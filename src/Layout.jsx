@@ -423,6 +423,27 @@ export default function Layout({ children, currentPageName }) {
 
   // ❌ REMOVIDO - Sync desnecessário, já temos cache
 
+  // 🛡️ SYNC ENTRE ABAS: Quando outra aba modifica localStorage, atualiza o estado local
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'currentUser') {
+        if (e.newValue) {
+          try {
+            const updatedUser = JSON.parse(e.newValue);
+            setCurrentUser(updatedUser);
+            sessionStorage.setItem('isLoggedIn', 'true');
+          } catch (err) { /* JSON inválido, ignora */ }
+        } else {
+          // Outra aba removeu o currentUser (logout)
+          setCurrentUser(null);
+          sessionStorage.removeItem('isLoggedIn');
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
