@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { getCatalogOrders } from '@/functions/getCatalogOrders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,12 @@ export default function CatalogOrdersAdmin() {
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      const allOrders = await CatalogSale.list('-created_date', 500);
+      // Pega email do admin logado no sistema custom (AppUser via localStorage)
+      const savedUser = localStorage.getItem('currentUser');
+      const callerEmail = savedUser ? JSON.parse(savedUser).email : null;
+      
+      const response = await getCatalogOrders({ caller_email: callerEmail });
+      const allOrders = response?.data?.orders || response?.orders || [];
       setOrders(Array.isArray(allOrders) ? allOrders : []);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
