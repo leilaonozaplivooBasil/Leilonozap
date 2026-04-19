@@ -598,6 +598,15 @@ export default function Layout({ children, currentPageName }) {
         { title: "🩺 Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
       ]
     },
+    {
+      title: "👤 Minha Conta",
+      isCategory: true,
+      items: [
+        { title: "💰 Minha Carteira", pageName: "AddFunds" },
+        { title: "🏆 Meus Arremates", pageName: "MyWinnings" },
+        { title: "👤 Perfil", pageName: "Profile" },
+      ]
+    },
   ];
 
   const isLoggedIn = currentUser && currentUser.email;
