@@ -1,142 +1,101 @@
 /**
- * pages.config.jsx.js - Page routing configuration
+ * pages.config.jsx - Page routing configuration (LAZY LOADED)
  * 
- * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
- * Pages are auto-registered when you create files in the ./pages/ folder.
- * 
- * THE ONLY EDITABLE VALUE: mainPage
- * This controls which page is the landing page (shown when users visit the app).
- * 
- * Example file structure:
- * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
- *   
- *   export const PAGES = {
- *       "HomePage": HomePage,
- *       "Dashboard": Dashboard,
- *       "Settings": Settings,
- *   }
- *   
- *   export const pagesConfig = {
- *       mainPage: "HomePage",
- *       Pages: PAGES,
- *   };
- * 
- * Example with Layout (wraps all pages):
- *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
- *   import __Layout from './Layout.jsx';
- *
- *   export const PAGES = {
- *       "Home": Home,
- *       "Settings": Settings,
- *   }
- *
- *   export const pagesConfig = {
- *       mainPage: "Home",
- *       Pages: PAGES,
- *       Layout: __Layout,
- *   };
- *
- * To change the main page from HomePage to Dashboard, use find_replace:
- *   Old: mainPage: "HomePage",
- *   New: mainPage: "Dashboard",
- *
- * The mainPage value must match a key in the PAGES object exactly.
+ * Todos os imports de página usam React.lazy() para code-splitting.
+ * O Layout e RequireRole permanecem estáticos (necessários no carregamento inicial).
  */
-import ActivePartners from './pages/ActivePartners';
-import AddCatalogProduct from './pages/AddCatalogProduct';
-import AnaliseDeLotes from './pages/AnaliseDeLotes';
-import AddFunds from './pages/AddFunds';
-import AdminCatalogSales from './pages/AdminCatalogSales';
-import AdminUsers from './pages/AdminUsers';
-import AdminWithdrawals from './pages/AdminWithdrawals';
-import AmbienteDeTeste from './pages/AmbienteDeTeste';
-import ArquitetoIA from './pages/ArquitetoIA';
-import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
-import AuctionControl from './pages/AuctionControl';
-import AuctionDetails from './pages/AuctionDetails';
-import AuctionRoom from './pages/AuctionRoom';
-import AuditSnapshot from './pages/AuditSnapshot';
-import BannerManagement from './pages/BannerManagement';
-import CadastroInvestidor from './pages/CadastroInvestidor';
-import CadastroLeiloeiro from './pages/CadastroLeiloeiro';
-import CarteiraInvestidor from './pages/CarteiraInvestidor';
-import CRM from './pages/CRM';
-import CRMInvestidores from './pages/CRMInvestidores';
-import CareerLevelsReport from './pages/CareerLevelsReport';
-import Cart from './pages/Cart';
-import Catalog from './pages/Catalog';
-import CatalogCheckout2 from './pages/CatalogCheckout2';
-import CatalogManagement from './pages/CatalogManagement';
-import CatalogOrderTracking from './pages/CatalogOrderTracking';
-import CatalogProductDetails from './pages/CatalogProductDetails';
-import Checkout from './pages/Checkout';
-import CommissionDistributionFull from './pages/CommissionDistributionFull';
-import CommissionPilot from './pages/CommissionPilot';
-import CreateAuction from './pages/CreateAuction';
-import CreateAuctionV2 from './pages/CreateAuctionV2';
-import CreateCatalogProduct from './pages/CreateCatalogProduct';
-import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
-import CustomerDetails from './pages/CustomerDetails';
-import DailyReportView from './pages/DailyReportView';
-import DiretoDeFabrica from './pages/DiretoDeFabrica';
-import EditAuction from './pages/EditAuction';
-import EditCatalogProduct from './pages/EditCatalogProduct';
-import ErrorReport from './pages/ErrorReport';
-import Financial from './pages/Financial';
-import ForgotPassword from './pages/ForgotPassword';
-import Home from './pages/Home';
-import Influencers from './pages/Influencers';
-import InfluencersDashboard from './pages/InfluencersDashboard';
-import InvestorDashboard from './pages/InvestorDashboard';
-import Landing from './pages/Landing';
-import LicenseeOrders from './pages/LicenseeOrders';
-import Licensing from './pages/Licensing';
-import LicensorCRM from './pages/LicensorCRM';
-import LiveShop from './pages/LiveShop';
-import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
-import LiveShopNoZap from './pages/LiveShopNoZap';
-import LojistaDashboard from './pages/LojistaDashboard';
-import LuxuryAccessManager from './pages/LuxuryAccessManager';
-import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
-import LuxuryCollection from './pages/LuxuryCollection';
-import MarketplaceLotes from './pages/MarketplaceLotes';
-import MemoryBackup from './pages/MemoryBackup';
-import MyCatalogOrders from './pages/MyCatalogOrders';
-import MyWinnings from './pages/MyWinnings';
-import NetworkOverview from './pages/NetworkOverview';
-import OrderTracking from './pages/OrderTracking';
-import PDV from './pages/PDV';
-import PartnerPlanActivation from './pages/PartnerPlanActivation';
-import Partners from './pages/Partners';
-import PaymentFailure from './pages/PaymentFailure';
-import PaymentSettings from './pages/PaymentSettings';
-import ProductManagement from './pages/ProductManagement';
-import ProductOperationHistory from './pages/ProductOperationHistory';
-import Profile from './pages/Profile';
-import PromoCreator from './pages/PromoCreator';
-import ProtecaoCriacao from './pages/ProtecaoCriacao';
-import ProtectionDashboard from './pages/ProtectionDashboard';
-import Register from './pages/Register';
-import RegisterBatches from './pages/RegisterBatches';
-import RegisterLicensee from './pages/RegisterLicensee';
-import ResetPassword from './pages/ResetPassword';
-import ShippingSettings from './pages/ShippingSettings';
-import StockPosition from './pages/StockPosition';
-import StoreRegistration from './pages/StoreRegistration';
-import StressTest from './pages/StressTest';
-import SystemChecklist from './pages/SystemChecklist';
-import SystemDiagnostics from './pages/SystemDiagnostics';
-import TesteLeilao from './pages/TesteLeilao';
-import TransactionHistory from './pages/TransactionHistory';
-import UserManagement from './pages/UserManagement';
-import WalletHistory from './pages/WalletHistory';
+import React from 'react';
 import { RequireRole } from '@/components/common';
 import __Layout from './Layout.jsx';
+
+const ActivePartners = React.lazy(() => import('./pages/ActivePartners'));
+const AddCatalogProduct = React.lazy(() => import('./pages/AddCatalogProduct'));
+const AnaliseDeLotes = React.lazy(() => import('./pages/AnaliseDeLotes'));
+const AddFunds = React.lazy(() => import('./pages/AddFunds'));
+const AdminCatalogSales = React.lazy(() => import('./pages/AdminCatalogSales'));
+const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
+const AdminWithdrawals = React.lazy(() => import('./pages/AdminWithdrawals'));
+const AmbienteDeTeste = React.lazy(() => import('./pages/AmbienteDeTeste'));
+const ArquitetoIA = React.lazy(() => import('./pages/ArquitetoIA'));
+const AuctionCheckoutModern = React.lazy(() => import('./pages/AuctionCheckoutModern'));
+const AuctionControl = React.lazy(() => import('./pages/AuctionControl'));
+const AuctionDetails = React.lazy(() => import('./pages/AuctionDetails'));
+const AuctionRoom = React.lazy(() => import('./pages/AuctionRoom'));
+const AuditSnapshot = React.lazy(() => import('./pages/AuditSnapshot'));
+const BannerManagement = React.lazy(() => import('./pages/BannerManagement'));
+const CadastroInvestidor = React.lazy(() => import('./pages/CadastroInvestidor'));
+const CadastroLeiloeiro = React.lazy(() => import('./pages/CadastroLeiloeiro'));
+const CarteiraInvestidor = React.lazy(() => import('./pages/CarteiraInvestidor'));
+const CRM = React.lazy(() => import('./pages/CRM'));
+const CRMInvestidores = React.lazy(() => import('./pages/CRMInvestidores'));
+const CareerLevelsReport = React.lazy(() => import('./pages/CareerLevelsReport'));
+const Cart = React.lazy(() => import('./pages/Cart'));
+const Catalog = React.lazy(() => import('./pages/Catalog'));
+const CatalogCheckout2 = React.lazy(() => import('./pages/CatalogCheckout2'));
+const CatalogManagement = React.lazy(() => import('./pages/CatalogManagement'));
+const CatalogOrderTracking = React.lazy(() => import('./pages/CatalogOrderTracking'));
+const CatalogProductDetails = React.lazy(() => import('./pages/CatalogProductDetails'));
+const Checkout = React.lazy(() => import('./pages/Checkout'));
+const CommissionDistributionFull = React.lazy(() => import('./pages/CommissionDistributionFull'));
+const CommissionPilot = React.lazy(() => import('./pages/CommissionPilot'));
+const CreateAuction = React.lazy(() => import('./pages/CreateAuction'));
+const CreateAuctionV2 = React.lazy(() => import('./pages/CreateAuctionV2'));
+const CreateCatalogProduct = React.lazy(() => import('./pages/CreateCatalogProduct'));
+const CreateLuxuryAuction = React.lazy(() => import('./pages/CreateLuxuryAuction'));
+const CustomerDetails = React.lazy(() => import('./pages/CustomerDetails'));
+const DailyReportView = React.lazy(() => import('./pages/DailyReportView'));
+const DiretoDeFabrica = React.lazy(() => import('./pages/DiretoDeFabrica'));
+const EditAuction = React.lazy(() => import('./pages/EditAuction'));
+const EditCatalogProduct = React.lazy(() => import('./pages/EditCatalogProduct'));
+const ErrorReport = React.lazy(() => import('./pages/ErrorReport'));
+const Financial = React.lazy(() => import('./pages/Financial'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const Home = React.lazy(() => import('./pages/Home'));
+const Influencers = React.lazy(() => import('./pages/Influencers'));
+const InfluencersDashboard = React.lazy(() => import('./pages/InfluencersDashboard'));
+const InvestorDashboard = React.lazy(() => import('./pages/InvestorDashboard'));
+const Landing = React.lazy(() => import('./pages/Landing'));
+const LicenseeOrders = React.lazy(() => import('./pages/LicenseeOrders'));
+const Licensing = React.lazy(() => import('./pages/Licensing'));
+const LicensorCRM = React.lazy(() => import('./pages/LicensorCRM'));
+const LiveShop = React.lazy(() => import('./pages/LiveShop'));
+const LiveShopControlNoZap = React.lazy(() => import('./pages/LiveShopControlNoZap'));
+const LiveShopNoZap = React.lazy(() => import('./pages/LiveShopNoZap'));
+const LojistaDashboard = React.lazy(() => import('./pages/LojistaDashboard'));
+const LuxuryAccessManager = React.lazy(() => import('./pages/LuxuryAccessManager'));
+const LuxuryBannerManagement = React.lazy(() => import('./pages/LuxuryBannerManagement'));
+const LuxuryCollection = React.lazy(() => import('./pages/LuxuryCollection'));
+const MarketplaceLotes = React.lazy(() => import('./pages/MarketplaceLotes'));
+const MemoryBackup = React.lazy(() => import('./pages/MemoryBackup'));
+const MyCatalogOrders = React.lazy(() => import('./pages/MyCatalogOrders'));
+const MyWinnings = React.lazy(() => import('./pages/MyWinnings'));
+const NetworkOverview = React.lazy(() => import('./pages/NetworkOverview'));
+const OrderTracking = React.lazy(() => import('./pages/OrderTracking'));
+const PDV = React.lazy(() => import('./pages/PDV'));
+const PartnerPlanActivation = React.lazy(() => import('./pages/PartnerPlanActivation'));
+const Partners = React.lazy(() => import('./pages/Partners'));
+const PaymentFailure = React.lazy(() => import('./pages/PaymentFailure'));
+const PaymentSettings = React.lazy(() => import('./pages/PaymentSettings'));
+const ProductManagement = React.lazy(() => import('./pages/ProductManagement'));
+const ProductOperationHistory = React.lazy(() => import('./pages/ProductOperationHistory'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const PromoCreator = React.lazy(() => import('./pages/PromoCreator'));
+const ProtecaoCriacao = React.lazy(() => import('./pages/ProtecaoCriacao'));
+const ProtectionDashboard = React.lazy(() => import('./pages/ProtectionDashboard'));
+const Register = React.lazy(() => import('./pages/Register'));
+const RegisterBatches = React.lazy(() => import('./pages/RegisterBatches'));
+const RegisterLicensee = React.lazy(() => import('./pages/RegisterLicensee'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+const ShippingSettings = React.lazy(() => import('./pages/ShippingSettings'));
+const StockPosition = React.lazy(() => import('./pages/StockPosition'));
+const StoreRegistration = React.lazy(() => import('./pages/StoreRegistration'));
+const StressTest = React.lazy(() => import('./pages/StressTest'));
+const SystemChecklist = React.lazy(() => import('./pages/SystemChecklist'));
+const SystemDiagnostics = React.lazy(() => import('./pages/SystemDiagnostics'));
+const TesteLeilao = React.lazy(() => import('./pages/TesteLeilao'));
+const TransactionHistory = React.lazy(() => import('./pages/TransactionHistory'));
+const UserManagement = React.lazy(() => import('./pages/UserManagement'));
+const WalletHistory = React.lazy(() => import('./pages/WalletHistory'));
 
 
 export const PAGES = {

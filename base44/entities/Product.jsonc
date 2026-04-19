@@ -177,6 +177,10 @@
   ],
   "rls": {
     "read": null,
-    "write": null
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
   }
 }
