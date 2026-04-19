@@ -170,8 +170,8 @@ export default function ConfirmProductDuplicationModal({
                       <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🔨 Lance inicial:</span>
-                      <span className="text-yellow-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-gray-400">🔨 Lance inicial (−20% loja):</span>
+                      <span className="text-yellow-400 font-bold">R$ {(parseFloat(formData.starting_price || 0) * 0.80).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">⚡ Arremate Agora (= loja):</span>
