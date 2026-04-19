@@ -3,32 +3,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Search, Plus, Copy, Edit, ExternalLink, Share2, Calendar, Clock, User, ShoppingBag } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, Plus } from "lucide-react";
 
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
 import LicenseeListItem from "../components/licensees/LicenseeListItem";
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import LicenseeDetailsPanel from "../components/licensees/LicenseeDetailsPanel";
 
-function copyToClipboard(text){
-  navigator.clipboard.writeText(text);
-}
-function shareLink(url, name){
-  if (navigator.share) {
-    navigator.share({ title: name ? `Loja Virtual de ${name}` : "Loja Virtual", url });
-  } else {
-    navigator.clipboard.writeText(url);
-    alert("Link copiado!");
-  }
-}
 
-function storeName(u) {
-  return u?.store_name || ("L. Virtual " + (u?.full_name || "Sem nome"));
-}
+
 
 export default function RegisterLicensee() {
   const qc = useQueryClient();
@@ -62,31 +45,7 @@ export default function RegisterLicensee() {
     if (!selected && filtered.length) setSelected(filtered[0]);
   }, [filtered, selected]);
 
-  const referral = selected?.referral_code || "";
-  const catalogLink = referral ? `https://leilaonozap.net/Catalog?ref=${referral}` : "";
-  const slug = selected?.nickname || referral;
-  const displayLink = slug ? `leilaonozap.net/loja-virtual/${slug}` : "";
-  const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
-  const { data: visits = [] } = useQuery({
-  queryKey: ["catalogVisits", selected?.id],
-  enabled: !!selected?.id,
-  queryFn: async () => await base44.entities.CatalogVisit.filter({ licensee_id: selected.id }, "-visited_at", 10000),
-});
-const visitsData = useMemo(() => {
-  const days = Array.from({ length: 30 }).map((_, idx) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (29 - idx));
-    const key = d.toISOString().slice(0, 10);
-    return { key, i: idx, v: 0 };
-  });
-  const counts = (visits || []).reduce((acc, v) => {
-    const key = (v.visited_at || v.created_date || "").slice(0, 10);
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-  days.forEach(d => { d.v = counts[d.key] || 0; });
-  return days.map(d => ({ i: d.i, v: d.v }));
-}, [visits]);
+
 
 
   return (
@@ -136,143 +95,11 @@ const visitsData = useMemo(() => {
 
         {/* Details */}
         <div className="lg:col-span-1">
-          <Card className="bg-gray-800 border-gray-700 shadow-sm">
-            <CardHeader className="pb-0">
-              <div className="flex flex-col items-center text-center gap-3">
-                {selected?.avatar_url ? (
-                  <img src={selected.avatar_url} alt={selected.full_name} className="h-16 w-16 rounded-full object-cover" />
-                ) : (
-                  <div className="h-16 w-16 rounded-full bg-green-500/20 text-green-400 font-semibold grid place-items-center">
-                    {(selected?.full_name || "?").slice(0,2).toUpperCase()}
-                  </div>
-                )}
-                <div className="text-xl font-semibold text-white">{selected ? storeName(selected) : "Selecione um licenciado"}</div>
-                {selected && <div className="text-sm text-gray-400">{selected.full_name}</div>}
-                {selected && (
-                  <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">Loja ativa <ShoppingBag className="w-3.5 h-3.5" /></Badge>
-                )}
-                {selected && (
-                  <a href={catalogLink} target="_blank" rel="noreferrer" className="text-gray-300 hover:underline break-all">
-                    {displayLink}
-                  </a>
-                )}
-                {selected && (
-                  <div className="flex items-center gap-3 mt-1">
-                    <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => setShowModal(true)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => shareLink(catalogLink, selected?.full_name)}>
-                      <Share2 className="w-4 h-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => copyToClipboard(catalogLink)}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <a href={catalogLink} target="_blank" rel="noreferrer">
-                      <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400">
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    </a>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-6">
-              {selected ? (
-                <>
-                  <Separator className="bg-gray-700" />
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <div>
-                        <div className="text-sm font-medium text-white">0 vendas</div>
-                        <div className="text-xs text-gray-400">Mês passado</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <div>
-                        <div className="text-sm font-medium text-white">Última venda</div>
-                        <div className="text-xs text-gray-400">-</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator className="bg-gray-700" />
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm text-gray-300 font-medium">Visitas na loja</div>
-                      <button className="text-xs text-green-400 hover:underline">Ver tudo</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 items-center">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-gray-300">
-                          <User className="w-4 h-4 text-slate-400" />
-                          <span className="text-white font-semibold">{(visits && visits.length) || 0} visitas</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-300">
-                          <Clock className="w-4 h-4 text-slate-400" />
-                          <span className="text-gray-300">4 contatos</span>
-                        </div>
-                      </div>
-                      <div className="w-full">
-                        <div className="h-16">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={visitsData}>
-                              <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                        <div className="text-[10px] text-gray-400 text-right mt-1">Últimos 30 dias</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-300 font-medium">Produtos mais visitados</div>
-                      <button className="text-xs text-green-400 hover:underline">Ver tudo</button>
-                    </div>
-                    <div className="flex flex-col items-center justify-center text-gray-400 text-sm h-28 gap-2">
-                      <span className="text-2xl">📱</span>
-                      <span className="text-center">—</span>
-                    </div>
-                  </div>
-
-                  <div className="text-center">
-                    <div className="font-semibold text-gray-100">{selected ? storeName(selected) : ""} não teve visitas em sua loja nos últimos 30 dias</div>
-                    <p className="text-gray-400 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa a loja do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      variant="ghost"
-                      className="text-green-400 hover:text-green-500"
-                      disabled={!selected}
-                      onClick={() => {
-                        if (!selected) return;
-                        const url = createPageUrl("LicenseeOrders") + `?licenseeId=${selected.id}&ref=${encodeURIComponent(selected.referral_code || "")}&name=${encodeURIComponent(selected.full_name || "")}`;
-                        navigate(url);
-                      }}
-                    >
-                      Ver pedidos
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-green-400 hover:text-green-500"
-                      disabled={!selected}
-                      onClick={() => setShowModal(true)}
-                    >
-                      Editar cadastro
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-gray-400">Selecione um licenciado à esquerda para ver detalhes.</div>
-              )}
-            </CardContent>
-          </Card>
+          <LicenseeDetailsPanel
+            selected={selected}
+            onEdit={() => setShowModal(true)}
+            onRefresh={() => setSelected(null)}
+          />
         </div>
       </div>
 
