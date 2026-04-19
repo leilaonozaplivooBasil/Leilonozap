@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 export default function ConfirmProductDuplicationModal({
@@ -14,18 +16,24 @@ export default function ConfirmProductDuplicationModal({
 }) {
   const [includeAuction, setIncludeAuction] = useState(true);
   const [includeCatalog, setIncludeCatalog] = useState(true);
+  const [catalogPrice, setCatalogPrice] = useState('');
 
   const imageCount = (formData.image_urls || []).filter(url => url && url.trim()).length;
 
   const handleConfirm = () => {
     if (!includeAuction && !includeCatalog) {
-      alert('⚠️ Selecione pelo menos um destino (Leilão ou Catálogo)');
+      alert('⚠️ Selecione pelo menos um destino (Leilão ou Loja Virtual)');
+      return;
+    }
+    if (includeCatalog && !catalogPrice) {
+      alert('⚠️ Informe o preço da Loja Virtual');
       return;
     }
 
     onConfirm({
       includeAuction,
-      includeCatalog
+      includeCatalog,
+      catalogPrice: parseFloat(catalogPrice) || 0
     });
   };
 
@@ -100,7 +108,7 @@ export default function ConfirmProductDuplicationModal({
               </div>
             </div>
 
-            {/* CHECKBOX CATÁLOGO */}
+            {/* CHECKBOX LOJA VIRTUAL */}
             <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
               includeCatalog 
                 ? 'bg-green-900/20 border-green-500 ring-2 ring-green-500/30' 
@@ -115,13 +123,30 @@ export default function ConfirmProductDuplicationModal({
                   className="w-5 h-5"
                 />
                 <div className="flex-1">
-                  <div className="font-semibold text-white">📦 Adicionar ao Catálogo de Vendas</div>
+                  <div className="font-semibold text-white">🛒 Adicionar à Loja Virtual</div>
                   <div className="text-xs text-gray-400 mt-1">
                     Produto fica disponível para venda direta pelos licenciados
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* PREÇO DA LOJA VIRTUAL */}
+            {includeCatalog && (
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3" onClick={(e) => e.stopPropagation()}>
+                <Label className="text-gray-300 text-sm mb-1 block">Preço na Loja Virtual (R$) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={catalogPrice}
+                  onChange={(e) => setCatalogPrice(e.target.value)}
+                  placeholder="Ex: 199.90"
+                  className="bg-gray-900 border-gray-600 text-white"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <p className="text-xs text-gray-500 mt-1">Preço de venda na Loja Virtual (diferente do preço do leilão)</p>
+              </div>
+            )}
           </div>
 
           {/* VALIDAÇÃO */}

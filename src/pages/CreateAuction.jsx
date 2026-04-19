@@ -881,11 +881,13 @@ export default function CreateAuction() {
     }
   };
 
-  const handleConfirmDuplication = async ({ includeAuction, includeCatalog }) => {
+  const handleConfirmDuplication = async ({ includeAuction, includeCatalog, catalogPrice }) => {
     setIsSubmittingBid(true);
 
     try {
       const finalImageUrls = formData.image_urls.filter(url => url && url.trim() !== "");
+      const Product = base44.entities.Product;
+      let createdAuction = null;
 
       // 1. Criar no Leilão
       if (includeAuction) {
@@ -914,22 +916,49 @@ export default function CreateAuction() {
           product_id: formData.product_id || null,
           allowed_regions: formData.allowed_regions || [],
         };
-        await Auction.create(auctionData);
+        createdAuction = await Auction.create(auctionData);
+
+        // Se veio de um produto do estoque, vincula o leilão ao produto
+        if (formData.product_id && createdAuction?.id) {
+          try {
+            const existingProducts = await Product.filter({ id: formData.product_id });
+            if (existingProducts.length > 0) {
+              const existingLinked = existingProducts[0].linked_auctions || [];
+              await Product.update(formData.product_id, {
+                linked_auctions: [...existingLinked, createdAuction.id]
+              });
+            }
+          } catch (e) {
+            console.warn('Não foi possível vincular leilão ao produto:', e.message);
+          }
+        }
       }
 
-      // 2. Criar no Catálogo de Produtos
+      // 2. Publicar na Loja Virtual
       if (includeCatalog) {
-        const Product = base44.entities.Product;
-        const productData = {
-          description: formData.title, // Usando o título como descrição principal
-          notes: formData.description,
-          image_urls: finalImageUrls, // <<< AQUI A CORREÇÃO CRÍTICA
-          cost_price: 0, // Custo pode ser ajustado depois
-          price_catalog: parseFloat(priceCatalog) || parseFloat(formData.starting_price) * 1.5, // Preço de venda no catálogo
-          quantity: 1,
-          catalog_active: true,
-        };
-        await Product.create(productData);
+        const finalCatalogPrice = catalogPrice || parseFloat(formData.starting_price) * 1.5;
+
+        if (formData.product_id) {
+          // Produto já existe no estoque → atualiza com catalog_active
+          await Product.update(formData.product_id, {
+            catalog_active: true,
+            price_catalog: finalCatalogPrice,
+            selling_price_wholesale: finalCatalogPrice,
+            image_urls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
+          });
+        } else {
+          // Produto novo → cria no estoque com catalog_active
+          await Product.create({
+            description: formData.title,
+            notes: formData.description,
+            image_urls: finalImageUrls,
+            cost_price: 0,
+            price_catalog: finalCatalogPrice,
+            selling_price_wholesale: finalCatalogPrice,
+            quantity: 1,
+            catalog_active: true,
+          });
+        }
       }
 
       let successMessage = "✅ Operação concluída!";
