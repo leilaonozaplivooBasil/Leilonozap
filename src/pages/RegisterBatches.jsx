@@ -44,14 +44,20 @@ export default function RegisterBatches() {
   const [lotesStatus, setLotesStatus] = useState({});
   const navigate = useNavigate();
 
+  const [lotesRecebidos, setLotesRecebidos] = useState([]);
+
   useEffect(() => {
     loadBatches();
   }, []);
 
   const loadBatches = async () => {
     try {
-      const allBatches = await base44.entities.BatchRegistration.list('-created_date', 100);
+      const [allBatches, allLotes] = await Promise.all([
+        base44.entities.BatchRegistration.list('-created_date', 100),
+        base44.entities.LoteRecebido.filter({ status: 'enviado_ao_estoque' })
+      ]);
       setBatches(allBatches);
+      setLotesRecebidos(allLotes || []);
 
       // Atualiza mapa local de códigos (code -> descrição) com histórico
       try {
@@ -555,6 +561,8 @@ export default function RegisterBatches() {
 
   const pendingBatches = batches.filter(b => b.status === 'pendente');
   const convertedBatches = batches.filter(b => b.status === 'convertido');
+  const totalArrematados = batches.length + lotesRecebidos.length;
+  const totalConvertidos = convertedBatches.length + lotesRecebidos.length;
   
   let filteredBatches = statusFilter === 'all' 
     ? batches 
@@ -618,7 +626,7 @@ export default function RegisterBatches() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">Total Arrematados</p>
-                  <p className="text-2xl font-bold text-white">{batches.length}</p>
+                  <p className="text-2xl font-bold text-white">{totalArrematados}</p>
                 </div>
                 <Package className="w-8 h-8 text-blue-400" />
               </div>
@@ -656,7 +664,7 @@ export default function RegisterBatches() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">Convertidos</p>
-                  <p className="text-2xl font-bold text-green-400">{convertedBatches.length}</p>
+                  <p className="text-2xl font-bold text-green-400">{totalConvertidos}</p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-400" />
               </div>
@@ -833,7 +841,52 @@ export default function RegisterBatches() {
             );
           })}
 
-          {filteredBatches.length === 0 && !isLoading && (
+          {/* LOTES RECEBIDOS (via Estoque de Lotes) */}
+          {(statusFilter === 'all' || statusFilter === 'convertido') && lotesRecebidos.map((lote) => (
+            <Card key={`lr-${lote.id}`} className="bg-gray-800 border-emerald-700/40">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Package className="w-6 h-6 text-emerald-400" />
+                    <div className="flex-1">
+                      <CardTitle className="text-xl text-white">
+                        {lote.nome_lote}
+                      </CardTitle>
+                      <p className="text-sm text-gray-400">
+                        {lote.quantidade_total || 0} produtos • R$ {(lote.valor_lote || 0).toFixed(2)}
+                        {lote.marketplace && ` • ${lote.marketplace}`}
+                      </p>
+                      {lote.valor_lote > 0 && lote.quantidade_total > 0 && (
+                        <p className="text-xs text-green-400 font-semibold">
+                          💰 Custo Unitário: R$ {(lote.valor_lote / lote.quantidade_total).toFixed(2)}
+                        </p>
+                      )}
+                      {lote.data_recebimento && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          ⏱️ Recebido em: {new Date(lote.data_recebimento).toLocaleString('pt-BR')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-700 text-white">
+                      ✅ {lote.produtos_gerados_count || 0} produtos no estoque
+                    </Badge>
+                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/50 text-xs">
+                      Via Estoque de Lotes
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              {lote.observacoes && (
+                <CardContent className="pt-0">
+                  <p className="text-gray-500 text-xs">{lote.observacoes}</p>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+
+          {filteredBatches.length === 0 && lotesRecebidos.length === 0 && !isLoading && (
             <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-12 text-center">
                 <Package className="w-16 h-16 mx-auto mb-4 text-gray-600" />
