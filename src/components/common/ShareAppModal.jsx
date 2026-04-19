@@ -15,17 +15,17 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
   let appUrl;
   if (context === "catalog") {
     // No catálogo: usa link do licenciado se tiver, senão link do catálogo
-    appUrl = refCode ? `${baseUrl}/Catalog?ref=${refCode}` : `${baseUrl}/Catalog`;
+    appUrl = refCode ? `${baseUrl}/Loja-Virtual?ref=${refCode}` : `${baseUrl}/Catalog`;
   } else {
     // Fora do catálogo: usa link do licenciado se tiver, senão link padrão
-    appUrl = refCode ? `${baseUrl}/Catalog?ref=${refCode}` : baseUrl;
+    appUrl = refCode ? `${baseUrl}/Loja-Virtual?ref=${refCode}` : baseUrl;
   }
   
   const appTitle = context === "catalog" 
-    ? "Catálogo Leilão NoZap - Produtos Incríveis!" 
+    ? "Loja Virtual Leilão NoZap - Produtos Incríveis!" 
     : "Leilão NoZap - Arremate Produtos Incríveis!";
   const appDescription = context === "catalog"
-    ? "Confira os melhores produtos do Catálogo Leilão NoZap com preços imperdíveis!"
+    ? "Confira os melhores produtos da Loja Virtual Leilão NoZap com preços imperdíveis!"
     : "Participe de leilões emocionantes e arremate produtos com preços imperdíveis no Leilão NoZap!";
 
   const copyToClipboard = () => {
