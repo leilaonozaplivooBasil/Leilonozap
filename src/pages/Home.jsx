@@ -31,6 +31,7 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
+import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -532,6 +533,7 @@ export default function Home() {
 
   return (
     <div className="bg-gray-900 text-white min-h-screen relative overflow-hidden">
+      <PagePerformanceTracker pageName="Home" />
       <LiquidGlassStyles />
       
       {/* Background — PERF: static gradients instead of animated blurred orbs */}

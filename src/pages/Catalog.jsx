@@ -15,6 +15,7 @@ import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -449,6 +450,7 @@ export default function Catalog() {
 
   return (
     <div className="bg-gray-900 text-white min-h-screen">
+      <PagePerformanceTracker pageName="Catalog" />
       <style>{`
         .category-scroller {
           overflow-x: scroll;

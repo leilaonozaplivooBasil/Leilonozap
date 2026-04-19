@@ -26,6 +26,7 @@ import { Wallet } from "lucide-react";
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
 import useBidSubmission from "@/hooks/useBidSubmission";
+import PagePerformanceTracker from "@/components/system/PagePerformanceTracker";
 
 const COUNTDOWN_DURATION = 142;
 const BID_EXTENSION_SECONDS = 22;
@@ -932,6 +933,7 @@ export default function AuctionRoom() {
 
   return (
     <div className="auction-page-container">
+      <PagePerformanceTracker pageName="AuctionRoom" />
       {showFloatingBalance && currentUser && (
         <FloatingBalance balance={currentUser.valora_pay_balance || 0} />
       )}

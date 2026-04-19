@@ -97,7 +97,7 @@ export default function useAuctionSync({
     }
   }, [auctionId, auction, messages, syncAuctionDataOnly, setMessages]);
 
-  // Unified sync loop
+  // Real-time subscription for messages + polling fallback for auction data
   useEffect(() => {
     if (!auction || auction.status !== 'active') {
       if (auctionSyncIntervalRef.current) {
@@ -111,6 +111,36 @@ export default function useAuctionSync({
       return;
     }
 
+    // REAL-TIME: Subscribe to AuctionMessage changes (instant lance delivery)
+    let unsubscribeMessages = null;
+    try {
+      unsubscribeMessages = AuctionMessage.subscribe((event) => {
+        if (!event?.data?.auction_id || event.data.auction_id !== auctionId) return;
+
+        if (event.type === 'create') {
+          setMessages(prev => {
+            // Deduplicate — avoid adding if already present
+            if (prev.some(m => m.id === event.data.id)) return prev;
+            // Remove matching optimistic message
+            const cleaned = prev.filter(m => {
+              if (!String(m.id).startsWith('temp-')) return true;
+              return !(m.sender_id === event.data.sender_id && m.bid_amount === event.data.bid_amount);
+            });
+            return [event.data, ...cleaned];
+          });
+          lastMessageCountRef.current++;
+          // If it's a new bid, sync auction data to get updated price
+          if (event.data.message_type === 'bid') {
+            setTimeout(syncAuctionDataOnly, 300);
+          }
+        }
+      });
+      console.log("✅ [SYNC] Real-time subscription ativa para mensagens");
+    } catch (subError) {
+      console.warn("⚠️ [SYNC] Subscription falhou, usando polling:", subError.message);
+    }
+
+    // POLLING FALLBACK: Auction data every 15s + message fallback every 60s
     let auctionCounter = 0;
     let messageCounter = 0;
 
@@ -123,19 +153,22 @@ export default function useAuctionSync({
         auctionCounter = 0;
       }
 
-      if (messageCounter >= 6) {
+      // Message polling as safety net (subscription handles real-time)
+      if (messageCounter >= 12) {
         syncMessagesOnly();
         messageCounter = 0;
       }
     }, 5000);
 
     setTimeout(syncAuctionDataOnly, 3000);
-    setTimeout(syncMessagesOnly, 5000);
 
     return () => {
       clearInterval(unifiedInterval);
+      if (unsubscribeMessages) {
+        try { unsubscribeMessages(); } catch (e) { /* cleanup */ }
+      }
     };
-  }, [auction?.status, syncAuctionDataOnly, syncMessagesOnly]);
+  }, [auction?.status, auctionId, syncAuctionDataOnly, syncMessagesOnly, setMessages]);
 
   const clearSyncIntervals = useCallback(() => {
     if (auctionSyncIntervalRef.current) {
