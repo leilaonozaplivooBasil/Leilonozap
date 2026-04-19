@@ -14,6 +14,7 @@ import { createPageUrl } from '@/utils';
 import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
 import BatchCard from '@/components/batches/BatchCard';
 import BatchLoteDetail from '@/components/batches/BatchLoteDetail';
+import LoteAnalysisView from '@/components/lotes/LoteAnalysisView';
 
 export default function RegisterBatches() {
   const [batches, setBatches] = useState([]);
@@ -825,47 +826,7 @@ export default function RegisterBatches() {
                     isExpanded={isExpanded}
                     onExpand={() => toggleBatchExpanded(`lr-${lote.id}`)}
                     onViewFile={lote.arquivo_url ? () => window.open(lote.arquivo_url, '_blank') : undefined}
-                    expandedContent={
-                      itensLote.length > 0 ? (
-                        <div className="rounded-xl bg-gray-800/60 border border-gray-700/50 overflow-hidden">
-                          <div className="px-4 py-2.5 border-b border-gray-700/40">
-                            <h4 className="text-sm font-semibold text-white">Itens do Lote ({itensLote.length} tipos)</h4>
-                          </div>
-                          <div className="divide-y divide-gray-700/30">
-                            {itensLote.slice(0, 50).map((it, idx) => (
-                              <div key={idx} className="flex items-center justify-between px-4 py-2 hover:bg-gray-700/20 transition-colors">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  {it.grade && (
-                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                                      it.grade === 'A' ? 'bg-emerald-500/20 text-emerald-300' :
-                                      it.grade === 'B' ? 'bg-yellow-500/20 text-yellow-300' :
-                                      'bg-orange-500/20 text-orange-300'
-                                    }`}>{it.grade}</span>
-                                  )}
-                                  <span className="text-sm text-gray-200 truncate">{it.desc || it.descricao || 'Item'}</span>
-                                </div>
-                                <div className="flex items-center gap-4 flex-shrink-0 ml-3">
-                                  <span className="text-xs text-gray-400">Qtd: <span className="text-white font-semibold">{it.qtd || it.quantidade || 1}</span></span>
-                                  {(it.valor || it.valor_mercado) > 0 && (
-                                    <span className="text-xs text-purple-400">Mkt: R$ {(it.valor || it.valor_mercado || 0).toFixed(2)}</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                            {itensLote.length > 50 && (
-                              <div className="px-4 py-2 text-center text-xs text-gray-500">
-                                ... e mais {itensLote.length - 50} itens
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-6 text-gray-500 text-sm">
-                          <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                          Nenhum detalhe de itens disponível para este lote.
-                        </div>
-                      )
-                    }
+                    expandedContent={<LoteAnalysisView lote={lote} />}
                   />
                 );
               }
