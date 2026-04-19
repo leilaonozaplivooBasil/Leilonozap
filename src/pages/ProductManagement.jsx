@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
-  Trash2, RotateCcw
+  Trash2, RotateCcw, RefreshCw
 } from 'lucide-react';
 
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
@@ -221,13 +221,13 @@ export default function ProductManagement() {
         }
       }
 
-      // Cache agressivo de 5 minutos
+      // Cache agressivo de 1 minuto (reduzido de 5 para capturar mudanças rápido)
       const cachedProducts = sessionStorage.getItem('products_cache_v3');
       const cacheTime = sessionStorage.getItem('products_cache_time_v3');
 
       if (cachedProducts && cacheTime && retryCount === 0) {
         const age = Date.now() - parseInt(cacheTime);
-        if (age < 300000) { // 5 minutos
+        if (age < 60000) { // 1 minuto
           console.log('⚡ Usando cache de produtos');
           const cached = JSON.parse(cachedProducts);
           setProducts(cached);
@@ -470,6 +470,19 @@ export default function ProductManagement() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button 
+              size="sm" 
+              onClick={() => {
+                sessionStorage.removeItem('products_cache_v3');
+                sessionStorage.removeItem('products_cache_time_v3');
+                loadData();
+              }}
+              className="bg-cyan-600/90 hover:bg-cyan-600 text-white border-0"
+              disabled={isLoadingData}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isLoadingData ? 'animate-spin' : ''}`} />
+              {isLoadingData ? 'Atualizando...' : 'Recarregar'}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white">
