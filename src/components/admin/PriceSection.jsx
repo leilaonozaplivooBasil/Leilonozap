@@ -40,21 +40,20 @@ export default function PriceSection({ formData, onInputChange }) {
 
           {/* Sinalização da fórmula */}
           {sp > 0 && (
-            <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-600/40 rounded-lg space-y-1.5">
-              <p className="text-xs text-emerald-400 font-semibold">✅ Fórmula automática aplicada:</p>
-              <div className="text-xs space-y-1">
-                {/* Linha separadora visual */}
-                <div className="flex justify-between items-center py-0.5 border-b border-gray-700">
-                  <span className="text-gray-300 font-medium">📊 Valor de Mercado (base):</span>
-                  <span className="text-white font-bold">R$ {sp.toFixed(2)}</span>
+            <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-600/40 rounded-lg">
+              <p className="text-xs text-emerald-400 font-semibold mb-1.5">✅ Fórmula automática:</p>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado</span>
+                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {sp.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">🏪 Loja Virtual (−20% do mercado):</span>
-                  <span className="text-blue-400 font-bold">R$ {lojaPrice.toFixed(2)}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual <span className="text-gray-500">(−20%)</span></span>
+                  <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">🔨 Lance inicial (−40% do mercado):</span>
-                  <span className="text-yellow-400 font-bold">R$ {leilaoInicio.toFixed(2)}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−40%)</span></span>
+                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
                 </div>
               </div>
             </div>
