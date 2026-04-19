@@ -27,6 +27,7 @@ import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDu
 import ManualImageUpload from "../components/admin/ManualImageUpload";
 import ValidationReportModal from "../components/admin/ValidationReportModal";
 import GoogleShoppingImporter from "../components/admin/GoogleShoppingImporter";
+import PriceSection from "../components/admin/PriceSection";
 
 const withRetry = async (fn, max = 3) => {
   let err;
@@ -1873,91 +1874,7 @@ export default function CreateAuction() {
                       <ProductImagePreview imageUrls={formData.image_urls} />
                     </div>
                   </div>
-                  <Card className="bg-gray-800 border border-gray-700">
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2 text-green-400">
-                        <DollarSign className="w-5 h-5" /> Preços e Duração
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid md:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="starting_price" className="text-sm font-medium text-gray-400"> Preço Inicial (R$) * </Label>
-                        <Input id="starting_price" type="number" step="0.01" value={formData.starting_price} onChange={(e) => handleInputChange("starting_price", e.target.value)} required className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500" />
-                      </div>
-                      <div>
-                        <Label htmlFor="increment" className="text-sm font-medium text-gray-400"> Incremento (R$) * </Label>
-                        <Input id="increment" type="number" step="0.01" value={formData.increment} onChange={(e) => handleInputChange("increment", e.target.value)} required className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500" />
-                      </div>
-                      <div>
-                        <Label htmlFor="buy_now_price" className="text-sm font-medium text-gray-400"> Preço de Compra Rápida (opcional) </Label>
-                        <Input
-                          id="buy_now_price"
-                          type="number"
-                          step="0.01"
-                          value={formData.buy_now_price}
-                          onChange={(e) => handleInputChange("buy_now_price", e.target.value)}
-                          className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Se preenchido, o leilão pode ser encerrado imediatamente por este valor.</p>
-                      </div>
-
-                      {/* 🆕 SEÇÃO CATÁLOGO */}
-                      <div className="md:col-span-3 mt-4 p-4 bg-yellow-900/20 rounded-lg border border-yellow-600/50 hidden">
-                        <div className="flex items-center gap-3 mb-4">
-                          <input
-                            type="checkbox"
-                            id="catalog_active"
-                            checked={catalogActive}
-                            onChange={(e) => setCatalogActive(e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-600 text-yellow-600 cursor-pointer"
-                          />
-                          <Label htmlFor="catalog_active" className="text-white cursor-pointer flex items-center gap-2 font-medium">
-                            <Package className="w-4 h-4 text-yellow-400" />
-                            📦 Disponibilizar no Catálogo de Licenciados
-                          </Label>
-                        </div>
-
-                        {catalogActive && (
-                          <div className="space-y-3">
-                            <div>
-                              <Label className="text-gray-300">Preço do Catálogo (R$) *</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={priceCatalog}
-                                onChange={(e) => setPriceCatalog(e.target.value)}
-                                placeholder="Ex: 299.90"
-                                className="mt-1 bg-gray-900 border-yellow-600 text-gray-100 placeholder-gray-500 focus:border-yellow-400"
-                                required={catalogActive}
-                              />
-                            </div>
-                            <p className="text-xs text-yellow-300/80">
-                              💡 Este produto ficará disponível para venda direta pelos licenciados através do catálogo.
-                              Os licenciados ganharão comissão de 13% a 20% sobre este valor.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="duration" className="text-sm font-medium text-gray-400"> Duração do Leilão </Label>
-                        <Select value={formData.duration} onValueChange={(value) => handleInputChange("duration", value)} >
-                          <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                            <SelectItem value="60">⚡ 1 Minuto (Teste)</SelectItem>
-                            <SelectItem value="300">⚡ 5 Minutos (Teste)</SelectItem>
-                            <SelectItem value="900">⚡ 15 Minutos (Teste)</SelectItem>
-                            <SelectItem value="3600">1 hora</SelectItem>
-                            <SelectItem value="21600">6 horas</SelectItem>
-                            <SelectItem value="43200">12 horas</SelectItem>
-                            <SelectItem value="86400">1 dia (24h)</SelectItem>
-                            <SelectItem value="172800">2 dias (48h)</SelectItem>
-                            <SelectItem value="259200">3 dias (72h)</SelectItem>
-                            <SelectItem value="604800">1 semana</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <PriceSection formData={formData} onInputChange={handleInputChange} />
                   <div className="flex gap-4 pt-6">
                     <Button type="button" variant="outline" onClick={() => navigate(createPageUrl("Home"))} className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"> Cancelar </Button>
                     <Button type="submit" disabled={isSubmittingBid || isUploading} className="flex-1 bg-green-600 hover:bg-green-700 text-white" >
