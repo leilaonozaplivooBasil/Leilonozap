@@ -439,16 +439,15 @@ export default function Layout({ children, currentPageName }) {
 
   const adminMenuItems = [
     {
-      title: "🤖 Arquiteto IA",
-      pageName: "ArquitetoIA",
-      highlight: true
+      title: "🤖 Ferramentas IA",
+      isCategory: true,
+      items: [
+        { title: "Arquiteto IA", pageName: "ArquitetoIA" },
+        { title: "⚡ PrecificaVivo", pageName: "PrecificaVivoPainel" },
+      ]
     },
     {
-      title: "🧪 Ambiente de Teste",
-      pageName: "AmbienteDeTeste"
-    },
-    {
-      title: "Leilões",
+      title: "🔨 Leilões",
       isCategory: true,
       items: [
         { title: "Criar Leilão", pageName: "CreateAuction" },
@@ -461,34 +460,49 @@ export default function Layout({ children, currentPageName }) {
       ]
     },
     {
-      title: "Gestão do Aplicativo",
+      title: "📦 Loja Virtual",
       isCategory: true,
       items: [
         { title: "Gestão de Produtos", pageName: "ProductManagement" },
-        { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
-        { title: "📦 Gerenciar Loja Virtual", pageName: "CatalogManagement" },
-        { title: "🚚 Pedidos da Loja Virtual", pageName: "CatalogOrdersAdmin" },
+        { title: "Gerenciar Loja Virtual", pageName: "CatalogManagement" },
+        { title: "🚚 Pedidos", pageName: "CatalogOrdersAdmin" },
+        { title: "🎨 Banners", pageName: "BannerManagement" },
         { title: "🎨 Material Promocional", pageName: "PromoCreator" },
-        { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
-        { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
-        { title: "💳 Transações", pageName: "TransactionHistory" },
-        { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
-        { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
       ]
     },
-    { title: "💰 PDV", pageName: "PDV" },
-    { title: "📊 CRM", pageName: "CRM" },
-    { title: "🏪 Registrar Lojista", pageName: "StoreRegistration" },
-    { title: "🪪 Registrar Licenciado", pageName: "RegisterLicensee" },
-    { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
-    { title: "💼 Parceiros Ativos", pageName: "ActivePartners" },
-    { title: "💲 Financeiro", pageName: "Financial" },
-    { title: "Painel de Controle", pageName: "NetworkOverview" },
-    { title: "🩺 Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
-    { title: "⚡ PrecificaVivo", pageName: "PrecificaVivoPainel" },
-    { title: "Gerenciar Senhas", pageName: "AdminUsers" },
-    { title: "💰 Carteira Leilões", pageName: "AddFunds" },
-    { title: "💼 Carteira Investidor", pageName: "CarteiraInvestidor" },
+    {
+      title: "💰 Financeiro",
+      isCategory: true,
+      items: [
+        { title: "💰 PDV", pageName: "PDV" },
+        { title: "💲 Dashboard Financeiro", pageName: "Financial" },
+        { title: "💳 Transações", pageName: "TransactionHistory" },
+        { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
+        { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
+        { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
+      ]
+    },
+    {
+      title: "👥 Rede & Parceiros",
+      isCategory: true,
+      items: [
+        { title: "📊 CRM", pageName: "CRM" },
+        { title: "Painel de Controle", pageName: "NetworkOverview" },
+        { title: "💼 Parceiros Ativos", pageName: "ActivePartners" },
+        { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
+        { title: "🏪 Registrar Lojista", pageName: "StoreRegistration" },
+        { title: "🪪 Registrar Licenciado", pageName: "RegisterLicensee" },
+      ]
+    },
+    {
+      title: "⚙️ Configurações",
+      isCategory: true,
+      items: [
+        { title: "Gerenciar Senhas", pageName: "AdminUsers" },
+        { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
+        { title: "🩺 Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
+      ]
+    },
   ];
 
   const isLoggedIn = currentUser && currentUser.email;
