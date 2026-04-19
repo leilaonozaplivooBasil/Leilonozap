@@ -467,6 +467,7 @@ export default function Layout({ children, currentPageName }) {
         { title: "Gestão de Produtos", pageName: "ProductManagement" },
         { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
         { title: "📦 Gerenciar Catálogo", pageName: "CatalogManagement" },
+        { title: "🚚 Pedidos do Catálogo", pageName: "CatalogOrdersAdmin" },
         { title: "🎨 Material Promocional", pageName: "PromoCreator" },
         { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
         { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },

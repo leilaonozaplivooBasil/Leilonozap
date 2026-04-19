@@ -15,6 +15,7 @@ import GestaoLotes from '@/pages/GestaoLotes';
 import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
 import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
+import CatalogOrdersAdmin from '@/pages/CatalogOrdersAdmin';
 import AnaliseLoteEstoque from '@/pages/AnaliseLoteEstoque';
 import EstoqueLotes from '@/pages/EstoqueLotes';
 import ImageOptimizer from '@/pages/ImageOptimizer';
@@ -171,6 +172,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="EstoqueLotes">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <EstoqueLotes />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      <Route path="/CatalogOrdersAdmin" element={
+        <LayoutWrapper currentPageName="CatalogOrdersAdmin">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <CatalogOrdersAdmin />
           </RequireRole>
         </LayoutWrapper>
       } />
