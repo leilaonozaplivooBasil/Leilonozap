@@ -128,7 +128,9 @@ export default function useAuctionTimer({ auction, onEndAuction, playSound }) {
   return {
     timeRemaining,
     auctioneerPhase,
+    setAuctioneerPhase,
     auctioneerMessage,
+    setAuctioneerMessage,
     showAuctioneer,
     setShowAuctioneer,
     serverOffsetRef,

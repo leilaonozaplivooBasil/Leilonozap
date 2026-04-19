@@ -164,7 +164,9 @@ export default function AuctionRoom() {
   const {
     timeRemaining,
     auctioneerPhase,
+    setAuctioneerPhase,
     auctioneerMessage,
+    setAuctioneerMessage,
     showAuctioneer,
     setShowAuctioneer,
     serverOffsetRef,
