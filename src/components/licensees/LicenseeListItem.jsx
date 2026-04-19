@@ -14,7 +14,8 @@ function storeName(u) {
 export default function LicenseeListItem({ licensee, selected, onSelect, onEdit }) {
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
   const referral = licensee.referral_code || "";
-  const link = `https://leilaonozap.net/catalog?ref=${referral}`;
+  const link = `https://leilaonozap.net/Catalog?ref=${referral}`;
+  const displayLink = `leilaonozap.net/loja-virtual/${referral}`;
   const name = storeName(licensee);
 
   const copy = (e) => {
@@ -44,7 +45,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
         <div className="flex-1 min-w-0">
           <p className="font-medium text-white truncate">{name}</p>
           <div className="text-xs text-gray-400 truncate flex items-center gap-1">
-            <Link2 className="w-3.5 h-3.5" /> {link}
+            <Link2 className="w-3.5 h-3.5" /> {displayLink}
           </div>
         </div>
         <div className="flex items-center gap-1">

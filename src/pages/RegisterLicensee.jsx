@@ -19,7 +19,7 @@ function copyToClipboard(text){
 }
 function shareLink(url, name){
   if (navigator.share) {
-    navigator.share({ title: name ? `Catálogo de ${name}` : "Catálogo", url });
+    navigator.share({ title: name ? `Loja Virtual de ${name}` : "Loja Virtual", url });
   } else {
     navigator.clipboard.writeText(url);
     alert("Link copiado!");
@@ -63,7 +63,8 @@ export default function RegisterLicensee() {
   }, [filtered, selected]);
 
   const referral = selected?.referral_code || "";
-  const catalogLink = referral ? `https://leilaonozap.net/catalog?ref=${referral}` : "";
+  const catalogLink = referral ? `https://leilaonozap.net/Catalog?ref=${referral}` : "";
+  const displayLink = referral ? `leilaonozap.net/loja-virtual/${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
   const { data: visits = [] } = useQuery({
   queryKey: ["catalogVisits", selected?.id],
@@ -151,7 +152,7 @@ const visitsData = useMemo(() => {
                 )}
                 {selected && (
                   <a href={catalogLink} target="_blank" rel="noreferrer" className="text-gray-300 hover:underline break-all">
-                    {catalogLink}
+                    {displayLink}
                   </a>
                 )}
                 {selected && (
