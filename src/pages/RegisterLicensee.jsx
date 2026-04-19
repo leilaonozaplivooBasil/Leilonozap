@@ -36,8 +36,10 @@ export default function RegisterLicensee() {
   const { data: licensees = [], isLoading } = useQuery({
     queryKey: ["licensees"],
     queryFn: async () => {
-      const res = await base44.entities.AppUser.filter({ role: "licensee" }, "-updated_date", 1000);
-      return res || [];
+      // Busca todos os AppUsers e filtra os que têm licenciado_catalogo nos career_levels
+      // Não pode filtrar apenas por role=licensee pois admins também podem ser licenciados
+      const res = await base44.entities.AppUser.list("-updated_date", 1000);
+      return (res || []).filter(u => (u.career_levels || []).includes("licenciado_catalogo"));
     },
   });
 
