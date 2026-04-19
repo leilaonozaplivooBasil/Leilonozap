@@ -1446,7 +1446,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900">
-                          Disponibilizar no Catálogo
+                          Disponibilizar na Loja Virtual
                         </h3>
                         <p className="text-sm text-gray-500 mt-0.5">
                           Tornar este produto visível para licenciados
@@ -1465,7 +1465,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                           Colocar em Destaque
                         </h3>
                         <p className="text-sm text-gray-500 mt-0.5">
-                          Destacar este produto no catálogo
+                          Destacar este produto na loja virtual
                         </p>
                       </div>
                       <Switch
@@ -1491,7 +1491,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Gerencie suas categorias</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  As categorias que os produtos serão exibidas na tela inicial do seu catálogo
+                  As categorias que os produtos serão exibidas na tela inicial da sua loja virtual
                 </p>
               </div>
               <button
@@ -1576,7 +1576,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Gerencie suas subcategorias</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  As subcategorias serão vistas por seus clientes na tela inicial do seu catálogo abaixo das categorias pais. Os clientes poderão filtrar os produtos por meio dessas subcategorias.
+                  As subcategorias serão vistas por seus clientes na tela inicial da sua loja virtual abaixo das categorias pais. Os clientes poderão filtrar os produtos por meio dessas subcategorias.
                 </p>
               </div>
               <button

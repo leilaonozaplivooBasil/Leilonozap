@@ -209,7 +209,7 @@ export default function CatalogCheckout2() {
                 buyer_phone: phone.trim(),
                 amount: product.price_catalog,
                 billing_type: paymentType,
-                description: `Catálogo - ${product.description}`
+                description: `Loja Virtual - ${product.description}`
             };
 
             // Se for cartão, adicionar dados do cartão + endereço

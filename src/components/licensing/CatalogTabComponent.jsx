@@ -46,9 +46,9 @@ export default function CatalogTabComponent({ isSaiDeBaixo }) {
   return (
     <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
       <CardHeader>
-        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo de Produtos</CardTitle>
+        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Loja Virtual de Produtos</CardTitle>
         <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-          Produtos disponíveis para venda - Compartilhe seu link do catálogo
+          Produtos disponíveis para venda - Compartilhe seu link da loja virtual
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

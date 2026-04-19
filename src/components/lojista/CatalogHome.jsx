@@ -73,7 +73,7 @@ export default function CatalogHome({ currentStore, catalogSales = [] }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <Eye className="w-5 h-5" />
-            Visitas ao seu catálogo
+            Visitas à sua loja virtual
           </CardTitle>
         </CardHeader>
         <CardContent>

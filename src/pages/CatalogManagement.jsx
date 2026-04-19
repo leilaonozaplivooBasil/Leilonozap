@@ -220,7 +220,7 @@ export default function CatalogManagement() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento do Catálogo</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento da Loja Virtual</h1>
         
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
@@ -236,7 +236,7 @@ export default function CatalogManagement() {
             variant={activeTab === 'catalog-products' ? 'default' : 'outline'}
             className={activeTab === 'catalog-products' ? 'bg-blue-600 hover:bg-blue-700' : ''}
           >
-            📦 Produtos do Catálogo
+            📦 Produtos da Loja Virtual
           </Button>
           <Button
             onClick={() => setActiveTab('produtos')}
@@ -258,7 +258,7 @@ export default function CatalogManagement() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-white">Produtos do Catálogo</h2>
+                <h2 className="text-2xl font-bold text-white">Produtos da Loja Virtual</h2>
                 <p className="text-gray-400 mt-1">
                   {products.filter(p => p.catalog_active).length} ativos · {products.filter(p => !p.catalog_active).length} inativos
                 </p>
@@ -279,7 +279,7 @@ export default function CatalogManagement() {
             ) : products.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg mb-4">Nenhum produto no catálogo ainda</p>
+                <p className="text-gray-400 text-lg mb-4">Nenhum produto na loja virtual ainda</p>
                 <Button
                   onClick={() => navigate(createPageUrl('AddCatalogProduct'))}
                   className="bg-green-600 hover:bg-green-700 text-white"
@@ -294,7 +294,7 @@ export default function CatalogManagement() {
                 {products.filter(p => p.catalog_active).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
-                      ✅ Ativos no Catálogo ({products.filter(p => p.catalog_active).length})
+                      ✅ Ativos na Loja Virtual ({products.filter(p => p.catalog_active).length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {products.filter(p => p.catalog_active).map((product) => (
@@ -396,7 +396,7 @@ export default function CatalogManagement() {
         {activeTab === 'banners' && (
           <>
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-white">Banners do Catálogo</h2>
+              <h2 className="text-2xl font-bold text-white">Banners da Loja Virtual</h2>
               <div className="flex gap-2">
                 <Button
                   onClick={() => setEditingBanner({ image_url: '', title: '', link_url: '', is_active: true, device_type: 'desktop' })}
@@ -557,7 +557,7 @@ export default function CatalogManagement() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-white mb-2">Produtos em Destaque</h2>
-                <p className="text-gray-400">Gerencie quais produtos aparecem na seção de destaque do catálogo (máximo 4)</p>
+                <p className="text-gray-400">Gerencie quais produtos aparecem na seção de destaque da loja virtual (máximo 4)</p>
               </div>
               <Button
                 onClick={() => setEditingSettings(true)}
@@ -819,7 +819,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
         <Card className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <CardHeader>
             <CardTitle className="text-white">
-              {banner.id ? 'Editar Banner do Catálogo' : 'Novo Banner do Catálogo'}
+              {banner.id ? 'Editar Banner da Loja Virtual' : 'Novo Banner da Loja Virtual'}
             </CardTitle>
           </CardHeader>
           <CardContent>

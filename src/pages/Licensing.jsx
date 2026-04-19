@@ -133,7 +133,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     'usuario': 'Usuário',
     'licenciado_aplicativo': 'Influencer',
     'influencer': 'Influencer',
-    'licenciado_catalogo': 'Licenciado Catálogo',
+    'licenciado_catalogo': 'Licenciado Loja Virtual',
     'trainee': 'Trainee',
     'executivo': 'Executivo',
     'kit_start': 'Kit Start',
@@ -1078,7 +1078,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <StatCard
           icon={BarChart}
-          label="Total Comissões (App + Catálogo)"
+          label="Total Comissões (App + Loja Virtual)"
           value={`R$ ${((user.commission_balance || 0) + (user.catalog_commission_balance || 0)).toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
@@ -1088,7 +1088,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
           <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Catálogo</TabsTrigger>}
+          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Loja Virtual</TabsTrigger>}
 
           <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
           {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
@@ -1107,7 +1107,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             <CardHeader>
               <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
               <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Acompanhe suas vendas de leilão e catálogo
+                Acompanhe suas vendas de leilão e loja virtual
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1119,7 +1119,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <Tabs defaultValue="leilao" className="w-full">
                   <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
                     <TabsTrigger value="leilao">Leilão</TabsTrigger>
-                    <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
+                    <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="leilao" className="mt-4">
@@ -1160,7 +1160,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <TabsContent value="catalogo" className="mt-4">
                     {mySales.length === 0 ?
                       <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Nenhuma venda do catálogo
+                        Nenhuma venda da loja virtual
                       </p> :
 
                       <div className="overflow-x-auto">
@@ -1223,7 +1223,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           <TabsContent value="pedidos" className="space-y-6">
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Pedidos do Catálogo</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Pedidos da Loja Virtual</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                   Acompanhe seus pedidos de venda direta
                 </CardDescription>
@@ -1232,7 +1232,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                   <Package className="w-12 h-12 mx-auto opacity-50 mb-4" />
                   <p>Nenhum pedido ainda</p>
-                  <p className="text-sm mt-2">Comece a vender pelo seu link do catálogo!</p>
+                  <p className="text-sm mt-2">Comece a vender pelo seu link da loja virtual!</p>
                 </div>
               </CardContent>
             </Card>
@@ -1315,7 +1315,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           {userLevels.includes('licenciado_catalogo') &&
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Catálogo) - 26% distribuídos</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Loja Virtual) - 26% distribuídos</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                   Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
                 </CardDescription>
@@ -1332,7 +1332,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Catálogo (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
@@ -1384,7 +1384,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </div>
                 <div>
                   <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Você Ganha Comissões em R$</h4>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>App: 3% por arremate | Catálogo: até 26% distribuídos na rede!</p>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>App: 3% por arremate | Loja Virtual: até 26% distribuídos na rede!</p>
                 </div>
               </div>
             </CardContent>
@@ -1984,7 +1984,7 @@ export default function LicensingPage() {
     const labels = {
       'usuario': 'um Usuário',
       'influencer': 'um Influencer',
-      'licenciado_catalogo': 'um Licenciado Catálogo',
+      'licenciado_catalogo': 'um Licenciado Loja Virtual',
       'trainee': 'um Trainee',
       'executivo': 'um Executivo',
       'kit_start': 'Kit Start',
@@ -2003,8 +2003,8 @@ export default function LicensingPage() {
   // Mensagens motivacionais por cargo
   const getMotivationalMessage = (level) => {
     const messages = {
-      'influencer': 'Continue evoluindo! O próximo passo é se tornar Licenciado Catálogo e desbloquear ainda mais benefícios.',
-      'licenciado_catalogo': 'Você já tem acesso ao catálogo! Cresça sua rede para alcançar os níveis Trainee e Executivo.',
+      'influencer': 'Continue evoluindo! O próximo passo é se tornar Licenciado Loja Virtual e desbloquear ainda mais benefícios.',
+      'licenciado_catalogo': 'Você já tem acesso à loja virtual! Cresça sua rede para alcançar os níveis Trainee e Executivo.',
       'trainee': 'Não sei se te dou parabéns ou pêsames, seja bem vindo a... SIFUDENCIA! Serão 6 meses de extremo desafio, porém se você se formar o céu é o limite. BOA SORTE!',
       'executivo': 'Ótimo trabalho! Os próximos níveis são Kit Start, Plano Líder e Plano Lojista.',
       'kit_start': 'Continue crescendo! Avance para Plano Líder e aumente suas comissões.',
