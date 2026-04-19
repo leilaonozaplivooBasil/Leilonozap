@@ -20,22 +20,24 @@ function suggestIncrement(lanceInicio) {
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
 
-  // Auto-aplica incremento sugerido quando o valor de mercado muda
+  // sp = preço digitado pelo admin = preço da Loja Virtual (já com −20% do mercado real)
+  // Mercado real = sp ÷ 0.80 (+20% sobre sp)
+  // Loja Virtual = sp (o próprio valor digitado)
+  // Lance inicial = sp × 0.80 (−20% da loja)
+  // Arremate Agora = Loja Virtual (= sp)
+  const mercadoReal = sp > 0 ? parseFloat((sp / 0.80).toFixed(2)) : 0;
+  const lojaPrice = sp; // o próprio valor digitado
+  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
+  const incrementSuggestion = suggestIncrement(leilaoInicio);
+
+  // Auto-aplica incremento sugerido quando o valor digitado muda
   useEffect(() => {
     if (sp <= 0) return;
-    const lanceInicio = sp * 0.60;
-    const suggestion = suggestIncrement(lanceInicio);
+    const suggestion = suggestIncrement(sp * 0.80);
     if (suggestion) {
       onInputChange("increment", suggestion.value);
     }
   }, [sp]);
-  // sp = valor de mercado (base inserida pelo admin)
-  // Loja Virtual = mercado × 0.80 (20% abaixo do mercado)
-  // Lance inicial = mercado × 0.60 (40% abaixo do mercado)
-  // Arremate Agora = preço da Loja Virtual (teto direto)
-  const lojaPrice = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
-  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.60).toFixed(2)) : 0;
-  const incrementSuggestion = suggestIncrement(leilaoInicio);
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -67,15 +69,15 @@ export default function PriceSection({ formData, onInputChange }) {
               <p className="text-xs text-emerald-400 font-semibold mb-1.5">✅ Fórmula automática:</p>
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado</span>
-                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {sp.toFixed(2)}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado real <span className="text-gray-500">(+20%)</span></span>
+                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {mercadoReal.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual <span className="text-gray-500">(−20%)</span></span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual</span>
                   <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−40%)</span></span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−20%)</span></span>
                   <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
                 </div>
               </div>
