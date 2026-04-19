@@ -17,12 +17,12 @@ export default function ConfirmProductDuplicationModal({
   const [includeAuction, setIncludeAuction] = useState(true);
   const [includeCatalog, setIncludeCatalog] = useState(true);
 
-  // starting_price = preço da Loja Virtual (já com −20% do mercado real)
-  // Loja Virtual = starting_price (o próprio valor)
-  // Lance inicial = starting_price × 0.80
+  // starting_price = lance inicial digitado pelo admin (ex: R$ 19,14)
+  // Loja Virtual = starting_price ÷ 0.80 (ex: R$ 23,92)
+  // Mercado real = starting_price ÷ 0.64 (ex: R$ 29,90)
   const calcAutoPrice = () => {
-    const loja = parseFloat(formData.starting_price) || 0;
-    return loja > 0 ? loja.toFixed(2) : '';
+    const lance = parseFloat(formData.starting_price) || 0;
+    return lance > 0 ? (lance / 0.80).toFixed(2) : '';
   };
 
   const [catalogPrice, setCatalogPrice] = useState(() => calcAutoPrice());
@@ -162,20 +162,20 @@ export default function ConfirmProductDuplicationModal({
                   <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600 space-y-1.5">
                     <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Preços que serão aplicados:</p>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">📊 Mercado real (+20%):</span>
-                      <span className="text-white font-bold">R$ {(parseFloat(formData.starting_price || 0) / 0.80).toFixed(2)}</span>
+                      <span className="text-gray-400">🔨 Lance inicial:</span>
+                      <span className="text-yellow-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🛒 Loja Virtual:</span>
-                      <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-gray-400">🛒 Loja Virtual (÷0.80):</span>
+                      <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🔨 Lance inicial (−20% loja):</span>
-                      <span className="text-yellow-400 font-bold">R$ {(parseFloat(formData.starting_price || 0) * 0.80).toFixed(2)}</span>
+                      <span className="text-gray-400">📊 Mercado real (÷0.64):</span>
+                      <span className="text-white font-bold">R$ {(parseFloat(formData.starting_price || 0) / 0.64).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">⚡ Arremate Agora (= loja):</span>
-                      <span className="text-green-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-green-400 font-bold">R$ {parseFloat(catalogPrice || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 )}

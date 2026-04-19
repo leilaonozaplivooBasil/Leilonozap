@@ -20,20 +20,19 @@ function suggestIncrement(lanceInicio) {
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
 
-  // sp = preço digitado pelo admin = preço da Loja Virtual (já com −20% do mercado real)
-  // Mercado real = sp ÷ 0.80 (+20% sobre sp)
-  // Loja Virtual = sp (o próprio valor digitado)
-  // Lance inicial = sp × 0.80 (−20% da loja)
-  // Arremate Agora = Loja Virtual (= sp)
-  const mercadoReal = sp > 0 ? parseFloat((sp / 0.80).toFixed(2)) : 0;
-  const lojaPrice = sp; // o próprio valor digitado
-  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
-  const incrementSuggestion = suggestIncrement(leilaoInicio);
+  // sp = lance inicial digitado pelo admin (ex: R$ 19,14)
+  // Loja Virtual = sp ÷ 0.80 (ex: R$ 23,92)
+  // Mercado real = sp ÷ 0.64 (ex: R$ 29,90)
+  // Arremate Agora = Loja Virtual
+  const leilaoInicio = sp; // o próprio valor digitado
+  const lojaPrice = sp > 0 ? parseFloat((sp / 0.80).toFixed(2)) : 0;
+  const mercadoReal = sp > 0 ? parseFloat((sp / 0.64).toFixed(2)) : 0;
+  const incrementSuggestion = suggestIncrement(sp);
 
-  // Auto-aplica incremento sugerido quando o valor digitado muda
+  // Auto-aplica incremento sugerido quando o lance inicial muda
   useEffect(() => {
     if (sp <= 0) return;
-    const suggestion = suggestIncrement(sp * 0.80);
+    const suggestion = suggestIncrement(sp);
     if (suggestion) {
       onInputChange("increment", suggestion.value);
     }
@@ -51,7 +50,7 @@ export default function PriceSection({ formData, onInputChange }) {
         {/* PREÇO INICIAL */}
         <div>
           <Label htmlFor="starting_price" className="text-sm font-medium text-gray-400">
-            Preço Inicial / Base (R$) *
+            Lance Inicial (R$) *
           </Label>
           <Input
             id="starting_price"
@@ -69,16 +68,16 @@ export default function PriceSection({ formData, onInputChange }) {
               <p className="text-xs text-emerald-400 font-semibold mb-1.5">✅ Fórmula automática:</p>
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado real <span className="text-gray-500">(+20%)</span></span>
-                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {mercadoReal.toFixed(2)}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial</span>
+                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual <span className="text-gray-500">(÷0.80)</span></span>
                   <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−20%)</span></span>
-                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado real <span className="text-gray-500">(÷0.64)</span></span>
+                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {mercadoReal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -101,7 +100,7 @@ export default function PriceSection({ formData, onInputChange }) {
           />
           {incrementSuggestion && (
             <p className="text-xs text-gray-500 mt-1">
-              💡 Auto: {incrementSuggestion.label} para lance de R$ {leilaoInicio.toFixed(2)} — editável
+              💡 Auto: {incrementSuggestion.label} para lance de R$ {sp.toFixed(2)} — editável
             </p>
           )}
         </div>
@@ -124,13 +123,13 @@ export default function PriceSection({ formData, onInputChange }) {
           {sp > 0 && (
             <div className="mt-1.5 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
               <p className="text-xs text-blue-300">
-                💡 Sugerido: <strong>R$ {lojaPrice.toFixed(2)}</strong> (= preço da Loja Virtual)
+                💡 Sugerido: <strong>R$ {lojaPrice.toFixed(2)}</strong> (= Loja Virtual)
               </p>
               <p className="text-xs text-gray-500 mt-0.5">Arrematar agora = comprar direto na loja.</p>
               {!formData.buy_now_price && (
                 <button
                   type="button"
-                  onClick={() => onInputChange("buy_now_price", lojaPrice.toString())}
+                  onClick={() => onInputChange("buy_now_price", lojaPrice.toFixed(2))}
                   className="mt-1 text-xs text-blue-400 underline hover:text-blue-300"
                 >
                   Usar este valor
