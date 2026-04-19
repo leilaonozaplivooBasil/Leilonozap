@@ -1101,7 +1101,7 @@ export default function ProductManagement() {
                       />
                     </div>
 
-                    <div className="col-span-full flex gap-2">
+                    <div className="col-span-full flex flex-wrap gap-2">
                       <Button type="submit" className="bg-green-600 hover:bg-green-700">
                         <Save className="w-4 h-4 mr-2" />
                         {editingProduct ? 'Atualizar' : 'Salvar'}
