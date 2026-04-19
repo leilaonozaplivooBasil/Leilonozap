@@ -284,7 +284,6 @@ export default function Cart() {
     if (!formData.cpf.trim()) { toast.error('Preencha seu CPF'); return; }
     if (!isValidCpf(formData.cpf)) { toast.error('CPF inválido. Verifique os números digitados.'); return; }
     if (!formData.email.trim()) { toast.error('Preencha seu email'); return; }
-    if (!currentUser || !currentUser.id) { toast.error('Você precisa estar logado para finalizar a compra'); return; }
 
     if (deliveryMethod === 'delivery') {
       if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
@@ -307,13 +306,37 @@ export default function Cart() {
     setIsProcessing(true);
     toast.loading('Processando compra...', { id: 'checkout-loading' });
 
+    // 🛡️ Re-ler currentUser FRESCO do localStorage no momento do clique
+    // Evita stale state quando outra aba sobrescreve o localStorage
+    let freshUser = currentUser;
+    try {
+      const freshJSON = localStorage.getItem('currentUser');
+      if (freshJSON) {
+        const parsed = JSON.parse(freshJSON);
+        if (parsed?.id && parsed?.email) {
+          freshUser = parsed;
+          if (!currentUser || currentUser.id !== parsed.id) {
+            setCurrentUser(parsed);
+          }
+        }
+      }
+    } catch (e) { /* usa currentUser existente */ }
+
+    // Se mesmo depois de re-ler não tem usuário, pedir login
+    if (!freshUser?.id) {
+      toast.dismiss('checkout-loading');
+      toast.error('Sessão expirada. Faça login novamente.');
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       // ═══════════════════════════════════════════════════════════
       // PASSO 1: GERAR PIX/PAGAMENTO PRIMEIRO (igual AuctionCheckoutModern)
       // Chamada direta e imediata — sem operações pesadas antes
       // ═══════════════════════════════════════════════════════════
       const paymentPayload = {
-        buyer_id: currentUser.id,
+        buyer_id: freshUser.id,
         buyer_name: formData.name.trim(),
         buyer_email: formData.email.trim(),
         buyer_cpf: formData.cpf.replace(/\D/g, ''),
@@ -386,7 +409,7 @@ export default function Cart() {
           sale_price: price,
           quantity: item.quantity || 1,
           total_amount: price * (item.quantity || 1),
-          buyer_id: currentUser.id,
+          buyer_id: freshUser.id,
           buyer_name: formData.name,
           buyer_email: formData.email,
           buyer_phone: formData.phone,
