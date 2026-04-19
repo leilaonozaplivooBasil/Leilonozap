@@ -307,19 +307,26 @@ Deno.serve(async (req) => {
     }
 
     // Atualiza saldos agregados dos usuários (catálogo + saldo geral)
+    // OTIMIZAÇÃO: busca todos os usuários em paralelo antes de iterar
+    const userIds = [...perUserTotals.keys()];
+    const userFetchResults = await Promise.all(
+      userIds.map(id => findUserById(base44, id))
+    );
+    const usersMap = new Map();
+    userIds.forEach((id, idx) => { if (userFetchResults[idx]) usersMap.set(id, userFetchResults[idx]); });
+
     for (const [userId, amount] of perUserTotals.entries()) {
-      const u = await findUserById(base44, userId);
-      const currentCatalogBal = Number(u?.catalog_commission_balance || 0);
-      const currentCatalogTotal = Number(u?.catalog_total_commissions_generated || 0);
-      const currentValoraBal = Number(u?.valora_pay_balance || 0);
-      const currentCommBal = Number(u?.commission_balance || 0);
-      const currentTotalGen = Number(u?.total_commissions_generated || 0);
+      const u = usersMap.get(userId);
+      if (!u) { console.warn(`⚠️ Usuário ${userId} não encontrado, pulando atualização de saldo`); continue; }
+      const currentCatalogBal = Number(u.catalog_commission_balance || 0);
+      const currentCatalogTotal = Number(u.catalog_total_commissions_generated || 0);
+      const currentValoraBal = Number(u.valora_pay_balance || 0);
+      const currentCommBal = Number(u.commission_balance || 0);
+      const currentTotalGen = Number(u.total_commissions_generated || 0);
       
       await base44.asServiceRole.entities.AppUser.update(userId, {
-        // Saldos específicos do Catálogo
         catalog_commission_balance: +(currentCatalogBal + amount).toFixed(2),
         catalog_total_commissions_generated: +(currentCatalogTotal + amount).toFixed(2),
-        // Saldo GERAL (disponível para saque e uso)
         valora_pay_balance: +(currentValoraBal + amount).toFixed(2),
         commission_balance: +(currentCommBal + amount).toFixed(2),
         total_commissions_generated: +(currentTotalGen + amount).toFixed(2)
