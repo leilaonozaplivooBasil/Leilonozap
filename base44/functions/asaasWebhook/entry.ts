@@ -262,6 +262,46 @@ Deno.serve(async (req) => {
                 }
             }
 
+            // 🛡️ FALLBACK 3: Buscar CatalogSale por buyer_id + valor + status pending_payment (race condition)
+            // Cobre cenário onde CatalogSale foi criada APÓS o AsaasPayment e nenhum dos dois tem referência cruzada
+            if (saleIdsToProcess.length === 0 && asaasPayment.wallet_deposit_user_id && asaasPayment.value) {
+                try {
+                    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+                    const candidateSales = await base44.asServiceRole.entities.CatalogSale.filter(
+                        {
+                            buyer_id: asaasPayment.wallet_deposit_user_id,
+                            total_amount: asaasPayment.value,
+                            status: 'pending_payment'
+                        },
+                        '-created_date',
+                        5
+                    );
+
+                    // Filtrar apenas as criadas nos últimos 10 minutos
+                    const recentCandidates = (candidateSales || []).filter(s => 
+                        s.created_date && new Date(s.created_date).toISOString() >= tenMinutesAgo
+                    );
+
+                    if (recentCandidates.length === 1) {
+                        // Match exato e seguro — vincular
+                        const matchedSale = recentCandidates[0];
+                        saleIdsToProcess = [matchedSale.id];
+
+                        await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
+                            catalog_sale_id: matchedSale.id,
+                            external_reference: matchedSale.id
+                        });
+                        console.log(`🔍 FALLBACK 3: CatalogSale ${matchedSale.id} vinculada via buyer_id+valor+timing`);
+                    } else if (recentCandidates.length > 1) {
+                        console.warn(`⚠️ FALLBACK 3: ${recentCandidates.length} candidatas encontradas — ignorando por segurança`);
+                    } else {
+                        console.log('⚠️ FALLBACK 3: Nenhuma CatalogSale candidata encontrada');
+                    }
+                } catch (fallback3Err) {
+                    console.warn('⚠️ Erro no fallback 3:', fallback3Err.message);
+                }
+            }
+
             if (saleIdsToProcess.length > 0) {
                 console.log(`🔄 Processando ${saleIdsToProcess.length} item(s) do lote de catálogo...`);
 
