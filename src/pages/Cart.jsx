@@ -153,7 +153,7 @@ export default function Cart() {
   // 🔄 Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
     // ⚠️ NÃO disparar se já confirmou, se não há PIX ou se não tem payment_id
-    if (!pixData || pixData.billing_type !== 'PIX' || !pixData.payment_id || pixConfirmed) {
+    if (!pixData || pixData.billing_type !== 'PIX' || !pixData.payment_id || pixConfirmed || paymentDetected) {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
@@ -161,19 +161,20 @@ export default function Cart() {
       return;
     }
 
-    const paymentId = pixData?.payment_id;
-    if (!paymentId) return; // sem payment_id não tem como fazer polling
+    const paymentId = pixData.payment_id;
 
-    // ✅ Igual ao AuctionCheckoutModern: usa checkPaymentStatus com payment_id
-    const checkPaymentStatus = async () => {
+    // Função de checagem reutilizável
+    const checkPayment = async () => {
       try {
         const result = await base44.functions.invoke('checkPaymentStatus', {
           payment_id: paymentId
         });
         const data = result?.data || result;
         if (data?.found && data?.status === 'confirmed') {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
           setPaymentDetected(true);
           setCountdown(5);
         }
@@ -182,18 +183,29 @@ export default function Cart() {
       }
     };
 
-    const interval = setInterval(checkPaymentStatus, 5000); // a cada 5s, igual ao AuctionCheckoutModern
-
+    // Polling normal a cada 5s
+    const interval = setInterval(checkPayment, 5000);
     pollingIntervalRef.current = interval;
 
-    // Cleanup: parar intervalo se efeito for destruído
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-        pollingIntervalRef.current = null;
+    // 📱 MOBILE FIX: Quando o usuário volta do app do banco, o setInterval pode estar pausado.
+    // visibilitychange dispara quando a aba volta ao foco — checa imediatamente.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkPayment();
       }
     };
-  }, [pixData]); // ✅ Depende apenas de pixData (payment_id dentro dele)
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Também checa no focus (fallback para alguns navegadores mobile)
+    window.addEventListener('focus', checkPayment);
+
+    return () => {
+      clearInterval(interval);
+      pollingIntervalRef.current = null;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', checkPayment);
+    };
+  }, [pixData, pixConfirmed, paymentDetected]);
 
   const updateCart = (newCart) => {
     setCartItems(newCart);
