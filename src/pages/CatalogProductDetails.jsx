@@ -57,6 +57,46 @@ export default function CatalogProductDetails() {
     loadProduct();
   }, [productId, navigate]);
 
+  // Meta tags OG para Loja Virtual (sobrescreve as padrão de leilão)
+  useEffect(() => {
+    const setMeta = (attr, attrValue, content) => {
+      const el = document.querySelector(`meta[${attr}="${attrValue}"]`);
+      if (el) el.setAttribute('content', content);
+    };
+
+    const ogTitle = product
+      ? `${product.description} | Loja Virtual NoZap`
+      : 'Loja Virtual NoZap - Produtos com até 60% de desconto';
+    const ogDesc = product
+      ? `${product.description} por R$ ${product.price_catalog?.toFixed(2)}. Produtos direto de fábrica e devolvidos em até 7 dias. Compre agora!`
+      : 'Produtos direto de fábrica e devolvidos em até 7 dias. Eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
+    const ogImage = product?.image_urls?.[0] || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+
+    document.title = ogTitle;
+    setMeta('property', 'og:title', ogTitle);
+    setMeta('property', 'og:description', ogDesc);
+    setMeta('property', 'og:image', ogImage);
+    setMeta('name', 'description', ogDesc);
+    setMeta('name', 'twitter:title', ogTitle);
+    setMeta('name', 'twitter:description', ogDesc);
+    setMeta('name', 'twitter:image', ogImage);
+
+    return () => {
+      // Restaura padrão ao sair da página
+      const defaultTitle = 'NoZap - Loja Virtual e Leilões Online | Até 60% de Desconto';
+      const defaultDesc = 'Produtos direto de fábrica e devolvidos em até 7 dias com até 60% de desconto! Loja Virtual e Leilões Online de eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
+      const defaultImg = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      document.title = defaultTitle;
+      setMeta('property', 'og:title', defaultTitle);
+      setMeta('property', 'og:description', defaultDesc);
+      setMeta('property', 'og:image', defaultImg);
+      setMeta('name', 'description', defaultDesc);
+      setMeta('name', 'twitter:title', defaultTitle);
+      setMeta('name', 'twitter:description', defaultDesc);
+      setMeta('name', 'twitter:image', defaultImg);
+    };
+  }, [product]);
+
   // Busca telefone do licenciado âncora a partir do referral (?ref=)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
