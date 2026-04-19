@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,16 @@ function suggestIncrement(lanceInicio) {
 
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
+
+  // Auto-aplica incremento sugerido quando o valor de mercado muda
+  useEffect(() => {
+    if (sp <= 0) return;
+    const lanceInicio = sp * 0.60;
+    const suggestion = suggestIncrement(lanceInicio);
+    if (suggestion) {
+      onInputChange("increment", suggestion.value);
+    }
+  }, [sp]);
   // sp = valor de mercado (base inserida pelo admin)
   // Loja Virtual = mercado × 0.80 (20% abaixo do mercado)
   // Lance inicial = mercado × 0.60 (40% abaixo do mercado)
@@ -87,19 +97,10 @@ export default function PriceSection({ formData, onInputChange }) {
             required
             className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
           />
-          {incrementSuggestion && formData.increment !== incrementSuggestion.value && (
-            <div className="mt-1.5 p-2 bg-purple-900/20 border border-purple-600/30 rounded-lg">
-              <p className="text-xs text-purple-300">
-                💡 Sugerido: <strong>{incrementSuggestion.label}</strong> para lance de R$ {leilaoInicio.toFixed(2)}
-              </p>
-              <button
-                type="button"
-                onClick={() => onInputChange("increment", incrementSuggestion.value)}
-                className="mt-1 text-xs text-purple-400 underline hover:text-purple-300"
-              >
-                Usar este valor
-              </button>
-            </div>
+          {incrementSuggestion && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Auto: {incrementSuggestion.label} para lance de R$ {leilaoInicio.toFixed(2)} — editável
+            </p>
           )}
         </div>
 
