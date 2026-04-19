@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { adminDataProxy } from "@/functions/adminDataProxy";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -57,13 +58,18 @@ export default function AuctionControl() {
     loadData();
   }, []);
 
+  const getCallerEmail = () => {
+    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [auctionsData, paymentsData] = await Promise.all([
+      const [auctionsData, paymentsResponse] = await Promise.all([
         Auction.list("-created_date", 200),
-        Payment.list("-created_date", 500)
+        adminDataProxy({ entity_name: 'Payment', method: 'list', params: { sort_by: '-created_date', limit: 500 }, caller_email: getCallerEmail() })
       ]);
+      const paymentsData = paymentsResponse?.data?.data || paymentsResponse?.data || [];
       setAuctions(auctionsData);
       setPayments(paymentsData);
     } catch (error) {

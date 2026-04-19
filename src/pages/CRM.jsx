@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -150,9 +151,14 @@ export default function CRM() {
     }
   };
 
+  const getCallerEmail = () => {
+    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
+  };
+
   const loadNegotiations = async () => {
     try {
-      const data = await base44.entities.Negotiation.list('-created_date', 200);
+      const response = await adminDataProxy({ entity_name: 'Negotiation', method: 'list', params: { sort_by: '-created_date', limit: 200 }, caller_email: getCallerEmail() });
+      const data = response?.data?.data || response?.data || [];
       setNegotiations(data);
     } catch (error) {
       console.error('Erro ao carregar negociações:', error);
