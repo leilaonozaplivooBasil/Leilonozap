@@ -896,14 +896,13 @@ export default function CreateAuction() {
         const endTime = addSeconds(now, parseInt(formData.duration, 10));
         const endTimeISO = endTime.toISOString();
 
-        // Regra de negócio:
-        // starting_price = valor de mercado (base)
-        // Loja Virtual = mercado × 0.80 (−20% do mercado) → esse é o catalogPrice
-        // Lance inicial = mercado × 0.60 (−40% do mercado) = loja × 0.75
-        // Arremate Agora = preço da Loja Virtual (teto direto)
-        const marketPrice = parseFloat(formData.starting_price) || 0;
-        const finalCatalogPriceForAuction = catalogPrice || (marketPrice * 0.80);
-        const auctionStartingPrice = parseFloat((marketPrice * 0.60).toFixed(2));
+        // Regra de negócio atualizada:
+        // starting_price = lance inicial (valor digitado pelo admin)
+        // mercado = lance ÷ 0.60 | loja = mercado × 0.80
+        // Arremate Agora = preço da Loja Virtual
+        const auctionStartingPrice = parseFloat(parseFloat(formData.starting_price || 0).toFixed(2));
+        const marketPrice = auctionStartingPrice > 0 ? auctionStartingPrice / 0.60 : 0;
+        const finalCatalogPriceForAuction = catalogPrice || parseFloat((marketPrice * 0.80).toFixed(2));
         const auctionBuyNowPrice = parseFloat(finalCatalogPriceForAuction.toFixed(2));
 
         const auctionData = {
@@ -947,7 +946,9 @@ export default function CreateAuction() {
 
       // 2. Publicar na Loja Virtual
       if (includeCatalog) {
-        const finalCatalogPrice = catalogPrice || parseFloat(formData.starting_price) * 1.5;
+        const lanceInicial = parseFloat(formData.starting_price) || 0;
+        const mercadoFallback = lanceInicial > 0 ? lanceInicial / 0.60 : 0;
+        const finalCatalogPrice = catalogPrice || parseFloat((mercadoFallback * 0.80).toFixed(2));
 
         if (formData.product_id) {
           // Produto já existe no estoque → atualiza com catalog_active

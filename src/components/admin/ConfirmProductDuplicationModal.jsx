@@ -17,11 +17,13 @@ export default function ConfirmProductDuplicationModal({
   const [includeAuction, setIncludeAuction] = useState(true);
   const [includeCatalog, setIncludeCatalog] = useState(true);
 
-  // Preço da Loja Virtual = mercado × 0.80 (−20% do mercado)
-  // O starting_price É o valor de mercado (base)
+  // starting_price agora é o LANCE INICIAL
+  // mercado = lance ÷ 0.60 | loja = mercado × 0.80
   const calcAutoPrice = () => {
-    const mercado = parseFloat(formData.starting_price) || 0;
-    return mercado > 0 ? (mercado * 0.80).toFixed(2) : '';
+    const lance = parseFloat(formData.starting_price) || 0;
+    if (lance <= 0) return '';
+    const mercado = lance / 0.60;
+    return (mercado * 0.80).toFixed(2);
   };
 
   const [catalogPrice, setCatalogPrice] = useState(() => calcAutoPrice());
@@ -66,8 +68,8 @@ export default function ConfirmProductDuplicationModal({
                 <span className="text-white font-medium">{formData.title || '(não preenchido)'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Valor de Mercado:</span>
-                <span className="text-green-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
+                <span className="text-gray-400">Lance Inicial:</span>
+                <span className="text-yellow-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-start">
                 <span className="text-gray-400">Imagens:</span>
@@ -153,29 +155,33 @@ export default function ConfirmProductDuplicationModal({
                     className="bg-gray-900 border-gray-600 text-white"
                     onClick={(e) => e.stopPropagation()}
                   />
-                  <p className="text-xs text-gray-500 mt-1">= mercado × 0.80 (−20% do mercado) — ajuste se necessário</p>
+                  <p className="text-xs text-gray-500 mt-1">= lance ÷ 0.60 × 0.80 — ajuste se necessário</p>
                 </div>
 
                 {/* PREVIEW DOS PREÇOS DO LEILÃO */}
                 {catalogPrice && parseFloat(catalogPrice) > 0 && (
                   <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600 space-y-1.5">
                     <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Preços que serão aplicados:</p>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">📊 Valor de mercado (base):</span>
-                      <span className="text-white font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🛒 Loja Virtual (−20% mercado):</span>
-                      <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🔨 Lance inicial (−40% mercado):</span>
-                      <span className="text-yellow-400 font-bold">R$ {(parseFloat(formData.starting_price || 0) * 0.60).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">⚡ Arremate Agora (= loja):</span>
-                      <span className="text-green-400 font-bold">R$ {parseFloat(catalogPrice).toFixed(2)}</span>
-                    </div>
+                    {(() => {
+                      const lance = parseFloat(formData.starting_price || 0);
+                      const mercado = lance > 0 ? lance / 0.60 : 0;
+                      return (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">🔨 Lance inicial:</span>
+                            <span className="text-yellow-400 font-bold">R$ {lance.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">🛒 Loja Virtual (= Arremate Agora):</span>
+                            <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">📊 Valor de mercado:</span>
+                            <span className="text-white font-bold">R$ {mercado.toFixed(2)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
