@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Copy, Edit, ExternalLink, Share2, Calendar, Clock, User, ShoppingBag, Trash2, Power } from "lucide-react";
+import LicenseeShareModal from "./LicenseeShareModal";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -35,6 +36,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.net/Catalog?ref=${referral}` : "";
@@ -161,7 +163,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
             <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={onEdit}>
               <Edit className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => shareLink(catalogLink, selected.full_name)}>
+            <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => setShowShareModal(true)}>
               <Share2 className="w-4 h-4" />
             </Button>
             <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => copyToClipboard(catalogLink)}>
@@ -280,6 +282,12 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
           </Button>
         )}
       </CardContent>
+
+      <LicenseeShareModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        licensee={selected}
+      />
     </Card>
   );
 }
