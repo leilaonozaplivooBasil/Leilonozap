@@ -478,6 +478,9 @@ export default function ProductManagement() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl">
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("CatalogOrdersAdmin"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <ShoppingCart className="w-4 h-4 mr-2 text-green-400" /> Pedidos do Catálogo
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("RegisterBatches"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <PackagePlus className="w-4 h-4 mr-2 text-blue-400" /> Registrar Lotes
                 </DropdownMenuItem>
