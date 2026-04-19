@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -14,10 +15,15 @@ export default function AdminLancesAutorizados() {
   const [filterModelo, setFilterModelo] = useState('all');
   const [selectedAuthorization, setSelectedAuthorization] = useState(null);
 
+  const getCallerEmail = () => {
+    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
+  };
+
   const { data: authorizations = [], isLoading } = useQuery({
     queryKey: ['lancesAutorizados'],
     queryFn: async () => {
-      return await base44.asServiceRole.entities.LanceAutorizado.list('-created_date', 500);
+      const response = await adminDataProxy({ entity_name: 'LanceAutorizado', method: 'list', params: { sort_by: '-created_date', limit: 500 }, caller_email: getCallerEmail() });
+      return response?.data?.data || response?.data || [];
     },
     refetchInterval: 5000
   });

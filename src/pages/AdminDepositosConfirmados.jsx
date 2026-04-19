@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -20,10 +21,15 @@ export default function AdminDepositosConfirmados() {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const queryClient = useQueryClient();
 
+  const getCallerEmail = () => {
+    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
+  };
+
   const { data: transactions = [], isLoading, error } = useQuery({
     queryKey: ['wallet-deposits'],
     queryFn: async () => {
-      const all = await base44.asServiceRole.entities.WalletTransaction.list();
+      const response = await adminDataProxy({ entity_name: 'WalletTransaction', method: 'list', params: { limit: 1000 }, caller_email: getCallerEmail() });
+      const all = response?.data?.data || response?.data || [];
       return all.filter(t => t.type === 'deposit');
     },
     refetchInterval: 5000
@@ -75,7 +81,7 @@ export default function AdminDepositosConfirmados() {
 
     for (const tx of expiredPix) {
       try {
-        await base44.asServiceRole.entities.WalletTransaction.delete(tx.id);
+        await base44.entities.WalletTransaction.delete(tx.id);
         deleted++;
       } catch (err) {
         console.error('[CleanupPix] Falha ao deletar tx:', tx.id, err);

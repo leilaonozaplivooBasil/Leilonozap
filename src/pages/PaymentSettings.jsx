@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { adminDataProxy } from "@/functions/adminDataProxy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,9 +103,14 @@ export default function PaymentSettings() {
     ]);
   };
 
+  const getCallerEmail = () => {
+    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
+  };
+
   const loadGatewaySettings = async () => {
     try {
-      const settings = await base44.entities.PaymentSettings.list("-created_date", 1);
+      const response = await adminDataProxy({ entity_name: 'PaymentSettings', method: 'list', params: { sort_by: '-created_date', limit: 1 }, caller_email: getCallerEmail() });
+      const settings = response?.data?.data || response?.data || [];
       if (settings.length > 0) {
         const setting = settings[0];
         setGatewaySettings(setting);
@@ -144,10 +150,12 @@ export default function PaymentSettings() {
 
   const loadWalletStats = async () => {
     try {
-      const [transactions, wallets] = await Promise.all([
-        base44.entities.WalletTransaction.list("-created_date", 1000),
-        base44.entities.Wallet.list("-created_date", 1000)
+      const [txResponse, walletResponse] = await Promise.all([
+        adminDataProxy({ entity_name: 'WalletTransaction', method: 'list', params: { sort_by: '-created_date', limit: 1000 }, caller_email: getCallerEmail() }),
+        adminDataProxy({ entity_name: 'Wallet', method: 'list', params: { sort_by: '-created_date', limit: 1000 }, caller_email: getCallerEmail() })
       ]);
+      const transactions = txResponse?.data?.data || txResponse?.data || [];
+      const wallets = walletResponse?.data?.data || walletResponse?.data || [];
       
       const confirmedDeposits = transactions.filter(t => 
         t.type === 'deposit' && t.status === 'confirmed'
