@@ -3,11 +3,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin only' }, { status: 403 });
-    }
 
     const { product_ids, product_names } = await req.json();
 
@@ -15,8 +10,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'product_ids or product_names required' }, { status: 400 });
     }
 
-    // Busca produtos
-    const allProducts = await base44.entities.Product.list();
+    // Busca produtos via service role (funciona dentro e fora do Base44)
+    const allProducts = await base44.asServiceRole.entities.Product.list();
     let productsToPrice = [];
 
     if (product_ids && Array.isArray(product_ids)) {
@@ -42,7 +37,7 @@ Deno.serve(async (req) => {
     for (const product of productsToPrice) {
       try {
         // Chama searchGoogleShopping com o parâmetro correto
-        const priceResult = await base44.functions.invoke('searchGoogleShopping', {
+        const priceResult = await base44.asServiceRole.functions.invoke('searchGoogleShopping', {
           productName: product.description
         });
 
