@@ -376,35 +376,51 @@ export default function Layout({ children, currentPageName }) {
         }
 
         if (!userFound) {
-          setCurrentUser(null);
-          localStorage.removeItem('currentUser');
-          sessionStorage.removeItem('isLoggedIn');
+          // 🛡️ CORREÇÃO DEFINITIVA: Se localStorage já tinha usuário válido,
+          // NÃO limpa — isso evita que uma nova aba destrua a sessão da aba original.
+          // A limpeza só acontece no logout explícito (handleLogout).
+          const existingUser = localStorage.getItem('currentUser');
+          if (existingUser) {
+            try {
+              const parsed = JSON.parse(existingUser);
+              if (parsed?.id && parsed?.email) {
+                // Usuário válido existe no localStorage — usa ele em vez de limpar
+                setCurrentUser(parsed);
+                sessionStorage.setItem('isLoggedIn', 'true');
+                console.log("🛡️ Mantendo sessão do localStorage (fallback seguro)");
+              } else {
+                setCurrentUser(null);
+              }
+            } catch (e) {
+              setCurrentUser(null);
+              localStorage.removeItem('currentUser');
+              sessionStorage.removeItem('isLoggedIn');
+            }
+          } else {
+            setCurrentUser(null);
+          }
         }
 
       } catch (error) {
         console.debug("Init error:", error.message);
 
-        // 🆕 LOGA ERRO NO SYSTEMLOG
-        try {
-          await base44.entities.SystemLog.create({
-            step: 'Layout_Init_Critical_Error',
-            status: 'error',
-            message: `Critical error during app initialization: ${error.message}`,
-            component_name: 'Layout',
-            error_details: { message: error.message, stack: error.stack },
-            url: window.location.href,
-            user_agent: navigator.userAgent
-          });
-        } catch (logErr) {
-          console.debug('SystemLog falhou:', logErr.message);
-        }
-
-        try {
+        // 🛡️ CORREÇÃO: Em caso de erro crítico, NÃO limpa localStorage se tem dados válidos
+        const existingUser = localStorage.getItem('currentUser');
+        if (existingUser) {
+          try {
+            const parsed = JSON.parse(existingUser);
+            if (parsed?.id && parsed?.email) {
+              setCurrentUser(parsed);
+              sessionStorage.setItem('isLoggedIn', 'true');
+              console.log("🛡️ Erro na inicialização, mas sessão mantida via localStorage");
+            } else {
+              setCurrentUser(null);
+            }
+          } catch (e) {
+            setCurrentUser(null);
+          }
+        } else {
           setCurrentUser(null);
-          localStorage.removeItem('currentUser');
-          sessionStorage.removeItem('isLoggedIn');
-        } catch (e) {
-          // Ignora completamente
         }
       } finally {
         // 🛡️ SEMPRE desliga o loading

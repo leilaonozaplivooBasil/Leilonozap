@@ -185,7 +185,13 @@ export default function Catalog() {
   const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
     try {
       const savedUserJSON = localStorage.getItem('currentUser');
-      const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+      let isLoggedIn = sessionStorage.getItem('isLoggedIn');
+
+      // 🛡️ Se localStorage tem usuário mas sessionStorage não (nova aba), restaura
+      if (savedUserJSON && !isLoggedIn) {
+        sessionStorage.setItem('isLoggedIn', 'true');
+        isLoggedIn = 'true';
+      }
 
       if (savedUserJSON && isLoggedIn) {
         const userFromStorage = JSON.parse(savedUserJSON);
