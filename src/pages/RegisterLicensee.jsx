@@ -15,7 +15,6 @@ import LicenseeDetailsPanel from "../components/licensees/LicenseeDetailsPanel";
 
 export default function RegisterLicensee() {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
