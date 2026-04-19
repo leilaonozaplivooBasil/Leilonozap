@@ -251,7 +251,7 @@ export default function MyCatalogOrders() {
               <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">Meus Pedidos</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">Meus Pedidos — Loja Virtual</h1>
               <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
                 {orders.length} pedido{orders.length !== 1 ? 's' : ''} no total
               </p>

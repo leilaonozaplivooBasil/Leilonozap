@@ -527,7 +527,7 @@ export default function ProductManagement() {
               <Package className="w-3.5 h-3.5 mr-1.5" /> Agrupar Duplicados
             </Button>
             <Button size="sm" onClick={() => navigate(createPageUrl("AddCatalogProduct"))} className="bg-violet-600/90 hover:bg-violet-600 text-white border-0">
-              <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Catálogo
+              <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Loja Virtual
             </Button>
             <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/40">
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo Produto

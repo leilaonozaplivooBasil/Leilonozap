@@ -415,13 +415,13 @@ export default function Layout({ children, currentPageName }) {
   // 🔥 DEFININDO MENUS - ANTES DE QUALQUER RETURN CONDICIONAL
   const publicMenuItems = [
     { title: "Leilões", pageName: "Home" },
-    { title: "Catálogo", pageName: "Catalog" },
+    { title: "Loja Virtual", pageName: "Catalog" },
     { title: "Sistema de Alavancagem", pageName: "Licensing" },
     { title: "Lucre Conosco", pageName: "Partners" },
   ];
 
   const catalogMenuItems = [
-    { title: "Catálogo", pageName: "Catalog" },
+    { title: "Loja Virtual", pageName: "Catalog" },
     { title: "Carrinho", pageName: "Cart", icon: "cart" },
   ];
 
@@ -466,8 +466,8 @@ export default function Layout({ children, currentPageName }) {
       items: [
         { title: "Gestão de Produtos", pageName: "ProductManagement" },
         { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
-        { title: "📦 Gerenciar Catálogo", pageName: "CatalogManagement" },
-        { title: "🚚 Pedidos do Catálogo", pageName: "CatalogOrdersAdmin" },
+        { title: "📦 Gerenciar Loja Virtual", pageName: "CatalogManagement" },
+        { title: "🚚 Pedidos da Loja Virtual", pageName: "CatalogOrdersAdmin" },
         { title: "🎨 Material Promocional", pageName: "PromoCreator" },
         { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
         { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
@@ -521,14 +521,14 @@ export default function Layout({ children, currentPageName }) {
 
   const finalMenuItems = (isCatalogPage && !isProfileFromCatalog && !isLicensingFromCatalog)
     ? [
-      { title: "Catálogo", pageName: "Catalog" },
-      { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
+    { title: "Loja Virtual", pageName: "Catalog" },
+    { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
     ]
     : (isProfileFromCatalog || isLicensingFromCatalog)
-      ? [
-        { title: "Catálogo", pageName: "Catalog" },
-        { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
-      ]
+    ? [
+      { title: "Loja Virtual", pageName: "Catalog" },
+      { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
+    ]
       : [
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },

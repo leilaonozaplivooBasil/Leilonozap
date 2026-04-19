@@ -113,7 +113,7 @@ export default function CatalogOrdersAdmin() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Package className="w-7 h-7 text-green-400" />
-              Gestão de Pedidos — Catálogo
+              Gestão de Pedidos — Loja Virtual
             </h1>
             <p className="text-gray-400 text-sm mt-1">Gerencie envios, rastreios e status de cada pedido</p>
           </div>
