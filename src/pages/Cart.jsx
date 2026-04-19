@@ -1014,25 +1014,58 @@ export default function Cart() {
               </Card>
             )}
 
-            {/* Botão Pagar */}
+            {/* Botão Pagar ou Aviso de Cadastro */}
             {!pixData && (
-              <Button
-                onClick={handleCheckout}
-                disabled={isProcessing || cartItems.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR COM CARTÃO'}
-                  </>
+              <>
+                {!currentUser && cartItems.length > 0 && (
+                  <div className="bg-yellow-500/10 border-2 border-yellow-500/40 rounded-2xl p-5 text-center">
+                    <p className="text-yellow-300 font-bold text-base mb-1">
+                      ⚡ Cadastre-se para concluir sua compra
+                    </p>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Leva menos de 1 minuto! Crie sua conta e finalize o pagamento.
+                    </p>
+                    <Button
+                      onClick={() => navigate(createPageUrl('Register'))}
+                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 h-14 text-lg font-bold rounded-full shadow-lg shadow-yellow-500/30"
+                    >
+                      Criar Conta e Comprar
+                    </Button>
+                    <p className="text-gray-500 text-xs mt-3">
+                      Já tem conta?{' '}
+                      <button
+                        onClick={() => {
+                          // Dispara o LoginModal via layout
+                          const event = new CustomEvent('openLoginModal');
+                          window.dispatchEvent(event);
+                        }}
+                        className="text-green-400 hover:text-green-300 underline font-medium"
+                      >
+                        Faça login aqui
+                      </button>
+                    </p>
+                  </div>
                 )}
-              </Button>
+                {(currentUser || cartItems.length === 0) && (
+                  <Button
+                    onClick={handleCheckout}
+                    disabled={isProcessing || cartItems.length === 0}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5 mr-2" />
+                        {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR COM CARTÃO'}
+                      </>
+                    )}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>

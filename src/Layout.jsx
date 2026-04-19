@@ -69,9 +69,16 @@ export default function Layout({ children, currentPageName }) {
     };
     window.addEventListener('openCartPopup', handleOpenCartPopup);
 
+    // Evento para abrir modal de login (disparado pelo Cart quando visitante tenta comprar)
+    const handleOpenLoginModal = () => {
+      setShowLoginModal(true);
+    };
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+
     return () => {
       window.removeEventListener('cartUpdated', updateCartCount);
       window.removeEventListener('openCartPopup', handleOpenCartPopup);
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
     };
   }, []);
 
