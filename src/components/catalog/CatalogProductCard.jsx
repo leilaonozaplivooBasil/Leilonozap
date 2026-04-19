@@ -156,7 +156,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
     const ref = sessionStorage.getItem('referralCode');
     const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
     const phone = licenseePhone ? `55${licenseePhone.replace(/\D/g, '')}` : DEFAULT_STORE_PHONE;
-    const message = `Olá! Tenho interesse neste produto da *Loja Virtual NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
