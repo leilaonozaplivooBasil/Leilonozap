@@ -170,19 +170,31 @@ export default function CatalogProductDetails() {
   const shareWithImage = async (isLicensee, targetNumber) => {
     const imageUrl = product?.image_urls?.[0];
     const message = buildShareMessage(isLicensee);
+    const productUrl = getCanonicalProductUrl();
     const waUrl = targetNumber
       ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-    // NÍVEL 1: Share com imagem (qualquer URL)
+    // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
       try {
-        const response = await fetch(imageUrl);
+        const response = await fetch(imageUrl, { mode: 'cors' });
         if (response.ok) {
           const blob = await response.blob();
-          const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ title: product.description, text: message, files: [file] });
+          // Detecta tipo MIME real e define extensão correta
+          const mimeType = blob.type || 'image/jpeg';
+          const ext = mimeType.includes('png') ? '.png' : mimeType.includes('webp') ? '.webp' : '.jpg';
+          const fileName = `${(product.description || 'produto').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}${ext}`;
+          const file = new File([blob], fileName, { type: mimeType });
+          
+          const shareData = { files: [file] };
+          if (navigator.canShare(shareData)) {
+            await navigator.share({
+              title: product.description,
+              text: message,
+              url: productUrl,
+              files: [file]
+            });
             return;
           }
         }
@@ -195,7 +207,7 @@ export default function CatalogProductDetails() {
     // NÍVEL 2: Share só texto (sem imagem)
     if (navigator.share) {
       try {
-        await navigator.share({ title: product.description, text: message });
+        await navigator.share({ title: product.description, text: message, url: productUrl });
         return;
       } catch (e) {
         if (e.name === 'AbortError') return;
