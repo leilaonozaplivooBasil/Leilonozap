@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Edit, Check } from "lucide-react";
+import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle } from "lucide-react";
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 
@@ -371,6 +371,15 @@ function CatalogProductCard({ product, currentUser }) {
                   className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
                 />
                 <span className="truncate">COMPARAR PREÇOS</span>
+              </Button>
+
+              {/* WHATSAPP */}
+              <Button
+                onClick={handleShare}
+                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-lg px-2 sm:px-4"
+              >
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                <span className="truncate">WHATSAPP</span>
               </Button>
 
               {/* MAIS INFORMAÇÕES - LINK */}
