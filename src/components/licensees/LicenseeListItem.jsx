@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Link2, Copy, Edit, ExternalLink } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link2, Copy, Edit, ExternalLink, Power } from "lucide-react";
+import { toast } from "sonner";
 
 function initials(name = "") {
   const parts = name.trim().split(/\s+/);
@@ -12,7 +15,22 @@ function storeName(u) {
 }
 
 export default function LicenseeListItem({ licensee, selected, onSelect, onEdit }) {
+  const qc = useQueryClient();
+  const [toggling, setToggling] = useState(false);
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
+
+  const handleToggle = async (e) => {
+    e.stopPropagation();
+    setToggling(true);
+    const currentLevels = licensee.career_levels || [];
+    const newLevels = isActive
+      ? currentLevels.filter(l => l !== "licenciado_catalogo")
+      : [...currentLevels, "licenciado_catalogo"];
+    await base44.entities.AppUser.update(licensee.id, { career_levels: newLevels });
+    toast.success(isActive ? "Loja desativada" : "Loja ativada");
+    qc.invalidateQueries({ queryKey: ["licensees"] });
+    setToggling(false);
+  };
   const referral = licensee.referral_code || "";
   const link = `https://leilaonozap.net/Catalog?ref=${referral}`;
   const slug = licensee.nickname || referral;
@@ -60,9 +78,10 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
             <Edit className="w-4 h-4" />
           </span>
         </div>
-        <div className="ml-2">
-          <Badge className={isActive ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-300"}>
-            {isActive ? "Loja ativa" : "Loja inativa"}
+        <div className="ml-2" onClick={handleToggle}>
+          <Badge className={`cursor-pointer flex items-center gap-1 transition-colors ${isActive ? "bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400" : "bg-gray-700 text-gray-300 hover:bg-green-500/20 hover:text-green-400"}`}>
+            <Power className="w-3 h-3" />
+            {toggling ? "..." : isActive ? "Loja ativa" : "Loja inativa"}
           </Badge>
         </div>
       </div>
