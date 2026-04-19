@@ -24,6 +24,7 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
       return {
         id: product.id,
         selling_price_retail: product.calculated_price,
+        market_price: product.market_price,
         source_url: product.source_url || null
       };
     });
