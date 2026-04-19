@@ -33,7 +33,7 @@ const fileInputRef = useRef(null);
     return (base || "licenciado") + rand;
   }, [fullName]);
 
-  const suggestedSlug = useMemo(() => slug || slugify(fullName), [slug, fullName]);
+  const suggestedSlug = useMemo(() => slug || slugify(storeName) || slugify(fullName), [slug, storeName, fullName]);
 
   React.useEffect(() => {
     if (open && initialUser) {
@@ -148,9 +148,12 @@ const fileInputRef = useRef(null);
                   className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
                   placeholder="Ex: Loja Vale do Recreio, Loja da Maria..."
                   value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
+                  onChange={(e) => {
+                    setStoreName(e.target.value);
+                    if (!slug) setSlug(slugify(e.target.value));
+                  }}
                 />
-                <p className="text-xs text-gray-500 mt-1">Nome que aparece na listagem. Se vazio, será "L. Virtual + nome".</p>
+                <p className="text-xs text-gray-500 mt-1">Nome que aparece na listagem e gera o endereço da loja.</p>
               </div>
 
               {/* Nome do vendedor */}
@@ -160,10 +163,7 @@ const fileInputRef = useRef(null);
                   className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
                   placeholder="Nome completo do vendedor"
                   value={fullName}
-                  onChange={(e) => {
-                    setFullName(e.target.value);
-                    if (!slug) setSlug(slugify(e.target.value));
-                  }}
+                  onChange={(e) => setFullName(e.target.value)}
                   required
                 />
               </div>
