@@ -324,7 +324,10 @@ export default function Layout({ children, currentPageName }) {
               if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
                 const freshUser = usersInDB[0];
 
-                // role vem do banco — não precisa forçar por email
+                // 🛡️ PROTEÇÃO ANTI-DOWNGRADE: Se localStorage tinha admin, NUNCA downgradar
+                if (userFromStorage.role === 'admin' && freshUser.role !== 'admin') {
+                  freshUser.role = 'admin';
+                }
 
                 localStorage.setItem('currentUser', JSON.stringify(freshUser));
                 setCurrentUser(freshUser);
@@ -369,6 +372,14 @@ export default function Layout({ children, currentPageName }) {
         }
 
         if (!userFound) {
+          // 🛡️ Captura role do localStorage ANTES de sobrescrever
+          const cachedRole = (() => {
+            try {
+              const c = localStorage.getItem('currentUser');
+              return c ? JSON.parse(c)?.role : null;
+            } catch { return null; }
+          })();
+
           try {
             const platformUser = await User.me();
             if (platformUser && platformUser.email) {
@@ -377,6 +388,11 @@ export default function Layout({ children, currentPageName }) {
                 let finalUser = platformUser;
                 if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
                   finalUser = usersInDB[0];
+                }
+
+                // 🛡️ PROTEÇÃO ANTI-DOWNGRADE: preserva admin do cache
+                if (cachedRole === 'admin' && finalUser.role !== 'admin') {
+                  finalUser.role = 'admin';
                 }
 
                 localStorage.setItem('currentUser', JSON.stringify(finalUser));
