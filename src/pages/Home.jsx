@@ -350,7 +350,7 @@ export default function Home() {
 
   const loadProductStock = React.useCallback(async () => {
     try {
-      const products = await base44.entities.Product.list();
+      const products = await base44.entities.Product.list('-created_date', 200);
       const stockMap = {};
       products.forEach(p => {
         if (p.id) {
