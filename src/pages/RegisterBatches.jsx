@@ -582,7 +582,7 @@ export default function RegisterBatches() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               <span className="font-semibold">Voltar</span>
             </Button>
-            <h1 className="text-3xl font-bold text-white">📦 Registrar Leilões</h1>
+            <h1 className="text-3xl font-bold text-white">📦 Leilões Arrematados</h1>
           </div>
           <div className="flex gap-2">
             <Button
@@ -617,7 +617,7 @@ export default function RegisterBatches() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Total de Leilões</p>
+                  <p className="text-gray-400 text-sm">Total Arrematados</p>
                   <p className="text-2xl font-bold text-white">{batches.length}</p>
                 </div>
                 <Package className="w-8 h-8 text-blue-400" />

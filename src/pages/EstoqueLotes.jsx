@@ -190,7 +190,7 @@ export default function EstoqueLotes() {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              onClick={() => navigate(createPageUrl('RegisterBatches'))}
+              onClick={() => navigate(createPageUrl('ProductManagement'))}
               className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
