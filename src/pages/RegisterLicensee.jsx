@@ -64,7 +64,8 @@ export default function RegisterLicensee() {
 
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.net/Catalog?ref=${referral}` : "";
-  const displayLink = referral ? `leilaonozap.net/loja-virtual/${referral}` : "";
+  const slug = selected?.nickname || referral;
+  const displayLink = slug ? `leilaonozap.net/loja-virtual/${slug}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
   const { data: visits = [] } = useQuery({
   queryKey: ["catalogVisits", selected?.id],

@@ -15,7 +15,8 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
   const referral = licensee.referral_code || "";
   const link = `https://leilaonozap.net/Catalog?ref=${referral}`;
-  const displayLink = `leilaonozap.net/loja-virtual/${referral}`;
+  const slug = licensee.nickname || referral;
+  const displayLink = `leilaonozap.net/loja-virtual/${slug}`;
   const name = storeName(licensee);
 
   const copy = (e) => {
