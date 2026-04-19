@@ -195,18 +195,15 @@ const fileInputRef = useRef(null);
                                       />
               </div>
 
-              {/* Endereço do catálogo */}
+              {/* Link da Loja Virtual */}
               <div className="md:col-span-2">
-                <Label className="text-gray-300">Endereço da loja do vendedor</Label>
-                <div className="flex flex-nowrap items-stretch">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-800 text-gray-300 whitespace-nowrap shrink-0 text-sm">leilaonozap.net/loja-virtual/</span>
-                  <Input
-                                            className="rounded-l-none flex-1 min-w-0 bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
-                                            placeholder="Ex: nome-do-vendedor"
-                                            value={suggestedSlug}
-                                            onChange={(e) => setSlug(slugify(e.target.value))}
-                                          />
-                </div>
+                <Label className="text-gray-300">Link da Loja Virtual</Label>
+                <Input
+                  className="bg-gray-900 border-gray-700 text-gray-400 cursor-default"
+                  value={`leilaonozap.net/Catalog?ref=${(foundUser && foundUser.referral_code) || suggestedCode}`}
+                  readOnly
+                />
+                <p className="text-xs text-gray-500 mt-1">Link gerado automaticamente pelo código de indicação.</p>
               </div>
             </div>
           </div>
