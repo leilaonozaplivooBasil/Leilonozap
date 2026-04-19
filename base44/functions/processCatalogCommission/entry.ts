@@ -83,13 +83,15 @@ Deno.serve(async (req) => {
           const payload = await req.json().catch(() => ({}));
           const isAutomation = !!payload?.event;
 
-          // Não valida auth: pode ser chamada por:
-          // - Automação (webhook)
-          // - Admin
-          // - functions.invoke() do asServiceRole
-          // A validação real é feita no asServiceRole internamente
+          // Se NÃO for automação (webhook/entity trigger), exige admin autenticado
+          if (!isAutomation) {
+            const user = await base44.auth.me();
+            if (!user || user.role !== 'admin') {
+              return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+            }
+          }
 
-    // Permite automação por evento: usa event.entity_id se não vier sale_id
+          // Permite automação por evento: usa event.entity_id se não vier sale_id
     const saleId = payload?.sale_id || payload?.event?.entity_id;
     if (!saleId) {
       return Response.json({ error: 'Missing sale_id' }, { status: 400 });
