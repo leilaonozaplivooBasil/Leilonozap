@@ -9,6 +9,7 @@ import LoginModal from "@/components/common/LoginModal";
 
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
+import AdminPanelMenu from "@/components/nav/AdminPanelMenu";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import { useActiveSession } from "@/components/system/useActiveSession";
@@ -765,53 +766,7 @@ export default function Layout({ children, currentPageName }) {
 
                   {/* PAINEL DE CONTROLE - SÓ ADMIN */}
                   {isAdmin && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-300 hover:text-purple-200 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-purple-500/10">
-                          <Settings className="h-4 w-4" />
-                          Painel de Controle
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="text-white max-h-[500px] overflow-y-auto border-0 min-w-[220px]" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                        {expandedCategory ? (
-                          <>
-                            <DropdownMenuItem
-                              className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-purple-300 font-semibold flex items-center gap-2"
-                              onSelect={(e) => { e.preventDefault(); setExpandedCategory(null); }}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                              Voltar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-gray-700" />
-                            <DropdownMenuLabel className="text-gray-500 text-xs uppercase tracking-wider">{expandedCategory}</DropdownMenuLabel>
-                            {adminMenuItems.find(c => c.title === expandedCategory)?.items?.map((subItem) => (
-                              <DropdownMenuItem
-                                key={subItem.pageName}
-                                onClick={() => navigate(createPageUrl(subItem.pageName))}
-                                className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-sm"
-                              >
-                                {subItem.title}
-                              </DropdownMenuItem>
-                            ))}
-                          </>
-                        ) : (
-                          <>
-                            <DropdownMenuLabel className="text-purple-400">Administração</DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-gray-700" />
-                            {adminMenuItems.map((item) => (
-                              <DropdownMenuItem
-                                key={item.title}
-                                className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 flex items-center justify-between"
-                                onSelect={(e) => { e.preventDefault(); setExpandedCategory(item.title); }}
-                              >
-                                <span>{item.title}</span>
-                                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                              </DropdownMenuItem>
-                            ))}
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <AdminPanelMenu adminMenuItems={adminMenuItems} />
                   )}
 
                   {/* BOTÃO ENTRAR - SÓ SE NÃO LOGADO */}
