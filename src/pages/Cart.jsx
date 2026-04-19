@@ -307,64 +307,12 @@ export default function Cart() {
     setIsProcessing(true);
     toast.loading('Processando compra...', { id: 'checkout-loading' });
 
-    const salesBatch = [];
-
     try {
-      const referralCode = sessionStorage.getItem('referralCode');
-
-      // Resolver licensee
-      let licenseeId = 'site_official';
-      let licenseeData = null;
-
-      if (referralCode) {
-        try {
-          const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
-          if (licensees && licensees.length > 0) {
-            licenseeData = licensees[0];
-            licenseeId = licenseeData.id;
-          }
-        } catch (e) {
-          console.warn('Erro ao buscar licensee:', e.message);
-        }
-      }
-
-      // Criar CatalogSale para cada produto
-      for (const item of cartItems) {
-        const price = item.price_catalog || item.selling_price_wholesale || 0;
-        const sale = await base44.entities.CatalogSale.create({
-          product_id: item.id,
-          product_title: item.description,
-          product_image: item.image_urls?.[0] || '',
-          sale_price: price,
-          quantity: item.quantity || 1,
-          total_amount: price * (item.quantity || 1),
-          buyer_id: currentUser.id,
-          buyer_name: formData.name,
-          buyer_email: formData.email,
-          buyer_phone: formData.phone,
-          licensee_id: licenseeId,
-          licensee_name: licenseeData?.full_name || null,
-          licensee_plan: licenseeData?.primary_career_level || null,
-          referred_by_code: referralCode || '',
-          referral_code: referralCode || null,
-          status: 'pending_payment',
-          delivery_type: deliveryMethod,
-          address_street: formData.street,
-          address_number: formData.number,
-          address_complement: formData.complement,
-          address_neighborhood: formData.neighborhood,
-          address_city: formData.city,
-          address_state: formData.state,
-          address_zip_code: formData.cep
-        });
-        salesBatch.push(sale);
-      }
-
-      setCreatedSales(salesBatch);
-
-      // Criar pagamento ASAAS único para todo o carrinho
+      // ═══════════════════════════════════════════════════════════
+      // PASSO 1: GERAR PIX/PAGAMENTO PRIMEIRO (igual AuctionCheckoutModern)
+      // Chamada direta e imediata — sem operações pesadas antes
+      // ═══════════════════════════════════════════════════════════
       const paymentPayload = {
-        catalog_sale_id: salesBatch.map(s => s.id).join(','),
         buyer_id: currentUser.id,
         buyer_name: formData.name.trim(),
         buyer_email: formData.email.trim(),
@@ -391,64 +339,112 @@ export default function Cart() {
 
       toast.dismiss('checkout-loading');
 
-      if (paymentResponse?.success) {
-        // Verificar se cartão foi recusado imediatamente
-        const isRejected = paymentResponse.asaas_status === 'REJECTED' || paymentResponse.asaas_status === 'FAILED';
-
-        if (isRejected) {
-          toast.error('Pagamento recusado pela operadora do cartão. Tente novamente ou use outro meio de pagamento.');
-          // Limpar as vendas pré-geradas
-          for (const sale of salesBatch) {
-            try { await base44.entities.CatalogSale.delete(sale.id); } catch (e) { /* ignora */ }
-          }
-          setCreatedSales([]);
-          return; // finally vai resetar isProcessing
-        }
-
-        // Salvar snapshot dos itens ANTES de limpar o carrinho
-        setCheckoutItems([...cartItems]);
-        setPixData({ ...paymentResponse, billing_type: paymentType });
-        toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
-
-        // Limpa carrinho
-        updateCart([]);
-        setCardNumber('');
-        setCardName('');
-        setCardExpiry('');
-        setCardCvv('');
-      } else {
+      if (!paymentResponse?.success) {
+        // Erro no pagamento — mostra mensagem e sai
         const errorMsg = paymentResponse?.error || 'Erro na transação. Verifique seus dados.';
         const errorDetails = paymentResponse?.details;
-
         if (errorDetails && Array.isArray(errorDetails)) {
           const asaasError = errorDetails.map(e => e.description).join(', ');
-          if (asaasError.toLowerCase().includes('cpf')) {
-            toast.error('CPF inválido ou não encontrado. Verifique os dados.');
-          } else {
-            toast.error(`Erro no pagamento: ${asaasError}`);
-          }
+          toast.error(asaasError.toLowerCase().includes('cpf')
+            ? 'CPF inválido ou não encontrado. Verifique os dados.'
+            : `Erro no pagamento: ${asaasError}`);
         } else {
           toast.error(`Erro: ${errorMsg}`);
         }
-
-        // Limpar vendas criadas em caso de erro
-        for (const sale of salesBatch) {
-          try { await base44.entities.CatalogSale.delete(sale.id); } catch (e) { /* ignora */ }
-        }
-        setCreatedSales([]);
+        return; // finally reseta isProcessing
       }
+
+      // Verificar se cartão foi recusado imediatamente
+      const isRejected = paymentResponse.asaas_status === 'REJECTED' || paymentResponse.asaas_status === 'FAILED';
+      if (isRejected) {
+        toast.error('Pagamento recusado pela operadora do cartão. Tente novamente ou use outro meio de pagamento.');
+        return; // finally reseta isProcessing
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // PASSO 2: PAGAMENTO GERADO COM SUCESSO — agora registra vendas
+      // Isso acontece DEPOIS do PIX/pagamento estar garantido
+      // ═══════════════════════════════════════════════════════════
+      const referralCode = sessionStorage.getItem('referralCode');
+      let licenseeId = 'site_official';
+      let licenseeData = null;
+
+      if (referralCode) {
+        try {
+          const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
+          if (licensees?.[0]) { licenseeData = licensees[0]; licenseeId = licenseeData.id; }
+        } catch (e) { /* ignora — não bloqueia pagamento */ }
+      }
+
+      // Criar CatalogSales via bulkCreate (1 chamada, não N)
+      const salesToCreate = cartItems.map(item => {
+        const price = item.price_catalog || item.selling_price_wholesale || 0;
+        return {
+          product_id: item.id,
+          product_title: item.description,
+          product_image: item.image_urls?.[0] || '',
+          sale_price: price,
+          quantity: item.quantity || 1,
+          total_amount: price * (item.quantity || 1),
+          buyer_id: currentUser.id,
+          buyer_name: formData.name,
+          buyer_email: formData.email,
+          buyer_phone: formData.phone,
+          licensee_id: licenseeId,
+          licensee_name: licenseeData?.full_name || null,
+          licensee_plan: licenseeData?.primary_career_level || null,
+          referred_by_code: referralCode || '',
+          referral_code: referralCode || null,
+          status: 'pending_payment',
+          payment_id: paymentResponse.payment_id || null,
+          delivery_type: deliveryMethod,
+          address_street: formData.street,
+          address_number: formData.number,
+          address_complement: formData.complement,
+          address_neighborhood: formData.neighborhood,
+          address_city: formData.city,
+          address_state: formData.state,
+          address_zip_code: formData.cep
+        };
+      });
+
+      try {
+        const createdSalesResult = await base44.entities.CatalogSale.bulkCreate(salesToCreate);
+        setCreatedSales(createdSalesResult || []);
+      } catch (e) {
+        console.warn('CatalogSale.bulkCreate falhou, tentando individualmente:', e.message);
+        // Fallback: criar individualmente se bulkCreate não existir
+        const salesBatch = [];
+        for (const saleData of salesToCreate) {
+          try {
+            const sale = await base44.entities.CatalogSale.create(saleData);
+            salesBatch.push(sale);
+          } catch (createErr) {
+            console.warn('Erro ao criar CatalogSale individual:', createErr.message);
+          }
+        }
+        setCreatedSales(salesBatch);
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // PASSO 3: EXIBIR RESULTADO — salvar snapshot e mostrar QR
+      // ═══════════════════════════════════════════════════════════
+      setCheckoutItems([...cartItems]);
+      setPixData({ ...paymentResponse, billing_type: paymentType });
+      toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
+
+      // Limpa carrinho e campos de cartão
+      updateCart([]);
+      setCardNumber('');
+      setCardName('');
+      setCardExpiry('');
+      setCardCvv('');
+
     } catch (error) {
       console.error('Erro no checkout:', error);
       toast.dismiss('checkout-loading');
       toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
-
-      // Limpar vendas em caso de erro
-      for (const sale of salesBatch) {
-        try { await base44.entities.CatalogSale.delete(sale.id); } catch (e) { /* ignora */ }
-      }
-      setCreatedSales([]);
     } finally {
-      // ✅ GARANTIA ABSOLUTA: isProcessing SEMPRE reseta, independente do caminho
       setIsProcessing(false);
     }
   };
