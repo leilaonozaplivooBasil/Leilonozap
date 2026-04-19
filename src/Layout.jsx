@@ -87,6 +87,12 @@ export default function Layout({ children, currentPageName }) {
   const handleLogout = React.useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
 
+    // 🛡️ Detecta contexto ANTES de limpar dados
+    const urlParams = new URLSearchParams(window.location.search);
+    const isFromCatalog = urlParams.get('from') === 'catalog';
+    const catalogPages = ['Catalog', 'CatalogProductDetails', 'Cart', 'CatalogCheckout', 'MyCatalogOrders', 'CatalogOrderTracking'];
+    const isInCatalogContext = isFromCatalog || catalogPages.includes(currentPageName);
+
     localStorage.removeItem('currentUser');
     sessionStorage.removeItem('isLoggedIn');
 
@@ -94,8 +100,13 @@ export default function Layout({ children, currentPageName }) {
 
     console.log("✅ LOGOUT COMPLETO - Estado limpo!");
 
-    navigate(createPageUrl("Home"), { replace: true });
-  }, [navigate]);
+    // Redireciona para o contexto correto: Catálogo ou Home
+    if (isInCatalogContext) {
+      navigate(createPageUrl("Catalog"), { replace: true });
+    } else {
+      navigate(createPageUrl("Home"), { replace: true });
+    }
+  }, [navigate, currentPageName]);
 
   const syncUserData = React.useCallback(async () => {
     const savedUserJSON = localStorage.getItem('currentUser');
