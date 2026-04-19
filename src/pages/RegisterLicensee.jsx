@@ -26,6 +26,12 @@ function shareLink(url, name){
   }
 }
 
+function displayName(u) {
+  if (u?.nickname) return u.nickname;
+  if (u?.display_first_name || u?.display_last_name) return [u.display_first_name, u.display_last_name].filter(Boolean).join(" ");
+  return u?.full_name || "Sem nome";
+}
+
 export default function RegisterLicensee() {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -104,7 +110,7 @@ const visitsData = useMemo(() => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 pt-3 text-sm text-gray-400 flex items-center justify-between">
-        <p>Gerencie os seus catálogos de vendedores</p>
+        <p>Gerencie as lojas virtuais dos vendedores</p>
         <span>{(licensees || []).filter(l => (l.career_levels || []).includes("licenciado_catalogo")).length} vendedores</span>
       </div>
 
@@ -140,9 +146,9 @@ const visitsData = useMemo(() => {
                     {(selected?.full_name || "?").slice(0,2).toUpperCase()}
                   </div>
                 )}
-                <div className="text-xl font-semibold text-white">{selected?.full_name || "Selecione um licenciado"}</div>
+                <div className="text-xl font-semibold text-white">{selected ? displayName(selected) : "Selecione um licenciado"}</div>
                 {selected && (
-                  <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">Catálogo ativo <ShoppingBag className="w-3.5 h-3.5" /></Badge>
+                  <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">Loja ativa <ShoppingBag className="w-3.5 h-3.5" /></Badge>
                 )}
                 {selected && (
                   <a href={catalogLink} target="_blank" rel="noreferrer" className="text-gray-300 hover:underline break-all">
@@ -195,7 +201,7 @@ const visitsData = useMemo(() => {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm text-gray-300 font-medium">Visitas no catálogo</div>
+                      <div className="text-sm text-gray-300 font-medium">Visitas na loja</div>
                       <button className="text-xs text-green-400 hover:underline">Ver tudo</button>
                     </div>
                     <div className="grid grid-cols-2 gap-4 items-center">
@@ -234,8 +240,8 @@ const visitsData = useMemo(() => {
                   </div>
 
                   <div className="text-center">
-                    <div className="font-semibold text-gray-100">{selected?.full_name} não teve visitas em seu catálogo nos últimos 30 dias</div>
-                    <p className="text-gray-400 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa o catálogo do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
+                    <div className="font-semibold text-gray-100">{selected ? displayName(selected) : ""} não teve visitas em sua loja nos últimos 30 dias</div>
+                    <p className="text-gray-400 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa a loja do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

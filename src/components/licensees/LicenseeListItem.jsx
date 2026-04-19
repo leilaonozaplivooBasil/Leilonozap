@@ -7,10 +7,17 @@ function initials(name = "") {
   return (parts[0]?.[0] || "?") + (parts[1]?.[0] || "");
 }
 
+function displayName(u) {
+  if (u.nickname) return u.nickname;
+  if (u.display_first_name || u.display_last_name) return [u.display_first_name, u.display_last_name].filter(Boolean).join(" ");
+  return u.full_name || "Sem nome";
+}
+
 export default function LicenseeListItem({ licensee, selected, onSelect, onEdit }) {
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
   const referral = licensee.referral_code || "";
   const link = `https://leilaonozap.net/catalog?ref=${referral}`;
+  const name = displayName(licensee);
 
   const copy = (e) => {
     e.stopPropagation();
@@ -37,7 +44,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-white truncate">{licensee.full_name}</p>
+          <p className="font-medium text-white truncate">{name}</p>
           <div className="text-xs text-gray-400 truncate flex items-center gap-1">
             <Link2 className="w-3.5 h-3.5" /> {link}
           </div>
@@ -55,7 +62,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
         </div>
         <div className="ml-2">
           <Badge className={isActive ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-300"}>
-            {isActive ? "Catálogo ativo" : "Catálogo inativo"}
+            {isActive ? "Loja ativa" : "Loja inativa"}
           </Badge>
         </div>
       </div>
