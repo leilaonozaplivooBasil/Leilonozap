@@ -37,6 +37,7 @@ export default function RegisterBatches() {
   const [editDataLancamento, setEditDataLancamento] = useState('');
   const [manualBatch, setManualBatch] = useState({
     numero_leilao: '',
+    nome_origem: '',
     valor_total: 0,
     lotes: [{
       numero_lote: '',
@@ -422,6 +423,7 @@ export default function RegisterBatches() {
 
       await base44.entities.BatchRegistration.create({
         numero_leilao: manualBatch.numero_leilao,
+        nome_origem: manualBatch.nome_origem || '',
         lotes: manualBatch.lotes,
         valor_total: valorComFrete,
         frete_value: manualFreteValue || 0,
@@ -436,6 +438,7 @@ export default function RegisterBatches() {
       setManualFreteValue(0);
       setManualBatch({
         numero_leilao: '',
+        nome_origem: '',
         valor_total: 0,
         lotes: [{
           numero_lote: '',
@@ -489,6 +492,7 @@ export default function RegisterBatches() {
     setEditFreteValue(batch.frete_value || 0);
     setManualBatch({
       numero_leilao: batch.numero_leilao,
+      nome_origem: batch.nome_origem || '',
       valor_total: batch.valor_total - (batch.frete_value || 0),
       lotes: batch.lotes || [{
         numero_lote: '',
@@ -531,6 +535,7 @@ export default function RegisterBatches() {
 
       await base44.entities.BatchRegistration.update(editingBatch.id, {
         numero_leilao: manualBatch.numero_leilao,
+        nome_origem: manualBatch.nome_origem || '',
         lotes: manualBatch.lotes,
         valor_total: valorComFrete,
         frete_value: editFreteValue || 0,
@@ -545,6 +550,7 @@ export default function RegisterBatches() {
       setEditFreteValue(0);
       setManualBatch({
         numero_leilao: '',
+        nome_origem: '',
         valor_total: 0,
         lotes: [{
           numero_lote: '',
@@ -579,6 +585,20 @@ export default function RegisterBatches() {
     const end = new Date(brDateTimeToISOString(`${dateEnd}T23:59`));
     filteredBatches = filteredBatches.filter(b => b.data_lancamento && new Date(b.data_lancamento) <= end);
   }
+
+  // Ordenação: mais recente primeiro
+  filteredBatches = [...filteredBatches].sort((a, b) => {
+    const dateA = a.data_lancamento ? new Date(a.data_lancamento) : new Date(a.created_date || 0);
+    const dateB = b.data_lancamento ? new Date(b.data_lancamento) : new Date(b.created_date || 0);
+    return dateB - dateA;
+  });
+
+  // Lotes recebidos também ordenados por mais recente primeiro
+  const sortedLotesRecebidos = [...lotesRecebidos].sort((a, b) => {
+    const dateA = a.data_recebimento ? new Date(a.data_recebimento) : new Date(a.created_date || 0);
+    const dateB = b.data_recebimento ? new Date(b.data_recebimento) : new Date(b.created_date || 0);
+    return dateB - dateA;
+  });
 
   return (
     <div className="min-h-screen bg-gray-950 p-4 sm:p-6">
@@ -710,7 +730,7 @@ export default function RegisterBatches() {
             return (
               <BatchCard
                 key={batch.id}
-                title={`Leilão #${batch.numero_leilao}`}
+                title={batch.nome_origem || `Leilão #${batch.numero_leilao}`}
                 status={batch.status}
                 totalProdutos={batch.total_produtos}
                 valorTotal={batch.valor_total}
@@ -727,6 +747,10 @@ export default function RegisterBatches() {
                 onDelete={() => handleDeleteBatch(batch.id)}
                 onConvert={batch.status === 'pendente' ? () => handleConvertToProducts(batch) : undefined}
                 onViewFile={batch.recibo_url ? () => window.open(batch.recibo_url, '_blank') : undefined}
+                onRename={async (newName) => {
+                  await base44.entities.BatchRegistration.update(batch.id, { nome_origem: newName });
+                  await loadBatches();
+                }}
                 expandedContent={
                   <div className="space-y-3">
                     {batch.lotes?.map((lote, loteIdx) => (
@@ -746,7 +770,7 @@ export default function RegisterBatches() {
           })}
 
           {/* LOTES RECEBIDOS (via Estoque de Lotes) — mesmo card padronizado */}
-          {(statusFilter === 'all' || statusFilter === 'convertido') && lotesRecebidos.map((lote) => {
+          {(statusFilter === 'all' || statusFilter === 'convertido') && sortedLotesRecebidos.map((lote) => {
             const isExpanded = expandedBatches[`lr-${lote.id}`];
             const custoUnit = (lote.valor_lote > 0 && lote.quantidade_total > 0) 
               ? lote.valor_lote / lote.quantidade_total 
@@ -844,14 +868,25 @@ export default function RegisterBatches() {
                 <CardTitle className="text-white">✏️ Editar Leilão #{editingBatch.numero_leilao}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label className="text-gray-300 text-sm mb-1 block font-semibold">Número do Leilão *</label>
-                  <Input
-                    value={manualBatch.numero_leilao}
-                    onChange={(e) => setManualBatch({...manualBatch, numero_leilao: e.target.value})}
-                    className="bg-gray-700 text-white"
-                    placeholder="Ex: 186"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-gray-300 text-sm mb-1 block font-semibold">Número do Leilão *</label>
+                    <Input
+                      value={manualBatch.numero_leilao}
+                      onChange={(e) => setManualBatch({...manualBatch, numero_leilao: e.target.value})}
+                      className="bg-gray-700 text-white"
+                      placeholder="Ex: 186"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-300 text-sm mb-1 block font-semibold">Nome / Origem</label>
+                    <Input
+                      value={manualBatch.nome_origem}
+                      onChange={(e) => setManualBatch({...manualBatch, nome_origem: e.target.value})}
+                      className="bg-gray-700 text-white"
+                      placeholder="Ex: Alcance Leilões, Casa & Vídeo..."
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1086,14 +1121,25 @@ export default function RegisterBatches() {
                 <CardTitle className="text-white">✏️ Registrar Leilão Manualmente</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label className="text-gray-300 text-sm mb-1 block font-semibold">Número do Leilão *</label>
-                  <Input
-                    value={manualBatch.numero_leilao}
-                    onChange={(e) => setManualBatch({...manualBatch, numero_leilao: e.target.value})}
-                    className="bg-gray-700 text-white"
-                    placeholder="Ex: 186"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-gray-300 text-sm mb-1 block font-semibold">Número do Leilão *</label>
+                    <Input
+                      value={manualBatch.numero_leilao}
+                      onChange={(e) => setManualBatch({...manualBatch, numero_leilao: e.target.value})}
+                      className="bg-gray-700 text-white"
+                      placeholder="Ex: 186"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-300 text-sm mb-1 block font-semibold">Nome / Origem</label>
+                    <Input
+                      value={manualBatch.nome_origem}
+                      onChange={(e) => setManualBatch({...manualBatch, nome_origem: e.target.value})}
+                      className="bg-gray-700 text-white"
+                      placeholder="Ex: Alcance Leilões, Casa & Vídeo..."
+                    />
+                  </div>
                 </div>
 
                 <div>

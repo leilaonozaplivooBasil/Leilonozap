@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   ChevronDown, ChevronUp, FileImage, Edit, Trash2, ArrowRight,
-  Package, Calendar, DollarSign, Hash, Layers, Eye
+  Package, Calendar, DollarSign, Hash, Layers, Eye, Pencil, Check
 } from 'lucide-react';
 
 const MARKETPLACE_ICONS = {
@@ -53,11 +54,14 @@ export default function BatchCard({
   onDelete,
   onConvert,
   onViewFile,
+  onRename, // NEW: callback(newName) to save inline rename
   // Expanded content
   isExpanded,
   expandedContent,
   lotesCount,
 }) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(title || '');
   const prettyDate = formatPrettyDate(date);
 
   const statusConfig = {
@@ -88,8 +92,50 @@ export default function BatchCard({
           <div className="flex-1 min-w-0">
             {/* Title Row */}
             <div className="flex items-center gap-2.5 mb-2">
-              <h3 className="text-lg font-bold text-white truncate">{title}</h3>
-              {marketplace && (
+              {isRenaming ? (
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Input
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && renameValue.trim()) {
+                        onRename?.(renameValue.trim());
+                        setIsRenaming(false);
+                      }
+                      if (e.key === 'Escape') setIsRenaming(false);
+                    }}
+                    autoFocus
+                    className="bg-gray-700 border-gray-600 text-white h-8 text-base font-bold"
+                    placeholder="Nome do leilão / fornecedor"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (renameValue.trim()) {
+                        onRename?.(renameValue.trim());
+                        setIsRenaming(false);
+                      }
+                    }}
+                    className="h-8 w-8 p-0 bg-emerald-600 hover:bg-emerald-500"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 min-w-0 group/title">
+                  <h3 className="text-lg font-bold text-white truncate">{title}</h3>
+                  {onRename && (
+                    <button
+                      onClick={() => { setRenameValue(title || ''); setIsRenaming(true); }}
+                      className="opacity-0 group-hover/title:opacity-100 transition-opacity text-gray-500 hover:text-white"
+                      title="Renomear"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+              {marketplace && !isRenaming && (
                 <span className="text-sm flex-shrink-0" title={marketplace}>
                   {MARKETPLACE_ICONS[marketplace] || '📦'}
                 </span>
