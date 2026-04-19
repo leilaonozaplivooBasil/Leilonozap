@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import ComparaiButton from "../components/comparai/ComparaiButton";
 import { createPageUrl } from "@/utils";
@@ -21,6 +21,7 @@ export default function CatalogProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [licenseePhone, setLicenseePhone] = useState(null);
+  const DEFAULT_STORE_PHONE = '5521984072064';
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -280,9 +281,13 @@ export default function CatalogProductDetails() {
     return `55${digits}`; // assume Brasil
   };
 
-  const handleWhatsAppToLicensee = async () => {
-    const number = normalizeToWaNumber(licenseePhone);
-    await shareWithImage(true, number || undefined);
+  const handleWhatsAppOrder = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const phone = licenseePhone ? normalizeToWaNumber(licenseePhone) : DEFAULT_STORE_PHONE;
+    const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+    const productUrl = getCanonicalProductUrl();
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual NoZap*:\n\n📦 *${product.description}*\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n🔗 ${productUrl}`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
@@ -343,6 +348,15 @@ export default function CatalogProductDetails() {
                 </>
               )}
 
+              {/* BOTÃO COMPARTILHAR */}
+              <button
+                onClick={handleShare}
+                className="absolute top-3 left-3 bg-black/40 hover:bg-emerald-600/80 text-white p-2 rounded-full shadow-md transition-all z-10 backdrop-blur-sm border border-white/10"
+                title="Compartilhar produto"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+
               {/* BOTÃO FULLSCREEN */}
               <button
                 onClick={() => setShowFullscreen(true)}
@@ -401,9 +415,9 @@ export default function CatalogProductDetails() {
                 </Button>
               )}
 
-              {/* PEDIR PELO WHATSAPP */}
+              {/* PEDIR PELO WHATSAPP — conversa direta */}
               <Button
-                onClick={handleWhatsAppToLicensee}
+                onClick={handleWhatsAppOrder}
                 variant="outline"
                 className="w-full h-12 border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
               >

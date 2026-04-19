@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle } from "lucide-react";
+import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2 } from "lucide-react";
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 
-function CatalogProductCard({ product, currentUser }) {
+const DEFAULT_STORE_PHONE = '5521984072064';
+
+function CatalogProductCard({ product, currentUser, licenseePhone }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
@@ -145,18 +147,28 @@ function CatalogProductCard({ product, currentUser }) {
     return () => stopCarousel();
   }, []);
 
+  // PEDIR PELO WHATSAPP — conversa direta com licenciado ou loja
+  const handleWhatsAppOrder = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const ref = sessionStorage.getItem('referralCode');
+    const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
+    const phone = licenseePhone ? `55${licenseePhone.replace(/\D/g, '')}` : DEFAULT_STORE_PHONE;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual NoZap*:\n\n📦 *${product.description}*\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n🔗 ${productUrl}`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  // COMPARTILHAR — Web Share API com imagem, fallback WhatsApp texto
   const handleShare = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}`;
+    const ref = sessionStorage.getItem('referralCode');
+    const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
     const shareMessage = `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
 
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
     const imageUrl = product.image_urls?.[0];
-    // Só tenta fetch de imagem em URLs internas (supabase/base44) — URLs externas bloqueiam CORS
     const isInternalImage = imageUrl && (
       imageUrl.includes('supabase.co') || 
       imageUrl.includes('base44') || 
@@ -164,8 +176,7 @@ function CatalogProductCard({ product, currentUser }) {
     );
 
     try {
-      // 📱 Mobile (iOS + Android) — tenta Web Share API com imagem se URL interna
-      if ((isIOS || isAndroid) && navigator.share && navigator.canShare) {
+      if (navigator.share && navigator.canShare) {
         if (isInternalImage) {
           try {
             const response = await fetch(imageUrl);
@@ -173,32 +184,21 @@ function CatalogProductCard({ product, currentUser }) {
               const blob = await response.blob();
               const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
               if (navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                  title: product.description,
-                  text: shareMessage,
-                  files: [file]
-                });
+                await navigator.share({ title: product.description, text: shareMessage, files: [file] });
                 return;
               }
             }
           } catch (imgError) {
-            console.debug('Share com imagem falhou, usando fallback:', imgError.message);
+            console.debug('Share com imagem falhou:', imgError.message);
           }
         }
-
-        // Fallback: share sem imagem (mobile)
-        if (isIOS) {
+        // Fallback sem imagem
+        try {
           await navigator.share({ title: product.description, text: shareMessage });
           return;
-        }
-        // Android fallback: abre WhatsApp direto
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
-        return;
+        } catch (_) {}
       }
-
-      // 💻 DESKTOP
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
-      
     } catch (err) {
       if (err.name !== 'AbortError') {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
@@ -279,6 +279,19 @@ function CatalogProductCard({ product, currentUser }) {
           </div>
         )}
         
+        {/* Botão de compartilhar - CANTO SUPERIOR ESQUERDO */}
+        <div className="absolute top-2 left-2 z-20">
+          <button
+            onClick={handleShare}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="min-h-[36px] min-w-[36px] h-9 w-9 shadow-md bg-black/40 hover:bg-emerald-600/80 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95 border border-white/10"
+            title="Compartilhar produto"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* Botão de edição - CANTO SUPERIOR DIREITO (apenas admin) */}
         {currentUser?.role === 'admin' && (
           <div className="absolute top-2 right-2 z-20">
@@ -373,9 +386,9 @@ function CatalogProductCard({ product, currentUser }) {
                 <span className="truncate">COMPARAR PREÇOS</span>
               </Button>
 
-              {/* WHATSAPP */}
+              {/* PEDIR PELO WHATSAPP — conversa direta */}
               <Button
-                onClick={handleShare}
+                onClick={handleWhatsAppOrder}
                 variant="outline"
                 className="w-full h-8 sm:h-9 text-[10px] sm:text-sm border-2 border-emerald-500 text-emerald-500 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent px-2 sm:px-4 transition-shadow duration-300"
                 style={{ boxShadow: 'inset 0 0 12px rgba(16,185,129,0.4)' }}
@@ -424,6 +437,7 @@ function CatalogProductCard({ product, currentUser }) {
 export default memo(CatalogProductCard, (prevProps, nextProps) => {
   return (
     prevProps.product.id === nextProps.product.id &&
-    prevProps.currentUser?.id === nextProps.currentUser?.id
+    prevProps.currentUser?.id === nextProps.currentUser?.id &&
+    prevProps.licenseePhone === nextProps.licenseePhone
   );
 });
