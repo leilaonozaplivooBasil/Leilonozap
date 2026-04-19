@@ -116,14 +116,32 @@ export default function CatalogProductDetails() {
     return url.toString();
   };
 
-  const shareWithImage = async (message, targetNumber) => {
+  const buildShareMessage = (isLicensee, withEmojis = true) => {
+    const productUrl = getCanonicalProductUrl();
+    const price = product.price_catalog?.toFixed(2) || '0.00';
+
+    if (isLicensee) {
+      return withEmojis
+        ? `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`
+        : `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n*${product.description}*\n\n*R$ ${price}*\n\n${productUrl}`;
+    }
+    return withEmojis
+      ? `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`
+      : `*LOJA VIRTUAL NOZAP*\n\n*${product.description}*\n\n*R$ ${price}*\n\nCompre agora:\n${productUrl}`;
+  };
+
+  const shareWithImage = async (isLicensee, targetNumber) => {
     const imageUrl = product?.image_urls?.[0];
+    // Mensagem SEM emojis para link wa.me (desktop) — emojis viram ◆/? no WhatsApp Web
+    const desktopMessage = buildShareMessage(isLicensee, false);
     const waUrl = targetNumber
-      ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+      ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(desktopMessage)}`
+      : `https://wa.me/?text=${encodeURIComponent(desktopMessage)}`;
+
+    // Mensagem COM emojis para Web Share API (mobile) — emojis funcionam perfeitamente
+    const mobileMessage = buildShareMessage(isLicensee, true);
 
     // Tenta Web Share API com imagem (mobile) — apenas para URLs internas/supabase
-    // URLs externas (Google Shopping, gstatic, etc.) bloqueiam CORS e causam erro
     const isInternalImage = imageUrl && (
       imageUrl.includes('supabase.co') || 
       imageUrl.includes('base44') || 
@@ -138,8 +156,8 @@ export default function CatalogProductDetails() {
           const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
-              title: `🛍️ ${product.description}`,
-              text: message,
+              title: product.description,
+              text: mobileMessage,
               files: [file]
             });
             return;
@@ -147,41 +165,17 @@ export default function CatalogProductDetails() {
         }
       } catch (e) {
         if (e.name === 'AbortError') return;
-        // Qualquer outro erro: cai silenciosamente no fallback
         console.debug('Share com imagem falhou, usando fallback texto:', e.message);
       }
     }
 
-    // Fallback: abre WhatsApp com texto
+    // Fallback: abre WhatsApp com texto (sem emojis)
     window.open(waUrl, '_blank');
-  };
-
-  const buildShareMessage = (isLicensee) => {
-    const productUrl = getCanonicalProductUrl();
-    const price = product.price_catalog?.toFixed(2) || '0.00';
-
-    if (isLicensee) {
-      return `Olá! Tenho interesse neste produto da *sua Loja Virtual*:
-
-📦 *${product.description}*
-
-💚 *R$ ${price}*
-
-🔗 ${productUrl}`;
-    }
-    return `🛍️ *LOJA VIRTUAL NOZAP*
-
-📦 *${product.description}*
-
-💚 *R$ ${price}*
-
-🛒 Compre agora:
-${productUrl}`;
   };
 
   const handleShare = async () => {
     if (!product) return;
-    await shareWithImage(buildShareMessage(false));
+    await shareWithImage(false);
   };
 
   if (isLoading) {
@@ -244,7 +238,7 @@ ${productUrl}`;
   };
 
   const handleWhatsApp = async () => {
-    await shareWithImage(buildShareMessage(false));
+    await shareWithImage(false);
   };
 
   const normalizeToWaNumber = (phone) => {
@@ -256,7 +250,7 @@ ${productUrl}`;
 
   const handleWhatsAppToLicensee = async () => {
     const number = normalizeToWaNumber(licenseePhone);
-    await shareWithImage(buildShareMessage(true), number || undefined);
+    await shareWithImage(true, number || undefined);
   };
 
   return (

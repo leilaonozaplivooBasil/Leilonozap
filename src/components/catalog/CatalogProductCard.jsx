@@ -150,15 +150,10 @@ function CatalogProductCard({ product, currentUser }) {
     e.stopPropagation();
 
     const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}`;
-    const categoryEmoji = categoryEmojis[product.category] || '📦';
-    const shareMessage = `🛍️ *LOJA VIRTUAL NOZAP*
-
-📦 *${product.description}*
-
-💚 *R$ ${product.price_catalog?.toFixed(2)}*
-
-🛒 Compre agora:
-${productUrl}`;
+    // Mensagem COM emojis (mobile Web Share API)
+    const mobileMessage = `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    // Mensagem SEM emojis (desktop link wa.me — emojis viram ◆/? no WhatsApp Web)
+    const desktopMessage = `*LOJA VIRTUAL NOZAP*\n\n*${product.description}*\n\n*R$ ${product.price_catalog?.toFixed(2)}*\n\nCompre agora:\n${productUrl}`;
 
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -182,8 +177,8 @@ ${productUrl}`;
               const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
               if (navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                  title: `🛍️ ${product.description}`,
-                  text: shareMessage,
+                  title: product.description,
+                  text: mobileMessage,
                   files: [file]
                 });
                 return;
@@ -196,20 +191,20 @@ ${productUrl}`;
 
         // Fallback: share sem imagem (mobile)
         if (isIOS) {
-          await navigator.share({ title: `🛍️ ${product.description}`, text: shareMessage });
+          await navigator.share({ title: product.description, text: mobileMessage });
           return;
         }
-        // Android fallback: abre WhatsApp direto
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+        // Android fallback: abre WhatsApp direto (sem emojis no link)
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(desktopMessage)}`, '_blank');
         return;
       }
 
-      // 💻 DESKTOP
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+      // 💻 DESKTOP — sem emojis (emojis viram ◆/? no WhatsApp Web)
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(desktopMessage)}`, '_blank');
       
     } catch (err) {
       if (err.name !== 'AbortError') {
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(desktopMessage)}`, '_blank');
       }
     }
   };
