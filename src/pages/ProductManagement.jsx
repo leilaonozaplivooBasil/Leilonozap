@@ -758,6 +758,7 @@ export default function ProductManagement() {
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wider" style={{width:'130px'}}>Obs.</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>C. Total</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'80px'}}>C. Unit.</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-purple-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Mercado</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-sky-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Venda</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Estoque</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Vendidos</th>
@@ -844,6 +845,11 @@ export default function ProductManagement() {
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       R$ {(() => { const tq = (product.quantity || 0) + (product.quantity_sold || 0); return tq > 0 ? ((product.cost_price || 0) / tq).toFixed(2) : (product.cost_price || 0).toFixed(2); })()}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-purple-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
+                      {(product.market_value || 0) > 0
+                        ? <span>R$ {product.market_value.toFixed(2)}</span>
+                        : <span className="text-gray-600">—</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       {(product.selling_price_retail || 0) > 0
