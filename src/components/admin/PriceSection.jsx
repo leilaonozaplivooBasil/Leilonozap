@@ -7,9 +7,16 @@ import { DollarSign } from "lucide-react";
 
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
+  // sp = valor de mercado (base)
+  // Loja Virtual = mercado × 1.20 (+20% sobre mercado)
+  // Lance inicial = loja × 0.80 = mercado × 0.96 (20% abaixo da loja, 4% acima do mercado)
+  // Arremate Agora = loja (quem arremata agora paga o preço da loja)
   const lojaPrice = sp > 0 ? parseFloat((sp * 1.20).toFixed(2)) : 0;
   const leilaoInicio = sp > 0 ? parseFloat((lojaPrice * 0.80).toFixed(2)) : 0;
-  const descontoMercado = sp > 0 ? Math.round((1 - leilaoInicio / sp) * 100) : 0;
+  // Desconto do lance vs LOJA (correto: 20% abaixo da loja)
+  const descontoVsLoja = 20;
+  // Desconto do lance vs MERCADO (leilaoInicio / sp)
+  const descontoVsMercado = sp > 0 ? ((1 - leilaoInicio / sp) * 100).toFixed(1) : 0;
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -37,20 +44,31 @@ export default function PriceSection({ formData, onInputChange }) {
 
           {/* Sinalização da fórmula */}
           {sp > 0 && (
-            <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-600/40 rounded-lg space-y-1">
-              <p className="text-xs text-emerald-400 font-semibold">✅ Fórmula automática:</p>
-              <div className="text-xs space-y-0.5">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">🏪 Loja Virtual (× 1.20):</span>
+            <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-600/40 rounded-lg space-y-1.5">
+              <p className="text-xs text-emerald-400 font-semibold">✅ Fórmula automática aplicada:</p>
+              <div className="text-xs space-y-1">
+                {/* Linha separadora visual */}
+                <div className="flex justify-between items-center py-0.5 border-b border-gray-700">
+                  <span className="text-gray-300 font-medium">📊 Valor de Mercado (base):</span>
+                  <span className="text-white font-bold">R$ {sp.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">🏪 Loja Virtual (+20% sobre mercado):</span>
                   <span className="text-blue-400 font-bold">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">🔨 Lance inicial (loja × 0.80):</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">🔨 Lance inicial (−20% da loja):</span>
                   <span className="text-yellow-400 font-bold">R$ {leilaoInicio.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">📉 Desconto vs base:</span>
-                  <span className="text-orange-400 font-bold">{descontoMercado}% abaixo</span>
+                <div className="flex justify-between items-center pt-0.5 border-t border-gray-700">
+                  <span className="text-gray-400">📉 Lance vs Loja Virtual:</span>
+                  <span className="text-orange-400 font-bold">−{descontoVsLoja}% da loja</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">📉 Lance vs Mercado:</span>
+                  <span className={parseFloat(descontoVsMercado) < 0 ? "text-red-400 font-bold" : "text-orange-300 font-bold"}>
+                    {parseFloat(descontoVsMercado) >= 0 ? `−${descontoVsMercado}%` : `+${Math.abs(descontoVsMercado)}%`} vs mercado
+                  </span>
                 </div>
               </div>
             </div>
