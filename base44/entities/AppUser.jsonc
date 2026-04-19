@@ -1,0 +1,320 @@
+{
+  "name": "AppUser",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string"
+    },
+    "nickname": {
+      "type": "string",
+      "description": "Apelido p\u00fablico usado nos leil\u00f5es"
+    },
+    "store_name": {
+      "type": "string",
+      "description": "Nome da loja virtual do licenciado (exibido na listagem e cat\u00e1logo)"
+    },
+    "email": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF do usu\u00e1rio"
+    },
+    "points": {
+      "type": "number",
+      "default": 0
+    },
+    "total_bids": {
+      "type": "number",
+      "default": 0
+    },
+    "won_auctions": {
+      "type": "number",
+      "default": 0
+    },
+    "avatar_color": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "profile_photo_url": {
+      "type": "string",
+      "description": "URL da foto de perfil do licenciado para cat\u00e1logo personalizado"
+    },
+    "terms_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "role": {
+      "type": "string",
+      "default": "user",
+      "enum": [
+        "user",
+        "admin",
+        "licensee",
+        "investidor",
+        "leiloeiro",
+        "arrematante"
+      ]
+    },
+    "referral_code": {
+      "type": "string",
+      "description": "C\u00f3digo de indica\u00e7\u00e3o \u00fanico do licenciado"
+    },
+    "referred_by_id": {
+      "type": "string",
+      "description": "ID do licenciado/arrematante que indicou este usu\u00e1rio"
+    },
+    "indicated_clients_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Contagem de clientes indicados pelo licenciado"
+    },
+    "network_bids_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Contagem de arremates da rede do licenciado"
+    },
+    "commission_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo total de comiss\u00f5es dispon\u00edvel para saque (App + Cat\u00e1logo em R$)"
+    },
+    "total_commissions_generated": {
+      "type": "number",
+      "default": 0,
+      "description": "Total hist\u00f3rico de comiss\u00f5es geradas (nunca diminui)"
+    },
+    "career_levels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "usuario",
+          "licenciado_aplicativo",
+          "influencer",
+          "licenciado_catalogo",
+          "trainee",
+          "executivo",
+          "kit_start",
+          "plano_lider",
+          "plano_lojista",
+          "distribuidor",
+          "diretoria",
+          "diretor",
+          "ceo",
+          "conselheiro",
+          "fundador"
+        ]
+      },
+      "default": [
+        "usuario"
+      ],
+      "description": "N\u00edveis de carreira ativos (pode ter m\u00faltiplos)"
+    },
+    "primary_career_level": {
+      "type": "string",
+      "enum": [
+        "usuario",
+        "licenciado_aplicativo",
+        "influencer",
+        "licenciado_catalogo",
+        "trainee",
+        "executivo",
+        "kit_start",
+        "plano_lider",
+        "plano_lojista",
+        "distribuidor",
+        "diretoria",
+        "diretor",
+        "ceo",
+        "conselheiro",
+        "fundador"
+      ],
+      "default": "usuario",
+      "description": "Fun\u00e7\u00e3o principal/ativa no momento"
+    },
+    "display_first_name": {
+      "type": "string"
+    },
+    "display_last_name": {
+      "type": "string"
+    },
+    "address_street": {
+      "type": "string"
+    },
+    "address_number": {
+      "type": "string"
+    },
+    "address_complement": {
+      "type": "string"
+    },
+    "address_neighborhood": {
+      "type": "string"
+    },
+    "address_city": {
+      "type": "string"
+    },
+    "address_state": {
+      "type": "string"
+    },
+    "address_zip_code": {
+      "type": "string"
+    },
+    "catalog_commission_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo atual de comiss\u00f5es do Cat\u00e1logo (R$)"
+    },
+    "catalog_total_commissions_generated": {
+      "type": "number",
+      "default": 0,
+      "description": "Total hist\u00f3rico de comiss\u00f5es do Cat\u00e1logo (R$)"
+    },
+    "active_partner_plan": {
+      "type": "string",
+      "description": "Nome do plano de parceiro ativo"
+    },
+    "partner_plan_amount": {
+      "type": "number",
+      "description": "% comiss\u00e3o da plataforma (admin) sobre o arrematante"
+    },
+    "partner_plan_activated_at": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de ativa\u00e7\u00e3o do plano de parceiro"
+    },
+    "saldo_disponivel": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo livre do investidor (capital dispon\u00edvel para novos lances)"
+    },
+    "saldo_alocado": {
+      "type": "number",
+      "default": 0,
+      "description": "Capital travado em lances ativos (em disputa)"
+    },
+    "password_reset_token": {
+      "type": "string",
+      "description": "Token tempor\u00e1rio para recupera\u00e7\u00e3o de senha"
+    },
+    "password_reset_expires": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de expira\u00e7\u00e3o do token de recupera\u00e7\u00e3o de senha"
+    },
+    "arrematante_commission_percentage": {
+      "type": "number",
+      "default": 0,
+      "description": "% comiss\u00e3o que o arrematante cobra do investidor (definida pelo arrematante ao cadastrar)"
+    },
+    "total_operation_fee_percentage": {
+      "type": "number",
+      "default": 0,
+      "description": "Taxa total de opera\u00e7\u00e3o para o investidor (% admin + % arrematante, calculada no cadastro)"
+    },
+    "arrematante_responsavel_id": {
+      "type": "string",
+      "description": "ID do AppUser arrematante respons\u00e1vel por este investidor"
+    },
+    "licenciado_context": {
+      "type": "object",
+      "description": "Contexto isolado de VENDEDOR (Licenciado) \u2014 quem vende e recebe comiss\u00f5es",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Se este usu\u00e1rio atua como licenciado"
+        },
+        "commission_balance": {
+          "type": "number",
+          "default": 0,
+          "description": "Saldo de comiss\u00f5es APENAS de vendas (separado)"
+        },
+        "total_commissions_generated": {
+          "type": "number",
+          "default": 0,
+          "description": "Total hist\u00f3rico de comiss\u00f5es (nunca diminui)"
+        },
+        "career_level": {
+          "type": "string",
+          "enum": [
+            "usuario",
+            "licenciado_aplicativo",
+            "influencer",
+            "licenciado_catalogo",
+            "trainee",
+            "executivo",
+            "kit_start",
+            "plano_lider",
+            "plano_lojista",
+            "distribuidor",
+            "diretoria",
+            "diretor",
+            "ceo",
+            "conselheiro",
+            "fundador"
+          ],
+          "description": "Carreira dentro do contexto de vendedor"
+        },
+        "referral_code": {
+          "type": "string",
+          "description": "C\u00f3digo \u00fanico de indica\u00e7\u00e3o do licenciado"
+        }
+      }
+    },
+    "arrematante_context": {
+      "type": "object",
+      "description": "Contexto isolado de COMPRADOR (Arrematante) \u2014 quem participa de leil\u00f5es",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Se este usu\u00e1rio atua como arrematante"
+        },
+        "saldo_disponivel": {
+          "type": "number",
+          "default": 0,
+          "description": "Capital livre para novos lances"
+        },
+        "saldo_alocado": {
+          "type": "number",
+          "default": 0,
+          "description": "Capital travado em lances ativos"
+        },
+        "total_bids": {
+          "type": "number",
+          "default": 0,
+          "description": "Total de lances efetuados"
+        },
+        "won_auctions": {
+          "type": "number",
+          "default": 0,
+          "description": "Total de leil\u00f5es vencidos"
+        },
+        "commission_percentage": {
+          "type": "number",
+          "default": 0,
+          "description": "% que este arrematante cobra dos investidores (taxa operacional)"
+        }
+      }
+    }
+  },
+  "required": [
+    "full_name",
+    "email",
+    "password",
+    "phone"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

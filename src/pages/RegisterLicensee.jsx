@@ -26,10 +26,8 @@ function shareLink(url, name){
   }
 }
 
-function displayName(u) {
-  if (u?.nickname) return u.nickname;
-  if (u?.display_first_name || u?.display_last_name) return [u.display_first_name, u.display_last_name].filter(Boolean).join(" ");
-  return u?.full_name || "Sem nome";
+function storeName(u) {
+  return u?.store_name || ("L. Virtual " + (u?.full_name || "Sem nome"));
 }
 
 export default function RegisterLicensee() {
@@ -146,7 +144,8 @@ const visitsData = useMemo(() => {
                     {(selected?.full_name || "?").slice(0,2).toUpperCase()}
                   </div>
                 )}
-                <div className="text-xl font-semibold text-white">{selected ? displayName(selected) : "Selecione um licenciado"}</div>
+                <div className="text-xl font-semibold text-white">{selected ? storeName(selected) : "Selecione um licenciado"}</div>
+                {selected && <div className="text-sm text-gray-400">{selected.full_name}</div>}
                 {selected && (
                   <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">Loja ativa <ShoppingBag className="w-3.5 h-3.5" /></Badge>
                 )}
@@ -240,7 +239,7 @@ const visitsData = useMemo(() => {
                   </div>
 
                   <div className="text-center">
-                    <div className="font-semibold text-gray-100">{selected ? displayName(selected) : ""} não teve visitas em sua loja nos últimos 30 dias</div>
+                    <div className="font-semibold text-gray-100">{selected ? storeName(selected) : ""} não teve visitas em sua loja nos últimos 30 dias</div>
                     <p className="text-gray-400 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa a loja do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
                   </div>
 

@@ -7,17 +7,15 @@ function initials(name = "") {
   return (parts[0]?.[0] || "?") + (parts[1]?.[0] || "");
 }
 
-function displayName(u) {
-  if (u.nickname) return u.nickname;
-  if (u.display_first_name || u.display_last_name) return [u.display_first_name, u.display_last_name].filter(Boolean).join(" ");
-  return u.full_name || "Sem nome";
+function storeName(u) {
+  return u.store_name || ("L. Virtual " + (u.full_name || "Sem nome"));
 }
 
 export default function LicenseeListItem({ licensee, selected, onSelect, onEdit }) {
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
   const referral = licensee.referral_code || "";
   const link = `https://leilaonozap.net/catalog?ref=${referral}`;
-  const name = displayName(licensee);
+  const name = storeName(licensee);
 
   const copy = (e) => {
     e.stopPropagation();

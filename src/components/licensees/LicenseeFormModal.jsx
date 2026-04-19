@@ -17,6 +17,7 @@ function slugify(str) {
 export default function LicenseeFormModal({ open, onClose, onCreated, initialUser }) {
   const [cpf, setCpf] = useState("");
   const [fullName, setFullName] = useState("");
+  const [storeName, setStoreName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
     const [slug, setSlug] = useState("");
@@ -38,6 +39,7 @@ const fileInputRef = useRef(null);
     if (open && initialUser) {
       setFoundUser(initialUser);
       setFullName(initialUser.full_name || "");
+      setStoreName(initialUser.store_name || "");
       setEmail(initialUser.email || "");
       setPhone(initialUser.phone || "");
       setAvatarUrl(initialUser.avatar_url || "");
@@ -54,6 +56,7 @@ const fileInputRef = useRef(null);
       const u = rows[0];
       setFoundUser(u);
       setFullName(u.full_name || "");
+      setStoreName(u.store_name || "");
       setEmail(u.email || "");
       setPhone(u.phone || "");
       setAvatarUrl(u.avatar_url || "");
@@ -79,6 +82,7 @@ const fileInputRef = useRef(null);
 
     const common = {
       full_name: fullName.trim(),
+      store_name: storeName.trim() || null,
       email: (email || "").trim().toLowerCase(),
       phone: (phone || "").trim(),
       role: "licensee",
@@ -107,7 +111,7 @@ const fileInputRef = useRef(null);
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
       <DialogContent className="sm:max-w-2xl bg-gray-900 border border-gray-700 text-gray-100">
         <DialogHeader>
-          <DialogTitle className="text-gray-100">Catálogo do Vendedor</DialogTitle>
+          <DialogTitle className="text-gray-100">Loja Virtual do Vendedor</DialogTitle>
         </DialogHeader>
 
         {/* Busca por CPF */}
@@ -134,22 +138,34 @@ const fileInputRef = useRef(null);
                   )}
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                <div className="text-gray-200 font-semibold">Catálogo do Vendedor</div>
+                <div className="text-gray-200 font-semibold">Loja Virtual do Vendedor</div>
               </div>
 
-              {/* Nome */}
+              {/* Nome da Loja */}
+              <div className="md:col-span-2">
+                <Label className="text-gray-300">Nome da Loja Virtual</Label>
+                <Input
+                  className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                  placeholder="Ex: Loja Vale do Recreio, Loja da Maria..."
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                />
+                <p className="text-xs text-gray-500 mt-1">Nome que aparece na listagem. Se vazio, será "L. Virtual + nome".</p>
+              </div>
+
+              {/* Nome do vendedor */}
               <div>
                 <Label className="text-gray-300">Nome do vendedor</Label>
                 <Input
-                                        className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
-                                        placeholder="Digite o nome dele aqui"
-                                        value={fullName}
-                                        onChange={(e) => {
-                                          setFullName(e.target.value);
-                                          if (!slug) setSlug(slugify(e.target.value));
-                                        }}
-                                        required
-                                      />
+                  className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                  placeholder="Nome completo do vendedor"
+                  value={fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    if (!slug) setSlug(slugify(e.target.value));
+                  }}
+                  required
+                />
               </div>
 
               {/* WhatsApp */}
@@ -181,7 +197,7 @@ const fileInputRef = useRef(null);
 
               {/* Endereço do catálogo */}
               <div className="md:col-span-2">
-                <Label className="text-gray-300">Endereço do catálogo do vendedor</Label>
+                <Label className="text-gray-300">Endereço da loja do vendedor</Label>
                 <div className="flex flex-nowrap items-stretch">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-800 text-gray-300 whitespace-nowrap shrink-0 text-sm">https://leilaonozap.net/catalog?ref=</span>
                   <Input
