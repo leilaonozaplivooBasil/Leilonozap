@@ -39,7 +39,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
   const [showShareModal, setShowShareModal] = useState(false);
 
   const referral = selected?.referral_code || "";
-  const catalogLink = referral ? `https://leilaonozap.net/Catalog?ref=${referral}` : "";
+  const catalogLink = referral ? `https://leilaonozap.net/Loja-Virtual?ref=${referral}` : "";
   const displayLink = referral ? `leilaonozap.net/Loja-Virtual?ref=${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
 

@@ -28,10 +28,8 @@ const [isUploading, setIsUploading] = useState(false);
 const fileInputRef = useRef(null);
 
   const suggestedCode = useMemo(() => {
-    const base = slugify(fullName).replace(/-/g, "");
-    const rand = Math.random().toString(36).slice(2, 6);
-    return (base || "licenciado") + rand;
-  }, [fullName]);
+    return slugify(storeName) || slugify(fullName) || "licenciado";
+  }, [storeName, fullName]);
 
   const suggestedSlug = useMemo(() => slug || slugify(storeName) || slugify(fullName), [slug, storeName, fullName]);
 
@@ -89,7 +87,7 @@ const fileInputRef = useRef(null);
       career_levels: ["licenciado_catalogo"],
       primary_career_level: "licenciado_catalogo",
       terms_accepted: true,
-      referral_code: (foundUser && foundUser.referral_code) ? foundUser.referral_code : suggestedCode,
+      referral_code: suggestedCode,
       nickname: suggestedSlug,
       avatar_url: avatarUrl,
     };
@@ -148,10 +146,7 @@ const fileInputRef = useRef(null);
                   className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
                   placeholder="Ex: Loja Vale do Recreio, Loja da Maria..."
                   value={storeName}
-                  onChange={(e) => {
-                    setStoreName(e.target.value);
-                    if (!slug) setSlug(slugify(e.target.value));
-                  }}
+                  onChange={(e) => setStoreName(e.target.value)}
                 />
                 <p className="text-xs text-gray-500 mt-1">Nome que aparece na listagem e gera o endereço da loja.</p>
               </div>
@@ -200,7 +195,7 @@ const fileInputRef = useRef(null);
                 <Label className="text-gray-300">Link da Loja Virtual</Label>
                 <Input
                   className="bg-gray-900 border-gray-700 text-gray-400 cursor-default"
-                  value={`leilaonozap.net/Catalog?ref=${(foundUser && foundUser.referral_code) || suggestedCode}`}
+                  value={`leilaonozap.net/Loja-Virtual?ref=${suggestedCode}`}
                   readOnly
                 />
                 <p className="text-xs text-gray-500 mt-1">Link gerado automaticamente pelo código de indicação.</p>

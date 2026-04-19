@@ -32,7 +32,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
     setToggling(false);
   };
   const referral = licensee.referral_code || "";
-  const link = `https://leilaonozap.net/Catalog?ref=${referral}`;
+  const link = `https://leilaonozap.net/Loja-Virtual?ref=${referral}`;
   const displayLink = `leilaonozap.net/Loja-Virtual?ref=${referral}`;
   const name = storeName(licensee);
 
