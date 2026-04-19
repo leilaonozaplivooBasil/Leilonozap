@@ -26,6 +26,7 @@ import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 
 // 🆕 IMPORT DO MODAL
 import FavoriteButton from '../recommendations/FavoriteButton';
+import { proxyImage } from "@/functions/proxyImage";
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
@@ -234,80 +235,65 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    try {
-      // 🍎 iOS
-      if (isIOS && navigator.share && navigator.canShare) {
-        const imageUrl = auction.image_urls?.[0];
+    const imageUrl = auction.image_urls?.[0];
 
-        if (imageUrl) {
-          try {
-            const response = await fetch(imageUrl);
-            if (!response.ok) throw new Error('Erro ao baixar imagem');
-
-            const blob = await response.blob();
-            const file = new File([blob], 'produto.jpg', { type: blob.type });
-
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                title: `🔨📦 ${displayTitle}`,
-                text: shareMessage,
-                files: [file]
-              });
-              return;
+    // NÍVEL 1: Share com imagem via Web Share API
+    if (imageUrl && navigator.share && navigator.canShare) {
+      try {
+        // Resolve URL acessível (proxy se for externa)
+        let shareableUrl = imageUrl;
+        const isLocalUrl = imageUrl.includes('supabase.co') || imageUrl.includes('base44.app');
+        if (!isLocalUrl) {
+          const cacheKey = `proxy_img_${imageUrl}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            shareableUrl = cached;
+          } else {
+            const proxyResult = await proxyImage({ imageUrl });
+            if (proxyResult?.data?.file_url) {
+              shareableUrl = proxyResult.data.file_url;
+              sessionStorage.setItem(cacheKey, shareableUrl);
             }
-          } catch (imgError) {
-            // Fallback sem imagem
           }
         }
 
-        await navigator.share({
-          title: `🔨📦 ${displayTitle}`,
-          text: shareMessage,
-        });
-        return;
-      }
-
-      // 🤖 ANDROID
-      if (isAndroid) {
-        const imageUrl = auction.image_urls?.[0];
-
-        if (imageUrl && navigator.share && navigator.canShare) {
-          try {
-            const response = await fetch(imageUrl);
-            if (!response.ok) throw new Error('Erro ao baixar imagem');
-
-            const blob = await response.blob();
-            const file = new File([blob], 'produto.jpg', {
-              type: 'image/jpeg',
-              lastModified: new Date().getTime()
+        const response = await fetch(shareableUrl, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          const mimeType = blob.type || 'image/jpeg';
+          const ext = mimeType.includes('png') ? '.png' : mimeType.includes('webp') ? '.webp' : '.jpg';
+          const fileName = `${(displayTitle || 'produto').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}${ext}`;
+          const file = new File([blob], fileName, { type: mimeType });
+          
+          const shareData = { files: [file] };
+          if (navigator.canShare(shareData)) {
+            await navigator.share({
+              title: `🔨📦 ${displayTitle}`,
+              text: shareMessage,
+              url: productUrl,
+              files: [file]
             });
-
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                title: `🔨📦 ${displayTitle}`,
-                text: shareMessage,
-                files: [file]
-              });
-              return;
-            }
-          } catch (imgError) {
-            // Fallback
+            return;
           }
         }
-
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
-        window.open(whatsappUrl, '_blank');
-        return;
-      }
-
-      // 💻 DESKTOP
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
-
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+      } catch (imgErr) {
+        if (imgErr.name === 'AbortError') return;
+        console.debug('Share com imagem falhou, tentando sem imagem:', imgErr.message);
       }
     }
+
+    // NÍVEL 2: Share só texto (sem imagem)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `🔨📦 ${displayTitle}`, text: shareMessage, url: productUrl });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // NÍVEL 3: Abre WhatsApp com texto
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
   };
 
   // REGRA ÚNICA E SIMPLES: Se o status no banco é 'active', o leilão é ativo.

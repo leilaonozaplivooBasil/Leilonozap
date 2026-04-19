@@ -181,7 +181,8 @@ export default function CatalogProductDetails() {
       try {
         // Resolve URL acessível (proxy se for externa)
         let shareableUrl = imageUrl;
-        if (!imageUrl.includes('supabase.co')) {
+        const isLocalUrl = imageUrl.includes('supabase.co') || imageUrl.includes('base44.app');
+        if (!isLocalUrl) {
           const cacheKey = `proxy_img_${imageUrl}`;
           const cached = sessionStorage.getItem(cacheKey);
           if (cached) {
