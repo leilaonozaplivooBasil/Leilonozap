@@ -58,19 +58,15 @@ export default function AdminPanelMenu({ adminMenuItems }) {
         >
           {/* Menu principal de categorias */}
           <div
-            className="rounded-xl overflow-hidden py-2 min-w-[210px]"
+            className="rounded-lg overflow-hidden py-1"
             style={{
               background: 'rgba(15,23,42,0.92)',
               backdropFilter: 'blur(24px) saturate(1.5)',
               border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
             }}
           >
-            <p className="px-4 py-1.5 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
-              Administração
-            </p>
-            <div className="h-px bg-white/[0.06] mx-3 my-1" />
-            {adminMenuItems.map((item) => (
+            {adminMenuItems.map((item, idx) => (
               <button
                 key={item.title}
                 onMouseEnter={() => setHoveredCategory(item)}
@@ -81,39 +77,36 @@ export default function AdminPanelMenu({ adminMenuItems }) {
                     setHoveredCategory(item);
                   }
                 }}
-                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-all flex items-center justify-between gap-2 ${
+                className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-all flex items-center justify-between gap-3 whitespace-nowrap ${
                   hoveredCategory?.title === item.title
-                    ? 'text-white bg-white/[0.06]'
+                    ? 'text-white bg-white/[0.07]'
                     : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <span>{item.title}</span>
-                <svg className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             ))}
           </div>
 
-          {/* Submenu lateral — abre à direita */}
+          {/* Submenu lateral — abre à direita, tamanho ajustado ao conteúdo */}
           {hoveredCategory && (
             <div
-              className="ml-1 rounded-xl overflow-hidden py-2 min-w-[220px] animate-in fade-in slide-in-from-left-2 duration-150"
+              className="ml-1 rounded-lg overflow-hidden py-1 animate-in fade-in slide-in-from-left-2 duration-150"
               style={{
                 background: 'rgba(15,23,42,0.92)',
                 backdropFilter: 'blur(24px) saturate(1.5)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
               }}
             >
-              <p className="px-4 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                {hoveredCategory.title}
-              </p>
               {hoveredCategory.items?.map((subItem) => (
                 <button
                   key={subItem.pageName}
                   onClick={() => handleNavigate(subItem.pageName)}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-white/[0.07] transition-colors whitespace-nowrap"
                 >
                   {subItem.title}
                 </button>
