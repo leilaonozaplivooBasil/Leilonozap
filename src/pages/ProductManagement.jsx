@@ -133,10 +133,17 @@ export default function ProductManagement() {
         if (item.source_url) updateData.source_url = item.source_url;
         if (item.market_price) updateData.market_value = item.market_price;
         await base44.entities.Product.update(item.id, updateData);
-        alert(`✅ Precificado!\nMercado: R$ ${item.market_price.toFixed(2)}\nVenda (-20%): R$ ${item.selling_price_retail.toFixed(2)}`);
+
+        // ✅ Atualiza estado local IMEDIATAMENTE (evita problema de cache)
+        const updater = (list) => list.map(p => p.id === item.id ? { ...p, ...updateData } : p);
+        setProducts(prev => updater(prev));
+        setFilteredProducts(prev => updater(prev));
+
+        // Invalida cache para próxima carga
         sessionStorage.removeItem('products_cache_v3');
         sessionStorage.removeItem('products_cache_time_v3');
-        setTimeout(() => loadData(), 500);
+
+        alert(`✅ Precificado!\nMercado: R$ ${item.market_price.toFixed(2)}\nVenda (-20%): R$ ${item.selling_price_retail.toFixed(2)}`);
       } else {
         alert('⚠️ Preço de mercado não encontrado para este produto');
       }
