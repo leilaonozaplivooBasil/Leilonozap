@@ -278,63 +278,110 @@ function MetricCard({ label, value, icon: Icon, color, border, hint, tooltip }) 
 }
 
 function HistoryRow({ record }) {
-  const isUp = (record.variation_percent || 0) >= 0;
+  const variation = record.variation_percent || 0;
+  const isUp = variation >= 0;
+  // Regra de negócio visual: preço SUBIU = ruim p/ cliente (vermelho) | preço DESCEU = ganho p/ cliente (verde)
   const variationColor = isUp ? 'text-red-400' : 'text-emerald-400';
+  const variationBg = isUp ? 'bg-red-500/10 border-red-500/25' : 'bg-emerald-500/10 border-emerald-500/25';
   const ArrowIcon = isUp ? ArrowUpCircle : ArrowDownCircle;
 
   const triggerLabels = {
-    auto_traffic: { label: '⚡ Auto', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-    manual_single: { label: '👆 Manual', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-    manual_batch: { label: '📦 Lote', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-    scheduled: { label: '⏰ Agendado', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' }
+    auto_traffic: { label: 'Auto', icon: '⚡', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+    manual_single: { label: 'Manual', icon: '👆', color: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+    manual_batch: { label: 'Lote', icon: '📦', color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+    scheduled: { label: 'Agendado', icon: '⏰', color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' }
   };
   const trig = triggerLabels[record.trigger_type] || triggerLabels.auto_traffic;
 
   const createdAt = record.created_date ? new Date(record.created_date) : null;
   const timeStr = createdAt ? createdAt.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
-  const tooltipText = `Preço antigo: R$ ${(record.old_price || 0).toFixed(2)} (o que estava cadastrado antes)
-Preço novo: R$ ${(record.new_price || 0).toFixed(2)} (aplicado agora)
-Variação: ${isUp ? '+' : ''}${(record.variation_percent || 0).toFixed(2)}% (${isUp ? 'subiu' : 'desceu'})
-${record.new_market ? `Mercado detectado: R$ ${record.new_market.toFixed(2)} (mediana do Google Shopping)` : ''}
-${record.floor_applied ? '⚠ Piso de segurança aplicado (custo × 1,3) para proteger margem.' : ''}`.trim();
-
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/40 transition-colors cursor-help">
-          <ArrowIcon className={`w-5 h-5 ${variationColor} flex-shrink-0`} />
+        <div className="group flex items-center gap-4 px-5 py-4 hover:bg-gradient-to-r hover:from-gray-800/40 hover:to-transparent transition-all cursor-help border-l-2 border-transparent hover:border-emerald-500/40">
 
+          {/* Ícone de direção em círculo */}
+          <div className={`w-10 h-10 rounded-full border flex items-center justify-center flex-shrink-0 ${variationBg}`}>
+            <ArrowIcon className={`w-5 h-5 ${variationColor}`} />
+          </div>
+
+          {/* Coluna central: produto + metadados */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-200 font-medium truncate">{record.product_description || '—'}</p>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <Badge className={`text-[10px] ${trig.color} border font-normal`}>{trig.label}</Badge>
+            <p className="text-sm text-gray-100 font-medium truncate group-hover:text-white transition-colors">
+              {record.product_description || '—'}
+            </p>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <Badge className={`text-[10px] px-2 py-0.5 ${trig.color} border font-medium gap-1`}>
+                <span>{trig.icon}</span> {trig.label}
+              </Badge>
               {record.floor_applied && (
-                <Badge className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
-                  <Shield className="w-2.5 h-2.5 mr-1" /> Piso
+                <Badge className="text-[10px] px-2 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium gap-1">
+                  <Shield className="w-2.5 h-2.5" /> Piso
                 </Badge>
               )}
               {record.sessions_active != null && (
-                <span className="text-[10px] text-gray-600">
-                  <Users className="w-2.5 h-2.5 inline mr-0.5" />{record.sessions_active} online
+                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                  <Users className="w-2.5 h-2.5" />{record.sessions_active} online
                 </span>
               )}
-              <span className="text-[10px] text-gray-600">{timeStr}</span>
+              <span className="text-[10px] text-gray-600 ml-auto sm:ml-0">{timeStr}</span>
             </div>
           </div>
 
-          <div className="text-right flex-shrink-0">
-            <div className="text-xs text-gray-500">
-              R$ {(record.old_price || 0).toFixed(2)} → <span className="text-white font-semibold">R$ {(record.new_price || 0).toFixed(2)}</span>
+          {/* Coluna direita: antes → depois + variação */}
+          <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-500 line-through">R$ {(record.old_price || 0).toFixed(2)}</span>
+              <span className="text-gray-600">→</span>
+              <span className="text-white font-bold text-sm">R$ {(record.new_price || 0).toFixed(2)}</span>
             </div>
-            <div className={`text-xs font-bold ${variationColor}`}>
-              {isUp ? '+' : ''}{(record.variation_percent || 0).toFixed(2)}%
+            <div className={`text-xs font-bold px-2 py-0.5 rounded-md border ${variationBg} ${variationColor}`}>
+              {isUp ? '+' : ''}{variation.toFixed(2)}%
             </div>
           </div>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="left" className="max-w-xs bg-gray-900 border-gray-700 text-gray-200 text-xs p-3 leading-relaxed whitespace-pre-line">
-        {tooltipText}
+      <TooltipContent side="left" className="max-w-sm bg-gray-950 border border-gray-700 text-gray-200 p-0 overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-r from-emerald-950/60 to-gray-900 px-4 py-2.5 border-b border-gray-800">
+          <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">Detalhes da alteração</p>
+        </div>
+        <div className="p-4 space-y-2.5">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Antes</p>
+              <p className="text-sm text-gray-400 line-through">R$ {(record.old_price || 0).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Depois</p>
+              <p className="text-sm text-white font-bold">R$ {(record.new_price || 0).toFixed(2)}</p>
+            </div>
+          </div>
+
+          <div className={`rounded-lg px-3 py-2 border ${variationBg} flex items-center justify-between`}>
+            <span className="text-[11px] text-gray-400 font-medium">Variação</span>
+            <span className={`text-sm font-bold ${variationColor} flex items-center gap-1`}>
+              <ArrowIcon className="w-3.5 h-3.5" />
+              {isUp ? '+' : ''}{variation.toFixed(2)}%
+            </span>
+          </div>
+
+          {record.new_market > 0 && (
+            <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-gray-800">
+              <span className="text-gray-500">Mercado (mediana Google)</span>
+              <span className="text-purple-300 font-semibold">R$ {record.new_market.toFixed(2)}</span>
+            </div>
+          )}
+
+          {record.floor_applied && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 flex items-start gap-2">
+              <Shield className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-200 leading-relaxed">
+                <span className="font-semibold">Piso de segurança</span> aplicado (custo × 1,3) para proteger a margem.
+              </p>
+            </div>
+          )}
+        </div>
       </TooltipContent>
     </Tooltip>
   );
