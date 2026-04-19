@@ -166,7 +166,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
 
     const ref = sessionStorage.getItem('referralCode');
     const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
-    const shareMessage = `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
     const imageUrl = product.image_urls?.[0];
 
     // NÍVEL 1: Share com imagem (qualquer URL)

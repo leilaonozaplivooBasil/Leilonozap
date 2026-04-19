@@ -164,7 +164,7 @@ export default function CatalogProductDetails() {
     if (isLicensee) {
       return `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`;
     }
-    return `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`;
+    return `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`;
   };
 
   const shareWithImage = async (isLicensee, targetNumber) => {

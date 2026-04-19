@@ -118,22 +118,31 @@ export default function GlobalMonitor() {
         
       } catch (error) {
         const endTime = Date.now();
+        const requestUrl = typeof args[0] === 'string' ? args[0] : '';
         
-        errorLogRef.current.push({
-          error: error.message,
-          url: args[0],
-          timestamp: Date.now(),
-          duration: endTime - startTime
-        });
+        // Ignora erros de fetch de imagens externas (CORS esperado no compartilhamento)
+        const isExternalImageFetch = requestUrl.includes('gstatic.com') ||
+          requestUrl.includes('encrypted-tbn') ||
+          requestUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i) ||
+          requestUrl.includes('shopping?q=tbn');
         
-        addIssue({
-          level: 'critical',
-          type: 'request_error',
-          message: `Erro na requisição: ${error.message}`,
-          location: args[0],
-          timestamp: new Date().toISOString(),
-          prompt: `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${args[0]}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
-        });
+        if (!isExternalImageFetch) {
+          errorLogRef.current.push({
+            error: error.message,
+            url: requestUrl,
+            timestamp: Date.now(),
+            duration: endTime - startTime
+          });
+          
+          addIssue({
+            level: 'critical',
+            type: 'request_error',
+            message: `Erro na requisição: ${error.message}`,
+            location: requestUrl,
+            timestamp: new Date().toISOString(),
+            prompt: `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${requestUrl}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
+          });
+        }
         
         throw error;
       }
