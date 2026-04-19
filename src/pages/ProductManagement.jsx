@@ -528,6 +528,9 @@ export default function ProductManagement() {
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("AddCatalogProduct"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <BookOpen className="w-4 h-4 mr-2 text-violet-400" /> Loja Virtual
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("CreateAuction"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <TrendingUp className="w-4 h-4 mr-2 text-blue-400" /> Criar Leilão
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("RegisterBatches"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <PackagePlus className="w-4 h-4 mr-2 text-blue-400" /> Registrar Lotes
                 </DropdownMenuItem>
@@ -589,9 +592,6 @@ export default function ProductManagement() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/40">
-              <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo Produto
-            </Button>
           </div>
         </div>
       </div>
