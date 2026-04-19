@@ -55,14 +55,15 @@ const AuthenticatedApp = () => {
   }
 
   // Handle authentication errors
+  // NOTA: Este app usa autenticação custom (AppUser + LoginModal).
+  // Não bloquear a renderização quando auth_required — o login da plataforma Base44
+  // não é o fluxo principal. Apenas bloquear para user_not_registered.
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
     }
+    // auth_required e outros erros: NÃO redirecionar para login Base44.
+    // O app tem login próprio via LoginModal que salva no localStorage.
   }
 
   // Render the main app
