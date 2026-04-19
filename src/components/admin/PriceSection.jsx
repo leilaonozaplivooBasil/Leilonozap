@@ -7,16 +7,12 @@ import { DollarSign } from "lucide-react";
 
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
-  // sp = valor de mercado (base)
-  // Loja Virtual = mercado × 1.20 (+20% sobre mercado)
-  // Lance inicial = loja × 0.80 = mercado × 0.96 (20% abaixo da loja, 4% acima do mercado)
-  // Arremate Agora = loja (quem arremata agora paga o preço da loja)
-  const lojaPrice = sp > 0 ? parseFloat((sp * 1.20).toFixed(2)) : 0;
-  const leilaoInicio = sp > 0 ? parseFloat((lojaPrice * 0.80).toFixed(2)) : 0;
-  // Desconto do lance vs LOJA (correto: 20% abaixo da loja)
-  const descontoVsLoja = 20;
-  // Desconto do lance vs MERCADO (leilaoInicio / sp)
-  const descontoVsMercado = sp > 0 ? ((1 - leilaoInicio / sp) * 100).toFixed(1) : 0;
+  // sp = valor de mercado (base inserida pelo admin)
+  // Loja Virtual = mercado × 0.80 (20% abaixo do mercado)
+  // Lance inicial = mercado × 0.60 (40% abaixo do mercado)
+  // Arremate Agora = preço da Loja Virtual (teto direto)
+  const lojaPrice = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
+  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.60).toFixed(2)) : 0;
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -53,22 +49,12 @@ export default function PriceSection({ formData, onInputChange }) {
                   <span className="text-white font-bold">R$ {sp.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">🏪 Loja Virtual (+20% sobre mercado):</span>
+                  <span className="text-gray-400">🏪 Loja Virtual (−20% do mercado):</span>
                   <span className="text-blue-400 font-bold">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">🔨 Lance inicial (−20% da loja):</span>
+                  <span className="text-gray-400">🔨 Lance inicial (−40% do mercado):</span>
                   <span className="text-yellow-400 font-bold">R$ {leilaoInicio.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-0.5 border-t border-gray-700">
-                  <span className="text-gray-400">📉 Lance vs Loja Virtual:</span>
-                  <span className="text-orange-400 font-bold">−{descontoVsLoja}% da loja</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">📉 Lance vs Mercado:</span>
-                  <span className={parseFloat(descontoVsMercado) < 0 ? "text-red-400 font-bold" : "text-orange-300 font-bold"}>
-                    {parseFloat(descontoVsMercado) >= 0 ? `−${descontoVsMercado}%` : `+${Math.abs(descontoVsMercado)}%`} vs mercado
-                  </span>
                 </div>
               </div>
             </div>
