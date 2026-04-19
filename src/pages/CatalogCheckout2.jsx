@@ -334,9 +334,19 @@ export default function CatalogCheckout2() {
         pollingTimeoutRef.current = setTimeout(checkStatus, 4000);
         pollingIntervalRef.current = setInterval(checkStatus, 6000);
 
+        // Complemento: check imediato ao voltar do app do banco (mobile)
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') checkStatus();
+        };
+        const handleFocus = () => checkStatus();
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('focus', handleFocus);
+
         return () => {
             clearInterval(pollingIntervalRef.current);
             clearTimeout(pollingTimeoutRef.current);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('focus', handleFocus);
         };
     }, [pixData, paymentConfirmed]);
 
