@@ -374,7 +374,7 @@ export default function Cart() {
         buyer_phone: formData.phone.replace(/\D/g, ''),
         amount: totalAmount,
         billing_type: paymentType,
-        description: `Pedido - ${cartItems.length} item(s) do catálogo`
+        description: `Pedido - ${cartItems.length} item(s) da loja virtual`
       };
 
       if (paymentType === 'CREDIT_CARD') {
@@ -520,7 +520,7 @@ export default function Cart() {
   };
 
   const openWhatsApp = () => {
-    const message = encodeURIComponent('Olá! Gostaria de negociar sobre meu pedido do catálogo.');
+    const message = encodeURIComponent('Olá! Gostaria de negociar sobre meu pedido da loja virtual.');
     window.open(`https://wa.me/5521999999999?text=${message}`, '_blank');
   };
 

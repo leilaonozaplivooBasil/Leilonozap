@@ -151,7 +151,7 @@ function CatalogProductCard({ product, currentUser }) {
 
     const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}`;
     const categoryEmoji = categoryEmojis[product.category] || '📦';
-    const shareMessage = `🛍️${categoryEmoji} CATÁLOGO LEILÃO NO ZAP!
+    const shareMessage = `🛍️${categoryEmoji} LOJA VIRTUAL LEILÃO NO ZAP!
 
 ${categoryEmoji} ${product.description}
 💰 Preço: R$ ${product.price_catalog?.toFixed(2)}

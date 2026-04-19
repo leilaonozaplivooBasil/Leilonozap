@@ -494,7 +494,7 @@ export default function Catalog() {
               )}
               <div className="flex-1">
                 <h2 className="text-lg font-bold text-white">
-                  Catálogo de {licenseeData.name}
+                  Loja Virtual de {licenseeData.name}
                 </h2>
                 <p className="text-green-200 text-xs">
                   ✨ Produtos exclusivos selecionados especialmente para você
@@ -502,7 +502,7 @@ export default function Catalog() {
               </div>
               {licenseeData.phone && (
                 <a
-                  href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo seu catálogo personalizado.`}
+                  href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-xl"
@@ -525,7 +525,7 @@ export default function Catalog() {
               <div>
                 <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
                   <Flame className="w-9 h-9 text-orange-400 animate-fire" />
-                  <span>Catálogo <span className="text-green-400">Especial</span>!</span>
+                  <span>Loja Virtual <span className="text-green-400">Especial</span>!</span>
                 </h1>
                 <p className="text-gray-300 mb-4 text-base lg:text-lg">
                   {products.length} produtos incríveis com preços imbatíveis!
@@ -541,7 +541,7 @@ export default function Catalog() {
 
               {licenseePhone && !licenseeData && (
                 <a
-                  href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos do catálogo.`}
+                  href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos da loja virtual.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"

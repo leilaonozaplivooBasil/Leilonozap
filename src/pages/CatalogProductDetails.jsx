@@ -120,7 +120,7 @@ export default function CatalogProductDetails() {
     if (!product) return;
 
     const productUrl = getCanonicalProductUrl();
-    const shareText = `🛍️ CATÁLOGO NOZAP!\n\n📱 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n🛒 Compre agora: ${productUrl}`;
+    const shareText = `🛍️ LOJA VIRTUAL NOZAP!\n\n📱 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n🛒 Compre agora: ${productUrl}`;
 
     if (navigator.share) {
       try {
@@ -159,7 +159,7 @@ export default function CatalogProductDetails() {
             onClick={() => navigate(createPageUrl("Catalog"))}
             className="bg-green-600 hover:bg-green-700"
           >
-            Voltar ao Catálogo
+            Voltar à Loja Virtual
           </Button>
         </div>
       </div>
@@ -213,7 +213,7 @@ export default function CatalogProductDetails() {
 
   const handleWhatsAppToLicensee = () => {
     const productUrl = getCanonicalProductUrl();
-    const message = `Olá! Tenho interesse neste produto do Catálogo:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n🔗 ${productUrl}`;
+    const message = `Olá! Tenho interesse neste produto da Loja Virtual:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n🔗 ${productUrl}`;
     const number = normalizeToWaNumber(licenseePhone);
     if (number) {
       window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');

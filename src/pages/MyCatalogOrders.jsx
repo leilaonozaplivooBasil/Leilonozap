@@ -277,7 +277,7 @@ export default function MyCatalogOrders() {
         <h1 className="text-2xl font-bold text-white mb-2">Faça Login Para Ver Seus Pedidos</h1>
         <p className="text-gray-400 mb-6">Você precisa estar conectado para acessar seu histórico de compras.</p>
         <Link to={createPageUrl("Catalog")}>
-          <Button className="bg-green-600 hover:bg-green-700">Voltar para o Catálogo</Button>
+          <Button className="bg-green-600 hover:bg-green-700">Voltar para a Loja Virtual</Button>
         </Link>
       </div>
     );
@@ -320,9 +320,9 @@ export default function MyCatalogOrders() {
           <div className="text-center py-16 bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-white/5">
             <ShoppingBag className="w-16 h-16 mx-auto text-gray-600 mb-4" />
             <h2 className="text-xl font-semibold text-white mb-2">Você ainda não fez nenhum pedido</h2>
-            <p className="text-gray-400 mb-6">Explore nosso catálogo e faça sua primeira compra!</p>
+            <p className="text-gray-400 mb-6">Explore nossa loja virtual e faça sua primeira compra!</p>
             <Link to={createPageUrl("Catalog")}>
-              <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500">Ver Catálogo</Button>
+              <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500">Ver Loja Virtual</Button>
             </Link>
           </div>
         ) : (
