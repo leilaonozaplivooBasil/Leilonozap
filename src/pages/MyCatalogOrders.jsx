@@ -47,10 +47,10 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
           </h3>
         </div>
 
-        {/* DATA */}
+        {/* DATA + HORA */}
         <div className="px-4 pb-3">
           <p className="text-xs text-gray-500">
-            {new Date(order.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })}
+            {new Date(order.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às {new Date(order.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
 
@@ -105,8 +105,10 @@ export default function MyCatalogOrders() {
   const navigate = useNavigate();
 
   const filteredOrders = useMemo(() => {
-    if (activeFilter === 'todos') return orders;
-    return orders.filter(order => order.status === activeFilter);
+    let result = activeFilter === 'todos' ? [...orders] : orders.filter(order => order.status === activeFilter);
+    // Ordena: mais recentes primeiro
+    result.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    return result;
   }, [orders, activeFilter]);
 
   // Adiciona parâmetro from=catalog na URL para o layout mostrar o menu correto
