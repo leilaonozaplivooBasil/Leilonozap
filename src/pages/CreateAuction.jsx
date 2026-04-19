@@ -895,14 +895,20 @@ export default function CreateAuction() {
         const endTime = addSeconds(now, parseInt(formData.duration, 10));
         const endTimeISO = endTime.toISOString();
 
+        // Preço do leilão = 80% do preço da loja (20% a menos para estimular lances)
+        // Arremate Agora = preço da loja virtual (teto da concorrência)
+        const finalCatalogPriceForAuction = catalogPrice || parseFloat(formData.starting_price) || 0;
+        const auctionStartingPrice = parseFloat((finalCatalogPriceForAuction * 0.80).toFixed(2));
+        const auctionBuyNowPrice = parseFloat(finalCatalogPriceForAuction.toFixed(2));
+
         const auctionData = {
           title: formData.title,
           description: formData.description,
           image_urls: finalImageUrls,
-          starting_price: parseFloat(formData.starting_price),
-          current_price: parseFloat(formData.starting_price),
+          starting_price: auctionStartingPrice,
+          current_price: auctionStartingPrice,
           increment: parseFloat(formData.increment),
-          buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null,
+          buy_now_price: auctionBuyNowPrice,
           end_time: endTimeISO,
           category: formData.category,
           status: 'active',

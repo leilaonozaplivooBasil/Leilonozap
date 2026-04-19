@@ -141,18 +141,39 @@ export default function ConfirmProductDuplicationModal({
 
             {/* PREÇO DA LOJA VIRTUAL */}
             {includeCatalog && (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3" onClick={(e) => e.stopPropagation()}>
-                <Label className="text-gray-300 text-sm mb-1 block">Preço na Loja Virtual (R$) <span className="text-green-400 text-xs">(calculado automaticamente — editável)</span></Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={catalogPrice}
-                  onChange={(e) => setCatalogPrice(e.target.value)}
-                  placeholder="Ex: 199.90"
-                  className="bg-gray-900 border-gray-600 text-white"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <p className="text-xs text-gray-500 mt-1">= preço de compra rápida (ou inicial) × 1.20 — ajuste se necessário</p>
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+                <div>
+                  <Label className="text-gray-300 text-sm mb-1 block">🛒 Preço na Loja Virtual (R$) <span className="text-green-400 text-xs">(automático — editável)</span></Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={catalogPrice}
+                    onChange={(e) => setCatalogPrice(e.target.value)}
+                    placeholder="Ex: 199.90"
+                    className="bg-gray-900 border-gray-600 text-white"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">= preço base × 1.20 — ajuste se necessário</p>
+                </div>
+
+                {/* PREVIEW DOS PREÇOS DO LEILÃO */}
+                {catalogPrice && parseFloat(catalogPrice) > 0 && (
+                  <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600 space-y-1.5">
+                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Preços que serão aplicados no leilão:</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">🔨 Lance inicial:</span>
+                      <span className="text-yellow-400 font-bold">R$ {(parseFloat(catalogPrice) * 0.80).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">⚡ Arremate Agora:</span>
+                      <span className="text-green-400 font-bold">R$ {parseFloat(catalogPrice).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">🛒 Loja Virtual:</span>
+                      <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
