@@ -3,9 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, Package, Truck, CheckCircle, Eye, ArrowLeft, Clock, Filter } from 'lucide-react';
+import { Loader2, ShoppingBag, Package, Truck, CheckCircle, Eye, ArrowLeft, Clock, Filter, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 
 const CatalogSale = base44.entities.CatalogSale;
 
@@ -18,7 +19,7 @@ const statusConfig = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 };
 
-const CatalogOrderCard = ({ order, onTrackClick }) => {
+const CatalogOrderCard = ({ order, onTrackClick, onCancelClick }) => {
   const config = statusConfig[order.status] || statusConfig.pending_payment;
   const mainImage = order.product_image || "https://via.placeholder.com/150";
 
@@ -83,6 +84,17 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
           <Eye className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
           Acompanhar Pedido
         </button>
+
+        {/* CANCELAR — só para pendentes */}
+        {order.status === 'pending_payment' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onCancelClick(order); }}
+            className="mx-4 mb-4 py-2 px-3 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium text-xs transition-all duration-300 flex items-center justify-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Cancelar Pedido
+          </button>
+        )}
 
         {/* RASTREIO (se houver) */}
         {order.tracking_code && (
@@ -202,6 +214,23 @@ export default function MyCatalogOrders() {
     return () => clearInterval(pollingTimer);
   }, []);
 
+  const [cancelingId, setCancelingId] = useState(null);
+
+  const handleCancelOrder = async (order) => {
+    if (!window.confirm(`Deseja cancelar o pedido "${order.product_title}"?\n\nEssa ação não pode ser desfeita.`)) return;
+    setCancelingId(order.id);
+    try {
+      await CatalogSale.update(order.id, { status: 'canceled' });
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+      toast.success('Pedido cancelado com sucesso');
+    } catch (err) {
+      console.error('Erro ao cancelar:', err);
+      toast.error('Erro ao cancelar pedido');
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
   const handleTrackClick = (order) => {
     // Navega para página de acompanhamento do pedido do catálogo
     navigate(createPageUrl('CatalogOrderTracking') + `?sale_id=${order.id}`);
@@ -311,6 +340,7 @@ export default function MyCatalogOrders() {
                     key={order.id}
                     order={order}
                     onTrackClick={handleTrackClick}
+                    onCancelClick={handleCancelOrder}
                   />
                 ))}
               </div>
