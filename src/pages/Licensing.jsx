@@ -1302,16 +1302,12 @@ const DashboardContent = ({ user, isAdmin }) => {
                   readOnly
                   className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
-                <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700">
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copiar
-                </Button>
+                <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
+                <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
               </div>
               <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
                 <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
-                <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>
-                  <strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.
-                </AlertDescription>
+                <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
               </Alert>
             </CardContent>
           </Card>
@@ -1331,22 +1327,12 @@ const DashboardContent = ({ user, isAdmin }) => {
                     readOnly
                     className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
-                  <Button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
-                      toast.success('Link copiado!');
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700">
-
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar
-                  </Button>
+                  <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
+                  <a href={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>
-                    <strong>Catálogo (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.
-                  </AlertDescription>
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Catálogo (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
