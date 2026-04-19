@@ -1107,6 +1107,46 @@ export default function ProductManagement() {
                             <Plus className="w-4 h-4 mr-2" />
                             Colocar em Leilão
                           </Button>
+                          {/* RETIRAR DA LOJA VIRTUAL */}
+                          {editingProduct?.catalog_active && (
+                            <Button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm('Retirar este produto da Loja Virtual?')) return;
+                                await base44.entities.Product.update(editingProduct.id, { catalog_active: false });
+                                alert('✅ Produto retirado da Loja Virtual!');
+                                sessionStorage.removeItem('products_cache_v3');
+                                sessionStorage.removeItem('products_cache_time_v3');
+                                setShowAddForm(false);
+                                setEditingProduct(null);
+                                setTimeout(() => loadData(), 500);
+                              }}
+                              className="bg-violet-700 hover:bg-violet-800"
+                            >
+                              🛒 Retirar da Loja
+                            </Button>
+                          )}
+
+                          {/* RETIRAR DO LEILÃO */}
+                          {(editingProduct?.linked_auctions?.length > 0) && (
+                            <Button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm('Limpar os leilões vinculados a este produto?')) return;
+                                await base44.entities.Product.update(editingProduct.id, { linked_auctions: [] });
+                                alert('✅ Produto desvinculado dos leilões!');
+                                sessionStorage.removeItem('products_cache_v3');
+                                sessionStorage.removeItem('products_cache_time_v3');
+                                setShowAddForm(false);
+                                setEditingProduct(null);
+                                setTimeout(() => loadData(), 500);
+                              }}
+                              className="bg-blue-700 hover:bg-blue-800"
+                            >
+                              🔨 Retirar do Leilão
+                            </Button>
+                          )}
+
                           <Button
                             type="button"
                             onClick={() => {
