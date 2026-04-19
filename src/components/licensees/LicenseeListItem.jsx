@@ -61,7 +61,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-white truncate">{name}</p>
+          <p className="font-medium text-white truncate">{licensee.full_name || "Sem nome"}</p>
           <div className="text-xs text-gray-400 truncate flex items-center gap-1">
             <Link2 className="w-3.5 h-3.5" /> {displayLink}
           </div>
