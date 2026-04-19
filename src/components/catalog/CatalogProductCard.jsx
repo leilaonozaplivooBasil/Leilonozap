@@ -167,43 +167,38 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
     const ref = sessionStorage.getItem('referralCode');
     const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
     const shareMessage = `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
-
     const imageUrl = product.image_urls?.[0];
-    const isInternalImage = imageUrl && (
-      imageUrl.includes('supabase.co') || 
-      imageUrl.includes('base44') || 
-      imageUrl.startsWith('blob:')
-    );
 
-    try {
-      if (navigator.share && navigator.canShare) {
-        if (isInternalImage) {
-          try {
-            const response = await fetch(imageUrl);
-            if (response.ok) {
-              const blob = await response.blob();
-              const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
-              if (navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: product.description, text: shareMessage, files: [file] });
-                return;
-              }
-            }
-          } catch (imgError) {
-            console.debug('Share com imagem falhou:', imgError.message);
+    // NÍVEL 1: Share com imagem (qualquer URL)
+    if (imageUrl && navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(imageUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: product.description, text: shareMessage, files: [file] });
+            return;
           }
         }
-        // Fallback sem imagem
-        try {
-          await navigator.share({ title: product.description, text: shareMessage });
-          return;
-        } catch (_) {}
-      }
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.debug('Share com imagem falhou, tentando sem imagem:', err.message);
       }
     }
+
+    // NÍVEL 2: Share só texto (sem imagem)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: product.description, text: shareMessage });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // NÍVEL 3: Abre WhatsApp com texto
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
   };
 
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;

@@ -174,35 +174,35 @@ export default function CatalogProductDetails() {
       ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-    // Tenta Web Share API com imagem (mobile) — apenas para URLs internas/supabase
-    const isInternalImage = imageUrl && (
-      imageUrl.includes('supabase.co') || 
-      imageUrl.includes('base44') || 
-      imageUrl.startsWith('blob:')
-    );
-
-    if (isInternalImage && navigator.share && navigator.canShare) {
+    // NÍVEL 1: Share com imagem (qualquer URL)
+    if (imageUrl && navigator.share && navigator.canShare) {
       try {
         const response = await fetch(imageUrl);
         if (response.ok) {
           const blob = await response.blob();
           const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: product.description,
-              text: message,
-              files: [file]
-            });
+            await navigator.share({ title: product.description, text: message, files: [file] });
             return;
           }
         }
       } catch (e) {
         if (e.name === 'AbortError') return;
-        console.debug('Share com imagem falhou, usando fallback texto:', e.message);
+        console.debug('Share com imagem falhou, tentando sem imagem:', e.message);
       }
     }
 
-    // Fallback: abre WhatsApp com texto
+    // NÍVEL 2: Share só texto (sem imagem)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: product.description, text: message });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+
+    // NÍVEL 3: Abre WhatsApp com texto
     window.open(waUrl, '_blank');
   };
 
