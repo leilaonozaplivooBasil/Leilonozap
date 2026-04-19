@@ -187,7 +187,23 @@ Deno.serve(async (req) => {
 
     // Monta cadeia de ancestrais a partir do âncora
     const chain = isLicenseeSale ? await buildAncestorChain(base44, anchorUser) : [anchorUser];
-    const allUsers = await base44.asServiceRole.entities.AppUser.list();
+
+    // 🔒 OTIMIZAÇÃO: Busca APENAS usuários com roles Director+ (em vez de carregar TODOS os AppUsers)
+    // Roles Director+: diretor, diretoria, ceo, conselheiro, fundador
+    const directorRoles = ['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'];
+    const directorResults = await Promise.all(
+      directorRoles.map(role =>
+        base44.asServiceRole.entities.AppUser.filter({ career_levels: role }, null, 50)
+          .catch(err => { console.warn(`⚠️ Erro ao buscar role ${role}:`, err.message); return []; })
+      )
+    );
+    // Consolida e deduplica por ID
+    const seenIds = new Set();
+    const allUsers = directorResults.flat().filter(u => {
+      if (!u?.id || seenIds.has(u.id)) return false;
+      seenIds.add(u.id);
+      return true;
+    });
 
     // CÓPIA EXATA DA LÓGICA DO PREVIEW
      const totalPercent = 26.0;
