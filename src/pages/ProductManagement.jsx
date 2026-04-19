@@ -514,19 +514,6 @@ export default function ProductManagement() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button 
-              size="sm" 
-              onClick={() => {
-                sessionStorage.removeItem('products_cache_v3');
-                sessionStorage.removeItem('products_cache_time_v3');
-                loadData();
-              }}
-              className="bg-cyan-600/90 hover:bg-cyan-600 text-white border-0"
-              disabled={isLoadingData}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isLoadingData ? 'animate-spin' : ''}`} />
-              {isLoadingData ? 'Atualizando...' : 'Recarregar'}
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white">
@@ -534,9 +521,12 @@ export default function ProductManagement() {
                   Mais Ações
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl">
-                <DropdownMenuItem onClick={() => navigate(createPageUrl("CatalogOrdersAdmin"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
-                  <ShoppingCart className="w-4 h-4 mr-2 text-green-400" /> Pedidos do Catálogo
+              <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl min-w-[200px]">
+                <DropdownMenuItem onClick={() => setShowAddForm(!showAddForm)} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <Plus className="w-4 h-4 mr-2 text-emerald-400" /> Novo Produto
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("AddCatalogProduct"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <BookOpen className="w-4 h-4 mr-2 text-violet-400" /> Loja Virtual
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("RegisterBatches"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <PackagePlus className="w-4 h-4 mr-2 text-blue-400" /> Registrar Lotes
@@ -544,8 +534,27 @@ export default function ProductManagement() {
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("PDV"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <DollarSign className="w-4 h-4 mr-2 text-green-400" /> PDV
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("CatalogOrdersAdmin"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <ShoppingCart className="w-4 h-4 mr-2 text-green-400" /> Pedidos do Catálogo
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("ProductOperationHistory"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <BookOpen className="w-4 h-4 mr-2 text-purple-400" /> Histórico de Operação
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (!confirm('Agrupar produtos duplicados?')) return;
+                    try {
+                      setIsLoading(true);
+                      const result = await base44.functions.invoke('groupDuplicateProducts', {});
+                      alert(`✅ ${result.data.grupos_processados} grupos | ${result.data.produtos_deletados} removidos`);
+                      sessionStorage.removeItem('products_cache_v3');
+                      sessionStorage.removeItem('products_cache_time_v3');
+                      await loadData();
+                    } catch { alert('❌ Erro ao agrupar'); } finally { setIsLoading(false); }
+                  }}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <Package className="w-4 h-4 mr-2 text-orange-400" /> Agrupar Duplicados
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -567,25 +576,19 @@ export default function ProductManagement() {
                 >
                   <Download className="w-4 h-4 mr-2 text-yellow-400" /> Exportar CSV
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    sessionStorage.removeItem('products_cache_v3');
+                    sessionStorage.removeItem('products_cache_time_v3');
+                    loadData();
+                  }}
+                  disabled={isLoadingData}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 text-cyan-400 ${isLoadingData ? 'animate-spin' : ''}`} /> Recarregar Dados
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Button size="sm" onClick={async () => {
-              if (!confirm('Agrupar produtos duplicados?')) return;
-              try {
-                setIsLoading(true);
-                const result = await base44.functions.invoke('groupDuplicateProducts', {});
-                alert(`✅ ${result.data.grupos_processados} grupos | ${result.data.produtos_deletados} removidos`);
-                sessionStorage.removeItem('products_cache_v3');
-                sessionStorage.removeItem('products_cache_time_v3');
-                await loadData();
-              } catch { alert('❌ Erro ao agrupar'); } finally { setIsLoading(false); }
-            }} className="bg-orange-600/90 hover:bg-orange-600 text-white border-0">
-              <Package className="w-3.5 h-3.5 mr-1.5" /> Agrupar Duplicados
-            </Button>
-            <Button size="sm" onClick={() => navigate(createPageUrl("AddCatalogProduct"))} className="bg-violet-600/90 hover:bg-violet-600 text-white border-0">
-              <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Loja Virtual
-            </Button>
             <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/40">
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo Produto
             </Button>
