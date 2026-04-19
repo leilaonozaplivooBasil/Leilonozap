@@ -23,18 +23,12 @@ import WinnerModal from "../components/auction/WinnerModal";
 import LowBalanceModal from "../components/auction/LowBalanceModal";
 import { Wallet } from "lucide-react";
 
-import { getServerTime } from "@/functions/getServerTime";
+import useAuctionTimer from "@/hooks/useAuctionTimer";
+import useAuctionSync from "@/hooks/useAuctionSync";
+import useBidSubmission from "@/hooks/useBidSubmission";
 
 const COUNTDOWN_DURATION = 142;
 const BID_EXTENSION_SECONDS = 22;
-const MESSAGE_SYNC_INTERVAL = 30000; // 30s (era 20s)
-const AUCTION_SYNC_INTERVAL = 15000; // 15s (era 6s)
-
-const NARRATOR_TRIGGERS = [
-  { time: 110, phase: 1, message: "🔨 Dou-lhe UMA! A contagem está correndo. Não deixe essa oportunidade escapar!" },
-  { time: 70, phase: 2, message: "🔨🔨 Dou-lhe DUAS! A disputa está acirrada! Quem dará o próximo lance?" },
-  { time: 35, phase: 3, message: "🔨🔨🔨 Dou-lhe TRÊS! Última chamada! Alguém mais vai participar dessa guerra?" }
-];
 
 export default function AuctionRoom() {
   const [searchParams] = useSearchParams();
@@ -47,22 +41,12 @@ export default function AuctionRoom() {
   const [auction, setAuction] = useState(null);
   const [messages, setMessages] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-  const [isSubmittingBid, setIsSubmittingBid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showMobilePanel, setShowMobilePanel] = useState(false);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showLoginModal, setShowLogin] = useState(false);
   const [userMap, setUserMap] = useState({});
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  const [timeRemaining, setTimeRemaining] = useState(null);
-
-  const serverOffsetRef = useRef(null);
-  const lastOffsetCalibrationRef = useRef(0);
-
-  const [showAuctioneer, setShowAuctioneer] = useState(false);
-  const [auctioneerPhase, setAuctioneerPhase] = useState(null);
-  const [auctioneerMessage, setAuctioneerMessage] = useState("");
 
   const [showDebugger, setShowDebugger] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -76,23 +60,7 @@ export default function AuctionRoom() {
 
   const chatRef = useRef(null);
 
-  const auctionSyncIntervalRef = useRef(null);
-  const messageSyncIntervalRef = useRef(null);
-  const countdownIntervalRef = useRef(null);
-  const hammerAnnounced = useRef({ first: false, second: false, third: false });
-  const lastAICommentTime = useRef(0);
-
   const audioContextRef = useRef(null);
-  const isSubmittingRef = useRef(false);
-  const lastBidAmountRef = useRef(null);
-  const lastBidTimeRef = useRef(0);
-  const isBlockedRef = useRef(false);
-  const blockUntilRef = useRef(0);
-
-  const lastAuctionSyncTimeRef = useRef(0);
-  const lastMessageCountRef = useRef(0);
-
-  const isSyncingAuctionRef = useRef(false);
   const abortControllerRef = useRef(null);
 
   const isEndingRef = useRef(false);
@@ -188,45 +156,28 @@ export default function AuctionRoom() {
     }
   }, [currentUser]);
 
-  const calibrateServerOffset = useCallback(async () => {
-    try {
-      console.log("🔧 [CALIBRATE] Calibrando offset...");
+  // ── HOOKS ─────────────────────────────────────────────────────────────
+  // Timer hook (provides calibrateServerOffset, getServerSyncedTime, timeRemaining, auctioneer state)
+  // We pass a stable ref for endAuction since it's defined below
+  const endAuctionRef = useRef(null);
 
-      const clientBeforeCall = Date.now();
-      const { data } = await getServerTime();
-      const clientAfterCall = Date.now();
-
-      if (!data || typeof data.timestamp !== 'number') {
-        console.error("❌ [CALIBRATE] Resposta inválida.");
-        return false;
-      }
-
-      const clientAverage = (clientBeforeCall + clientAfterCall) / 2;
-      const serverTime = data.timestamp;
-
-      const offset = serverTime - clientAverage;
-
-      serverOffsetRef.current = offset;
-      lastOffsetCalibrationRef.current = Date.now();
-
-      console.log(`✅ [CALIBRATE] Offset: ${offset.toFixed(0)}ms`);
-
-      return true;
-
-    } catch (error) {
-      console.error("❌ [CALIBRATE] Erro:", error);
-      serverOffsetRef.current = null;
-      return false;
-    }
-  }, []);
-
-  const getServerSyncedTime = useCallback(() => {
-    if (serverOffsetRef.current === null) {
-      return null;
-    }
-
-    return Date.now() + serverOffsetRef.current;
-  }, []);
+  const {
+    timeRemaining,
+    auctioneerPhase,
+    auctioneerMessage,
+    showAuctioneer,
+    setShowAuctioneer,
+    serverOffsetRef,
+    lastOffsetCalibrationRef,
+    calibrateServerOffset,
+    getServerSyncedTime,
+    clearCountdown,
+    COUNTDOWN_DURATION: _CD,
+  } = useAuctionTimer({
+    auction,
+    onEndAuction: (...args) => endAuctionRef.current?.(...args),
+    playSound,
+  });
 
   const endAuction = useCallback(async () => {
     if (!auction) {
@@ -262,18 +213,8 @@ export default function AuctionRoom() {
       isEndingRef.current = true;
       console.log("🔨 [END] FINALIZANDO...");
 
-      if (auctionSyncIntervalRef.current) {
-        clearInterval(auctionSyncIntervalRef.current);
-        auctionSyncIntervalRef.current = null;
-      }
-      if (messageSyncIntervalRef.current) {
-        clearInterval(messageSyncIntervalRef.current);
-        messageSyncIntervalRef.current = null;
-      }
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
+      clearSyncIntervals();
+      clearCountdown();
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -556,6 +497,47 @@ export default function AuctionRoom() {
     }
   }, [auction, playSound, getServerSyncedTime]);
 
+  // Wire up the ref so the timer hook can call endAuction without circular deps
+  endAuctionRef.current = endAuction;
+
+  // Sync hook
+  const {
+    syncAuctionDataOnly,
+    syncMessagesOnly,
+    clearSyncIntervals,
+    lastMessageCountRef,
+  } = useAuctionSync({
+    auctionId,
+    auction,
+    setAuction,
+    messages,
+    setMessages,
+    calibrateServerOffset,
+    getServerSyncedTime,
+    lastOffsetCalibrationRef,
+    onEndAuction: endAuction,
+  });
+
+  // Bid hook
+  const { submitBid, isSubmittingBid } = useBidSubmission({
+    auction,
+    setAuction,
+    auctionId,
+    currentUser,
+    setMessages,
+    lastMessageCountRef,
+    chatRef,
+    playSound,
+    getServerSyncedTime,
+    calibrateServerOffset,
+    syncAuctionDataOnly,
+    setShowLogin,
+    setShowGuestModal,
+    setShowLowBalanceModal,
+    userWallet,
+    setUserWallet,
+  });
+
   const initialLoadData = useCallback(async () => {
     if (!auctionId) return;
 
@@ -588,110 +570,7 @@ export default function AuctionRoom() {
     }
   }, [auctionId, calibrateServerOffset]);
 
-  const syncAuctionDataOnly = useCallback(async () => {
-    if (!auctionId || !auction) return;
-
-    const now = Date.now();
-
-    if (isBlockedRef.current && now < blockUntilRef.current) {
-      return;
-    }
-
-    if (now - lastAuctionSyncTimeRef.current < 10000) { // Mínimo 10s entre syncs
-      return;
-    }
-
-    if (isSyncingAuctionRef.current) {
-      return;
-    }
-
-    isSyncingAuctionRef.current = true;
-    lastAuctionSyncTimeRef.current = now;
-
-    try {
-      console.log(`🔄 [AUCTION SYNC] Atualizando dados do leilão...`);
-
-      if (now - lastOffsetCalibrationRef.current > 60000) {
-        await calibrateServerOffset();
-      }
-
-      const auctions = await Auction.filter({ id: auctionId });
-
-      if (!auctions || auctions.length === 0) {
-        console.error(`❌ [AUCTION SYNC] Leilão não encontrado!`);
-        return;
-      }
-
-      const freshAuction = auctions[0];
-
-      // Sempre loga o preço atual do banco
-      console.log(`💰 [AUCTION SYNC] Preço no banco: R$ ${(freshAuction.current_price || freshAuction.starting_price).toFixed(2)}`);
-      console.log(`💰 [AUCTION SYNC] Preço local atual: R$ ${(auction.current_price || auction.starting_price).toFixed(2)}`);
-
-      const hasChanges =
-        freshAuction.current_price !== auction.current_price ||
-        freshAuction.winner_name !== auction.winner_name ||
-        freshAuction.end_time !== auction.end_time ||
-        freshAuction.status !== auction.status;
-
-      if (hasChanges) {
-        console.log(`✅ [AUCTION SYNC] Mudanças detectadas, atualizando estado local...`);
-        setAuction(freshAuction);
-      } else {
-        console.log(`✅ [AUCTION SYNC] Nenhuma mudança detectada, mantendo estado local.`);
-      }
-
-      const serverNow = getServerSyncedTime();
-      if (serverNow !== null) {
-        const endTime = new Date(freshAuction.end_time).getTime();
-        const isExpired = serverNow >= endTime;
-
-        if (isExpired && freshAuction.status === 'active') {
-          console.log("🔴 [AUTO-FIX] Leilão expirado mas ainda ativo, finalizando...");
-          setTimeout(() => {
-            endAuction();
-          }, 500);
-        }
-      }
-
-      isBlockedRef.current = false;
-
-    } catch (error) {
-      console.error("❌ [AUCTION SYNC] Erro ao sincronizar:", error);
-
-      const errorMsg = error?.message || '';
-      if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('rate limit')) {
-        isBlockedRef.current = true;
-        blockUntilRef.current = Date.now() + 60000; // 60s de pausa
-        console.warn("⚠️ [AUCTION SYNC] Rate limit detectado, aguardando 60s...");
-      }
-    } finally {
-      isSyncingAuctionRef.current = false;
-    }
-  }, [auctionId, auction, getServerSyncedTime, calibrateServerOffset, endAuction]);
-
-  const syncMessagesOnly = useCallback(async () => {
-    if (!auctionId || !auction) return;
-    try {
-      const msgs = await AuctionMessage.filter({ auction_id: auctionId }, '-created_date', 50);
-      if (!Array.isArray(msgs)) return;
-      // Anti-conflito: deduplica por ID real
-      const seen = new Set();
-      const deduped = msgs.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
-      // Remove temporárias que já têm correspondente real no banco
-      setMessages(prev => {
-        const temps = prev.filter(m => String(m.id).startsWith('temp-'));
-        const orphanTemps = temps.filter(t => !deduped.some(r => r.sender_id === t.sender_id && r.bid_amount === t.bid_amount && r.message_type === t.message_type));
-        return [...deduped, ...orphanTemps];
-      });
-      if (deduped.length > lastMessageCountRef.current) {
-        const newBids = deduped.filter(m => m.message_type === 'bid' && !messages.some(e => e.id === m.id));
-        if (newBids.length > 0) setTimeout(syncAuctionDataOnly, 100);
-      }
-      lastMessageCountRef.current = deduped.length;
-      if (chatRef.current) chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
-    } catch (error) { console.debug("[MESSAGE SYNC] Erro:", error.message); }
-  }, [auctionId, auction, messages, syncAuctionDataOnly]);
+  // syncAuctionDataOnly and syncMessagesOnly are now in useAuctionSync hook
 
   useEffect(() => {
     // Se não tem ID, redireciona imediatamente
@@ -730,49 +609,7 @@ export default function AuctionRoom() {
 
   }, [auctionId, loadCurrentUser, initialLoadData]);
 
-  // 🔥 CONSOLIDADO: 1 ÚNICO LOOP EM VEZ DE 3 setInterval SEPARADOS
-  useEffect(() => {
-    if (!auction || auction.status !== 'active') {
-      if (auctionSyncIntervalRef.current) {
-        clearInterval(auctionSyncIntervalRef.current);
-        auctionSyncIntervalRef.current = null;
-      }
-      if (messageSyncIntervalRef.current) {
-        clearInterval(messageSyncIntervalRef.current);
-        messageSyncIntervalRef.current = null;
-      }
-      return;
-    }
-
-    let auctionCounter = 0;
-    let messageCounter = 0;
-
-    // LOOP UNIFICADO: 1 setInterval a cada 5s (syncs já são throttled a 15s/30s)
-    const unifiedInterval = setInterval(() => {
-      auctionCounter++;
-      messageCounter++;
-
-      // Sync auction a cada ~15s (3 ticks × 5s)
-      if (auctionCounter >= 3) {
-        syncAuctionDataOnly();
-        auctionCounter = 0;
-      }
-
-      // Sync messages a cada ~30s (6 ticks × 5s)
-      if (messageCounter >= 6) {
-        syncMessagesOnly();
-        messageCounter = 0;
-      }
-    }, 5000); // 5s por tick
-
-    // Initial loads
-    setTimeout(syncAuctionDataOnly, 3000);
-    setTimeout(syncMessagesOnly, 5000);
-
-    return () => {
-      clearInterval(unifiedInterval);
-    };
-  }, [auction?.status, syncAuctionDataOnly, syncMessagesOnly]);
+  // Unified sync loop is now in useAuctionSync hook
 
   useEffect(() => {
     if (chatRef.current) {
@@ -780,365 +617,9 @@ export default function AuctionRoom() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    if (!auction || auction.status !== 'active') {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-      setTimeRemaining(null);
-      return;
-    }
+  // Countdown effect is now in useAuctionTimer hook
 
-    const serverNow = getServerSyncedTime();
-    if (serverNow === null) {
-      return;
-    }
-
-    const endTime = new Date(auction.end_time).getTime();
-    const timeUntilEnd = Math.floor((endTime - serverNow) / 1000);
-
-    if (timeUntilEnd <= 0) {
-      console.log("🔴 [COUNTDOWN] Finalizando...");
-      setTimeRemaining(0);
-
-      setTimeout(() => {
-        endAuction();
-      }, 100);
-
-      return;
-    }
-
-    setTimeRemaining(timeUntilEnd);
-
-    hammerAnnounced.current = { first: false, second: false, third: false };
-
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-
-    countdownIntervalRef.current = setInterval(() => {
-      const nowCheck = getServerSyncedTime();
-      if (nowCheck === null) {
-        return;
-      }
-
-      const endTimeCheck = new Date(auction.end_time).getTime();
-      const remaining = Math.floor((endTimeCheck - nowCheck) / 1000);
-
-      if (remaining <= 0) {
-        setTimeRemaining(0);
-
-        if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
-        }
-
-        endAuction();
-        return;
-      }
-
-      setTimeRemaining(remaining);
-
-      if (auction.status === 'active') {
-        NARRATOR_TRIGGERS.forEach(async (trigger) => {
-          if (remaining === trigger.time) {
-            const hammerKey = trigger.phase === 1 ? 'first' : trigger.phase === 2 ? 'second' : trigger.phase === 3 ? 'third' : null;
-
-            if (hammerKey && !hammerAnnounced.current[hammerKey]) {
-              hammerAnnounced.current[hammerKey] = true;
-
-              try {
-                playSound('countdown');
-
-                setAuctioneerPhase(trigger.phase);
-                setAuctioneerMessage(trigger.message);
-                setShowAuctioneer(true);
-
-              } catch (err) {
-                console.error(`❌ Erro martelo:`, err);
-                if (hammerKey) hammerAnnounced.current[hammerKey] = false;
-              }
-            }
-          }
-        });
-      }
-    }, 1000);
-
-    return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-    };
-  }, [auction?.end_time, auction?.status, endAuction, playSound, getServerSyncedTime]);
-
-  const submitBid = useCallback(async (amount) => {
-    if (!currentUser) {
-      const choice = confirm("Para dar lances, você precisa ter uma conta.\n\nOK = Fazer Login\nCancelar = Criar Conta");
-      if (choice) {
-        setShowLogin(true);
-      } else {
-        setShowGuestModal(true);
-      }
-      return;
-    }
-
-    // 🆕 VERIFICA SALDO ANTES DE DAR LANCE (busca saldo atualizado)
-    try {
-      const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
-      const freshData = freshResult?.data || freshResult;
-      const freshBalance = freshData?.balance || 0;
-      setUserWallet({ balance: freshBalance });
-
-      if (freshBalance < amount) {
-        console.warn(`⚠️ Saldo insuficiente: R$ ${freshBalance.toFixed(2)} < R$ ${amount.toFixed(2)}`);
-        setShowLowBalanceModal(true);
-        return;
-      }
-    } catch (walletError) {
-      console.warn("⚠️ Não foi possível verificar saldo, permitindo lance:", walletError.message);
-      // Se não conseguir verificar, permite o lance (melhor experiência do usuário)
-    }
-
-    if (isSubmittingRef.current || isSubmittingBid) {
-      return;
-    }
-
-    if (!auction || auction.status !== 'active') {
-      alert("Não é possível dar lance.");
-      return;
-    }
-
-    const bidAmount = parseFloat(amount);
-    const serverNow = getServerSyncedTime();
-
-    if (serverNow === null) {
-      alert("Aguarde a sincronização.");
-      calibrateServerOffset();
-      return;
-    }
-
-    if (serverNow - lastBidTimeRef.current < 2000) {
-      return;
-    }
-
-    if (lastBidAmountRef.current === bidAmount) {
-      alert("Você já deu esse lance!");
-      return;
-    }
-
-    try {
-      isSubmittingRef.current = true;
-      setIsSubmittingBid(true);
-      lastBidTimeRef.current = serverNow;
-
-      const freshAuctionData = await Auction.filter({ id: auctionId });
-      if (!freshAuctionData || freshAuctionData.length === 0) {
-        alert("Leilão não encontrado.");
-        return;
-      }
-
-      const freshAuction = freshAuctionData[0];
-      const currentPrice = freshAuction.current_price || freshAuction.starting_price;
-      const minBid = currentPrice + freshAuction.increment;
-
-      if (bidAmount <= currentPrice) {
-        alert(`❌ Lance maior! Atual: R$ ${currentPrice.toFixed(2)}`);
-        setAuction(freshAuction);
-        return;
-      }
-
-      if (bidAmount < minBid) {
-        alert(`❌ Mínimo: R$ ${minBid.toFixed(2)}`);
-        return;
-      }
-
-      playSound('bid');
-
-      // 🆕 DEBOUNCE: Bloqueia novos lances por 2s
-      const debounceKey = `bid_debounce_${currentUser.id}`;
-      const lastBidTime = sessionStorage.getItem(debounceKey);
-      if (lastBidTime && Date.now() - parseInt(lastBidTime) < 2000) {
-        console.log('⏸️ Debounce ativo, aguarde');
-        return;
-      }
-      sessionStorage.setItem(debounceKey, Date.now().toString());
-
-      // 🔒 DEBITA SALDO DA CARTEIRA ANTES DE REGISTRAR O LANCE
-      try {
-        const debitResult = await base44.functions.invoke('debitWalletBalance', {
-          user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
-          description: `Lance - R$ ${bidAmount.toFixed(2)}`
-        });
-        const debitData = debitResult?.data || debitResult;
-        if (!debitData?.success) {
-          setUserWallet({ balance: debitData?.balance || 0 });
-          setShowLowBalanceModal(true);
-          return;
-        }
-        setUserWallet({ balance: debitData.new_balance });
-      } catch (debitError) {
-        console.warn("⚠️ Erro ao debitar saldo:", debitError.message);
-        setShowLowBalanceModal(true);
-        return;
-      }
-
-      const optimisticMessage = {
-        id: 'temp-' + Date.now(),
-        auction_id: auctionId,
-        message_type: "bid",
-        sender_id: currentUser.id,
-        content: `Lance de R$ ${bidAmount.toFixed(2)}`,
-        sender_name: currentUser.nickname || currentUser.full_name,
-        bid_amount: bidAmount,
-        is_system_message: false,
-        created_date: new Date().toISOString()
-      };
-
-      setMessages(prev => [optimisticMessage, ...prev]);
-      lastMessageCountRef.current++;
-
-      if (chatRef.current) {
-        setTimeout(() => {
-          chatRef.current.scrollTo({
-            top: chatRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }, 100);
-      }
-
-      await AuctionMessage.create({
-        auction_id: auctionId,
-        message_type: "bid",
-        sender_id: currentUser.id,
-        content: `Lance de R$ ${bidAmount.toFixed(2)}`,
-        sender_name: currentUser.nickname || currentUser.full_name,
-        bid_amount: bidAmount,
-        is_system_message: false
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      const revalidateAuction = await Auction.filter({ id: auctionId });
-      const revalidatePrice = revalidateAuction[0].current_price || revalidateAuction[0].starting_price;
-
-      if (revalidatePrice >= bidAmount) {
-        alert("Outro lance foi dado!");
-
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-        lastMessageCountRef.current--;
-
-        setAuction(prev => ({
-          ...prev,
-          current_price: revalidatePrice,
-          winner_name: revalidateAuction[0].winner_name
-        }));
-
-        return;
-      }
-
-      const recentBids = await AuctionMessage.filter(
-        { auction_id: auctionId, message_type: "bid" },
-        "-created_date",
-        10
-      );
-
-      const nowCheckServer = getServerSyncedTime();
-      if (nowCheckServer === null) {
-        alert("Erro de sincronização.");
-        return;
-      }
-
-      const conflictingBids = recentBids.filter(bid => {
-        const bidTime = new Date(bid.created_date).getTime();
-        const timeDiff = Math.abs(nowCheckServer - bidTime);
-        return (
-          bid.bid_amount === bidAmount &&
-          bid.sender_id !== currentUser.id &&
-          timeDiff < 5000
-        );
-      });
-
-      if (conflictingBids.length > 0) {
-        alert("Lance duplicado!");
-
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-        lastMessageCountRef.current--;
-
-        return;
-      }
-
-      const currentEndTime = new Date(freshAuction.end_time).getTime();
-      const timeUntilEnd = Math.floor((currentEndTime - nowCheckServer) / 1000);
-
-      let newEndTimeISO = freshAuction.end_time;
-
-      if (timeUntilEnd <= COUNTDOWN_DURATION) {
-        console.log(`⚡ [BID] GUERRA! +${BID_EXTENSION_SECONDS}s`);
-        const newEndTime = new Date(currentEndTime + (BID_EXTENSION_SECONDS * 1000));
-        newEndTimeISO = newEndTime.toISOString();
-      } else {
-        console.log(`✅ [BID] ${timeUntilEnd}s restantes. SEM extensão.`);
-      }
-
-      await Auction.update(auctionId, {
-        current_price: bidAmount,
-        winner_name: currentUser.nickname || currentUser.full_name,
-        end_time: newEndTimeISO
-      });
-
-      // Débito já foi realizado antes do lance (pré-validado)
-
-      setAuction(prev => ({
-        ...prev,
-        current_price: bidAmount,
-        winner_name: currentUser.nickname || currentUser.full_name,
-        end_time: newEndTimeISO
-      }));
-
-      lastBidAmountRef.current = bidAmount;
-
-      // Atualiza stats do usuário (se existir na entidade AppUser)
-      try {
-        const userExists = await AppUser.filter({ id: currentUser.id });
-        if (userExists && userExists.length > 0) {
-          await AppUser.update(currentUser.id, {
-            points: (currentUser.points || 0) + 10,
-            total_bids: (currentUser.total_bids || 0) + 1
-          });
-          console.log(`✅ [BID] Stats do usuário atualizados!`);
-        } else {
-          console.log(`ℹ️ [BID] Usuário não existe em AppUser, pulando atualização de stats`);
-        }
-      } catch (updateError) {
-        console.warn(`⚠️ [BID] Erro ao atualizar stats do usuário:`, updateError.message);
-      }
-
-      const serverTimeStamp = getServerSyncedTime();
-      if (serverTimeStamp !== null) {
-        const timeSinceLastAI = serverTimeStamp - lastAICommentTime.current;
-        if (timeSinceLastAI > 20000 || bidAmount % 50 === 0) {
-          lastAICommentTime.current = serverTimeStamp;
-          const name = currentUser.nickname || currentUser.full_name;
-          const comments = [`🔥 UHULLLL! ${name} MANDOU R$ ${bidAmount.toFixed(2)}!`, `💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`, `⚡ ${name} ON FIRE!`, `🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`, `💥 POW! ${name} não brinca!`, `🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`, `⭐ SHOWWW! ${name}!`, `🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`];
-          setTimeout(async () => {
-            await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
-          }, 1500);
-        }
-      }
-
-    } catch (error) {
-      console.error("❌ [BID] Erro:", error);
-      alert("Erro ao enviar lance.");
-    } finally {
-      setTimeout(() => {
-        isSubmittingRef.current = false;
-        setIsSubmittingBid(false);
-      }, 3000);
-    }
-  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset]);
+  // submitBid is now in useBidSubmission hook
 
   const handleBuyNow = useCallback(async () => {
     if (!currentUser) {
@@ -1272,18 +753,8 @@ export default function AuctionRoom() {
       setShowBuyNowModal(false);
 
       // Para os intervalos de sync para evitar conflitos
-      if (auctionSyncIntervalRef.current) {
-        clearInterval(auctionSyncIntervalRef.current);
-        auctionSyncIntervalRef.current = null;
-      }
-      if (messageSyncIntervalRef.current) {
-        clearInterval(messageSyncIntervalRef.current);
-        messageSyncIntervalRef.current = null;
-      }
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
+      clearSyncIntervals();
+      clearCountdown();
 
       // Atualiza o estado local para refletir o fim do leilão
       setAuction(prev => ({
