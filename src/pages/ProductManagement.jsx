@@ -119,7 +119,7 @@ export default function ProductManagement() {
     }
   };
 
-  // 🆕 Precificar por item
+  // 🆕 Precificar por item — aplica automaticamente sem modal
   const handleSinglePrice = async (product) => {
     setIsPricingLoading(true);
     try {
@@ -128,10 +128,17 @@ export default function ProductManagement() {
       });
       const data = response.data?.products || [];
       if (data.length > 0 && data[0].status === 'success') {
-        setPricingPreviewData(data);
-        setShowPricingPreview(true);
+        const item = data[0];
+        const updateData = { selling_price_retail: item.selling_price_retail };
+        if (item.source_url) updateData.source_url = item.source_url;
+        if (item.market_price) updateData.market_value = item.market_price;
+        await base44.entities.Product.update(item.id, updateData);
+        alert(`✅ Precificado!\nMercado: R$ ${item.market_price.toFixed(2)}\nVenda (-20%): R$ ${item.selling_price_retail.toFixed(2)}`);
+        sessionStorage.removeItem('products_cache_v3');
+        sessionStorage.removeItem('products_cache_time_v3');
+        setTimeout(() => loadData(), 500);
       } else {
-        alert('⚠️ Preço de mercado não encontrado');
+        alert('⚠️ Preço de mercado não encontrado para este produto');
       }
     } catch (error) {
       alert('❌ Erro: ' + error.message);

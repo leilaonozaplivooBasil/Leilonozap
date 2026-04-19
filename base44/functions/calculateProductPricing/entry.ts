@@ -27,9 +27,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filtra produtos sem preço
-    productsToPrice = productsToPrice.filter(p => !p.selling_price_retail || p.selling_price_retail === 0);
-
     // Limita a 5 por chamada para evitar timeout 504
     productsToPrice = productsToPrice.slice(0, 5);
 
