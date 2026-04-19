@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Zap, Users, TrendingUp, Shield, Play, RefreshCw, Activity,
-  ArrowUpCircle, ArrowDownCircle, AlertTriangle, CheckCircle2
+  ArrowUpCircle, ArrowDownCircle, AlertTriangle, CheckCircle2, HelpCircle
 } from 'lucide-react';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
+} from '@/components/ui/tooltip';
 
 export default function PrecificaVivoPainel() {
   const [stats, setStats] = useState(null);
@@ -144,48 +147,55 @@ export default function PrecificaVivoPainel() {
         </Card>
 
         {/* Métricas */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <MetricCard
-            label="Sessões ativas"
-            value={stats?.sessions_active ?? '—'}
-            icon={Users}
-            color="text-blue-400"
-            border="border-blue-500/25"
-            hint={stats?.sessions_active >= 10 ? 'Motor ativo' : 'Modo econômico'}
-          />
-          <MetricCard
-            label="Updates 24h"
-            value={stats?.updates_24h ?? 0}
-            icon={TrendingUp}
-            color="text-emerald-400"
-            border="border-emerald-500/25"
-            hint={`${stats?.auto_updates ?? 0} auto · ${stats?.manual_updates ?? 0} manual`}
-          />
-          <MetricCard
-            label="Variação média"
-            value={`${stats?.avg_variation_percent ?? 0}%`}
-            icon={Activity}
-            color="text-purple-400"
-            border="border-purple-500/25"
-            hint="Absoluta, últimas 24h"
-          />
-          <MetricCard
-            label="Piso aplicado"
-            value={stats?.floor_applied_24h ?? 0}
-            icon={Shield}
-            color="text-amber-400"
-            border="border-amber-500/25"
-            hint="custo × 1.3 > mercado"
-          />
-          <MetricCard
-            label="Histórico total"
-            value={history.length}
-            icon={CheckCircle2}
-            color="text-cyan-400"
-            border="border-cyan-500/25"
-            hint="Últimas 50 mudanças"
-          />
-        </div>
+        <TooltipProvider delayDuration={150}>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <MetricCard
+              label="Sessões ativas"
+              value={stats?.sessions_active ?? '—'}
+              icon={Users}
+              color="text-blue-400"
+              border="border-blue-500/25"
+              hint={stats?.sessions_active >= 10 ? 'Motor ativo' : 'Modo econômico'}
+              tooltip="Quantas pessoas estão usando o app agora (últimos 10 min). O motor só roda automaticamente quando tem 10 ou mais, para economizar créditos de busca de preço. No modo teste, esse limite é ignorado."
+            />
+            <MetricCard
+              label="Updates 24h"
+              value={stats?.updates_24h ?? 0}
+              icon={TrendingUp}
+              color="text-emerald-400"
+              border="border-emerald-500/25"
+              hint={`${stats?.auto_updates ?? 0} auto · ${stats?.manual_updates ?? 0} manual`}
+              tooltip="Quantos produtos tiveram o preço alterado nas últimas 24h. 'Auto' = ajustes feitos pelo motor automaticamente (tráfego ativo). 'Manual' = você clicou em 'Rodar Agora' ou 'Rodar em Modo Teste'."
+            />
+            <MetricCard
+              label="Variação média"
+              value={`${stats?.avg_variation_percent ?? 0}%`}
+              icon={Activity}
+              color="text-purple-400"
+              border="border-purple-500/25"
+              hint="Absoluta, últimas 24h"
+              tooltip="Média de quanto os preços mudaram (para cima ou para baixo) nas últimas 24h. Valor sempre positivo. Exemplo: 8% significa que, em média, os produtos mudaram 8% de preço."
+            />
+            <MetricCard
+              label="Piso aplicado"
+              value={stats?.floor_applied_24h ?? 0}
+              icon={Shield}
+              color="text-amber-400"
+              border="border-amber-500/25"
+              hint="custo × 1.3 > mercado"
+              tooltip="Quantas vezes o motor teve que usar o PISO DE SEGURANÇA (custo × 1,3) em vez do preço de mercado. Isso acontece quando o mercado está tão barato que venderíamos com prejuízo. O piso protege sua margem mínima de 30%."
+            />
+            <MetricCard
+              label="Histórico total"
+              value={history.length}
+              icon={CheckCircle2}
+              color="text-cyan-400"
+              border="border-cyan-500/25"
+              hint="Últimas 50 mudanças"
+              tooltip="Total de alterações de preço registradas (limitado às 50 mais recentes exibidas abaixo). Cada linha do Histórico de Preços representa 1 alteração aplicada."
+            />
+          </div>
+        </TooltipProvider>
 
         {/* Última execução manual */}
         {lastRunResult && (
@@ -219,11 +229,13 @@ export default function PrecificaVivoPainel() {
                 <p className="text-xs mt-1">Ative a automação ou clique em "Rodar Agora"</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-800/60">
-                {history.map((h) => (
-                  <HistoryRow key={h.id} record={h} />
-                ))}
-              </div>
+              <TooltipProvider delayDuration={150}>
+                <div className="divide-y divide-gray-800/60">
+                  {history.map((h) => (
+                    <HistoryRow key={h.id} record={h} />
+                  ))}
+                </div>
+              </TooltipProvider>
             )}
           </CardContent>
         </Card>
@@ -234,16 +246,30 @@ export default function PrecificaVivoPainel() {
 
 // ───── Sub-componentes ─────
 
-function MetricCard({ label, value, icon: Icon, color, border, hint }) {
-  return (
-    <div className={`rounded-2xl border ${border} bg-gray-900 p-4`}>
+function MetricCard({ label, value, icon: Icon, color, border, hint, tooltip }) {
+  const card = (
+    <div className={`rounded-2xl border ${border} bg-gray-900 p-4 ${tooltip ? 'cursor-help hover:bg-gray-800/60 transition-colors' : ''}`}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</p>
+          {tooltip && <HelpCircle className="w-3 h-3 text-gray-600" />}
+        </div>
         <Icon className={`w-4 h-4 ${color}`} />
       </div>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       {hint && <p className="text-[10px] text-gray-600 mt-1">{hint}</p>}
     </div>
+  );
+
+  if (!tooltip) return card;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs bg-gray-900 border-gray-700 text-gray-200 text-xs p-3 leading-relaxed">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -263,36 +289,49 @@ function HistoryRow({ record }) {
   const createdAt = record.created_date ? new Date(record.created_date) : null;
   const timeStr = createdAt ? createdAt.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
+  const tooltipText = `Preço antigo: R$ ${(record.old_price || 0).toFixed(2)} (o que estava cadastrado antes)
+Preço novo: R$ ${(record.new_price || 0).toFixed(2)} (aplicado agora)
+Variação: ${isUp ? '+' : ''}${(record.variation_percent || 0).toFixed(2)}% (${isUp ? 'subiu' : 'desceu'})
+${record.new_market ? `Mercado detectado: R$ ${record.new_market.toFixed(2)} (mediana do Google Shopping)` : ''}
+${record.floor_applied ? '⚠ Piso de segurança aplicado (custo × 1,3) para proteger margem.' : ''}`.trim();
+
   return (
-    <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/40 transition-colors">
-      <ArrowIcon className={`w-5 h-5 ${variationColor} flex-shrink-0`} />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/40 transition-colors cursor-help">
+          <ArrowIcon className={`w-5 h-5 ${variationColor} flex-shrink-0`} />
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-200 font-medium truncate">{record.product_description || '—'}</p>
-        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          <Badge className={`text-[10px] ${trig.color} border font-normal`}>{trig.label}</Badge>
-          {record.floor_applied && (
-            <Badge className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
-              <Shield className="w-2.5 h-2.5 mr-1" /> Piso
-            </Badge>
-          )}
-          {record.sessions_active != null && (
-            <span className="text-[10px] text-gray-600">
-              <Users className="w-2.5 h-2.5 inline mr-0.5" />{record.sessions_active} online
-            </span>
-          )}
-          <span className="text-[10px] text-gray-600">{timeStr}</span>
-        </div>
-      </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-gray-200 font-medium truncate">{record.product_description || '—'}</p>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <Badge className={`text-[10px] ${trig.color} border font-normal`}>{trig.label}</Badge>
+              {record.floor_applied && (
+                <Badge className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-normal">
+                  <Shield className="w-2.5 h-2.5 mr-1" /> Piso
+                </Badge>
+              )}
+              {record.sessions_active != null && (
+                <span className="text-[10px] text-gray-600">
+                  <Users className="w-2.5 h-2.5 inline mr-0.5" />{record.sessions_active} online
+                </span>
+              )}
+              <span className="text-[10px] text-gray-600">{timeStr}</span>
+            </div>
+          </div>
 
-      <div className="text-right flex-shrink-0">
-        <div className="text-xs text-gray-500">
-          R$ {(record.old_price || 0).toFixed(2)} → <span className="text-white font-semibold">R$ {(record.new_price || 0).toFixed(2)}</span>
+          <div className="text-right flex-shrink-0">
+            <div className="text-xs text-gray-500">
+              R$ {(record.old_price || 0).toFixed(2)} → <span className="text-white font-semibold">R$ {(record.new_price || 0).toFixed(2)}</span>
+            </div>
+            <div className={`text-xs font-bold ${variationColor}`}>
+              {isUp ? '+' : ''}{(record.variation_percent || 0).toFixed(2)}%
+            </div>
+          </div>
         </div>
-        <div className={`text-xs font-bold ${variationColor}`}>
-          {isUp ? '+' : ''}{(record.variation_percent || 0).toFixed(2)}%
-        </div>
-      </div>
-    </div>
+      </TooltipTrigger>
+      <TooltipContent side="left" className="max-w-xs bg-gray-900 border-gray-700 text-gray-200 text-xs p-3 leading-relaxed whitespace-pre-line">
+        {tooltipText}
+      </TooltipContent>
+    </Tooltip>
   );
 }
