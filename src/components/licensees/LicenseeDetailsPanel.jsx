@@ -97,8 +97,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
     }
     await base44.entities.AppUser.update(selected.id, { career_levels: newLevels });
     toast.success(isActive ? "Loja desativada" : "Loja ativada");
-    qc.invalidateQueries({ queryKey: ["licensees"] });
-    onRefresh?.();
+    onRefresh?.("toggled");
     setIsToggling(false);
   };
 
@@ -115,8 +114,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
       store_name: null,
     });
     toast.success("Licenciado removido com sucesso");
-    qc.invalidateQueries({ queryKey: ["licensees"] });
-    onRefresh?.();
+    onRefresh?.("removed");
     setIsDeleting(false);
     setShowDeleteConfirm(false);
   };

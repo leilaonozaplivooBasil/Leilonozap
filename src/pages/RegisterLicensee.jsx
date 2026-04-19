@@ -63,8 +63,14 @@ export default function RegisterLicensee() {
   React.useEffect(() => {
     if (selected) {
       const fresh = (licensees || []).find(l => l.id === selected.id);
-      if (fresh && JSON.stringify(fresh) !== JSON.stringify(selected)) {
-        setSelected(fresh);
+      if (fresh) {
+        // Atualiza com dados frescos
+        if (JSON.stringify(fresh) !== JSON.stringify(selected)) {
+          setSelected(fresh);
+        }
+      } else {
+        // Usuário foi removido da lista (ex: remoção de licenciado) — limpa selected
+        setSelected(null);
       }
     } else if (filtered.length) {
       setSelected(filtered[0]);
@@ -143,7 +149,12 @@ export default function RegisterLicensee() {
           <LicenseeDetailsPanel
             selected={selected}
             onEdit={() => setShowModal(true)}
-            onRefresh={() => setSelected(null)}
+            onRefresh={(action) => {
+              qc.invalidateQueries({ queryKey: ["licensees"] });
+              if (action === "removed") {
+                setSelected(null);
+              }
+            }}
           />
         </div>
       </div>
