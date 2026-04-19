@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,24 +18,21 @@ function suggestIncrement(lanceInicio) {
 }
 
 export default function PriceSection({ formData, onInputChange }) {
-  const sp = parseFloat(formData.starting_price) || 0;
+  // valorMercado é local — base de cálculo. starting_price = lance inicial (salvo no banco)
+  const [valorMercado, setValorMercado] = useState("");
 
-  // Auto-aplica incremento sugerido quando o valor de mercado muda
-  useEffect(() => {
-    if (sp <= 0) return;
-    const lanceInicio = sp * 0.60;
-    const suggestion = suggestIncrement(lanceInicio);
-    if (suggestion) {
-      onInputChange("increment", suggestion.value);
-    }
-  }, [sp]);
-  // sp = valor de mercado (base inserida pelo admin)
-  // Loja Virtual = mercado × 0.80 (20% abaixo do mercado)
-  // Lance inicial = mercado × 0.60 (40% abaixo do mercado)
-  // Arremate Agora = preço da Loja Virtual (teto direto)
-  const lojaPrice = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
-  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.60).toFixed(2)) : 0;
+  const mercado = parseFloat(valorMercado) || 0;
+  const lojaPrice  = mercado > 0 ? parseFloat((mercado * 0.80).toFixed(2)) : 0;
+  const leilaoInicio = mercado > 0 ? parseFloat((mercado * 0.60).toFixed(2)) : 0;
   const incrementSuggestion = suggestIncrement(leilaoInicio);
+
+  // Quando mercado muda: atualiza lance inicial (starting_price) e incremento
+  useEffect(() => {
+    if (mercado <= 0) return;
+    onInputChange("starting_price", leilaoInicio.toFixed(2));
+    const suggestion = suggestIncrement(leilaoInicio);
+    if (suggestion) onInputChange("increment", suggestion.value);
+  }, [mercado]);
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -46,29 +43,29 @@ export default function PriceSection({ formData, onInputChange }) {
       </CardHeader>
       <CardContent className="grid md:grid-cols-3 gap-4">
 
-        {/* PREÇO INICIAL */}
+        {/* VALOR DE MERCADO — campo base, local */}
         <div>
-          <Label htmlFor="starting_price" className="text-sm font-medium text-gray-400">
+          <Label htmlFor="valor_mercado" className="text-sm font-medium text-gray-400">
             Valor de Mercado (R$) *
           </Label>
           <Input
-            id="starting_price"
+            id="valor_mercado"
             type="number"
             step="0.01"
-            value={formData.starting_price}
-            onChange={(e) => onInputChange("starting_price", e.target.value)}
-            required
+            value={valorMercado}
+            onChange={(e) => setValorMercado(e.target.value)}
+            placeholder="Ex: 250.00"
             className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
           />
 
-          {/* Sinalização da fórmula */}
-          {sp > 0 && (
+          {/* Fórmula automática */}
+          {mercado > 0 && (
             <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-600/40 rounded-lg">
               <p className="text-xs text-emerald-400 font-semibold mb-1.5">✅ Fórmula automática:</p>
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado</span>
-                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {sp.toFixed(2)}</span>
+                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {mercado.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual <span className="text-gray-500">(−20%)</span></span>
@@ -80,6 +77,26 @@ export default function PriceSection({ formData, onInputChange }) {
                 </div>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* LANCE INICIAL — valor salvo como starting_price */}
+        <div>
+          <Label htmlFor="starting_price" className="text-sm font-medium text-gray-400">
+            Lance Inicial (R$) *
+          </Label>
+          <Input
+            id="starting_price"
+            type="number"
+            step="0.01"
+            value={formData.starting_price}
+            onChange={(e) => onInputChange("starting_price", e.target.value)}
+            required
+            placeholder="Calculado automaticamente"
+            className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
+          />
+          {mercado > 0 && (
+            <p className="text-xs text-gray-500 mt-1">= mercado −40% — editável</p>
           )}
         </div>
 
@@ -119,7 +136,7 @@ export default function PriceSection({ formData, onInputChange }) {
           />
 
           {/* Sugestão automática */}
-          {sp > 0 && (
+          {mercado > 0 && (
             <div className="mt-1.5 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
               <p className="text-xs text-blue-300">
                 💡 Sugerido: <strong>R$ {lojaPrice.toFixed(2)}</strong> (= preço da Loja Virtual)
