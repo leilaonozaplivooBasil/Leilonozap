@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ComparaiModal from './ComparaiModal';
 
-export default function ComparaiButton({ auction }) {
+export default function ComparaiButton({ auction, mode }) {
   const [showModal, setShowModal] = useState(false);
 
   if (!auction) return null;
@@ -25,6 +25,7 @@ export default function ComparaiButton({ auction }) {
       {showModal && (
         <ComparaiModal 
           auction={auction} 
+          isProduct={mode === 'catalog'}
           onClose={() => setShowModal(false)} 
         />
       )}
