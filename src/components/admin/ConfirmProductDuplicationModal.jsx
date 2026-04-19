@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,7 +16,20 @@ export default function ConfirmProductDuplicationModal({
 }) {
   const [includeAuction, setIncludeAuction] = useState(true);
   const [includeCatalog, setIncludeCatalog] = useState(true);
-  const [catalogPrice, setCatalogPrice] = useState('');
+
+  // Preço da Loja Virtual: calculado automaticamente
+  // Prioridade: buy_now_price * 1.20 → se não tiver, starting_price * 1.20
+  const calcAutoPrice = () => {
+    const base = parseFloat(formData.buy_now_price) || parseFloat(formData.starting_price) || 0;
+    return base > 0 ? (base * 1.20).toFixed(2) : '';
+  };
+
+  const [catalogPrice, setCatalogPrice] = useState(() => calcAutoPrice());
+
+  // Recalcula quando o modal abre (formData pode mudar)
+  useEffect(() => {
+    if (isOpen) setCatalogPrice(calcAutoPrice());
+  }, [isOpen, formData.buy_now_price, formData.starting_price]);
 
   const imageCount = (formData.image_urls || []).filter(url => url && url.trim()).length;
 
@@ -25,11 +38,6 @@ export default function ConfirmProductDuplicationModal({
       alert('⚠️ Selecione pelo menos um destino (Leilão ou Loja Virtual)');
       return;
     }
-    if (includeCatalog && !catalogPrice) {
-      alert('⚠️ Informe o preço da Loja Virtual');
-      return;
-    }
-
     onConfirm({
       includeAuction,
       includeCatalog,
@@ -134,7 +142,7 @@ export default function ConfirmProductDuplicationModal({
             {/* PREÇO DA LOJA VIRTUAL */}
             {includeCatalog && (
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-3" onClick={(e) => e.stopPropagation()}>
-                <Label className="text-gray-300 text-sm mb-1 block">Preço na Loja Virtual (R$) *</Label>
+                <Label className="text-gray-300 text-sm mb-1 block">Preço na Loja Virtual (R$) <span className="text-green-400 text-xs">(calculado automaticamente — editável)</span></Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -144,7 +152,7 @@ export default function ConfirmProductDuplicationModal({
                   className="bg-gray-900 border-gray-600 text-white"
                   onClick={(e) => e.stopPropagation()}
                 />
-                <p className="text-xs text-gray-500 mt-1">Preço de venda na Loja Virtual (diferente do preço do leilão)</p>
+                <p className="text-xs text-gray-500 mt-1">= preço de compra rápida (ou inicial) × 1.20 — ajuste se necessário</p>
               </div>
             )}
           </div>
