@@ -274,7 +274,14 @@ export default function Layout({ children, currentPageName }) {
         let userFound = false;
 
         const savedUserJSON = localStorage.getItem('currentUser');
-        const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+        let isLoggedIn = sessionStorage.getItem('isLoggedIn');
+
+        // 🛡️ CORREÇÃO: Se localStorage tem usuário mas sessionStorage não (nova aba),
+        // restaura o sessionStorage ao invés de ignorar o login
+        if (savedUserJSON && !isLoggedIn) {
+          sessionStorage.setItem('isLoggedIn', 'true');
+          isLoggedIn = 'true';
+        }
 
         if (savedUserJSON && isLoggedIn) {
           try {
