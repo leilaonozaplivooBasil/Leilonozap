@@ -138,7 +138,7 @@ const fileInputRef = useRef(null);
                   )}
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                <div className="text-gray-200 font-semibold">Loja Virtual do Vendedor</div>
+                <div className="text-gray-200 font-semibold">{fullName ? `Loja Virtual de ${fullName}` : "Loja Virtual do Vendedor"}</div>
               </div>
 
               {/* Nome da Loja */}
@@ -199,7 +199,7 @@ const fileInputRef = useRef(null);
               <div className="md:col-span-2">
                 <Label className="text-gray-300">Endereço da loja do vendedor</Label>
                 <div className="flex flex-nowrap items-stretch">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-800 text-gray-300 whitespace-nowrap shrink-0 text-sm">https://leilaonozap.net/catalog?ref=</span>
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-800 text-gray-300 whitespace-nowrap shrink-0 text-sm">leilaonozap.net/loja-virtual/</span>
                   <Input
                                             className="rounded-l-none flex-1 min-w-0 bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
                                             placeholder="Ex: nome-do-vendedor"
