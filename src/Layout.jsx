@@ -10,6 +10,8 @@ import LoginModal from "@/components/common/LoginModal";
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import AdminPanelMenu from "@/components/nav/AdminPanelMenu";
+import NavDesktop from "@/components/nav/NavDesktop";
+import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import { useActiveSession } from "@/components/system/useActiveSession";
@@ -52,7 +54,6 @@ export default function Layout({ children, currentPageName }) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [showCartPopup, setShowCartPopup] = useState(false);
 
@@ -749,152 +750,21 @@ export default function Layout({ children, currentPageName }) {
 
               {/* MENU DESKTOP */}
               {!isLojistaPage && (
-                <div className="hidden md:flex md:gap-x-6 items-center">
-
-                  {/* ITENS DO MENU */}
-                  {finalMenuItems.filter(item => item.pageName).map((item) => (
-                    <Link
-                      key={item.title}
-                      to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
-                      className={`text-sm font-semibold transition-all duration-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${currentPageName === item.pageName
-                        ? "text-emerald-300"
-                        : "text-gray-300 hover:text-white"
-                        }`}
-                      style={currentPageName === item.pageName ? {
-                        background: 'rgba(16, 185, 129, 0.1)',
-                        boxShadow: '0 0 12px rgba(16, 185, 129, 0.08)',
-                      } : {}}
-                    >
-                      {item.icon === 'cart' && <CartIcon className="w-4 h-4" />}
-                      {item.title}
-                    </Link>
-                  ))}
-
-                  {/* COMPARTILHAR - SEMPRE VISÍVEL */}
-                  <button
-                    onClick={() => setShowShareModal(true)}
-                    className="flex items-center gap-2 text-sm font-semibold transition-all duration-300 text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    Compartilhar
-                  </button>
-
-                  {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
-                  {isLoggedIn && isCatalogPage && (
-                    <Link
-                      to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
-                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Profile"
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
-                        }`}
-                    >
-                      <UserIcon className="w-4 h-4" />
-                      Perfil
-                    </Link>
-                  )}
-
-                  {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO (antes do Painel/Sair) */}
-                  {isCatalogPage && (
-                    <Link
-                      to={createPageUrl("Cart")}
-                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Cart"
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
-                        }`}
-                    >
-                      <CartIcon className="w-4 h-4" />
-                      Carrinho
-                    </Link>
-                  )}
-
-                  {/* MENU INVESTIDOR - DROPDOWN */}
-                  {isInvestidor && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-emerald-500/10">
-                          <UserIcon className="h-4 w-4" />
-                          Minha Conta
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="text-white border-0" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                        <DropdownMenuLabel className="text-emerald-400">Investidor</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-gray-700" />
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("MarketplaceLotes"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          Marketplace de Lotes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("CarteiraInvestidor"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          Carteira Investidor
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("AddFunds"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          💰 Carteira Leilões
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("Profile"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          Perfil
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-
-                  {/* MENU LEILOEIRO/ARREMATANTE - DROPDOWN */}
-                  {isLeiloeiro && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-emerald-500/10">
-                          <UserIcon className="h-4 w-4" />
-                          Minha Conta
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="text-white border-0" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                        <DropdownMenuLabel className="text-emerald-400">Arrematante</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-gray-700" />
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("CRMInvestidores"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          CRM de Investidores
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("AuctionControl"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          Controle de Leilões
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("AddFunds"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          💰 Minha Carteira
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl("Profile"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                          Perfil
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-
-                  {/* PAINEL DE CONTROLE - SÓ ADMIN */}
-                  {isAdmin && (
-                    <AdminPanelMenu adminMenuItems={adminMenuItems} />
-                  )}
-
-                  {/* BOTÃO ENTRAR - SÓ SE NÃO LOGADO */}
-                  {!isLoggedIn && (
-                    <Button
-                      onClick={() => setShowLoginModal(true)}
-                      className="flex items-center gap-2 text-sm font-semibold text-white rounded-xl border-0 transition-all duration-300 hover:scale-105"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))',
-                        border: '1px solid rgba(16,185,129,0.3)',
-                        boxShadow: '0 4px 16px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
-                      }}
-                    >
-                      <UserIcon className="h-4 w-4" />
-                      Entrar
-                    </Button>
-                  )}
-
-                  {/* BOTÃO SAIR - SÓ SE LOGADO */}
-                  {isLoggedIn && (
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-2 text-sm font-semibold transition-all duration-300 ml-2 text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-500/10"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sair
-                    </button>
-                  )}
-                </div>
+                <NavDesktop
+                  finalMenuItems={finalMenuItems}
+                  currentPageName={currentPageName}
+                  isLoggedIn={isLoggedIn}
+                  isAdmin={isAdmin}
+                  isInvestidor={isInvestidor}
+                  isLeiloeiro={isLeiloeiro}
+                  isCatalogPage={isCatalogPage}
+                  adminMenuItems={adminMenuItems}
+                  currentUser={currentUser}
+                  onShareClick={() => setShowShareModal(true)}
+                  onLoginClick={() => setShowLoginModal(true)}
+                  onLogout={handleLogout}
+                  navigate={navigate}
+                />
               )}
 
               {/* BOTÃO MOBILE */}
@@ -928,227 +798,21 @@ export default function Layout({ children, currentPageName }) {
         </nav>}
 
         {/* MENU MOBILE - SLIDE LATERAL */}
-        {mobileMenuOpen && (
-          <>
-            {/* Overlay */}
-            <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            {/* Menu Lateral */}
-            <div className="fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] animate-in slide-in-from-right duration-300" style={{ background: 'rgba(10, 15, 28, 0.75)', backdropFilter: 'blur(32px) saturate(1.6)', WebkitBackdropFilter: 'blur(32px) saturate(1.6)', boxShadow: '-8px 0 48px rgba(0,0,0,0.4)', borderLeft: '1px solid rgba(16,185,129,0.06)' }}>
-              <div className="flex flex-col h-full">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <h2 className="text-xl font-bold text-white">Menu</h2>
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-2 rounded-lg transition-colors hover:bg-white/5"
-                  >
-                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-1">
-
-                  {/* ITENS DO MENU */}
-                  {finalMenuItems.filter(item => item.pageName).map((item) => (
-                    <Link
-                      key={item.title}
-                      to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === item.pageName
-                        ? "text-emerald-300"
-                        : "text-gray-400 hover:text-white hover:translate-x-1"
-                        }`}
-                      style={currentPageName === item.pageName ? {
-                        background: 'rgba(16,185,129,0.1)',
-                        borderLeft: '3px solid rgba(16,185,129,0.5)',
-                      } : {}}
-                    >
-                      {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
-                      {item.title}
-                    </Link>
-                  ))}
-
-                  {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
-                  {isCatalogPage && (
-                    <Link
-                      to={createPageUrl("Cart")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === "Cart"
-                        ? "text-emerald-300"
-                        : "text-gray-400 hover:text-white hover:translate-x-1"
-                        }`}
-                      style={currentPageName === "Cart" ? {
-                        background: 'rgba(16,185,129,0.1)',
-                        borderLeft: '3px solid rgba(16,185,129,0.5)',
-                      } : {}}
-                    >
-                      <CartIcon className="w-5 h-5" />
-                      Carrinho
-                    </Link>
-                  )}
-
-                  {/* COMPARTILHAR */}
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setShowShareModal(true);
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
-                  >
-                    <Share2 className="h-5 w-5" />
-                    Compartilhar
-                  </button>
-
-                  {/* PERFIL - APENAS EM PÁGINAS DO CATÁLOGO (com parâmetro from=catalog) */}
-                  {isCatalogPage && isLoggedIn && (
-                    <Link
-                      to={createPageUrl("Profile") + "?from=catalog"}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === "Profile"
-                        ? "text-emerald-300"
-                        : "text-gray-400 hover:text-white hover:translate-x-1"
-                        }`}
-                      style={currentPageName === "Profile" ? {
-                        background: 'rgba(16,185,129,0.1)',
-                        borderLeft: '3px solid rgba(16,185,129,0.5)',
-                      } : {}}
-                    >
-                      <UserIcon className="w-5 h-5" />
-                      Perfil
-                    </Link>
-                  )}
-
-
-
-                  {/* PAINEL MOBILE - INVESTIDOR */}
-                  {isInvestidor && (
-                    <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-emerald-400/70">Minha Conta</p>
-                      {[
-                        { title: "Marketplace de Lotes", pageName: "MarketplaceLotes" },
-                        { title: "Carteira Investidor", pageName: "CarteiraInvestidor" },
-                        { title: "💰 Carteira Leilões", pageName: "AddFunds" },
-                        { title: "Perfil", pageName: "Profile" },
-                      ].map((item) => (
-                        <Link
-                          key={item.pageName}
-                          to={createPageUrl(item.pageName)}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 ${currentPageName === item.pageName ? "text-emerald-300" : "text-gray-400 hover:text-white"}`}
-                          style={currentPageName === item.pageName ? { background: 'rgba(16,185,129,0.1)', borderLeft: '3px solid rgba(16,185,129,0.5)' } : {}}
-                        >
-                          {item.title}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* PAINEL MOBILE - LEILOEIRO/ARREMATANTE */}
-                  {isLeiloeiro && (
-                    <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-emerald-400/70">Minha Conta</p>
-                      {[
-                        { title: "CRM de Investidores", pageName: "CRMInvestidores" },
-                        { title: "Controle de Leilões", pageName: "AuctionControl" },
-                        { title: "💰 Minha Carteira", pageName: "AddFunds" },
-                        { title: "Perfil", pageName: "Profile" },
-                      ].map((item) => (
-                        <Link
-                          key={item.pageName}
-                          to={createPageUrl(item.pageName)}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 ${currentPageName === item.pageName ? "text-emerald-300" : "text-gray-400 hover:text-white"}`}
-                          style={currentPageName === item.pageName ? { background: 'rgba(16,185,129,0.1)', borderLeft: '3px solid rgba(16,185,129,0.5)' } : {}}
-                        >
-                          {item.title}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* PAINEL MOBILE - SÓ ADMIN */}
-                  {isAdmin && (
-                    <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                      {expandedCategory ? (
-                        <>
-                          <button
-                            onClick={() => setExpandedCategory(null)}
-                            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-purple-300 hover:text-purple-200 transition-all"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                            Voltar
-                          </button>
-                          <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 mt-1 text-gray-500">{expandedCategory}</p>
-                          {adminMenuItems.find(c => c.title === expandedCategory)?.items?.map((subItem) => (
-                            <Link
-                              key={subItem.pageName}
-                              to={createPageUrl(subItem.pageName)}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className="flex items-center gap-3 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
-                            >
-                              {subItem.title}
-                            </Link>
-                          ))}
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-purple-400/70">Painel de Controle</p>
-                          {adminMenuItems.map((item) => (
-                            <button
-                              key={item.title}
-                              onClick={() => setExpandedCategory(item.title)}
-                              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
-                            >
-                              <span>{item.title}</span>
-                              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            </button>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ENTRAR MOBILE - SÓ SE NÃO LOGADO */}
-                  {!isLoggedIn && (
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        setShowLoginModal(true);
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 mt-4 text-emerald-400 hover:text-emerald-300"
-                      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                    >
-                      <UserIcon className="h-5 w-5" />
-                      Entrar na Conta
-                    </button>
-                  )}
-
-                  {/* SAIR MOBILE - SÓ SE LOGADO */}
-                  {isLoggedIn && (
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 mt-4 text-red-400/70 hover:text-red-300"
-                      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                    >
-                      <LogOut className="h-5 w-5" />
-                      Sair da Conta
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+        <NavMobile
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          finalMenuItems={finalMenuItems}
+          currentPageName={currentPageName}
+          isLoggedIn={isLoggedIn}
+          isAdmin={isAdmin}
+          isInvestidor={isInvestidor}
+          isLeiloeiro={isLeiloeiro}
+          isCatalogPage={isCatalogPage}
+          adminMenuItems={adminMenuItems}
+          onShareClick={() => setShowShareModal(true)}
+          onLoginClick={() => setShowLoginModal(true)}
+          onLogout={handleLogout}
+        />
 
         <main className={isLandingPage ? "" : "pt-16"}>{children}</main>
         <Footer />
