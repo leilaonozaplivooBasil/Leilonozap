@@ -21,6 +21,7 @@ import EstoqueLotes from '@/pages/EstoqueLotes';
 import ImageOptimizer from '@/pages/ImageOptimizer';
 import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
+import PrecificaVivoPainel from '@/pages/PrecificaVivoPainel';
 import ParceiroLotes from '@/pages/ParceiroLotes';
 import AcessoArrematante from '@/pages/AcessoArrematante';
 import RequireRole from '@/components/common/RequireRole';
@@ -140,6 +141,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="SentinelNoZap">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <SentinelNoZap />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      <Route path="/PrecificaVivoPainel" element={
+        <LayoutWrapper currentPageName="PrecificaVivoPainel">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <PrecificaVivoPainel />
           </RequireRole>
         </LayoutWrapper>
       } />
