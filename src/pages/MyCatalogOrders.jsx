@@ -231,6 +231,27 @@ export default function MyCatalogOrders() {
     }
   };
 
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const deletableOrders = orders.filter(o => o.status === 'pending_payment' || o.status === 'canceled');
+
+  const handleDeleteAll = async () => {
+    if (deletableOrders.length === 0) return;
+    if (!window.confirm(`Excluir ${deletableOrders.length} pedido(s) pendentes/cancelados?\n\nEssa ação não pode ser desfeita.`)) return;
+    setIsDeletingAll(true);
+    let deleted = 0;
+    for (const order of deletableOrders) {
+      try {
+        await CatalogSale.delete(order.id);
+        deleted++;
+      } catch (err) {
+        console.warn('Erro ao excluir:', order.id, err.message);
+      }
+    }
+    setOrders(prev => prev.filter(o => o.status !== 'pending_payment' && o.status !== 'canceled'));
+    toast.success(`${deleted} pedido(s) excluído(s)`);
+    setIsDeletingAll(false);
+  };
+
   const handleTrackClick = (order) => {
     // Navega para página de acompanhamento do pedido do catálogo
     navigate(createPageUrl('CatalogOrderTracking') + `?sale_id=${order.id}`);
@@ -302,7 +323,7 @@ export default function MyCatalogOrders() {
         ) : (
           <>
             {/* Filtros */}
-            <div className="mb-8 flex flex-wrap gap-2">
+            <div className="mb-8 flex flex-wrap gap-2 items-center">
               <div className="flex items-center gap-2 mr-2 text-gray-400 text-sm">
                 <Filter className="w-4 h-4" />
                 <span className="font-semibold">Filtrar:</span>
@@ -325,6 +346,17 @@ export default function MyCatalogOrders() {
                   </span>
                 </button>
               ))}
+
+              {deletableOrders.length > 0 && (
+                <button
+                  onClick={handleDeleteAll}
+                  disabled={isDeletingAll}
+                  className="ml-auto px-4 py-2 rounded-lg font-semibold text-sm border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeletingAll ? 'Excluindo...' : `Excluir Todos (${deletableOrders.length})`}
+                </button>
+              )}
             </div>
 
             {/* Cards */}
