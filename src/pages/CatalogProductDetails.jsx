@@ -161,9 +161,22 @@ export default function CatalogProductDetails() {
     const price = product.price_catalog?.toFixed(2) || '0.00';
 
     if (isLicensee) {
-      return `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`;
+      return `Olá! Tenho interesse neste produto da *sua Loja Virtual*:
+
+📦 *${product.description}*
+
+💚 *R$ ${price}*
+
+🔗 ${productUrl}`;
     }
-    return `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`;
+    return `🛍️ *LOJA VIRTUAL NOZAP*
+
+📦 *${product.description}*
+
+💚 *R$ ${price}*
+
+🛒 Compre agora:
+${productUrl}`;
   };
 
   const handleShare = async () => {
