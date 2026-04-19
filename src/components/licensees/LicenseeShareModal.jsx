@@ -19,9 +19,11 @@ export default function LicenseeShareModal({ open, onClose, licensee }) {
   if (!licensee) return null;
 
   const name = storeName(licensee);
+  const sellerName = licensee.full_name || "nosso vendedor";
   const referral = licensee.referral_code || "";
   const catalogLink = `https://leilaonozap.net/Loja-Virtual?ref=${referral}`;
-  const message = `🔥 Agora sou licenciado(a) da Leilão NoZap!\n\nProdutos *direto de fábrica*, *devolvidos em até 7 dias* e *pontas de estoque* com até 70% de desconto!\n\nEletrônicos, eletrodomésticos, móveis e muito mais.\n\n🛍️ Acesse minha Loja Virtual:\n${catalogLink}`;
+  const photoUrl = licensee.profile_photo_url || licensee.avatar_url || "";
+  const message = `🔥 Conheça a *${name}* — Loja Virtual de *${sellerName}* na Leilão NoZap!\n\nProdutos *direto de fábrica*, *devolvidos em até 7 dias* e *pontas de estoque* com até 70% de desconto!\n\nEletrônicos, eletrodomésticos, móveis e muito mais.\n\n🛍️ Acesse a Loja Virtual:\n${catalogLink}${photoUrl ? `\n\n📸 ${photoUrl}` : ""}`;
 
   const handleWhatsApp = () => {
     const encoded = encodeURIComponent(message);
