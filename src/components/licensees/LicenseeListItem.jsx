@@ -33,7 +33,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
   };
   const referral = licensee.referral_code || "";
   const link = `https://leilaonozap.net/Catalog?ref=${referral}`;
-  const displayLink = `leilaonozap.net/Catalog?ref=${referral}`;
+  const displayLink = `leilaonozap.net/Loja-Virtual?ref=${referral}`;
   const name = storeName(licensee);
 
   const copy = (e) => {

@@ -40,8 +40,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
 
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.net/Catalog?ref=${referral}` : "";
-  const slug = selected?.nickname || referral;
-  const displayLink = slug ? `leilaonozap.net/loja-virtual/${slug}` : "";
+  const displayLink = referral ? `leilaonozap.net/Loja-Virtual?ref=${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
 
   // === VENDAS REAIS ===
