@@ -281,34 +281,41 @@ export default function Cart() {
       return;
     }
 
-    // Validações
+    // Validações — resetar guard antes de cada return para não travar o botão
     if (!formData.name.trim()) {
+      isSubmittingRef.current = false;
       toast.error('Preencha seu nome');
       return;
     }
     if (!formData.phone.trim()) {
+      isSubmittingRef.current = false;
       toast.error('Preencha seu telefone');
       return;
     }
     if (!formData.cpf.trim()) {
+      isSubmittingRef.current = false;
       toast.error('Preencha seu CPF');
       return;
     }
     if (!isValidCpf(formData.cpf)) {
+      isSubmittingRef.current = false;
       toast.error('CPF inválido. Verifique os números digitados.');
       return;
     }
     if (!formData.email.trim()) {
+      isSubmittingRef.current = false;
       toast.error('Preencha seu email');
       return;
     }
     if (!currentUser || !currentUser.id) {
+      isSubmittingRef.current = false;
       toast.error('Você precisa estar logado para finalizar a compra');
       return;
     }
 
     if (deliveryMethod === 'delivery') {
       if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
+        isSubmittingRef.current = false;
         toast.error('Preencha o endereço completo para entrega');
         return;
       }
@@ -316,6 +323,7 @@ export default function Cart() {
 
     if (paymentType === 'CREDIT_CARD') {
       if (!cardNumber?.trim() || !cardName?.trim() || !cardExpiry?.trim() || !cardCvv?.trim()) {
+        isSubmittingRef.current = false;
         toast.error('Preencha todos os dados do cartão');
         return;
       }
@@ -324,6 +332,7 @@ export default function Cart() {
     const totalAmount = calculateSubtotal();
 
     if (totalAmount < 5) {
+      isSubmittingRef.current = false;
       toast.error('Valor mínimo para pagamento: R$ 5,00');
       return;
     }
