@@ -113,7 +113,12 @@ export default function MyCatalogOrders() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('todos');
+  const [activeFilter, setActiveFilter] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParam = urlParams.get('filter');
+    if (filterParam === 'paid' || filterParam === 'pending_payment') return filterParam;
+    return 'todos';
+  });
   const navigate = useNavigate();
 
   const filteredOrders = useMemo(() => {

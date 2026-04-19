@@ -1048,7 +1048,7 @@ export default function Cart() {
                       Alterar Forma de Pagamento
                     </Button>
                     <Button
-                      onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                      onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
                       className="w-full bg-gray-700 hover:bg-gray-600 text-white"
                     >
                       Ver Meus Pedidos
@@ -1067,7 +1067,7 @@ export default function Cart() {
                   <p className="text-gray-400 text-sm text-center mt-2">Seu pedido está sendo processado.</p>
                 </div>
                 <Button
-                  onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
                   className="w-full bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   Ver Meus Pedidos
@@ -1084,7 +1084,7 @@ export default function Cart() {
                   <p className="text-gray-400 text-sm text-center mt-2">Aguarde a confirmação.</p>
                 </div>
                 <Button
-                  onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
                   className="w-full bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   Ver Meus Pedidos
