@@ -25,6 +25,7 @@ import PrecificaVivoPainel from '@/pages/PrecificaVivoPainel';
 import ParceiroLotes from '@/pages/ParceiroLotes';
 import AcessoArrematante from '@/pages/AcessoArrematante';
 import RequireRole from '@/components/common/RequireRole';
+import Catalog from '@/pages/Catalog';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfUse from '@/pages/TermsOfUse';
 import PageNotFound from './lib/PageNotFound';
@@ -154,6 +155,11 @@ const AuthenticatedApp = () => {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
+      <Route path="/Loja-Virtual" element={
+        <LayoutWrapper currentPageName="Catalog">
+          <Catalog />
+        </LayoutWrapper>
+      } />
       <Route path="/ImageOptimizer" element={
         <LayoutWrapper currentPageName="ImageOptimizer">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
