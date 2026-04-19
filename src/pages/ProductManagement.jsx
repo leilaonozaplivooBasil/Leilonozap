@@ -119,7 +119,7 @@ export default function ProductManagement() {
     }
   };
 
-  // 🆕 Precificar por item — aplica automaticamente sem modal
+  // 🆕 Precificar por item — mostra ANTES/DEPOIS e pede confirmação
   const handleSinglePrice = async (product) => {
     setIsPricingLoading(true);
     try {
@@ -127,26 +127,61 @@ export default function ProductManagement() {
         product_ids: [product.id]
       });
       const data = response.data?.products || [];
-      if (data.length > 0 && data[0].status === 'success') {
-        const item = data[0];
-        const updateData = { selling_price_retail: item.selling_price_retail };
-        if (item.source_url) updateData.source_url = item.source_url;
-        if (item.market_price) updateData.market_value = item.market_price;
-        await base44.entities.Product.update(item.id, updateData);
+      const item = data[0];
 
-        // ✅ Atualiza estado local IMEDIATAMENTE (evita problema de cache)
-        const updater = (list) => list.map(p => p.id === item.id ? { ...p, ...updateData } : p);
-        setProducts(prev => updater(prev));
-        setFilteredProducts(prev => updater(prev));
-
-        // Invalida cache para próxima carga
-        sessionStorage.removeItem('products_cache_v3');
-        sessionStorage.removeItem('products_cache_time_v3');
-
-        alert(`✅ Precificado!\nMercado: R$ ${item.market_price.toFixed(2)}\nVenda (-20%): R$ ${item.selling_price_retail.toFixed(2)}`);
-      } else {
-        alert('⚠️ Preço de mercado não encontrado para este produto');
+      if (!item) {
+        alert('⚠️ Nenhum resultado encontrado');
+        return;
       }
+
+      // 🛡️ Preço suspeito (menor que custo × 2 ou maior que custo × 50)
+      if (item.status === 'suspect') {
+        alert(`⚠️ Preço rejeitado — resultado suspeito\n\n${item.reason}\n\n💡 Revise a descrição do produto para melhorar a busca.`);
+        return;
+      }
+
+      if (item.status !== 'success') {
+        alert('⚠️ Preço de mercado não encontrado para este produto');
+        return;
+      }
+
+      // ✅ Popup de confirmação ANTES/DEPOIS
+      const prevMarket = item.previous_market || 0;
+      const prevPrice = item.previous_price || 0;
+      const newMarket = item.market_price;
+      const newPrice = item.selling_price_retail;
+
+      const msg =
+        `📊 Confirmar Precificação?\n\n` +
+        `Produto: ${item.description}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `P. MERCADO:\n` +
+        `  Antes:  ${prevMarket > 0 ? 'R$ ' + prevMarket.toFixed(2) : '—'}\n` +
+        `  Depois: R$ ${newMarket.toFixed(2)}\n\n` +
+        `P. VENDA (-20%):\n` +
+        `  Antes:  ${prevPrice > 0 ? 'R$ ' + prevPrice.toFixed(2) : '—'}\n` +
+        `  Depois: R$ ${newPrice.toFixed(2)}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `Aplicar nova precificação?`;
+
+      if (!confirm(msg)) {
+        return;
+      }
+
+      const updateData = { selling_price_retail: newPrice };
+      if (item.source_url) updateData.source_url = item.source_url;
+      updateData.market_value = newMarket;
+      await base44.entities.Product.update(item.id, updateData);
+
+      // ✅ Atualiza estado local IMEDIATAMENTE
+      const updater = (list) => list.map(p => p.id === item.id ? { ...p, ...updateData } : p);
+      setProducts(prev => updater(prev));
+      setFilteredProducts(prev => updater(prev));
+
+      sessionStorage.removeItem('products_cache_v3');
+      sessionStorage.removeItem('products_cache_time_v3');
+
+      alert('✅ Precificação aplicada!');
     } catch (error) {
       alert('❌ Erro: ' + error.message);
     } finally {

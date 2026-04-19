@@ -63,6 +63,29 @@ Deno.serve(async (req) => {
             ? validPrices[mid]
             : (validPrices[mid - 1] + validPrices[mid]) / 2;
 
+          // 🛡️ VALIDAÇÃO DE SANIDADE: rejeita preço absurdo vs custo unitário
+          const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
+          const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
+          const minAcceptable = unitCost * 2;   // mínimo: custo × 2
+          const maxAcceptable = unitCost * 50;  // máximo: custo × 50
+
+          if (unitCost > 0 && (marketPrice < minAcceptable || marketPrice > maxAcceptable)) {
+            pricedProducts.push({
+              id: product.id,
+              description: product.description,
+              lot: product.lot,
+              market_price: marketPrice,
+              unit_cost: unitCost,
+              previous_price: product.selling_price_retail || 0,
+              previous_market: product.market_value || 0,
+              status: 'suspect',
+              reason: marketPrice < minAcceptable
+                ? `Preço de mercado (R$ ${marketPrice.toFixed(2)}) menor que custo × 2 (R$ ${minAcceptable.toFixed(2)})`
+                : `Preço de mercado (R$ ${marketPrice.toFixed(2)}) maior que custo × 50 (R$ ${maxAcceptable.toFixed(2)})`
+            });
+            continue;
+          }
+
           const calculatedPrice = parseFloat((marketPrice * 0.80).toFixed(2));
 
           pricedProducts.push({
@@ -72,6 +95,8 @@ Deno.serve(async (req) => {
             market_price: marketPrice,
             calculated_price: calculatedPrice,
             selling_price_retail: calculatedPrice,
+            previous_price: product.selling_price_retail || 0,
+            previous_market: product.market_value || 0,
             source_url: mlUrl,
             status: 'success'
           });
