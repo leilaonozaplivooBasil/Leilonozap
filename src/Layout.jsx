@@ -450,20 +450,24 @@ export default function Layout({ children, currentPageName }) {
       title: "🔨 Leilões",
       isCategory: true,
       items: [
-        { title: "Criar Leilão", pageName: "CreateAuction" },
         { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
         { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
-        { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
         { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
-        { title: "📉 Análise de Lotes (Excel)", pageName: "AnaliseDeLotes" },
         { title: "🏗️ Sistema de Arremate", pageName: "SistemaDeArremate" },
       ]
     },
     {
-      title: "📦 Loja Virtual",
+      title: "📦 Estoque & Produtos",
       isCategory: true,
       items: [
         { title: "Gestão de Produtos", pageName: "ProductManagement" },
+        { title: "📋 Estoque Lotes", pageName: "EstoqueLotes" },
+      ]
+    },
+    {
+      title: "🛍️ Loja Virtual",
+      isCategory: true,
+      items: [
         { title: "Gerenciar Loja Virtual", pageName: "CatalogManagement" },
         { title: "🚚 Pedidos", pageName: "CatalogOrdersAdmin" },
         { title: "🎨 Banners", pageName: "BannerManagement" },
