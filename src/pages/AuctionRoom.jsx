@@ -747,23 +747,23 @@ export default function AuctionRoom() {
     let auctionCounter = 0;
     let messageCounter = 0;
 
-    // LOOP UNIFICADO: 1 setInterval ao invés de 3
+    // LOOP UNIFICADO: 1 setInterval a cada 5s (syncs já são throttled a 15s/30s)
     const unifiedInterval = setInterval(() => {
       auctionCounter++;
       messageCounter++;
 
-      // Sync auction a cada 15s
-      if (auctionCounter >= 15) {
+      // Sync auction a cada ~15s (3 ticks × 5s)
+      if (auctionCounter >= 3) {
         syncAuctionDataOnly();
         auctionCounter = 0;
       }
 
-      // Sync messages a cada 30s
-      if (messageCounter >= 30) {
+      // Sync messages a cada ~30s (6 ticks × 5s)
+      if (messageCounter >= 6) {
         syncMessagesOnly();
         messageCounter = 0;
       }
-    }, 1000); // 1 tick por segundo
+    }, 5000); // 5s por tick
 
     // Initial loads
     setTimeout(syncAuctionDataOnly, 3000);
