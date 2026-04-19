@@ -376,10 +376,14 @@ function CatalogProductCard({ product, currentUser }) {
               {/* WHATSAPP */}
               <Button
                 onClick={handleShare}
-                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-lg px-2 sm:px-4"
+                variant="outline"
+                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm border-2 border-emerald-500 text-emerald-500 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent px-2 sm:px-4 transition-shadow duration-300"
+                style={{ boxShadow: 'inset 0 0 12px rgba(16,185,129,0.4)' }}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'inset 0 0 18px rgba(16,185,129,0.6)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'inset 0 0 12px rgba(16,185,129,0.4)'}
               >
                 <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
-                <span className="truncate">WHATSAPP</span>
+                <span className="truncate">PEDIR PELO WHATSAPP</span>
               </Button>
 
               {/* MAIS INFORMAÇÕES - LINK */}
