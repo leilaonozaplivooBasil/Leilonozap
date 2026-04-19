@@ -134,12 +134,6 @@ export default function ProductManagement() {
         return;
       }
 
-      // 🛡️ Preço suspeito (menor que custo × 2 ou maior que custo × 50)
-      if (item.status === 'suspect') {
-        alert(`⚠️ Preço rejeitado — resultado suspeito\n\n${item.reason}\n\n💡 Revise a descrição do produto para melhorar a busca.`);
-        return;
-      }
-
       if (item.status !== 'success') {
         alert('⚠️ Preço de mercado não encontrado para este produto');
         return;
