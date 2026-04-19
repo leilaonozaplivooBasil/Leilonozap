@@ -13,6 +13,7 @@ export default function PrecificaVivoPainel() {
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [isTestRunning, setIsTestRunning] = useState(false);
   const [lastRunResult, setLastRunResult] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -54,6 +55,23 @@ export default function PrecificaVivoPainel() {
     }
   };
 
+  const handleRunTest = async () => {
+    if (!confirm('🧪 MODO TESTE\n\nIgnora o limite de sessões e processa APENAS 1 produto (consumo mínimo SerpAPI).\n\nContinuar?')) return;
+
+    setIsTestRunning(true);
+    setLastRunResult(null);
+    try {
+      const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_test' });
+      setLastRunResult(res?.data?.result || res?.data);
+      alert('✅ Teste concluído! Veja o resultado no painel.');
+      await loadData();
+    } catch (err) {
+      alert('❌ Erro: ' + err.message);
+    } finally {
+      setIsTestRunning(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -82,8 +100,21 @@ export default function PrecificaVivoPainel() {
             </Button>
             <Button
               size="sm"
+              onClick={handleRunTest}
+              disabled={isTestRunning || isRunning}
+              className="bg-purple-600 hover:bg-purple-500 text-white border-0"
+              title="Ignora o limite de sessões e processa apenas 1 produto"
+            >
+              {isTestRunning ? (
+                <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Testando...</>
+              ) : (
+                <>🧪 Rodar em Modo Teste</>
+              )}
+            </Button>
+            <Button
+              size="sm"
               onClick={handleRunNow}
-              disabled={isRunning}
+              disabled={isRunning || isTestRunning}
               className="bg-emerald-600 hover:bg-emerald-500 text-white border-0"
             >
               {isRunning ? (

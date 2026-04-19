@@ -30,6 +30,20 @@ Deno.serve(async (req) => {
     }
 
     // ───────────────────────────────────────────────
+    // AÇÃO 1B: MODO TESTE (ignora limite de sessões, processa 1 produto)
+    // ───────────────────────────────────────────────
+    if (action === 'run_test') {
+      const result = await base44.asServiceRole.functions.invoke('precificaVivo', {
+        force_test: true
+      });
+      return Response.json({
+        success: true,
+        test_mode: true,
+        result: result?.data || result
+      });
+    }
+
+    // ───────────────────────────────────────────────
     // AÇÃO 2: ESTATÍSTICAS (sessões + histórico 24h)
     // ───────────────────────────────────────────────
     if (action === 'get_stats') {

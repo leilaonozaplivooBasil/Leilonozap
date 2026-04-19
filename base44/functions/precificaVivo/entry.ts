@@ -15,6 +15,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const startedAt = Date.now();
 
+    // Flag de teste manual (ignora gate de sessões e processa só 1 produto)
+    let forceTest = false;
+    try {
+      const body = await req.json();
+      forceTest = body?.force_test === true;
+    } catch (_) {
+      // sem body — chamada automatica da automation
+    }
+
     // 1. MEDE TRÁFEGO ATIVO (últimos 10 min)
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const activeSessions = await base44.asServiceRole.entities.LiveSession.filter({
@@ -22,10 +31,10 @@ Deno.serve(async (req) => {
     });
     const sessionsCount = activeSessions?.length || 0;
 
-    console.log(`[PrecificaVivo] Sessões ativas: ${sessionsCount}`);
+    console.log(`[PrecificaVivo] Sessões ativas: ${sessionsCount}${forceTest ? ' [MODO TESTE]' : ''}`);
 
-    // 2. MODO ECONÔMICO — tráfego baixo
-    if (sessionsCount < 10) {
+    // 2. MODO ECONÔMICO — tráfego baixo (pulado no modo teste)
+    if (!forceTest && sessionsCount < 10) {
       return Response.json({
         status: 'economic_mode',
         sessions_active: sessionsCount,
@@ -36,7 +45,8 @@ Deno.serve(async (req) => {
 
     // 3. DEFINE QUANTOS PRODUTOS ATUALIZAR
     let topN;
-    if (sessionsCount < 30) topN = 20;
+    if (forceTest) topN = 1;
+    else if (sessionsCount < 30) topN = 20;
     else if (sessionsCount < 80) topN = 50;
     else topN = 100;
 
@@ -138,7 +148,7 @@ Deno.serve(async (req) => {
           old_market: product.market_value || 0,
           new_market: newMarket,
           variation_percent: parseFloat(variation.toFixed(2)),
-          trigger_type: 'auto_traffic',
+          trigger_type: forceTest ? 'manual_single' : 'auto_traffic',
           sessions_active: sessionsCount,
           floor_applied: floorApplied,
           source_url: sourceUrl
