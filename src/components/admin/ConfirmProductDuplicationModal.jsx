@@ -66,7 +66,7 @@ export default function ConfirmProductDuplicationModal({
                 <span className="text-white font-medium">{formData.title || '(não preenchido)'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Preço Inicial:</span>
+                <span className="text-gray-400">Valor de Mercado:</span>
                 <span className="text-green-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-start">

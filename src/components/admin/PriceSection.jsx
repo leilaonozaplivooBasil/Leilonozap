@@ -49,7 +49,7 @@ export default function PriceSection({ formData, onInputChange }) {
         {/* PREÇO INICIAL */}
         <div>
           <Label htmlFor="starting_price" className="text-sm font-medium text-gray-400">
-            Preço Inicial / Base (R$) *
+            Valor de Mercado (R$) *
           </Label>
           <Input
             id="starting_price"
