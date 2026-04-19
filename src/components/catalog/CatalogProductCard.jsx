@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2 } from "lucide-react";
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
+import { proxyImage } from "@/functions/proxyImage";
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
@@ -172,10 +173,25 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
     // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
       try {
-        const response = await fetch(imageUrl, { mode: 'cors' });
+        // Resolve URL acessível (proxy se for externa)
+        let shareableUrl = imageUrl;
+        if (!imageUrl.includes('supabase.co')) {
+          const cacheKey = `proxy_img_${imageUrl}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            shareableUrl = cached;
+          } else {
+            const proxyResult = await proxyImage({ imageUrl });
+            if (proxyResult?.data?.file_url) {
+              shareableUrl = proxyResult.data.file_url;
+              sessionStorage.setItem(cacheKey, shareableUrl);
+            }
+          }
+        }
+
+        const response = await fetch(shareableUrl, { mode: 'cors' });
         if (response.ok) {
           const blob = await response.blob();
-          // Detecta tipo MIME real e define extensão correta
           const mimeType = blob.type || 'image/jpeg';
           const ext = mimeType.includes('png') ? '.png' : mimeType.includes('webp') ? '.webp' : '.jpg';
           const fileName = `${(product.description || 'produto').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}${ext}`;
@@ -183,7 +199,6 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
           
           const shareData = { files: [file] };
           if (navigator.canShare(shareData)) {
-            // Compartilha APENAS com files — texto e url vão separados para máxima compatibilidade
             await navigator.share({
               title: product.description,
               text: shareMessage,
