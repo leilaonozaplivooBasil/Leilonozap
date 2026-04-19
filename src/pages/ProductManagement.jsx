@@ -616,32 +616,35 @@ export default function ProductManagement() {
           <select
             value={depositNameFilter}
             onChange={(e) => setDepositNameFilter(e.target.value)}
-            className="bg-gray-800 text-gray-300 text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="bg-gray-900 text-gray-200 text-xs rounded-lg px-2.5 py-1.5 border border-gray-700/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 cursor-pointer hover:border-gray-600 transition-colors appearance-none pr-7"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
           >
-            <option value="all">Todos os depósitos</option>
-            <option value="Bangu">🔵 Bangu</option>
-            <option value="Oficina">🟠 Oficina</option>
-            <option value="Recreio">🟣 Recreio</option>
+            <option value="all">Depósito</option>
+            <option value="Bangu">Bangu</option>
+            <option value="Oficina">Oficina</option>
+            <option value="Recreio">Recreio</option>
           </select>
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
-            className="bg-gray-800 text-gray-300 text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="bg-gray-900 text-gray-200 text-xs rounded-lg px-2.5 py-1.5 border border-gray-700/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 cursor-pointer hover:border-gray-600 transition-colors appearance-none pr-7"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
           >
-            <option value="all">Todas as classes</option>
-            <option value="perfeito">✅ Perfeito ({products.reduce((s, p) => s + (p.qty_perfeito || 0), 0)})</option>
-            <option value="bom">🟡 Bom ({products.reduce((s, p) => s + (p.qty_bom || 0), 0)})</option>
-            <option value="oficina">🔧 Oficina ({products.reduce((s, p) => s + (p.qty_oficina || 0) + (p.qty_ruim || 0), 0)})</option>
+            <option value="all">Classe</option>
+            <option value="perfeito">Perfeito ({products.reduce((s, p) => s + (p.qty_perfeito || 0), 0)})</option>
+            <option value="bom">Bom ({products.reduce((s, p) => s + (p.qty_bom || 0), 0)})</option>
+            <option value="oficina">Oficina ({products.reduce((s, p) => s + (p.qty_oficina || 0) + (p.qty_ruim || 0), 0)})</option>
           </select>
           <select
             value={alertFilter}
             onChange={(e) => setAlertFilter(e.target.value)}
-            className="bg-gray-800 text-gray-300 text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="bg-gray-900 text-gray-200 text-xs rounded-lg px-2.5 py-1.5 border border-gray-700/60 focus:outline-none focus:ring-1 focus:ring-red-500/50 cursor-pointer hover:border-gray-600 transition-colors appearance-none pr-7"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
           >
-            <option value="all">Todos os alertas</option>
-            <option value="no_price">🔴 Sem Preço ({products.filter(p => !p.selling_price_retail || p.selling_price_retail === 0).length})</option>
-            <option value="stopped">🐌 Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
-            <option value="error">💥 Erro de Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
+            <option value="all">Alertas</option>
+            <option value="no_price">Sem Preço ({products.filter(p => !p.selling_price_retail || p.selling_price_retail === 0).length})</option>
+            <option value="stopped">Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
+            <option value="error">Erro Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
           </select>
         </div>
 
