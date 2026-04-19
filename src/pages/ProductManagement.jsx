@@ -940,9 +940,21 @@ export default function ProductManagement() {
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(createPageUrl("AddCatalogProduct"), { state: { sourceProduct: product } }); }}
                           className="w-7 h-7 rounded-lg bg-violet-600/20 hover:bg-violet-600 text-violet-400 hover:text-white flex items-center justify-center transition-all"
-                          title="Catálogo"
+                          title="Loja Virtual"
                         >
                           <BookOpen className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const sourceUrl = product?.source_url || '';
+                            const mlParam = sourceUrl ? `&ml_url=${encodeURIComponent(sourceUrl)}` : '';
+                            navigate(createPageUrl("CreateAuction") + `?product_id=${product.id}${mlParam}`);
+                          }}
+                          className="w-7 h-7 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white flex items-center justify-center transition-all"
+                          title="Criar Leilão"
+                        >
+                          <TrendingUp className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
