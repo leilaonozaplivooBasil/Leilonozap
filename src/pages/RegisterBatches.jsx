@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Upload, Loader2, FileText, Package, CheckCircle, X, 
-  Edit, Trash2, Save, Plus, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, FileImage 
+  Edit, Trash2, Save, Plus, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, FileImage,
+  Calendar, DollarSign
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
+import BatchCard from '@/components/batches/BatchCard';
+import BatchLoteDetail from '@/components/batches/BatchLoteDetail';
 
 export default function RegisterBatches() {
   const [batches, setBatches] = useState([]);
@@ -578,34 +581,40 @@ export default function RegisterBatches() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-950 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
+        {/* HEADER */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex items-center gap-3">
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={() => navigate(createPageUrl("ProductManagement"))}
-              className="bg-gray-800 border-gray-700 text-white hover:bg-blue-900 hover:border-blue-900"
+              className="text-gray-400 hover:text-white hover:bg-gray-800 h-9 w-9 p-0"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="font-semibold">Voltar</span>
+              <ArrowLeft className="w-4 h-4" />
             </Button>
-            <h1 className="text-3xl font-bold text-white">📦 Leilões Arrematados</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Leilões Arrematados</h1>
+              <p className="text-xs text-gray-500 mt-0.5">Controle de lotes arrematados e importados</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button
+              size="sm"
               onClick={() => navigate(createPageUrl('EstoqueLotes'))}
-              className="bg-blue-700 hover:bg-blue-800"
+              className="bg-blue-600/90 hover:bg-blue-600 text-white border-0 h-9"
             >
-              <Package className="w-4 h-4 mr-2" />
+              <Package className="w-3.5 h-3.5 mr-1.5" />
               Estoque de Lotes
             </Button>
             <Button
+              size="sm"
               onClick={() => setShowManualModal(true)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 h-9"
             >
-              <Edit className="w-4 h-4 mr-2" />
-              Registrar Manualmente
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Registrar Manual
             </Button>
           </div>
         </div>
@@ -613,292 +622,217 @@ export default function RegisterBatches() {
         {/* Upload removido — lotes são registrados manualmente ou via EstoqueLotes */}
 
         {/* ESTATÍSTICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <button
             onClick={() => setStatusFilter('all')}
-            className={`cursor-pointer transition-all ${
+            className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
               statusFilter === 'all' 
-                ? 'bg-blue-900/30 border-blue-500 ring-2 ring-blue-500' 
-                : 'bg-gray-800 border-gray-700 hover:bg-gray-750'
+                ? 'border-blue-500/50 ring-1 ring-blue-500/30' 
+                : 'bg-gray-800/60 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600'
             }`}
+            style={statusFilter === 'all' ? { background: 'linear-gradient(135deg, rgba(59,130,246,0.08), transparent)' } : {}}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Total Arrematados</p>
-                  <p className="text-2xl font-bold text-white">{totalArrematados}</p>
-                </div>
-                <Package className="w-8 h-8 text-blue-400" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Total Arrematados</p>
+                <p className={`text-3xl font-bold ${statusFilter === 'all' ? 'text-blue-400' : 'text-white'}`}>{totalArrematados}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card 
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-500/25">
+                <Package className="w-5 h-5 text-blue-400" />
+              </div>
+            </div>
+          </button>
+          <button
             onClick={() => setStatusFilter('pendente')}
-            className={`cursor-pointer transition-all ${
+            className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
               statusFilter === 'pendente' 
-                ? 'bg-yellow-900/30 border-yellow-500 ring-2 ring-yellow-500' 
-                : 'bg-gray-800 border-gray-700 hover:bg-gray-750'
+                ? 'border-amber-500/50 ring-1 ring-amber-500/30' 
+                : 'bg-gray-800/60 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600'
             }`}
+            style={statusFilter === 'pendente' ? { background: 'linear-gradient(135deg, rgba(245,158,11,0.08), transparent)' } : {}}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Pendentes</p>
-                  <p className="text-2xl font-bold text-yellow-400">{pendingBatches.length}</p>
-                </div>
-                <Package className="w-8 h-8 text-yellow-400" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Pendentes</p>
+                <p className={`text-3xl font-bold ${statusFilter === 'pendente' ? 'text-amber-400' : 'text-white'}`}>{pendingBatches.length}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card 
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-amber-500/15 border border-amber-500/25">
+                <Package className="w-5 h-5 text-amber-400" />
+              </div>
+            </div>
+          </button>
+          <button
             onClick={() => setStatusFilter('convertido')}
-            className={`cursor-pointer transition-all ${
+            className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
               statusFilter === 'convertido' 
-                ? 'bg-green-900/30 border-green-500 ring-2 ring-green-500' 
-                : 'bg-gray-800 border-gray-700 hover:bg-gray-750'
+                ? 'border-emerald-500/50 ring-1 ring-emerald-500/30' 
+                : 'bg-gray-800/60 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600'
             }`}
+            style={statusFilter === 'convertido' ? { background: 'linear-gradient(135deg, rgba(16,185,129,0.08), transparent)' } : {}}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Convertidos</p>
-                  <p className="text-2xl font-bold text-green-400">{totalConvertidos}</p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-green-400" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">No Estoque</p>
+                <p className={`text-3xl font-bold ${statusFilter === 'convertido' ? 'text-emerald-400' : 'text-white'}`}>{totalConvertidos}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-emerald-500/15 border border-emerald-500/25">
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* FILTRO POR DATA */}
-        <Card className="bg-gray-800 border-gray-700 mb-4">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-gray-300 text-sm whitespace-nowrap">De:</span>
-                <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="bg-gray-700 text-white" />
-              </div>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-gray-300 text-sm whitespace-nowrap">Até:</span>
-                <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="bg-gray-700 text-white" />
-              </div>
-              <Button variant="outline" onClick={() => { setDateStart(''); setDateEnd(''); }} className="border-gray-600 text-gray-300 w-full sm:w-auto">Limpar</Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col sm:flex-row items-center gap-3 mb-5 px-1">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-gray-400 text-xs whitespace-nowrap">De:</span>
+            <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="bg-gray-800 border-gray-700 text-white h-9 text-sm" />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-gray-400 text-xs whitespace-nowrap">Até:</span>
+            <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="bg-gray-800 border-gray-700 text-white h-9 text-sm" />
+          </div>
+          {(dateStart || dateEnd) && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateStart(''); setDateEnd(''); }} className="text-gray-400 hover:text-white text-xs h-8">
+              <X className="w-3.5 h-3.5 mr-1" /> Limpar
+            </Button>
+          )}
+        </div>
 
         {/* LISTA DE LEILÕES */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredBatches.map((batch) => {
             const isExpanded = expandedBatches[batch.id];
+            const origem = batch.recibo_url 
+              ? (batch.recibo_url.match(/\.(xlsx|xls|csv)/i) ? 'planilha' : 'nota_fiscal')
+              : 'manual';
             return (
-              <Card key={batch.id} className="bg-gray-800 border-gray-700">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Package className="w-6 h-6 text-blue-400" />
-                      <div className="flex-1">
-                        <CardTitle className="text-xl text-white">
-                          Leilão #{batch.numero_leilao}
-                        </CardTitle>
-                        <p className="text-sm text-gray-400">
-                          {batch.lotes?.length || 0} lotes • {batch.total_produtos} produtos • R$ {batch.valor_total?.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-green-400 font-semibold">
-                          💰 Custo Unitário: R$ {batch.custo_por_unidade?.toFixed(2)}
-                        </p>
-                        {batch.data_lancamento && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            ⏱️ Lançado em: {formatDateTimeBR(batch.data_lancamento)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={batch.status === 'pendente' ? 'bg-yellow-600' : 'bg-green-600'}>
-                        {batch.status === 'pendente' ? '⏳ Pendente' : '✅ Convertido'}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleBatchExpanded(batch.id)}
-                        className="border-gray-600 text-gray-300"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </Button>
-                      {batch.recibo_url && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(batch.recibo_url, '_blank')}
-                          className="border-purple-600 text-purple-400"
-                          title="Ver Nota Fiscal"
-                        >
-                          <FileImage className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditBatch(batch)}
-                        className="border-blue-600 text-blue-400"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      {batch.status === 'pendente' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleConvertToProducts(batch)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <ArrowRight className="w-4 h-4 mr-1" />
-                          Converter
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteBatch(batch.id)}
-                        className="border-red-600 text-red-400"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+              <BatchCard
+                key={batch.id}
+                title={`Leilão #${batch.numero_leilao}`}
+                status={batch.status}
+                totalProdutos={batch.total_produtos}
+                valorTotal={batch.valor_total}
+                custoUnitario={batch.custo_por_unidade}
+                date={batch.data_lancamento}
+                dateLabel="Lançado em"
+                origem={origem}
+                lotesCount={batch.lotes?.length}
+                arquivoUrl={batch.recibo_url}
+                arquivoNome="Nota Fiscal / Planilha"
+                isExpanded={isExpanded}
+                onExpand={() => toggleBatchExpanded(batch.id)}
+                onEdit={() => handleEditBatch(batch)}
+                onDelete={() => handleDeleteBatch(batch.id)}
+                onConvert={batch.status === 'pendente' ? () => handleConvertToProducts(batch) : undefined}
+                onViewFile={batch.recibo_url ? () => window.open(batch.recibo_url, '_blank') : undefined}
+                expandedContent={
+                  <div className="space-y-3">
+                    {batch.lotes?.map((lote, loteIdx) => (
+                      <BatchLoteDetail
+                        key={loteIdx}
+                        lote={lote}
+                        loteIndex={loteIdx}
+                        batch={batch}
+                        lotesStatus={lotesStatus}
+                        onConvertSingleLot={handleConvertSingleLot}
+                      />
+                    ))}
                   </div>
-                </CardHeader>
-                
-                {isExpanded && (
-                  <CardContent>
-                    <div className="space-y-4">
-                      {batch.lotes?.map((lote, loteIdx) => (
-                        <div key={loteIdx} className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-white font-semibold">Lote {lote.numero_lote}</h4>
-                                {(() => {
-                                  const loteKey = `${batch.id}_${lote.numero_lote}`;
-                                  const status = lotesStatus[loteKey];
-                                  if (!status) return null;
-                                  
-                                  if (status.complete && status.found > 0) {
-                                    return (
-                                      <Badge className="bg-green-600 text-white text-xs">
-                                        ✓ Completo ({status.found}/{status.expected})
-                                      </Badge>
-                                    );
-                                  } else if (status.missing > 0) {
-                                    return (
-                                      <Badge className="bg-red-600 text-white text-xs">
-                                        ⚠️ Faltam {status.missing} produto(s)
-                                      </Badge>
-                                    );
-                                  } else if (status.found === 0) {
-                                    return (
-                                      <Badge className="bg-yellow-600 text-white text-xs">
-                                        ⏳ Não lançado
-                                      </Badge>
-                                    );
-                                  }
-                                })()}
-                              </div>
-                              <p className="text-xs text-gray-400">
-                                {lote.produtos?.reduce((sum, p) => sum + (p.quantidade || 1), 0)} produtos
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-blue-400 border-blue-400">
-                                R$ {lote.valor_lote?.toFixed(2)}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                onClick={() => handleConvertSingleLot(batch, loteIdx)}
-                                className="bg-purple-600 hover:bg-purple-700 text-xs"
-                              >
-                                <Package className="w-3 h-3 mr-1" />
-                                {batch.status === 'convertido' ? 'Relançar no Estoque' : 'Lançar no Estoque'}
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            {lote.produtos?.map((produto, prodIdx) => (
-                              <div key={prodIdx} className="flex justify-between bg-gray-900 rounded p-2 text-sm">
-                                <span className="text-white">{produto.codigo ? `(${produto.codigo}) ` : ''}{produto.descricao}{produto.variacao ? ` • ${produto.variacao}` : ''}</span>
-                                <div className="text-gray-400">
-                                  Qtd: {produto.quantidade} • Unit: R$ {batch.custo_por_unidade?.toFixed(2)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
+                }
+              />
             );
           })}
 
-          {/* LOTES RECEBIDOS (via Estoque de Lotes) */}
-          {(statusFilter === 'all' || statusFilter === 'convertido') && lotesRecebidos.map((lote) => (
-            <Card key={`lr-${lote.id}`} className="bg-gray-800 border-emerald-700/40">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1">
-                    <Package className="w-6 h-6 text-emerald-400" />
-                    <div className="flex-1">
-                      <CardTitle className="text-xl text-white">
-                        {lote.nome_lote}
-                      </CardTitle>
-                      <p className="text-sm text-gray-400">
-                        {lote.quantidade_total || 0} produtos • R$ {(lote.valor_lote || 0).toFixed(2)}
-                        {lote.marketplace && ` • ${lote.marketplace}`}
-                      </p>
-                      {lote.valor_lote > 0 && lote.quantidade_total > 0 && (
-                        <p className="text-xs text-green-400 font-semibold">
-                          💰 Custo Unitário: R$ {(lote.valor_lote / lote.quantidade_total).toFixed(2)}
-                        </p>
-                      )}
-                      {lote.data_recebimento && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          ⏱️ Recebido em: {new Date(lote.data_recebimento).toLocaleString('pt-BR')}
-                        </p>
-                      )}
+          {/* LOTES RECEBIDOS (via Estoque de Lotes) — mesmo card padronizado */}
+          {(statusFilter === 'all' || statusFilter === 'convertido') && lotesRecebidos.map((lote) => {
+            const isExpanded = expandedBatches[`lr-${lote.id}`];
+            const custoUnit = (lote.valor_lote > 0 && lote.quantidade_total > 0) 
+              ? lote.valor_lote / lote.quantidade_total 
+              : 0;
+            
+            // Parse itens_json para expandir
+            let itensLote = [];
+            if (lote.itens_json) {
+              try { itensLote = JSON.parse(lote.itens_json); } catch {}
+            }
+
+            return (
+              <BatchCard
+                key={`lr-${lote.id}`}
+                title={lote.nome_lote}
+                status="estoque"
+                totalProdutos={lote.quantidade_total || 0}
+                valorTotal={lote.valor_lote || 0}
+                custoUnitario={custoUnit}
+                date={lote.data_recebimento}
+                dateLabel="Recebido em"
+                marketplace={lote.marketplace}
+                origem="estoque_lotes"
+                produtosNoEstoque={lote.produtos_gerados_count}
+                arquivoUrl={lote.arquivo_url}
+                arquivoNome={lote.arquivo_nome}
+                observacoes={lote.observacoes}
+                isExpanded={isExpanded}
+                onExpand={() => toggleBatchExpanded(`lr-${lote.id}`)}
+                onViewFile={lote.arquivo_url ? () => window.open(lote.arquivo_url, '_blank') : undefined}
+                expandedContent={
+                  itensLote.length > 0 ? (
+                    <div className="rounded-xl bg-gray-800/60 border border-gray-700/50 overflow-hidden">
+                      <div className="px-4 py-2.5 border-b border-gray-700/40">
+                        <h4 className="text-sm font-semibold text-white">Itens do Lote ({itensLote.length} tipos)</h4>
+                      </div>
+                      <div className="divide-y divide-gray-700/30">
+                        {itensLote.slice(0, 50).map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between px-4 py-2 hover:bg-gray-700/20 transition-colors">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {item.grade && (
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                                  item.grade === 'A' ? 'bg-emerald-500/20 text-emerald-300' :
+                                  item.grade === 'B' ? 'bg-yellow-500/20 text-yellow-300' :
+                                  'bg-orange-500/20 text-orange-300'
+                                }`}>{item.grade}</span>
+                              )}
+                              <span className="text-sm text-gray-200 truncate">{item.desc || item.descricao || 'Item'}</span>
+                            </div>
+                            <div className="flex items-center gap-4 flex-shrink-0 ml-3">
+                              <span className="text-xs text-gray-400">Qtd: <span className="text-white font-semibold">{item.qtd || item.quantidade || 1}</span></span>
+                              {(item.valor || item.valor_mercado) > 0 && (
+                                <span className="text-xs text-purple-400">Mkt: R$ {(item.valor || item.valor_mercado || 0).toFixed(2)}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {itensLote.length > 50 && (
+                          <div className="px-4 py-2 text-center text-xs text-gray-500">
+                            ... e mais {itensLote.length - 50} itens
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-emerald-700 text-white">
-                      ✅ {lote.produtos_gerados_count || 0} produtos no estoque
-                    </Badge>
-                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/50 text-xs">
-                      Via Estoque de Lotes
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              {lote.observacoes && (
-                <CardContent className="pt-0">
-                  <p className="text-gray-500 text-xs">{lote.observacoes}</p>
-                </CardContent>
-              )}
-            </Card>
-          ))}
+                  ) : (
+                    <div className="text-center py-6 text-gray-500 text-sm">
+                      <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      Nenhum detalhe de itens disponível para este lote.
+                    </div>
+                  )
+                }
+              />
+            );
+          })}
 
           {filteredBatches.length === 0 && lotesRecebidos.length === 0 && !isLoading && (
-            <Card className="bg-gray-800 border-gray-700">
-              <CardContent className="p-12 text-center">
-                <Package className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                <p className="text-gray-400">
-                  {statusFilter === 'all' 
-                    ? 'Nenhum leilão registrado ainda' 
-                    : statusFilter === 'pendente'
-                    ? 'Nenhum leilão pendente'
-                    : 'Nenhum leilão convertido'}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-gray-700/40 bg-gray-800/50 p-12 text-center">
+              <Package className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400">
+                {statusFilter === 'all' 
+                  ? 'Nenhum leilão registrado ainda' 
+                  : statusFilter === 'pendente'
+                  ? 'Nenhum leilão pendente'
+                  : 'Nenhum leilão convertido'}
+              </p>
+            </div>
           )}
         </div>
 
