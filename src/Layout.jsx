@@ -32,7 +32,19 @@ import {
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('currentUser');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.id && parsed?.email) {
+          sessionStorage.setItem('isLoggedIn', 'true');
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const hasInitializedRef = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
