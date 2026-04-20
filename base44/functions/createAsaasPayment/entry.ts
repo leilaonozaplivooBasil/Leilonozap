@@ -7,17 +7,19 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        // 🔒 VALIDAÇÃO DE AUTENTICAÇÃO
-        // O app usa auth custom (AppUser + localStorage), não a auth da plataforma Base44.
-        // Portanto NÃO podemos usar base44.auth.me() — os clientes não têm token da plataforma.
-        // A validação de identidade é feita no frontend (Cart.jsx verifica currentUser antes de chamar).
-        // Tentamos auth da plataforma como fallback silencioso, mas NUNCA bloqueamos por isso.
-        let authUser = null;
-        try {
-            authUser = await base44.auth.me();
-        } catch (_) {
-            // Auth da plataforma não disponível — normal para usuários AppUser
-        }
+        // ╔══════════════════════════════════════════════════════════════════╗
+        // ║ ⛔ REGRA INVIOLÁVEL — NÃO BLOQUEAR POR AUTH DA PLATAFORMA ⛔    ║
+        // ║                                                                  ║
+        // ║ Este app usa autenticação CUSTOM (AppUser + localStorage).       ║
+        // ║ Os clientes NÃO possuem token da plataforma Base44.             ║
+        // ║ Chamar base44.auth.me() como barreira = BLOQUEIA 100% DOS PIX.  ║
+        // ║                                                                  ║
+        // ║ A identidade do comprador é validada pelo buyer_id obrigatório   ║
+        // ║ (verificado abaixo) que vem do frontend autenticado.             ║
+        // ║                                                                  ║
+        // ║ NUNCA adicionar: if (!authUser) return 401                       ║
+        // ║ NUNCA usar base44.auth.me() como gate para este endpoint.        ║
+        // ╚══════════════════════════════════════════════════════════════════╝
 
         const {
             catalog_sale_id,
