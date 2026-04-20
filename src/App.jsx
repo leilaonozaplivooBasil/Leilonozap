@@ -81,7 +81,11 @@ const AuthenticatedApp = () => {
         <MainPage />
       </LayoutWrapper>
     } />
-      {Object.entries(Pages).map(([path, Page]) => (
+      {/* 🔒 Redirect legado: /Home → / (evita duplicação com a Route "/" da MainPage) */}
+      <Route path="/Home" element={<Navigate to="/" replace />} />
+      {Object.entries(Pages)
+        .filter(([path]) => path !== mainPageKey) // 🔒 não duplicar Home (já renderizada em "/")
+        .map(([path, Page]) => (
         <Route
           key={path}
           path={`/${path}`}
