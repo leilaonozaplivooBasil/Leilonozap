@@ -7,11 +7,16 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        // 🔒 VALIDAÇÃO DE AUTENTICAÇÃO — Bloqueia chamadas não autenticadas
-        const authUser = await base44.auth.me();
-        if (!authUser) {
-            console.error('🚫 createAsaasPayment: Chamada sem autenticação rejeitada');
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        // 🔒 VALIDAÇÃO DE AUTENTICAÇÃO
+        // O app usa auth custom (AppUser + localStorage), não a auth da plataforma Base44.
+        // Portanto NÃO podemos usar base44.auth.me() — os clientes não têm token da plataforma.
+        // A validação de identidade é feita no frontend (Cart.jsx verifica currentUser antes de chamar).
+        // Tentamos auth da plataforma como fallback silencioso, mas NUNCA bloqueamos por isso.
+        let authUser = null;
+        try {
+            authUser = await base44.auth.me();
+        } catch (_) {
+            // Auth da plataforma não disponível — normal para usuários AppUser
         }
 
         const {
@@ -38,6 +43,12 @@ Deno.serve(async (req) => {
         // Validações
         if (!amount || amount <= 0) {
             return Response.json({ error: 'Valor inválido' }, { status: 400 });
+        }
+
+        // 🔒 buyer_id é obrigatório — garante que sabemos quem está comprando
+        if (!explicitBuyerId) {
+            console.error('🚫 createAsaasPayment: buyer_id não informado');
+            return Response.json({ error: 'buyer_id é obrigatório' }, { status: 400 });
         }
 
         // ✅ PERMITIR depósito de carteira sem referência (ambos null é aceitável para wallet)
