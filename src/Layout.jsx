@@ -106,6 +106,9 @@ export default function Layout({ children, currentPageName }) {
     const catalogPages = ['Catalog', 'CatalogProductDetails', 'Cart', 'CatalogCheckout', 'MyCatalogOrders', 'CatalogOrderTracking'];
     const isInCatalogContext = isFromCatalog || catalogPages.includes(currentPageName);
 
+    // 🔒 FLAG DE LOGOUT INTENCIONAL — impede re-login automático via User.me()
+    sessionStorage.setItem('userLoggedOut', 'true');
+
     localStorage.removeItem('currentUser');
     sessionStorage.removeItem('isLoggedIn');
 
@@ -294,6 +297,14 @@ export default function Layout({ children, currentPageName }) {
       hasInitializedRef.current = true;
 
       try {
+        // 🔒 LOGOUT INTENCIONAL: se usuário clicou em Sair, respeita e não tenta re-logar
+        if (sessionStorage.getItem('userLoggedOut') === 'true') {
+          sessionStorage.removeItem('userLoggedOut'); // consome a flag
+          setCurrentUser(null);
+          setIsLoading(false);
+          return;
+        }
+
         // 🛡️ PROTEÇÃO CRÍTICA: Envolve TUDO em try-catch para evitar crashes
         let userFound = false;
 
