@@ -22,13 +22,23 @@ export default function RequireRole({ children, allowedRoles, fallbackRoute = 'H
             try {
                 // Tenta ler do cache local primeiro (igual ao Layout)
                 const savedUserJSON = localStorage.getItem('currentUser');
-                const isLoggedIn = sessionStorage.getItem('isLoggedIn');
 
                 let user = null;
 
-                if (savedUserJSON && isLoggedIn) {
-                    user = JSON.parse(savedUserJSON);
-                } else {
+                if (savedUserJSON) {
+                    try {
+                        const parsed = JSON.parse(savedUserJSON);
+                        if (parsed?.id && parsed?.email) {
+                            user = parsed;
+                            // Garante sessionStorage sync (Layout pode não ter rodado ainda)
+                            if (!sessionStorage.getItem('isLoggedIn')) {
+                                sessionStorage.setItem('isLoggedIn', 'true');
+                            }
+                        }
+                    } catch (_) { /* JSON inválido, ignora */ }
+                }
+                
+                if (!user) {
                     // Fallback: tenta plataforma
                     try {
                         user = await base44.auth.me();
