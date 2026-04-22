@@ -71,6 +71,19 @@ export default function ProductManagement() {
   });
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [goToPageInput, setGoToPageInput] = useState('');
+  const tableRef = React.useRef(null);
+
+  // 📌 Ao trocar de página, rola suave pro topo da tabela (não pula pro topo da página)
+  const changePage = (newPage) => {
+    setCurrentPage(newPage);
+    setTimeout(() => {
+      if (tableRef.current) {
+        const headerOffset = 140; // header sticky + margem
+        const elementTop = tableRef.current.getBoundingClientRect().top + window.scrollY - headerOffset;
+        window.scrollTo({ top: elementTop, behavior: 'smooth' });
+      }
+    }, 50);
+  };
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showGoogleShopping, setShowGoogleShopping] = useState(false);
@@ -416,13 +429,13 @@ export default function ProductManagement() {
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      changePage(currentPage - 1);
     }
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+      changePage(currentPage + 1);
     }
   };
 
@@ -727,7 +740,7 @@ export default function ProductManagement() {
         </TooltipProvider>
 
         {/* ═══ TABELA ═══ */}
-        <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+        <div ref={tableRef} className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
           {/* Table Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
             <h2 className="text-sm font-semibold text-gray-300">Posição de Estoque</h2>
@@ -1044,7 +1057,7 @@ export default function ProductManagement() {
                       if (e.key === 'Enter') {
                         const num = parseInt(goToPageInput);
                         if (num >= 1 && num <= totalPages) {
-                          setCurrentPage(num);
+                          changePage(num);
                           setGoToPageInput('');
                         }
                       }
@@ -1064,7 +1077,7 @@ export default function ProductManagement() {
               <div className="flex items-center gap-1">
                 {/* First */}
                 <button
-                  onClick={() => setCurrentPage(1)}
+                  onClick={() => changePage(1)}
                   disabled={currentPage === 1}
                   title="Primeira página"
                   className="w-8 h-8 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
@@ -1109,7 +1122,7 @@ export default function ProductManagement() {
                     return (
                       <button
                         key={p}
-                        onClick={() => setCurrentPage(p)}
+                        onClick={() => changePage(p)}
                         className={`min-w-[32px] h-8 rounded-md border transition-all text-xs font-semibold px-2 ${isActive
                           ? 'bg-emerald-600 border-emerald-500 text-white shadow-sm shadow-emerald-500/20'
                           : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white'}`}
@@ -1127,7 +1140,7 @@ export default function ProductManagement() {
                 >›</button>
                 {/* Last */}
                 <button
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => changePage(totalPages)}
                   disabled={currentPage === totalPages || totalPages === 0}
                   title="Última página"
                   className="w-8 h-8 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
