@@ -56,8 +56,21 @@ export default function ProductManagement() {
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [currentObservation, setCurrentObservation] = useState({ productId: null, text: '' });
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 34;
+  const [currentPage, setCurrentPage] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('productMgmt_currentPage');
+      return saved ? parseInt(saved) || 1 : 1;
+    } catch { return 1; }
+  });
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    try {
+      const saved = localStorage.getItem('productMgmt_itemsPerPage');
+      const parsed = saved ? parseInt(saved) : 50;
+      return [20, 50, 100, 200].includes(parsed) ? parsed : 50;
+    } catch { return 50; }
+  });
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [goToPageInput, setGoToPageInput] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showGoogleShopping, setShowGoogleShopping] = useState(false);
@@ -343,13 +356,29 @@ export default function ProductManagement() {
     return alerts;
   };
 
+  // 🔎 Debounce da busca (300ms) — evita filtrar a cada tecla em tabelas grandes
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // 💾 Persiste itens por página no localStorage
+  useEffect(() => {
+    try { localStorage.setItem('productMgmt_itemsPerPage', String(itemsPerPage)); } catch { /* ignora */ }
+  }, [itemsPerPage]);
+
+  // 💾 Persiste página atual no sessionStorage (volta pra mesma página após editar)
+  useEffect(() => {
+    try { sessionStorage.setItem('productMgmt_currentPage', String(currentPage)); } catch { /* ignora */ }
+  }, [currentPage]);
+
   useEffect(() => {
     let filtered = products;
 
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       filtered = filtered.filter(p =>
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.lot?.toLowerCase().includes(searchTerm.toLowerCase())
+        p.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        p.lot?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       );
     }
 
@@ -373,12 +402,12 @@ export default function ProductManagement() {
     }
 
     setFilteredProducts(filtered);
-  }, [searchTerm, products, classFilter, depositNameFilter, alertFilter]);
+  }, [debouncedSearchTerm, products, classFilter, depositNameFilter, alertFilter]);
 
   // Reset page only when filters change (not when products reload)
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, classFilter, depositNameFilter, alertFilter]);
+  }, [debouncedSearchTerm, classFilter, depositNameFilter, alertFilter, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -787,8 +816,8 @@ export default function ProductManagement() {
 
           <div className="overflow-x-auto">
             <table className="text-sm" style={{minWidth: '1200px', width: '100%'}}>
-              <thead>
-                <tr className="bg-gray-800/80 border-b border-gray-700">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-gray-800 border-b border-gray-700 shadow-sm">
                   <th className="px-3 py-2.5 text-center" style={{width:'36px'}}>
                     <input
                       type="checkbox"
@@ -974,23 +1003,136 @@ export default function ProductManagement() {
             )}
           </div>
 
-          {/* PAGINAÇÃO */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800 bg-gray-900/60">
-            <span className="text-xs text-gray-600">
-              {startIndex + 1}–{Math.min(endIndex, filteredProducts.length)} de {filteredProducts.length}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-600 mr-2">Pág. {currentPage}/{totalPages}</span>
-              <button
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1}
-                className="w-7 h-7 rounded-lg bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
-              >‹</button>
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="w-7 h-7 rounded-lg bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
-              >›</button>
+          {/* PAGINAÇÃO PADRÃO GRANDES PLAYERS */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-800 bg-gray-900/60">
+            {/* Esquerda: contador + itens por página */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                <span className="text-gray-300 font-semibold">{startIndex + 1}–{Math.min(endIndex, filteredProducts.length)}</span>
+                <span className="text-gray-600"> de </span>
+                <span className="text-gray-300 font-semibold">{filteredProducts.length.toLocaleString()}</span>
+              </span>
+              <div className="w-px h-4 bg-gray-700" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-600">Mostrar</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(parseInt(e.target.value))}
+                  className="bg-gray-800 text-gray-200 text-xs rounded-md px-2 py-1 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 cursor-pointer hover:border-gray-600 transition-colors"
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Direita: paginação inteligente + ir para */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Campo "Ir para" — oculto em mobile muito pequeno */}
+              {totalPages > 5 && (
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <span className="text-xs text-gray-600">Ir para</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={goToPageInput}
+                    onChange={(e) => setGoToPageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const num = parseInt(goToPageInput);
+                        if (num >= 1 && num <= totalPages) {
+                          setCurrentPage(num);
+                          setGoToPageInput('');
+                        }
+                      }
+                    }}
+                    placeholder={String(currentPage)}
+                    className="w-14 bg-gray-800 text-gray-200 text-xs text-center rounded-md px-2 py-1 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 hover:border-gray-600 transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Indicador Pág X/Y */}
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                Pág. <span className="text-gray-300 font-semibold">{currentPage}</span>/<span className="text-gray-400">{totalPages || 1}</span>
+              </span>
+
+              {/* Botões de navegação */}
+              <div className="flex items-center gap-1">
+                {/* First */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  title="Primeira página"
+                  className="w-8 h-8 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
+                >«</button>
+                {/* Prev */}
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  title="Página anterior"
+                  className="w-8 h-8 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
+                >‹</button>
+
+                {/* Números com reticências inteligentes */}
+                {(() => {
+                  if (totalPages <= 1) return null;
+                  const pages = [];
+                  const push = (p) => pages.push(p);
+                  const siblings = 1; // vizinhos
+                  const boundaries = 1; // primeiro/último
+
+                  const leftBoundary = 1 + boundaries;
+                  const rightBoundary = totalPages - boundaries;
+                  const leftSibling = Math.max(currentPage - siblings, leftBoundary + 1);
+                  const rightSibling = Math.min(currentPage + siblings, rightBoundary - 1);
+
+                  // Início
+                  for (let i = 1; i <= Math.min(boundaries, totalPages); i++) push(i);
+                  if (leftSibling > leftBoundary + 1) push('left-dots');
+                  // Middle
+                  for (let i = leftSibling; i <= rightSibling; i++) {
+                    if (i > boundaries && i <= totalPages - boundaries) push(i);
+                  }
+                  if (rightSibling < rightBoundary - 1) push('right-dots');
+                  // Fim
+                  for (let i = Math.max(totalPages - boundaries + 1, boundaries + 1); i <= totalPages; i++) push(i);
+
+                  return pages.map((p, idx) => {
+                    if (p === 'left-dots' || p === 'right-dots') {
+                      return <span key={`${p}-${idx}`} className="px-1 text-gray-600 text-xs">…</span>;
+                    }
+                    const isActive = p === currentPage;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-[32px] h-8 rounded-md border transition-all text-xs font-semibold px-2 ${isActive
+                          ? 'bg-emerald-600 border-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                      >{p}</button>
+                    );
+                  });
+                })()}
+
+                {/* Next */}
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  title="Próxima página"
+                  className="w-8 h-8 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
+                >›</button>
+                {/* Last */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  title="Última página"
+                  className="w-8 h-8 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
+                >»</button>
+              </div>
             </div>
           </div>
         </div>
