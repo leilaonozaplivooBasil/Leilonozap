@@ -8,7 +8,7 @@ const PROF_XAVIER_GOLDEN = "https://media.base44.com/images/public/69e618c1927ab
 const PROF_XAVIER_CHAIR  = "https://media.base44.com/images/public/69e618c1927ab5696bf98c08/6a2b8847c_image.png";
 const MENTALIDADE_IMG    = "https://media.base44.com/images/public/69e618c1927ab5696bf98c08/bd7e2c11a_29349AB6-1538-4FF6-8858-073A48D207F3.JPG";
 
-const API_URL = "https://nexus-6bf98c08.base44.app/functions/getVendas";
+const API_URL = "https://n-e-x-u-s-app-5ff130d8.base44.app/functions/getVendas";
 const LEILAO_LOGO = "https://media.base44.com/images/public/69e618c1927ab5696bf98c08/62a6b3a92_BEBE94BD-625B-4FEE-81EF-3A0CE605276B3.PNG";
 const HAND_IMG = "https://media.base44.com/images/public/69e618c1927ab5696bf98c08/75f728745_ChatGPTImage22deabrde202601_57_32.png";
 const EXEC_HERO = "https://media.base44.com/images/public/69e618c1927ab5696bf98c08/a731ae418_generated_image.png";
