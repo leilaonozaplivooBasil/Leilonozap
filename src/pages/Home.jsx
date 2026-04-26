@@ -1265,7 +1265,7 @@ export default function Dashboard() {
   },[]);
 
   const hoje=hojeISO();
-  const vHoje=vendas.filter(v=>v.data_venda===hoje&&v.status==="registrada");
+  const vHoje=vendas.filter(v=>v.data_venda===hoje&&(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos"));
   const vSemana=()=>{const hoje=hojeISO();const dt=new Date(hoje+"T12:00:00");const diasDesdedom=dt.getDay();const domISO=new Date(dt-diasDesdedom*86400000).toISOString().slice(0,10);return vendas.filter(v=>v.status==="registrada"&&v.data_venda>=domISO);};
   const vMes=()=>{const agr=new Date();const m=agr.getMonth();const a=agr.getFullYear();const ms=`${a}-${String(m+1).padStart(2,"0")}`;return vendas.filter(v=>v.status==="registrada"&&v.data_venda&&v.data_venda.startsWith(ms));};
 
