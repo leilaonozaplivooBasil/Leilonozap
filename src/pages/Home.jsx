@@ -1222,7 +1222,7 @@ export default function Dashboard() {
           const agora=new Date();
           const mesAtual=agora.getMonth();
           const anoAtual=agora.getFullYear();
-          const mesStr=`${anoAtual}-${String(mesAtual+1).padStart(2,"0")}`;const vMesAtual=d.filter(v=>(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")&&v.data_venda&&v.data_venda.startsWith(mesStr));
+          const mesStr=`${anoAtual}-${String(mesAtual+1).padStart(2,"0")}`;const vMesAtual=d.filter(v=>v.status==="registrada"&&v.data_venda&&v.data_venda.startsWith(mesStr));
           const fat=vMesAtual.reduce((s,v)=>s+Number(v.valor||0),0);
           const trans=vMesAtual.length;
           // Recorde diário
@@ -1239,10 +1239,10 @@ export default function Dashboard() {
           vMesAtual.forEach(v=>{const n=v.executivo;if(n)mp[n]=(mp[n]||0)+Number(v.valor||0);});
           const rnk=Object.entries(mp).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({n,v}));
           // Evolução — meses fixos exceto atual
-          const totalAcum=d.filter(v=>v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos").reduce((s,v)=>s+Number(v.valor||0),0);
+          const totalAcum=d.filter(v=>v.status==="registrada").reduce((s,v)=>s+Number(v.valor||0),0);
           // Calcular por mês
           const fatPorMes={};
-          d.filter(v=>v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos").forEach(v=>{
+          d.filter(v=>v.status==="registrada").forEach(v=>{
             const dt=new Date(v.data_venda);
             const k=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`;
             fatPorMes[k]=(fatPorMes[k]||0)+Number(v.valor||0);
@@ -1265,17 +1265,17 @@ export default function Dashboard() {
   },[]);
 
   const hoje=hojeISO();
-  const vHoje=vendas.filter(v=>v.data_venda===hoje&&(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos"));
-  const vSemana=()=>{const hoje=hojeISO();const dt=new Date(hoje+"T12:00:00");const diasDesdedom=dt.getDay();const domISO=new Date(dt-diasDesdedom*86400000).toISOString().slice(0,10);return vendas.filter(v=>(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")&&v.data_venda>=domISO);};
-  const vMes=()=>{const agr=new Date();const m=agr.getMonth();const a=agr.getFullYear();const ms=`${a}-${String(m+1).padStart(2,"0")}`;return vendas.filter(v=>(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")&&v.data_venda&&v.data_venda.startsWith(ms));};
+  const vHoje=vendas.filter(v=>v.data_venda===hoje&&v.status==="registrada");
+  const vSemana=()=>{const hoje=hojeISO();const dt=new Date(hoje+"T12:00:00");const diasDesdedom=dt.getDay();const domISO=new Date(dt-diasDesdedom*86400000).toISOString().slice(0,10);return vendas.filter(v=>v.status==="registrada"&&v.data_venda>=domISO);};
+  const vMes=()=>{const agr=new Date();const m=agr.getMonth();const a=agr.getFullYear();const ms=`${a}-${String(m+1).padStart(2,"0")}`;return vendas.filter(v=>v.status==="registrada"&&v.data_venda&&v.data_venda.startsWith(ms));};
 
   const getV=(t)=>t==="hoje"?vHoje:t==="semana"?vSemana():vMes();
   const ranking=(lista)=>{const mp={};EXECUTIVOS.forEach(e=>mp[e]=0);lista.forEach(v=>{if((v.tipo==="venda"||v.tipo==="tiktok"||v.tipo==="licenciado"||v.tipo==="whatsapp")&&v.executivo!=="Flavio"&&mp[v.executivo]!==undefined)mp[v.executivo]+=Number(v.valor||0);});return Object.entries(mp).sort((a,b)=>b[1]-a[1]);};
   const canais=(lista)=>({
-    showroom:lista.filter(v=>v.tipo==="venda"&&(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")).reduce((s,v)=>s+Number(v.valor||0),0),
-    whatsapp:lista.filter(v=>v.tipo==="whatsapp"&&(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")).reduce((s,v)=>s+Number(v.valor||0),0),
-    tiktok:lista.filter(v=>v.tipo==="tiktok"&&(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")).reduce((s,v)=>s+Number(v.valor||0),0),
-    licenciados:lista.filter(v=>v.tipo==="licenciado"&&(v.status==="registrada"||v.status==="confirmado"||v.status==="pendente_produtos")).reduce((s,v)=>s+Number(v.valor||0),0),
+    showroom:lista.filter(v=>v.tipo==="venda"&&v.status==="registrada").reduce((s,v)=>s+Number(v.valor||0),0),
+    whatsapp:lista.filter(v=>v.tipo==="whatsapp"&&v.status==="registrada").reduce((s,v)=>s+Number(v.valor||0),0),
+    tiktok:lista.filter(v=>v.tipo==="tiktok"&&v.status==="registrada").reduce((s,v)=>s+Number(v.valor||0),0),
+    licenciados:lista.filter(v=>v.tipo==="licenciado"&&v.status==="registrada").reduce((s,v)=>s+Number(v.valor||0),0),
   });
 
   const lista=getV(tab==="hoje"||tab==="semana"?tab:"hoje");
