@@ -36,7 +36,7 @@ export default function AcessoVendedor() {
           token,
           action: "check",
         });
-        const data = response?.data;
+        const data = response;
         if (data?.success && data.seller) {
           setSeller(data.seller);
           setPhase("form");
@@ -68,10 +68,10 @@ export default function AcessoVendedor() {
     setIsSubmitting(true);
     try {
       const response = await base44.functions.invoke("validateSellerAccessToken", {
-        token,
-        new_password: password,
-      });
-      const data = response?.data;
+         token,
+         new_password: password,
+       });
+       const data = response;
 
       if (data?.success && data.user) {
         // Persiste sessão (mesmo pattern do LoginModal)
