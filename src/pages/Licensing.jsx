@@ -40,6 +40,12 @@ import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CommissionsTab from '../components/licensing/CommissionsTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
+import WithdrawalModal from '../components/licensing/WithdrawalModal';
+import WithdrawalsHistoryTab from '../components/licensing/WithdrawalsHistoryTab';
+import MyClientsTab from '../components/licensing/MyClientsTab';
+import HowItWorksCard from '../components/licensing/HowItWorksCard';
+import SellerFormModal from '../components/sellers/SellerFormModal';
+import SellersListPanel from '../components/sellers/SellersListPanel';
 
 const Product = base44.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => <Card onClick={onClick} className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle><Icon className="h-4 w-4 text-gray-400" /></CardHeader><CardContent>{isL ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl font-bold text-white">{value}</div>}</CardContent></Card>;
@@ -98,6 +104,10 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [recipientName, setRecipientName] = useState('');
   const [recipientDocument, setRecipientDocument] = useState('');
 
+  // 🆕 Estado do cadastro de vendedores (Etapa 5)
+  const [showSellerModal, setShowSellerModal] = useState(false);
+  const [sellersRefreshCounter, setSellersRefreshCounter] = useState(0);
+
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
     networkBidsCount: null
@@ -129,23 +139,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : user.career_levels ? [user.career_levels] : ['usuario'];
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
 
-  const careerLevelsMap = {
-    'usuario': 'Usuário',
-    'licenciado_aplicativo': 'Influencer',
-    'influencer': 'Influencer',
-    'licenciado_catalogo': 'Licenciado Loja Virtual',
-    'trainee': 'Trainee',
-    'executivo': 'Executivo',
-    'kit_start': 'Kit Start',
-    'plano_lider': 'Plano Líder',
-    'plano_lojista': 'Plano Lojista',
-    'distribuidor': 'Distribuidor',
-    'diretor': 'Diretor',
-    'diretoria': 'Diretoria',
-    'ceo': 'CEO',
-    'conselheiro': 'Conselheiro',
-    'fundador': 'Fundador'
-  };
+  const careerLevelsMap = { 'usuario': 'Usuário', 'licenciado_aplicativo': 'Influencer', 'influencer': 'Influencer', 'licenciado_catalogo': 'Licenciado Loja Virtual', 'trainee': 'Trainee', 'executivo': 'Executivo', 'kit_start': 'Kit Start', 'plano_lider': 'Plano Líder', 'plano_lojista': 'Plano Lojista', 'distribuidor': 'Distribuidor', 'diretor': 'Diretor', 'diretoria': 'Diretoria', 'ceo': 'CEO', 'conselheiro': 'Conselheiro', 'fundador': 'Fundador' };
 
   const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
 
@@ -1093,6 +1087,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
           {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
+          {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
           <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
           <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
           <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
@@ -1239,6 +1234,26 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
+        {/* ABA: MEUS VENDEDORES - Licenciados de catálogo ou admin */}
+        {(userLevels.includes('licenciado_catalogo') || isAdmin) && (
+          <TabsContent value="meus-vendedores" className="space-y-6">
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <CardHeader>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
+                    <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Cadastre vendedores que vão vender pela sua rede (10% por venda).</CardDescription>
+                  </div>
+                  <Button onClick={() => setShowSellerModal(true)} className="bg-green-600 hover:bg-green-700 text-white min-h-[44px]">+ Cadastrar Vendedor</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         {/* ABA: CATÁLOGO - Produtos para vender + Dashboard */}
         {userLevels.includes('licenciado_catalogo') &&
           <TabsContent value="catalogo" className="space-y-6">
@@ -1355,107 +1370,18 @@ const DashboardContent = ({ user, isAdmin }) => {
             </CardContent>
           </Card>
 
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Como Funciona o Sistema</CardTitle>
-            </CardHeader>
-            <CardContent className={`space-y-4 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}>
-                  <span className="text-white font-bold">1</span>
-                </div>
-                <div>
-                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Compartilhe seu Link</h4>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Envie seu link de indicação para amigos e familiares.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}>
-                  <span className="text-white font-bold">2</span>
-                </div>
-                <div>
-                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Eles Se Cadastram</h4>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Quando usam seu link, são automaticamente seus indicados.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}>
-                  <span className="text-white font-bold">3</span>
-                </div>
-                <div>
-                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Você Ganha Comissões em R$</h4>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>App: 3% por arremate | Loja Virtual: até 26% distribuídos na rede!</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <HowItWorksCard isSaiDeBaixo={isSaiDeBaixo} />
         </TabsContent>
 
         <TabsContent value="meus-clientes" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Clientes Indicados</CardTitle>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar cliente..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'} />
-
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingClients ?
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                </div> :
-                filteredClients.length > 0 ?
-                  <Table>
-                    <TableHeader>
-                      <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Nome</TableHead>
-                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Email</TableHead>
-                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Indicado Por</TableHead>
-                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data de Cadastro</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredClients.map((client) => {
-                        const referrer = client.referred_by_id ?
-                          allUsers.find((u) => u.id === client.referred_by_id) :
-                          null;
-
-                        return (
-                          <TableRow key={client.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                            <TableCell className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{client.full_name}</TableCell>
-                            <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>{client.email}</TableCell>
-                            <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                              {referrer ?
-                                <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>👤 {referrer.full_name}</span> :
-
-                                <span className={isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'}>Sem indicação</span>
-                              }
-                            </TableCell>
-                            <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                              {new Date(client.created_date).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                          </TableRow>);
-
-                      })}
-                    </TableBody>
-                  </Table> :
-
-                  <div className="text-center py-12 text-gray-500">
-                    <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="font-semibold">Nenhum cliente indicado ainda</p>
-                    <p className="text-sm mt-2">Compartilhe seu link para começar!</p>
-                  </div>
-              }
-            </CardContent>
-          </Card>
+          <MyClientsTab
+            isSaiDeBaixo={isSaiDeBaixo}
+            isLoadingClients={isLoadingClients}
+            filteredClients={filteredClients}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            allUsers={allUsers}
+          />
         </TabsContent>
 
         {/* ABA: MEU CRM */}
@@ -1468,76 +1394,11 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="saques" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Histórico de Saques</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Acompanhe suas solicitações de saque
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingWithdrawals ?
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                </div> :
-                myWithdrawals.length > 0 ?
-                  <div className="space-y-4">
-                    {myWithdrawals.map((withdrawal) =>
-                      <Card key={withdrawal.id} className="bg-gray-700/50 border-gray-600">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="text-2xl font-bold text-green-400">
-                                  R$ {withdrawal.amount.toFixed(2)}
-                                </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                                  withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                    withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                                      withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                                        'bg-red-500/20 text-red-400 border border-red-500/30'}`
-                                }>
-                                  {withdrawal.status === 'pending' && '⏳ Aguardando Aprovação'}
-                                  {withdrawal.status === 'approved' && '✅ Aprovado'}
-                                  {withdrawal.status === 'processing' && '🔄 Processando'}
-                                  {withdrawal.status === 'completed' && '✅ Concluído'}
-                                  {withdrawal.status === 'rejected' && '❌ Rejeitado'}
-                                  {withdrawal.status === 'failed' && '❌ Falhou'}
-                                </div>
-                              </div>
-                              <div className="space-y-1 text-sm text-gray-400">
-                                <p>
-                                  <strong className="text-gray-300">Chave PIX:</strong> {withdrawal.pix_key} ({withdrawal.pix_key_type})
-                                </p>
-                                <p>
-                                  <strong className="text-gray-300">Solicitado em:</strong> {new Date(withdrawal.created_date).toLocaleString('pt-BR')}
-                                </p>
-                                {withdrawal.processed_date &&
-                                  <p className="text-green-400">
-                                    <strong>Processado em:</strong> {new Date(withdrawal.processed_date).toLocaleString('pt-BR')}
-                                  </p>
-                                }
-                                {withdrawal.notes &&
-                                  <p className="text-gray-500 italic mt-2">
-                                    Obs: {withdrawal.notes}
-                                  </p>
-                                }
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div> :
-
-                  <div className="text-center py-12 text-gray-500">
-                    <Wallet className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="font-semibold">Nenhum saque solicitado ainda</p>
-                    <p className="text-sm mt-2">Use o botão "Sacar Dinheiro" para solicitar seu primeiro saque</p>
-                  </div>
-              }
-            </CardContent>
-          </Card>
+          <WithdrawalsHistoryTab
+            isSaiDeBaixo={isSaiDeBaixo}
+            isLoadingWithdrawals={isLoadingWithdrawals}
+            myWithdrawals={myWithdrawals}
+          />
         </TabsContent>
 
         {isAdmin &&
@@ -1728,107 +1589,27 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       }
 
+      {/* Modal de Cadastro de Vendedor */}
+      <SellerFormModal
+        open={showSellerModal}
+        onClose={() => setShowSellerModal(false)}
+        onCreated={() => setSellersRefreshCounter((c) => c + 1)}
+      />
+
       {/* Modal de Saque */}
-      {showWithdrawalModal &&
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
-            <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h3 className="text-2xl font-bold text-white">💸 Solicitar Saque</h3>
-              <button
-                onClick={() => setShowWithdrawalModal(false)}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                disabled={isProcessingWithdrawal}>
-
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
-                <p className="text-sm text-gray-300 mb-1">Saldo Disponível para Saque:</p>
-                <p className="text-3xl font-bold text-green-400">
-                  R$ {totalAvailable.toFixed(2)}
-                </p>
-              </div>
-
-              <div>
-                <Label className="text-gray-300">Valor do Saque</Label>
-                <Input
-                  type="number"
-                  value={withdrawalAmount}
-                  onChange={(e) => setWithdrawalAmount(e.target.value)}
-                  placeholder="0.00"
-                  min="30"
-                  className="bg-gray-700 border-gray-600 text-white text-lg"
-                  disabled={isProcessingWithdrawal} />
-
-                <p className="text-xs text-gray-400 mt-1">Valor mínimo: R$ 30,00</p>
-              </div>
-
-              <div>
-                <Label className="text-gray-300">Tipo de Chave PIX</Label>
-                <select
-                  value={pixKeyType}
-                  onChange={(e) => setPixKeyType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white"
-                  disabled={isProcessingWithdrawal}>
-
-                  <option value="CPF">CPF</option>
-                  <option value="CNPJ">CNPJ</option>
-                  <option value="EMAIL">E-mail</option>
-                  <option value="PHONE">Telefone</option>
-                  <option value="RANDOM">Chave Aleatória</option>
-                </select>
-              </div>
-
-              <div>
-                <Label className="text-gray-300">Chave PIX</Label>
-                <Input
-                  type="text"
-                  value={pixKey}
-                  onChange={(e) => setPixKey(e.target.value)}
-                  placeholder="Sua chave PIX"
-                  className="bg-gray-700 border-gray-600 text-white"
-                  disabled={isProcessingWithdrawal} />
-
-              </div>
-
-              <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
-                <p className="text-sm text-blue-300">
-                  ℹ️ O saque será processado em até 2 dias úteis após aprovação.
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  onClick={() => setShowWithdrawalModal(false)}
-                  variant="outline"
-                  className="flex-1 border-gray-600 text-gray-300"
-                  disabled={isProcessingWithdrawal}>
-
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleWithdrawalSubmit}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                  disabled={isProcessingWithdrawal}>
-
-                  {isProcessingWithdrawal ?
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Processando...
-                    </> :
-
-                    'Solicitar Saque'
-                  }
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
+      <WithdrawalModal
+        isOpen={showWithdrawalModal}
+        onClose={() => setShowWithdrawalModal(false)}
+        totalAvailable={totalAvailable}
+        withdrawalAmount={withdrawalAmount}
+        setWithdrawalAmount={setWithdrawalAmount}
+        pixKey={pixKey}
+        setPixKey={setPixKey}
+        pixKeyType={pixKeyType}
+        setPixKeyType={setPixKeyType}
+        isProcessingWithdrawal={isProcessingWithdrawal}
+        onSubmit={handleWithdrawalSubmit}
+      />
 
     </div>);
 
