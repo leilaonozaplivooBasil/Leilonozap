@@ -19,6 +19,7 @@ export default function RegisterLicensee() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [editingLicensee, setEditingLicensee] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "active" | "inactive"
 
   const { data: licensees = [], isLoading } = useQuery({
@@ -94,7 +95,7 @@ export default function RegisterLicensee() {
               className="pl-9 bg-gray-900/60 border-gray-700 text-gray-100 placeholder:text-gray-400 rounded-full"
             />
           </div>
-          <Button onClick={() => setShowModal(true)} className="bg-green-600 hover:bg-green-700 gap-2 rounded-full">
+          <Button onClick={() => { setEditingLicensee(null); setShowModal(true); }} className="bg-green-600 hover:bg-green-700 gap-2 rounded-full">
             <Plus className="w-4 h-4" /> Cadastrar vendedor
           </Button>
         </div>
@@ -136,7 +137,7 @@ export default function RegisterLicensee() {
           ) : (
             <div className="space-y-3">
               {filtered.map((l) => (
-                <LicenseeListItem key={l.id} licensee={l} selected={selected?.id === l.id} onSelect={setSelected} onEdit={(u) => { setSelected(u); setShowModal(true); }} />
+                <LicenseeListItem key={l.id} licensee={l} selected={selected?.id === l.id} onSelect={setSelected} onEdit={(u) => { setSelected(u); setEditingLicensee(u); setShowModal(true); }} />
               ))}
             </div>
               )}
@@ -148,7 +149,7 @@ export default function RegisterLicensee() {
         <div className="lg:col-span-1">
           <LicenseeDetailsPanel
             selected={selected}
-            onEdit={() => setShowModal(true)}
+            onEdit={() => { setEditingLicensee(selected); setShowModal(true); }}
             onRefresh={(action) => {
               qc.invalidateQueries({ queryKey: ["licensees"] });
               if (action === "removed") {
@@ -161,12 +162,13 @@ export default function RegisterLicensee() {
 
       <LicenseeFormModal
         open={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); setEditingLicensee(null); }}
         onCreated={() => {
           qc.invalidateQueries({ queryKey: ["licensees"] });
           setShowModal(false);
+          setEditingLicensee(null);
         }}
-        initialUser={selected}
+        initialUser={editingLicensee}
       />
     </div>
   );
