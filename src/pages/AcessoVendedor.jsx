@@ -86,9 +86,9 @@ export default function AcessoVendedor() {
         setPhase("success");
         toast.success("Senha definida! Entrando no seu painel...");
 
-        // Redireciona após pequeno delay (Fase 1: vai pra Home, Fase 2 mudará pra /SellerPanel)
+        // Redireciona para SellerPanel
         setTimeout(() => {
-          navigate("/", { replace: true });
+          navigate("/SellerPanel", { replace: true });
         }, 1500);
       } else {
         toast.error(data?.error || "Não foi possível definir a senha.");

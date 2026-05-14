@@ -26,6 +26,7 @@ import PrecificaVivoPainel from '@/pages/PrecificaVivoPainel';
 import ParceiroLotes from '@/pages/ParceiroLotes';
 import AcessoArrematante from '@/pages/AcessoArrematante';
 import AcessoVendedor from '@/pages/AcessoVendedor';
+import SellerPanel from '@/pages/SellerPanel';
 import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
@@ -164,6 +165,11 @@ const AuthenticatedApp = () => {
       } />
       <Route path="/AcessoArrematante" element={<AcessoArrematante />} />
       <Route path="/AcessoVendedor" element={<AcessoVendedor />} />
+      <Route path="/SellerPanel" element={
+        <LayoutWrapper currentPageName="SellerPanel">
+          <SellerPanel />
+        </LayoutWrapper>
+      } />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
