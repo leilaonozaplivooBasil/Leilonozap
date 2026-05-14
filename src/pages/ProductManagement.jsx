@@ -536,7 +536,7 @@ export default function ProductManagement() {
   }
 
   const depositBadge = (dep) => {
-    const map = { Bangu: 'bg-blue-500/15 text-blue-300 border border-blue-500/30', Oficina: 'bg-orange-500/15 text-orange-300 border border-orange-500/30', Recreio: 'bg-purple-500/15 text-purple-300 border border-purple-500/30' };
+    const map = { Bangu: 'bg-blue-500/15 text-blue-300 border border-blue-500/30', Oficina: 'bg-orange-500/15 text-orange-300 border border-orange-500/30', Recreio: 'bg-purple-500/15 text-purple-300 border border-purple-500/30', Shopmix: 'bg-pink-500/15 text-pink-300 border border-pink-500/30' };
     return map[dep] || 'bg-gray-700 text-gray-300';
   };
 
@@ -665,6 +665,7 @@ export default function ProductManagement() {
             <option value="Bangu">Bangu</option>
             <option value="Oficina">Oficina</option>
             <option value="Recreio">Recreio</option>
+            <option value="Shopmix">Shopmix (Catálogo)</option>
           </select>
           <select
             value={classFilter}
@@ -1215,6 +1216,7 @@ export default function ProductManagement() {
                         <option value="Bangu">Bangu</option>
                         <option value="Oficina">Oficina</option>
                         <option value="Recreio">Recreio</option>
+                        <option value="Shopmix">Shopmix (Catálogo)</option>
                       </select>
                     </div>
 
