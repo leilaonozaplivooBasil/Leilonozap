@@ -20,6 +20,7 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import SellerFormModal from "./SellerFormModal";
@@ -45,6 +46,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [internalRefresh, setInternalRefresh] = useState(0);
+  const [sendingAccessId, setSendingAccessId] = useState(null);
 
   const fetchSellers = useCallback(async () => {
     if (!licenseeId) {
@@ -95,6 +97,36 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
   const handleOpenStore = (referralCode) => {
     const link = `https://${buildStoreLink(referralCode)}`;
     window.open(link, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSendAccess = async (seller) => {
+    if (sendingAccessId) return;
+    setSendingAccessId(seller.id);
+    try {
+      const response = await base44.functions.invoke("generateSellerAccessToken", {
+        seller_id: seller.id,
+      });
+      const data = response?.data;
+      if (data?.success && data.whatsapp_url) {
+        window.open(data.whatsapp_url, "_blank", "noopener,noreferrer");
+        toast.success("WhatsApp aberto! Link válido por 7 dias.");
+      } else if (data?.success && data.magic_link) {
+        // Fallback: sem WhatsApp (sem telefone) — copia o link
+        try {
+          await navigator.clipboard.writeText(data.magic_link);
+          toast.success("Link de acesso copiado! Envie ao vendedor.");
+        } catch {
+          toast.info(`Link de acesso: ${data.magic_link}`, { duration: 10000 });
+        }
+      } else {
+        toast.error(data?.error || "Não foi possível gerar o link de acesso.");
+      }
+    } catch (err) {
+      const apiMsg = err?.response?.data?.error;
+      toast.error(apiMsg || err.message || "Erro ao gerar link de acesso.");
+    } finally {
+      setSendingAccessId(null);
+    }
   };
 
   const handleOpenDelete = async (seller) => {
@@ -239,12 +271,12 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                   {storeLink}
                 </div>
 
-                <div className="flex gap-2 mt-auto">
+                <div className="flex gap-2 mt-auto flex-wrap">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => handleCopyLink(seller.referral_code)}
-                    className="flex-1 min-h-[44px] gap-2 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-700"
+                    className="flex-1 min-w-[120px] min-h-[44px] gap-2 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-700"
                   >
                     <Copy className="w-4 h-4" />
                     Copiar Link
@@ -252,10 +284,29 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                   <Button
                     type="button"
                     onClick={() => handleOpenStore(seller.referral_code)}
-                    className="flex-1 min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="flex-1 min-w-[120px] min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-white"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Abrir Loja
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleSendAccess(seller)}
+                    disabled={sendingAccessId === seller.id}
+                    className="w-full min-h-[44px] gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
+                    title="Enviar link de acesso ao painel do vendedor via WhatsApp"
+                  >
+                    {sendingAccessId === seller.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Gerando link...
+                      </>
+                    ) : (
+                      <>
+                        <MessageCircle className="w-4 h-4" />
+                        📲 Enviar acesso
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

@@ -219,6 +219,15 @@
       "format": "datetime-local",
       "description": "Data de expira\u00e7\u00e3o do token de recupera\u00e7\u00e3o de senha"
     },
+    "access_token": {
+      "type": "string",
+      "description": "Token de primeiro acesso (link m\u00e1gico) \u2014 usado pelo vendedor para definir a primeira senha"
+    },
+    "access_token_expires": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de expira\u00e7\u00e3o do token de primeiro acesso (7 dias)"
+    },
     "arrematante_commission_percentage": {
       "type": "number",
       "default": 0,

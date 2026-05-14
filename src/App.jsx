@@ -25,6 +25,7 @@ import SentinelNoZap from '@/pages/SentinelNoZap';
 import PrecificaVivoPainel from '@/pages/PrecificaVivoPainel';
 import ParceiroLotes from '@/pages/ParceiroLotes';
 import AcessoArrematante from '@/pages/AcessoArrematante';
+import AcessoVendedor from '@/pages/AcessoVendedor';
 import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
@@ -162,6 +163,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       <Route path="/AcessoArrematante" element={<AcessoArrematante />} />
+      <Route path="/AcessoVendedor" element={<AcessoVendedor />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
