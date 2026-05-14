@@ -535,6 +535,11 @@ export default function Layout({ children, currentPageName }) {
     setMobileMenuOpen(false);
   }, [location]);
 
+  // 🔓 Pages que renderizam SEM layout (auth/onboarding puro)
+  if (currentPageName === "AcessoVendedor" || currentPageName === "AcessoArrematante") {
+    return children;
+  }
+
   // 🔥 DEFININDO MENUS - ANTES DE QUALQUER RETURN CONDICIONAL
   const publicMenuItems = [
     { title: "Leilões", pageName: "Home" },
