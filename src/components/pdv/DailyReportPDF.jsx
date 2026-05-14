@@ -609,9 +609,9 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.text('PRODUTO', margin + 3, yPos + 5);
       doc.text('VALOR BRUTO', margin + 55, yPos + 5);
       doc.text('CUSTO', margin + 90, yPos + 5);
-      doc.text('COMISSÃO', margin + 115, yPos + 5);
-      doc.text('LUCRO', margin + 140, yPos + 5);
-      doc.text('VENDEDOR', margin + 165, yPos + 5);
+      doc.text('COMISSÃO', margin + 118, yPos + 5);
+      doc.text('LUCRO', margin + 148, yPos + 5);
+      doc.text('VENDEDOR', margin + 168, yPos + 5);
 
       yPos += 10;
 
@@ -636,9 +636,9 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           doc.text('PRODUTO', margin + 3, yPos + 5);
           doc.text('VALOR BRUTO', margin + 55, yPos + 5);
           doc.text('CUSTO', margin + 90, yPos + 5);
-          doc.text('COMISSÃO', margin + 115, yPos + 5);
-          doc.text('LUCRO', margin + 140, yPos + 5);
-          doc.text('VENDEDOR', margin + 165, yPos + 5);
+          doc.text('COMISSÃO', margin + 118, yPos + 5);
+          doc.text('LUCRO', margin + 148, yPos + 5);
+          doc.text('VENDEDOR', margin + 168, yPos + 5);
 
           yPos += 10;
         }
@@ -670,16 +670,15 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.text(`R$ ${fmt(custoDia)}`, margin + 90, yPos + 4);
 
         doc.setTextColor(220, 38, 38);
-        doc.text(`R$ ${fmt(comissaoDia)}`, margin + 115, yPos + 4);
+        doc.text(`R$ ${fmt(comissaoDia)}`, margin + 118, yPos + 4);
 
         doc.setTextColor(34, 197, 94);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(lucroDia)}`, margin + 140, yPos + 4);
+        doc.text(`R$ ${fmt(lucroDia)}`, margin + 148, yPos + 4);
 
+        doc.setTextColor(40, 40, 40);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(60, 60, 60);
-        const vendedor = (sale.seller_name || '-').substring(0, 12);
-        doc.text(vendedor, margin + 165, yPos + 4);
+        doc.text((sale.seller_name || '-').substring(0, 14), margin + 168, yPos + 4);
 
         yPos += 7;
       });
