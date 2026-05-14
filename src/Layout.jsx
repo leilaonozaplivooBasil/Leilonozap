@@ -37,9 +37,14 @@ export default function Layout({ children, currentPageName }) {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('currentUser');
+      const stickyAdmin = localStorage.getItem('userIsAdmin') === '1';
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.id && parsed?.email) {
+          // Sticky admin: se já foi confirmado admin antes, força role admin
+          if (stickyAdmin && parsed.role !== 'admin') {
+            parsed.role = 'admin';
+          }
           sessionStorage.setItem('isLoggedIn', 'true');
           return parsed;
         }
@@ -47,6 +52,20 @@ export default function Layout({ children, currentPageName }) {
     } catch (e) {}
     return null;
   });
+
+  // 🛡️ Helper anti-downgrade universal — protege role admin em TODOS os setCurrentUser
+  const safeMergeUser = React.useCallback((newUser, oldUser) => {
+    if (!newUser) return oldUser;
+    const merged = { ...newUser };
+    const wasAdmin = oldUser?.role === 'admin' || localStorage.getItem('userIsAdmin') === '1';
+    if (wasAdmin && merged.role !== 'admin') {
+      merged.role = 'admin';
+    }
+    if (merged.role === 'admin') {
+      try { localStorage.setItem('userIsAdmin', '1'); } catch (e) {}
+    }
+    return merged;
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const hasInitializedRef = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -110,6 +129,7 @@ export default function Layout({ children, currentPageName }) {
     sessionStorage.setItem('userLoggedOut', 'true');
 
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('userIsAdmin');
     sessionStorage.removeItem('isLoggedIn');
 
     setCurrentUser(null);
@@ -342,7 +362,7 @@ export default function Layout({ children, currentPageName }) {
                 }
 
                 localStorage.setItem('currentUser', JSON.stringify(freshUser));
-                setCurrentUser(freshUser);
+                setCurrentUser(prev => safeMergeUser(freshUser, prev));
                 userFound = true;
                 console.log("✅ Usuário carregado:", freshUser?.full_name || 'Sem nome', "Role:", freshUser?.role || 'user');
 
@@ -362,13 +382,13 @@ export default function Layout({ children, currentPageName }) {
               } else {
                 // Usuário não encontrado no banco, usa localStorage
                 console.log("⚠️ Usuário não encontrado no banco, usando localStorage");
-                setCurrentUser(userFromStorage);
+                setCurrentUser(prev => safeMergeUser(userFromStorage, prev));
                 userFound = true;
               }
             } catch (dbError) {
               // Erro ao buscar no banco, usa localStorage
               console.log("⚠️ Erro ao buscar no banco, usando localStorage");
-              setCurrentUser(userFromStorage);
+              setCurrentUser(prev => safeMergeUser(userFromStorage, prev));
               userFound = true;
             }
           } catch (parseError) {
@@ -409,7 +429,7 @@ export default function Layout({ children, currentPageName }) {
 
                 localStorage.setItem('currentUser', JSON.stringify(finalUser));
                 sessionStorage.setItem('isLoggedIn', 'true');
-                setCurrentUser(finalUser);
+                setCurrentUser(prev => safeMergeUser(finalUser, prev));
                 userFound = true;
                 console.log("✅ Usuário da plataforma carregado:", finalUser?.full_name || 'Sem nome');
               } catch (dbError) {
@@ -417,7 +437,7 @@ export default function Layout({ children, currentPageName }) {
                 console.log("⚠️ Erro ao buscar AppUser, usando dados da plataforma");
                 localStorage.setItem('currentUser', JSON.stringify(platformUser));
                 sessionStorage.setItem('isLoggedIn', 'true');
-                setCurrentUser(platformUser);
+                setCurrentUser(prev => safeMergeUser(platformUser, prev));
                 userFound = true;
               }
             }
@@ -436,7 +456,7 @@ export default function Layout({ children, currentPageName }) {
               const parsed = JSON.parse(existingUser);
               if (parsed?.id && parsed?.email) {
                 // Usuário válido existe no localStorage — usa ele em vez de limpar
-                setCurrentUser(parsed);
+                setCurrentUser(prev => safeMergeUser(parsed, prev));
                 sessionStorage.setItem('isLoggedIn', 'true');
                 console.log("🛡️ Mantendo sessão do localStorage (fallback seguro)");
               } else {
@@ -461,7 +481,7 @@ export default function Layout({ children, currentPageName }) {
           try {
             const parsed = JSON.parse(existingUser);
             if (parsed?.id && parsed?.email) {
-              setCurrentUser(parsed);
+              setCurrentUser(prev => safeMergeUser(parsed, prev));
               sessionStorage.setItem('isLoggedIn', 'true');
               console.log("🛡️ Erro na inicialização, mas sessão mantida via localStorage");
             } else {
@@ -497,7 +517,7 @@ export default function Layout({ children, currentPageName }) {
         if (e.newValue) {
           try {
             const updatedUser = JSON.parse(e.newValue);
-            setCurrentUser(updatedUser);
+            setCurrentUser(prev => safeMergeUser(updatedUser, prev));
             sessionStorage.setItem('isLoggedIn', 'true');
           } catch (err) { /* JSON inválido, ignora */ }
         } else {
@@ -626,6 +646,8 @@ export default function Layout({ children, currentPageName }) {
   const isLeiloeiro = isLoggedIn && currentUser.role === 'leiloeiro';
   const isInvestidor = isLoggedIn && currentUser.role === 'investidor';
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
+  // 🛡️ Só decide menu específico de role quando o role está realmente confirmado
+  const roleConfirmed = isLoggedIn && typeof currentUser?.role === 'string' && currentUser.role.length > 0;
 
   // Determina se estamos em páginas do catálogo
   // Também verifica se veio do catálogo via parâmetro de URL
@@ -664,7 +686,7 @@ export default function Layout({ children, currentPageName }) {
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
         { title: "Sistema de Alavancagem", pageName: "Licensing" },
-        ...(isLoggedIn && !isAdmin ? rolesSpecificMenu : [])
+        ...(roleConfirmed && !isAdmin ? rolesSpecificMenu : [])
       ];
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';
