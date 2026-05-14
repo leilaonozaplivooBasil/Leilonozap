@@ -1,32 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
 
-export default function VendedoresDoDia({ daySales, date }) {
+export default function VendedoresDoDia({ daySales, date, allCommissions = [] }) {
   const [sellersData, setSellersData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadSellersForDay();
-  }, [daySales.length, date]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [daySales.length, date, allCommissions.length]);
 
   const loadSellersForDay = async () => {
     setIsLoading(true);
     try {
-      // Busca TODAS as comissões das vendas deste dia
+      // 🚀 OTIMIZAÇÃO: usa allCommissions vindo do pai (1 query total em vez de N)
       const saleIds = daySales.map(s => s.id);
-      
+
       if (saleIds.length === 0) {
         setSellersData([]);
         setIsLoading(false);
         return;
       }
 
-      // Busca todas as comissões de uma vez
-      const allCommissions = await base44.entities.SaleCommission.list();
-      const commissionsForDay = allCommissions.filter(c => saleIds.includes(c.sale_id));
-      
-      console.log(`📊 Total de comissões encontradas para ${saleIds.length} vendas:`, commissionsForDay.length);
+      // Filtra localmente as comissões deste dia (sem nova query ao banco)
+      const commissionsForDay = (allCommissions || []).filter(c => saleIds.includes(c.sale_id));
 
       // Agrupa por vendedor
       const sellerMap = {};

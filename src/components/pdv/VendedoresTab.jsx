@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, Calendar, Eye } from 'lucide-react';
@@ -11,6 +12,28 @@ import DailyReportPDF from '@/components/pdv/DailyReportPDF';
 const fmtBRL = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function VendedoresTab({ allSales, sellersDataForPDF, loadAllSales }) {
+  // 🚀 OTIMIZAÇÃO: busca TODAS as comissões UMA ÚNICA VEZ
+  // (antes cada VendedoresDoDia fazia SaleCommission.list() — N queries = scroll travava)
+  const [allCommissions, setAllCommissions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadAllCommissions = async () => {
+      if (!allSales || allSales.length === 0) {
+        if (!cancelled) setAllCommissions([]);
+        return;
+      }
+      try {
+        const list = await base44.entities.SaleCommission.list();
+        if (!cancelled) setAllCommissions(list || []);
+      } catch (e) {
+        if (!cancelled) setAllCommissions([]);
+      }
+    };
+    loadAllCommissions();
+    return () => { cancelled = true; };
+  }, [allSales.length]);
+
   return (
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
@@ -82,7 +105,7 @@ export default function VendedoresTab({ allSales, sellersDataForPDF, loadAllSale
                           </div>
                         </div>
                       </div>
-                      <VendedoresDoDia daySales={daySales} date={date} />
+                      <VendedoresDoDia daySales={daySales} date={date} allCommissions={allCommissions} />
                     </div>
                   );
                 });
