@@ -30,8 +30,8 @@ export default function RegisterLicensee() {
       return (res || []).filter(u =>
         (u.career_levels || []).includes("licenciado_catalogo") ||
         u.role === "licensee" ||
-        u.referral_code ||
-        u.store_name
+        (u.referral_code && u.referral_code.trim() !== "") ||
+        (u.store_name && u.store_name.trim() !== "")
       );
     },
   });

@@ -107,13 +107,18 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
     if (!selected) return;
     setIsDeleting(true);
     const currentLevels = (selected.career_levels || []).filter(l => l !== "licenciado_catalogo");
-    await base44.entities.AppUser.update(selected.id, {
+    const updatePayload = {
       career_levels: currentLevels.length > 0 ? currentLevels : ["usuario"],
       primary_career_level: "usuario",
-      referral_code: null,
-      nickname: null,
-      store_name: null,
-    });
+      referral_code: "",
+      nickname: "",
+      store_name: "",
+    };
+    // Só reseta role se for "licensee" — preserva admin/investidor/leiloeiro/arrematante
+    if (selected.role === "licensee") {
+      updatePayload.role = "user";
+    }
+    await base44.entities.AppUser.update(selected.id, updatePayload);
     toast.success("Licenciado removido com sucesso");
     onRefresh?.("removed");
     setIsDeleting(false);
