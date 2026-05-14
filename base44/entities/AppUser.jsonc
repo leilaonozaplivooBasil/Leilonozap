@@ -72,6 +72,15 @@
       "type": "string",
       "description": "ID do licenciado/arrematante que indicou este usu\u00e1rio"
     },
+    "recruited_by_id": {
+      "type": "string",
+      "description": "ID do licenciado que recrutou este vendedor"
+    },
+    "is_seller": {
+      "type": "boolean",
+      "default": false,
+      "description": "True se este usu\u00e1rio \u00e9 um vendedor recrutado por um licenciado"
+    },
     "indicated_clients_count": {
       "type": "number",
       "default": 0,
