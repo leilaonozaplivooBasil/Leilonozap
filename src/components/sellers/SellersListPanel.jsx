@@ -1,8 +1,28 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Copy, ExternalLink, Loader2, Store, Phone, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Copy,
+  ExternalLink,
+  Loader2,
+  Store,
+  Phone,
+  Users,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
 import { toast } from "sonner";
+import SellerFormModal from "./SellerFormModal";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -18,6 +38,13 @@ function buildStoreLink(referralCode) {
 export default function SellersListPanel({ licenseeId, refreshKey }) {
   const [sellers, setSellers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingSeller, setEditingSeller] = useState(null);
+  const [deletingSeller, setDeletingSeller] = useState(null);
+  const [deleteSalesCount, setDeleteSalesCount] = useState(0);
+  const [isCheckingSales, setIsCheckingSales] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [internalRefresh, setInternalRefresh] = useState(0);
 
   const fetchSellers = useCallback(async () => {
     if (!licenseeId) {
@@ -42,7 +69,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
 
   useEffect(() => {
     fetchSellers();
-  }, [fetchSellers, refreshKey]);
+  }, [fetchSellers, refreshKey, internalRefresh]);
 
   const handleCopyLink = async (referralCode) => {
     const link = `https://${buildStoreLink(referralCode)}`;
@@ -69,6 +96,54 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
     const link = `https://${buildStoreLink(referralCode)}`;
     window.open(link, "_blank", "noopener,noreferrer");
   };
+
+  const handleOpenDelete = async (seller) => {
+    setDeletingSeller(seller);
+    setConfirmText("");
+    setDeleteSalesCount(0);
+    setIsCheckingSales(true);
+    try {
+      const sales = await base44.entities.CatalogSale.filter({ licensee_id: seller.id });
+      setDeleteSalesCount(Array.isArray(sales) ? sales.length : 0);
+    } catch (err) {
+      // Em caso de falha, assume 0 (a função backend revalida)
+      setDeleteSalesCount(0);
+    } finally {
+      setIsCheckingSales(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingSeller) return;
+    setIsDeleting(true);
+    try {
+      const response = await base44.functions.invoke("deleteSeller", {
+        seller_id: deletingSeller.id,
+      });
+      const data = response?.data;
+      if (data?.success) {
+        if (data.action === "deleted") {
+          toast.success("Vendedor excluído permanentemente.");
+        } else {
+          toast.success(`Vendedor desvinculado (${data.sales_count} venda(s) preservada(s)).`);
+        }
+        setDeletingSeller(null);
+        setConfirmText("");
+        setInternalRefresh((v) => v + 1);
+      } else {
+        toast.error(data?.error || "Erro ao excluir vendedor");
+      }
+    } catch (err) {
+      const apiMsg = err?.response?.data?.error;
+      toast.error(apiMsg || err.message || "Erro ao excluir vendedor");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const canConfirmHardDelete = deleteSalesCount === 0 && confirmText.trim().toUpperCase() === "EXCLUIR";
+  const canConfirmUnlink = deleteSalesCount > 0;
+  const canConfirm = canConfirmHardDelete || canConfirmUnlink;
 
   return (
     <div className="w-full">
@@ -104,9 +179,31 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
             return (
               <div
                 key={seller.id}
-                className="rounded-xl border border-gray-700 bg-gray-800 p-4 flex flex-col gap-3"
+                className="rounded-xl border border-gray-700 bg-gray-800 p-4 flex flex-col gap-3 relative"
               >
-                <div className="flex items-center gap-3">
+                {/* Botões de ação no canto superior direito */}
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingSeller(seller)}
+                    title="Editar vendedor"
+                    aria-label="Editar vendedor"
+                    className="min-h-[36px] min-w-[36px] h-9 w-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDelete(seller)}
+                    title="Excluir vendedor"
+                    aria-label="Excluir vendedor"
+                    className="min-h-[36px] min-w-[36px] h-9 w-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 pr-20">
                   {seller.avatar_url ? (
                     <img
                       src={seller.avatar_url}
@@ -166,6 +263,82 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
           })}
         </div>
       )}
+
+      {/* Modal de edição */}
+      {editingSeller && (
+        <SellerFormModal
+          open={!!editingSeller}
+          onClose={() => setEditingSeller(null)}
+          editingSeller={editingSeller}
+          onUpdated={() => {
+            setEditingSeller(null);
+            setInternalRefresh((v) => v + 1);
+          }}
+        />
+      )}
+
+      {/* Modal de confirmação de exclusão */}
+      <Dialog open={!!deletingSeller} onOpenChange={(v) => !v && !isDeleting && setDeletingSeller(null)}>
+        <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-700 text-gray-100 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-100 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+              Excluir vendedor {deletingSeller?.full_name || ""}?
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {isCheckingSales
+                ? "Verificando histórico de vendas..."
+                : deleteSalesCount > 0
+                ? `Este vendedor já fez ${deleteSalesCount} venda(s). Ele será DESVINCULADO da sua rede, mas o histórico de comissões será preservado.`
+                : "Este vendedor ainda não vendeu nada e será excluído PERMANENTEMENTE. Esta ação é irreversível."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!isCheckingSales && deleteSalesCount === 0 && (
+            <div className="space-y-2">
+              <label className="text-sm text-gray-300">
+                Digite <span className="font-bold text-red-400">EXCLUIR</span> para confirmar:
+              </label>
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="EXCLUIR"
+                className="bg-gray-800 border-gray-700 text-gray-100"
+                disabled={isDeleting}
+              />
+            </div>
+          )}
+
+          <DialogFooter className="flex-row gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletingSeller(null)}
+              disabled={isDeleting}
+              className="flex-1 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={isCheckingSales || isDeleting || !canConfirm}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : deleteSalesCount > 0 ? (
+                "Sim, desvincular"
+              ) : (
+                "Excluir permanentemente"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

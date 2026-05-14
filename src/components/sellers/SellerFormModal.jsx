@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
-import { Camera, Search, Loader2 } from "lucide-react";
+import { Camera, Search, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 function slugify(str) {
@@ -15,7 +15,9 @@ function slugify(str) {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function SellerFormModal({ open, onClose, onCreated }) {
+export default function SellerFormModal({ open, onClose, onCreated, onUpdated, editingSeller }) {
+  const isEditMode = !!editingSeller;
+
   const [cpf, setCpf] = useState("");
   const [fullName, setFullName] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -28,10 +30,11 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
   const fileInputRef = useRef(null);
 
   const suggestedCode = useMemo(() => {
+    if (isEditMode) return editingSeller?.referral_code || "";
     return slugify(storeName) || slugify(fullName) || "vendedor";
-  }, [storeName, fullName]);
+  }, [storeName, fullName, isEditMode, editingSeller]);
 
-  // Reset ao fechar
+  // Pré-preenche em modo edição / reset ao fechar
   React.useEffect(() => {
     if (!open) {
       setCpf("");
@@ -41,8 +44,17 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
       setPhone("");
       setFoundUser(null);
       setAvatarUrl("");
+      return;
     }
-  }, [open]);
+    if (isEditMode && editingSeller) {
+      setCpf(editingSeller.cpf || "");
+      setFullName(editingSeller.full_name || "");
+      setStoreName(editingSeller.store_name || "");
+      setEmail(editingSeller.email || "");
+      setPhone(editingSeller.phone || "");
+      setAvatarUrl(editingSeller.avatar_url || "");
+    }
+  }, [open, isEditMode, editingSeller]);
 
   const normalizeCpf = (v) => (v || "").replace(/\D/g, "");
 
@@ -99,29 +111,46 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
 
     setIsSubmitting(true);
     try {
-      const response = await base44.functions.invoke("registerSeller", {
-        cpf: normalizeCpf(cpf),
-        full_name: fullName.trim(),
-        store_name: storeName.trim(),
-        email: (email || "").trim().toLowerCase(),
-        phone: phone.trim(),
-        avatar_url: avatarUrl || null,
-      });
-
-      const data = response?.data;
-
-      if (data?.success) {
-        toast.success(`Vendedor cadastrado! Loja: ${data.store_link}`, {
-          duration: 6000,
+      if (isEditMode) {
+        const response = await base44.functions.invoke("updateSeller", {
+          seller_id: editingSeller.id,
+          full_name: fullName.trim(),
+          store_name: storeName.trim(),
+          phone: phone.trim(),
+          cpf: normalizeCpf(cpf),
+          avatar_url: avatarUrl || null,
         });
-        onCreated?.(data.seller);
-        onClose?.();
+
+        const data = response?.data;
+        if (data?.success) {
+          toast.success("Vendedor atualizado com sucesso!");
+          onUpdated?.(data.seller);
+          onClose?.();
+        } else {
+          toast.error(data?.error || "Erro ao atualizar vendedor");
+        }
       } else {
-        toast.error(data?.error || "Erro ao cadastrar vendedor");
+        const response = await base44.functions.invoke("registerSeller", {
+          cpf: normalizeCpf(cpf),
+          full_name: fullName.trim(),
+          store_name: storeName.trim(),
+          email: (email || "").trim().toLowerCase(),
+          phone: phone.trim(),
+          avatar_url: avatarUrl || null,
+        });
+
+        const data = response?.data;
+        if (data?.success) {
+          toast.success(`Vendedor cadastrado! Loja: ${data.store_link}`, { duration: 6000 });
+          onCreated?.(data.seller);
+          onClose?.();
+        } else {
+          toast.error(data?.error || "Erro ao cadastrar vendedor");
+        }
       }
     } catch (err) {
       const apiMsg = err?.response?.data?.error;
-      toast.error(apiMsg || err.message || "Erro ao cadastrar vendedor");
+      toast.error(apiMsg || err.message || "Erro ao salvar vendedor");
     } finally {
       setIsSubmitting(false);
     }
@@ -129,28 +158,32 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
-      <DialogContent className="sm:max-w-2xl bg-gray-900 border border-gray-700 text-gray-100">
+      <DialogContent className="sm:max-w-2xl bg-gray-900 border border-gray-700 text-gray-100 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-100">Cadastrar Vendedor</DialogTitle>
+          <DialogTitle className="text-gray-100">
+            {isEditMode ? "Editar Vendedor" : "Cadastrar Vendedor"}
+          </DialogTitle>
         </DialogHeader>
 
-        {/* Busca por CPF */}
-        <div className="mb-4 flex gap-2">
-          <Input
-            placeholder="CPF do vendedor (opcional)"
-            value={cpf}
-            onChange={(e) => setCpf(e.target.value)}
-            className="bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-400"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCpfSearch}
-            className="gap-2 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-800"
-          >
-            <Search className="w-4 h-4" /> Buscar
-          </Button>
-        </div>
+        {/* Busca por CPF — APENAS em modo cadastro */}
+        {!isEditMode && (
+          <div className="mb-4 flex gap-2">
+            <Input
+              placeholder="CPF do vendedor (opcional)"
+              value={cpf}
+              onChange={(e) => setCpf(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-400"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCpfSearch}
+              className="gap-2 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-800"
+            >
+              <Search className="w-4 h-4" /> Buscar
+            </Button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="rounded-xl border border-gray-700 bg-gray-800 p-4">
@@ -195,7 +228,9 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
                   onChange={(e) => setStoreName(e.target.value)}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Nome que aparece na listagem e gera o endereço da loja.
+                  {isEditMode
+                    ? "Você pode atualizar o nome de exibição da loja."
+                    : "Nome que aparece na listagem e gera o endereço da loja."}
                 </p>
               </div>
 
@@ -227,28 +262,42 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
                 </div>
               </div>
 
-              {/* Email */}
+              {/* Email — bloqueado em edição */}
               <div className="md:col-span-2">
-                <Label className="text-gray-300">E-mail para contato (opcional)</Label>
+                <Label className="text-gray-300 flex items-center gap-1">
+                  E-mail para contato {isEditMode ? "" : "(opcional)"}
+                  {isEditMode && <Lock className="w-3 h-3 text-gray-500" title="Não editável após criação" />}
+                </Label>
                 <Input
                   type="email"
                   placeholder="vendedor@provedor.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                  disabled={isEditMode}
+                  className={`bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400 ${
+                    isEditMode ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
                 />
+                {isEditMode && (
+                  <p className="text-xs text-gray-500 mt-1">E-mail não pode ser alterado após criação.</p>
+                )}
               </div>
 
-              {/* Link da Loja Virtual */}
+              {/* Link da Loja Virtual — sempre readOnly */}
               <div className="md:col-span-2">
-                <Label className="text-gray-300">Link da Loja Virtual</Label>
+                <Label className="text-gray-300 flex items-center gap-1">
+                  Link da Loja Virtual
+                  {isEditMode && <Lock className="w-3 h-3 text-gray-500" title="Não editável após criação" />}
+                </Label>
                 <Input
-                  className="bg-gray-900 border-gray-700 text-gray-400 cursor-default"
+                  className="bg-gray-900 border-gray-700 text-gray-400 cursor-default opacity-60"
                   value={`leilaonozap.net/Loja-Virtual?ref=${suggestedCode}`}
                   readOnly
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Link gerado automaticamente. O código final é definido pelo sistema ao salvar (garantindo unicidade).
+                  {isEditMode
+                    ? "Link permanente — não pode ser alterado para preservar acessos já compartilhados."
+                    : "Link gerado automaticamente. O código final é definido pelo sistema ao salvar (garantindo unicidade)."}
                 </p>
               </div>
             </div>
@@ -272,10 +321,10 @@ export default function SellerFormModal({ open, onClose, onCreated }) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Cadastrando...
+                  {isEditMode ? "Salvando..." : "Cadastrando..."}
                 </>
               ) : (
-                "Cadastrar Vendedor"
+                isEditMode ? "Salvar alterações" : "Cadastrar Vendedor"
               )}
             </Button>
           </div>
