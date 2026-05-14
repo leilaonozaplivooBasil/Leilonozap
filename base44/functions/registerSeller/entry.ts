@@ -37,16 +37,27 @@ Deno.serve(async (req) => {
 
     // 1) Autenticação
     const caller = await base44.auth.me();
-    if (!caller || !caller.id) {
+    if (!caller || !caller.email) {
       return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // 1.1) Resolver o AppUser REAL do chamador (o app usa auth custom via LoginModal,
+    // por isso caller.id da plataforma != AppUser.id real).
+    const callerAppUsers = await base44.asServiceRole.entities.AppUser.filter({ email: caller.email });
+    const callerAppUser = callerAppUsers && callerAppUsers[0];
+    if (!callerAppUser) {
+      return Response.json(
+        { success: false, error: 'AppUser do chamador não encontrado' },
+        { status: 401 }
+      );
+    }
+
     // 2) Validação: chamador precisa ser licenciado, licensee ou admin
-    const callerLevels = Array.isArray(caller.career_levels) ? caller.career_levels : [];
+    const callerLevels = Array.isArray(callerAppUser.career_levels) ? callerAppUser.career_levels : [];
     const isLicensee =
       callerLevels.includes('licenciado_catalogo') ||
-      caller.role === 'licensee' ||
-      caller.role === 'admin';
+      callerAppUser.role === 'licensee' ||
+      callerAppUser.role === 'admin';
 
     if (!isLicensee) {
       return Response.json(
@@ -54,6 +65,8 @@ Deno.serve(async (req) => {
         { status: 403 }
       );
     }
+
+    const callerId = callerAppUser.id;
 
     // 3) Payload
     const body = await req.json().catch(() => ({}));
@@ -108,7 +121,7 @@ Deno.serve(async (req) => {
         phone: cleanPhone,
         avatar_url: avatar_url || existingUser.avatar_url || null,
         is_seller: true,
-        recruited_by_id: caller.id,
+        recruited_by_id: callerId,
         referral_code: referralCode,
         nickname: existingUser.nickname || referralCode,
         terms_accepted: true
@@ -116,7 +129,7 @@ Deno.serve(async (req) => {
 
       // Só preenche referred_by_id se ainda não tinha indicador (preserva rede existente)
       if (!existingUser.referred_by_id) {
-        updatePayload.referred_by_id = caller.id;
+        updatePayload.referred_by_id = callerId;
       }
 
       // Só preenche CPF se ainda não tinha
@@ -148,8 +161,8 @@ Deno.serve(async (req) => {
         avatar_url: avatar_url || null,
         role: 'user',
         is_seller: true,
-        recruited_by_id: caller.id,
-        referred_by_id: caller.id,
+        recruited_by_id: callerId,
+        referred_by_id: callerId,
         career_levels: ['usuario'],
         primary_career_level: 'usuario',
         referral_code: referralCode,
