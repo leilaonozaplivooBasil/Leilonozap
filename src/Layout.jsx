@@ -672,6 +672,9 @@ export default function Layout({ children, currentPageName }) {
     rolesSpecificMenu = loggedMenuItems;
   }
 
+  // 🆕 DETECÇÃO AUTOMÁTICA DE VENDEDOR
+  const isSeller = currentUser?.is_seller === true && currentUser.role !== 'admin' && currentUser.role !== 'licensee' && !(currentUser.career_levels || []).includes('licenciado_catalogo');
+
   const finalMenuItems = (isCatalogPage && !isProfileFromCatalog && !isLicensingFromCatalog)
     ? [
     { title: "Loja Virtual", pageName: "Catalog" },
@@ -681,6 +684,11 @@ export default function Layout({ children, currentPageName }) {
     ? [
       { title: "Loja Virtual", pageName: "Catalog" },
       { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
+    ]
+    : isSeller
+    ? [
+      { title: "📊 Painel do Vendedor", pageName: "SellerPanel" },
+      { title: "Loja Virtual", pageName: "Catalog" }
     ]
       : [
         { title: "Leilões", pageName: "Home" },
