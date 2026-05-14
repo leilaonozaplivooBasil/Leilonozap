@@ -607,10 +607,11 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFont('helvetica', 'bold');
       
       doc.text('PRODUTO', margin + 3, yPos + 5);
-      doc.text('VALOR BRUTO', margin + 65, yPos + 5);
-      doc.text('CUSTO', margin + 105, yPos + 5);
-      doc.text('COMISSÃO', margin + 135, yPos + 5);
-      doc.text('LUCRO', margin + 165, yPos + 5);
+      doc.text('VALOR BRUTO', margin + 55, yPos + 5);
+      doc.text('CUSTO', margin + 90, yPos + 5);
+      doc.text('COMISSÃO', margin + 115, yPos + 5);
+      doc.text('LUCRO', margin + 140, yPos + 5);
+      doc.text('VENDEDOR', margin + 165, yPos + 5);
 
       yPos += 10;
 
@@ -633,10 +634,11 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           doc.setFont('helvetica', 'bold');
           
           doc.text('PRODUTO', margin + 3, yPos + 5);
-          doc.text('VALOR BRUTO', margin + 65, yPos + 5);
-          doc.text('CUSTO', margin + 105, yPos + 5);
-          doc.text('COMISSÃO', margin + 135, yPos + 5);
-          doc.text('LUCRO', margin + 165, yPos + 5);
+          doc.text('VALOR BRUTO', margin + 55, yPos + 5);
+          doc.text('CUSTO', margin + 90, yPos + 5);
+          doc.text('COMISSÃO', margin + 115, yPos + 5);
+          doc.text('LUCRO', margin + 140, yPos + 5);
+          doc.text('VENDEDOR', margin + 165, yPos + 5);
 
           yPos += 10;
         }
@@ -651,7 +653,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.setFontSize(8);
         doc.setTextColor(40, 40, 40);
 
-        const produto = (sale.product_description || 'Produto').substring(0, 20);
+        const produto = (sale.product_description || 'Produto').substring(0, 16);
         doc.text(produto, margin + 3, yPos + 4);
 
         const valorBr = sale.total_amount || 0;
@@ -661,18 +663,23 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(valorBr)}`, margin + 65, yPos + 4);
+        doc.text(`R$ ${fmt(valorBr)}`, margin + 55, yPos + 4);
 
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(220, 38, 38);
-        doc.text(`R$ ${fmt(custoDia)}`, margin + 105, yPos + 4);
+        doc.text(`R$ ${fmt(custoDia)}`, margin + 90, yPos + 4);
 
         doc.setTextColor(220, 38, 38);
-        doc.text(`R$ ${fmt(comissaoDia)}`, margin + 135, yPos + 4);
+        doc.text(`R$ ${fmt(comissaoDia)}`, margin + 115, yPos + 4);
 
         doc.setTextColor(34, 197, 94);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(lucroDia)}`, margin + 165, yPos + 4);
+        doc.text(`R$ ${fmt(lucroDia)}`, margin + 140, yPos + 4);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        const vendedor = (sale.seller_name || '-').substring(0, 12);
+        doc.text(vendedor, margin + 165, yPos + 4);
 
         yPos += 7;
       });
