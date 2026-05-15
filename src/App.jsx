@@ -164,11 +164,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       <Route path="/AcessoArrematante" element={<AcessoArrematante />} />
-      <Route path="/AcessoVendedor" element={
-        <LayoutWrapper currentPageName="AcessoVendedor">
-          <AcessoVendedor />
-        </LayoutWrapper>
-      } />
+      <Route path="/AcessoVendedor" element={<AcessoVendedor />} />
       <Route path="/SellerPanel" element={
         <LayoutWrapper currentPageName="SellerPanel">
           <SellerPanel />
