@@ -414,13 +414,6 @@ export default function Catalog() {
 
       const urlParams = new URLSearchParams(window.location.search);
       
-      // Captura o código de referência do URL
-      let refCode = urlParams.get('ref');
-      if (refCode) {
-        sessionStorage.setItem('referralCode', refCode);
-        console.log(`✅ Código de referência '${refCode}' capturado do URL`);
-      }
-      
       if (urlParams.get('search')) {
         setSearchTerm(urlParams.get('search'));
       }
