@@ -246,6 +246,16 @@ export default function Catalog() {
 
             localStorage.setItem('currentUser', JSON.stringify(freshUser));
             sessionStorage.setItem('lastUserValidation', now.toString());
+            
+            // 🔧 FORÇA URL para vendedor DENTRO da validação (síncrono)
+            if (freshUser?.is_seller === true && freshUser?.referral_code) {
+              const sellerCode = freshUser.referral_code;
+              const newUrl = `/Loja-Virtual?ref=${sellerCode}`;
+              window.history.replaceState(null, '', newUrl);
+              console.log(`✅ [VENDEDOR] URL forçada SÍNCRONO para: ${newUrl}`);
+              sessionStorage.setItem('referralCode', sellerCode);
+            }
+            
             setCurrentUser(freshUser);
             
             console.log("✅ Usuário validado no Catalog:", freshUser.full_name, "Role:", freshUser.role);
@@ -397,19 +407,6 @@ export default function Catalog() {
       await loadProducts();
       await loadCurrentUser();
       await loadLicenseePhone();
-      
-      // 🔧 CORREÇÃO: Após carregar usuário, força URL e título para vendedor
-      setCurrentUser(prev => {
-        if (prev?.is_seller === true && prev?.referral_code) {
-          const sellerCode = prev.referral_code;
-          // Força a URL para /Loja-Virtual?ref={codigo}
-          const newUrl = `/Loja-Virtual?ref=${sellerCode}`;
-          window.history.replaceState(null, '', newUrl);
-          console.log(`✅ [VENDEDOR] URL forçada para: ${newUrl}`);
-          sessionStorage.setItem('referralCode', sellerCode);
-        }
-        return prev;
-      });
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
