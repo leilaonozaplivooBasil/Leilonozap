@@ -141,7 +141,28 @@ export default function Catalog() {
 
   const loadLicenseePhone = React.useCallback(async () => {
     try {
-      const refCode = sessionStorage.getItem('referralCode');
+      let refCode = sessionStorage.getItem('referralCode');
+      
+      // Se não há ref no sessionStorage, tenta pegar da URL diretamente
+      if (!refCode) {
+        const urlParams = new URLSearchParams(window.location.search);
+        refCode = urlParams.get('ref');
+        if (refCode) sessionStorage.setItem('referralCode', refCode);
+      }
+      
+      // Se ainda não há ref, tenta usar o referral_code do próprio usuário logado (se for vendedor/licenciado)
+      if (!refCode) {
+        try {
+          const savedUser = localStorage.getItem('currentUser');
+          if (savedUser) {
+            const u = JSON.parse(savedUser);
+            if (u?.referral_code && (u?.is_seller || u?.role === 'licensee')) {
+              refCode = u.referral_code;
+            }
+          }
+        } catch (e) {}
+      }
+      
       if (!refCode) return;
 
       // Busca em AppUser
@@ -527,7 +548,11 @@ export default function Catalog() {
               <div>
                 <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
                   <Flame className="w-9 h-9 text-orange-400 animate-fire" />
-                  <span>Loja Virtual <span className="text-green-400">Especial</span>!</span>
+                  {licenseeData ? (
+                    <span>Loja de <span className="text-green-400">{licenseeData.name}</span></span>
+                  ) : (
+                    <span>Loja Virtual <span className="text-green-400">Especial</span>!</span>
+                  )}
                 </h1>
                 <p className="text-gray-300 mb-4 text-base lg:text-lg">
                   {products.length} produtos incríveis com preços imbatíveis!
