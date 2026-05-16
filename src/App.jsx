@@ -38,6 +38,12 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { OfflineScreen, OfflineBanner, ReconnectedBanner } from '@/components/OfflineScreen';
 import { useState, useCallback } from 'react';
 
+// Helper: redirect preservando query params
+const RedirectWithParams = ({ to }) => {
+  const location = window.location;
+  return <Navigate to={`${to}${location.search}`} replace />;
+};
+
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
@@ -85,6 +91,8 @@ const AuthenticatedApp = () => {
     } />
       {/* 🔒 Redirect legado: /Home → / (evita duplicação com a Route "/" da MainPage) */}
       <Route path="/Home" element={<Navigate to="/" replace />} />
+      {/* 🔒 Redirect legado: /Catalog → /Loja-Virtual (preserva query params como ?ref=) */}
+      <Route path="/Catalog" element={<RedirectWithParams to="/Loja-Virtual" />} />
       {Object.entries(Pages)
         .filter(([path]) => path !== mainPageKey) // 🔒 não duplicar Home (já renderizada em "/")
         .map(([path, Page]) => (
