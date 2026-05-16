@@ -254,6 +254,27 @@ export default function Catalog() {
               window.history.replaceState(null, '', newUrl);
               console.log(`✅ [VENDEDOR] URL forçada SÍNCRONO para: ${newUrl}`);
               sessionStorage.setItem('referralCode', sellerCode);
+              
+              // 🔧 Recarrega dados do licenciado COM O NOVO REF
+              setTimeout(async () => {
+                const licensees = await AppUser.filter({ referral_code: sellerCode });
+                if (licensees && licensees.length > 0) {
+                  const licensee = licensees[0];
+                  let photoUrl = licensee.profile_photo_url || licensee.avatar_url;
+                  try {
+                    const stores = await Store.filter({ email: licensee.email });
+                    if (stores && stores.length > 0 && stores[0].logo_url) {
+                      photoUrl = stores[0].logo_url;
+                    }
+                  } catch (e) {}
+                  if (licensee.phone) setLicenseePhone(licensee.phone);
+                  setLicenseeData({
+                    name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
+                    photo: photoUrl,
+                    phone: licensee.phone
+                  });
+                }
+              }, 0);
             }
             
             setCurrentUser(freshUser);
