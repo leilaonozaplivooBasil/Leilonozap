@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import bcrypt from 'bcryptjs';
 import { Eye, EyeOff, CheckCircle, AlertCircle, Lock, Loader2 } from 'lucide-react';
 
 export default function AcessoVendedor() {
+  const navigate = useNavigate();
   const [view, setView] = useState('loading'); // loading | form | success | error
   const [seller, setSeller] = useState(null);
   const [newPassword, setNewPassword] = useState('');
@@ -95,7 +97,7 @@ export default function AcessoVendedor() {
       sessionStorage.setItem('isLoggedIn', 'true');
 
       setView('success');
-      setTimeout(() => { window.location.href = '/SellerPanel'; }, 2000);
+      setTimeout(() => { navigate('/SellerPanel'); }, 2000);
     } catch (e) {
       setError('Erro ao salvar a senha. Tente novamente.');
     } finally {
