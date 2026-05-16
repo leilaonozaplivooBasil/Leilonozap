@@ -92,7 +92,8 @@ export default function AcessoVendedor() {
         access_token_expires: null,
       });
 
-      const updatedUser = { ...seller, password: hashed };
+      const updatedUser = { ...seller };
+      delete updatedUser.password;
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       sessionStorage.setItem('isLoggedIn', 'true');
 
