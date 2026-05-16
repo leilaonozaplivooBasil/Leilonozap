@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     });
 
     // 7) Montar links
-    const magicLink = `https://leilaonozap.net/acesso-vendedor?t=${token}`;
+    const magicLink = `https://app.base44.com/apps/68d536db3c26ff51f79c4137/preview/acesso-vendedor?t=${token}`;
     const phoneBR = normalizePhoneToBR(seller.phone);
     const firstName = (seller.full_name || 'Vendedor').split(' ')[0];
 
