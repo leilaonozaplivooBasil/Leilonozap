@@ -10,6 +10,7 @@ import SellerSalesTable from "../components/sellers/SellerSalesTable";
 import SellerWithdrawalModal from "../components/sellers/SellerWithdrawalModal";
 import SellerWithdrawalsHistoryModal from "../components/sellers/SellerWithdrawalsHistoryModal";
 import SellerLoginForm from "../components/sellers/SellerLoginForm";
+import SellerStoreCard from "../components/sellers/SellerStoreCard";
 
 export default function SellerPanel() {
   const navigate = useNavigate();
@@ -184,6 +185,9 @@ export default function SellerPanel() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Minha Loja */}
+            <SellerStoreCard referralCode={user.referral_code} />
 
             {/* Minhas Vendas */}
             <Card className="bg-gray-800/50 border-gray-700 mb-6">
