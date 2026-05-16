@@ -419,8 +419,8 @@ export default function Catalog() {
       }
 
       await loadProducts();
-      await loadCurrentUser();
-      await loadLicenseePhone();
+      await loadCurrentUser(); // 🔧 SETA sessionStorage.referralCode AQUI
+      await loadLicenseePhone(); // 🔧 LÊ sessionStorage COM GARANTIA
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
