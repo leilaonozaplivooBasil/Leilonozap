@@ -1,224 +1,101 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, Lock, CheckCircle2, AlertTriangle, MessageCircle } from "lucide-react";
-import { toast } from "sonner";
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import bcrypt from 'bcryptjs';
+import { Eye, EyeOff, CheckCircle, AlertCircle, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+const AppUser = base44.entities.AppUser;
 
 export default function AcessoVendedor() {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const [phase, setPhase] = useState("validating"); // validating | form | success | invalid
+  const [view, setView] = useState('loading');
   const [seller, setSeller] = useState(null);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  // Lê token da URL
-  const params = new URLSearchParams(location.search);
-  const token = params.get("t");
-
-  // Valida token ao carregar
   useEffect(() => {
-    const validate = async () => {
-      if (!token) {
-        setPhase("invalid");
-        setErrorMsg("Link inválido: token não fornecido.");
-        return;
-      }
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('t');
+    if (!t) { setView('error'); return; }
+    validateToken(t);
+  }, []);
 
-      try {
-        const response = await base44.functions.invoke("validateSellerAccessToken", {
-          token,
-          action: "check",
-        });
-        const data = response;
-        if (data?.success && data.seller) {
-          setSeller(data.seller);
-          setPhase("form");
-        } else {
-          setErrorMsg(data?.error || "Link inválido ou expirado.");
-          setPhase("invalid");
-        }
-      } catch (err) {
-        const apiMsg = err?.response?.data?.error;
-        setErrorMsg(apiMsg || err.message || "Não foi possível validar o link.");
-        setPhase("invalid");
-      }
-    };
-    validate();
-  }, [token]);
+  const validateToken = async (t) => {
+    try {
+      const results = await AppUser.filter({ access_token: t });
+      if (!results || results.length === 0) { setView('error'); return; }
+      const user = results[0];
+      if (user.access_token_expires && new Date() > new Date(user.access_token_expires)) { setView('error'); return; }
+      setSeller(user);
+      setView('form');
+    } catch (e) { setView('error'); }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem.");
-      return;
-    }
-
+    setError('');
+    if (!newPassword || newPassword.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return; }
+    if (newPassword !== confirmPassword) { setError('As senhas não coincidem.'); return; }
     setIsSubmitting(true);
     try {
-      const response = await base44.functions.invoke("validateSellerAccessToken", {
-         token,
-         new_password: password,
-       });
-       const data = response;
-
-      if (data?.success && data.user) {
-        // Persiste sessão (mesmo pattern do LoginModal)
-        try {
-          localStorage.setItem("currentUser", JSON.stringify(data.user));
-          sessionStorage.setItem("isLoggedIn", "true");
-          sessionStorage.removeItem("userLoggedOut");
-        } catch (storageErr) {
-          // Storage indisponível, segue mesmo assim
-        }
-
-        setPhase("success");
-        toast.success("Senha definida! Entrando no seu painel...");
-
-        // Redireciona para SellerPanel
-        setTimeout(() => {
-          navigate("/SellerPanel", { replace: true });
-        }, 1500);
-      } else {
-        toast.error(data?.error || "Não foi possível definir a senha.");
-      }
-    } catch (err) {
-      const apiMsg = err?.response?.data?.error;
-      toast.error(apiMsg || err.message || "Erro ao definir senha.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      const hashed = bcrypt.hashSync(newPassword, bcrypt.genSaltSync(10));
+      await AppUser.update(seller.id, { password: hashed, access_token: null, access_token_expires: null });
+      localStorage.setItem('currentUser', JSON.stringify({ ...seller, password: hashed }));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      setView('success');
+      setTimeout(() => { window.location.href = '/Home'; }, 2000);
+    } catch (e) { setError('Erro ao salvar. Tente novamente.'); }
+    finally { setIsSubmitting(false); }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
-            alt="Leilão NoZap"
-            className="h-16 w-auto mx-auto"
-          />
-        </div>
-
-        <div className="rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-2xl">
-          {phase === "validating" && (
-            <div className="text-center py-8">
-              <Loader2 className="w-10 h-10 text-green-400 animate-spin mx-auto mb-4" />
-              <p className="text-gray-200 font-medium">Validando seu link de acesso...</p>
+        {view === 'loading' && <div className="text-center text-white">Validando link...</div>}
+        {view === 'error' && (
+          <div className="bg-gray-800 rounded-2xl p-8 text-center">
+            <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">Link inválido ou expirado</h2>
+            <p className="text-gray-400 mb-6">Solicite um novo link ao administrador.</p>
+          </div>
+        )}
+        {view === 'form' && seller && (
+          <div className="bg-gray-800 rounded-2xl p-8">
+            <div className="text-center mb-6">
+              <Lock className="h-12 w-12 text-green-500 mx-auto mb-3" />
+              <h2 className="text-xl font-bold text-white">Olá, {seller.full_name?.split(' ')[0]}! 👋</h2>
+              <p className="text-gray-400 mt-1">Defina sua senha para acessar o painel.</p>
             </div>
-          )}
-
-          {phase === "form" && seller && (
-            <>
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-green-600/20 border border-green-600/40 mx-auto mb-3 flex items-center justify-center">
-                  <Lock className="w-8 h-8 text-green-400" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label className="text-gray-300">Nova senha</Label>
+                <div className="relative mt-1">
+                  <Input type={showPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="bg-gray-700 border-gray-600 text-white pr-10" />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
                 </div>
-                <h1 className="text-xl font-bold text-gray-100">
-                  Olá, {(seller.full_name || "").split(" ")[0]}! 👋
-                </h1>
-                <p className="text-sm text-gray-400 mt-1">
-                  Defina sua senha para acessar seu painel de vendedor.
-                </p>
-                {seller.email && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Seu e-mail de login: <span className="text-gray-300">{seller.email}</span>
-                  </p>
-                )}
               </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label className="text-gray-300">Nova senha</Label>
-                  <Input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-500 min-h-[44px]"
-                    required
-                    minLength={6}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-gray-300">Confirmar senha</Label>
-                  <Input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Digite a senha novamente"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-500 min-h-[44px]"
-                    required
-                    minLength={6}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full min-h-[48px] bg-green-600 hover:bg-green-700 text-white font-semibold"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Definindo senha...
-                    </>
-                  ) : (
-                    "Acessar meu painel"
-                  )}
-                </Button>
-              </form>
-            </>
-          )}
-
-          {phase === "success" && (
-            <div className="text-center py-8">
-              <CheckCircle2 className="w-14 h-14 text-green-400 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-gray-100 mb-2">Tudo certo!</h2>
-              <p className="text-sm text-gray-400">Levando você para o painel...</p>
-            </div>
-          )}
-
-          {phase === "invalid" && (
-            <div className="text-center py-6">
-              <AlertTriangle className="w-14 h-14 text-amber-400 mx-auto mb-4" />
-              <h2 className="text-lg font-bold text-gray-100 mb-2">Link inválido ou expirado</h2>
-              <p className="text-sm text-gray-400 mb-6">
-                {errorMsg || "Solicite um novo link de acesso ao licenciado que te cadastrou."}
-              </p>
-              <a
-                href="https://wa.me/5521984072064"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Falar com o suporte
-              </a>
-            </div>
-          )}
-        </div>
-
-        <p className="text-center text-xs text-gray-500 mt-4">
-          Leilão NoZap · Painel do Vendedor
-        </p>
+              <div>
+                <Label className="text-gray-300">Confirmar senha</Label>
+                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repita a senha" className="bg-gray-700 border-gray-600 text-white mt-1" />
+              </div>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <Button type="submit" disabled={isSubmitting} className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3">
+                {isSubmitting ? 'Salvando...' : '✅ Definir senha e entrar'}
+              </Button>
+            </form>
+          </div>
+        )}
+        {view === 'success' && (
+          <div className="bg-gray-800 rounded-2xl p-8 text-center">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white">Senha definida! 🎉</h2>
+            <p className="text-gray-400">Redirecionando...</p>
+          </div>
+        )}
       </div>
     </div>
   );
