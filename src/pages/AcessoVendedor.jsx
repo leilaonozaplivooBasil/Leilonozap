@@ -28,8 +28,9 @@ export default function AcessoVendedor() {
   const validateToken = async (t, userId) => {
     try {
       const result = await base44.functions.invoke('validateSellerAccessToken', { token: t, userId });
-      if (result && result.valid && result.user) {
-        setSeller(result.user);
+      const data = result?.data ?? result;
+      if (data && data.valid && data.user) {
+        setSeller(data.user);
         setView('form');
       } else {
         setView('error');
