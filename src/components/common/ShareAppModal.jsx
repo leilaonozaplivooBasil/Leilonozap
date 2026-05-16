@@ -5,15 +5,27 @@ import { Share2, Copy, MessageCircle, Mail, Facebook, Twitter, Linkedin } from '
 import { toast } from "sonner";
 
 export default function ShareAppModal({ isOpen, onClose, context = "default" }) {
+  // Obtém dados do usuário logado
+  const currentUser = (() => {
+    try {
+      const saved = localStorage.getItem('currentUser');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  })();
+
   // Verifica se há um código de licenciado na URL atual
   const urlParams = new URLSearchParams(window.location.search);
   const refCode = urlParams.get('ref');
   
   const baseUrl = "https://leilaonozap.net";
   
-  // Determina o link baseado no contexto
+  // Determina o link baseado no contexto e no role do usuário
   let appUrl;
-  if (context === "catalog") {
+  
+  // Se é vendedor, SEMPRE usa seu referral_code para compartilhar sua loja
+  if (currentUser?.is_seller === true && currentUser?.referral_code) {
+    appUrl = `${baseUrl}/Loja-Virtual?ref=${currentUser.referral_code}`;
+  } else if (context === "catalog") {
     // No catálogo: usa link do licenciado se tiver, senão link do catálogo
     appUrl = refCode ? `${baseUrl}/Loja-Virtual?ref=${refCode}` : `${baseUrl}/Catalog`;
   } else {
