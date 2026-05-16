@@ -9,6 +9,7 @@ import SellerStatsCards from "../components/sellers/SellerStatsCards";
 import SellerSalesTable from "../components/sellers/SellerSalesTable";
 import SellerWithdrawalModal from "../components/sellers/SellerWithdrawalModal";
 import SellerWithdrawalsHistoryModal from "../components/sellers/SellerWithdrawalsHistoryModal";
+import SellerLoginForm from "../components/sellers/SellerLoginForm";
 
 export default function SellerPanel() {
   const navigate = useNavigate();
@@ -19,30 +20,36 @@ export default function SellerPanel() {
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Validar acesso
+  // Validar acesso — se não logado, mostra tela de login própria
   useEffect(() => {
-    const checkAccess = async () => {
+    const checkAccess = () => {
       try {
         const savedUserJSON = localStorage.getItem('currentUser');
         if (!savedUserJSON) {
-          navigate('/', { replace: true });
-          return;
+          setIsLoading(false);
+          return; // vai exibir o SellerLoginForm
         }
 
         const savedUser = JSON.parse(savedUserJSON);
-        if (!savedUser.is_seller && savedUser.role !== 'admin') {
-          navigate('/', { replace: true });
+        // Valida se o ID parece real (24 chars hex do MongoDB/Base44)
+        const hasValidId = savedUser?.id && /^[a-f0-9]{24}$/.test(savedUser.id);
+
+        if (!hasValidId || (!savedUser.is_seller && savedUser.role !== 'admin')) {
+          // ID inválido ou sem permissão → limpa e mostra login
+          localStorage.removeItem('currentUser');
+          sessionStorage.removeItem('isLoggedIn');
+          setIsLoading(false);
           return;
         }
 
         setUser(savedUser);
       } catch (err) {
-        navigate('/', { replace: true });
+        setIsLoading(false);
       }
     };
 
     checkAccess();
-  }, [navigate]);
+  }, []);
 
   // Buscar dashboard
   const fetchDashboard = async () => {
@@ -94,6 +101,18 @@ export default function SellerPanel() {
       window.removeEventListener('focus', handleFocus);
     };
   }, [user, dashboardData]);
+
+  // Mostra login se não autenticado
+  if (!isLoading && !user) {
+    return (
+      <SellerLoginForm
+        onSuccess={(loggedUser) => {
+          setUser(loggedUser);
+          setIsLoading(true);
+        }}
+      />
+    );
+  }
 
   if (!user) {
     return (
