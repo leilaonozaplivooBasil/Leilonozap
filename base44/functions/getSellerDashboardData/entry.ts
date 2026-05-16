@@ -31,8 +31,9 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'seller_id obrigatório' }, { status: 400 });
     }
 
-    // Buscar vendedor
-    const seller = await base44.asServiceRole.entities.AppUser.get(sellerId).catch(() => null);
+    // Buscar vendedor via filter (evita erro 401 do .get() em contexto sem auth Base44)
+    const sellerArr = await base44.asServiceRole.entities.AppUser.filter({ id: sellerId });
+    const seller = sellerArr?.[0];
     if (!seller || !seller.is_seller) {
       return Response.json({ success: false, error: 'Vendedor não encontrado ou inativo' }, { status: 404 });
     }
