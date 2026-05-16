@@ -536,6 +536,18 @@ export default function Layout({ children, currentPageName }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // 🛡️ SYNC SESSIONSTORE: Se localStorage foi limpo (logout em outra aba), limpa sessionStorage também
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'currentUser' && !e.newValue) {
+        // Outra aba fez logout — sincroniza sessionStorage
+        sessionStorage.removeItem('isLoggedIn');
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
