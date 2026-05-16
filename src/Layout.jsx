@@ -900,6 +900,20 @@ export default function Layout({ children, currentPageName }) {
             onSuccess={(user) => {
               setCurrentUser(user);
               setShowLoginModal(false);
+              
+              // 🔧 CRÍTICO: Reforça URL se usuário é vendedor
+              if (user?.is_seller === true && user?.referral_code) {
+                const refCode = user.referral_code;
+                const currentPath = window.location.pathname;
+                
+                // Se está no Catálogo, força URL com ref
+                if (currentPath.includes('/Loja-Virtual') || currentPath.includes('/Catalog')) {
+                  const newUrl = `/Loja-Virtual?ref=${refCode}`;
+                  window.history.replaceState(null, '', newUrl);
+                  sessionStorage.setItem('referralCode', refCode);
+                  console.log(`✅ [LOGIN] URL reforçada para: ${newUrl}`);
+                }
+              }
             }}
             onSwitchToRegister={() => {
               setShowLoginModal(false);
