@@ -49,7 +49,7 @@ export default function SellerPanel() {
     if (!user) return;
     try {
       setIsError(false);
-      const response = await base44.functions.invoke('getSellerDashboardData', {});
+      const response = await base44.functions.invoke('getSellerDashboardData', { seller_id: user.id });
       const data = response?.data;
       if (data?.success) {
         setDashboardData(data);
