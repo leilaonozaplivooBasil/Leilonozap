@@ -536,7 +536,7 @@ export default function Layout({ children, currentPageName }) {
   }, [location]);
 
   // 🔓 Pages que renderizam SEM layout (auth/onboarding puro)
-  if (currentPageName === "AcessoVendedor" || currentPageName === "AcessoArrematante") {
+  if (currentPageName === "AcessoVendedor" || currentPageName === "acesso-vendedor" || currentPageName === "AcessoArrematante") {
     return children;
   }
 
