@@ -195,6 +195,13 @@ export default function AcessoVendedor() {
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white">Senha definida! 🎉</h2>
             <p className="text-gray-400 mt-2">Redirecionando para o painel...</p>
+            <p className="text-gray-500 text-xs mt-4">Se não redirecionar automaticamente:</p>
+            <button
+              onClick={() => window.location.href = '/SellerPanel'}
+              className="mt-3 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              Clique aqui para continuar →
+            </button>
           </div>
         )}
 
