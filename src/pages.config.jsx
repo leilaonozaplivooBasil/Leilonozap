@@ -8,6 +8,7 @@ import React from 'react';
 import { RequireRole } from '@/components/common';
 import __Layout from './Layout.jsx';
 
+const AcessoVendedor = React.lazy(() => import('./pages/AcessoVendedor'));
 const ActivePartners = React.lazy(() => import('./pages/ActivePartners'));
 const AddCatalogProduct = React.lazy(() => import('./pages/AddCatalogProduct'));
 const AnaliseDeLotes = React.lazy(() => import('./pages/AnaliseDeLotes'));
@@ -99,6 +100,7 @@ const WalletHistory = React.lazy(() => import('./pages/WalletHistory'));
 
 
 export const PAGES = {
+    "AcessoVendedor": AcessoVendedor,
     "ActivePartners": ActivePartners,
     "AddCatalogProduct": AddCatalogProduct,
     "AnaliseDeLotes": AnaliseDeLotes,
