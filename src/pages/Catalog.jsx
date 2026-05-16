@@ -151,12 +151,18 @@ export default function Catalog() {
       }
       
       // Se ainda não há ref, tenta usar o referral_code do próprio usuário logado (se for vendedor/licenciado)
+      // 🔧 PRIORIDADE: Se é vendedor logado, USA SEMPRE SEU CÓDIGO
       if (!refCode) {
         try {
           const savedUser = localStorage.getItem('currentUser');
           if (savedUser) {
             const u = JSON.parse(savedUser);
-            if (u?.referral_code && (u?.is_seller || u?.role === 'licensee')) {
+            // Se é vendedor E tem referral_code, força usar o dele
+            if (u?.is_seller === true && u?.referral_code) {
+              refCode = u.referral_code;
+              sessionStorage.setItem('referralCode', refCode);
+              console.log(`✅ [VENDEDOR] Usando ref do vendedor logado: ${refCode}`);
+            } else if (u?.referral_code && u?.role === 'licensee') {
               refCode = u.referral_code;
             }
           }
@@ -378,7 +384,7 @@ export default function Catalog() {
       const urlParams = new URLSearchParams(window.location.search);
       
       // Captura o código de referência do URL
-      const refCode = urlParams.get('ref');
+      let refCode = urlParams.get('ref');
       if (refCode) {
         sessionStorage.setItem('referralCode', refCode);
         console.log(`✅ Código de referência '${refCode}' capturado do URL`);
@@ -391,6 +397,19 @@ export default function Catalog() {
       await loadProducts();
       await loadCurrentUser();
       await loadLicenseePhone();
+      
+      // 🔧 CORREÇÃO: Após carregar usuário, força URL e título para vendedor
+      setCurrentUser(prev => {
+        if (prev?.is_seller === true && prev?.referral_code) {
+          const sellerCode = prev.referral_code;
+          // Força a URL para /Loja-Virtual?ref={codigo}
+          const newUrl = `/Loja-Virtual?ref=${sellerCode}`;
+          window.history.replaceState(null, '', newUrl);
+          console.log(`✅ [VENDEDOR] URL forçada para: ${newUrl}`);
+          sessionStorage.setItem('referralCode', sellerCode);
+        }
+        return prev;
+      });
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
