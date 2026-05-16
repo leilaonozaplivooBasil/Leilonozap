@@ -7,9 +7,7 @@ function onlyDigits(v) {
 function normalizePhoneToBR(phone) {
   const digits = onlyDigits(phone);
   if (!digits) return '';
-  // Se já começa com 55 e tem 12-13 dígitos, mantém
   if (digits.length >= 12 && digits.startsWith('55')) return digits;
-  // Senão prefixa 55
   return '55' + digits;
 }
 
@@ -17,7 +15,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // 1) Auth
+    // Auth
     const caller = await base44.auth.me();
     if (!caller || !caller.email) {
       return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -29,7 +27,7 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'AppUser do chamador não encontrado' }, { status: 401 });
     }
 
-    // 2) Validar role (licenciado/licensee/admin)
+    // Validar role
     const callerLevels = Array.isArray(callerAppUser.career_levels) ? callerAppUser.career_levels : [];
     const isLicensee =
       callerLevels.includes('licenciado_catalogo') ||
@@ -40,14 +38,14 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Forbidden: apenas licenciados podem gerar link de acesso' }, { status: 403 });
     }
 
-    // 3) Payload
+    // Payload — suporta seller_id ou sellerId
     const body = await req.json().catch(() => ({}));
-    const { seller_id } = body || {};
+    const seller_id = body.seller_id || body.sellerId;
     if (!seller_id) {
       return Response.json({ success: false, error: 'seller_id é obrigatório' }, { status: 400 });
     }
 
-    // 4) Buscar vendedor e validar ownership
+    // Buscar vendedor e validar ownership
     const seller = await base44.asServiceRole.entities.AppUser.get(seller_id).catch(() => null);
     if (!seller) {
       return Response.json({ success: false, error: 'Vendedor não encontrado' }, { status: 404 });
@@ -57,30 +55,21 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Forbidden: este vendedor não pertence à sua rede' }, { status: 403 });
     }
 
-    if (!seller.is_seller) {
-      return Response.json({ success: false, error: 'Usuário não é um vendedor ativo' }, { status: 400 });
-    }
-
-    if (!seller.phone) {
-      return Response.json({ success: false, error: 'Vendedor não possui telefone cadastrado' }, { status: 400 });
-    }
-
-    // 5) Gerar token único (44+ chars, criptograficamente seguro)
+    // Gerar token
     const uuid = crypto.randomUUID();
     const suffix = Date.now().toString(36);
     const token = `${uuid}-${suffix}`;
 
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // 6) Salvar token no AppUser (invalida token anterior automaticamente)
     await base44.asServiceRole.entities.AppUser.update(seller.id, {
       access_token: token,
       access_token_expires: expiresAt.toISOString(),
+      is_seller: true,
     });
 
-    // 7) Montar links
-    const magicLink = `https://leilaonozap.net/AcessoVendedor?t=${token}`;
+    const magicLink = `https://leilaonozap.net/AcessoVendedor?t=${token}&u=${seller.id}`;
     const phoneBR = normalizePhoneToBR(seller.phone);
     const firstName = (seller.full_name || 'Vendedor').split(' ')[0];
 
@@ -104,7 +93,9 @@ Após definir sua senha, você poderá entrar normalmente com seu e-mail.`;
       success: true,
       token,
       magic_link: magicLink,
+      link: magicLink,
       expires_at: expiresAt.toISOString(),
+      expires: expiresAt.toISOString(),
       whatsapp_url: whatsappUrl,
     });
   } catch (error) {

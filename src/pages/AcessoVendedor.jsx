@@ -20,19 +20,23 @@ export default function AcessoVendedor() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get('t');
+    const u = params.get('u');
     if (!t) { setView('error'); return; }
-    validateToken(t);
+    validateToken(t, u);
   }, []);
 
-  const validateToken = async (t) => {
+  const validateToken = async (t, userId) => {
     try {
-      const results = await AppUser.list();
-      const user = results.find(u => u.access_token === t);
-      if (!user) { setView('error'); return; }
-      if (user.access_token_expires && new Date() > new Date(user.access_token_expires)) { setView('error'); return; }
-      setSeller(user);
-      setView('form');
-    } catch (e) { setView('error'); }
+      const result = await base44.functions.invoke('validateSellerAccessToken', { token: t, userId });
+      if (result && result.valid && result.user) {
+        setSeller(result.user);
+        setView('form');
+      } else {
+        setView('error');
+      }
+    } catch (e) {
+      setView('error');
+    }
   };
 
   const handleSubmit = async (e) => {
