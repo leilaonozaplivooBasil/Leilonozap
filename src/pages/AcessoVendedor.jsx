@@ -26,9 +26,10 @@ export default function AcessoVendedor() {
 
   const validateToken = async (t) => {
     try {
-      const results = await AppUser.filter({ access_token: t });
-      if (!results || results.length === 0) { setView('error'); return; }
-      const user = results[0];
+      // Busca todos os vendedores (is_seller=true) e filtra pelo token
+      const results = await AppUser.filter({ is_seller: true });
+      const user = results.find(u => u.access_token === t);
+      if (!user) { setView('error'); return; }
       if (user.access_token_expires && new Date() > new Date(user.access_token_expires)) { setView('error'); return; }
       setSeller(user);
       setView('form');
