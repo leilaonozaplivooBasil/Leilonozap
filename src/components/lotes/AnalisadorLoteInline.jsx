@@ -214,7 +214,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         const novoLote = {
             id: Date.now(), nomePlanilha: filename, nomeLote: filename.replace(/\.xlsx?$/, ''),
             localColeta, resumoCategorias, subItemsByCategory, quantidadeTotal: totalItemsQtd,
-            valorMercadoTotal: referenceMarketValue !== null && referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal,
+            valorMercadoTotal: referenceMarketValue !== null && referenceMarketValue > 0 && referenceMarketValue >= valorMercadoTotal ? referenceMarketValue : valorMercadoTotal,
             classCount, gradesData, rawItemsByGrade, origem: 'Mercado Livre'
         };
         setLotesImportados(prev => [...prev, novoLote]);
