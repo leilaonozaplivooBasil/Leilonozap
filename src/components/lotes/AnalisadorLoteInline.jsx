@@ -140,7 +140,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         const normalizedHeaders = headers.map(h => typeof h === 'string' ? h.toUpperCase().trim().replace(/\s+/g, ' ') : '');
         const getColIdx = (kws) => normalizedHeaders.findIndex(h => kws.some(k => h.includes(k)));
         const colClass = getColIdx(['CLASSE', 'CLASSIFICA', 'CLASS', 'CONDIÇÃO', 'GRADE']);
-        const colValue = getColIdx(['VALOR TOTAL', 'VALOR DE MERCADO', 'VALOR']);
+        const colValue = getColIdx(['VALOR TOTAL', 'VALOR DE MERCADO']);
         const colQtd = getColIdx(['QUANTIDADE', 'QTD']);
         const colDesc = normalizedHeaders.findIndex(h => h.includes('DESCRI') || h === 'ITEM' || h === 'PRODUTO' || h.includes('NOME DO PRODUTO'));
         const extractGrade = (raw) => { const str = String(raw).toUpperCase().trim(); if (['A','B','C','D','E','U'].includes(str)) return str; const m = str.match(/\b([ABCDEU])\b/); return m ? m[1] : 'U'; };
