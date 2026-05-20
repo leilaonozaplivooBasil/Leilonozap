@@ -124,7 +124,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             const data = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[sheetName], { header: 1 });
             for (let i = 0; i < Math.min(20, data.length); i++) {
                 const row = data[i];
-                if (row && row.some(cell => typeof cell === 'string' && (cell.toUpperCase().includes('CLASSE') || cell.toUpperCase().includes('GRADE') || cell.toUpperCase().includes('CONDIÇÃO') || cell.toUpperCase().includes('VALOR TOTAL') || cell.toUpperCase().includes('VALOR DE MERCADO')))) {
+                if (row && row.some(cell => typeof cell === 'string' && (cell.toUpperCase().replace(/\s+/g, ' ').includes('CLASSE') || cell.toUpperCase().replace(/\s+/g, ' ').includes('GRADE') || cell.toUpperCase().replace(/\s+/g, ' ').includes('COND') || cell.toUpperCase().replace(/\s+/g, ' ').includes('VALOR TOTAL') || cell.toUpperCase().replace(/\s+/g, ' ').includes('VALOR DE MERCADO')))) {
                     headerRowIndex = i; headers = row; wmsSheetData = data; break;
                 }
             }
@@ -137,7 +137,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         let valorMercadoTotal = 0, totalItemsQtd = 0;
         const rawItemsByGrade = [];
         const gradesData = { A: { qtd: 0, valorMarket: 0 }, B: { qtd: 0, valorMarket: 0 }, C: { qtd: 0, valorMarket: 0 }, D: { qtd: 0, valorMarket: 0 }, E: { qtd: 0, valorMarket: 0 }, U: { qtd: 0, valorMarket: 0 } };
-        const normalizedHeaders = headers.map(h => typeof h === 'string' ? h.toUpperCase().trim() : '');
+        const normalizedHeaders = headers.map(h => typeof h === 'string' ? h.toUpperCase().trim().replace(/\s+/g, ' ') : '');
         const getColIdx = (kws) => normalizedHeaders.findIndex(h => kws.some(k => h.includes(k)));
         const colClass = getColIdx(['CLASSE', 'CLASSIFICA', 'CLASS', 'CONDIÇÃO', 'GRADE']);
         const colValue = getColIdx(['VALOR TOTAL', 'VALOR DE MERCADO', 'VALOR']);
