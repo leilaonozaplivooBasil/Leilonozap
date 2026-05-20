@@ -42,7 +42,7 @@ function parseSpreadsheetDirect(workbook) {
     // Mapeia colunas
     const col = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
 
-    const colLote = col(['LOTE']);
+    const colLote = col(['LOTE', 'ID GRUPO', 'ID_GRUPO', 'GRUPO']);
     const colQtd = col(['QTD', 'QUANTIDADE']);
     const colDesc = col(['DESCRI', 'ITEM', 'PRODUTO']);
     const colValUnit = col(['VALOR UNIT', 'VL UNIT', 'UNIT']);
@@ -83,7 +83,7 @@ function parseSpreadsheetDirect(workbook) {
       if (!row || row.every(c => c === '' || c == null)) continue;
 
       const loteNum = String(row[colLote] || '').trim();
-      if (!loteNum || loteNum.toUpperCase() === 'LOTE') continue;
+      if (!loteNum || loteNum.toUpperCase() === 'LOTE' || loteNum.toUpperCase() === 'ID GRUPO') continue;
 
       const qtd = parseInt(String(row[colQtd] || '1').replace(/\D/g, '')) || 1;
       const desc = colDesc >= 0 ? String(row[colDesc] || '').trim() : `Item ${loteNum}`;
