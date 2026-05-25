@@ -16,6 +16,7 @@ import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
+import DevLogoutButton from "@/components/dev/DevLogoutButton";
 
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
@@ -975,6 +976,9 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
+
+        {/* 🧪 DEV — Botão "Sair (teste)" visível apenas para admin/super_admin/email-master */}
+        <DevLogoutButton currentUser={currentUser} />
 
       </div>
 
