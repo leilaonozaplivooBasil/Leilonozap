@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { base44 } from "@/api/base44Client";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import UserPanelEditor from "@/components/superadmin/UserPanelEditor";
+import PortalPageHeader from "@/components/common/PortalPageHeader";
 
 const AppUser = base44.entities.AppUser;
 
@@ -51,23 +52,16 @@ export default function SuperAdminPanels() {
   return (
     <div className="min-h-screen bg-gray-900 text-white py-6 px-4 sm:py-10 sm:px-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-xl">
-            <Crown className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Gestão de Painéis
-            </h1>
-            <p className="text-sm text-gray-400 mt-1">
-              Habilite ou revogue acesso a painéis específicos para cada usuário.
-            </p>
-          </div>
-        </div>
+        {/* Header padronizado */}
+        <PortalPageHeader
+          icon={Crown}
+          title="Gestão de Painéis"
+          subtitle="Habilite ou revogue acesso a painéis específicos para cada usuário."
+          accentColor="amber"
+        />
 
         {/* Busca */}
-        <div className="relative mb-5">
+        <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <Input
             value={search}
@@ -75,6 +69,11 @@ export default function SuperAdminPanels() {
             placeholder="Buscar por nome, e-mail ou CPF..."
             className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
           />
+        </div>
+
+        {/* Contador de resultados */}
+        <div className="mb-5 text-xs text-gray-500">
+          {loading ? "Carregando..." : `${filtered.length} usuário${filtered.length !== 1 ? "s" : ""} encontrado${filtered.length !== 1 ? "s" : ""}`}
         </div>
 
         {/* Lista */}
