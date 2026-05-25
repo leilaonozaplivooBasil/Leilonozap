@@ -29,6 +29,14 @@ import AcessoVendedor from '@/pages/AcessoVendedor';
 import SellerPanel from '@/pages/SellerPanel';
 import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
+import Portal from '@/pages/Portal';
+import PortalArrematante from '@/pages/portal/PortalArrematante';
+import PortalLojaVirtual from '@/pages/portal/PortalLojaVirtual';
+import PortalLicenciado from '@/pages/portal/PortalLicenciado';
+import PortalLojista from '@/pages/portal/PortalLojista';
+import PortalVendedor from '@/pages/portal/PortalVendedor';
+import PortalInvestidor from '@/pages/portal/PortalInvestidor';
+import PortalLeiloeiro from '@/pages/portal/PortalLeiloeiro';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfUse from '@/pages/TermsOfUse';
 import PageNotFound from './lib/PageNotFound';
@@ -47,6 +55,10 @@ const RedirectWithParams = ({ to }) => {
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+
+// 🆕 Rotas controladas EXPLICITAMENTE (não passar pelo loop)
+// Portal vira a "/" / Home vai para "/leiloes" / Catalog vai para "/Loja-Virtual"
+const EXPLICIT_ROUTES = new Set(['Portal', 'Home', 'Catalog', mainPageKey]);
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -84,17 +96,36 @@ const AuthenticatedApp = () => {
       </div>
     }>
     <Routes>
+    {/* 🆕 PORTAL HUB — rota raiz "/" */}
     <Route path="/" element={
-      <LayoutWrapper currentPageName={mainPageKey}>
-        <MainPage />
+      <LayoutWrapper currentPageName="Portal">
+        <Portal />
       </LayoutWrapper>
     } />
-      {/* 🔒 Redirect legado: /Home → / (evita duplicação com a Route "/" da MainPage) */}
-      <Route path="/Home" element={<Navigate to="/" replace />} />
+      {/* 🆕 Home antiga (leilões) agora vive em /leiloes */}
+      <Route path="/leiloes" element={
+        <LayoutWrapper currentPageName="Home">
+          <MainPage />
+        </LayoutWrapper>
+      } />
+      {/* 🔒 Compatibilidade: /Home continua renderizando a Home de leilões */}
+      <Route path="/Home" element={
+        <LayoutWrapper currentPageName="Home">
+          <MainPage />
+        </LayoutWrapper>
+      } />
+      {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
+      <Route path="/portal/arrematante" element={<PortalArrematante />} />
+      <Route path="/portal/loja-virtual" element={<PortalLojaVirtual />} />
+      <Route path="/portal/licenciado" element={<PortalLicenciado />} />
+      <Route path="/portal/lojista" element={<PortalLojista />} />
+      <Route path="/portal/vendedor" element={<PortalVendedor />} />
+      <Route path="/portal/investidor" element={<PortalInvestidor />} />
+      <Route path="/portal/leiloeiro" element={<PortalLeiloeiro />} />
       {/* 🔒 Redirect legado: /Catalog → /Loja-Virtual (preserva query params como ?ref=) */}
       <Route path="/Catalog" element={<RedirectWithParams to="/Loja-Virtual" />} />
       {Object.entries(Pages)
-        .filter(([path]) => path !== mainPageKey) // 🔒 não duplicar Home (já renderizada em "/")
+        .filter(([path]) => !EXPLICIT_ROUTES.has(path)) // 🔒 não duplicar rotas explícitas (Portal, Home, Catalog)
         .map(([path, Page]) => (
         <Route
           key={path}

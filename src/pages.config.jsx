@@ -75,6 +75,7 @@ const OrderTracking = React.lazy(() => import('./pages/OrderTracking'));
 const PDV = React.lazy(() => import('./pages/PDV'));
 const PartnerPlanActivation = React.lazy(() => import('./pages/PartnerPlanActivation'));
 const Partners = React.lazy(() => import('./pages/Partners'));
+const Portal = React.lazy(() => import('./pages/Portal'));
 const PaymentFailure = React.lazy(() => import('./pages/PaymentFailure'));
 const PaymentSettings = React.lazy(() => import('./pages/PaymentSettings'));
 const ProductManagement = React.lazy(() => import('./pages/ProductManagement'));
@@ -179,6 +180,7 @@ export const PAGES = {
     "PDV": PDV,
     "PartnerPlanActivation": PartnerPlanActivation,
     "Partners": Partners,
+    "Portal": Portal,
     "PaymentFailure": PaymentFailure,
     "PaymentSettings": PaymentSettings,
     "ProductManagement": ProductManagement,

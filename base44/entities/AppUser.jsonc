@@ -58,6 +58,7 @@
       "enum": [
         "user",
         "admin",
+        "super_admin",
         "licensee",
         "investidor",
         "leiloeiro",
