@@ -1384,22 +1384,13 @@ const DashboardContent = ({ user, isAdmin }) => {
           />
         </TabsContent>
 
-        {/* ABA: MEU CRM */}
-        <TabsContent value="meu-crm" className="space-y-6">
-          <LicenseeCRM />
-        </TabsContent>
+        {/* ABA: MEU CRM — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
 
         <TabsContent value="comissoes" className="space-y-6">
           <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
         </TabsContent>
 
-        <TabsContent value="saques" className="space-y-6">
-          <WithdrawalsHistoryTab
-            isSaiDeBaixo={isSaiDeBaixo}
-            isLoadingWithdrawals={isLoadingWithdrawals}
-            myWithdrawals={myWithdrawals}
-          />
-        </TabsContent>
+        {/* ABA: SAQUES — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
 
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">
