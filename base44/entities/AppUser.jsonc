@@ -65,6 +65,25 @@
         "arrematante"
       ]
     },
+    "enabled_panels": {
+      "type": "array",
+      "description": "Pain\u00e9is habilitados manualmente pelo Super Admin para este usu\u00e1rio. Se vazio/undefined, s\u00e3o derivados automaticamente dos campos role/career_levels/is_seller.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "arrematante",
+          "loja_virtual",
+          "lojista",
+          "vendedor",
+          "licenciado",
+          "investidor",
+          "leiloeiro",
+          "admin",
+          "super_admin"
+        ]
+      },
+      "default": []
+    },
     "referral_code": {
       "type": "string",
       "description": "C\u00f3digo de indica\u00e7\u00e3o \u00fanico do licenciado"

@@ -15,6 +15,7 @@ import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import { useActiveSession } from "@/components/system/useActiveSession";
+import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
@@ -78,6 +79,19 @@ export default function Layout({ children, currentPageName }) {
 
   // 🆕 Rastreamento de sessão ativa
   useActiveSession(currentUser);
+
+  // 🆕 FASE 2: Consome flag de "abrir seletor de painéis" deixada por Register/AcessoArrematante
+  // (que usam window.location.href e perdem o estado JS — a flag sobrevive ao reload)
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const pending = sessionStorage.getItem('pendingPanelSelector');
+      if (pending === '1') {
+        sessionStorage.removeItem('pendingPanelSelector');
+        setTimeout(() => triggerPanelSelector(currentUser), 400);
+      }
+    } catch (_) { /* ignora storage indisponível */ }
+  }, [currentUser]);
 
   // Atualiza contador do carrinho
   useEffect(() => {
@@ -582,6 +596,10 @@ export default function Layout({ children, currentPageName }) {
 
   const leiloeiroMenuItems = [];
 
+  // 🆕 FASE 2: declarar isSuperAdmin ANTES de adminMenuItems (que o consome)
+  const _isLoggedInForMenu = currentUser && currentUser.email;
+  const _isSuperAdminForMenu = _isLoggedInForMenu && currentUser.role === 'super_admin';
+
   const adminMenuItems = [
     {
       title: "🤖 Ferramentas IA",
@@ -661,10 +679,19 @@ export default function Layout({ children, currentPageName }) {
         { title: "👤 Perfil", pageName: "Profile" },
       ]
     },
+    // 🆕 FASE 2: Categoria exclusiva do Super Admin (renderizada condicionalmente abaixo)
+    ...(_isSuperAdminForMenu ? [{
+      title: "👑 Super Admin",
+      isCategory: true,
+      items: [
+        { title: "Habilitar Painéis", pageName: "SuperAdminPanels" },
+      ]
+    }] : []),
   ];
 
   const isLoggedIn = currentUser && currentUser.email;
-  const isAdmin = isLoggedIn && currentUser.role === 'admin';
+  const isSuperAdmin = isLoggedIn && currentUser.role === 'super_admin';
+  const isAdmin = isLoggedIn && (currentUser.role === 'admin' || currentUser.role === 'super_admin');
   const isLeiloeiro = isLoggedIn && currentUser.role === 'leiloeiro';
   const isInvestidor = isLoggedIn && currentUser.role === 'investidor';
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
@@ -926,6 +953,9 @@ export default function Layout({ children, currentPageName }) {
                   console.log(`✅ [LOGIN] URL reforçada para: ${newUrl}`);
                 }
               }
+
+              // 🆕 FASE 2: dispara seletor de painéis pós-login (assíncrono, não bloqueia)
+              setTimeout(() => triggerPanelSelector(user), 150);
             }}
             onSwitchToRegister={() => {
               setShowLoginModal(false);
@@ -933,6 +963,9 @@ export default function Layout({ children, currentPageName }) {
             }}
           />
         )}
+
+        {/* 🆕 FASE 2: Seletor global de painéis (escuta evento 'panelSelectorRequested') */}
+        <PainelSelector />
 
         {/* Cart Popup */}
         <CartPopup

@@ -71,6 +71,9 @@ export default function AcessoArrematante() {
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
 
+      // 🆕 FASE 2: pede ao Layout abrir o seletor de painéis após o reload
+      try { sessionStorage.setItem('pendingPanelSelector', '1'); } catch (_) {}
+
       const isAdmin = user.role === 'admin' || user.email === 'luizsantanna@tttcorporate.com';
       
       // Marca origem do login para o Layout não sobrescrever

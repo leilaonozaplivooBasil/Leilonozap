@@ -30,6 +30,7 @@ import SellerPanel from '@/pages/SellerPanel';
 import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
 import Portal from '@/pages/Portal';
+import SuperAdminPanels from '@/pages/SuperAdminPanels';
 import PortalArrematante from '@/pages/portal/PortalArrematante';
 import PortalLojaVirtual from '@/pages/portal/PortalLojaVirtual';
 import PortalLicenciado from '@/pages/portal/PortalLicenciado';
@@ -58,7 +59,7 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // 🆕 Rotas controladas EXPLICITAMENTE (não passar pelo loop)
 // Portal vira a "/" / Home vai para "/leiloes" / Catalog vai para "/Loja-Virtual"
-const EXPLICIT_ROUTES = new Set(['Portal', 'Home', 'Catalog', mainPageKey]);
+const EXPLICIT_ROUTES = new Set(['Portal', 'Home', 'Catalog', 'SuperAdminPanels', mainPageKey]);
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -250,6 +251,21 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="AdminLancesAutorizados">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <AdminLancesAutorizados />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      {/* 🆕 FASE 2: Painel exclusivo do Super Admin para gerenciar enabled_panels dos usuários */}
+      <Route path="/super-admin/painels" element={
+        <LayoutWrapper currentPageName="SuperAdminPanels">
+          <RequireRole allowedRoles={['super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <SuperAdminPanels />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      <Route path="/SuperAdminPanels" element={
+        <LayoutWrapper currentPageName="SuperAdminPanels">
+          <RequireRole allowedRoles={['super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <SuperAdminPanels />
           </RequireRole>
         </LayoutWrapper>
       } />

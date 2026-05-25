@@ -220,6 +220,9 @@ export default function Register() {
       localStorage.setItem('currentUser', JSON.stringify(newUser));
       sessionStorage.setItem('isLoggedIn', 'true');
 
+      // 🆕 FASE 2: pede ao Layout abrir o seletor de painéis após o reload
+      try { sessionStorage.setItem('pendingPanelSelector', '1'); } catch (_) {}
+
       console.log(`[REGISTER] Registro bem-sucedido: ${newUser.full_name}`);
 
       setTimeout(() => {
