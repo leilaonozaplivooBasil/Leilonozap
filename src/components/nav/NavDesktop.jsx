@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
-import AdminMegaMenu from "@/components/nav/AdminMegaMenu";
 
 /**
  * 🛡️ NavDesktop — Cabeçalho público padrão LEILÃO NOZAP
@@ -85,11 +84,6 @@ export default function NavDesktop({
           {item.title}
         </Link>
       ))}
-
-      {/* === MEGA-MENU ADMIN (só para admin/super_admin) === */}
-      {(currentUser?.role === "admin" || currentUser?.role === "super_admin") && (
-        <AdminMegaMenu adminMenuItems={adminMenuItems} />
-      )}
 
       {/* === DIVISOR SUTIL === */}
       <div className="h-6 w-px bg-white/10 mx-3" />

@@ -22,10 +22,12 @@ import { ADMIN_PAGES } from "@/lib/adminNavConfig";
 
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
+import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
+import RoleSidebar from "@/components/layout/RoleSidebar";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
-import { Menu, Share2, LogOut, Settings, MessageCircle, User as UserIcon, ShoppingCart as CartIcon } from "lucide-react";
+import { Menu, Share2, LogOut, Settings, MessageCircle, User as UserIcon, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +75,7 @@ export default function Layout({ children, currentPageName }) {
   const [isLoading, setIsLoading] = useState(false);
   const hasInitializedRef = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -567,6 +570,7 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     setMobileMenuOpen(false);
+    setSidebarMobileOpen(false);
   }, [location]);
 
   // 🔓 Pages que renderizam SEM layout (auth/onboarding puro)
@@ -873,7 +877,22 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex h-16 justify-between items-center">
 
               {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
+                {/* 🆕 Botão hambúrguer esquerdo — abre a sidebar lateral no mobile */}
+                {(() => {
+                  const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
+                  if (!cfg.showSidebar) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setSidebarMobileOpen(true)}
+                      className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-300 hover:text-emerald-300 hover:bg-white/5"
+                      aria-label="Abrir painel"
+                    >
+                      <PanelLeft className="h-5 w-5" />
+                    </button>
+                  );
+                })()}
                 <img
                   src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
                   alt="Leilão NoZap"
@@ -952,7 +971,33 @@ export default function Layout({ children, currentPageName }) {
           onLogout={handleLogout}
         />
 
-        <main className={isLandingPage ? "" : "pt-16"}>{children}</main>
+        {/* 🛡️ SIDEBAR LATERAL CONTEXTUAL POR ROLE (desktop fixed + mobile drawer) */}
+        {(() => {
+          const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
+          if (!cfg.showSidebar) return null;
+          return (
+            <RoleSidebar
+              config={cfg}
+              currentPageName={currentPageName}
+              isMobileOpen={sidebarMobileOpen}
+              onCloseMobile={() => setSidebarMobileOpen(false)}
+            />
+          );
+        })()}
+
+        <main
+          className={
+            isLandingPage
+              ? ""
+              : `pt-16 ${
+                  getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems).showSidebar
+                    ? "md:pl-60"
+                    : ""
+                }`
+          }
+        >
+          {children}
+        </main>
         <Footer />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}

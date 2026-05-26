@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -15,8 +15,6 @@ import {
   Hammer,
   Shield,
   Crown,
-  Settings,
-  ChevronDown,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -87,16 +85,14 @@ export default function NavMobile({
   isLeiloeiro,
   // eslint-disable-next-line no-unused-vars
   isCatalogPage,
+  // eslint-disable-next-line no-unused-vars
   adminMenuItems,
   // eslint-disable-next-line no-unused-vars
   onShareClick,
 }) {
   const navigate = useNavigate();
-  const [adminOpen, setAdminOpen] = useState(false);
 
   if (!isOpen) return null;
-
-  const isAdminUser = currentUser?.role === "admin" || currentUser?.role === "super_admin";
 
   const userLogged = !!(currentUser && currentUser.email);
   const panels = userLogged ? resolveUserPanels(currentUser) : [];
@@ -265,53 +261,6 @@ export default function NavMobile({
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* === PAINEL ADMIN (colapsável — só admin/super_admin) === */}
-            {userLogged && isAdminUser && adminMenuItems && adminMenuItems.length > 0 && (
-              <div
-                className="pt-4 mt-3"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setAdminOpen((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-base font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                >
-                  <span className="flex items-center gap-3">
-                    <Settings className="w-5 h-5 text-emerald-400" />
-                    Painel Admin
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${adminOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {adminOpen && (
-                  <div className="mt-2 pl-2 space-y-3 max-h-[50vh] overflow-y-auto">
-                    {adminMenuItems.map((category) => (
-                      <div key={category.title}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 px-3 mb-1">
-                          {category.title}
-                        </p>
-                        <ul className="space-y-0.5">
-                          {(category.items || []).map((item) => (
-                            <li key={item.pageName}>
-                              <Link
-                                to={createPageUrl(item.pageName)}
-                                onClick={onClose}
-                                className="block px-3 py-2 rounded-md text-[13px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors truncate"
-                              >
-                                {item.title}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
 
