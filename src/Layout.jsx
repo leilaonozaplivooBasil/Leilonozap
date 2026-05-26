@@ -754,9 +754,12 @@ export default function Layout({ children, currentPageName }) {
 
   const shouldShowLoading = isLoading;
 
-  // 🛡️ DETECÇÃO DE PÁGINA ADMIN: se o usuário está logado E a página está na lista ADMIN_PAGES,
-  // renderiza com sidebar lateral (AdminLayout) em vez do menu de topo público.
-  const isAdminPage = isLoggedIn && ADMIN_PAGES.has(currentPageName);
+  // 🛡️ UNIFICAÇÃO DE NAVEGAÇÃO (Opção A): TODAS as páginas (públicas + admin)
+  // usam o mesmo cabeçalho público com avatar dropdown "ACESSAR COMO...".
+  // O usuário pode trocar de painel a qualquer momento via avatar, sem ficar
+  // preso em uma sidebar lateral. AdminLayout/AdminSidebar foram desativados
+  // mas mantidos no código por segurança (não deletados).
+  const isAdminPage = false;
 
   if (shouldShowLoading) {
     return (
