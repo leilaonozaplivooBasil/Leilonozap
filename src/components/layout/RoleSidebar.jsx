@@ -57,15 +57,23 @@ export default function RoleSidebar({
     <div className="flex flex-col h-full">
       {/* Header da sidebar */}
       <div
-        className="px-4 py-3 flex items-center justify-between flex-shrink-0"
+        className="px-4 py-3 flex items-start justify-between flex-shrink-0 gap-2"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
       >
-        <span className="text-sm font-bold text-emerald-300 truncate">{title}</span>
+        <div className="flex flex-col min-w-0 flex-1">
+          {/* Badge "MODO ADMIN" — sempre presente (sidebar é admin-only) */}
+          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400/90 mb-0.5">
+            🛡️ Modo Admin
+          </span>
+          <span className="text-sm font-bold text-emerald-300 truncate" title={title}>
+            {title}
+          </span>
+        </div>
         {/* Botão fechar — só mobile */}
         <button
           type="button"
           onClick={onCloseMobile}
-          className="md:hidden p-1 rounded hover:bg-white/5 text-gray-400 hover:text-white"
+          className="md:hidden p-1 rounded hover:bg-white/5 text-gray-400 hover:text-white flex-shrink-0"
           aria-label="Fechar painel"
         >
           <X className="w-5 h-5" />
