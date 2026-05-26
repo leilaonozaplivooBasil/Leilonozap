@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import LojistaDashboardHeader from "@/components/lojista/LojistaDashboardHeader";
 import LojistaDashboardStats from "@/components/lojista/LojistaDashboardStats";
 import LojistaDashboardTabs from "@/components/lojista/LojistaDashboardTabs";
+import { usePanelVisibility } from "@/hooks/usePanelVisibility";
 
 const StoreEntity = base44.entities.Store;
 const AuctionEntity = base44.entities.Auction;
@@ -59,6 +60,12 @@ export default function LojistaDashboard() {
     });
     return () => unsubscribeCatalog();
   }, [currentStore]);
+
+  // 🔄 Refresh ao voltar de outra aba/app (camada extra além do subscribe)
+  usePanelVisibility(
+    () => { if (currentStore?.id) loadDashboardData(currentStore.id); },
+    { enabled: !!currentStore?.id, throttleMs: 3000 }
+  );
 
   useEffect(() => {
     if (!currentStore?.id) return;

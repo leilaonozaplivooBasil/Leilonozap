@@ -5,9 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, Play, Zap } from 'lucide-react';
+import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, Play, Zap, Stethoscope } from 'lucide-react';
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import PortalPageHeader from '@/components/common/PortalPageHeader';
 
 /**
  * 🩺 PÁGINA DE DIAGNÓSTICO DO SISTEMA
@@ -162,22 +163,24 @@ export default function SystemDiagnostics() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">🩺 Diagnóstico do Sistema</h1>
-            <p className="text-gray-400">Logs cirúrgicos de todo o sistema</p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={loadLogs} variant="outline" disabled={isLoading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
-            <Button onClick={exportLogs} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar
-            </Button>
-          </div>
-        </div>
+        <PortalPageHeader
+          icon={Stethoscope}
+          title="Diagnóstico do Sistema"
+          subtitle="Logs cirúrgicos de todo o sistema"
+          accentColor="cyan"
+          actions={
+            <>
+              <Button onClick={loadLogs} variant="outline" disabled={isLoading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              <Button onClick={exportLogs} variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+              </Button>
+            </>
+          }
+        />
 
         {/* 🛠️ SEÇÃO DE AÇÕES DE REPARO */}
         <Card className="bg-emerald-900/10 border-emerald-500/30 mb-6">

@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, DollarSign, Search, ChevronDown, ChevronUp, Wallet, CheckCircle, XCircle } from "lucide-react";
+import { Users, TrendingUp, DollarSign, Search, ChevronDown, ChevronUp, Wallet, CheckCircle, XCircle, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { approveWithdrawal } from "@/functions/approveWithdrawal";
 import { rejectWithdrawal } from "@/functions/rejectWithdrawal";
+import PortalPageHeader from "@/components/common/PortalPageHeader";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -168,10 +169,12 @@ export default function InfluencersDashboard() {
   return (
     <div className="min-h-screen bg-gray-900 text-white py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Painel de Alavancagem</h1>
-          <p className="text-gray-400">Gerenciamento completo de indicações Sai de Baixo</p>
-        </div>
+        <PortalPageHeader
+          icon={Megaphone}
+          title="Painel de Alavancagem"
+          subtitle="Gerenciamento completo de indicações Sai de Baixo"
+          accentColor="amber"
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
           <TabsList className="bg-gray-800 border-gray-700">

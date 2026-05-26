@@ -13,6 +13,8 @@ import ExpenseFormModal from "@/components/financial/ExpenseFormModal";
 import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import PaymentModal from "@/components/financial/PaymentModal";
+import PortalPageHeader from "@/components/common/PortalPageHeader";
+import { DollarSign } from "lucide-react";
 
 const FinancialExpense = base44.entities.FinancialExpense;
 
@@ -165,20 +167,22 @@ export default function Financial() {
     <div className="min-h-screen bg-gray-900 p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Financeiro</h1>
-            <p className="text-gray-400 text-sm mt-1">Controle completo de contas e gastos</p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setShowPDF(true)} variant="outline" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2">
-              <FileText className="w-4 h-4" /> Gerar PDF
-            </Button>
-            <Button onClick={() => { setEditingExpense(null); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
-              <Plus className="w-4 h-4" /> Novo Gasto
-            </Button>
-          </div>
-        </div>
+        <PortalPageHeader
+          icon={DollarSign}
+          title="Financeiro"
+          subtitle="Controle completo de contas e gastos"
+          accentColor="emerald"
+          actions={
+            <>
+              <Button onClick={() => setShowPDF(true)} variant="outline" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2">
+                <FileText className="w-4 h-4" /> Gerar PDF
+              </Button>
+              <Button onClick={() => { setEditingExpense(null); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+                <Plus className="w-4 h-4" /> Novo Gasto
+              </Button>
+            </>
+          }
+        />
 
         {/* Tabs */}
         <div className="flex gap-2">

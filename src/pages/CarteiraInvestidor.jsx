@@ -4,6 +4,7 @@ import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, CheckCir
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
+import { usePanelVisibility } from '@/hooks/usePanelVisibility';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -25,6 +26,9 @@ export default function CarteiraInvestidor() {
     const pendingLote = searchParams.get('lote');
 
     useEffect(() => { loadDados(); }, []);
+
+    // 🔄 Refresh ao voltar de outra aba/app (saldos críticos podem ter mudado)
+    usePanelVisibility(loadDados, { enabled: !!usuario, throttleMs: 3000 });
 
     const loadDados = async () => {
         setIsLoading(true);

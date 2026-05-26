@@ -25,6 +25,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
 import TreeHierarchy from "../components/network/TreeHierarchy";
+import PortalPageHeader from "@/components/common/PortalPageHeader";
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
@@ -1122,15 +1123,12 @@ export default function NetworkOverview() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-start gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
-              <span className="hidden sm:inline">📊</span> Sistema de Alavancagem
-            </h1>
-            <p className="text-sm sm:text-base text-gray-400">Visão completa do sistema</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+        <PortalPageHeader
+          icon={Users}
+          title="Sistema de Alavancagem"
+          subtitle="Visão completa do sistema multinível"
+          accentColor="green"
+          actions={
             <Button
               onClick={() => setShowMessageDispatcher(true)}
               className="bg-blue-600 hover:bg-blue-700"
@@ -1142,8 +1140,8 @@ export default function NetworkOverview() {
               </svg>
               Disparar Mensagens
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4 mb-8">
           <Card className="bg-gray-800 border-gray-700">

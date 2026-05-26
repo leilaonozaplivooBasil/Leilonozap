@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Receipt, Search, DollarSign, Clock, CheckCircle, CreditCard, QrCode, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import PortalPageHeader from "@/components/common/PortalPageHeader";
 
 export default function TransactionHistory() {
   const [payments, setPayments] = useState([]);
@@ -126,23 +127,22 @@ export default function TransactionHistory() {
     <div className="min-h-screen bg-gray-900 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Receipt className="w-8 h-8 text-green-500" />
-            <div>
-              <h1 className="text-3xl font-bold text-white">Histórico de Transações</h1>
-              <p className="text-gray-400 text-sm mt-0.5">Gateway: ASAAS · {stats.countTotal} registros</p>
-            </div>
-          </div>
-          <button
-            onClick={loadPayments}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </button>
-        </div>
+        <PortalPageHeader
+          icon={Receipt}
+          title="Histórico de Transações"
+          subtitle={`Gateway: ASAAS · ${stats.countTotal} registros`}
+          accentColor="green"
+          actions={
+            <button
+              onClick={loadPayments}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </button>
+          }
+        />
 
         {lastUpdated && (
           <p className="text-gray-500 text-xs mb-4">

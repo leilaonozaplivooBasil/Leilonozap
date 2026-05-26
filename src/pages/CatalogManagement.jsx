@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
+import PortalPageHeader from '@/components/common/PortalPageHeader';
 
 export default function CatalogManagement() {
   const navigate = useNavigate();
@@ -220,7 +221,12 @@ export default function CatalogManagement() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento da Loja Virtual</h1>
+        <PortalPageHeader
+          icon={Store}
+          title="Gerenciamento da Loja Virtual"
+          subtitle="Banners, produtos, destaques e configurações"
+          accentColor="blue"
+        />
         
         {/* Tabs */}
         <div className="flex gap-2 mb-8">

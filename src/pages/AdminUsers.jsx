@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import PortalPageHeader from '@/components/common/PortalPageHeader';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -296,14 +297,14 @@ Equipe Leilão NoZap 🎯
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
+        <PortalPageHeader
+          icon={Key}
+          title="Gerenciar Usuários e Senhas"
+          subtitle="Controle de acessos, senhas e funções"
+          accentColor="violet"
+        />
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Key className="w-6 h-6 text-green-400" />
-              Gerenciar Usuários e Senhas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="flex gap-2 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

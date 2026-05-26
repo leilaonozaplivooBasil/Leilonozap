@@ -18,9 +18,11 @@ import {
   CheckCircle,
   XCircle,
   Flag,
-  FileText
+  FileText,
+  Handshake
 } from 'lucide-react';
 import { toast } from 'sonner';
+import PortalPageHeader from '@/components/common/PortalPageHeader';
 
 const PLANS = [
   {
@@ -372,10 +374,12 @@ export default function ActivePartners() {
     <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-4 sm:mb-8">
-          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">Parceiros Ativos</h1>
-          <p className="text-gray-400 text-sm sm:text-base">Gerencie todos os planos de parceria ativos</p>
-        </div>
+        <PortalPageHeader
+          icon={Handshake}
+          title="Parceiros Ativos"
+          subtitle="Gerencie todos os planos de parceria ativos"
+          accentColor="purple"
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-8">

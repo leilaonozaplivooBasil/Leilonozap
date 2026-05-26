@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import CadastroInvestidorModal from '@/components/crm/CadastroInvestidorModal';
 import { useSecureRole } from '@/components/hooks/useSecureRole';
+import { usePanelVisibility } from '@/hooks/usePanelVisibility';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -41,6 +42,9 @@ export default function CRMInvestidores() {
         // Só carrega dados após a verificação de autorização ser concluída
         if (authStatus === 'authorized') loadDados();
     }, [authStatus]);
+
+    // 🔄 Refresh ao voltar de outra aba/app (capital de investidores muda em tempo real)
+    usePanelVisibility(loadDados, { enabled: authStatus === 'authorized', throttleMs: 3000 });
 
     const totalSaldoGeral = investidores.reduce((acc, inv) => acc + (inv.saldo_disponivel ?? 0) + (inv.saldo_alocado ?? 0), 0);
     const totalAlocado = investidores.reduce((acc, inv) => acc + (inv.saldo_alocado ?? 0), 0);
