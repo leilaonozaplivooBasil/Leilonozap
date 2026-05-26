@@ -17,6 +17,8 @@ import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPo
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import DevLogoutButton from "@/components/dev/DevLogoutButton";
+import AdminLayout from "@/components/layout/AdminLayout";
+import { ADMIN_PAGES } from "@/lib/adminNavConfig";
 
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
@@ -752,6 +754,10 @@ export default function Layout({ children, currentPageName }) {
 
   const shouldShowLoading = isLoading;
 
+  // 🛡️ DETECÇÃO DE PÁGINA ADMIN: se o usuário está logado E a página está na lista ADMIN_PAGES,
+  // renderiza com sidebar lateral (AdminLayout) em vez do menu de topo público.
+  const isAdminPage = isLoggedIn && ADMIN_PAGES.has(currentPageName);
+
   if (shouldShowLoading) {
     return (
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[10000]">
@@ -813,6 +819,44 @@ export default function Layout({ children, currentPageName }) {
           }
         `}</style>
       </div>
+    );
+  }
+
+  // 🛡️ ADMIN LAYOUT — Sidebar profissional para painéis internos
+  if (isAdminPage) {
+    return (
+      <ErrorBoundary>
+        <GlobalMonitor />
+        <AdminLayout
+          currentUser={currentUser}
+          currentPageName={currentPageName}
+          onLogout={handleLogout}
+        >
+          {children}
+        </AdminLayout>
+
+        {/* Modais críticos preservados no contexto admin */}
+        {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+        {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
+        {showShareModal && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} context="default" />}
+        {showLoginModal && (
+          <LoginModal
+            onClose={() => setShowLoginModal(false)}
+            onSuccess={(user) => {
+              setCurrentUser(user);
+              setShowLoginModal(false);
+              setTimeout(() => triggerPanelSelector(user), 150);
+            }}
+            onSwitchToRegister={() => {
+              setShowLoginModal(false);
+              navigate(createPageUrl("Register"));
+            }}
+          />
+        )}
+        <PainelSelector />
+        <PaymentConfirmationPopup />
+        <DevLogoutButton currentUser={currentUser} />
+      </ErrorBoundary>
     );
   }
 

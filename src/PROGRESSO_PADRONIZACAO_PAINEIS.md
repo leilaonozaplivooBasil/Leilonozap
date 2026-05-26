@@ -1,7 +1,61 @@
 # 📋 PROGRESSO — PADRONIZAÇÃO DOS PAINÉIS DO LEILÃO NOZAP
 
 **Última atualização:** 26/05/2026
-**Status global:** ✅ **MISSÃO COMPLETA — FASES A, B e C CONCLUÍDAS**
+**Status global:** ✅ **MISSÃO COMPLETA — FASES A, B, C e D CONCLUÍDAS**
+
+---
+
+## 🎉 FASE D — SIDEBAR PROFISSIONAL UNIFICADA (CONCLUÍDA em 26/05/2026)
+
+### 🎯 Objetivo:
+Substituir o menu de topo dos painéis administrativos por uma **sidebar lateral profissional fixa** estilo "LIVOO", trazendo aparência de sistema corporativo real.
+
+### 📦 Entregáveis:
+
+| Arquivo | Tipo | Tamanho |
+|---------|------|---------|
+| ✅ `lib/adminNavConfig.js` | 🆕 CRIADO | ~170 linhas |
+| ✅ `components/layout/AdminSidebar.jsx` | 🆕 CRIADO | ~240 linhas |
+| ✅ `components/layout/AdminLayout.jsx` | 🆕 CRIADO | ~45 linhas |
+| ✅ `Layout.jsx` | ✏️ EDIT MÍNIMA | +40 linhas (1 import + 1 flag + 1 branch) |
+
+### 🎨 Especificações visuais entregues:
+
+- **Desktop:** sidebar fixa 260px à esquerda, gradiente `#0a0f1c → #050810`
+- **Mobile:** drawer off-canvas com overlay + ESC fecha + bloqueio de scroll
+- **Topo:** logo + badge da role (cor accent dinâmica por role)
+- **Corpo:** 6 categorias (PAINEL, FINANCEIRO, OPERAÇÃO, REDE & PARCEIROS, FERRAMENTAS IA, CONFIGURAÇÕES)
+- **Item ativo:** pill com gradiente cor accent + ponto à direita
+- **Rodapé:** avatar + nome + email + botão Sair
+- **39 páginas** no escopo ADMIN_PAGES (ver `lib/adminNavConfig.js`)
+
+### 🛡️ Garantias de segurança:
+
+✅ Páginas públicas (Home, Catalog, AuctionRoom, etc.) **NÃO foram tocadas** — continuam com menu de topo  
+✅ Páginas frozen 100% intactas (não estão em ADMIN_PAGES)  
+✅ Toda a lógica de auth/`safeMergeUser`/`handleLogout` preservada  
+✅ Modais críticos (LoginModal, WelcomeModal, PainelSelector, PaymentConfirmationPopup, DevLogoutButton) renderizados em ambos contextos  
+✅ Login screens (Lojista/Vendedor) NÃO mostram sidebar antes do login  
+✅ Renderização condicional por role (admin vê tudo, vendedor vê apenas seu painel + financeiro pessoal)  
+✅ Mobile-first: touch targets 44px+, responsivo até 320px  
+✅ Acessibilidade: `aria-label`, ESC fecha drawer, foco preservado  
+
+### 🎨 Cores accent por role:
+
+| Role | Cor | Visual badge |
+|------|-----|--------------|
+| super_admin | fuchsia 💗 | Rosa neon |
+| admin | violet 💜 | Violeta |
+| licensee | amber 🟡 | Âmbar |
+| investidor | violet 💜 | Violeta |
+| leiloeiro | blue 🔵 | Azul |
+| lojista/loja | cyan 🟦 | Ciano |
+| seller/vendedor | emerald 🟢 | Verde |
+| arrematante | green 🟩 | Verde escuro |
+
+---
+
+## ✅ HISTÓRICO ANTERIOR
 
 ---
 
