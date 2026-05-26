@@ -25,11 +25,6 @@ export default function CarteiraInvestidor() {
     const pendingAmount = Number(searchParams.get('amount')) || 0;
     const pendingLote = searchParams.get('lote');
 
-    useEffect(() => { loadDados(); }, []);
-
-    // 🔄 Refresh ao voltar de outra aba/app (saldos críticos podem ter mudado)
-    usePanelVisibility(loadDados, { enabled: !!usuario, throttleMs: 3000 });
-
     const loadDados = async () => {
         setIsLoading(true);
         try {
@@ -61,6 +56,12 @@ export default function CarteiraInvestidor() {
             setIsLoading(false);
         }
     };
+
+    // ⚠️ Hooks que dependem de loadDados — DEVEM vir DEPOIS da declaração (evita TDZ)
+    useEffect(() => { loadDados(); }, []);
+
+    // 🔄 Refresh ao voltar de outra aba/app (saldos críticos podem ter mudado)
+    usePanelVisibility(loadDados, { enabled: !!usuario, throttleMs: 3000 });
 
     const handleDepositarCapital = () => {
         const loteId = searchParams.get('lote_id');
