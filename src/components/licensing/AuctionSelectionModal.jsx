@@ -10,7 +10,7 @@ const AuctionItem = ({ auction, onSelect }) => {
     return (
         <div className="flex items-center gap-4 p-3 bg-gray-800 hover:bg-gray-700/80 rounded-lg transition-colors cursor-pointer" onClick={() => onSelect(auction.id)}>
             <img 
-                src={auction.image_urls?.[0] || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png'} 
+                src={auction.image_urls?.[0] || 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png'} 
                 alt={auction.title}
                 className="w-20 h-20 object-cover rounded-md bg-gray-700"
             />

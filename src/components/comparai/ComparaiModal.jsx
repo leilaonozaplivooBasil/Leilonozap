@@ -313,7 +313,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                 alt="Comparai"
                 className="w-12 h-12 rounded-full"
               />
@@ -344,7 +344,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-2xl pr-12">
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                 alt="Comparai"
                 className="w-16 h-16 rounded-full bg-white p-2 shadow-lg"
               />
@@ -419,7 +419,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                     <div className="flex items-center justify-between flex-wrap gap-4">
                       <div className="flex items-center gap-3">
                         <img 
-                          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+                          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
                           alt="NoZap"
                           className="w-12 h-12 rounded-full border-2 border-green-400"
                         />
@@ -462,7 +462,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                     <div className="bg-gradient-to-br from-orange-900/30 to-red-900/20 border-2 border-orange-500 rounded-xl p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-4">
                         <img 
-                          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                           alt="Comparai"
                           className="w-10 h-10"
                         />
@@ -486,7 +486,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                     <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-2 border-green-500 rounded-xl p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-4">
                         <img 
-                          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
+                          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
                           alt="NoZap"
                           className="w-10 h-10"
                         />

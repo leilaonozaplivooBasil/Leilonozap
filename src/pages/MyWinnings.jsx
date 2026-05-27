@@ -32,7 +32,7 @@ const statusConfigSaiDeBaixo = {
 const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
     const config = statusConfig[auction.order_status] || statusConfig.paid;
-    const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+    const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
 
     return (
         <Card className="group bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(34,197,94,0.12)]">

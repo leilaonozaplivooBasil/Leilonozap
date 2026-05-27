@@ -5,8 +5,8 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { base44 } from "@/api/base44Client";
 
-const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/9402aeaa5_leilonozap3.png";
-const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
+const XEosLogo = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/9402aeaa5_leilonozap3.png";
+const NoZapLogo = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
 
 export default function DailyRanking({ allSales }) {
   const [sellersRanking, setSellersRanking] = React.useState([]);
@@ -188,7 +188,7 @@ export default function DailyRanking({ allSales }) {
       let y = 12;
 
       // ===== HEADER: X-EOS (esquerda) | Título (centro) | NoZap (direita) =====
-      const noZapLogoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      const noZapLogoUrl = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
       const xeosLogoUrl = XEosLogo;
 
       let xeosBase64 = null;

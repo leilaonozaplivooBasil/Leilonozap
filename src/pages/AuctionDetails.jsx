@@ -172,7 +172,7 @@ export default function AuctionDetails() {
                         index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                       }`}
                       onError={(e) => {
-                        e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+                        e.target.src = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
                       }}
                     />
                   ))}

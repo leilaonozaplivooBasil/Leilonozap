@@ -88,7 +88,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
               className="relative z-10"
             >
               <img
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d97d32ed2_image.png"
+                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d97d32ed2_image.png"
                 alt="Leiloeiro"
                 className="auctioneer-image object-contain drop-shadow-2xl"
                 style={{

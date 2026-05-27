@@ -60,7 +60,7 @@ export default function SellerLoginForm({ onSuccess }) {
         {/* Logo */}
         <div className="text-center mb-8">
           <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
             alt="Leilão NoZap"
             className="h-12 w-auto mx-auto mb-4"
           />

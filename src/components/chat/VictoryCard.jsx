@@ -37,7 +37,7 @@ export default function VictoryCard({ winner, auction }) {
           {/* 🔨 LOGO DO MARTELO */}
           <div className="flex justify-center mb-3 md:mb-6">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/50cd0ef98_image.png"
+              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/50cd0ef98_image.png"
               alt="Arrematado"
               className="w-20 h-20 md:w-32 md:h-32 object-contain animate-bounce-celebration drop-shadow-2xl"
               style={{

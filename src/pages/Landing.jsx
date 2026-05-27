@@ -86,13 +86,13 @@ export default function LandingPage() {
   }, []);
 
   const productImages = [
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/f917607a1_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/42516c4cc_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/560991041_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/78549b7ee_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/32aeb727f_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/245d4009f_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png"
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/f917607a1_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/42516c4cc_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/560991041_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/78549b7ee_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/32aeb727f_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/245d4009f_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png"
   ];
   
   // Removed floatingItems array based on the outline
@@ -101,7 +101,7 @@ export default function LandingPage() {
     <>
       <div className="page-entry-animation">
         <div className="hammer-impact-indicator">
-          <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/917b16eb6_image.png" alt="Martelo de Leilão" className="w-20 h-20" decoding="async" width={80} height={80} />
+          <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/917b16eb6_image.png" alt="Martelo de Leilão" className="w-20 h-20" decoding="async" width={80} height={80} />
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export default function LandingPage() {
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10, 15, 28, 0.55)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(16, 185, 129, 0.08)' }}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
             alt="Leilão NoZap"
             className="h-12 w-auto"
             fetchpriority="high"
@@ -137,7 +137,7 @@ export default function LandingPage() {
         <div className="content-wrapper">
           <div className="text-center pt-8 md:pt-16">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
               alt="Leilão NoZap"
               className="w-28 h-28 md:w-32 md:h-32 mx-auto mb-6 rounded-full shadow-2xl border-2 border-green-500/50 logo-entrance"
               decoding="async"

@@ -1801,7 +1801,7 @@ export default function CreateAuction() {
                             />
                             <p className="text-xs text-green-300 mt-2 flex items-center gap-1">
                               <img
-                                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                                 alt="Comparai"
                                 className="w-4 h-4 rounded-full"
                               />

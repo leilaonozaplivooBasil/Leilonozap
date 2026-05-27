@@ -425,7 +425,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                   }`}
                 onError={(e) => {
-                  e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+                  e.target.src = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
                   e.target.classList.add('p-4');
                 }}
               />
@@ -577,7 +577,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             }}>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <img
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
                   alt="Leilão NoZap"
                   className="w-8 h-8"
                 />
@@ -636,7 +636,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 } : {}}
               >
                 <img
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                   alt="Comparai"
                   className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
                 />

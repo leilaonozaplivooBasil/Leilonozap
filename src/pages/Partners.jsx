@@ -353,7 +353,7 @@ export default function PartnersPage() {
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[5000]">
         <div className="text-center">
           <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
             alt="PROTEÇÃO MASTER"
             className="w-20 h-20 mx-auto mb-6 rounded-full"
             style={{

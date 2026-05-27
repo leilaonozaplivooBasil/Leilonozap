@@ -56,7 +56,7 @@ export default function WelcomeModal({ onAccept }) {
         <CardHeader className="text-center pb-4">
           <div className="mx-auto mb-4">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
               alt="Leilão NoZap"
               className="w-20 h-20 mx-auto rounded-full border-2 border-green-500/50 animate-pulse"
             />

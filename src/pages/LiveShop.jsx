@@ -205,7 +205,7 @@ export default function LiveShop() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/4898f3e09_br-11134210-7r98o-lub0ag42vvxhf2.jpg"
+                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/4898f3e09_br-11134210-7r98o-lub0ag42vvxhf2.jpg"
                 alt="Sai de Baixo"
                 className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => navigate(createPageUrl("SaiDeBaixo"))}

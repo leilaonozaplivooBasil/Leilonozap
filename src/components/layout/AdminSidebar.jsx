@@ -86,7 +86,7 @@ export default function AdminSidebar({ currentUser, currentPageName, onLogout, m
           className="flex items-center gap-3 w-full group"
         >
           <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
             alt="Leilão NoZap"
             className="h-10 w-auto group-hover:scale-105 transition-transform"
           />

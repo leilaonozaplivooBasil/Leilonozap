@@ -150,8 +150,8 @@ await new Promise(resolve => setTimeout(resolve, 5000));
       }
     ],
     images: [
-      'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/e83318e9e_image.png',
-      'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/14a2cac33_CapturadeTela2025-10-05as174256.png'
+      'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/e83318e9e_image.png',
+      'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/14a2cac33_CapturadeTela2025-10-05as174256.png'
     ],
     nextSteps: [
       'Som especial para "VENDIDO!" (opcional)',

@@ -14,7 +14,7 @@ export default function ComparaiButton({ auction, mode }) {
         title="Comparar Preços com Comparai"
       >
         <img 
-          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
           alt="Comparai"
           className="w-full h-full object-cover rounded-full"
         />

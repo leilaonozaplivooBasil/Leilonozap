@@ -54,7 +54,7 @@ export default function AIMessage({ message, winner, auction }) {
       return (
         <div className="flex items-center gap-3 py-2">
           <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
+            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
             alt="Leiloeiro"
             className="w-16 h-16 animate-swing"
           />

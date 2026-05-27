@@ -45,7 +45,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" alt="Leilão NoZap" class="logo">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" alt="Leilão NoZap" class="logo">
       <h1 style="color: white; margin: 0;">🚀 Programa de Licenciamento</h1>
     </div>
     
@@ -54,7 +54,7 @@ const MESSAGE_TEMPLATES = {
       <p>Você foi SELECIONADO para nosso Programa de Licenciamento exclusivo!</p>
       
       <div class="valora-section">
-        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/1cee75b0_90515FAF-DF1E-4B38-88A2-0DB1650A0338.png" alt="Valora Pay" style="width: 200px;">
+        <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/1cee75b0_90515FAF-DF1E-4B38-88A2-0DB1650A0338.png" alt="Valora Pay" style="width: 200px;">
         <h3 style="color: #1DB24A;">💰 VALORA PAY (V$)</h3>
         <p style="color: white;">Nossa Moeda Exclusiva!</p>
       </div>
@@ -67,9 +67,9 @@ const MESSAGE_TEMPLATES = {
       <p><strong>Cadastre-se:</strong> {{referral_link}}</p>
       
       <div style="text-align: center; margin: 20px 0;">
-        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/51d72aa1d_C92CFAFF-FF7B-45A0-9148-2B1B09CE77A512.png" style="width: 120px; margin: 5px;">
-        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/940575a06_7E0EC402-D37F-4C7E-A9AF-9CBAFAEC67B5.png" style="width: 120px; margin: 5px;">
-        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/35cd22e8d_22E71172-1469-40C1-91F5-52FB1CEB81B7.png" style="width: 120px; margin: 5px;">
+        <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/51d72aa1d_C92CFAFF-FF7B-45A0-9148-2B1B09CE77A512.png" style="width: 120px; margin: 5px;">
+        <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/940575a06_7E0EC402-D37F-4C7E-A9AF-9CBAFAEC67B5.png" style="width: 120px; margin: 5px;">
+        <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/35cd22e8d_22E71172-1469-40C1-91F5-52FB1CEB81B7.png" style="width: 120px; margin: 5px;">
       </div>
     </div>
 
@@ -100,7 +100,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparai" style="width: 150px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparai" style="width: 150px;">
       <h1 style="color: white; margin: 10px 0;">🔍 COMPARAI</h1>
       <p style="color: #dbeafe;">Comparação Inteligente de Preços</p>
     </div>
@@ -119,7 +119,7 @@ const MESSAGE_TEMPLATES = {
     </div>
 
     <div class="footer">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparai" style="width: 60px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparai" style="width: 60px;">
       <p>Equipe Leilão NoZap - Transparência garantida!</p>
     </div>
   </div>
@@ -174,7 +174,7 @@ const MESSAGE_TEMPLATES = {
     </div>
 
     <div class="footer">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 60px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 60px;">
       <p>Equipe Leilão NoZap</p>
     </div>
   </div>
@@ -203,7 +203,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
       <h1 style="color: white;">🎉 PARABÉNS!</h1>
     </div>
     
@@ -250,7 +250,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
       <h1 style="color: white;">📚 LICENCIADO CATÁLOGO!</h1>
     </div>
     
@@ -351,7 +351,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
       <h1 style="color: white;">💼 EXECUTIVO!</h1>
       <p style="color: #ddd6fe;">Você chegou à elite!</p>
     </div>
@@ -453,7 +453,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 120px;">
       <h1 style="color: white;">⭐ DIRETOR!</h1>
       <p style="color: #fed7aa;">Elite Absoluta</p>
     </div>
@@ -515,7 +515,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 150px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 150px;">
       <div class="ceo-crown">👑</div>
       <h1 style="color: white; font-size: 36px; margin: 0;">CEO</h1>
       <p style="color: #fca5a5;">PODER MÁXIMO</p>
@@ -643,7 +643,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 150px;">
+      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG" style="width: 150px;">
       <div class="trophy">🏆</div>
       <h1 style="color: white; font-size: 42px; margin: 0;">FUNDADOR</h1>
       <p style="color: #fef3c7; font-size: 18px;">LENDA IMORTAL</p>

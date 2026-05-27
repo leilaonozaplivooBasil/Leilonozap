@@ -4,7 +4,7 @@ import { FileText, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { jsPDF } from 'jspdf';
 
-const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+const NoZapLogo = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
 
 export default function DailyReportPDF({ daySales, date, sellersData }) {
   const [isGenerating, setIsGenerating] = useState(false);

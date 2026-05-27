@@ -26,7 +26,7 @@ export default function LayoutProtection({ children, currentPageName }) {
       theme_color: "#16a34a",
       icons: [
         {
-          src: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG",
+          src: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG",
           sizes: "192x192",
           type: "image/png"
         }
@@ -74,7 +74,7 @@ export default function LayoutProtection({ children, currentPageName }) {
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[5000]">
         <div className="text-center">
            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
               alt="Leilão NoZap"
               className="w-24 h-24 mx-auto mb-4 rounded-full shadow-2xl border-2 border-green-500/30 animate-pulse"
             />

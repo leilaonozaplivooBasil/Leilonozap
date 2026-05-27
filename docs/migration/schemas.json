@@ -1,0 +1,2883 @@
+{
+  "AppUser": {
+    "record_count": 37,
+    "fields": {
+      "indicated_clients_count": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "recruited_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "catalog_total_commissions_generated": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "password_reset_token": {
+        "types": [
+          "str"
+        ],
+        "sample": "it3n91yedk6a55ew9p3dk",
+        "nullable": true
+      },
+      "points": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "password": {
+        "types": [
+          "str"
+        ],
+        "sample": "p1e3k545mid8mby3yzh35",
+        "nullable": false
+      },
+      "is_seller": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": true
+      },
+      "network_bids_count": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "commission_balance": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "cpf": {
+        "types": [
+          "str"
+        ],
+        "sample": "10366039709",
+        "nullable": true
+      },
+      "profile_photo_url": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "arrematante_context": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "arrematante_responsavel_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "access_token": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "saldo_disponivel": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "full_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "BEATRIZ SANTANNA",
+        "nullable": false
+      },
+      "phone": {
+        "types": [
+          "str"
+        ],
+        "sample": "21920074474",
+        "nullable": false
+      },
+      "address_street": {
+        "types": [
+          "str"
+        ],
+        "sample": "Avenida Lúcio Costa",
+        "nullable": true
+      },
+      "arrematante_commission_percentage": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": true
+      },
+      "partner_plan_activated_at": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-01-20T00:00:00.000Z",
+        "nullable": true
+      },
+      "access_token_expires": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "total_operation_fee_percentage": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": true
+      },
+      "terms_accepted": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "role": {
+        "types": [
+          "str"
+        ],
+        "sample": "licensee",
+        "nullable": false
+      },
+      "career_levels": {
+        "types": [
+          "list"
+        ],
+        "sample": "['licenciado_catalogo']",
+        "nullable": false
+      },
+      "address_complement": {
+        "types": [
+          "str"
+        ],
+        "sample": "bl 1 ap 1417",
+        "nullable": true
+      },
+      "address_zip_code": {
+        "types": [
+          "str"
+        ],
+        "sample": "22630010",
+        "nullable": true
+      },
+      "address_state": {
+        "types": [
+          "str"
+        ],
+        "sample": "RJ",
+        "nullable": true
+      },
+      "partner_plan_amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "20.0",
+        "nullable": true
+      },
+      "total_commissions_generated": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "primary_career_level": {
+        "types": [
+          "str"
+        ],
+        "sample": "licenciado_catalogo",
+        "nullable": false
+      },
+      "avatar_color": {
+        "types": [
+          "str"
+        ],
+        "sample": "#25D366",
+        "nullable": true
+      },
+      "saldo_alocado": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "nickname": {
+        "types": [
+          "str"
+        ],
+        "sample": "beatriz-santanna",
+        "nullable": true
+      },
+      "store_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Beatriz Santanna",
+        "nullable": true
+      },
+      "won_auctions": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "total_bids": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "email": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "display_last_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Archanjo",
+        "nullable": true
+      },
+      "catalog_commission_balance": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "address_neighborhood": {
+        "types": [
+          "str"
+        ],
+        "sample": "Barra da Tijuca",
+        "nullable": true
+      },
+      "address_number": {
+        "types": [
+          "str"
+        ],
+        "sample": "3150",
+        "nullable": true
+      },
+      "address_city": {
+        "types": [
+          "str"
+        ],
+        "sample": "Rio de Janeiro",
+        "nullable": true
+      },
+      "referred_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "password_reset_expires": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-01T18:09:25.059Z",
+        "nullable": true
+      },
+      "avatar_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": true
+      },
+      "display_first_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Diogo",
+        "nullable": true
+      },
+      "licenciado_context": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "referral_code": {
+        "types": [
+          "str"
+        ],
+        "sample": "beatriz-santanna",
+        "nullable": true
+      },
+      "active_partner_plan": {
+        "types": [
+          "str"
+        ],
+        "sample": "Plano Visionário",
+        "nullable": true
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a07c1f7022c7f86ff80a102",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-16T01:01:43.150000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-16T01:01:43.150000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "enabled_panels": {
+        "types": [
+          "list"
+        ],
+        "sample": "['loja_virtual', 'arrematante', 'vendedor', 'lojista', 'licenciado', 'investidor",
+        "nullable": true
+      }
+    }
+  },
+  "Arrematante": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "AsaasPayment": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Auction": {
+    "record_count": 136,
+    "fields": {
+      "partner_commission_percentual": {
+        "types": [
+          "float"
+        ],
+        "sample": "7.0",
+        "nullable": true
+      },
+      "reserved_until": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "partner_name": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "partner_store": {
+        "types": [
+          "str"
+        ],
+        "sample": "nozap",
+        "nullable": false
+      },
+      "reserved_by": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "description": {
+        "types": [
+          "str"
+        ],
+        "sample": "Ponteiras Antiderrapantes Masticmol Metalon 20x20 Preto - 100 Unidades\n\n• Propor",
+        "nullable": false
+      },
+      "image_urls": {
+        "types": [
+          "list"
+        ],
+        "sample": "['https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcR2WGt2giFNFjL06Emg_KUG",
+        "nullable": false
+      },
+      "increment": {
+        "types": [
+          "float"
+        ],
+        "sample": "2.0",
+        "nullable": false
+      },
+      "winner_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "title": {
+        "types": [
+          "str"
+        ],
+        "sample": "Ponteiras Antiderrapantes 100 Unid Masticmol Metalon 20x20 Preto",
+        "nullable": false
+      },
+      "lot_status": {
+        "types": [
+          "str"
+        ],
+        "sample": "importado",
+        "nullable": true
+      },
+      "source_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "https://www.mercadolivre.com.br/microfone-dinmico-com-fio-cardioide-5m-preto-mic",
+        "nullable": true
+      },
+      "commissions_distributed": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": true
+      },
+      "lot_raw_items_json": {
+        "types": [
+          "str"
+        ],
+        "sample": "[{\"grade\":\"U\",\"desc\":\"Whisky Macallan Rare Cask 43\",\"qtd\":1,\"valor\":2429.98},{\"g",
+        "nullable": true
+      },
+      "order_status": {
+        "types": [
+          "str"
+        ],
+        "sample": "awaiting_payment",
+        "nullable": true
+      },
+      "manual_market_price": {
+        "types": [
+          "float"
+        ],
+        "sample": "197784.7699999999",
+        "nullable": true
+      },
+      "lot_items_json": {
+        "types": [
+          "str"
+        ],
+        "sample": "{\"Alimentos e Bebidas\":[{\"desc\":\"Whisky Macallan Rare Cask 43\",\"qtd\":1,\"valor\":2",
+        "nullable": true
+      },
+      "partner_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "seller_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "LUIZ ALBERTO SANTANNA FILHO",
+        "nullable": true
+      },
+      "starting_price": {
+        "types": [
+          "float"
+        ],
+        "sample": "19.14",
+        "nullable": false
+      },
+      "product_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69e3a59e27f0f5bc8f9014bb",
+        "nullable": true
+      },
+      "is_investment_plan": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "buy_now_price": {
+        "types": [
+          "float"
+        ],
+        "sample": "23.92",
+        "nullable": true
+      },
+      "seller_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "is_test_auction": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "last_updated": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-20T02:13:28.329Z",
+        "nullable": true
+      },
+      "comparai_mode": {
+        "types": [
+          "str"
+        ],
+        "sample": "google_shopping",
+        "nullable": false
+      },
+      "product_source": {
+        "types": [
+          "str"
+        ],
+        "sample": "return_resale",
+        "nullable": false
+      },
+      "end_time": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-20T02:02:10.024Z",
+        "nullable": false
+      },
+      "winner_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "LUIZ SANTANNA",
+        "nullable": true
+      },
+      "platform_commission_percentual": {
+        "types": [
+          "float"
+        ],
+        "sample": "3.0",
+        "nullable": true
+      },
+      "tracking_code": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "version": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "2.0",
+        "nullable": true
+      },
+      "reserved_by_name": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "last_processed_bid_time": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "supplier_logo_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "https://base44.app/api/apps/68d536db3c26ff51f79c4137/files/public/68d536db3c26ff",
+        "nullable": true
+      },
+      "lot_categories_json": {
+        "types": [
+          "str"
+        ],
+        "sample": "[{\"nome\":\"Alimentos e Bebidas\",\"qtd\":6311,\"valor\":108552.54999999986},{\"nome\":\"D",
+        "nullable": true
+      },
+      "market_price": {
+        "types": [
+          "float"
+        ],
+        "sample": "15.79",
+        "nullable": true
+      },
+      "allowed_regions": {
+        "types": [
+          "list"
+        ],
+        "sample": "[]",
+        "nullable": false
+      },
+      "current_price": {
+        "types": [
+          "float"
+        ],
+        "sample": "19.14",
+        "nullable": false
+      },
+      "category": {
+        "types": [
+          "str"
+        ],
+        "sample": "outros",
+        "nullable": false
+      },
+      "lot_grades_json": {
+        "types": [
+          "str"
+        ],
+        "sample": "{\"A\":{\"qtd\":3030,\"valorMarket\":30503.94000000004},\"B\":{\"qtd\":2,\"valorMarket\":60.",
+        "nullable": true
+      },
+      "last_comparison_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-19T19:52:00.012Z",
+        "nullable": true
+      },
+      "status": {
+        "types": [
+          "str"
+        ],
+        "sample": "ended",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69e437a2994efb5035dc325f",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-19T02:02:10.903000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-20T02:13:28.522000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "AuctionMessage": {
+    "record_count": 1605,
+    "fields": {
+      "bid_amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "2300.0",
+        "nullable": true
+      },
+      "countdown_phase": {
+        "types": [
+          "float"
+        ],
+        "sample": "3.0",
+        "nullable": true
+      },
+      "is_system_message": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "auction_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "699756d3b96826cc60309c56",
+        "nullable": false
+      },
+      "message_type": {
+        "types": [
+          "str"
+        ],
+        "sample": "ai_narration",
+        "nullable": false
+      },
+      "sender_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "LanceIA",
+        "nullable": false
+      },
+      "sender_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "content": {
+        "types": [
+          "str"
+        ],
+        "sample": "💥 POW! vale-do-recreio não brinca!",
+        "nullable": false
+      },
+      "timestamp": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-30T17:13:35.898Z",
+        "nullable": true
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a15e38648cbcbbe3ffb7a8f",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T18:16:38.713000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T18:16:38.713000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "AuctionView": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "BannerImage": {
+    "record_count": 14,
+    "fields": {
+      "is_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "image_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "https://base44.app/api/apps/68d536db3c26ff51f79c4137/files/mp/public/68d536db3c2",
+        "nullable": false
+      },
+      "context": {
+        "types": [
+          "str"
+        ],
+        "sample": "home",
+        "nullable": true
+      },
+      "image_adjustments": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "link_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "device_type": {
+        "types": [
+          "str"
+        ],
+        "sample": "desktop",
+        "nullable": true
+      },
+      "title": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "order": {
+        "types": [
+          "float"
+        ],
+        "sample": "1.0",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69688195d6fc0a732c925fbf",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-01-15T05:56:37.435000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-03-24T20:53:20.659000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "BatchRegistration": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Bid": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "CashRegister": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "CatalogSale": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "CatalogSettings": {
+    "record_count": 1,
+    "fields": {
+      "featured_section_title": {
+        "types": [
+          "str"
+        ],
+        "sample": "⭐ Produtos em Destaque",
+        "nullable": false
+      },
+      "featured_section_description": {
+        "types": [
+          "str"
+        ],
+        "sample": "TESTE",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "697bbb671b270afc665d7f50",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-01-29T19:56:23.664000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-01-29T19:56:49.469000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "CatalogVisit": {
+    "record_count": 213,
+    "fields": {
+      "session_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "visited_at": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T18:25:03.772Z",
+        "nullable": false
+      },
+      "page": {
+        "types": [
+          "str"
+        ],
+        "sample": "/Loja-Virtual?ref=valedorecreio",
+        "nullable": false
+      },
+      "user_agent": {
+        "types": [
+          "str"
+        ],
+        "sample": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like ",
+        "nullable": false
+      },
+      "licensee_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": false
+      },
+      "referral_code": {
+        "types": [
+          "str"
+        ],
+        "sample": "valedorecreio",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a15e5822da44d634bf46105",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T18:25:06.086000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T18:25:06.086000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "Category": {
+    "record_count": 52,
+    "fields": {
+      "name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Relógios",
+        "nullable": false
+      },
+      "parent_category_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Moda",
+        "nullable": true
+      },
+      "parent_category_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69e6cf37ec07dca9728835d5",
+        "nullable": true
+      },
+      "is_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "sort_order": {
+        "types": [
+          "int"
+        ],
+        "sample": "0",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a132ae330ae1f58c240c972",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-24T16:44:19.591000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-24T16:44:19.591000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "CommissionRecord": {
+    "record_count": 1325,
+    "fields": {
+      "sale_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a0f5421bd94f0aeaa2bb01e",
+        "nullable": false
+      },
+      "anchor_user_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "LUIZ SANTANNA",
+        "nullable": true
+      },
+      "amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "3.77",
+        "nullable": false
+      },
+      "role": {
+        "types": [
+          "str"
+        ],
+        "sample": "licenciado_catalogo",
+        "nullable": false
+      },
+      "user_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": false
+      },
+      "user_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "LUIZ SANTANNA",
+        "nullable": true
+      },
+      "anchor_user_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "sale_type": {
+        "types": [
+          "str"
+        ],
+        "sample": "catalog",
+        "nullable": true
+      },
+      "percent": {
+        "types": [
+          "float"
+        ],
+        "sample": "13.0",
+        "nullable": false
+      },
+      "product_title": {
+        "types": [
+          "str"
+        ],
+        "sample": "Raquete Elétrica Mata Mosquito Dengue Insetos Moscas Pernilongos Recarregável",
+        "nullable": true
+      },
+      "sale_amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "28.99",
+        "nullable": true
+      },
+      "status": {
+        "types": [
+          "str"
+        ],
+        "sample": "confirmed",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a0f545d56ca881954352ab4",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-21T18:52:13.162000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-21T18:52:13.162000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "service_800a3a02-e28c-4d70-bda9-4f4848ff79a7",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "service+800a3a02-e28c-4d70-bda9-4f4848ff79a7@no-reply.base44.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "ComparaiLog": {
+    "record_count": 1728,
+    "fields": {
+      "auction_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68decf111f5507014c036b65",
+        "nullable": false
+      },
+      "step": {
+        "types": [
+          "str"
+        ],
+        "sample": "FACTORY_SUCCESS",
+        "nullable": false
+      },
+      "status": {
+        "types": [
+          "str"
+        ],
+        "sample": "success",
+        "nullable": false
+      },
+      "message": {
+        "types": [
+          "str"
+        ],
+        "sample": "Preço extraído: R$ 209.00 via json-ld",
+        "nullable": false
+      },
+      "error_details": {
+        "types": [
+          "dict"
+        ],
+        "sample": "{'price': 209, 'method': 'json-ld'}",
+        "nullable": true
+      },
+      "user_agent": {
+        "types": [
+          "str"
+        ],
+        "sample": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like ",
+        "nullable": false
+      },
+      "is_mobile": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68e6b5ff5f093e06e2e8bc49",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2025-10-08T19:05:35.704000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2025-10-08T19:05:35.704000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "service_06397426-482e-42be-a628-53683e2d1878",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "service+06397426-482e-42be-a628-53683e2d1878@no-reply.base44.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "Customer": {
+    "record_count": 4,
+    "fields": {
+      "total_spent": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "notes": {
+        "types": [
+          "str"
+        ],
+        "sample": "LICENCIADA PARA 50.000 E ESTAMOS EM NEGOCIAÇÃ0 PARA QUE O ESCRITÓRIO DELA NA BAR",
+        "nullable": false
+      },
+      "assigned_seller": {
+        "types": [
+          "str"
+        ],
+        "sample": "LUCIANO",
+        "nullable": true
+      },
+      "purchase_product": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": true
+      },
+      "purchase_status": {
+        "types": [
+          "str"
+        ],
+        "sample": "em_negociacao",
+        "nullable": false
+      },
+      "address_zip_code": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "address_state": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "source": {
+        "types": [
+          "str"
+        ],
+        "sample": "indicacao",
+        "nullable": false
+      },
+      "total_purchases": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "next_steps": {
+        "types": [
+          "str"
+        ],
+        "sample": "LICENCIADA 50.000",
+        "nullable": true
+      },
+      "address_number": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "address_city": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "follow_up_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-03-02",
+        "nullable": true
+      },
+      "full_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "KAREN VIANA",
+        "nullable": false
+      },
+      "purchase_value": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "50000.0",
+        "nullable": false
+      },
+      "phone": {
+        "types": [
+          "str"
+        ],
+        "sample": "21993435251",
+        "nullable": false
+      },
+      "address_street": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "last_contact": {
+        "types": [
+          "str"
+        ],
+        "sample": "0001-01-01",
+        "nullable": false
+      },
+      "cpf": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "interested_products": {
+        "types": [
+          "list"
+        ],
+        "sample": "[]",
+        "nullable": false
+      },
+      "email": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "status": {
+        "types": [
+          "str"
+        ],
+        "sample": "lead",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69a998a1a3266afbf0692237",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-03-05T14:52:17.835000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-03-05T15:03:27.994000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "DepositPackage": {
+    "record_count": 5,
+    "fields": {
+      "label": {
+        "types": [
+          "str"
+        ],
+        "sample": "Depósito R$ 500",
+        "nullable": false
+      },
+      "amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "500.0",
+        "nullable": false
+      },
+      "is_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "sort_order": {
+        "types": [
+          "int"
+        ],
+        "sample": "3",
+        "nullable": false
+      },
+      "bonus_percentage": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "8",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6935e342c17729dac0c0451c",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2025-12-07T20:27:46.632000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-02-17T12:11:11.030000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "DigitalWallet": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "DigitalWalletTransaction": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "FavoriteAuction": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "FeaturedProduct": {
+    "record_count": 3,
+    "fields": {
+      "name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Tudo para o seu dia a dia!",
+        "nullable": false
+      },
+      "category": {
+        "types": [
+          "str"
+        ],
+        "sample": "Eletrônicos",
+        "nullable": false
+      },
+      "investment": {
+        "types": [
+          "str"
+        ],
+        "sample": "R$ 5.000,00",
+        "nullable": false
+      },
+      "expected_return": {
+        "types": [
+          "str"
+        ],
+        "sample": "R$ 150.00",
+        "nullable": false
+      },
+      "image_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "https://base44.app/api/apps/68d536db3c26ff51f79c4137/files/public/68d536db3c26ff",
+        "nullable": false
+      },
+      "order": {
+        "types": [
+          "float"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "is_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69592b2162fb9f54f996e636",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-01-03T14:43:45.293000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-01-03T15:05:29.556000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "FinancialExpense": {
+    "record_count": 35,
+    "fields": {
+      "expense_type": {
+        "types": [
+          "str"
+        ],
+        "sample": "fixo",
+        "nullable": false
+      },
+      "amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "18000.0",
+        "nullable": false
+      },
+      "amount_paid": {
+        "types": [
+          "float"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "notes": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "pix_or_card_info": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "payment_status": {
+        "types": [
+          "str"
+        ],
+        "sample": "pendente",
+        "nullable": false
+      },
+      "due_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-18",
+        "nullable": false
+      },
+      "description": {
+        "types": [
+          "str"
+        ],
+        "sample": "ALUGUEL NOVO APARTAMENTO ",
+        "nullable": false
+      },
+      "installment_current": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "interest_amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "recurring_day": {
+        "types": [
+          "float"
+        ],
+        "sample": "8.0",
+        "nullable": true
+      },
+      "total_amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "18000.0",
+        "nullable": false
+      },
+      "installment_total": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "company": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "category": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "payment_method": {
+        "types": [
+          "str"
+        ],
+        "sample": "pix",
+        "nullable": false
+      },
+      "payment_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69f91ea42f1cd392b38f8978",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-04T22:33:08.572000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-04T22:33:08.572000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "FooterSettings": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "FreteSettings": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "InfluencerLead": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "InfluencerPurchase": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "LicenseeLead": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "LiveSession": {
+    "record_count": 2227,
+    "fields": {
+      "session_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "session_1779827654644_a2wzh2ndp",
+        "nullable": true
+      },
+      "page": {
+        "types": [
+          "str"
+        ],
+        "sample": "/",
+        "nullable": true
+      },
+      "last_heartbeat": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T21:16:13.699Z",
+        "nullable": true
+      },
+      "user_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68db0ff2c19838a827fb6e5f",
+        "nullable": true
+      },
+      "user_agent": {
+        "types": [
+          "str"
+        ],
+        "sample": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik",
+        "nullable": true
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a1603cc36919bac59cc09eb",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T20:34:20.533000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-26T21:16:14.237000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "partner_store": {
+        "types": [
+          "str"
+        ],
+        "sample": "sai_de_baixo",
+        "nullable": true
+      },
+      "is_live": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": true
+      },
+      "is_paused": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": true
+      },
+      "stream_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": true
+      },
+      "pause_image_url": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "current_product_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "frame_type": {
+        "types": [
+          "str"
+        ],
+        "sample": "horizontal",
+        "nullable": true
+      },
+      "frame_image_url": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "quality": {
+        "types": [
+          "str"
+        ],
+        "sample": "1080p",
+        "nullable": true
+      }
+    }
+  },
+  "LoteRecebido": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "LuxuryAccessCode": {
+    "record_count": 3,
+    "fields": {
+      "whatsapp": {
+        "types": [
+          "str"
+        ],
+        "sample": "2196660296",
+        "nullable": false
+      },
+      "used_at": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-02-24T01:02:19.482Z",
+        "nullable": false
+      },
+      "code": {
+        "types": [
+          "str"
+        ],
+        "sample": "T4H7BYBX",
+        "nullable": false
+      },
+      "is_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "used_by_user_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "is_single_use": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "person_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Jonathan Henrique ",
+        "nullable": false
+      },
+      "label": {
+        "types": [
+          "str"
+        ],
+        "sample": "Teste",
+        "nullable": false
+      },
+      "email": {
+        "types": [
+          "str"
+        ],
+        "sample": "jonhhenrique29@hotmail.com",
+        "nullable": false
+      },
+      "is_used": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6980f2ac0355cb05f88238ca",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-02-02T18:53:32.233000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-02-24T01:02:19.595000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "LuxuryAuction": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Negotiation": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "PartnerPlanPurchase": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Payment": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "PaymentSettings": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "PriceHistory": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "PricingFormula": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Product": {
+    "record_count": 3543,
+    "fields": {
+      "date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-21",
+        "nullable": true
+      },
+      "linked_auctions": {
+        "types": [
+          "list"
+        ],
+        "sample": "[]",
+        "nullable": false
+      },
+      "notes": {
+        "types": [
+          "str"
+        ],
+        "sample": "<p>A Cola Tenis Borracha Couro Tekbond é a solução ideal para quem busca reparos",
+        "nullable": false
+      },
+      "calculated_price": {
+        "types": [
+          "float"
+        ],
+        "sample": "164.65696465696465",
+        "nullable": true
+      },
+      "description": {
+        "types": [
+          "str"
+        ],
+        "sample": "Cola Tenis Borracha Couro Tekbond Bico Anti Entupimento 20g Cor Transparente",
+        "nullable": false
+      },
+      "image_urls": {
+        "types": [
+          "list"
+        ],
+        "sample": "['https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQZnqa2tD-OAbzP-L_G9vf4",
+        "nullable": true
+      },
+      "discount_percentage": {
+        "types": [
+          "float"
+        ],
+        "sample": "20.83799776107469",
+        "nullable": true
+      },
+      "lot": {
+        "types": [
+          "str"
+        ],
+        "sample": "LOTE 58 - RIO DE JANEIRO - COMPLETO",
+        "nullable": true
+      },
+      "quantity_sold": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "comprimento": {
+        "types": [
+          "float"
+        ],
+        "sample": "5.0",
+        "nullable": true
+      },
+      "selling_price_retail": {
+        "types": [
+          "float"
+        ],
+        "sample": "12.78",
+        "nullable": true
+      },
+      "catalog_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": true
+      },
+      "profit": {
+        "types": [
+          "float"
+        ],
+        "sample": "364.0",
+        "nullable": true
+      },
+      "qty_bom": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "1.0",
+        "nullable": false
+      },
+      "cost_price": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "22.67",
+        "nullable": false
+      },
+      "market_value": {
+        "types": [
+          "float"
+        ],
+        "sample": "15.98",
+        "nullable": true
+      },
+      "quantity": {
+        "types": [
+          "float"
+        ],
+        "sample": "1.0",
+        "nullable": false
+      },
+      "largura": {
+        "types": [
+          "float"
+        ],
+        "sample": "3.0",
+        "nullable": true
+      },
+      "qty_perfeito": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "peso": {
+        "types": [
+          "float"
+        ],
+        "sample": "0.02",
+        "nullable": true
+      },
+      "selling_price_wholesale": {
+        "types": [
+          "float"
+        ],
+        "sample": "0.0",
+        "nullable": true
+      },
+      "pricing_formula_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "deposit_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Bangu",
+        "nullable": true
+      },
+      "sold_amount": {
+        "types": [
+          "float"
+        ],
+        "sample": "364.0",
+        "nullable": true
+      },
+      "qty_ruim": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "price_catalog": {
+        "types": [
+          "float"
+        ],
+        "sample": "12.78",
+        "nullable": true
+      },
+      "purchase_order": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": true
+      },
+      "altura": {
+        "types": [
+          "float"
+        ],
+        "sample": "15.0",
+        "nullable": true
+      },
+      "price_buy_now": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "last_dynamic_update": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-19T03:32:23.788Z",
+        "nullable": true
+      },
+      "qty_oficina": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": false
+      },
+      "price_auction_start": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "is_featured": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": true
+      },
+      "status": {
+        "types": [
+          "str"
+        ],
+        "sample": "ESTOQUE",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "6a0f609de8d98c812c9c3cfc",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-21T19:44:29.620000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-05-21T19:50:49.559000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "service_06397426-482e-42be-a628-53683e2d1878",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "service+06397426-482e-42be-a628-53683e2d1878@no-reply.base44.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "ProductOperation": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Sale": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "SaleCommission": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Seller": {
+    "record_count": 32,
+    "fields": {
+      "referred_by_id": {
+        "types": [],
+        "sample": null,
+        "nullable": true
+      },
+      "default_licenciante_commission_percentage": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "0.0",
+        "nullable": true
+      },
+      "is_active": {
+        "types": [
+          "bool"
+        ],
+        "sample": "True",
+        "nullable": false
+      },
+      "phone": {
+        "types": [
+          "str"
+        ],
+        "sample": " 21 98158-0217",
+        "nullable": false
+      },
+      "license_type": {
+        "types": [
+          "str"
+        ],
+        "sample": "loja_inicial",
+        "nullable": true
+      },
+      "name": {
+        "types": [
+          "str"
+        ],
+        "sample": "LIVIA BARBOSA (LICENCIADA)",
+        "nullable": false
+      },
+      "email": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "default_commission_percentage": {
+        "types": [
+          "float",
+          "int"
+        ],
+        "sample": "13.0",
+        "nullable": true
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "69cf990e2a974845c0687494",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-03T10:40:14.662000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-04-03T10:40:14.662000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "anonymous",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "Store": {
+    "record_count": 4,
+    "fields": {
+      "owner_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "ShopMix",
+        "nullable": false
+      },
+      "address": {
+        "types": [
+          "str"
+        ],
+        "sample": "Avenida das Américas, 3500",
+        "nullable": false
+      },
+      "notes": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "product_types": {
+        "types": [
+          "list"
+        ],
+        "sample": "[]",
+        "nullable": false
+      },
+      "logo_url": {
+        "types": [
+          "str"
+        ],
+        "sample": "https://base44.app/api/apps/68d536db3c26ff51f79c4137/files/public/68d536db3c26ff",
+        "nullable": false
+      },
+      "store_login": {
+        "types": [
+          "str"
+        ],
+        "sample": "shopMix",
+        "nullable": false
+      },
+      "cnpj": {
+        "types": [
+          "str"
+        ],
+        "sample": "",
+        "nullable": false
+      },
+      "phone": {
+        "types": [
+          "str"
+        ],
+        "sample": "21966629605",
+        "nullable": false
+      },
+      "can_create_direto_fabrica": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "store_name": {
+        "types": [
+          "str"
+        ],
+        "sample": "Grupo ShopMix",
+        "nullable": false
+      },
+      "distribution_channels": {
+        "types": [
+          "list"
+        ],
+        "sample": "[]",
+        "nullable": false
+      },
+      "email": {
+        "types": [
+          "str"
+        ],
+        "sample": "jonhhenrique17@gmail.com",
+        "nullable": false
+      },
+      "can_create_sai_de_baixo": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "can_create_arremate_devolucoes": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      },
+      "store_password": {
+        "types": [
+          "str"
+        ],
+        "sample": "L2026",
+        "nullable": false
+      },
+      "status": {
+        "types": [
+          "str"
+        ],
+        "sample": "active",
+        "nullable": false
+      },
+      "id": {
+        "types": [
+          "str"
+        ],
+        "sample": "698105599ff706c92019474d",
+        "nullable": false
+      },
+      "created_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-02-02T20:13:13.442000",
+        "nullable": false
+      },
+      "updated_date": {
+        "types": [
+          "str"
+        ],
+        "sample": "2026-02-02T20:13:13.442000",
+        "nullable": false
+      },
+      "created_by_id": {
+        "types": [
+          "str"
+        ],
+        "sample": "68d536db3c26ff51f79c4138",
+        "nullable": false
+      },
+      "created_by": {
+        "types": [
+          "str"
+        ],
+        "sample": "luizsantanna@tttcorporate.com",
+        "nullable": false
+      },
+      "is_sample": {
+        "types": [
+          "bool"
+        ],
+        "sample": "False",
+        "nullable": false
+      }
+    }
+  },
+  "SystemLog": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "Wallet": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "WalletTransaction": {
+    "record_count": 0,
+    "fields": {}
+  },
+  "WithdrawalRequest": {
+    "record_count": 0,
+    "fields": {}
+  }
+}

@@ -21,7 +21,7 @@ export default function FloatingBalance({ balance }) {
         <div className="amulet-content">
           {!imageError ? (
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/24e65328b_image.png" 
+              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/24e65328b_image.png" 
               alt="Amuleto Valora" 
               className="amulet-coin"
               onError={() => setImageError(true)}

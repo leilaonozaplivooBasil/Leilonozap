@@ -280,7 +280,7 @@ export default function Layout({ children, currentPageName }) {
       background_color: "#111827",
       theme_color: "#16a34a",
       icons: [{
-        src: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG",
+        src: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG",
         sizes: "192x192",
         type: "image/png"
       }]
@@ -395,7 +395,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[5000]" style={{ minHeight: '100vh', opacity: 1, visibility: 'visible' }}>
         <div className="text-center">
           <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
             alt="Leilão NoZap"
             className="w-20 h-20 mx-auto mb-6 rounded-full"
             style={{
@@ -453,7 +453,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex h-16 justify-between items-center">
               <div className="flex items-center gap-4">
                 <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/76e6d20e3_CapturadeTela2025-08-24as195629.png" 
+                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/76e6d20e3_CapturadeTela2025-08-24as195629.png" 
                   alt="Leilão NoZap" 
                   className="h-10 w-auto cursor-pointer"
                   onClick={() => navigate(createPageUrl("Home"))}
@@ -1051,20 +1051,20 @@ export default function LandingPage() {
   }, []);
 
   const productImages = [
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/f917607a1_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/42516c4cc_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/560991041_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/78549b7ee_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/32aeb727f_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/245d4009f_image.png",
-    "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png"
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/f917607a1_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/42516c4cc_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/560991041_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/78549b7ee_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/32aeb727f_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/245d4009f_image.png",
+    "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png"
   ];
 
   return (
     <>
       <div className="page-entry-animation">
         <div className="hammer-impact-indicator">
-          <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/917b16eb6_image.png" alt="Martelo de Leilão" className="w-20 h-20" />
+          <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/917b16eb6_image.png" alt="Martelo de Leilão" className="w-20 h-20" />
         </div>
       </div>
 
@@ -1076,7 +1076,7 @@ export default function LandingPage() {
         <div className="content-wrapper">
           <div className="text-center pt-8 md:pt-16">
             <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
+              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
               alt="Leilão NoZap"
               className="w-28 h-28 md:w-32 md:h-32 mx-auto mb-6 rounded-full shadow-2xl border-2 border-green-500/50 logo-entrance"
             />

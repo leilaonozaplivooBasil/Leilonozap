@@ -1,14 +1,8 @@
-import { createClient } from '@base44/sdk';
-import { appParams } from '@/lib/app-params';
-
-const { appId, token, functionsVersion, appBaseUrl } = appParams;
-
-//Create a client with authentication required
-export const base44 = createClient({
-  appId,
-  token,
-  functionsVersion,
-  // serverUrl removido para usar default do SDK (https://base44.app)
-  requiresAuth: false,
-  appBaseUrl
-});
+/**
+ * MIGRATED: este arquivo agora exporta o adapter Supabase
+ * mantendo a API do Base44 SDK pra compatibilidade total com o resto do código.
+ *
+ * Backup do arquivo original em base44Client.legacy.js (caso precise consultar).
+ */
+export { base44 } from './base44Adapter';
+export { supabase } from './supabaseClient';

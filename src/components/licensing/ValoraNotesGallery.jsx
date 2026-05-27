@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const valoraNotes = [
-  { value: 1, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/92dfe7c21_17cee75b0_90515FAF-DF1E-4B38-88A2-0DB1650A0338.png" },
-  { value: 2, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/2caf4c091_D19AF866-7F01-4359-B34C-6E1E49BB5B662.png" },
-  { value: 5, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/51d72aa1d_C92CFAFF-FF7B-450A-9148-2B1B09CE77A512.png" },
-  { value: 20, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/940575a06_7E0EC402-D37F-4C7E-A9AF-9CBAFAEC67B5.png" },
-  { value: 100, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/35cd22e8d_22E71172-1469-40C1-91F5-52FB1CEB81B7.png" },
-  { value: 200, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/5af62ec46_560AB3F0-BC1C-455F-9909-8366C699B0A3.png" },
-  { value: 500, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/e743cb8f9_A098D677-881A-4913-9F73-1B09CE77A512.png" },
-  { value: 1000, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/3f149d7ea_9F6550BF-035D-4171-85DA-960040528E39.png" }
+  { value: 1, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/92dfe7c21_17cee75b0_90515FAF-DF1E-4B38-88A2-0DB1650A0338.png" },
+  { value: 2, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/2caf4c091_D19AF866-7F01-4359-B34C-6E1E49BB5B662.png" },
+  { value: 5, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/51d72aa1d_C92CFAFF-FF7B-450A-9148-2B1B09CE77A512.png" },
+  { value: 20, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/940575a06_7E0EC402-D37F-4C7E-A9AF-9CBAFAEC67B5.png" },
+  { value: 100, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/35cd22e8d_22E71172-1469-40C1-91F5-52FB1CEB81B7.png" },
+  { value: 200, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/5af62ec46_560AB3F0-BC1C-455F-9909-8366C699B0A3.png" },
+  { value: 500, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/e743cb8f9_A098D677-881A-4913-9F73-1B09CE77A512.png" },
+  { value: 1000, url: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/3f149d7ea_9F6550BF-035D-4171-85DA-960040528E39.png" }
 ];
 
 
