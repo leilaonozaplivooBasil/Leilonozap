@@ -758,12 +758,11 @@ export default function Layout({ children, currentPageName }) {
 
   const shouldShowLoading = isLoading;
 
-  // 🛡️ UNIFICAÇÃO DE NAVEGAÇÃO (Opção A): TODAS as páginas (públicas + admin)
-  // usam o mesmo cabeçalho público com avatar dropdown "ACESSAR COMO...".
-  // O usuário pode trocar de painel a qualquer momento via avatar, sem ficar
-  // preso em uma sidebar lateral. AdminLayout/AdminSidebar foram desativados
-  // mas mantidos no código por segurança (não deletados).
-  const isAdminPage = false;
+  // 🛡️ SIDEBAR PERSISTENTE (reativada 2026-05-28): páginas em ADMIN_PAGES
+  // recebem o AdminLayout com sidebar fixa à esquerda + Outlet à direita.
+  // O dropdown "ACESSAR COMO..." continua disponível pra trocar de painel
+  // a qualquer momento. Páginas fora de ADMIN_PAGES mantêm o header público.
+  const isAdminPage = isLoggedIn && ADMIN_PAGES.has(currentPageName);
 
   if (shouldShowLoading) {
     return (
