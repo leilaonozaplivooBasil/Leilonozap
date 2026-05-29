@@ -37,7 +37,7 @@ export default function InfluencersDashboard() {
 
       const user = JSON.parse(savedUserJSON);
       
-      if (user.role !== 'admin' && user.email !== MASTER_ADMIN_EMAIL) {
+      if (user.role !== 'admin' && user.role !== 'super_admin' && user.email !== MASTER_ADMIN_EMAIL) {
         alert("Acesso negado. Apenas administradores.");
         navigate(createPageUrl("Home"));
         return;

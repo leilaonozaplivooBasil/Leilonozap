@@ -32,7 +32,7 @@ export default function DailyReportView() {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       const user = JSON.parse(savedUser);
-      if (user.role !== 'admin') {
+      if (user.role !== 'admin' && user.role !== 'super_admin') {
         navigate(createPageUrl('Home'));
         return;
       }

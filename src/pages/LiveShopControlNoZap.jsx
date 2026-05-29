@@ -45,7 +45,7 @@ export default function LiveShopControlNoZap() {
       }
 
       const user = JSON.parse(savedUserJSON);
-      if (user.role !== 'admin') {
+      if (user.role !== 'admin' && user.role !== 'super_admin') {
         toast.error("Apenas administradores podem acessar");
         navigate(createPageUrl("Home"));
         return;

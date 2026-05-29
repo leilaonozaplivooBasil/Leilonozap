@@ -19,7 +19,7 @@ export default function StressTest() {
   }, []);
 
   const runTest = async () => {
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
       alert('Apenas admins podem executar testes de stress');
       return;
     }
@@ -42,7 +42,7 @@ export default function StressTest() {
     }
   };
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <Card className="bg-gray-800 border-gray-700 text-white max-w-md">

@@ -46,7 +46,26 @@ export default function LojistaDashboard() {
       setCurrentStore(store);
       setIsLoggedIn(true);
       loadDashboardData(store.id);
+      return;
     }
+    // Super admin entra direto: usa a primeira store cadastrada como contexto
+    // de inspeção. Login do super_admin não precisa nem de senha.
+    (async () => {
+      try {
+        const raw = localStorage.getItem("currentUser");
+        const u = raw ? JSON.parse(raw) : null;
+        if (u?.role === "super_admin") {
+          const stores = await StoreEntity.list().catch(() => []);
+          const store = stores?.[0];
+          if (store) {
+            sessionStorage.setItem("lojista_login", JSON.stringify(store));
+            setCurrentStore(store);
+            setIsLoggedIn(true);
+            loadDashboardData(store.id);
+          }
+        }
+      } catch (e) { /* segue mostrando form de login */ }
+    })();
   }, []);
 
   useEffect(() => {

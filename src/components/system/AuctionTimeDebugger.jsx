@@ -61,7 +61,7 @@ export default function AuctionTimeDebugger({
   };
 
   // 🔒 VERIFICAÇÃO DE ADMIN
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
     return null;
   }
 

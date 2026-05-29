@@ -115,7 +115,7 @@ export default function TransactionHistory() {
     return "💳 Pagamento";
   };
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <p className="text-gray-400">Acesso negado.</p>

@@ -46,7 +46,7 @@ export default function TesteLeilaoPage() {
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        if (!user || user.role !== 'admin') {
+        if (!user || user.role !== 'admin' && user.role !== 'super_admin') {
             navigate('/');
         } else {
             setAuthorized(true);
@@ -121,7 +121,7 @@ export default function TesteLeilaoPage() {
     }, [isLoading]);
 
     const createTestEnvironment = async () => {
-        if (!currentUser || currentUser.role !== 'admin') {
+        if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
             toast.error("Apenas administradores podem criar ambientes de teste!");
             return;
         }
@@ -373,7 +373,7 @@ export default function TesteLeilaoPage() {
         );
     }
 
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
                 <Card className="bg-gray-800 border-gray-700 text-white max-w-md">

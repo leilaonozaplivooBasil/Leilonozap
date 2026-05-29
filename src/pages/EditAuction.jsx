@@ -77,7 +77,7 @@ export default function EditAuction() {
                 userFound = await User.me();
             }
 
-            if (userFound?.role !== 'admin') {
+            if (userFound?.role !== 'admin' && userFound?.role !== 'super_admin') {
                  alert("Acesso negado. Apenas administradores podem editar leilões.");
                  navigate(createPageUrl("Home"), { replace: true });
                  return;

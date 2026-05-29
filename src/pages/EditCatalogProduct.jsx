@@ -65,7 +65,7 @@ export default function EditCatalogProduct() {
                 userFound = await User.me();
             }
 
-            if (userFound?.role !== 'admin') {
+            if (userFound?.role !== 'admin' && userFound?.role !== 'super_admin') {
                  alert("Acesso negado. Apenas administradores podem editar produtos.");
                  navigate(createPageUrl("Catalog"), { replace: true });
                  return;

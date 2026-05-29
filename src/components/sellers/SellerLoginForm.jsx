@@ -30,7 +30,7 @@ export default function SellerLoginForm({ onSuccess }) {
 
       const user = users[0];
 
-      if (!user.is_seller && user.role !== 'admin') {
+      if (!user.is_seller && user.role !== 'admin' && user.role !== 'super_admin') {
         setError('Acesso não autorizado para este perfil.');
         return;
       }

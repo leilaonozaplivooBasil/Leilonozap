@@ -472,7 +472,7 @@ export default function MemoryBackup() {
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== 'admin' && user.role !== 'super_admin') {
       navigate('/');
     } else {
       setAuthorized(true);

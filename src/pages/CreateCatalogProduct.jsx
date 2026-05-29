@@ -37,7 +37,7 @@ export default function CreateCatalogProduct() {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       const user = JSON.parse(savedUser);
-      if (user.role !== 'admin') {
+      if (user.role !== 'admin' && user.role !== 'super_admin') {
         toast.error('Acesso negado! Apenas administradores.');
         navigate(createPageUrl('Home'));
       }

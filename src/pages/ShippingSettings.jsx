@@ -49,7 +49,7 @@ export default function ShippingSettings() {
 
     const user = JSON.parse(savedUserJSON);
     
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
       toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
       navigate(createPageUrl("Home"));
       return;

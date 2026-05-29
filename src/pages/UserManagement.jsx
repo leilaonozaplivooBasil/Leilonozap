@@ -33,7 +33,7 @@ export default function UserManagement() {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
         
-        if (user.role !== 'admin') {
+        if (user.role !== 'admin' && user.role !== 'super_admin') {
           alert("❌ Acesso negado! Apenas administradores.");
           navigate(createPageUrl('Home'));
           return;

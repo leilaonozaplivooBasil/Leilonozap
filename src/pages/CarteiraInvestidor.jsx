@@ -105,7 +105,7 @@ export default function CarteiraInvestidor() {
                     </div>
 
                     {/* Bloco Arrematante */}
-                    {usuario?.role !== 'admin' && (
+                    {usuario?.role !== 'admin' && usuario?.role !== 'super_admin' && (
                         <div className={`mt-2 mb-4 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border ${arrematante ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-[#161b22] border-[#30363d]'}`}>
                             <User size={16} className={arrematante ? 'text-emerald-400' : 'text-slate-500'} />
                             <div>

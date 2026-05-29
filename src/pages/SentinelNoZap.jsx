@@ -25,7 +25,7 @@ export default function SentinelNoZap() {
         const savedUser = localStorage.getItem('currentUser');
         if (!savedUser) { window.location.href = '/'; return; }
         const user = JSON.parse(savedUser);
-        if (user.role !== 'admin') { window.location.href = '/'; return; }
+        if (user.role !== 'admin' && user.role !== 'super_admin') { window.location.href = '/'; return; }
 
         // Verifica se está autenticado na plataforma Base44 (necessário para agents API)
         try {

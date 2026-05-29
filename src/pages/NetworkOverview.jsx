@@ -563,7 +563,7 @@ export default function NetworkOverview() {
       user = JSON.parse(savedUser);
       setCurrentUser(user);
 
-      if (user.role !== 'admin') {
+      if (user.role !== 'admin' && user.role !== 'super_admin') {
         toast.error("❌ Acesso negado. Apenas administradores.");
         setIsLoading(false);
         return;
@@ -1108,7 +1108,7 @@ export default function NetworkOverview() {
     );
   }
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <Card className="bg-gray-800 border-red-500">

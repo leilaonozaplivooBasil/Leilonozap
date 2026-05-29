@@ -109,7 +109,7 @@ export default function CRM() {
         }
       }
 
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== 'admin' && user.role !== 'super_admin') {
         alert("❌ Acesso negado! Apenas administradores.");
         navigate(createPageUrl('Home'));
         return;

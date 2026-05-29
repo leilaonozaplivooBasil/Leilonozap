@@ -81,7 +81,7 @@ export default function StoreRegistration() {
           userFound.role = 'admin';
         }
 
-        if (!userFound || userFound.role !== 'admin') {
+        if (!userFound || userFound.role !== 'admin' && userFound.role !== 'super_admin') {
           toast.error("Acesso negado. Apenas administradores podem registrar lojistas.");
           navigate(createPageUrl("Home"));
           return;

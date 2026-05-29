@@ -40,7 +40,7 @@ export default function ParceiroLotes() {
             const cached = JSON.parse(stored);
 
             // Valida que é leiloeiro
-            if (cached.role !== 'leiloeiro' && cached.role !== 'admin') {
+            if (cached.role !== 'leiloeiro' && cached.role !== 'admin' && cached.role !== 'super_admin') {
                 navigate(createPageUrl('Home'));
                 return;
             }

@@ -35,7 +35,7 @@ export default function SellerPanel() {
         // Valida se o ID parece real (24 chars hex do MongoDB/Base44)
         const hasValidId = savedUser?.id && /^[a-f0-9]{24}$/.test(savedUser.id);
 
-        if (!hasValidId || (!savedUser.is_seller && savedUser.role !== 'admin')) {
+        if (!hasValidId || (!savedUser.is_seller && savedUser.role !== 'admin' && savedUser.role !== 'super_admin')) {
           // ID inválido ou sem permissão → limpa e mostra login
           localStorage.removeItem('currentUser');
           sessionStorage.removeItem('isLoggedIn');
