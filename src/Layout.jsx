@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import RoleSidebar from "@/components/layout/RoleSidebar";
+import PanelSwitcherCard from "@/components/portal/PanelSwitcherCard";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -996,6 +997,11 @@ export default function Layout({ children, currentPageName }) {
                 }`
           }
         >
+          {(() => {
+            const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
+            if (!cfg.showSidebar || !cfg.context) return null;
+            return <PanelSwitcherCard currentUser={currentUser} currentContext={cfg.context} />;
+          })()}
           {children}
         </main>
         <Footer />

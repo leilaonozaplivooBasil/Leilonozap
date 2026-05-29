@@ -24,54 +24,72 @@
 // =====================================================================
 const CONTEXTS = {
   loja_virtual: {
-    title: "Editando: Loja Virtual",
+    title: "Painel Loja Virtual",
     items: [
-      { title: "🛍️ Gestão da Loja", pageName: "CatalogManagement" },
-      { title: "📦 Pedidos da Loja", pageName: "CatalogOrdersAdmin" },
+      { title: "🏪 Ver a loja", pageName: "Catalog" },
+      { title: "📦 Gestão de Produtos", pageName: "CatalogManagement" },
+      { title: "⭐ Destaques", pageName: "BannerManagement" },
+      { title: "🛒 Pedidos da Loja", pageName: "CatalogOrdersAdmin" },
+      { title: "🚚 Meus Pedidos", pageName: "MyCatalogOrders" },
       { title: "🖼️ Banners", pageName: "BannerManagement" },
+      { title: "🎨 Material Promocional", pageName: "PromoCreator" },
+      { title: "💰 PrecificaVivo", pageName: "PrecificaVivoPainel" },
+      { title: "🧾 PDV", pageName: "PDV" },
+      { title: "💳 Config. Pagamentos", pageName: "PaymentSettings" },
     ],
   },
   arrematante: {
-    title: "Editando: Painel Arrematante",
+    title: "Painel Arrematante",
     items: [
+      { title: "🔨 Leilões ao vivo", pageName: "Home" },
       { title: "🏆 Meus Arremates", pageName: "MyWinnings" },
-      { title: "💰 Carteira", pageName: "AddFunds" },
-      { title: "📊 Histórico", pageName: "WalletHistory" },
+      { title: "💰 Minha Carteira", pageName: "AddFunds" },
+      { title: "📊 Histórico Wallet", pageName: "WalletHistory" },
+      { title: "🎁 Favoritos", pageName: "Favorites" },
     ],
   },
   vendedor: {
-    title: "Editando: Painel Vendedor",
+    title: "Painel Vendedor",
     items: [
-      { title: "🏪 Painel do Vendedor", pageName: "SellerPanel" },
+      { title: "📊 Meu Painel", pageName: "SellerPanel" },
+      { title: "🛍️ Loja Virtual", pageName: "Catalog" },
+      { title: "🔑 Acesso Vendedor", pageName: "AcessoVendedor" },
     ],
   },
   lojista: {
-    title: "Editando: Painel Lojista",
+    title: "Painel Lojista",
     items: [
       { title: "🏢 Dashboard", pageName: "LojistaDashboard" },
       { title: "🛍️ Minha Loja", pageName: "CatalogManagement" },
       { title: "📦 Pedidos", pageName: "CatalogOrdersAdmin" },
+      { title: "🖼️ Banners", pageName: "BannerManagement" },
+      { title: "🎨 Material Promocional", pageName: "PromoCreator" },
     ],
   },
   licenciado: {
-    title: "Editando: Painel Licenciado",
+    title: "Painel Licenciado",
     items: [
-      { title: "📜 Dashboard Licenciado", pageName: "Licensing" },
+      { title: "📜 Dashboard", pageName: "Licensing" },
+      { title: "👥 CRM", pageName: "CRM" },
+      { title: "🌐 Minha Rede", pageName: "NetworkOverview" },
       { title: "💰 Carteira", pageName: "AddFunds" },
+      { title: "🤝 Parceiros Ativos", pageName: "ActivePartners" },
     ],
   },
   investidor: {
-    title: "Editando: Painel Investidor",
+    title: "Painel Investidor",
     items: [
-      { title: "💼 Carteira do Investidor", pageName: "CarteiraInvestidor" },
+      { title: "💼 Minha Carteira", pageName: "CarteiraInvestidor" },
       { title: "🛒 Marketplace de Lotes", pageName: "MarketplaceLotes" },
+      { title: "👥 CRM Investidores", pageName: "CRMInvestidores" },
     ],
   },
   leiloeiro: {
-    title: "Editando: Painel Leiloeiro",
+    title: "Painel Leiloeiro",
     items: [
       { title: "📋 Meus Lotes", pageName: "ParceiroLotes" },
       { title: "🔨 Gestão de Lotes", pageName: "GestaoLotes" },
+      { title: "🎯 Controle de Leilões", pageName: "AuctionControl" },
       { title: "👥 CRM Investidores", pageName: "CRMInvestidores" },
     ],
   },
