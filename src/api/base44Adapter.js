@@ -372,6 +372,14 @@ const auth = {
   redirectToLogin() { /* no-op */ },
 };
 
+// Analytics: stub (Base44 mandava pra plataforma deles; aqui é no-op).
+// Pra ter analytics real, plugar PostHog/Mixpanel aqui depois.
+const analytics = {
+  track() { return Promise.resolve({ ok: true }); },
+  identify() { return Promise.resolve({ ok: true }); },
+  page() { return Promise.resolve({ ok: true }); },
+};
+
 // Service role (alias) — usado por functions server-side; no client cai no mesmo
 const asServiceRole = { entities, functions, integrations };
 
@@ -380,6 +388,7 @@ export const base44 = {
   functions,
   integrations,
   auth,
+  analytics,
   asServiceRole,
   // Mantém referência ao raw supabase pra quem quiser usar direto
   __supabase: supabase,
