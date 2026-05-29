@@ -239,19 +239,34 @@ const entities = new Proxy(
   }
 );
 
-// Functions: redireciona pra /api/functions/<name> (Vercel API routes que adicionamos depois)
+// Functions: redireciona pra /api/functions/<name> (Vercel API routes).
+// Tolerante a "not implemented": se a function não existir como API route,
+// retorna { ok: false, error: 'not_implemented' } em vez de throw — mantém
+// a UI viva enquanto a migração das ~190 functions Base44 está em andamento.
 async function invokeFunction(name, body, options = {}) {
   const url = `/api/functions/${name}`;
-  const resp = await fetch(url, {
-    method: options.method || 'POST',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
+  try {
+    const resp = await fetch(url, {
+      method: options.method || 'POST',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (resp.status === 404) {
+      if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda — stub`);
+      return { ok: false, error: 'not_implemented', name };
+    }
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
+    }
+    return resp.json();
+  } catch (err) {
+    if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
+      if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' fetch falhou — stub`, err.message);
+      return { ok: false, error: 'network_or_not_implemented', name };
+    }
+    throw err;
   }
-  return resp.json();
 }
 
 const functions = new Proxy(
@@ -267,26 +282,63 @@ const functions = new Proxy(
   }
 );
 
-// Integrations.Core (UploadFile e similares)
-const integrations = {
-  Core: {
-    async UploadFile({ file, path }) {
-      const bucket = 'public-assets';
-      const finalPath =
-        path ||
-        `uploads/${Date.now()}_${(file?.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const { error } = await supabase.storage.from(bucket).upload(finalPath, file, {
-        upsert: true,
-        contentType: file?.type,
-      });
-      if (error) throw error;
-      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(finalPath);
-      return { file_url: pub.publicUrl, url: pub.publicUrl, path: finalPath };
-    },
+// Integrations.Core — UploadFile usa Supabase Storage. InvokeLLM/SendEmail/etc.
+// caem no shim de functions (`/api/integrations/<name>`) ou retornam stub.
+async function invokeIntegration(name, body) {
+  const url = `/api/integrations/${name}`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (resp.status === 404) {
+      if (typeof console !== 'undefined') console.warn(`[base44.integrations.Core] '${name}' não implementada — stub`);
+      return { ok: false, error: 'not_implemented', name };
+    }
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`Integration ${name} failed: ${resp.status} ${text}`);
+    }
+    return resp.json();
+  } catch (err) {
+    if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
+      if (typeof console !== 'undefined') console.warn(`[base44.integrations.Core] '${name}' fetch falhou — stub`, err.message);
+      return { ok: false, error: 'network_or_not_implemented', name };
+    }
+    throw err;
+  }
+}
+
+const CoreImpl = {
+  async UploadFile({ file, path }) {
+    const bucket = 'public-assets';
+    const finalPath =
+      path ||
+      `uploads/${Date.now()}_${(file?.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error } = await supabase.storage.from(bucket).upload(finalPath, file, {
+      upsert: true,
+      contentType: file?.type,
+    });
+    if (error) throw error;
+    const { data: pub } = supabase.storage.from(bucket).getPublicUrl(finalPath);
+    return { file_url: pub.publicUrl, url: pub.publicUrl, path: finalPath };
   },
 };
 
+const Core = new Proxy(CoreImpl, {
+  get(target, name) {
+    if (name in target) return target[name];
+    if (typeof name === 'symbol') return undefined;
+    // base44.integrations.Core.InvokeLLM(body) etc → POST /api/integrations/<name>
+    return (body) => invokeIntegration(name, body);
+  },
+});
+
+const integrations = { Core };
+
 // Auth (Base44 tinha ações específicas — vamos delegar pro Supabase Auth)
+// me() é alias de getUser() pra compat com código legado (User.me()).
 const auth = {
   async login({ email, password }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -300,6 +352,24 @@ const auth = {
     const { data } = await supabase.auth.getUser();
     return data?.user || null;
   },
+  async me() {
+    // Compat Base44: User.me() retornava o user logado OU lançava erro.
+    // Hoje: tenta localStorage (LoginModal salva lá); fallback Supabase Auth.
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('currentUser') : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id && parsed?.email) return parsed;
+      }
+    } catch { /* ignora */ }
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) return data.user;
+    const err = new Error('Not authenticated');
+    err.status = 401;
+    throw err;
+  },
+  // Base44 SDK redirecionava pra /login da plataforma; aqui é no-op (LoginModal cobre).
+  redirectToLogin() { /* no-op */ },
 };
 
 // Service role (alias) — usado por functions server-side; no client cai no mesmo

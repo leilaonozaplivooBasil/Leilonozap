@@ -17,9 +17,6 @@ import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPo
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import DevLogoutButton from "@/components/dev/DevLogoutButton";
-import AdminLayout from "@/components/layout/AdminLayout";
-import { ADMIN_PAGES } from "@/lib/adminNavConfig";
-
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
