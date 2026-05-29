@@ -86,14 +86,22 @@ const CONTEXT_BY_PAGE = {
   // Loja Virtual (cliente público comprando)
   Catalog: "loja_virtual",
   CatalogProductDetails: "loja_virtual",
+  Cart: "loja_virtual",
+  CatalogCheckout: "loja_virtual",
+  CatalogCheckout2: "loja_virtual",
+  MyCatalogOrders: "loja_virtual",
 
-  // Arrematante
+  // Arrematante (rota /leiloes vai pra Home, AuctionRoom é sala de leilão)
+  Home: "arrematante",
+  AuctionRoom: "arrematante",
+  AuctionDetails: "arrematante",
   MyWinnings: "arrematante",
   AddFunds: "arrematante",
   WalletHistory: "arrematante",
 
   // Vendedor
   SellerPanel: "vendedor",
+  AcessoVendedor: "vendedor",
 
   // Lojista
   LojistaDashboard: "lojista",
@@ -109,6 +117,9 @@ const CONTEXT_BY_PAGE = {
   ParceiroLotes: "leiloeiro",
   GestaoLotes: "leiloeiro",
   CRMInvestidores: "leiloeiro",
+
+  // Super Admin (gestão de habilitações)
+  SuperAdminPanels: "admin",
 };
 
 // =====================================================================

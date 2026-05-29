@@ -99,10 +99,11 @@ function derivePanelsFromLegacyFields(user) {
   const careerLevels = Array.isArray(user.career_levels) ? user.career_levels : [];
   const role = user.role;
 
-  // Super Admin
+  // Super Admin → acesso DEFAULT a todos os painéis (pra testar cada ambiente).
+  // Pode ser sobrescrito por enabled_panels caso o super admin queira filtrar.
   if (role === "super_admin") {
-    panels.add("super_admin");
-    panels.add("admin");
+    Object.keys(PANEL_METADATA).forEach((k) => panels.add(k));
+    return Array.from(panels);
   }
 
   // Admin
@@ -169,10 +170,17 @@ function derivePanelsFromLegacyFields(user) {
 export function resolveUserPanels(user) {
   if (!user) return [];
 
+  // Super Admin sempre tem acesso a TODOS os painéis (ignora enabled_panels).
+  // É login default de teste — pode entrar em cada ambiente como se fosse o role.
+  const isSuperAdmin = user.role === "super_admin";
+
   // 1) Se enabled_panels foi configurado manualmente → fonte de verdade
+  //    (mas super_admin sempre recebe todos, mesmo com enabled_panels vazio/parcial)
   const explicitPanels = Array.isArray(user.enabled_panels) ? user.enabled_panels : [];
 
-  let keys = explicitPanels.length > 0
+  let keys = isSuperAdmin
+    ? Object.keys(PANEL_METADATA)
+    : explicitPanels.length > 0
     ? explicitPanels
     : derivePanelsFromLegacyFields(user);
 

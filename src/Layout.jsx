@@ -758,11 +758,12 @@ export default function Layout({ children, currentPageName }) {
 
   const shouldShowLoading = isLoading;
 
-  // 🛡️ SIDEBAR PERSISTENTE (reativada 2026-05-28): páginas em ADMIN_PAGES
-  // recebem o AdminLayout com sidebar fixa à esquerda + Outlet à direita.
-  // O dropdown "ACESSAR COMO..." continua disponível pra trocar de painel
-  // a qualquer momento. Páginas fora de ADMIN_PAGES mantêm o header público.
-  const isAdminPage = isLoggedIn && ADMIN_PAGES.has(currentPageName);
+  // 🛡️ NAVEGAÇÃO UNIFICADA: TODAS as páginas (públicas + admin) usam o mesmo
+  // cabeçalho público + dropdown "ACESSAR COMO...". A sidebar lateral é
+  // contextual via RoleSidebar/roleSidebarConfig — muda conforme o painel
+  // que o admin está acessando (loja_virtual, arrematante, vendedor, etc).
+  // AdminLayout/AdminSidebar permanecem no código mas NÃO são usados aqui.
+  const isAdminPage = false;
 
   if (shouldShowLoading) {
     return (
