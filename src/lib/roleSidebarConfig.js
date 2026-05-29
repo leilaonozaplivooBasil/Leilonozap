@@ -45,7 +45,6 @@ const CONTEXTS = {
       { title: "🏆 Meus Arremates", pageName: "MyWinnings" },
       { title: "💰 Minha Carteira", pageName: "AddFunds" },
       { title: "📊 Histórico Wallet", pageName: "WalletHistory" },
-      { title: "🎁 Favoritos", pageName: "Favorites" },
     ],
   },
   vendedor: {

@@ -153,12 +153,12 @@ export function getNavForUser(currentUser) {
   if (!currentUser) return [];
   const role = currentUser.role || 'user';
   const isSeller = currentUser.is_seller === true;
+  // super_admin bypassa filtro — vê o menu completo (login default de teste)
+  const isSuperAdmin = role === 'super_admin';
 
   const canSee = (item) => {
-    // Filtro de sellerOnly: só vendedores ou admins veem
-    if (item.sellerOnly && !isSeller && role !== 'admin' && role !== 'super_admin') {
-      return false;
-    }
+    if (isSuperAdmin) return true;
+    if (item.sellerOnly && !isSeller && role !== 'admin') return false;
     if (item.roles.includes('*')) return true;
     return item.roles.includes(role);
   };
