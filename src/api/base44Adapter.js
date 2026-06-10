@@ -251,8 +251,9 @@ async function invokeFunction(name, body, options = {}) {
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (resp.status === 404) {
-      if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda — stub`);
+    if (resp.status === 404 || resp.status === 405 || resp.status === 501) {
+      // 405 = POST caiu no rewrite do index.html (function ainda não existe como API route)
+      if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
       return { ok: false, error: 'not_implemented', name };
     }
     if (!resp.ok) {
