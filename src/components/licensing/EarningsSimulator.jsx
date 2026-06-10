@@ -3,22 +3,24 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Users, DollarSign, Zap, Sparkles, ArrowRight } from 'lucide-react';
 
 export default function EarningsSimulator({ theme = 'nozap' }) {
-  const [people, setPeople] = useState(10);
+  const [people, setPeople] = useState(''); // começa vazio — usuário digita sem apagar nada
   const [selectedTicket, setSelectedTicket] = useState(497);
   const [showResult, setShowResult] = useState(false);
 
   const tickets = [197, 297, 397, 497, 597, 697, 797, 897, 997];
-  
+
   const isSaiDeBaixo = theme === 'saidebaixo';
 
-  const totalSales = people * selectedTicket;
+  const peopleNum = parseInt(people) || 0;
+  const totalSales = peopleNum * selectedTicket;
   const yourEarnings = totalSales * 0.03;
 
   useEffect(() => {
     setShowResult(false);
+    if (!peopleNum) return; // sem indicados, não mostra o resultado
     const timer = setTimeout(() => setShowResult(true), 300);
     return () => clearTimeout(timer);
-  }, [people, selectedTicket]);
+  }, [peopleNum, selectedTicket]);
 
   return (
     <div className="w-full max-w-5xl mx-auto py-6 px-4">
@@ -73,18 +75,23 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                   min="1"
                   max="100000"
                   value={people}
-                  onChange={(e) => setPeople(Math.min(100000, Math.max(1, parseInt(e.target.value) || 1)))}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '') { setPeople(''); return; }
+                    setPeople(String(Math.min(100000, Math.max(1, parseInt(v) || 1))));
+                  }}
                   className={`w-32 text-4xl font-black bg-transparent text-center border-b-2 focus:outline-none custom-number-input ${
-                    isSaiDeBaixo 
-                      ? 'text-gray-900 border-red-500/30 focus:border-red-600' 
-                      : 'text-white border-green-500/30 focus:border-green-400'
+                    isSaiDeBaixo
+                      ? 'text-gray-900 border-red-500/30 focus:border-red-600 placeholder-gray-400/50'
+                      : 'text-white border-green-500/30 focus:border-green-400 placeholder-white/25'
                   }`}
                 />
                 <span className={`text-base font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>pessoas</span>
               </div>
 
               <div className={`text-center text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                Digite o número de pessoas indicadas
+                Insira o número de indicados
               </div>
             </div>
           </div>
@@ -180,7 +187,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                       : 'bg-green-500/20 border-green-500/30'
                   }`}>
                     <Users className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`} />
-                    <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>{people} pessoas</span>
+                    <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>{peopleNum} pessoas</span>
                   </div>
 
                   <span className={isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'} text-sm>×</span>
