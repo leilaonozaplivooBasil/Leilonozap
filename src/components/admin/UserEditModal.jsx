@@ -137,10 +137,14 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 setIsSaving(false);
                 return;
             }
+            // Admin que está executando a edição (guard server-side da API service_role)
+            let actorId = null;
+            try { actorId = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { actorId = null; }
+
             if (newReferrerId) {
                 const refUser = (Array.isArray(allUsers) ? allUsers : []).find(u => u.id === newReferrerId);
                 if (refUser && refUser.referred_by_id === user.id) {
-                    await AppUser.update(refUser.id, { referred_by_id: null });
+                    await base44.functions.invoke('adminUpdateUser', { userId: refUser.id, updates: { referred_by_id: null }, actorId });
                 }
             }
             const updatePayload = {
@@ -156,14 +160,22 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 display_last_name: displayLastName.trim() || null,
                 avatar_url: userData.avatar_url || null
             };
-            
-            await AppUser.update(user.id, updatePayload);
-            
+
+            // Salva via service_role (RLS impede escrita pela anon key — sem isso o save é no-op silencioso)
+            const result = await base44.functions.invoke('adminUpdateUser', { userId: user.id, updates: updatePayload, actorId });
+            if (!result || result.success !== true) {
+                throw new Error(result?.error || 'Não foi possível salvar. Verifique se você está logado como admin.');
+            }
+            // Confirma que o banco realmente gravou o que mandamos
+            if (result.user && result.user.primary_career_level !== primaryLevel) {
+                throw new Error('O servidor não confirmou a alteração da função principal. Tente novamente.');
+            }
+
             const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
-            
+
             toast.success(`✅ Usuário atualizado!\nCargos: ${levelNames}\n⭐ Principal: ${primaryName}`);
-            onSuccess();
+            onSuccess(result.user);
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);

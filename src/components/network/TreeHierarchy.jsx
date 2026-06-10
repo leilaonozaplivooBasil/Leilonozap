@@ -234,6 +234,18 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     const initials = getInitials(node.full_name);
     const nodeRef = useRef(null);
     const [showTooltip, setShowTooltip] = useState(false);
+    const hideTimer = useRef(null);
+    // Abre a caixa e cancela qualquer fechamento pendente
+    const openCard = () => {
+      if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
+      setShowTooltip(true);
+    };
+    // Agenda fechamento com folga — dá tempo de cruzar o vão até a caixa e clicar no lápis
+    const scheduleClose = () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setShowTooltip(false), 600);
+    };
+    useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node.id);
     const isDragging = draggedNode?.id === node.id;
@@ -257,8 +269,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
         <div 
           className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-125 z-50' : ''}`}
           ref={nodeRef}
-          onMouseEnter={() => setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
+          onMouseEnter={openCard}
+          onMouseLeave={scheduleClose}
           onDragOver={(e) => handleDragOver(e, node)}
           onDragLeave={(e) => handleDragLeave(e)}
           onDrop={(e) => handleDrop(e, node)}
@@ -305,24 +317,38 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
             </div>
           )}
 
-          {/* Tooltip */}
-          <div 
-            className={`absolute ${depth === 0 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-30 border border-gray-600 shadow-2xl whitespace-nowrap`}
+          {/* Tooltip / card de ações — fica aberto enquanto o mouse está sobre ele */}
+          <div
+            onMouseEnter={openCard}
+            onMouseLeave={scheduleClose}
+            className={`absolute ${depth === 0 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-40 border border-gray-600 shadow-2xl whitespace-nowrap pointer-events-auto`}
           >
-            <div className="font-bold">{node.full_name}</div>
-            <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-bold">{node.full_name}</div>
+                <div className="text-gray-400 text-[10px] mt-0.5">{node.email}</div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (hideTimer.current) clearTimeout(hideTimer.current); setShowTooltip(false); }}
+                className="text-gray-500 hover:text-white text-sm leading-none -mt-0.5"
+                title="Fechar"
+              >✕</button>
+            </div>
             {hasChildren && (
               <div className="text-green-400 text-[10px] mt-1">
-                {isExpanded ? '👇 Clique para fechar' : `👆 Clique para ver ${node.children.length} indicados`}
+                {isExpanded ? '👇 Clique no círculo para fechar' : `👆 Clique no círculo para ver ${node.children.length} indicados`}
               </div>
             )}
 
-            <div className="flex gap-1 mt-2 pt-2 border-t border-gray-700">
-              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-blue-400 hover:bg-blue-500/20"
-                onClick={(e) => { e.stopPropagation(); onEdit(node); }}>✏️</Button>
-              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-green-400 hover:bg-green-500/20"
+            <div className="flex gap-1.5 mt-2 pt-2 border-t border-gray-700">
+              <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm text-blue-400 hover:bg-blue-500/20 flex items-center gap-1"
+                title="Editar usuário"
+                onClick={(e) => { e.stopPropagation(); onEdit(node); }}>✏️ <span className="text-[10px]">Editar</span></Button>
+              <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm text-green-400 hover:bg-green-500/20"
+                title="Promover / mudar cargo"
                 onClick={(e) => { e.stopPropagation(); onPromote(node); }}>⭐</Button>
-              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-red-400 hover:bg-red-500/20"
+              <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm text-red-400 hover:bg-red-500/20"
+                title="Excluir usuário"
                 onClick={(e) => { e.stopPropagation(); onDelete(node); }}>🗑️</Button>
             </div>
           </div>
