@@ -276,51 +276,16 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
             )}
 
       <style>{`
-        /* Estilo customizado para input number */
+        /* Input de display: sem setas de spinner pra centralizar o número de verdade */
         .custom-number-input::-webkit-outer-spin-button,
         .custom-number-input::-webkit-inner-spin-button {
           -webkit-appearance: none;
           margin: 0;
-          width: 20px;
-          height: 20px;
-          background: transparent;
-          cursor: pointer;
-          position: relative;
+          display: none;
         }
-
         .custom-number-input {
           -moz-appearance: textfield;
-        }
-
-        /* Setas customizadas para Chrome/Safari/Edge */
-        .custom-number-input::-webkit-inner-spin-button {
-          opacity: 1;
-          width: 20px;
-          height: 40px;
-          cursor: pointer;
-          position: absolute;
-          right: 0;
-          background: transparent;
-        }
-
-        .custom-number-input::-webkit-outer-spin-button {
-          -webkit-appearance: inner-spin-button;
-          background: transparent;
-          opacity: 1;
-        }
-
-        /* Remove fundo e estiliza apenas as setas */
-        input[type="number"]::-webkit-inner-spin-button {
-          opacity: 1;
-          cursor: pointer;
-          background: transparent;
-          color: #22c55e;
-        }
-
-        input[type="number"]::-webkit-outer-spin-button {
-          opacity: 1;
-          cursor: pointer;
-          background: transparent;
+          appearance: textfield;
         }
       `}</style>
     </div>
