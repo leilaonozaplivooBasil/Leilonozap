@@ -179,7 +179,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);
-            toast.error("Erro ao atualizar o usuário.");
+            toast.error(`❌ Não foi salvo: ${error.message || 'erro desconhecido'}`);
         } finally {
             setIsSaving(false);
         }
