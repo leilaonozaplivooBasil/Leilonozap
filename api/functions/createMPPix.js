@@ -43,20 +43,27 @@ export default async function handler(req, res) {
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
 
-    // resolve seller (indicador do comprador) p/ atribuição de comissão
+    // resolve seller p/ atribuição de comissão: prioridade ref_code do link, senão indicador do comprador
     let seller_id = null;
-    if (buyer.id) {
+    const refCode = String(body?.ref_code || '').trim();
+    if (refCode) {
+      const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(refCode)}&limit=1`)).json();
+      if (Array.isArray(r) && r[0]) seller_id = r[0].id;
+    }
+    if (!seller_id && buyer.id) {
       const b = await (await sb(`app_users?select=referred_by_id&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
       if (Array.isArray(b) && b[0]) seller_id = b[0].referred_by_id || null;
     }
 
-    // cria a venda pendente
+    // cria a venda pendente (com entrega/endereço)
+    const addr = body?.address || {};
     const saleId = oid();
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: total, total_amount: total, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: l.p.price_catalog })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null },
     }) });
 
     // cria o PIX no Mercado Pago

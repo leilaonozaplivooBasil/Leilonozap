@@ -389,6 +389,29 @@ export default function Cart() {
         };
       }
 
+      // PIX via Mercado Pago — cria a venda + gera o PIX (valor validado no servidor, anti-fraude)
+      if (paymentType === 'PIX') {
+        const mp = await base44.functions.invoke('createMPPix', {
+          items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
+          buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
+          delivery_type: deliveryMethod,
+          address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
+          ref_code: sessionStorage.getItem('referralCode') || '',
+        });
+        toast.dismiss('checkout-loading');
+        if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
+        setCreatedSales([{ id: mp.sale_id }]);
+        setPixData({
+          billing_type: 'PIX',
+          payment_id: mp.payment_id,
+          pix_qr_code: mp.qr_code_base64 ? `data:image/png;base64,${mp.qr_code_base64}` : null,
+          pix_payload: mp.pix_code,
+          sale_id: mp.sale_id,
+          ticket_url: mp.ticket_url,
+        });
+        return; // createMPPix já criou a venda — não segue o fluxo antigo (ASAAS stub)
+      }
+
       const paymentRaw = await base44.functions.invoke('createAsaasPayment', paymentPayload);
       const paymentResponse = paymentRaw?.data || paymentRaw;
 
