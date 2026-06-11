@@ -1,9 +1,31 @@
 // stripeWebhook — confirma o pagamento de cartão (busca a sessão/PI na API da Stripe, não confia
 // no corpo), marca a venda paga (idempotente) e paga as comissões pela cadeia (telescópio teto 20%).
+import crypto from 'crypto';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 const round2 = (n) => Math.round(n * 100) / 100;
+const oid = () => crypto.randomBytes(12).toString('hex');
+
+async function activateAdesao(sale) {
+  const u = await (await sb(`app_users?select=career_levels&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+  const buyer = Array.isArray(u) ? u[0] : null;
+  const levels = Array.isArray(buyer?.career_levels) ? buyer.career_levels.slice() : [];
+  if (!levels.includes(sale.adesao_level)) levels.push(sale.adesao_level);
+  await sb(`app_users?id=eq.${sale.buyer_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ career_levels: levels, primary_career_level: sale.adesao_level }) });
+  await sb('adesao_orders', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ id: oid(), sale_id: sale.id, user_id: sale.buyer_id, user_name: sale.buyer_name, user_email: sale.buyer_email, adesao_level: sale.adesao_level, valor_produto: sale.total_amount, status: 'a_escolher' }) });
+  let bonus = 0;
+  if (sale.seller_id) {
+    bonus = round2(0.20 * Number(sale.total_amount));
+    const s = await (await sb(`app_users?select=full_name,primary_career_level,commission_balance&id=eq.${encodeURIComponent(sale.seller_id)}&limit=1`)).json();
+    const seller = Array.isArray(s) ? s[0] : null;
+    if (seller) {
+      await sb('commission_ledger', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ sale_id: sale.id, beneficiary_id: sale.seller_id, beneficiary_name: seller.full_name, beneficiary_level: seller.primary_career_level, role_in_sale: 'bonus_adesao', pct: 20, amount: bonus }) });
+      await sb(`app_users?id=eq.${sale.seller_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: round2((Number(seller.commission_balance) || 0) + bonus) }) });
+    }
+  }
+  return { adesao: true, level: sale.adesao_level, product_credit: sale.total_amount, bonus };
+}
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -69,6 +91,10 @@ export default async function handler(req, res) {
     if (sale.status === 'paid') return res.status(200).json({ ok: true, already_paid: true });
 
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'paid' }) });
+    if (sale.kind === 'adesao') {
+      const r = await activateAdesao(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
     const commission = await payCommissions(sale);
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
     return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission });
