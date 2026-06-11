@@ -4,11 +4,12 @@ import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import MetaBanner from '@/components/painel/MetaBanner';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
   ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone,
-  UserCog, Factory, Plus, Trash2, KeyRound, Box
+  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target
 } from 'lucide-react';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -41,6 +42,8 @@ export default function PainelDistribuidor() {
   const [employees, setEmployees] = useState([]);
   const [supForm, setSupForm] = useState({ nome: '', cnpj: '', contato: '', telefone: '', email: '', categoria: '', observacao: '' });
   const [empForm, setEmpForm] = useState({ full_name: '', email: '', password: '' });
+  const [vendas, setVendas] = useState(null);
+  const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
   const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
     produtos_total: 0, produtos_ativos: 0, estoque_qtd: 0, vendidos_qtd: 0, faturado: 0, valor_estoque: 0,
@@ -121,6 +124,19 @@ export default function PainelDistribuidor() {
   };
   const removeEmployee = async (id) => { setBusy(id); try { await base44.functions.invoke('manageEmployees', { action: 'remove', actorId: user.id, id }); setEmployees((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
 
+  // Histórico de vendas (lazy)
+  const loadVendas = async () => {
+    if (vendas !== null || !user?.id) return;
+    try {
+      const [list, resumo] = await Promise.all([
+        supabase.rpc('distribuidor_vendas', { dist_id: user.id, lim: 300 }),
+        supabase.rpc('distribuidor_vendas_resumo', { dist_id: user.id }),
+      ]);
+      setVendas(list.data || []);
+      if (resumo.data) setVendasResumo(resumo.data);
+    } catch (e) { console.error(e); setVendas([]); }
+  };
+
   const MENU = [
     { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
@@ -131,10 +147,11 @@ export default function PainelDistribuidor() {
     { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
+    { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ];
-  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else setTab(m.id); };
+  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); } };
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando painel…</div>;
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
@@ -170,6 +187,7 @@ export default function PainelDistribuidor() {
         {/* ───────────────────── VISÃO GERAL ───────────────────── */}
         {tab === 'visao' && (
           <div>
+            <MetaBanner userId={user.id} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
@@ -240,6 +258,14 @@ export default function PainelDistribuidor() {
               <Shortcut onClick={() => navigate(ROUTES.pedidos)} icon={Truck} title="Pedidos & Envio" desc="Despache e acompanhe entregas." />
               <Shortcut onClick={() => navigate(createPageUrl('CatalogManagement'))} icon={Store} title="Editar loja / Importar" desc="Vitrine, banners e planilha." />
             </div>
+
+            {['admin', 'super_admin'].includes(user.role) && (
+              <button onClick={() => navigate('/Metas')} className="mt-4 w-full text-left rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/15 transition-colors flex items-center gap-3">
+                <Target className="w-6 h-6 text-yellow-300 flex-shrink-0" />
+                <div className="flex-1"><div className="font-bold text-yellow-200">Definir Metas (CEO)</div><div className="text-sm text-gray-400">Busque um login e defina a meta da categoria.</div></div>
+                <ArrowRight className="w-4 h-4 text-yellow-300" />
+              </button>
+            )}
           </div>
         )}
 
@@ -354,6 +380,60 @@ export default function PainelDistribuidor() {
               <button onClick={() => navigate(createPageUrl('Carteira'))} className="px-4 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4" /> Carteira & KYC</button>
               <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>
             </div>
+          </div>
+        )}
+
+        {/* ───────────────────── VENDAS / HISTÓRICO ───────────────────── */}
+        {tab === 'vendas' && (
+          <div>
+            <h1 className="text-2xl font-black mb-1">Vendas / Histórico</h1>
+            <p className="text-gray-400 text-sm mb-4">Todos os registros de venda do Distribuidor 01 — histórico, PDV e loja online.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 max-w-2xl">
+              <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1">Vendas registradas</div>
+                <div className="text-2xl font-black text-white">{vendasResumo.total_vendas}</div>
+              </div>
+              <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1">Valor registrado</div>
+                <div className="text-2xl font-black text-green-400">{money(vendasResumo.total_valor)}</div>
+              </div>
+              <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1">Faturado (estoque)</div>
+                <div className="text-2xl font-black text-emerald-400">{money(stats.faturado)}</div>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-4">ℹ️ As {Number(stats.vendidos_qtd).toLocaleString('pt-BR')} unidades vendidas históricas vieram agregadas na migração; abaixo estão os registros detalhados que existem + cada nova venda do PDV/loja.</p>
+
+            {vendas === null ? (
+              <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando vendas…</div>
+            ) : vendas.length === 0 ? (
+              <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-8 text-center text-gray-400">Nenhuma venda registrada ainda.</div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-gray-800">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-950 text-gray-400 text-xs uppercase">
+                    <tr>
+                      <th className="text-left px-4 py-3">Origem</th>
+                      <th className="text-left px-4 py-3">Produto</th>
+                      <th className="text-left px-4 py-3 hidden md:table-cell">Vendedor</th>
+                      <th className="text-right px-4 py-3">Valor</th>
+                      <th className="text-left px-4 py-3 hidden sm:table-cell">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendas.map((v, i) => (
+                      <tr key={v.sale_id || i} className="border-t border-gray-800 hover:bg-gray-800/40">
+                        <td className="px-4 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.origem === 'PDV' ? 'bg-green-500/15 text-green-300' : v.origem === 'Online' ? 'bg-blue-500/15 text-blue-300' : 'bg-gray-700 text-gray-300'}`}>{v.origem}</span></td>
+                        <td className="px-4 py-3 max-w-[280px] truncate">{v.produto || <span className="text-gray-600">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{(v.vendedor || '').trim() || '—'}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-400">{v.valor != null ? money(v.valor) : '—'}</td>
+                        <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">{v.data ? new Date(v.data).toLocaleDateString('pt-BR') : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

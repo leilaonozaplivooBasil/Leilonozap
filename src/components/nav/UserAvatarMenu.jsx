@@ -26,6 +26,7 @@ import {
   Crown,
   Truck,
   MapPin,
+  Target,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -266,6 +267,15 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
 
         {/* ===== Ações pessoais ===== */}
         <div className="p-2">
+          {["admin", "super_admin"].includes(roleKey) && (
+            <DropdownMenuItem
+              onClick={() => navigate("/Metas")}
+              className="cursor-pointer text-yellow-300 hover:bg-yellow-500/10 focus:bg-yellow-500/10 hover:text-yellow-200 rounded-md gap-3 px-3 py-2"
+            >
+              <Target className="w-4 h-4" />
+              Metas (CEO)
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => navigate(createPageUrl("Profile"))}
             className="cursor-pointer text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"

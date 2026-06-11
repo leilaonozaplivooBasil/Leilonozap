@@ -41,7 +41,7 @@ export default function TirarPedido() {
   };
 
   const doSearch = useCallback(async (q) => {
-    if (!q || q.trim().length < 2) { setResults([]); return; }
+    if (!q || q.trim().length < 1) { setResults([]); return; }
     setSearching(true);
     try {
       const { data } = await supabase

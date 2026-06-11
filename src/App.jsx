@@ -27,6 +27,7 @@ import PainelDistribuidor from '@/pages/PainelDistribuidor';
 import Cadastro from '@/pages/Cadastro';
 import PedidosDistribuidor from '@/pages/PedidosDistribuidor';
 import TirarPedido from '@/pages/TirarPedido';
+import GestaoMetas from '@/pages/GestaoMetas';
 import ImageOptimizer from '@/pages/ImageOptimizer';
 import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
@@ -136,6 +137,7 @@ const AuthenticatedApp = () => {
       <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pedidos" element={<LayoutWrapper currentPageName="PedidosDistribuidor"><PedidosDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />
+      <Route path="/Metas" element={<LayoutWrapper currentPageName="GestaoMetas"><GestaoMetas /></LayoutWrapper>} />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
       <Route path="/portal/arrematante" element={<PortalArrematante />} />
       <Route path="/portal/loja-virtual" element={<PortalLojaVirtual />} />

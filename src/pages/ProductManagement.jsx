@@ -188,10 +188,10 @@ export default function ProductManagement() {
         return;
       }
 
-      const updateData = { selling_price_retail: newPrice };
+      const updateData = { selling_price_retail: newPrice, price_catalog: newPrice, market_value: newMarket };
       if (item.source_url) updateData.source_url = item.source_url;
-      updateData.market_value = newMarket;
-      await base44.entities.Product.update(item.id, updateData);
+      const _save = await base44.functions.invoke('saveProductPricing', { items: [{ id: item.id, selling_price_retail: newPrice, market_price: newMarket, source_url: item.source_url }] });
+      if (!_save?.success) { alert('❌ Não salvou o preço: ' + (_save?.error || 'falha')); return; }
 
       // ✅ Atualiza estado local IMEDIATAMENTE
       const updater = (list) => list.map(p => p.id === item.id ? { ...p, ...updateData } : p);
@@ -209,17 +209,19 @@ export default function ProductManagement() {
     }
   };
 
-  // 🆕 Confirmar precificação e salvar
+  // 🆕 Confirmar precificação e salvar (via service_role — anon não persiste)
   const handleConfirmPricing = async (toUpdate) => {
     setIsPricingLoading(true);
     try {
-      for (const item of toUpdate) {
-        const updateData = { selling_price_retail: item.selling_price_retail };
-        if (item.source_url) updateData.source_url = item.source_url;
-        if (item.market_price) updateData.market_value = item.market_price;
-        await base44.entities.Product.update(item.id, updateData);
-      }
-      alert(`✅ ${toUpdate.length} produto(s) precificado(s)!`);
+      const items = toUpdate.map((item) => ({
+        id: item.id,
+        selling_price_retail: item.selling_price_retail,
+        market_price: item.market_price,
+        source_url: item.source_url,
+      }));
+      const r = await base44.functions.invoke('saveProductPricing', { items });
+      if (!r?.success) { alert('❌ Erro ao salvar preços: ' + (r?.error || 'falha')); return; }
+      alert(`✅ ${r.saved} produto(s) precificado(s)!`);
       setShowPricingPreview(false);
       setPricingPreviewData(null);
       clearSelection();
@@ -490,10 +492,12 @@ export default function ProductManagement() {
       };
 
       if (editingProduct) {
-        await base44.entities.Product.update(editingProduct.id, dataToSave);
+        const _r = await base44.functions.invoke('productAdminAction', { action: 'update', actorId: currentUser?.id, productId: editingProduct.id, fields: dataToSave });
+        if (!_r?.success) { alert('❌ Não atualizou: ' + (_r?.error || 'falha')); return; }
         alert('✅ Produto atualizado!');
       } else {
-        await base44.entities.Product.create(dataToSave);
+        const _c = await base44.functions.invoke('bulkImportProducts', { actorId: currentUser?.id, publish: false, items: [{ name: dataToSave.description, price: dataToSave.selling_price_retail, cost: dataToSave.cost_price, quantity: dataToSave.quantity, sku: dataToSave.lot }] });
+        if (!_c?.success) { alert('❌ Não cadastrou: ' + (_c?.error || 'falha')); return; }
         alert('✅ Produto cadastrado!');
       }
 
@@ -1359,7 +1363,7 @@ export default function ProductManagement() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm('Retirar este produto da Loja Virtual?')) return;
-                                await base44.entities.Product.update(editingProduct.id, { catalog_active: false });
+                                { const _r = await base44.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { catalog_active: false } }); if (!_r?.success) { alert('❌ Falha: ' + (_r?.error || '')); return; } }
                                 alert('✅ Produto retirado da Loja Virtual!');
                                 sessionStorage.removeItem('products_cache_v3');
                                 sessionStorage.removeItem('products_cache_time_v3');
@@ -1379,7 +1383,7 @@ export default function ProductManagement() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm('Limpar os leilões vinculados a este produto?')) return;
-                                await base44.entities.Product.update(editingProduct.id, { linked_auctions: [] });
+                                { const _r = await base44.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { linked_auctions: [] } }); if (!_r?.success) { alert('❌ Falha: ' + (_r?.error || '')); return; } }
                                 alert('✅ Produto desvinculado dos leilões!');
                                 sessionStorage.removeItem('products_cache_v3');
                                 sessionStorage.removeItem('products_cache_time_v3');
@@ -1525,28 +1529,13 @@ export default function ProductManagement() {
                       }
 
                       try {
-                        // Registra a operação
-                        await base44.entities.ProductOperation.create({
-                          product_id: editingProduct.id,
-                          product_description: editingProduct.description,
-                          operation_type: operationType,
-                          operator_name: operationData.operatorName,
-                          reason: operationData.reason,
-                          operation_date: new Date().toISOString()
-                        });
-
                         if (operationType === 'zerar_estoque') {
-                          // Zera APENAS a quantidade total (quantity = 0)
-                          await base44.entities.Product.update(editingProduct.id, {
-                            quantity: 0,
-                            qty_perfeito: 0,
-                            qty_bom: 0,
-                            qty_oficina: 0
-                          });
+                          const _z = await base44.functions.invoke('productAdminAction', { action: 'zerarEstoque', actorId: currentUser?.id, productId: editingProduct.id, operator_name: operationData.operatorName, reason: operationData.reason });
+                          if (!_z?.success) { alert('❌ Não zerou: ' + (_z?.error || 'falha')); return; }
                           alert('✅ Estoque zerado com sucesso!');
                         } else {
-                          // Exclui o produto
-                          await base44.entities.Product.delete(editingProduct.id);
+                          const _d = await base44.functions.invoke('productAdminAction', { action: 'delete', actorId: currentUser?.id, productId: editingProduct.id });
+                          if (!_d?.success) { alert('❌ Não excluiu: ' + (_d?.error || 'falha')); return; }
                           alert('✅ Produto excluído com sucesso!');
                         }
 
