@@ -674,9 +674,6 @@ export default function ProductManagement() {
           >
             <option value="all">Depósito</option>
             <option value="Bangu">Bangu</option>
-            <option value="Oficina">Oficina</option>
-            <option value="Recreio">Recreio</option>
-            <option value="Shopmix">Shopmix (Catálogo)</option>
           </select>
           <select
             value={classFilter}
