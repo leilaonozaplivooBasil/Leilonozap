@@ -6,6 +6,7 @@ import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import MetaBanner from '@/components/painel/MetaBanner';
 import RegiaoCard from '@/components/painel/RegiaoCard';
+import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
@@ -521,7 +522,11 @@ export default function PainelDistribuidor() {
         {tab === 'atendimento' && (
           <div className="max-w-5xl">
             <h1 className="text-2xl font-black mb-1">Atendimento</h1>
-            <p className="text-gray-400 text-sm mb-6">Suporte via WhatsApp e a IA que monitora e fiscaliza o que acontece no painel.</p>
+            <p className="text-gray-400 text-sm mb-6">WhatsApp do galpão + IA que atende e fiscaliza — tudo num lugar só.</p>
+
+            {/* Inbox WhatsApp (Baileys) */}
+            <div className="mb-8"><WhatsAppInbox user={user} /></div>
+            <SectionLabel>🛡️ Fiscalização do painel</SectionLabel>
             {atend === null ? (
               <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
             ) : (
