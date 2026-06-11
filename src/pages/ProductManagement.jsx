@@ -284,8 +284,12 @@ export default function ProductManagement() {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
 
-        if (user.role !== 'admin' && user.role !== 'super_admin') {
-          alert("❌ Acesso negado! Apenas administradores.");
+        // Pode gerir produtos: admin OU cargos com estoque próprio (Distribuidor, Loja Física, Ponto de Retirada)
+        const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+        const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
+          (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
+        if (!podeProduto) {
+          alert("❌ Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
           navigate(createPageUrl('Home'));
           return;
         }

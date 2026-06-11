@@ -591,7 +591,15 @@ export default function Layout({ children, currentPageName }) {
 
   const noZapLoggedItems = [];
 
+  // Cargos com estoque próprio podem gerir produtos (sem ser admin)
+  const _STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+  const _canManageStock = currentUser && Array.isArray(currentUser.career_levels) && currentUser.career_levels.some((c) => _STOCK_CARGOS.includes(c));
+
   const loggedMenuItems = [
+    ...(_canManageStock ? [
+      { title: "📦 Gestão de Produtos", pageName: "ProductManagement" },
+      { title: "🛍️ Gerenciar Loja Virtual", pageName: "CatalogManagement" },
+    ] : []),
     { title: "💰 Minha Carteira", pageName: "Carteira" },
     { title: "⬆️ Evoluir Nível", pageName: "Evoluir" },
     { title: "🛒 Meus Pedidos", pageName: "MyCatalogOrders" },

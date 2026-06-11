@@ -37,8 +37,11 @@ export default function CreateCatalogProduct() {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       const user = JSON.parse(savedUser);
-      if (user.role !== 'admin' && user.role !== 'super_admin') {
-        toast.error('Acesso negado! Apenas administradores.');
+      const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+      const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
+        (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
+      if (!podeProduto) {
+        toast.error('Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou admin.');
         navigate(createPageUrl('Home'));
       }
     } else {
