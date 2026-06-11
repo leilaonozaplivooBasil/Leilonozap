@@ -132,7 +132,7 @@ export default function ProductManagement() {
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
         const response = await calculateProductPricing({ product_ids: batch });
-        const batchProducts = response.data?.products || [];
+        const batchProducts = response?.products || response?.data?.products || [];
         allResults.push(...batchProducts);
       }
 
@@ -152,7 +152,7 @@ export default function ProductManagement() {
       const response = await calculateProductPricing({
         product_ids: [product.id]
       });
-      const data = response.data?.products || [];
+      const data = response?.products || response?.data?.products || [];
       const item = data[0];
 
       if (!item) {

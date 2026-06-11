@@ -26,7 +26,13 @@ export default async function handler(req, res) {
       const patch = { selling_price_retail: selling, price_catalog: selling, updated_date: now };
       if (it.market_price != null) patch.market_value = round2(it.market_price);
       if (it.source_url) patch.source_url = it.source_url;
-      const r = await sb(`products?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
+      let r = await sb(`products?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
+      if (!r.ok) {
+        // alguma coluna pode não existir (ex.: source_url) → tenta só o essencial
+        const min = { selling_price_retail: selling, price_catalog: selling, updated_date: now };
+        if (it.market_price != null) min.market_value = round2(it.market_price);
+        r = await sb(`products?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(min) });
+      }
       if (r.ok) saved++;
     }
     return res.status(200).json({ success: saved > 0, saved, total: items.length });

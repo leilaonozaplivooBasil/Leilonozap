@@ -23,6 +23,9 @@ export default function CatalogManagement() {
     const isRede = u && Array.isArray(u.career_levels) && u.career_levels.some((c) => rede.includes(c));
     return isRede ? { backTo: '/painel', backLabel: 'Voltar ao Painel' } : {};
   })();
+  // escrita via service_role (anon não persiste). uid = ator logado.
+  const _uid = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.id; } catch { return null; } })();
+  const _ew = (entity, action, id, data) => base44.functions.invoke('adminEntityWrite', { actorId: _uid, entity, action, id, data });
   const [catalogBanners, setCatalogBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
@@ -58,11 +61,11 @@ export default function CatalogManagement() {
       if (settings && settings.length > 0) {
         setCatalogSettings(settings[0]);
       } else {
-        const newSettings = await base44.entities.CatalogSettings.create({
+        const _r = await _ew('CatalogSettings', 'create', null, {
           featured_section_title: '⭐ Produtos em Destaque',
           featured_section_description: 'Veja nossos destaques selecionados'
         });
-        setCatalogSettings(newSettings);
+        setCatalogSettings(_r?.row || null);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -99,11 +102,8 @@ export default function CatalogManagement() {
 
   const handleCreateBanner = async (formData) => {
     try {
-      await base44.entities.BannerImage.create({
-        ...formData,
-        context: 'catalog',
-        order: catalogBanners.length
-      });
+      const _r = await _ew('BannerImage', 'create', null, { ...formData, context: 'catalog', order: catalogBanners.length });
+      if (!_r?.success) { toast.error('Erro ao criar banner'); return; }
       toast.success('Banner criado com sucesso!');
       loadBanners();
       setEditingBanner(null);
@@ -115,7 +115,7 @@ export default function CatalogManagement() {
 
   const handleUpdateBanner = async (id, formData) => {
     try {
-      await base44.entities.BannerImage.update(id, formData);
+      await _ew('BannerImage', 'update', id, formData);
       toast.success('Banner atualizado com sucesso!');
       loadBanners();
       setEditingBanner(null);
@@ -129,7 +129,7 @@ export default function CatalogManagement() {
     if (!confirm('Tem certeza que deseja excluir este banner?')) return;
     
     try {
-      await base44.entities.BannerImage.delete(id);
+      await _ew('BannerImage', 'delete', id);
       toast.success('Banner excluído com sucesso!');
       loadBanners();
     } catch (error) {
@@ -140,9 +140,7 @@ export default function CatalogManagement() {
 
   const handleToggleActive = async (banner) => {
     try {
-      await base44.entities.BannerImage.update(banner.id, {
-        is_active: !banner.is_active
-      });
+      await _ew('BannerImage', 'update', banner.id, { is_active: !banner.is_active });
       loadBanners();
       toast.success(banner.is_active ? 'Banner desativado' : 'Banner ativado');
     } catch (error) {
@@ -162,9 +160,7 @@ export default function CatalogManagement() {
 
     try {
       await Promise.all(
-        items.map((item, index) =>
-          base44.entities.BannerImage.update(item.id, { order: index })
-        )
+        items.map((item, index) => _ew('BannerImage', 'update', item.id, { order: index }))
       );
       toast.success('Ordem atualizada!');
     } catch (error) {
@@ -176,9 +172,7 @@ export default function CatalogManagement() {
 
   const handleToggleFeatured = async (product) => {
     try {
-      await base44.entities.Product.update(product.id, {
-        is_featured: !product.is_featured
-      });
+      await _ew('Product', 'update', product.id, { is_featured: !product.is_featured });
       loadProducts();
       toast.success(product.is_featured ? 'Removido do destaque' : 'Adicionado ao destaque');
     } catch (error) {
@@ -189,9 +183,7 @@ export default function CatalogManagement() {
 
   const handleUpdateFeaturedProduct = async (productId, newDescription) => {
     try {
-      await base44.entities.Product.update(productId, {
-        description: newDescription
-      });
+      await _ew('Product', 'update', productId, { description: newDescription });
       loadProducts();
       setEditingFeaturedProduct(null);
       toast.success('Nome do produto atualizado!');
@@ -204,7 +196,7 @@ export default function CatalogManagement() {
   const handleUpdateSettings = async (title, description) => {
     try {
       if (catalogSettings.id) {
-        await base44.entities.CatalogSettings.update(catalogSettings.id, {
+        await _ew('CatalogSettings', 'update', catalogSettings.id, {
           featured_section_title: title,
           featured_section_description: description
         });
