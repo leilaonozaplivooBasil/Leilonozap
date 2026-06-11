@@ -63,11 +63,12 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const ids = Array.isArray(body?.product_ids) ? body.product_ids.map(String) : [];
     const useZoom = body?.zoom !== false;
+    const useSearchApi = body?.searchapi !== false; // lote passa false (markup custo, rápido)
     if (!ids.length) return res.status(400).json({ success: false, error: 'product_ids obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config ausente' });
 
     const inList = ids.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-    const prods = await (await sb(`products?select=id,description,cost_price,market_value,selling_price_retail,price_catalog&id=in.(${inList})`)).json();
+    const prods = await (await sb(`products?select=id,description,lot,cost_price,market_value,selling_price_retail,price_catalog&id=in.(${inList})`)).json();
     const list = Array.isArray(prods) ? prods : [];
 
     const out = [];
@@ -77,8 +78,8 @@ export default async function handler(req, res) {
       const prevPrice = Number(p.selling_price_retail || p.price_catalog) || 0;
       let market = 0; let source = 'custo'; let sourceUrl = '';
 
-      // 1) Google Shopping (SearchApi) — caminho antigo
-      if (p.description) {
+      // 1) Google Shopping (SearchApi) — caminho antigo (individual; lote pula pra ser rápido)
+      if (useSearchApi && p.description) {
         const sa = await searchApiMarket(String(p.description).slice(0, 90));
         if (sa.price > 0 && (cost === 0 || sa.price > cost)) { market = sa.price; source = 'google_shopping'; sourceUrl = sa.url; }
       }
@@ -97,9 +98,10 @@ export default async function handler(req, res) {
       if (cost > 0 && selling > 0 && selling < cost * PISO_CUSTO) selling = round2(cost * PISO_CUSTO);
 
       out.push({
-        id: p.id, description: p.description,
+        id: p.id, description: p.description, lot: p.lot,
         status: selling > 0 ? 'success' : 'failed',
         market_price: market, selling_price_retail: selling,
+        calculated_price: selling, // alias usado pelo PricingPreviewModal
         previous_market: prevMarket, previous_price: prevPrice,
         source, source_url: sourceUrl, cost_price: cost,
       });

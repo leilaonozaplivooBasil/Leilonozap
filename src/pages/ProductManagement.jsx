@@ -131,7 +131,7 @@ export default function ProductManagement() {
 
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
-        const response = await calculateProductPricing({ product_ids: batch });
+        const response = await calculateProductPricing({ product_ids: batch, searchapi: false, zoom: false });
         const batchProducts = response?.products || response?.data?.products || [];
         allResults.push(...batchProducts);
       }

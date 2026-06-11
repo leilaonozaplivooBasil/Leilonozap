@@ -23,7 +23,7 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
       const product = products.find(p => p.id === id && p.status === 'success');
       return {
         id: product.id,
-        selling_price_retail: product.calculated_price,
+        selling_price_retail: product.selling_price_retail ?? product.calculated_price,
         market_price: product.market_price,
         source_url: product.source_url || null
       };
@@ -94,9 +94,9 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-xs text-gray-400">Mercado</p>
-                      <p className="font-bold text-emerald-400">R$ {product.market_price.toFixed(2)}</p>
+                      <p className="font-bold text-emerald-400">R$ {Number(product.market_price || 0).toFixed(2)}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Venda (-20%)</p>
-                      <p className="font-bold text-sky-400">R$ {product.calculated_price.toFixed(2)}</p>
+                      <p className="font-bold text-sky-400">R$ {Number(product.selling_price_retail ?? product.calculated_price ?? 0).toFixed(2)}</p>
                       {product.source_url && (
                         <a
                           href={product.source_url}
