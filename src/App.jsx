@@ -22,6 +22,7 @@ import EstoqueLotes from '@/pages/EstoqueLotes';
 import Evoluir from '@/pages/Evoluir';
 import Carteira from '@/pages/Carteira';
 import AdminFinanceiro from '@/pages/AdminFinanceiro';
+import Recepcao from '@/pages/Recepcao';
 import ImageOptimizer from '@/pages/ImageOptimizer';
 import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
@@ -100,8 +101,14 @@ const AuthenticatedApp = () => {
       </div>
     }>
     <Routes>
-    {/* 🆕 PORTAL HUB — rota raiz "/" */}
+    {/* 🆕 RECEPÇÃO — página de chegada na raiz "/" (landing forte com CTA pro leilão) */}
     <Route path="/" element={
+      <LayoutWrapper currentPageName="Recepcao">
+        <Recepcao />
+      </LayoutWrapper>
+    } />
+    {/* Portal de painéis movido pra /portal */}
+    <Route path="/portal" element={
       <LayoutWrapper currentPageName="Portal">
         <Portal />
       </LayoutWrapper>
