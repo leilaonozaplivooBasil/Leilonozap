@@ -592,7 +592,9 @@ export default function Layout({ children, currentPageName }) {
   const noZapLoggedItems = [];
 
   const loggedMenuItems = [
-    { title: "💰 Minha Carteira", pageName: "AddFunds" },
+    { title: "💰 Minha Carteira", pageName: "Carteira" },
+    { title: "⬆️ Evoluir Nível", pageName: "Evoluir" },
+    { title: "🛒 Meus Pedidos", pageName: "MyCatalogOrders" },
     { title: "Meus Arremates", pageName: "MyWinnings" },
     { title: "Perfil", pageName: "Profile" },
   ];
@@ -648,6 +650,7 @@ export default function Layout({ children, currentPageName }) {
       items: [
         { title: "💰 PDV", pageName: "PDV" },
         { title: "💲 Dashboard Financeiro", pageName: "Financial" },
+        { title: "🛡️ KYC & Saques", pageName: "AdminFinanceiro" },
         { title: "💳 Transações", pageName: "TransactionHistory" },
         { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
         { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
@@ -679,7 +682,8 @@ export default function Layout({ children, currentPageName }) {
       title: "👤 Minha Conta",
       isCategory: true,
       items: [
-        { title: "💰 Minha Carteira", pageName: "AddFunds" },
+        { title: "💰 Minha Carteira", pageName: "Carteira" },
+        { title: "⬆️ Evoluir Nível", pageName: "Evoluir" },
         { title: "🏆 Meus Arremates", pageName: "MyWinnings" },
         { title: "👤 Perfil", pageName: "Profile" },
       ]
