@@ -299,59 +299,20 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
     try {
       const normalizedResetEmail = resetEmail.toLowerCase().trim();
-      const users = await AppUser.filter({ email: normalizedResetEmail });
 
-      if (users.length === 0) {
-        // Por segurança, não revelamos se o email existe ou não
-        alert("✅ Se o seu e-mail estiver registrado, você receberá um código de verificação.");
-        setIsResetting(false);
-        return;
-      }
-
-      const user = users[0];
-
-      // Gera código de 6 dígitos
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedCode(code);
-      setResetUserId(user.id);
-
-      console.log('📧 Tentando enviar código via função backend...');
-      console.log('📦 Payload:', { email: normalizedResetEmail, code, userName: user.full_name?.split(' ')[0] || 'Usuário' });
-
-      const result = await base44.functions.invoke('sendPasswordResetEmail', {
+      // Envia código de 6 dígitos por e-mail (gerado e validado no servidor — sem link mágico)
+      const result = await base44.functions.invoke('sendEmailCode', {
         email: normalizedResetEmail,
-        code: code,
-        userName: user.full_name?.split(' ')[0] || 'Usuário'
+        purpose: 'reset'
       });
 
-      console.log('📬 Resposta completa:', JSON.stringify(result, null, 2));
-
-      // Acessa a resposta correta (result.data)
-      const responseData = result.data;
-
-      // Verifica erro
-      if (responseData?.error) {
-        console.error('❌ Erro retornado:', responseData.error);
-        throw new Error(responseData.error);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Falha ao enviar o código');
       }
-
-      if (!responseData?.success) {
-        console.error('❌ Sucesso = false');
-        throw new Error('Falha ao enviar email');
-      }
-
-      console.log('✅ Email enviado com sucesso!');
-
-      await base44.entities.SystemLog.create({
-        step: 'Password_Reset_Code_Sent',
-        status: 'success',
-        message: 'Verification code sent successfully via SendEmail',
-        component_name: 'LoginModal',
-        payload: { email: normalizedResetEmail }
-      }).catch(() => { });
 
       setResetStep('code');
-      setResetSuccessMessage('✅ Código enviado! Verifique seu e-mail.');
+      // Por segurança não revelamos se o e-mail existe
+      setResetSuccessMessage('✅ Se o e-mail estiver cadastrado, enviamos um código. Verifique sua caixa de entrada (e o spam).');
 
     } catch (error) {
       console.error("Erro ao enviar código:", error);
@@ -361,13 +322,13 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     }
   };
 
-  // Passo 2: Verificar código
+  // Passo 2: avança pro passo da senha (o código é conferido de verdade no servidor ao redefinir)
   const handleVerifyCode = () => {
-    if (verificationCode.trim() === generatedCode.trim()) {
+    if (/^\d{6}$/.test(verificationCode.trim())) {
       setResetStep('newPassword');
-      setResetSuccessMessage('✅ Código verificado! Defina sua nova senha.');
+      setResetSuccessMessage('✅ Agora defina sua nova senha.');
     } else {
-      alert("❌ Código incorreto. Verifique e tente novamente.");
+      alert("❌ Digite o código de 6 dígitos que enviamos por e-mail.");
     }
   };
 
@@ -386,19 +347,19 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     setIsResetting(true);
 
     try {
-      // Usa função backend para atualizar senha (bypass de RLS)
-      await base44.functions.invoke('updateUserPassword', {
-        user_id: resetUserId,
-        new_password: newPassword
+      // Redefine a senha no servidor (valida o código + grava bcrypt, bypassa RLS)
+      const result = await base44.functions.invoke('resetPassword', {
+        email: resetEmail.toLowerCase().trim(),
+        code: verificationCode.trim(),
+        newPassword
       });
 
-      await base44.entities.SystemLog.create({
-        step: 'Password_Reset_Complete',
-        status: 'success',
-        message: 'Password changed successfully via verification code',
-        component_name: 'LoginModal',
-        payload: { user_id: resetUserId }
-      }).catch(() => { });
+      if (!result?.success) {
+        alert("❌ " + (result?.error || 'Não foi possível redefinir a senha.'));
+        setResetStep('code');
+        setIsResetting(false);
+        return;
+      }
 
       alert("✅ Senha alterada com sucesso! Faça login com sua nova senha.");
 
