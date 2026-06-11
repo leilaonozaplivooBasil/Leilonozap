@@ -210,7 +210,10 @@ function entityProxy(entity) {
     async create(data) {
       const payload = mapToDB(entity, data);
       const w = await _routeWrite(table, 'create', null, payload);
-      if (!w._skip && w.success && w.rows?.[0]) return mapFromDB(entity, w.rows[0]);
+      if (!w._skip) { // operador: a rota é autoritativa (não cai no anon)
+        if (w.success && w.rows?.[0]) return mapFromDB(entity, w.rows[0]);
+        throw new Error(w.error || w.details || 'Falha ao salvar (servidor)');
+      }
       const { data: row, error } = await supabase
         .from(table)
         .insert(payload)
@@ -223,7 +226,10 @@ function entityProxy(entity) {
     async update(id, data) {
       const payload = mapToDB(entity, data);
       const w = await _routeWrite(table, 'update', id, payload);
-      if (!w._skip && w.success) return mapFromDB(entity, w.rows?.[0] || { id, ...payload });
+      if (!w._skip) {
+        if (w.success) return mapFromDB(entity, w.rows?.[0] || { id, ...payload });
+        throw new Error(w.error || w.details || 'Falha ao salvar (servidor)');
+      }
       const { data: row, error } = await supabase
         .from(table)
         .update(payload)
@@ -236,7 +242,10 @@ function entityProxy(entity) {
 
     async delete(id) {
       const w = await _routeWrite(table, 'delete', id, null);
-      if (!w._skip && w.success) return { success: true };
+      if (!w._skip) {
+        if (w.success) return { success: true };
+        throw new Error(w.error || w.details || 'Falha ao excluir (servidor)');
+      }
       const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
       return { success: true };
