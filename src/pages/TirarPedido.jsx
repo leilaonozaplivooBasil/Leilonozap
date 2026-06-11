@@ -19,6 +19,12 @@ const parseBRL = (s) => {
   return Number.isFinite(n) ? n : 0;
 };
 const toText = (n) => (Number(n) || 0).toFixed(2).replace('.', ','); // 69.8 → "69,80"
+const CARGO_LABEL = {
+  distribuidor: 'Distribuidor', loja_fisica: 'Loja Física', ponto_retirada: 'Ponto de Retirada', parceiro: 'Parceiro',
+  licenciado: 'Licenciado', licenciado_catalogo: 'Licenciado Catálogo', licenciado_aplicativo: 'Licenciado App',
+  vendedor: 'Vendedor', influenciador: 'Influenciador', plano_lider: 'Líder', trainee: 'Trainee', usuario: 'Usuário',
+};
+const cargoLabel = (c) => CARGO_LABEL[c] || c || '—';
 
 export default function TirarPedido() {
   const navigate = useNavigate();
@@ -106,8 +112,8 @@ export default function TirarPedido() {
   const total = cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0);
   const sellerOptions = sellers.filter((s) => {
     const q = sellerQuery.trim().toLowerCase();
-    return !q || (s.full_name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q);
-  }).slice(0, 8);
+    return !q || (s.full_name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q) || (s.primary_career_level || '').toLowerCase().includes(q);
+  });
 
   const finalize = async () => {
     if (!user?.id) { toast.error('Faça login.'); return; }
@@ -235,29 +241,32 @@ export default function TirarPedido() {
             </div>
           )}
 
-          {/* vincular vendedor (comissão) — só pro distribuidor/operador, não pra dono de loja */}
+          {/* quem vendeu? (comissão) — só pro distribuidor/operador, não pra dono de loja */}
           {!isStore && (
             <div className="mb-3">
-              <label className="text-[11px] text-gray-400 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Vendedor (comissão) — opcional</label>
+              <label className="text-[11px] text-gray-400 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Quem vendeu? (comissão entra pra esse login) — opcional</label>
               {vendedor ? (
                 <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
-                  <span className="text-sm text-green-200 truncate">{vendedor.full_name} <span className="text-[10px] text-green-400/70">· {vendedor.primary_career_level}</span></span>
+                  <span className="text-sm text-green-200 truncate">{vendedor.full_name} <span className="text-[10px] text-green-400/70">· {cargoLabel(vendedor.primary_career_level)}</span></span>
                   <button onClick={() => { setVendedor(null); setSellerQuery(''); }} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ) : (
-                <div className="relative">
-                  <input value={sellerQuery} onChange={(e) => setSellerQuery(e.target.value)} placeholder="Buscar vendedor da rede…" className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
-                  {sellerQuery && sellerOptions.length > 0 && (
-                    <div className="absolute z-10 left-0 right-0 mt-1 bg-gray-950 border border-gray-700 rounded-lg max-h-52 overflow-y-auto shadow-xl">
-                      {sellerOptions.map((s) => (
-                        <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 hover:bg-gray-800 text-sm border-b border-gray-800/60 last:border-0">
-                          <div className="truncate">{s.full_name}</div>
-                          <div className="text-[10px] text-gray-500">{s.primary_career_level} · {s.email}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {sellerQuery && sellerOptions.length === 0 && <div className="absolute z-10 left-0 right-0 mt-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-500">Nenhum vendedor encontrado.</div>}
+                <div>
+                  <input value={sellerQuery} onChange={(e) => setSellerQuery(e.target.value)} placeholder="Filtrar por nome, e-mail ou cargo…" className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500 mb-1" />
+                  <div className="border border-gray-800 rounded-lg max-h-56 overflow-y-auto bg-gray-950/60">
+                    {sellerOptions.length === 0 ? (
+                      <div className="px-3 py-3 text-xs text-gray-500">{sellers.length ? 'Nenhum login encontrado.' : 'Carregando logins da rede…'}</div>
+                    ) : sellerOptions.map((s) => (
+                      <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 hover:bg-gray-800 text-sm border-b border-gray-800/60 last:border-0 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{s.full_name || s.email}</div>
+                          <div className="text-[10px] text-gray-500 truncate">{s.email}</div>
+                        </div>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-300 shrink-0">{cargoLabel(s.primary_career_level)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">{sellers.length} logins vinculados ao distribuidor · sem seleção, a venda fica na casa.</p>
                 </div>
               )}
             </div>
