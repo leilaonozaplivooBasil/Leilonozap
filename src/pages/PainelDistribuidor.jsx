@@ -44,6 +44,7 @@ export default function PainelDistribuidor() {
   const [empForm, setEmpForm] = useState({ full_name: '', email: '', password: '' });
   const [vendas, setVendas] = useState(null);
   const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
+  const [lojaStats, setLojaStats] = useState(null);
   const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
     produtos_total: 0, produtos_ativos: 0, estoque_qtd: 0, vendidos_qtd: 0, faturado: 0, valor_estoque: 0,
@@ -58,10 +59,11 @@ export default function PainelDistribuidor() {
     if (u && u.is_pdv_operator === true) { navigate('/painel/pdv'); return; }
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
+    const _isLoja = ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
     (async () => {
       try {
         const [dash, wallet, lv, rp, rede] = await Promise.all([
-          supabase.rpc('distribuidor_dash', { dist_id: u.id }),
+          _isLoja ? supabase.rpc('loja_dash', { _owner: u.id }) : supabase.rpc('distribuidor_dash', { dist_id: u.id }),
           base44.functions.invoke('getMyWallet', { user_id: u.id }),
           supabase.from('career_levels').select('id,nome,adesao_valor,ordem').eq('bloco', 'rede').order('ordem'),
           supabase.from('register_permissions').select('can_register_level,bonus_adesao_pct').eq('actor_level', u.primary_career_level),
@@ -71,7 +73,8 @@ export default function PainelDistribuidor() {
         setLevels(lv.data || []);
         setPerms(rp.data || []);
         setDownline(rede.data || []);
-        setStats((s) => ({ ...s, ...d, saldo: wallet?.saldo_disponivel || 0, comissao: d.comissao ?? (wallet?.commission_balance || 0) }));
+        if (_isLoja) setLojaStats({ ...d, saldo: wallet?.saldo_disponivel || 0, comissao: d.comissao ?? 0 });
+        else setStats((s) => ({ ...s, ...d, saldo: wallet?.saldo_disponivel || 0, comissao: d.comissao ?? (wallet?.commission_balance || 0) }));
       } catch (e) { console.error(e); }
       setLoading(false);
       // fornecedores + funcionários (não bloqueiam a tela)
@@ -137,7 +140,18 @@ export default function PainelDistribuidor() {
     } catch (e) { console.error(e); setVendas([]); }
   };
 
-  const MENU = [
+  const isLoja = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
+  const MENU = isLoja ? [
+    { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
+    { id: 'rede', label: 'Minha Rede', icon: Network },
+    { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
+    { id: 'estoque', label: 'Meu Estoque', icon: Package, route: '/painel/estoque', star: true },
+    { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
+    { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
+    { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
+    { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
+  ] : [
     { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Rede', icon: Network },
@@ -184,8 +198,46 @@ export default function PainelDistribuidor() {
 
       {/* CONTEÚDO */}
       <main className="flex-1 p-6 md:p-8">
-        {/* ───────────────────── VISÃO GERAL ───────────────────── */}
-        {tab === 'visao' && (
+        {/* ───────────── VISÃO GERAL — LOJA (loja_fisica/ponto/parceiro) ───────────── */}
+        {tab === 'visao' && isLoja && (
+          <div>
+            <MetaBanner userId={user.id} />
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+              <div>
+                <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
+                <p className="text-gray-400 text-sm">{user.store_name || user.full_name} · {cargoNome}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
+                <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-bold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
+              </div>
+            </div>
+            <SectionLabel>📦 Minha loja</SectionLabel>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Stat icon={Package} label="Produtos na loja" value={Number(lojaStats?.itens || 0).toLocaleString('pt-BR')} sub={`${lojaStats?.ativos || 0} ativos`} color="text-white" />
+              <Stat icon={Box} label="Em estoque" value={Number(lojaStats?.estoque_qtd || 0).toLocaleString('pt-BR')} sub={`${lojaStats?.sem_estoque || 0} zerados`} color="text-blue-400" />
+              <Stat icon={DollarSign} label="Valor em loja" value={money(lojaStats?.valor_loja || 0)} sub="estoque × preço" color="text-amber-400" />
+              <Stat icon={Truck} label="Pedidos a despachar" value={lojaStats?.pedidos_abrir || 0} sub="aguardando" color={lojaStats?.pedidos_abrir > 0 ? 'text-orange-400' : 'text-white'} />
+            </div>
+            <SectionLabel>💰 Vendas & Rede</SectionLabel>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <Stat icon={ShoppingCart} label="Vendas" value={money(lojaStats?.vendas_valor || 0)} sub="online + PDV" color="text-green-400" />
+              <Stat icon={TrendingUp} label="Comissões" value={money(lojaStats?.comissao || 0)} sub="acumuladas" color="text-yellow-400" />
+              <Stat icon={Users} label="Minha rede" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
+              <Stat icon={Wallet} label="Saldo" value={money(lojaStats?.saldo || 0)} sub="pra sacar" color="text-emerald-400" />
+            </div>
+            <SectionLabel>⚡ Atalhos</SectionLabel>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Shortcut onClick={() => navigate(ROUTES.pdv)} icon={ShoppingCart} title="PDV · Tirar pedido" desc="Venda e baixe estoque." highlight />
+              <Shortcut onClick={() => navigate('/painel/estoque')} icon={Package} title="Meu Estoque" desc="Veja e ajuste sua loja." />
+              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Monte sua equipe." />
+              <Shortcut onClick={() => navigate(ROUTES.pedidos)} icon={Truck} title="Pedidos & Envio" desc="Despache suas vendas." />
+            </div>
+          </div>
+        )}
+
+        {/* ───────────────────── VISÃO GERAL — DISTRIBUIDOR ───────────────────── */}
+        {tab === 'visao' && !isLoja && (
           <div>
             <MetaBanner userId={user.id} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
