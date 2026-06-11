@@ -20,8 +20,10 @@ export default async function handler(req, res) {
 
     const u = (await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json())[0];
     if (!u) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
-    const cpf = onlyDigits(u.cpf);
-    if (!cpf || cpf.length !== 11) return res.status(200).json({ success: false, error: 'Cadastre um CPF válido no seu perfil antes de validar.' });
+    const cpf = onlyDigits(u.cpf) || onlyDigits(body?.cpf);
+    if (!cpf || cpf.length !== 11) return res.status(200).json({ success: false, error: 'Informe um CPF válido (11 dígitos).' });
+    // grava o CPF no perfil se ainda não tinha
+    if (!onlyDigits(u.cpf)) await sb(`app_users?id=eq.${userId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ cpf }) });
     // trava: a chave de saque precisa ser o CPF do titular
     const pixKey = onlyDigits(body?.pix_key);
     if (pixTipo !== 'cpf' || pixKey !== cpf) {

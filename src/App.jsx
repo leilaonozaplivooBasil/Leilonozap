@@ -20,6 +20,7 @@ import CatalogOrdersAdmin from '@/pages/CatalogOrdersAdmin';
 import AnaliseLoteEstoque from '@/pages/AnaliseLoteEstoque';
 import EstoqueLotes from '@/pages/EstoqueLotes';
 import Evoluir from '@/pages/Evoluir';
+import Carteira from '@/pages/Carteira';
 import ImageOptimizer from '@/pages/ImageOptimizer';
 import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
@@ -118,6 +119,7 @@ const AuthenticatedApp = () => {
       } />
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<Evoluir />} />
+      <Route path="/Carteira" element={<Carteira />} />
       <Route path="/portal/arrematante" element={<PortalArrematante />} />
       <Route path="/portal/loja-virtual" element={<PortalLojaVirtual />} />
       <Route path="/portal/licenciado" element={<PortalLicenciado />} />
