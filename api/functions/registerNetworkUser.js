@@ -112,7 +112,7 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     const hash = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
     const payload = {
-      id, base44_id: id, full_name, email, password: hash, phone: phone || null,
+      id, base44_id: id, full_name, email, password: null, phone: phone || null,
       role: 'user', career_levels: [level], primary_career_level: level,
       referred_by_id, referral_code, terms_accepted: true,
       is_seller: ['vendedor'].includes(level) ? true : null,
@@ -124,6 +124,8 @@ export default async function handler(req, res) {
     if (!ins.ok || !Array.isArray(rows) || !rows.length) {
       return res.status(200).json({ success: false, error: 'Falha ao criar usuário', details: rows });
     }
+    // grava o hash na tabela isolada (só service_role lê) — coluna app_users.password fica vazia
+    await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
     const u = { ...rows[0] };
     delete u.password; // nunca devolve o hash pro client
     return res.status(200).json({ success: true, user: u });

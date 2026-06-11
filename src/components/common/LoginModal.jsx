@@ -123,93 +123,14 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         return;
       }
 
-      // TRATAMENTO DE DUPLICATAS
-      if (users.length > 1) {
-        console.warn("⚠️ Encontrados múltiplos usuários com o mesmo E-mail!");
-        users.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-        const [keepUser, ...oldUsers] = users;
-        console.log(`✅ Mantendo usuário: ${keepUser.id} (${keepUser.created_date})`);
-
-        for (const oldUser of oldUsers) {
-          try {
-            console.log(`❌ Removendo duplicata: ${oldUser.id} (${oldUser.created_date})`);
-            await AppUser.delete(oldUser.id);
-          } catch (e) {
-            console.error("Erro ao remover duplicata:", e);
-          }
-        }
-
-        const user = keepUser;
-
-        if (user.password !== password) {
-          setErrorMessage("❌ Senha incorreta.");
-          setIsLogging(false);
-          return;
-        }
-
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        sessionStorage.setItem('isLoggedIn', 'true');
-
-        console.log(`[LOGIN] Login bem-sucedido: ${user.full_name} (duplicatas removidas)`);
-
-        setTimeout(() => {
-          try {
-            if (onSuccess) {
-              onSuccess(user);
-            } else {
-              // Roteamento por role (mesmo comportamento do fluxo normal)
-              if (user.role === 'investidor') {
-                window.location.href = createPageUrl("MarketplaceLotes");
-              } else if (user.role === 'leiloeiro') {
-                window.location.href = createPageUrl("CRMInvestidores");
-              } else {
-                // admin e outros vão para Home (acesso livre ao menu completo)
-                window.location.href = createPageUrl("Home");
-              }
-            }
-            onClose();
-          } catch (err) {
-            console.error("Erro no callback:", err);
-          }
-        }, 500);
-
-        return;
-      }
-
-      const user = users[0];
-
-      // VALIDAÇÃO E AUTO-MIGRAÇÃO COM BCRYPTJS
-      const storedPassword = user.password;
-      const isBcryptHash = storedPassword && storedPassword.startsWith('$2');
-      let passwordValid = false;
-
-      if (isBcryptHash) {
-        // Validar hash bcrypt
-        passwordValid = bcrypt.compareSync(password, storedPassword);
-        console.log(`[LOGIN] Validação bcrypt para: ${user.full_name}`);
-      } else {
-        // Validação legado (texto puro)
-        passwordValid = (storedPassword === password);
-
-        if (passwordValid) {
-          // Auto-migrar a senha antiga para bcrypt sem bloquear o usuário
-          try {
-            const salt = bcrypt.genSaltSync(10);
-            const hashedPassword = bcrypt.hashSync(password, salt);
-            await AppUser.update(user.id, { password: hashedPassword });
-            console.log(`[LOGIN] 🔄 AUTO-MIGRAÇÃO: Senha de ${user.full_name} convertida para bcrypt.`);
-            user.password = hashedPassword; // Atualiza a sessão local também
-          } catch (migrationErr) {
-            console.warn("[LOGIN] ⚠️ Erro na auto-migração de senha (não-bloqueante):", migrationErr);
-          }
-        }
-      }
-
-      if (!passwordValid) {
-        setErrorMessage("❌ Senha incorreta.");
+      // 🔒 Senha validada NO SERVIDOR (o hash não fica exposto no client/anon key)
+      const _login = await base44.functions.invoke('login', { email: normalizedEmail, password });
+      if (!_login?.success) {
+        setErrorMessage("❌ " + (_login?.error || 'E-mail ou senha incorretos.'));
         setIsLogging(false);
         return;
       }
+      const user = _login.user;
 
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');

@@ -21,23 +21,16 @@ export default function SellerLoginForm({ onSuccess }) {
 
     setIsLoading(true);
     try {
-      const users = await base44.entities.AppUser.filter({ email: email.trim().toLowerCase() });
-
-      if (!users || users.length === 0) {
-        setError('E-mail ou senha incorretos.');
+      // senha validada no servidor (o hash não é exposto no client)
+      const _login = await base44.functions.invoke('login', { email: email.trim().toLowerCase(), password });
+      if (!_login?.success) {
+        setError(_login?.error || 'E-mail ou senha incorretos.');
         return;
       }
-
-      const user = users[0];
+      const user = _login.user;
 
       if (!user.is_seller && user.role !== 'admin' && user.role !== 'super_admin') {
         setError('Acesso não autorizado para este perfil.');
-        return;
-      }
-
-      const senhaValida = bcrypt.compareSync(password, user.password || '');
-      if (!senhaValida) {
-        setError('E-mail ou senha incorretos.');
         return;
       }
 

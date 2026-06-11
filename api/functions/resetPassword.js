@@ -45,12 +45,12 @@ export default async function handler(req, res) {
     if (!v.ok) return res.status(200).json({ success: false, error: v.error });
 
     const hash = bcrypt.hashSync(newPassword, bcrypt.genSaltSync(10));
-    const upd = await sb(`app_users?email=eq.${encodeURIComponent(email)}`, {
-      method: 'PATCH', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ password: hash, needs_password_reset: false, updated_date: new Date().toISOString() }),
-    });
-    const rows = await upd.json();
-    if (!upd.ok || !Array.isArray(rows) || !rows.length) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
+    // acha o usuário e grava o hash na tabela isolada (não na coluna exposta)
+    const urows = await (await sb(`app_users?select=id&email=eq.${encodeURIComponent(email)}&limit=1`)).json();
+    const u = Array.isArray(urows) ? urows[0] : null;
+    if (!u) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
+    await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: u.id, password_hash: hash }) });
+    await sb(`app_users?id=eq.${u.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ password: null, needs_password_reset: false, updated_date: new Date().toISOString() }) });
     return res.status(200).json({ success: true });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao redefinir senha', details: String(e?.message || e) });
