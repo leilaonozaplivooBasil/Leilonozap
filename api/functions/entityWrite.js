@@ -20,6 +20,27 @@ function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
 }
 
+// escreve removendo colunas inexistentes e tentando de novo (robusto a mismatch de campo)
+async function writeResilient(method, table, id, payload, depth = 0) {
+  const isArr = Array.isArray(payload);
+  const path = id ? `${table}?id=eq.${encodeURIComponent(id)}` : table;
+  const r = await sb(path, { method, headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) });
+  const rows = await r.json().catch(() => null);
+  if (r.ok) return { ok: true, rows: Array.isArray(rows) ? rows : [rows], removed: [] };
+  const msg = JSON.stringify(rows || '');
+  // PostgREST: "Could not find the 'X' column" ou "column \"X\" of relation ... does not exist"
+  const m = msg.match(/'([a-zA-Z0-9_]+)' column/) || msg.match(/column "([a-zA-Z0-9_]+)"/);
+  if (m && depth < 12) {
+    const bad = m[1];
+    const strip = (o) => { const c = { ...o }; delete c[bad]; return c; };
+    const np = isArr ? payload.map(strip) : strip(payload);
+    const next = await writeResilient(method, table, id, np, depth + 1);
+    next.removed = [bad, ...(next.removed || [])];
+    return next;
+  }
+  return { ok: false, details: msg.slice(0, 200) };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -55,19 +76,17 @@ export default async function handler(req, res) {
         : stamp(body?.payload || {});
       const norm = (x) => { if (x.base44_id === undefined) x.base44_id = x.id; return x; };
       const finalPayload = Array.isArray(payload) ? payload.map(norm) : norm(payload);
-      const r = await sb(table, { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(finalPayload) });
-      const rows = await r.json();
-      if (!r.ok) return res.status(200).json({ success: false, error: 'Falha ao criar', details: JSON.stringify(rows).slice(0, 200) });
-      return res.status(200).json({ success: true, rows: Array.isArray(rows) ? rows : [rows] });
+      const cr = await writeResilient('POST', table, null, finalPayload);
+      if (!cr.ok) return res.status(200).json({ success: false, error: 'Falha ao criar', details: cr.details });
+      return res.status(200).json({ success: true, rows: cr.rows, removidos: cr.removed });
     }
 
     // update
     if (!id) return res.status(400).json({ success: false, error: 'id obrigatório' });
     const patch = { ...(body?.payload || {}), updated_date: now };
-    const r = await sb(`${table}?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) });
-    const rows = await r.json();
-    if (!r.ok) { return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: JSON.stringify(rows).slice(0, 200) }); }
-    return res.status(200).json({ success: true, rows: Array.isArray(rows) ? rows : [rows] });
+    const ur = await writeResilient('PATCH', table, id, patch);
+    if (!ur.ok) return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: ur.details });
+    return res.status(200).json({ success: true, rows: ur.rows, removidos: ur.removed });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro', details: String(e?.message || e) });
   }
