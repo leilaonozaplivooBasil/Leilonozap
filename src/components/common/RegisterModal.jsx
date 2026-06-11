@@ -120,7 +120,9 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
       setTimeout(() => {
         if (onSuccess) onSuccess(result.user);
         onClose();
-        window.location.reload();
+        // cargo pago via link: manda pagar a adesão no /Evoluir; senão recarrega
+        if (result.needs_adesao) { window.location.href = '/Evoluir'; }
+        else { window.location.reload(); }
       }, 400);
     } catch (error) {
       console.error("[REGISTER] Erro ao criar conta:", error);

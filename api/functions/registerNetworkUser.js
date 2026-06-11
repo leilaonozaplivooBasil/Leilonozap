@@ -90,6 +90,7 @@ export default async function handler(req, res) {
 
     // 4) define a categoria do novo usuário
     let level = 'usuario';
+    let needsAdesao = null; // cargo pago pendente de pagamento
     if (as_level && as_level !== 'usuario') {
       // precisa que o indicador tenha permissão de cadastrar essa categoria (tabela register_permissions)
       if (!actorLevel) return res.status(200).json({ success: false, error: 'Categoria exige um indicador habilitado.' });
@@ -97,7 +98,11 @@ export default async function handler(req, res) {
       if (!Array.isArray(perm) || !perm.length) {
         return res.status(200).json({ success: false, error: `Seu cargo (${actorLevel}) não pode cadastrar a categoria "${as_level}".` });
       }
-      level = as_level;
+      // 🔒 Cargo PAGO não é concedido de graça pelo link: entra como Usuário e paga a adesão depois (Evoluir).
+      const lv = await (await sb(`career_levels?select=adesao_valor&id=eq.${encodeURIComponent(as_level)}&limit=1`)).json();
+      const adesao = Array.isArray(lv) && lv[0] ? Number(lv[0].adesao_valor) || 0 : 0;
+      if (adesao > 0) { level = 'usuario'; needsAdesao = as_level; }
+      else { level = as_level; }
     }
 
     // 5) referral_code único
@@ -128,7 +133,7 @@ export default async function handler(req, res) {
     await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
     const u = { ...rows[0] };
     delete u.password; // nunca devolve o hash pro client
-    return res.status(200).json({ success: true, user: u });
+    return res.status(200).json({ success: true, user: u, needs_adesao: needsAdesao });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao cadastrar', details: String(e?.message || e) });
   }
