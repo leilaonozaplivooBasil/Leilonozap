@@ -47,6 +47,7 @@ export default function PainelDistribuidor() {
   const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
   const [lojaStats, setLojaStats] = useState(null);
   const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
+  const [marketing, setMarketing] = useState(null);
   const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
     produtos_total: 0, produtos_ativos: 0, estoque_qtd: 0, vendidos_qtd: 0, faturado: 0, valor_estoque: 0,
@@ -143,6 +144,15 @@ export default function PainelDistribuidor() {
     setBusy('');
   };
 
+  // Marketing (lazy)
+  const loadMarketing = async () => {
+    if (marketing !== null || !user?.id) return;
+    try {
+      const { data } = await supabase.rpc('marketing_resumo', { _ref: user.referral_code || '___', _owner: user.id });
+      setMarketing(data || {});
+    } catch (e) { console.error(e); setMarketing({}); }
+  };
+
   // Histórico de vendas (lazy)
   const loadVendas = async () => {
     if (vendas !== null || !user?.id) return;
@@ -165,6 +175,7 @@ export default function PainelDistribuidor() {
     { id: 'estoque', label: 'Meu Estoque', icon: Package, route: '/painel/estoque', star: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
     { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
+    { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ] : [
@@ -178,10 +189,11 @@ export default function PainelDistribuidor() {
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
     { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
+    { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ];
-  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); } };
+  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); if (m.id === 'marketing') loadMarketing(); } };
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando painel…</div>;
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
@@ -463,6 +475,43 @@ export default function PainelDistribuidor() {
                 <button onClick={trocarSenha} disabled={busy === 'senha'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'senha' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Alterar senha</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ───────────────────── MARKETING & CLIQUES ───────────────────── */}
+        {tab === 'marketing' && (
+          <div>
+            <h1 className="text-2xl font-black mb-1">Marketing & Cliques</h1>
+            <p className="text-gray-400 text-sm mb-6">Cliques na sua loja e desempenho dos seus anúncios.</p>
+            {marketing === null ? (
+              <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
+            ) : (
+              <>
+                <SectionLabel>🖱️ Cliques na loja</SectionLabel>
+                <div className="grid grid-cols-3 gap-4 mb-8 max-w-2xl">
+                  <Stat icon={MousePointerClick} label="Hoje" value={Number(marketing.cliques_hoje || 0).toLocaleString('pt-BR')} sub="visitas" color="text-blue-400" />
+                  <Stat icon={MousePointerClick} label="7 dias" value={Number(marketing.cliques_7d || 0).toLocaleString('pt-BR')} sub="visitas" color="text-white" />
+                  <Stat icon={MousePointerClick} label="Total" value={Number(marketing.cliques_total || 0).toLocaleString('pt-BR')} sub="visitas" color="text-white" />
+                </div>
+
+                <SectionLabel>📣 Anúncios (Ads)</SectionLabel>
+                {marketing.tem_ads ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    <Stat icon={Megaphone} label="Impressões" value={Number(marketing.ads_impressoes || 0).toLocaleString('pt-BR')} color="text-white" />
+                    <Stat icon={MousePointerClick} label="Cliques" value={Number(marketing.ads_cliques || 0).toLocaleString('pt-BR')} color="text-blue-400" />
+                    <Stat icon={DollarSign} label="Gasto" value={money(marketing.ads_gasto || 0)} color="text-red-400" />
+                    <Stat icon={ShoppingCart} label="Conversões" value={Number(marketing.ads_conversoes || 0).toLocaleString('pt-BR')} color="text-green-400" />
+                    <Stat icon={TrendingUp} label="ROAS" value={`${(marketing.ads_gasto > 0 ? (Number(marketing.ads_receita) / Number(marketing.ads_gasto)) : 0).toFixed(2)}x`} sub={money(marketing.ads_receita || 0)} color="text-yellow-400" />
+                  </div>
+                ) : (
+                  <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-8 text-center">
+                    <Megaphone className="w-8 h-8 mx-auto mb-2 text-gray-500" />
+                    <p className="text-gray-300 font-semibold mb-1">Conecte suas campanhas</p>
+                    <p className="text-sm text-gray-500">Meta Ads, Google Ads e TikTok aparecem aqui com impressões, cliques, gasto, conversões e ROAS. Em breve.</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
