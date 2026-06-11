@@ -47,6 +47,7 @@ export default function PainelDistribuidor() {
   const [vendas, setVendas] = useState(null);
   const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
   const [lojaStats, setLojaStats] = useState(null);
+  const [storeSlug, setStoreSlug] = useState('');
   const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
   const [marketing, setMarketing] = useState(null);
   const [atend, setAtend] = useState(null); // { whatsapp, atividade }
@@ -67,6 +68,9 @@ export default function PainelDistribuidor() {
     if (u && u.is_pdv_operator === true) { navigate('/painel/pdv'); return; }
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
+    // slug da loja online (/loja/:slug) — do user ou resolvido no banco
+    if (u.store_slug) setStoreSlug(u.store_slug);
+    else supabase.from('app_users').select('store_slug').eq('id', u.id).limit(1).single().then(({ data }) => { if (data?.store_slug) setStoreSlug(data.store_slug); }).catch(() => {});
     const _isLoja = ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
     (async () => {
       try {
@@ -281,6 +285,7 @@ export default function PainelDistribuidor() {
                 <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-bold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
               </div>
             </div>
+            <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name} />
             <SectionLabel>📦 Minha loja</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Stat icon={Package} label="Produtos na loja" value={Number(lojaStats?.itens || 0).toLocaleString('pt-BR')} sub={`${lojaStats?.ativos || 0} ativos`} color="text-white" />
@@ -322,6 +327,8 @@ export default function PainelDistribuidor() {
                 )}
               </div>
             </div>
+
+            <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name || 'Leilão NoZap'} />
 
             {/* destaque: vendas hoje + faturado */}
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
@@ -793,5 +800,30 @@ function Shortcut({ onClick, icon: Icon, title, desc, highlight }) {
       <div className="text-sm text-gray-400">{desc}</div>
       <div className="mt-2 text-green-400 text-sm flex items-center gap-1">Abrir <ArrowRight className="w-4 h-4" /></div>
     </button>
+  );
+}
+
+// 🏪 Card "Sua loja online" — link público /loja/:slug pra copiar e compartilhar
+function LojaLinkCard({ slug, name }) {
+  const [copied, setCopied] = useState(false);
+  if (!slug) return null;
+  const url = `${ORIGIN}/loja/${slug}`;
+  const copy = () => { navigator.clipboard?.writeText(url); setCopied(true); toast.success('Link da loja copiado!'); setTimeout(() => setCopied(false), 1800); };
+  const waText = encodeURIComponent(`🛒 Conheça a loja ${name} no Leilão NoZap! Produtos com entrega: ${url}`);
+  return (
+    <div className="bg-gradient-to-br from-emerald-900/40 to-green-800/10 border border-emerald-500/30 rounded-2xl p-5 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold mb-1"><Store className="w-4 h-4" /> SUA LOJA ONLINE</div>
+          <a href={url} target="_blank" rel="noreferrer" className="text-lg font-black text-white hover:text-emerald-300 break-all">{url}</a>
+          <p className="text-xs text-gray-400 mt-1">Compartilhe esse link — o cliente compra direto do seu estoque e você recebe.</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a href={url} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500"><ExternalLink className="w-4 h-4" /> Abrir</a>
+          <button onClick={copy} className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500">{copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />} {copied ? 'Copiado' : 'Copiar'}</button>
+          <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Compartilhar</a>
+        </div>
+      </div>
+    </div>
   );
 }

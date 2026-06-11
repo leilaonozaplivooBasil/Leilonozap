@@ -43,13 +43,12 @@ export default function PedidosDistribuidor() {
   const reload = async (u = user) => {
     setLoading(true);
     try {
-      // pedidos de PRODUTO (exclui adesão de cargo), pagos e em fulfillment
-      const { data } = await supabase
-        .from('catalog_sales')
-        .select('*')
-        .neq('kind', 'adesao')
-        .order('created_at', { ascending: false })
-        .limit(500);
+      // pedidos de PRODUTO (exclui adesão de cargo), pagos e em fulfillment.
+      // Cada um vê SÓ os seus pedidos (seller_id = você); admin/super_admin vê todos.
+      const isAdmin = ['admin', 'super_admin'].includes(u?.role);
+      let qy = supabase.from('catalog_sales').select('*').neq('kind', 'adesao');
+      if (!isAdmin) qy = qy.eq('seller_id', u?.id);
+      const { data } = await qy.order('created_at', { ascending: false }).limit(500);
       setOrders((data || []).filter((o) => ['paid', 'preparando', 'saiu_entrega', 'entregue', 'cancelado'].includes(o.status)));
 
       const c = await base44.functions.invoke('manageCarriers', { action: 'list', ownerId: u?.id });
@@ -157,9 +156,18 @@ export default function PedidosDistribuidor() {
                     <div key={o.id} className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="font-bold flex items-center gap-2"><Package className="w-4 h-4 text-green-400" /> {o.product_title || 'Pedido'}</div>
+                          <div className="font-bold flex items-center gap-2">
+                            <Package className="w-4 h-4 text-green-400" /> {o.product_title || 'Pedido'}
+                            {o.source === 'loja_online' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold">🛒 Loja online</span>}
+                          </div>
                           <div className="text-sm text-gray-400 mt-0.5">{o.buyer_name || o.buyer_email || 'Cliente'} · {o.quantity || 1}x · <strong className="text-white">{money(o.total_amount)}</strong></div>
                           <div className="text-[11px] text-gray-500 mt-0.5">{(o.created_at || o.created_date) ? new Date(o.created_at || o.created_date).toLocaleString('pt-BR') : ''} {o.carrier ? `· ${o.carrier}` : ''} {o.tracking_code ? `· ${o.tracking_code}` : ''}</div>
+                          {(o.buyer_address || o.buyer_cep || o.buyer_phone) && (
+                            <div className="text-[12px] text-gray-300 mt-2 bg-gray-900/60 rounded-lg px-3 py-2 space-y-0.5">
+                              {o.buyer_phone && <div className="flex items-center gap-1.5"><Send className="w-3 h-3 text-emerald-400" /> <a href={`https://wa.me/55${String(o.buyer_phone).replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">{o.buyer_phone}</a></div>}
+                              {(o.buyer_address || o.buyer_cep) && <div className="flex items-start gap-1.5"><MapPin className="w-3 h-3 text-emerald-400 mt-0.5" /> <span>{o.buyer_address || ''}{o.buyer_cep ? ` — CEP ${o.buyer_cep}` : ''}</span></div>}
+                            </div>
+                          )}
                         </div>
                         <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${M.color}`}><Icon className="w-3.5 h-3.5" /> {M.label}</span>
                       </div>
