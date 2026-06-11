@@ -26,7 +26,6 @@ export default async function handler(req, res) {
         model: MODEL,
         messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
         max_tokens: 1200, temperature: 0.6,
-        ...(schema ? { response_format: { type: 'json_object' } } : {}),
       }),
       signal: AbortSignal.timeout(28000),
     });
@@ -35,7 +34,9 @@ export default async function handler(req, res) {
     const content = j?.choices?.[0]?.message?.content || '';
     if (schema) {
       try {
-        const clean = content.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+        let clean = content.replace(/```(json)?/gi, '').trim();
+        const a = clean.indexOf('{'); const b = clean.lastIndexOf('}');
+        if (a >= 0 && b > a) clean = clean.slice(a, b + 1);
         const obj = JSON.parse(clean);
         return res.status(200).json(obj); // Base44 retorna o objeto direto
       } catch {
