@@ -10,8 +10,18 @@ const OWNER = process.env.WA_OWNER_ID || '696bcc0831b99360419f7053'; // distribu
 const APP = process.env.APP_URL || 'https://leilaonozap.net';
 const oid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
+// Persona padrão (caso a caixa "Treinar a IA" esteja vazia) — Ribeiro, atendente da Distribuidora de Bangu
+const DEFAULT_RIBEIRO = `Você é o Ribeiro, atendente e vendedor da Distribuidora de Bangu (Leilão NoZap). Cordial, objetivo, pouco texto, sempre puxando pro fechamento da venda. Consulte o estoque, ofereça as melhores oportunidades e os preços mais baratos, e dê suporte. Nunca invente preço, prazo ou produto.`;
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+}
+// chama uma RPC do Postgres via service_role
+async function rpc(fn, body) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    return await r.json();
+  } catch { return null; }
 }
 async function saveMsg({ chatId, fromMe, sender, body }) {
   const now = new Date().toISOString();
@@ -62,7 +72,28 @@ export default async function handler(req, res) {
       let hist = [];
       try { hist = await (await sb(`wa_messages?select=from_me,body&owner_id=eq.${OWNER}&chat_id=eq.${encodeURIComponent(chatId)}&order=ts.desc&limit=12`)).json(); } catch { hist = []; }
       const conv = (Array.isArray(hist) ? hist.reverse() : []).map((x) => `${x.from_me ? 'Atendente' : 'Cliente'}: ${x.body}`).join('\n');
-      const prompt = `${cfg?.ai_prompt || 'Você é o atendimento da Leilão NoZap. Seja cordial, objetivo e ajude o cliente. Não invente preços nem prazos que não souber.'}\n\nConversa:\n${conv}\n\nResponda como atendente (curto, PT-BR).`;
+
+      // 🪪 quem está falando? (reconhece pelo número do WhatsApp)
+      const phone = chatId.replace(/@.*/, '');
+      let caller = null;
+      try { const cr = await rpc('find_user_by_phone', { _phone: phone }); caller = Array.isArray(cr) ? cr[0] : null; } catch { caller = null; }
+      const isNetwork = !!caller && (['admin', 'super_admin'].includes(caller.role) || (caller.primary_career_level && !['usuario', 'cliente'].includes(caller.primary_career_level)));
+
+      // 📦 estoque ao vivo (busca pela mensagem do cliente; se nada, mostra os mais baratos)
+      let stock = await rpc('busca_estoque', { _q: (text || '').slice(0, 40), _lim: 6 });
+      if (!Array.isArray(stock) || !stock.length) stock = await rpc('busca_estoque', { _q: '', _lim: 6 });
+
+      const idBlock = caller
+        ? `CONTATO RECONHECIDO: ${caller.full_name} — cargo "${caller.primary_career_level}"${isNetwork ? ' (MEMBRO DA REDE)' : ' (cliente)'}.` + (isNetwork ? ` Saldo de comissão dele: R$ ${Number(caller.commission_balance || 0).toFixed(2)}.${caller.store_slug ? ` Loja online: ${APP}/loja/${caller.store_slug}.` : ''}` : '')
+        : 'CONTATO NÃO RECONHECIDO (número não cadastrado): trate como cliente comum. NUNCA informe comissões, percentuais, ganhos da rede, dados internos ou financeiros da empresa.';
+      const gate = isNetwork
+        ? 'Este contato É da rede: pode falar de comissões, oportunidades, suporte e dados que cabem ao cargo dele.'
+        : 'Este contato NÃO é da rede: foque em VENDER. Pode CONVIDAR pra ser revendedor de forma genérica, mas sem números/percentuais internos.';
+      const stockBlock = (Array.isArray(stock) && stock.length)
+        ? 'ESTOQUE E PREÇOS REAIS (use só estes valores, nunca invente):\n' + stock.map((s) => `• ${s.produto} — R$ ${Number(s.preco).toFixed(2)} (${s.qtd} em estoque)`).join('\n')
+        : 'Sem itens correspondentes no estoque neste momento.';
+
+      const prompt = `${cfg?.ai_prompt || DEFAULT_RIBEIRO}\n\n[${idBlock}]\n[${gate}]\n\n${stockBlock}\n\nConversa até agora:\n${conv}\n\nResponda como Ribeiro: cordial, objetivo, pouco texto, sempre puxando pro fechamento da venda. PT-BR.`;
 
       let reply = '';
       try {
