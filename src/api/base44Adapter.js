@@ -149,6 +149,31 @@ function applyFilters(query, entity, filters) {
   return query;
 }
 
+// 🆕 Escritas de OPERADOR (admin/super_admin OU cargo de estoque) passam por rota service_role
+// (anon não persiste por RLS). Usuário comum mantém o comportamento atual (sem escalonar privilégio).
+const _OP_STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+function _operatorActor() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const u = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (!u?.id) return null;
+    const isOp = ['admin', 'super_admin'].includes(u.role) ||
+      (Array.isArray(u.career_levels) && u.career_levels.some((c) => _OP_STOCK.includes(c)));
+    return isOp ? u : null;
+  } catch { return null; }
+}
+async function _routeWrite(table, action, id, payload) {
+  const op = _operatorActor();
+  if (!op) return { _skip: true };
+  try {
+    const resp = await fetch('/api/functions/entityWrite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actorId: op.id, table, action, id, payload }),
+    });
+    return await resp.json();
+  } catch (e) { return { success: false, error: String(e?.message || e) }; }
+}
+
 function entityProxy(entity) {
   const table = TABLE_MAP[entity];
   if (!table) {
@@ -183,9 +208,12 @@ function entityProxy(entity) {
     },
 
     async create(data) {
+      const payload = mapToDB(entity, data);
+      const w = await _routeWrite(table, 'create', null, payload);
+      if (!w._skip && w.success && w.rows?.[0]) return mapFromDB(entity, w.rows[0]);
       const { data: row, error } = await supabase
         .from(table)
-        .insert(mapToDB(entity, data))
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -193,9 +221,12 @@ function entityProxy(entity) {
     },
 
     async update(id, data) {
+      const payload = mapToDB(entity, data);
+      const w = await _routeWrite(table, 'update', id, payload);
+      if (!w._skip && w.success) return mapFromDB(entity, w.rows?.[0] || { id, ...payload });
       const { data: row, error } = await supabase
         .from(table)
-        .update(mapToDB(entity, data))
+        .update(payload)
         .eq('id', id)
         .select()
         .single();
@@ -204,6 +235,8 @@ function entityProxy(entity) {
     },
 
     async delete(id) {
+      const w = await _routeWrite(table, 'delete', id, null);
+      if (!w._skip && w.success) return { success: true };
       const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
       return { success: true };
@@ -211,6 +244,8 @@ function entityProxy(entity) {
 
     async bulkCreate(rows) {
       const payload = (rows || []).map((r) => mapToDB(entity, r));
+      const w = await _routeWrite(table, 'bulkCreate', null, payload);
+      if (!w._skip && w.success && Array.isArray(w.rows)) return w.rows.map((r) => mapFromDB(entity, r));
       const { data, error } = await supabase.from(table).insert(payload).select();
       if (error) throw error;
       return data.map((r) => mapFromDB(entity, r));
