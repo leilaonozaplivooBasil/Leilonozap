@@ -1,6 +1,7 @@
 // createPdvOrder — tirador de pedido (PDV) do Distribuidor: grava venda física em catalog_sales
 // e baixa o estoque (products). service_role. Guard: ator admin/super_admin OU cargo de estoque.
 import crypto from 'crypto';
+import { payDirectCommissions } from '../_lib/commissions.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const oid = () => crypto.randomBytes(12).toString('hex');
@@ -24,6 +25,7 @@ export default async function handler(req, res) {
     const customer = body?.customer || {};
     const paymentMethod = String(body?.payment_method || 'dinheiro');
     const delivered = !!body?.delivered; // retirada no balcão = entregue na hora
+    const vendedorId = String(body?.vendedor_id || '').trim(); // venda vinculada a um vendedor (comissão)
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Operador e itens são obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -76,6 +78,14 @@ export default async function handler(req, res) {
     total = round2(total);
     sellerId = isStoreOwner ? actorId : (sellerId || employerId || actorId);
 
+    // 🧑‍💼 venda vinculada a um vendedor da rede → a venda passa a ser DELE (e ele ganha comissão)
+    let vendedor = null;
+    if (vendedorId && !isStoreOwner) {
+      const vArr = await (await sb(`app_users?select=id,full_name,primary_career_level&id=eq.${encodeURIComponent(vendedorId)}&limit=1`)).json();
+      vendedor = Array.isArray(vArr) ? vArr[0] : null;
+      if (vendedor) sellerId = vendedor.id;
+    }
+
     const now = new Date().toISOString();
     const saleId = oid();
     const title = lines.length === 1 ? lines[0].p.description : `${lines[0].p.description} +${lines.length - 1} item(ns)`;
@@ -109,7 +119,14 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ success: true, sale_id: saleId, total, items: lines.length, status: sale.status });
+    // comissão: só quando a venda foi vinculada a um vendedor da rede
+    let comissao = 0;
+    if (vendedor) {
+      comissao = await payDirectCommissions({ saleId, sellerId: vendedor.id, total });
+      if (comissao > 0) await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: comissao }) });
+    }
+
+    return res.status(200).json({ success: true, sale_id: saleId, total, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || null, comissao });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao tirar pedido', details: String(e?.message || e) });
   }
