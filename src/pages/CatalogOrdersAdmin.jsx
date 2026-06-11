@@ -36,12 +36,9 @@ export default function CatalogOrdersAdmin() {
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      // Pega email do admin logado no sistema custom (AppUser via localStorage)
-      const savedUser = localStorage.getItem('currentUser');
-      const callerEmail = savedUser ? JSON.parse(savedUser).email : null;
-      
-      const response = await getCatalogOrders({ caller_email: callerEmail });
-      const allOrders = response?.data?.orders || response?.orders || [];
+      // Lê direto da tabela catalog_sales (getCatalogOrders é stub da migração — retornava vazio).
+      // O acesso de admin já é protegido pela rota (RequireRole) + RLS de leitura.
+      const allOrders = await base44.entities.CatalogSale.filter({}, '-created_date', 1000);
       setOrders(Array.isArray(allOrders) ? allOrders : []);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);

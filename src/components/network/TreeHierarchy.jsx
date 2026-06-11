@@ -120,10 +120,9 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
       }
     };
 
-    if (mainRoot) {
-      drawLinesForNode(mainRoot);
-    }
-  }, [expandedNodes, mainRoot]);
+    const { roots: allRoots } = getHierarchy();
+    allRoots.forEach((r) => drawLinesForNode(r));
+  }, [expandedNodes, getHierarchy]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -366,7 +365,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     );
   };
 
-  if (!mainRoot) {
+  if (!roots.length) {
     return (
       <div className="w-full p-8 bg-gray-900 rounded-lg text-center text-gray-400">
         Nenhum usuário encontrado na hierarquia.
@@ -388,7 +387,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
                 node.children.forEach(collectIds);
               }
             };
-            collectIds(mainRoot);
+            roots.forEach(collectIds);
             setExpandedNodes(allIds);
             setTimeout(() => setLineKey(k => k + 1), 100);
           }}
@@ -418,9 +417,16 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
         style={{ zIndex: 1 }}
       />
 
-      {/* Árvore recursiva */}
-      <div className="relative flex flex-col items-center pt-12" style={{ zIndex: 2 }}>
-        <TreeNode node={mainRoot} depth={0} />
+      {/* Árvore recursiva — TODAS as raízes (não só a maior) */}
+      <div className="relative flex flex-col items-center gap-24 pt-12" style={{ zIndex: 2 }}>
+        {roots.map((r) => (
+          <div key={r.id} className="flex flex-col items-center">
+            {roots.length > 1 && (
+              <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">Raiz: {r.full_name}</div>
+            )}
+            <TreeNode node={r} depth={0} />
+          </div>
+        ))}
       </div>
     </div>
   );

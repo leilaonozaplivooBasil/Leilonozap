@@ -139,20 +139,14 @@ export default function MyCatalogOrders() {
   }, []);
 
   const fetchOrders = async (userId) => {
+    // Lê direto da tabela catalog_sales (a function getMyCatalogOrders é stub da migração e
+    // resolve com {ok:false} sem lançar erro — por isso o fallback antigo nunca rodava).
     try {
-      const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: userId });
-      return result?.orders || result?.data?.orders || [];
-    } catch (err) {
-      console.error('invoke failed, trying direct fetch:', err.message);
-      // Fallback: busca direta via CatalogSale entity com asServiceRole não disponível no frontend,
-      // então tenta buscar via entidade diretamente (sujeita a RLS mas tenta mesmo assim)
-      try {
-        const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
-        return directResult || [];
-      } catch (e2) {
-        console.error('Direct fetch also failed:', e2.message);
-        return [];
-      }
+      const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
+      return Array.isArray(directResult) ? directResult : [];
+    } catch (e) {
+      console.error('fetchOrders falhou:', e.message);
+      return [];
     }
   };
 
