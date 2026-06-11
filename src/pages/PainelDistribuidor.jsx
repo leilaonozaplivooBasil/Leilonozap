@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
   ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone,
-  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target
+  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles
 } from 'lucide-react';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -48,6 +48,10 @@ export default function PainelDistribuidor() {
   const [lojaStats, setLojaStats] = useState(null);
   const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
   const [marketing, setMarketing] = useState(null);
+  const [atend, setAtend] = useState(null); // { whatsapp, atividade }
+  const [waEdit, setWaEdit] = useState('');
+  const [iaQ, setIaQ] = useState('');
+  const [iaAns, setIaAns] = useState('');
   const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
     produtos_total: 0, produtos_ativos: 0, estoque_qtd: 0, vendidos_qtd: 0, faturado: 0, valor_estoque: 0,
@@ -144,6 +148,39 @@ export default function PainelDistribuidor() {
     setBusy('');
   };
 
+  // Atendimento (lazy): config whatsapp + feed de atividade
+  const loadAtendimento = async () => {
+    if (atend !== null || !user?.id) return;
+    try {
+      const isDist = user.primary_career_level === 'distribuidor';
+      const [wa, ativ] = await Promise.all([
+        base44.functions.invoke('manageConfig', { action: 'get', chave: 'whatsapp_suporte' }),
+        supabase.rpc('painel_atividade', { _owner: user.id, _is_dist: isDist, _lim: 40 }),
+      ]);
+      setAtend({ whatsapp: wa?.valor || '', atividade: ativ.data || [] });
+      setWaEdit(wa?.valor || '');
+    } catch (e) { console.error(e); setAtend({ whatsapp: '', atividade: [] }); }
+  };
+  const salvarWhats = async () => {
+    setBusy('wa');
+    try {
+      const r = await base44.functions.invoke('manageConfig', { action: 'set', actorId: user.id, chave: 'whatsapp_suporte', valor: onlyDigits(waEdit) });
+      if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
+      setAtend((a) => ({ ...a, whatsapp: onlyDigits(waEdit) })); toast.success('WhatsApp do suporte salvo!');
+    } catch { toast.error('Erro'); }
+    setBusy('');
+  };
+  const perguntarIA = async () => {
+    setBusy('ia'); setIaAns('');
+    try {
+      const r = await base44.functions.invoke('atendimentoIA', { ownerId: user.id, isDist: user.primary_career_level === 'distribuidor', question: iaQ });
+      if (r?.needs_key) { setIaAns('⚙️ ' + r.message); }
+      else if (!r?.success) { setIaAns('❌ ' + (r?.error || 'IA indisponível')); }
+      else setIaAns(r.answer);
+    } catch { setIaAns('❌ Erro ao consultar a IA.'); }
+    setBusy('');
+  };
+
   // Marketing (lazy)
   const loadMarketing = async () => {
     if (marketing !== null || !user?.id) return;
@@ -176,6 +213,7 @@ export default function PainelDistribuidor() {
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
     { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
     { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
+    { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ] : [
@@ -190,10 +228,11 @@ export default function PainelDistribuidor() {
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
     { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
     { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
+    { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ];
-  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); if (m.id === 'marketing') loadMarketing(); } };
+  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); if (m.id === 'marketing') loadMarketing(); if (m.id === 'atendimento') loadAtendimento(); } };
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando painel…</div>;
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
@@ -475,6 +514,62 @@ export default function PainelDistribuidor() {
                 <button onClick={trocarSenha} disabled={busy === 'senha'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'senha' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Alterar senha</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ───────────────────── ATENDIMENTO (WhatsApp + IA) ───────────────────── */}
+        {tab === 'atendimento' && (
+          <div className="max-w-5xl">
+            <h1 className="text-2xl font-black mb-1">Atendimento</h1>
+            <p className="text-gray-400 text-sm mb-6">Suporte via WhatsApp e a IA que monitora e fiscaliza o que acontece no painel.</p>
+            {atend === null ? (
+              <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* WhatsApp + IA */}
+                <div className="space-y-6">
+                  <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-green-400" /> WhatsApp do Suporte</h3>
+                    <div className="flex gap-2 mb-3">
+                      <input value={waEdit} onChange={(e) => setWaEdit(e.target.value)} placeholder="Número com DDD (ex: 21999999999)" className="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                      <button onClick={salvarWhats} disabled={busy === 'wa'} className="px-4 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold">{busy === 'wa' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}</button>
+                    </div>
+                    {atend.whatsapp
+                      ? <a href={`https://wa.me/55${atend.whatsapp}`} target="_blank" rel="noreferrer" className="w-full block text-center py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-bold flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" /> Falar com o suporte</a>
+                      : <p className="text-[11px] text-gray-500">Configure o número pra liberar o botão de suporte.</p>}
+                  </div>
+
+                  <div className="bg-gradient-to-br from-indigo-900/30 to-gray-900 border border-indigo-500/25 rounded-xl p-5">
+                    <h3 className="font-semibold mb-1 flex items-center gap-2"><Bot className="w-4 h-4 text-indigo-300" /> IA de Atendimento & Fiscalização</h3>
+                    <p className="text-[11px] text-gray-400 mb-3">A IA observa o painel, responde dúvidas e <b>alerta</b> sobre anomalias de venda. Não executa ações.</p>
+                    <textarea value={iaQ} onChange={(e) => setIaQ(e.target.value)} placeholder="Pergunte algo (ex: tem alguma venda fora do padrão hoje?)" rows={2} className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 mb-2 resize-none" />
+                    <button onClick={perguntarIA} disabled={busy === 'ia'} className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2">{busy === 'ia' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Consultar a IA</button>
+                    {iaAns && <div className="mt-3 bg-gray-950/60 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 whitespace-pre-wrap">{iaAns}</div>}
+                  </div>
+                </div>
+
+                {/* Feed de fiscalização */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2"><Receipt className="w-4 h-4 text-green-400" /> Atividade do painel (fiscalização)</h3>
+                  {(!atend.atividade || atend.atividade.length === 0) ? (
+                    <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-400 text-sm">Sem atividade recente.</div>
+                  ) : (
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                      {atend.atividade.map((a, i) => (
+                        <div key={a.id || i} className="bg-gray-800/60 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
+                          <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${a.tipo === 'venda' ? 'bg-green-500/15' : 'bg-blue-500/15'}`}>{a.tipo === 'venda' ? <ShoppingCart className="w-4 h-4 text-green-400" /> : <UserPlus className="w-4 h-4 text-blue-400" />}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm truncate">{a.titulo}</div>
+                            <div className="text-[11px] text-gray-500">{a.quem || ''} · {a.quando ? new Date(a.quando).toLocaleString('pt-BR') : ''}</div>
+                          </div>
+                          {a.valor != null && <div className="text-sm font-bold text-green-400">{money(a.valor)}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
