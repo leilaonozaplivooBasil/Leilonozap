@@ -563,8 +563,12 @@ export default function NetworkOverview() {
       user = JSON.parse(savedUser);
       setCurrentUser(user);
 
-      if (user.role !== 'admin' && user.role !== 'super_admin') {
-        toast.error("❌ Acesso negado. Apenas administradores.");
+      // admin OU cargos que gerenciam rede (Distribuidor/Loja Física/Ponto/Parceiro/Licenciado)
+      const REDE_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
+      const podeRede = user.role === 'admin' || user.role === 'super_admin' ||
+        (Array.isArray(user.career_levels) && user.career_levels.some((c) => REDE_CARGOS.includes(c)));
+      if (!podeRede) {
+        toast.error("❌ Acesso negado.");
         setIsLoading(false);
         return;
       }

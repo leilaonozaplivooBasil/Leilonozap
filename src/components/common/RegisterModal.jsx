@@ -84,8 +84,10 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
       const refCode = sessionStorage.getItem('referralCode') || '';
+      const asLevel = sessionStorage.getItem('registerAsLevel') || '';
 
       const result = await base44.functions.invoke('registerNetworkUser', {
+        as_level: asLevel,
         full_name: nameTrimmed,
         display_first_name: firstName || null,
         display_last_name: lastName || null,
@@ -113,6 +115,7 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
       localStorage.setItem('currentUser', JSON.stringify(result.user));
       sessionStorage.setItem('isLoggedIn', 'true');
       sessionStorage.removeItem('referralCode');
+      sessionStorage.removeItem('registerAsLevel');
 
       setTimeout(() => {
         if (onSuccess) onSuccess(result.user);

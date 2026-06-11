@@ -23,6 +23,7 @@ import Evoluir from '@/pages/Evoluir';
 import Carteira from '@/pages/Carteira';
 import AdminFinanceiro from '@/pages/AdminFinanceiro';
 import Recepcao from '@/pages/Recepcao';
+import PainelDistribuidor from '@/pages/PainelDistribuidor';
 import ImageOptimizer from '@/pages/ImageOptimizer';
 import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
@@ -128,6 +129,7 @@ const AuthenticatedApp = () => {
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<Evoluir />} />
       <Route path="/Carteira" element={<Carteira />} />
+      <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
       <Route path="/portal/arrematante" element={<PortalArrematante />} />
       <Route path="/portal/loja-virtual" element={<PortalLojaVirtual />} />

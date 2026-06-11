@@ -332,6 +332,12 @@ export default function Layout({ children, currentPageName }) {
       }
     }
 
+    // Captura a categoria-alvo do link de cadastro (?as=vendedor/influenciador/...)
+    const asLevel = urlParams.get('as');
+    if (asLevel && !sessionStorage.getItem('registerAsLevel')) {
+      sessionStorage.setItem('registerAsLevel', asLevel);
+    }
+
     const initApp = async () => {
       if (hasInitializedRef.current) {
         return;
@@ -591,15 +597,15 @@ export default function Layout({ children, currentPageName }) {
 
   const noZapLoggedItems = [];
 
-  // Cargos com estoque próprio podem gerir produtos (sem ser admin)
+  // Cargos com estoque próprio / rede têm um painel dedicado
   const _STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
-  const _canManageStock = currentUser && Array.isArray(currentUser.career_levels) && currentUser.career_levels.some((c) => _STOCK_CARGOS.includes(c));
+  const _REDE_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
+  const _hasCargo = (arr) => currentUser && Array.isArray(currentUser.career_levels) && currentUser.career_levels.some((c) => arr.includes(c));
+  const _canManageStock = _hasCargo(_STOCK_CARGOS);
+  const _hasPainel = _hasCargo(_REDE_CARGOS);
 
   const loggedMenuItems = [
-    ...(_canManageStock ? [
-      { title: "📦 Gestão de Produtos", pageName: "ProductManagement" },
-      { title: "🛍️ Gerenciar Loja Virtual", pageName: "CatalogManagement" },
-    ] : []),
+    ...(_hasPainel ? [{ title: "🏠 Meu Painel", pageName: "painel" }] : []),
     { title: "💰 Minha Carteira", pageName: "Carteira" },
     { title: "⬆️ Evoluir Nível", pageName: "Evoluir" },
     { title: "🛒 Meus Pedidos", pageName: "MyCatalogOrders" },
