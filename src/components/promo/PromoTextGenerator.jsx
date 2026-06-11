@@ -39,6 +39,11 @@ IMPORTANTE: Use linguagem de vendas brasileira, com emojis, e mencione "Leilão 
         },
       },
     });
+    if (!result || result.ok === false || (!result.whatsapp && !result.instagram && !result.stories)) {
+      alert(result?.needs_key ? '⚙️ A IA ainda não está conectada. Peça pra ativar a chave do AI Gateway.' : '⚠️ Não consegui gerar os textos agora. Tente de novo.');
+      setLoading(false);
+      return;
+    }
     setTexts(result);
     setLoading(false);
   };

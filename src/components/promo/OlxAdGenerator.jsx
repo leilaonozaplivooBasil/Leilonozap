@@ -95,6 +95,12 @@ REGRAS ABSOLUTAS:
       },
     });
 
+    if (!result || result.ok === false || !result.ad_text) {
+      setGeneratedAd('');
+      alert(result?.needs_key ? '⚙️ A IA ainda não está conectada. Peça pra ativar a chave do AI Gateway.' : '⚠️ Não consegui gerar o anúncio agora. Tente de novo.');
+      setLoading(false);
+      return;
+    }
     setGeneratedAd(result.ad_text);
     setLoading(false);
   };
