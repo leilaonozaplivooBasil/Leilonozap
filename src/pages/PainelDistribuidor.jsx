@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
-  ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone
+  ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone,
+  UserCog, Factory, Plus, Trash2, KeyRound
 } from 'lucide-react';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -36,6 +37,11 @@ export default function PainelDistribuidor() {
   const [levels, setLevels] = useState([]);
   const [perms, setPerms] = useState([]);
   const [downline, setDownline] = useState([]); // toda a rede abaixo do distribuidor
+  const [suppliers, setSuppliers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [supForm, setSupForm] = useState({ nome: '', cnpj: '', contato: '', telefone: '', email: '', categoria: '', observacao: '' });
+  const [empForm, setEmpForm] = useState({ full_name: '', email: '', password: '' });
+  const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
     gmv: 0, vendas: 0, comissao: 0, saldo: 0, cliques: 0,
     rede: 0, vendedores: 0, influenciadores: 0, parceiros: 0, licenciados: 0, pontos: 0, lojas: 0,
@@ -43,6 +49,8 @@ export default function PainelDistribuidor() {
 
   useEffect(() => {
     let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    // 🧑‍💼 funcionário de PDV não vê o painel do distribuidor — vai direto pro PDV
+    if (u && u.is_pdv_operator === true) { navigate('/painel/pdv'); return; }
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
     (async () => {
@@ -89,6 +97,15 @@ export default function PainelDistribuidor() {
         });
       } catch (e) { console.error(e); }
       setLoading(false);
+      // fornecedores + funcionários (não bloqueiam a tela)
+      try {
+        const [sup, emp] = await Promise.all([
+          base44.functions.invoke('manageSuppliers', { action: 'list', ownerId: u.id }),
+          base44.functions.invoke('manageEmployees', { action: 'list', employerId: u.id }),
+        ]);
+        setSuppliers(sup?.suppliers || []);
+        setEmployees(emp?.employees || []);
+      } catch (_) { /* silencioso */ }
     })();
   }, []);
 
@@ -100,12 +117,44 @@ export default function PainelDistribuidor() {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  // Fornecedores
+  const addSupplier = async () => {
+    if (!supForm.nome.trim()) { toast.error('Nome do fornecedor é obrigatório.'); return; }
+    setBusy('add-sup');
+    try {
+      const r = await base44.functions.invoke('manageSuppliers', { action: 'add', actorId: user.id, ownerId: user.id, ...supForm });
+      if (!r?.success) { toast.error(r?.error || 'Falha ao salvar'); setBusy(''); return; }
+      toast.success('Fornecedor cadastrado!');
+      setSuppliers((p) => [r.supplier, ...p]);
+      setSupForm({ nome: '', cnpj: '', contato: '', telefone: '', email: '', categoria: '', observacao: '' });
+    } catch { toast.error('Erro'); }
+    setBusy('');
+  };
+  const removeSupplier = async (id) => { setBusy(id); try { await base44.functions.invoke('manageSuppliers', { action: 'remove', actorId: user.id, id }); setSuppliers((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
+
+  // Funcionários do PDV
+  const addEmployee = async () => {
+    if (!empForm.full_name.trim() || !empForm.email.trim() || empForm.password.length < 6) { toast.error('Nome, e-mail e senha (mín. 6).'); return; }
+    setBusy('add-emp');
+    try {
+      const r = await base44.functions.invoke('manageEmployees', { action: 'add', actorId: user.id, employerId: user.id, ...empForm, email: empForm.email.trim().toLowerCase() });
+      if (!r?.success) { toast.error(r?.error || 'Falha ao criar'); setBusy(''); return; }
+      toast.success('Funcionário criado! Já pode logar e tirar pedidos.');
+      setEmployees((p) => [r.employee, ...p]);
+      setEmpForm({ full_name: '', email: '', password: '' });
+    } catch { toast.error('Erro'); }
+    setBusy('');
+  };
+  const removeEmployee = async (id) => { setBusy(id); try { await base44.functions.invoke('manageEmployees', { action: 'remove', actorId: user.id, id }); setEmployees((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
+
   const MENU = [
     { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Rede', icon: Network },
     { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
+    { id: 'funcionarios', label: 'Funcionários (PDV)', icon: UserCog },
     { id: 'produtos', label: 'Produtos & Estoque', icon: Package, ext: true },
+    { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
@@ -322,6 +371,91 @@ export default function PainelDistribuidor() {
             <div className="flex flex-wrap gap-3">
               <button onClick={() => navigate(createPageUrl('Carteira'))} className="px-4 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4" /> Carteira & KYC</button>
               <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>
+            </div>
+          </div>
+        )}
+
+        {/* ───────────────────── FUNCIONÁRIOS (PDV) ───────────────────── */}
+        {tab === 'funcionarios' && (
+          <div className="max-w-4xl">
+            <h1 className="text-2xl font-black mb-1">Funcionários (PDV)</h1>
+            <p className="text-gray-400 text-sm mb-6">Crie logins de balcão. Cada funcionário entra direto no PDV e cada pedido fica registrado com quem tirou.</p>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 h-fit">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><UserPlus className="w-4 h-4 text-green-400" /> Novo funcionário</h3>
+                <div className="space-y-2.5">
+                  <input value={empForm.full_name} onChange={(e) => setEmpForm({ ...empForm, full_name: e.target.value })} placeholder="Nome do funcionário" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  <input value={empForm.email} onChange={(e) => setEmpForm({ ...empForm, email: e.target.value })} placeholder="E-mail (login)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  <input value={empForm.password} onChange={(e) => setEmpForm({ ...empForm, password: e.target.value })} placeholder="Senha (mín. 6)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  <button onClick={addEmployee} disabled={busy === 'add-emp'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'add-emp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Criar login</button>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><UserCog className="w-4 h-4 text-green-400" /> Funcionários ({employees.length})</h3>
+                {employees.length === 0 ? (
+                  <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-400 text-sm">Nenhum funcionário cadastrado.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {employees.map((e) => (
+                      <div key={e.id} className="bg-gray-800/60 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-9 h-9 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0"><UserCog className="w-4 h-4 text-green-400" /></span>
+                          <div className="min-w-0"><div className="font-semibold text-sm truncate">{e.full_name}</div><div className="text-[11px] text-gray-400 truncate">{e.email}{e.active === false ? ' · inativo' : ''}</div></div>
+                        </div>
+                        <button onClick={() => removeEmployee(e.id)} disabled={busy === e.id} className="text-gray-500 hover:text-red-400 p-1.5"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ───────────────────── FORNECEDORES ───────────────────── */}
+        {tab === 'fornecedores' && (
+          <div className="max-w-4xl">
+            <h1 className="text-2xl font-black mb-1">Fornecedores</h1>
+            <p className="text-gray-400 text-sm mb-6">Cadastre seus fornecedores e mantenha os contatos organizados.</p>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 h-fit">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><Plus className="w-4 h-4 text-green-400" /> Novo fornecedor</h3>
+                <div className="space-y-2.5">
+                  <input value={supForm.nome} onChange={(e) => setSupForm({ ...supForm, nome: e.target.value })} placeholder="Nome / Razão social *" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={supForm.cnpj} onChange={(e) => setSupForm({ ...supForm, cnpj: e.target.value })} placeholder="CNPJ" className="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                    <input value={supForm.categoria} onChange={(e) => setSupForm({ ...supForm, categoria: e.target.value })} placeholder="Categoria" className="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={supForm.contato} onChange={(e) => setSupForm({ ...supForm, contato: e.target.value })} placeholder="Contato" className="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                    <input value={supForm.telefone} onChange={(e) => setSupForm({ ...supForm, telefone: e.target.value })} placeholder="Telefone" className="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  </div>
+                  <input value={supForm.email} onChange={(e) => setSupForm({ ...supForm, email: e.target.value })} placeholder="E-mail" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  <input value={supForm.observacao} onChange={(e) => setSupForm({ ...supForm, observacao: e.target.value })} placeholder="Observação" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                  <button onClick={addSupplier} disabled={busy === 'add-sup'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'add-sup' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Adicionar</button>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><Factory className="w-4 h-4 text-green-400" /> Cadastrados ({suppliers.length})</h3>
+                {suppliers.length === 0 ? (
+                  <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-400 text-sm">Nenhum fornecedor cadastrado.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {suppliers.map((s) => (
+                      <div key={s.id} className="bg-gray-800/60 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-9 h-9 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0"><Factory className="w-4 h-4 text-green-400" /></span>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm truncate">{s.nome}</div>
+                            <div className="text-[11px] text-gray-400 truncate">{[s.categoria, s.telefone || s.contato, s.cnpj].filter(Boolean).join(' · ') || '—'}</div>
+                          </div>
+                        </div>
+                        <button onClick={() => removeSupplier(s.id)} disabled={busy === s.id} className="text-gray-500 hover:text-red-400 p-1.5"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

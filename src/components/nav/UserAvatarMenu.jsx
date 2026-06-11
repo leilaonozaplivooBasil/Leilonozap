@@ -119,6 +119,9 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
   const avatarColor = currentUser.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
   const photoUrl = currentUser.profile_photo_url || currentUser.avatar_url;
 
+  // Funcionário de PDV → atalho direto pro PDV
+  const isPdvOperator = currentUser.is_pdv_operator === true;
+
   // Cargo de rede (tem painel próprio /painel)
   const redeCargo = getRedeCargo(currentUser);
   const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
@@ -190,6 +193,22 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             {badge.label}
           </div>
         </div>
+
+        {/* ===== Funcionário de PDV (destaque) ===== */}
+        {isPdvOperator && (
+          <div className="p-3 pb-0">
+            <button
+              onClick={() => navigate("/painel/pdv")}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-green-500/50 bg-green-500/10 hover:bg-green-500/15 transition-all duration-200 text-left"
+            >
+              <ShoppingBag className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-green-300 truncate">PDV — Tirar Pedido</p>
+                <p className="text-[11px] text-gray-400 truncate">Abrir o caixa e registrar vendas</p>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* ===== Painel próprio do cargo de rede (destaque) ===== */}
         {redeMeta && (

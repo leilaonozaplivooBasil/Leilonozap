@@ -27,13 +27,15 @@ export default async function handler(req, res) {
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Operador e itens são obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    // guard: ator admin OU cargo de estoque
-    const actorArr = await (await sb(`app_users?select=id,full_name,role,career_levels,primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
+    // guard: ator admin OU cargo de estoque OU funcionário de PDV ativo
+    const actorArr = await (await sb(`app_users?select=id,full_name,role,career_levels,primary_career_level,is_pdv_operator,employer_id,active&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
     if (!actor) return res.status(403).json({ success: false, error: 'Operador inválido' });
     const isAdmin = ['admin', 'super_admin'].includes(actor.role);
     const hasStock = Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK_CARGOS.includes(c));
-    if (!isAdmin && !hasStock) return res.status(403).json({ success: false, error: 'Sem permissão para tirar pedido' });
+    const isEmployee = actor.is_pdv_operator === true && actor.active !== false;
+    if (!isAdmin && !hasStock && !isEmployee) return res.status(403).json({ success: false, error: 'Sem permissão para tirar pedido' });
+    const employerId = isEmployee ? (actor.employer_id || null) : null;
 
     // lê produtos (preço de referência + estoque + dono)
     const ids = items.map((i) => String(i.product_id)).filter(Boolean);
@@ -54,7 +56,7 @@ export default async function handler(req, res) {
     }
     if (!lines.length) return res.status(400).json({ success: false, error: 'Nenhum produto válido' });
     total = round2(total);
-    sellerId = sellerId || actorId;
+    sellerId = sellerId || employerId || actorId;
 
     const now = new Date().toISOString();
     const saleId = oid();

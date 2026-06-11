@@ -29,6 +29,12 @@ export default function PainelSelector() {
       const incomingUser = e?.detail?.user;
       if (!incomingUser) return;
 
+      // 🧑‍💼 Funcionário de PDV → vai direto pro PDV
+      if (incomingUser.is_pdv_operator === true) {
+        if (!String(window.location.pathname).startsWith('/painel/pdv')) navigate('/painel/pdv');
+        return;
+      }
+
       // 🏠 Cargos de rede (distribuidor/loja física/ponto/parceiro/licenciado) têm
       // um painel próprio e completo — vão DIRETO pra ele, sem modal de seleção.
       const REDE_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
