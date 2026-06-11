@@ -96,6 +96,10 @@ export default function NavMobile({
 
   const userLogged = !!(currentUser && currentUser.email);
   const panels = userLogged ? resolveUserPanels(currentUser) : [];
+  // Cargo de rede → painel próprio em /painel
+  const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado"];
+  const REDE_TITLE = { distribuidor: "Painel do Distribuidor", loja_fisica: "Painel da Loja Física", ponto_retirada: "Painel do Ponto de Retirada", parceiro: "Painel do Parceiro", licenciado: "Painel do Licenciado" };
+  const redeCargo = userLogged && Array.isArray(currentUser.career_levels) ? REDE_CARGOS.find((c) => currentUser.career_levels.includes(c)) : null;
   const fullName = currentUser?.full_name || "Usuário";
   const email = currentUser?.email || "";
   const initials = getInitials(fullName);
@@ -228,6 +232,23 @@ export default function NavMobile({
               Carrinho
             </Link>
 
+            {/* === PAINEL PRÓPRIO (cargo de rede) === */}
+            {userLogged && redeCargo && (
+              <div className="pt-4 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <button
+                  onClick={() => handlePanelClick("/painel")}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-green-500/50 text-left transition-all duration-200 hover:translate-x-1"
+                  style={{ background: "rgba(16,185,129,0.10)" }}
+                >
+                  <Building2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-extrabold text-green-300 truncate">{REDE_TITLE[redeCargo]}</p>
+                    <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
+                  </div>
+                </button>
+              </div>
+            )}
+
             {/* === ACESSAR COMO... === */}
             {userLogged && panels.length > 0 && (
               <div
@@ -235,7 +256,7 @@ export default function NavMobile({
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
                 <p className="font-bold text-[10px] uppercase tracking-wider px-4 mb-3 text-gray-500">
-                  Acessar como...
+                  {redeCargo ? "Também acessar como..." : "Acessar como..."}
                 </p>
                 <div className="space-y-2">
                   {panels.map((panel) => {

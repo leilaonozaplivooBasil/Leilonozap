@@ -12,9 +12,17 @@ import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
+import PlanilhaImport from '@/components/catalog/PlanilhaImport';
 
 export default function CatalogManagement() {
   const navigate = useNavigate();
+  // cargos de rede voltam pro painel próprio (não pro portal/home)
+  const _redeBack = (() => {
+    let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    const rede = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
+    const isRede = u && Array.isArray(u.career_levels) && u.career_levels.some((c) => rede.includes(c));
+    return isRede ? { backTo: '/painel', backLabel: 'Voltar ao Painel' } : {};
+  })();
   const [catalogBanners, setCatalogBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
@@ -226,6 +234,7 @@ export default function CatalogManagement() {
           title="Gerenciamento da Loja Virtual"
           subtitle="Banners, produtos, destaques e configurações"
           accentColor="blue"
+          {..._redeBack}
         />
         
         {/* Tabs */}
@@ -245,6 +254,13 @@ export default function CatalogManagement() {
             📦 Produtos da Loja Virtual
           </Button>
           <Button
+            onClick={() => setActiveTab('importar')}
+            variant={activeTab === 'importar' ? 'default' : 'outline'}
+            className={activeTab === 'importar' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+          >
+            📊 Importar Planilha
+          </Button>
+          <Button
             onClick={() => setActiveTab('produtos')}
             variant={activeTab === 'produtos' ? 'default' : 'outline'}
             className={activeTab === 'produtos' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
@@ -259,6 +275,10 @@ export default function CatalogManagement() {
             📄 Rodapé
           </Button>
         </div>
+
+        {activeTab === 'importar' && (
+          <PlanilhaImport onDone={loadProducts} />
+        )}
 
         {activeTab === 'catalog-products' && (
           <div>

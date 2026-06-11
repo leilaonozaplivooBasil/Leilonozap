@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
-  Trash2, RotateCcw, RefreshCw
+  Trash2, RotateCcw, RefreshCw, ArrowLeft
 } from 'lucide-react';
 
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
@@ -551,6 +551,13 @@ export default function ProductManagement() {
       <div className="bg-gradient-to-r from-gray-900 via-gray-900 to-gray-800 border-b border-gray-800 px-6 py-4 sticky top-16 z-30 backdrop-blur-sm">
         <div className="max-w-[1800px] mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/painel')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-700 transition-colors flex-shrink-0"
+              title="Voltar ao painel"
+            >
+              <ArrowLeft className="w-4 h-4" /> Voltar
+            </button>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
               <Package className="w-5 h-5 text-emerald-400" />
             </div>

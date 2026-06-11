@@ -24,8 +24,25 @@ import {
   Hammer,
   Shield,
   Crown,
+  Truck,
+  MapPin,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
+
+// Cargos de rede que têm Painel próprio e completo (/painel)
+const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado"];
+const REDE_META = {
+  distribuidor: { label: "DISTRIBUIDOR", title: "Painel do Distribuidor", icon: Truck },
+  loja_fisica: { label: "LOJA FÍSICA", title: "Painel da Loja Física", icon: Building2 },
+  ponto_retirada: { label: "PONTO DE RETIRADA", title: "Painel do Ponto de Retirada", icon: MapPin },
+  parceiro: { label: "PARCEIRO", title: "Painel do Parceiro", icon: Store },
+  licenciado: { label: "LICENCIADO", title: "Painel do Licenciado", icon: Briefcase },
+};
+function getRedeCargo(user) {
+  const levels = Array.isArray(user?.career_levels) ? user.career_levels : [];
+  // respeita a ordem de prioridade (distribuidor primeiro)
+  return REDE_CARGOS.find((c) => levels.includes(c)) || null;
+}
 
 // Mapa de ícones (string → componente) — evita import dinâmico
 const ICON_MAP = {
@@ -102,9 +119,16 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
   const avatarColor = currentUser.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
   const photoUrl = currentUser.profile_photo_url || currentUser.avatar_url;
 
-  // Badge da role principal
+  // Cargo de rede (tem painel próprio /painel)
+  const redeCargo = getRedeCargo(currentUser);
+  const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
+  const RedeIcon = redeMeta?.icon || Truck;
+
+  // Badge da role principal — cargo de rede tem prioridade visual sobre "CLIENTE"
   const roleKey = currentUser.role || "user";
-  const badge = ROLE_BADGE[roleKey] || ROLE_BADGE.user;
+  const badge = (redeMeta && roleKey === "user")
+    ? { label: redeMeta.label, className: "bg-green-500/15 text-green-300 border-green-500/40", icon: redeMeta.icon }
+    : (ROLE_BADGE[roleKey] || ROLE_BADGE.user);
   const BadgeIcon = badge.icon;
 
   return (
@@ -167,11 +191,27 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
           </div>
         </div>
 
+        {/* ===== Painel próprio do cargo de rede (destaque) ===== */}
+        {redeMeta && (
+          <div className="p-3 pb-0">
+            <button
+              onClick={() => navigate("/painel")}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-green-500/50 bg-green-500/10 hover:bg-green-500/15 transition-all duration-200 text-left"
+            >
+              <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-green-300 truncate">{redeMeta.title}</p>
+                <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* ===== Acessar como... ===== */}
         {panels.length > 0 && (
           <div className="p-3">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 px-2 pb-2">
-              Acessar como...
+              {redeMeta ? "Também acessar como..." : "Acessar como..."}
             </p>
             <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
               {panels.map((panel) => {

@@ -29,6 +29,16 @@ export default function PainelSelector() {
       const incomingUser = e?.detail?.user;
       if (!incomingUser) return;
 
+      // 🏠 Cargos de rede (distribuidor/loja física/ponto/parceiro/licenciado) têm
+      // um painel próprio e completo — vão DIRETO pra ele, sem modal de seleção.
+      const REDE_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
+      const cargos = Array.isArray(incomingUser.career_levels) ? incomingUser.career_levels : [];
+      if (incomingUser.role !== 'super_admin' && cargos.some((c) => REDE_CARGOS.includes(c))) {
+        // só redireciona se ainda não estiver no painel (evita loop)
+        if (!String(window.location.pathname).startsWith('/painel')) navigate('/painel');
+        return;
+      }
+
       const list = resolveUserPanels(incomingUser);
 
       // 0 painéis → ignora

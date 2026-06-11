@@ -1,66 +1,44 @@
 import React from 'react';
-import { Award, BookOpen, Briefcase, Star, ArrowUp, Users, Crown, Gem, Trophy } from 'lucide-react';
+import { Award, BookOpen, Briefcase, Star, ArrowUp, Users, Crown, Gem, Trophy, Megaphone, Store, MapPin, Building2 } from 'lucide-react';
 import { cn } from "@/lib/utils"
 
-// Percentuais de comissão do CATÁLOGO por cargo (total fixo 26%)
+// Comissão de VENDA DIRETA por cargo (plano de carreira atual — bloco rede).
+// Modelo telescópico: o cargo recebe esse % direto; a diferença pra 20% sobe pra rede.
 const rolePercentages = {
-  licenciado_catalogo: 13,
-  trainee: 0.5,
-  executivo: 0.5,
-  kit_start: 1,
-  plano_lider: 1,
-  plano_lojista: 3,
-  distribuidor: 1,
-  diretor: 0.5,
-  diretoria: 0.5,
-  ceo: 3,
-  conselheiro: 1,
-  fundador: 1,
-};;
+  influenciador: 5,
+  vendedor: 10,
+  licenciado: 13,
+  parceiro: 15,
+  ponto_retirada: 16,
+  loja_fisica: 19,
+  distribuidor: 20,
+};
 
 const careerSteps = [
-  // Topo → Base (hierarquia única, sem duplicação)
-  { id: 'fundador', title: 'Fundador', icon: Crown,
-    achievedDescription: '🎉 Parabéns! Você conquistou o nível máximo! Criador e visionário do sistema. Patrimônio e legado.',
-    lockedDescription: 'Em breve: Torne-se criador e visionário do sistema de alavancagem. Patrimônio e legado.' },
-  { id: 'conselheiro', title: 'Conselheiro', icon: Gem,
-    achievedDescription: '✨ Incrível! Você é um Conselheiro! Influencie decisões críticas da empresa.',
-    lockedDescription: 'Em breve: Influencie decisões críticas da empresa como conselheiro do sistema.' },
-  { id: 'ceo', title: 'CEO', icon: Trophy,
-    achievedDescription: '👑 Parabéns! Você é o CEO! Gerencie toda a operação e defina estratégias globais.',
-    lockedDescription: 'Em breve: Assuma a liderança máxima do sistema de alavancagem.' },
-  { id: 'diretoria', title: 'Diretoria', icon: Star,
-    achievedDescription: '🏛️ Membro da Diretoria. Liderança estratégica acima de Diretor.',
-    lockedDescription: 'Em breve: Alcance a Diretoria para liderar estrategicamente.' },
-  { id: 'diretor', title: 'Diretor', icon: Star,
-    achievedDescription: '🚀 Você alcançou o topo! Participe das decisões estratégicas e tenha ganhos exponenciais.',
-    lockedDescription: 'Em breve: Alcance o topo do sistema de alavancagem e participe das decisões estratégicas.' },
+  // Topo → Base (hierarquia de rede atual)
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
-    achievedDescription: '💎 Nível de distribuição ativa na rede.',
-    lockedDescription: 'Em breve: Torne-se distribuidor na rede.' },
-  { id: 'plano_lojista', title: 'Plano Lojista', icon: Briefcase,
-    achievedDescription: '🏪 Habilitado como lojista parceiro.',
-    lockedDescription: 'Em breve: Ative o plano lojista.' },
-  { id: 'plano_lider', title: 'Plano Líder', icon: Star,
-    achievedDescription: '⭐ Liderança ativa com equipe em crescimento.',
-    lockedDescription: 'Em breve: Ative o plano líder.' },
-  { id: 'kit_start', title: 'Kit Start', icon: Award,
-    achievedDescription: '🎁 Kit inicial adquirido.',
-    lockedDescription: 'Em breve: Ative seu Kit Start.' },
-  { id: 'executivo', title: 'Executivo', icon: Briefcase,
-    achievedDescription: '💼 Parabéns, Executivo! Lidere sua equipe no sistema de alavancagem e multiplique seus resultados.',
-    lockedDescription: 'Em breve: Após a mentoria, lidere uma equipe e multiplique resultados no sistema.' },
-  { id: 'trainee', title: 'Trainee', icon: BookOpen,
-    achievedDescription: '📘 Em formação para próximos níveis.',
-    lockedDescription: 'Em breve: Entre como Trainee.' },
-  { id: 'licenciado_catalogo', title: 'Licenciado Catálogo', icon: BookOpen,
-    achievedDescription: '📚 Expanda seus ganhos com nosso catálogo exclusivo. 13% exclusivo em vendas feitas pelo seu link do catálogo.',
-    lockedDescription: 'Em breve: Expanda seus ganhos com catálogo.' },
-  { id: 'licenciado_aplicativo', title: 'Influencer', icon: Award,
-    achievedDescription: '✅ Você é um Influencer! Indique clientes e ganhe 3% em cada arremate deles (App).',
-    lockedDescription: 'Indique clientes para o App e ganhe 3% em cada arremate.' },
+    achievedDescription: '💎 Topo da rede. Estoque próprio, sobe produtos e recebe 20% na venda direta.',
+    lockedDescription: 'Adesão R$ 4.000.000 (100% em produto). 20% na venda direta + topo da rede.' },
+  { id: 'loja_fisica', title: 'Loja Física', icon: Building2,
+    achievedDescription: '🏬 Loja física com estoque próprio. 19% na venda direta.',
+    lockedDescription: 'Adesão R$ 350.000 (100% em produto). 19% na venda direta.' },
+  { id: 'ponto_retirada', title: 'Ponto de Retirada', icon: MapPin,
+    achievedDescription: '📍 Ponto de retirada com estoque próprio. 16% na venda direta.',
+    lockedDescription: 'Adesão R$ 50.000 (100% em produto). 16% na venda direta.' },
+  { id: 'parceiro', title: 'Parceiro', icon: Store,
+    achievedDescription: '🤝 Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
+    lockedDescription: 'Adesão R$ 20.000 (100% em produto). 15% na venda direta.' },
+  { id: 'licenciado', title: 'Licenciado', icon: Briefcase,
+    achievedDescription: '📚 Licenciado. 13% na venda direta pelo seu link.',
+    lockedDescription: 'Adesão R$ 5.000 (100% em produto). 13% na venda direta.' },
+  { id: 'vendedor', title: 'Vendedor', icon: Award,
+    achievedDescription: '🛒 Vendedor ativo. 10% na venda direta.',
+    lockedDescription: 'Em breve: torne-se Vendedor e ganhe 10% na venda direta.' },
+  { id: 'influenciador', title: 'Influenciador', icon: Megaphone,
+    achievedDescription: '📣 Influenciador. Indique e ganhe 5% nas vendas pelo seu link.',
+    lockedDescription: 'Em breve: torne-se Influenciador e ganhe 5%.' },
   { id: 'usuario', title: 'Usuário', icon: Users,
-    achievedDescription: '🎯 Bem-vindo! Você está cadastrado e pronto para evoluir no sistema.',
+    achievedDescription: '🎯 Bem-vindo! Você está cadastrado e pronto para evoluir na rede.',
     lockedDescription: 'Nível inicial: cadastro ativo no sistema.' },
 ];
 
@@ -106,8 +84,11 @@ export default function CareerPath({ currentUser }) {
                                         {isPrimary && <span className="text-sm">⭐</span>}
                                         {step.title}
                                         {isPrimary && <span className="text-xs text-gray-400">(Função Principal)</span>}
-                                        {isActive && rolePercentages[step.id] ? (
-                                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-green-600/20 text-green-300 border border-green-500/30">+{rolePercentages[step.id]}%{step.id === 'licenciado_catalogo' ? ' via link' : ''}</span>
+                                        {rolePercentages[step.id] ? (
+                                          <span className={cn(
+                                            "ml-2 text-xs px-2 py-0.5 rounded border",
+                                            isActive ? "bg-green-600/20 text-green-300 border-green-500/30" : "bg-gray-700/40 text-gray-400 border-gray-600/40"
+                                          )}>{rolePercentages[step.id]}% venda direta</span>
                                         ) : null}
                                     </h4>
                                     <p className={cn(
