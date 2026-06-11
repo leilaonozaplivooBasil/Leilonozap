@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import MetaBanner from '@/components/painel/MetaBanner';
+import RegiaoCard from '@/components/painel/RegiaoCard';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
@@ -217,6 +218,7 @@ export default function PainelDistribuidor() {
         {tab === 'visao' && isLoja && (
           <div>
             <MetaBanner userId={user.id} />
+            <RegiaoCard user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
@@ -255,6 +257,7 @@ export default function PainelDistribuidor() {
         {tab === 'visao' && !isLoja && (
           <div>
             <MetaBanner userId={user.id} />
+            <RegiaoCard user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
