@@ -50,6 +50,19 @@ export default async function handler(req, res) {
     const ref_code = String(body?.ref_code || '').trim();   // código do indicador (link)
     const as_level = String(body?.as_level || '').trim();   // categoria alvo (quando cadastrado por alguém acima)
     const actor_id = String(body?.actor_id || '').trim();   // quem está cadastrando (logado)
+    // campos extras opcionais (cadastro completo)
+    const extra = {
+      display_first_name: body?.display_first_name || null,
+      display_last_name: body?.display_last_name || null,
+      cpf: body?.cpf ? String(body.cpf).replace(/\D/g, '') : null,
+      address_street: body?.address_street || null,
+      address_number: body?.address_number || null,
+      address_complement: body?.address_complement || null,
+      address_neighborhood: body?.address_neighborhood || null,
+      address_city: body?.address_city || null,
+      address_state: body?.address_state || null,
+      address_zip_code: body?.address_zip_code ? String(body.address_zip_code).replace(/\D/g, '') : null,
+    };
 
     if (!full_name || !email || !password) return res.status(400).json({ success: false, error: 'Nome, e-mail e senha são obrigatórios' });
     if (password.length < 6) return res.status(400).json({ success: false, error: 'Senha deve ter ao menos 6 caracteres' });
@@ -104,14 +117,16 @@ export default async function handler(req, res) {
       referred_by_id, referral_code, terms_accepted: true,
       is_seller: ['vendedor'].includes(level) ? true : null,
       created_date: now, updated_date: now,
+      ...extra,
     };
     const ins = await sb('app_users', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) });
     const rows = await ins.json();
     if (!ins.ok || !Array.isArray(rows) || !rows.length) {
       return res.status(200).json({ success: false, error: 'Falha ao criar usuário', details: rows });
     }
-    const u = rows[0];
-    return res.status(200).json({ success: true, user: { id: u.id, full_name: u.full_name, email: u.email, role: u.role, primary_career_level: u.primary_career_level, referral_code: u.referral_code, referred_by_id: u.referred_by_id } });
+    const u = { ...rows[0] };
+    delete u.password; // nunca devolve o hash pro client
+    return res.status(200).json({ success: true, user: u });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao cadastrar', details: String(e?.message || e) });
   }

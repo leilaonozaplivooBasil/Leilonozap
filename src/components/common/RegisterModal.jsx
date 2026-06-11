@@ -23,58 +23,76 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
   const [addressZipCode, setAddressZipCode] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
-  const handleRegister = async () => {
+  // Passo 1: valida, checa duplicados e envia o código de verificação por e-mail
+  const handleSendCode = async () => {
     if (!fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode) {
       setErrorMessage("❌ Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    if (!email.includes('@')) {
-      setErrorMessage("❌ Por favor, insira um E-mail válido.");
-      return;
-    }
-    if (password.length < 6) {
-      setErrorMessage("❌ A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
+    if (!email.includes('@')) { setErrorMessage("❌ Por favor, insira um E-mail válido."); return; }
+    if (password.length < 6) { setErrorMessage("❌ A senha deve ter no mínimo 6 caracteres."); return; }
 
     setIsRegistering(true);
     setErrorMessage('');
-
     try {
       const normalizedEmail = email.toLowerCase().trim();
       const phoneDigits = (phone || '').replace(/\D/g, '');
       const cpfDigits = (cpf || '').replace(/\D/g, '');
-      const nameTrimmed = (fullName || '').trim();
-      const nameParts = nameTrimmed.split(/\s+/).filter(Boolean);
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
-      const [byEmail, byPhone, byCpf, byNameExact, byNameDL] = await Promise.all([
+      // Evita enviar código pra quem já tem cadastro
+      const [byEmail, byPhone, byCpf] = await Promise.all([
         AppUser.filter({ email: normalizedEmail }),
         phoneDigits ? AppUser.filter({ phone: phoneDigits }) : Promise.resolve([]),
         cpfDigits ? AppUser.filter({ cpf: cpfDigits }) : Promise.resolve([]),
-        nameTrimmed ? AppUser.filter({ full_name: nameTrimmed }) : Promise.resolve([]),
-        (firstName && lastName) ? AppUser.filter({ display_first_name: firstName, display_last_name: lastName }) : Promise.resolve([]),
       ]);
-
-      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0 || (byNameExact?.length || 0) > 0 || (byNameDL?.length || 0) > 0) {
+      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0) {
         setErrorMessage("USUÁRIO JÁ CADASTRADO.");
         setIsRegistering(false);
         return;
       }
 
-      const newUser = await AppUser.create({
-        full_name: fullName.trim(),
+      const result = await base44.functions.invoke('sendEmailCode', { email: normalizedEmail, purpose: 'signup' });
+      if (!result?.success) throw new Error(result?.error || 'Falha ao enviar o código');
+
+      setCodeSent(true);
+      setErrorMessage('');
+    } catch (error) {
+      console.error("[REGISTER] Erro ao enviar código:", error);
+      setErrorMessage("❌ Erro ao enviar o código: " + (error.message || "tente novamente"));
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Passo 2: confirma o código e cria a conta de verdade (persiste + referral_code + indicação)
+  const handleCreateAccount = async () => {
+    if (!/^\d{6}$/.test((verificationCode || '').trim())) {
+      setErrorMessage("❌ Digite o código de 6 dígitos enviado por e-mail.");
+      return;
+    }
+    setIsRegistering(true);
+    setErrorMessage('');
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const nameTrimmed = (fullName || '').trim();
+      const nameParts = nameTrimmed.split(/\s+/).filter(Boolean);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+      const refCode = sessionStorage.getItem('referralCode') || '';
+
+      const result = await base44.functions.invoke('registerNetworkUser', {
+        full_name: nameTrimmed,
         display_first_name: firstName || null,
         display_last_name: lastName || null,
         email: normalizedEmail,
-        phone: phoneDigits,
-        cpf: cpfDigits,
-        password: password,
-        role: 'user',
+        password,
+        phone: (phone || '').replace(/\D/g, ''),
+        cpf: (cpf || '').replace(/\D/g, ''),
         address_street: addressStreet,
         address_number: addressNumber,
         address_complement: addressComplement,
@@ -82,21 +100,27 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
         address_city: addressCity,
         address_state: addressState,
         address_zip_code: addressZipCode,
+        code: verificationCode.trim(),
+        ref_code: refCode,
       });
 
-      localStorage.setItem('currentUser', JSON.stringify(newUser));
-      sessionStorage.setItem('isLoggedIn', 'true');
+      if (!result?.success) {
+        setErrorMessage("❌ " + (result?.error || 'Não foi possível criar a conta.'));
+        setIsRegistering(false);
+        return;
+      }
 
-      console.log(`[REGISTER] Registro bem-sucedido: ${newUser.full_name}`);
+      localStorage.setItem('currentUser', JSON.stringify(result.user));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.removeItem('referralCode');
 
       setTimeout(() => {
-        if (onSuccess) onSuccess(newUser);
+        if (onSuccess) onSuccess(result.user);
         onClose();
         window.location.reload();
-      }, 500);
-
+      }, 400);
     } catch (error) {
-      console.error("[REGISTER] Erro no registro:", error);
+      console.error("[REGISTER] Erro ao criar conta:", error);
       setErrorMessage("❌ Erro ao criar conta: " + (error.message || "Erro desconhecido"));
     } finally {
       setIsRegistering(false);
@@ -298,24 +322,57 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
         </CardContent>
         
         <CardFooter className="flex flex-col gap-3">
-          <Button 
-            onClick={handleRegister} 
-            disabled={isRegistering || !fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode}
-            className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
-          >
-            {isRegistering ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Registrando...
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Criar Conta
-              </>
-            )}
-          </Button>
-          
+          {!codeSent ? (
+            <Button
+              onClick={handleSendCode}
+              disabled={isRegistering || !fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode}
+              className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              {isRegistering ? (
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Enviando código...</>
+              ) : (
+                <><UserPlus className="w-4 h-4 mr-2" />Continuar</>
+              )}
+            </Button>
+          ) : (
+            <div className="w-full space-y-3">
+              <div className={`rounded-lg p-3 text-center text-sm ${isSaiDeBaixo ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-green-500/10 text-green-300 border border-green-500/30'}`}>
+                📧 Enviamos um código de 6 dígitos para <strong>{email}</strong>. Confira sua caixa de entrada (e o spam).
+              </div>
+              <div>
+                <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Código de verificação *</Label>
+                <Input
+                  type="text" inputMode="numeric" maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  className={`text-center text-2xl tracking-[0.5em] font-bold ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}`}
+                  disabled={isRegistering}
+                  autoFocus
+                />
+              </div>
+              <Button
+                onClick={handleCreateAccount}
+                disabled={isRegistering || verificationCode.length !== 6}
+                className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                {isRegistering ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Criando conta...</>
+                ) : (
+                  <><UserPlus className="w-4 h-4 mr-2" />Criar Conta</>
+                )}
+              </Button>
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={isRegistering}
+                className={`w-full text-xs ${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 hover:text-gray-200'}`}
+              >
+                Não recebeu? Reenviar código
+              </button>
+            </div>
+          )}
+
           <div className="text-center">
             <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-2`}>Já tem uma conta?</p>
             <Button 
