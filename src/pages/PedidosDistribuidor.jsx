@@ -42,8 +42,8 @@ export default function PedidosDistribuidor() {
 
   const reload = async (u = user) => {
     setLoading(true);
+    // pedidos — isolado pra não derrubar a página se a tabela/RPC quebrar
     try {
-      // pedidos de PRODUTO (exclui adesão de cargo), pagos e em fulfillment
       const { data } = await supabase
         .from('catalog_sales')
         .select('*')
@@ -51,11 +51,20 @@ export default function PedidosDistribuidor() {
         .order('created_at', { ascending: false })
         .limit(500);
       setOrders((data || []).filter((o) => ['paid', 'preparando', 'saiu_entrega', 'entregue', 'cancelado'].includes(o.status)));
+    } catch (e) { console.error('[PedidosDistribuidor] orders error:', e); setOrders([]); }
 
+    // transportadoras — isolado: se a function não existir, só esconde a aba
+    try {
       const c = await base44.functions.invoke('manageCarriers', { action: 'list', ownerId: u?.id });
-      setCarriers(c?.carriers || []);
-      setTableMissing(!!c?.table_missing);
-    } catch (e) { console.error(e); }
+      const payload = c?.data || c || {};
+      setCarriers(payload.carriers || []);
+      setTableMissing(!!payload.table_missing);
+    } catch (e) {
+      console.warn('[PedidosDistribuidor] manageCarriers indisponível:', e?.message);
+      setCarriers([]);
+      setTableMissing(true);
+    }
+
     setLoading(false);
   };
 
