@@ -1,0 +1,60 @@
+{
+  "name": "Arrematante",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Nome completo do arrematante"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF do arrematante (somente d\u00edgitos)"
+    },
+    "city": {
+      "type": "string",
+      "description": "Cidade"
+    },
+    "state": {
+      "type": "string",
+      "description": "Estado (UF)"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-mail do arrematante"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone / WhatsApp"
+    },
+    "pix_key": {
+      "type": "string",
+      "description": "Chave PIX"
+    },
+    "pix_key_type": {
+      "type": "string",
+      "enum": [
+        "cpf",
+        "email",
+        "telefone",
+        "aleatoria"
+      ],
+      "description": "Tipo da chave PIX"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Ativo/Inativo"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es internas"
+    }
+  },
+  "required": [
+    "full_name"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

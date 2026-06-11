@@ -1,0 +1,45 @@
+{
+  "name": "AuctionView",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o visualizado"
+    },
+    "view_count": {
+      "type": "number",
+      "default": 1,
+      "description": "Quantidade de vezes que visualizou"
+    },
+    "last_viewed": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "\u00daltima visualiza\u00e7\u00e3o"
+    },
+    "category": {
+      "type": "string",
+      "description": "Categoria do leil\u00e3o (cache)"
+    },
+    "interacted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se clicou em imagens, descri\u00e7\u00e3o, etc"
+    }
+  },
+  "required": [
+    "user_id",
+    "auction_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

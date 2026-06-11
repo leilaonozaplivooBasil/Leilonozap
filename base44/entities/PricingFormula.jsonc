@@ -1,0 +1,49 @@
+{
+  "name": "PricingFormula",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da f\u00f3rmula (ex: F\u00f3rmula Padr\u00e3o)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada da f\u00f3rmula"
+    },
+    "base_percentage": {
+      "type": "number",
+      "description": "% do valor de mercado para base de c\u00e1lculo (ex: 50 para 50%)"
+    },
+    "commission_percentage": {
+      "type": "number",
+      "description": "% de comiss\u00e3o do licenciado (ex: 20 para 20%)"
+    },
+    "tax_percentage": {
+      "type": "number",
+      "description": "% de imposto (ex: 6 para 6%)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a f\u00f3rmula est\u00e1 ativa"
+    }
+  },
+  "required": [
+    "name",
+    "base_percentage",
+    "commission_percentage",
+    "tax_percentage"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Nome completo do cliente"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do cliente"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone do cliente"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF do cliente"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "cliente",
+        "inativo"
+      ],
+      "default": "lead",
+      "description": "Status do cliente"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "site",
+        "indicacao",
+        "whatsapp",
+        "redes_sociais",
+        "outro"
+      ],
+      "default": "site",
+      "description": "Origem do lead"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o cliente"
+    },
+    "address_street": {
+      "type": "string",
+      "description": "Endere\u00e7o"
+    },
+    "address_number": {
+      "type": "string",
+      "description": "N\u00famero"
+    },
+    "address_city": {
+      "type": "string",
+      "description": "Cidade"
+    },
+    "address_state": {
+      "type": "string",
+      "description": "Estado"
+    },
+    "address_zip_code": {
+      "type": "string",
+      "description": "CEP"
+    },
+    "total_purchases": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de compras realizadas"
+    },
+    "total_spent": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor total gasto"
+    },
+    "last_contact": {
+      "type": "string",
+      "format": "date",
+      "description": "\u00daltima data de contato"
+    },
+    "assigned_seller": {
+      "type": "string",
+      "description": "Nome do vendedor respons\u00e1vel"
+    },
+    "purchase_status": {
+      "type": "string",
+      "enum": [
+        "sem_compra",
+        "em_negociacao",
+        "aguardando_pagamento",
+        "pago",
+        "enviado",
+        "entregue",
+        "cancelado"
+      ],
+      "default": "sem_compra",
+      "description": "Status da compra atual"
+    },
+    "next_steps": {
+      "type": "string",
+      "description": "Pr\u00f3ximos passos do atendimento"
+    },
+    "purchase_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor da compra em negocia\u00e7\u00e3o"
+    },
+    "purchase_product": {
+      "type": "string",
+      "description": "Produto em negocia\u00e7\u00e3o"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data para pr\u00f3ximo follow-up"
+    },
+    "interested_products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          }
+        }
+      },
+      "default": [],
+      "description": "Produtos que o cliente demonstrou interesse"
+    }
+  },
+  "required": [
+    "full_name"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

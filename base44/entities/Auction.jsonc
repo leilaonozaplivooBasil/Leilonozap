@@ -1,0 +1,263 @@
+{
+  "name": "Auction",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Nome do produto em leil\u00e3o"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada do produto"
+    },
+    "image_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista de URLs das imagens do produto"
+    },
+    "starting_price": {
+      "type": "number",
+      "description": "Pre\u00e7o inicial do leil\u00e3o"
+    },
+    "current_price": {
+      "type": "number",
+      "description": "Pre\u00e7o atual (maior lance)"
+    },
+    "increment": {
+      "type": "number",
+      "description": "Valor m\u00ednimo de incremento"
+    },
+    "buy_now_price": {
+      "type": "number",
+      "description": "Pre\u00e7o para arrematar imediatamente"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data e hora de t\u00e9rmino do leil\u00e3o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "ended",
+        "sold",
+        "processing"
+      ],
+      "default": "active",
+      "description": "Status do leil\u00e3o"
+    },
+    "lot_status": {
+      "type": "string",
+      "enum": [
+        "importado",
+        "em_analise",
+        "publicado",
+        "autorizado",
+        "aguardando_pagamento",
+        "pagamento_confirmado",
+        "arrematado",
+        "finalizado",
+        "cancelado"
+      ],
+      "default": "importado",
+      "description": "Status do ciclo de vida do lote de investimento"
+    },
+    "winner_id": {
+      "type": "string",
+      "description": "ID do vencedor do leil\u00e3o"
+    },
+    "winner_name": {
+      "type": "string",
+      "description": "Nome do vencedor"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "eletronicos",
+        "eletrodomesticos",
+        "moveis_decoracao",
+        "casa_jardim",
+        "ferramentas",
+        "roupas_acessorios",
+        "esportes_lazer",
+        "brinquedos_hobbies",
+        "livros_midia",
+        "veiculos_pecas",
+        "instrumentos_musicais",
+        "beleza_cuidado_pessoal",
+        "outros"
+      ],
+      "default": "outros",
+      "description": "Categoria do produto"
+    },
+    "seller_id": {
+      "type": "string"
+    },
+    "seller_name": {
+      "type": "string"
+    },
+    "last_processed_bid_time": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Timestamp do \u00faltimo lance processado pela IA para evitar duplicidade"
+    },
+    "order_status": {
+      "type": "string",
+      "enum": [
+        "awaiting_payment",
+        "paid",
+        "shipped",
+        "delivered",
+        "canceled"
+      ],
+      "description": "Status do pedido p\u00f3s-arremate"
+    },
+    "tracking_code": {
+      "type": "string",
+      "description": "C\u00f3digo de rastreio da entrega"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "URL original do produto (para Comparai)"
+    },
+    "market_price": {
+      "type": "number",
+      "description": "Pre\u00e7o de mercado detectado pela Comparai"
+    },
+    "last_comparison_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "\u00daltima vez que a Comparai checou pre\u00e7os"
+    },
+    "product_source": {
+      "type": "string",
+      "enum": [
+        "factory_new",
+        "return_resale"
+      ],
+      "default": "return_resale",
+      "description": "Origem do produto: factory_new (novo de f\u00e1brica) ou return_resale (arremate/devolu\u00e7\u00e3o)"
+    },
+    "supplier_logo_url": {
+      "type": "string",
+      "description": "URL da logo do fabricante/fornecedor (para exibir na Comparai)"
+    },
+    "is_test_auction": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se \u00e9 um leil\u00e3o de teste (comiss\u00f5es v\u00e3o para test_valora_balance)"
+    },
+    "comparai_mode": {
+      "type": "string",
+      "enum": [
+        "supplier",
+        "google_shopping"
+      ],
+      "default": "google_shopping",
+      "description": "Modo de compara\u00e7\u00e3o: supplier (busca no site do fornecedor) ou google_shopping (pre\u00e7o m\u00e9dio do Google)"
+    },
+    "manual_market_price": {
+      "type": "number",
+      "description": "Pre\u00e7o de mercado inserido manualmente (usado quando a Comparai n\u00e3o encontra)"
+    },
+    "partner_store": {
+      "type": "string",
+      "enum": [
+        "nozap",
+        "sai_de_baixo"
+      ],
+      "default": "nozap",
+      "description": "Loja parceira: nozap (leil\u00f5es padr\u00e3o) ou sai_de_baixo (rede Sai de Baixo)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto vinculado na gest\u00e3o de estoque"
+    },
+    "allowed_regions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Estados (siglas) onde o leil\u00e3o pode aparecer. Vazio = dispon\u00edvel em todo Brasil"
+    },
+    "is_investment_plan": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se \u00e9 um plano de investimento (n\u00e3o deve aparecer em listagens p\u00fablicas)"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Timestamp da \u00faltima atualiza\u00e7\u00e3o do leil\u00e3o (para otimiza\u00e7\u00e3o de sync)"
+    },
+    "version": {
+      "type": "number",
+      "default": 0,
+      "description": "Vers\u00e3o do leil\u00e3o para controle de concorr\u00eancia otimista"
+    },
+    "partner_id": {
+      "type": "string",
+      "description": "ID do parceiro/leiloeiro respons\u00e1vel pelo lote de investimento"
+    },
+    "partner_name": {
+      "type": "string",
+      "description": "Nome do parceiro/leiloeiro respons\u00e1vel (cache para exibi\u00e7\u00e3o)"
+    },
+    "partner_commission_percentual": {
+      "type": "number",
+      "description": "Percentual de comiss\u00e3o do parceiro sobre o arremate deste lote"
+    },
+    "platform_commission_percentual": {
+      "type": "number",
+      "description": "Percentual de comiss\u00e3o da plataforma sobre o arremate deste lote"
+    },
+    "commissions_distributed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Flag de controle: comiss\u00f5es j\u00e1 foram distribu\u00eddas para este lote"
+    },
+    "lot_categories_json": {
+      "type": "string",
+      "description": "JSON serializado com resumo de categorias do lote (array de {nome, qtd, valor})"
+    },
+    "lot_items_json": {
+      "type": "string",
+      "description": "JSON serializado com itens detalhados por categoria ({categoria: [{desc, qtd, valor}]})"
+    },
+    "lot_grades_json": {
+      "type": "string",
+      "description": "JSON serializado com dados agregados de grade ({A: {qtd, valorMarket}, B: {qtd, valorMarket}, ...})"
+    },
+    "lot_raw_items_json": {
+      "type": "string",
+      "description": "JSON serializado com itens individuais e sua grade ([{grade, desc, qtd, valor}])"
+    },
+    "reserved_by": {
+      "type": "string",
+      "description": "ID do investidor que reservou o lote temporariamente"
+    },
+    "reserved_until": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora de expira\u00e7\u00e3o da reserva tempor\u00e1ria"
+    },
+    "reserved_by_name": {
+      "type": "string",
+      "description": "Nome do investidor que reservou (cache para exibi\u00e7\u00e3o admin)"
+    }
+  },
+  "required": [
+    "title",
+    "starting_price",
+    "increment",
+    "end_time"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

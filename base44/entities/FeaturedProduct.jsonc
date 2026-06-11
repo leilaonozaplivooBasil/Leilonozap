@@ -1,0 +1,51 @@
+{
+  "name": "FeaturedProduct",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "category": {
+      "type": "string",
+      "description": "Categoria do produto"
+    },
+    "investment": {
+      "type": "string",
+      "description": "Valor do investimento (ex: R$ 5.000)"
+    },
+    "expected_return": {
+      "type": "string",
+      "description": "Retorno estimado (ex: R$ 150)"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL da imagem do produto"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Ordem de exibi\u00e7\u00e3o"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o produto est\u00e1 ativo"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "investment",
+    "expected_return",
+    "image_url"
+  ],
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

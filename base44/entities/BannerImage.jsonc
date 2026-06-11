@@ -1,0 +1,78 @@
+{
+  "name": "BannerImage",
+  "type": "object",
+  "properties": {
+    "image_url": {
+      "type": "string",
+      "description": "URL da imagem do banner"
+    },
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo/descri\u00e7\u00e3o do banner"
+    },
+    "link_url": {
+      "type": "string",
+      "description": "URL de redirecionamento ao clicar (opcional)"
+    },
+    "context": {
+      "type": "string",
+      "enum": [
+        "home",
+        "catalog",
+        "luxurycollection"
+      ],
+      "default": "home",
+      "description": "Contexto onde o banner aparece (home, catalog ou luxurycollection)"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Ordem de exibi\u00e7\u00e3o"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o banner est\u00e1 ativo"
+    },
+    "device_type": {
+      "type": "string",
+      "enum": [
+        "desktop",
+        "mobile"
+      ],
+      "default": "desktop",
+      "description": "Tipo de dispositivo (desktop ou mobile)"
+    },
+    "image_adjustments": {
+      "type": "object",
+      "description": "Ajustes de posi\u00e7\u00e3o e zoom da imagem",
+      "properties": {
+        "position": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          }
+        },
+        "scale": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "required": [
+    "image_url"
+  ],
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

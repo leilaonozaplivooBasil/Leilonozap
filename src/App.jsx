@@ -48,6 +48,7 @@ import PortalInvestidor from '@/pages/portal/PortalInvestidor';
 import PortalLeiloeiro from '@/pages/portal/PortalLeiloeiro';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfUse from '@/pages/TermsOfUse';
+import DossieArremate from '@/pages/DossieArremate';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -234,6 +235,11 @@ const AuthenticatedApp = () => {
       } />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfUse />} />
+      <Route path="/DossieArremate" element={
+        <LayoutWrapper currentPageName="DossieArremate">
+          <DossieArremate />
+        </LayoutWrapper>
+      } />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
       <Route path="/Loja-Virtual" element={
         <LayoutWrapper currentPageName="Catalog">

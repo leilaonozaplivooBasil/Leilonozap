@@ -1,0 +1,79 @@
+{
+  "name": "InfluencerLead",
+  "type": "object",
+  "properties": {
+    "influencer_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio influenciador"
+    },
+    "influencer_name": {
+      "type": "string",
+      "description": "Nome do influenciador"
+    },
+    "influencer_code": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico do influenciador"
+    },
+    "lead_email": {
+      "type": "string",
+      "description": "Email do lead indicado"
+    },
+    "lead_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio lead (ap\u00f3s cadastro)"
+    },
+    "lead_name": {
+      "type": "string",
+      "description": "Nome do lead"
+    },
+    "total_purchases": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de compras realizadas"
+    },
+    "total_spent": {
+      "type": "number",
+      "default": 0,
+      "description": "Total gasto em R$"
+    },
+    "first_purchase_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data da primeira compra"
+    },
+    "last_purchase_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data da \u00faltima compra"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "registered",
+        "active_buyer"
+      ],
+      "default": "pending",
+      "description": "Status do lead"
+    }
+  },
+  "required": [
+    "influencer_id",
+    "influencer_code"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "influencer_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": null
+  }
+}

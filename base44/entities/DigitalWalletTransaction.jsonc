@@ -1,0 +1,80 @@
+{
+  "name": "DigitalWalletTransaction",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "deposit",
+        "auction_payment",
+        "refund",
+        "adjustment"
+      ],
+      "description": "Tipo de transa\u00e7\u00e3o"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "credit",
+        "debit"
+      ],
+      "description": "Dire\u00e7\u00e3o da movimenta\u00e7\u00e3o"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor da transa\u00e7\u00e3o"
+    },
+    "related_auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o relacionado (se aplic\u00e1vel)"
+    },
+    "related_payment_id": {
+      "type": "string",
+      "description": "ID do pagamento ASAAS relacionado"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "failed"
+      ],
+      "default": "pending",
+      "description": "Status da transa\u00e7\u00e3o"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da transa\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "user_id",
+    "type",
+    "direction",
+    "amount",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

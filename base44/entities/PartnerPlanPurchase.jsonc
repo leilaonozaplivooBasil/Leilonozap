@@ -1,0 +1,117 @@
+{
+  "name": "PartnerPlanPurchase",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio parceiro"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio (cache)"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio (cache)"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Nome do plano (Plano Vision\u00e1rio, Plano S\u00f3cios de Ouro, Plano Elite)"
+    },
+    "plan_amount": {
+      "type": "number",
+      "description": "Valor investido nesta compra"
+    },
+    "activated_at": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de ativa\u00e7\u00e3o desta compra"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "canceled"
+      ],
+      "default": "active",
+      "description": "Status desta compra espec\u00edfica"
+    },
+    "purchase_periods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "default": [],
+      "description": "Cronograma de compras desta ativa\u00e7\u00e3o"
+    },
+    "activation_source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "lucre_conosco"
+      ],
+      "default": "manual",
+      "description": "Origem da ativa\u00e7\u00e3o"
+    },
+    "is_investment": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 modalidade investimento com rendimento (ao inv\u00e9s de compra)"
+    },
+    "investment_rate": {
+      "type": "number",
+      "enum": [
+        3,
+        5
+      ],
+      "description": "Taxa de rendimento mensal em % (3% ou 5%)"
+    },
+    "accumulated_return": {
+      "type": "number",
+      "default": 0,
+      "description": "Retorno acumulado com juros compostos"
+    },
+    "withdrawal_available_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data em que pode retirar (12 meses ap\u00f3s in\u00edcio)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es ou lembretes sobre esta compra"
+    }
+  },
+  "required": [
+    "user_id",
+    "plan_name",
+    "plan_amount",
+    "activated_at"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": null
+  }
+}

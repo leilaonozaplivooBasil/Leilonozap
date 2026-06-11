@@ -1,0 +1,77 @@
+{
+  "name": "CommissionRecord",
+  "type": "object",
+  "properties": {
+    "sale_id": {
+      "type": "string",
+      "description": "ID da venda (leil\u00e3o ou cat\u00e1logo)"
+    },
+    "sale_type": {
+      "type": "string",
+      "enum": [
+        "auction",
+        "catalog"
+      ],
+      "default": "catalog",
+      "description": "Tipo: auction (leil\u00e3o/app 3%) ou catalog (cat\u00e1logo 26%)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que recebe a comiss\u00e3o"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio (cache para exibi\u00e7\u00e3o)"
+    },
+    "role": {
+      "type": "string",
+      "description": "Cargo: influencer_app, licenciado_catalogo, trainee, executivo, kit_start, plano_lider, plano_lojista, distribuidor, diretor, diretoria, ceo, conselheiro, fundador, site_official_rollup"
+    },
+    "percent": {
+      "type": "number",
+      "description": "Percentual aplicado (0-100)"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor em R$ da comiss\u00e3o"
+    },
+    "sale_amount": {
+      "type": "number",
+      "description": "Valor total da venda original"
+    },
+    "product_title": {
+      "type": "string",
+      "description": "T\u00edtulo do produto vendido"
+    },
+    "anchor_user_id": {
+      "type": "string",
+      "description": "ID do licenciado \u00e2ncora da venda"
+    },
+    "anchor_user_name": {
+      "type": "string",
+      "description": "Nome do licenciado \u00e2ncora"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "paid",
+        "canceled"
+      ],
+      "default": "pending",
+      "description": "Status da comiss\u00e3o"
+    }
+  },
+  "required": [
+    "sale_id",
+    "user_id",
+    "role",
+    "percent",
+    "amount"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

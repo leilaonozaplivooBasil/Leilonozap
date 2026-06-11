@@ -10,6 +10,7 @@ import LoginModal from "@/components/common/LoginModal";
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import AdminPanelMenu from "@/components/nav/AdminPanelMenu";
+import AdminLayout from "@/components/layout/AdminLayout";
 import NavDesktop from "@/components/nav/NavDesktop";
 import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";

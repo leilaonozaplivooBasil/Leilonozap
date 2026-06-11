@@ -1,0 +1,61 @@
+{
+  "name": "LuxuryAccessCode",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo de acesso (\u00fanico)"
+    },
+    "label": {
+      "type": "string",
+      "description": "R\u00f3tulo opcional"
+    },
+    "person_name": {
+      "type": "string",
+      "description": "Nome da pessoa associada ao c\u00f3digo"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-mail do convidado"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp do convidado"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o c\u00f3digo est\u00e1 ativo"
+    },
+    "is_single_use": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o c\u00f3digo \u00e9 de uso \u00fanico"
+    },
+    "is_used": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se j\u00e1 foi utilizado"
+    },
+    "used_by_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que utilizou"
+    },
+    "used_at": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora de uso"
+    }
+  },
+  "required": [
+    "code"
+  ],
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

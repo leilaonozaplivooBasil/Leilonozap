@@ -1,0 +1,50 @@
+{
+  "name": "Bid",
+  "type": "object",
+  "properties": {
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o"
+    },
+    "bidder_name": {
+      "type": "string",
+      "description": "Nome do arrematante"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor do lance"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Momento do lance"
+    },
+    "is_auto_increment": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se foi incremento autom\u00e1tico"
+    }
+  },
+  "required": [
+    "auction_id",
+    "bidder_name",
+    "amount"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

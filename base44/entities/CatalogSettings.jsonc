@@ -1,0 +1,25 @@
+{
+  "name": "CatalogSettings",
+  "type": "object",
+  "properties": {
+    "featured_section_title": {
+      "type": "string",
+      "default": "\u2b50 Produtos em Destaque",
+      "description": "T\u00edtulo da se\u00e7\u00e3o de produtos em destaque"
+    },
+    "featured_section_description": {
+      "type": "string",
+      "default": "Veja nossos destaques selecionados",
+      "description": "Descri\u00e7\u00e3o da se\u00e7\u00e3o de produtos em destaque"
+    }
+  },
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "required": []
+}

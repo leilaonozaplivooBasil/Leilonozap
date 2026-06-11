@@ -1,0 +1,48 @@
+{
+  "name": "ComparaiLog",
+  "type": "object",
+  "properties": {
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o"
+    },
+    "step": {
+      "type": "string",
+      "description": "Etapa onde ocorreu o log"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "error",
+        "warning"
+      ],
+      "description": "Status da etapa"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mensagem detalhada"
+    },
+    "error_details": {
+      "type": "object",
+      "description": "Detalhes t\u00e9cnicos do erro"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent do dispositivo"
+    },
+    "is_mobile": {
+      "type": "boolean",
+      "description": "Se \u00e9 mobile"
+    }
+  },
+  "required": [
+    "auction_id",
+    "step",
+    "status"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

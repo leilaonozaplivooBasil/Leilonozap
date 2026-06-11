@@ -1,0 +1,56 @@
+{
+  "name": "FooterSettings",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o da empresa"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone de contato"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp de contato"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de contato"
+    },
+    "facebook_url": {
+      "type": "string",
+      "description": "URL do Facebook"
+    },
+    "instagram_url": {
+      "type": "string",
+      "description": "URL do Instagram"
+    },
+    "youtube_url": {
+      "type": "string",
+      "description": "URL do YouTube"
+    },
+    "linkedin_url": {
+      "type": "string",
+      "description": "URL do LinkedIn"
+    },
+    "twitter_url": {
+      "type": "string",
+      "description": "URL do Twitter"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o rodap\u00e9 est\u00e1 ativo"
+    }
+  },
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "required": []
+}

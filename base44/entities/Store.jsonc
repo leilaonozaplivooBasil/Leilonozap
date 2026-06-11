@@ -1,0 +1,104 @@
+{
+  "name": "Store",
+  "type": "object",
+  "properties": {
+    "store_name": {
+      "type": "string",
+      "description": "Nome da loja"
+    },
+    "owner_name": {
+      "type": "string",
+      "description": "Nome do propriet\u00e1rio"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de contato"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ da loja"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o completo"
+    },
+    "product_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tipos de produtos que vende"
+    },
+    "distribution_channels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "sai_de_baixo",
+          "direto_fabrica",
+          "arremate_devolucoes"
+        ]
+      },
+      "description": "Canais de distribui\u00e7\u00e3o autorizados"
+    },
+    "can_create_sai_de_baixo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pode criar leil\u00f5es na p\u00e1gina Sai de Baixo"
+    },
+    "can_create_direto_fabrica": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pode criar leil\u00f5es Direto de F\u00e1brica"
+    },
+    "can_create_arremate_devolucoes": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pode criar leil\u00f5es de Arremate & Devolu\u00e7\u00f5es"
+    },
+    "store_login": {
+      "type": "string",
+      "description": "Login de acesso do lojista (configurado apenas pelo admin)"
+    },
+    "store_password": {
+      "type": "string",
+      "description": "Senha de acesso do lojista (configurado apenas pelo admin)"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL da logo da loja"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "inactive"
+      ],
+      "default": "pending",
+      "description": "Status da loja"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es administrativas"
+    }
+  },
+  "required": [
+    "store_name",
+    "owner_name",
+    "email",
+    "phone"
+  ],
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

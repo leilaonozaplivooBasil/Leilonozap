@@ -1,0 +1,56 @@
+{
+  "name": "Seller",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone do vendedor (com c\u00f3digo do pa\u00eds)"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do vendedor"
+    },
+    "license_type": {
+      "type": "string",
+      "enum": [
+        "loja_inicial",
+        "loja_start",
+        "loja_profissional",
+        "loja_lider",
+        "loja_distribuidor"
+      ],
+      "description": "Tipo de licen\u00e7a do vendedor"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o vendedor est\u00e1 ativo"
+    },
+    "referred_by_id": {
+      "type": "string",
+      "description": "ID do licenciante que indicou este vendedor"
+    },
+    "default_commission_percentage": {
+      "type": "number",
+      "default": 0,
+      "description": "Comiss\u00e3o padr\u00e3o do licenciado em %"
+    },
+    "default_licenciante_commission_percentage": {
+      "type": "number",
+      "default": 0,
+      "description": "Comiss\u00e3o padr\u00e3o do licenciante em %"
+    }
+  },
+  "required": [
+    "name",
+    "phone"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

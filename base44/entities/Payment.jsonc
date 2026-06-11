@@ -1,0 +1,100 @@
+{
+  "name": "Payment",
+  "type": "object",
+  "properties": {
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o/produto"
+    },
+    "buyer_id": {
+      "type": "string",
+      "description": "ID do comprador"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Nome do comprador"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Email do comprador"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor pago"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "pix",
+        "credit_card",
+        "gateway"
+      ],
+      "default": "pix",
+      "description": "M\u00e9todo de pagamento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "failed",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Status do pagamento"
+    },
+    "transaction_id": {
+      "type": "string",
+      "description": "ID da transa\u00e7\u00e3o no gateway"
+    },
+    "gateway_name": {
+      "type": "string",
+      "description": "Nome do gateway (Stripe, Mercado Pago, etc)"
+    },
+    "pix_code": {
+      "type": "string",
+      "description": "C\u00f3digo PIX gerado"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data do pagamento"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "auction_id",
+    "buyer_id",
+    "amount",
+    "payment_method"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

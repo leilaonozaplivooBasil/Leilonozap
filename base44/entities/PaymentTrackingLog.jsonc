@@ -1,0 +1,104 @@
+{
+  "name": "PaymentTrackingLog",
+  "type": "object",
+  "properties": {
+    "payment_id": {
+      "type": "string",
+      "description": "ID do pagamento (Mercado Pago ou gateway)"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto comprado"
+    },
+    "buyer_id": {
+      "type": "string",
+      "description": "ID do comprador"
+    },
+    "licensee_id": {
+      "type": "string",
+      "description": "ID do vendedor/licenciado"
+    },
+    "referral_code": {
+      "type": "string",
+      "description": "C\u00f3digo de refer\u00eancia do licenciado"
+    },
+    "catalog_sale_id": {
+      "type": "string",
+      "description": "ID da venda no cat\u00e1logo"
+    },
+    "mercadopago_payment_id": {
+      "type": "string",
+      "description": "ID da MercadoPagoPayment"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor da compra"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Status do pagamento"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "checkout_started",
+        "sale_created",
+        "preference_created",
+        "payment_approved",
+        "commissions_processed",
+        "completed"
+      ],
+      "description": "Etapa do fluxo"
+    },
+    "event_log": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Hist\u00f3rico de eventos: [{timestamp, event, details}]"
+    },
+    "commissions_distributed": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": [],
+      "description": "Comiss\u00f5es distribu\u00eddas: [{user_id, role, amount, percent}]"
+    },
+    "gateway": {
+      "type": "string",
+      "enum": [
+        "mercadopago",
+        "asaas",
+        "manual"
+      ],
+      "default": "mercadopago",
+      "description": "Gateway de pagamento utilizado"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es adicionais"
+    }
+  },
+  "required": [
+    "payment_id",
+    "buyer_id",
+    "amount"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": null
+  }
+}
