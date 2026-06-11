@@ -151,6 +151,11 @@ export default function PromoVideoGenerator({ product }) {
         existing_image_urls: product.image_urls?.[0] ? [product.image_urls[0]] : undefined,
       });
 
+      if (!result || result.ok === false || !result.url) {
+        setError(result?.needs_key ? '⚙️ A IA de imagem ainda não está conectada. Peça pra ativar a chave do AI Gateway.' : 'Não foi possível gerar a imagem. Tente novamente.');
+        setLoading(false);
+        return;
+      }
       setGeneratedImage(result.url);
       const final = await addOverlay(result.url);
       setCompositeImage(final);
