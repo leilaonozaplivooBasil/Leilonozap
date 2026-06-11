@@ -2,6 +2,7 @@
 // (não confia no corpo), marca a venda como paga e PAGA as comissões pela cadeia (telescópio, teto 20%).
 // Idempotente: se a venda já está paga, não repaga.
 import crypto from 'crypto';
+import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -101,6 +102,10 @@ export default async function handler(req, res) {
 
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
+    if (sale.kind === 'loja') {
+      const r = await fulfillStoreOrder(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
     const commission = await payCommissions(sale);

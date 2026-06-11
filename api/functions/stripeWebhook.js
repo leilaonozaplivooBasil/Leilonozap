@@ -1,6 +1,7 @@
 // stripeWebhook — confirma o pagamento de cartão (busca a sessão/PI na API da Stripe, não confia
 // no corpo), marca a venda paga (idempotente) e paga as comissões pela cadeia (telescópio teto 20%).
 import crypto from 'crypto';
+import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
@@ -93,6 +94,10 @@ export default async function handler(req, res) {
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'paid' }) });
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
+    if (sale.kind === 'loja') {
+      const r = await fulfillStoreOrder(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
     const commission = await payCommissions(sale);

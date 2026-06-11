@@ -25,6 +25,7 @@ import AdminFinanceiro from '@/pages/AdminFinanceiro';
 import Recepcao from '@/pages/Recepcao';
 import PainelDistribuidor from '@/pages/PainelDistribuidor';
 import Cadastro from '@/pages/Cadastro';
+import LojaVitrine from '@/pages/LojaVitrine';
 import PedidosDistribuidor from '@/pages/PedidosDistribuidor';
 import TirarPedido from '@/pages/TirarPedido';
 import GestaoMetas from '@/pages/GestaoMetas';
@@ -134,6 +135,8 @@ const AuthenticatedApp = () => {
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<Evoluir />} />
       <Route path="/Cadastro" element={<Cadastro />} />
+      {/* 🏪 Vitrine pública por loja da rede (standalone, sem Layout) */}
+      <Route path="/loja/:slug" element={<LojaVitrine />} />
       <Route path="/Carteira" element={<Carteira />} />
       <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pedidos" element={<LayoutWrapper currentPageName="PedidosDistribuidor"><PedidosDistribuidor /></LayoutWrapper>} />
