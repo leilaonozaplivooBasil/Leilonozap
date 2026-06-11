@@ -34,7 +34,7 @@ export default function TirarPedido() {
   const loadToday = async (u = user) => {
     if (!u?.id) return;
     const start = new Date(); start.setHours(0, 0, 0, 0);
-    const { data } = await supabase.from('catalog_sales').select('total_amount').eq('source', 'pdv').gte('created_at', start.toISOString());
+    const { data } = await supabase.from('catalog_sales').select('total_amount').eq('source', 'pdv').eq('seller_id', u.id).gte('created_at', start.toISOString());
     const list = data || [];
     setTodayCount(list.length);
     setTodayTotal(list.reduce((s, x) => s + (Number(x.total_amount) || 0), 0));
@@ -44,12 +44,22 @@ export default function TirarPedido() {
     if (!q || q.trim().length < 1) { setResults([]); return; }
     setSearching(true);
     try {
-      const { data } = await supabase
-        .from('products')
-        .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
-        .or(`description.ilike.%${q}%,lot.ilike.%${q}%`)
-        .limit(20);
-      setResults(data || []);
+      const u = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; } })();
+      const isStore = u && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
+      if (isStore) {
+        // dono de loja vende do PRÓPRIO estoque (store_inventory)
+        const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q, lim: 20 });
+        setResults((data || []).filter((x) => x.ativo && Number(x.quantidade) > 0).map((x) => ({
+          id: x.product_id, description: x.descricao, price_catalog: x.preco, quantity: x.quantidade, lot: '', image_urls: x.imagem ? [x.imagem] : [],
+        })));
+      } else {
+        const { data } = await supabase
+          .from('products')
+          .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
+          .or(`description.ilike.%${q}%,lot.ilike.%${q}%`)
+          .limit(20);
+        setResults(data || []);
+      }
     } catch (e) { console.error(e); }
     setSearching(false);
   }, []);

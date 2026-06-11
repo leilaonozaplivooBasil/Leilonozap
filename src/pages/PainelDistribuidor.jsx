@@ -45,6 +45,7 @@ export default function PainelDistribuidor() {
   const [vendas, setVendas] = useState(null);
   const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
   const [lojaStats, setLojaStats] = useState(null);
+  const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
   const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
     produtos_total: 0, produtos_ativos: 0, estoque_qtd: 0, vendidos_qtd: 0, faturado: 0, valor_estoque: 0,
@@ -126,6 +127,20 @@ export default function PainelDistribuidor() {
     setBusy('');
   };
   const removeEmployee = async (id) => { setBusy(id); try { await base44.functions.invoke('manageEmployees', { action: 'remove', actorId: user.id, id }); setEmployees((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
+
+  // Trocar senha
+  const trocarSenha = async () => {
+    if (pwForm.nova.length < 6) { toast.error('Nova senha: mínimo 6 caracteres.'); return; }
+    if (pwForm.nova !== pwForm.conf) { toast.error('A confirmação não bate com a nova senha.'); return; }
+    setBusy('senha');
+    try {
+      const r = await base44.functions.invoke('changeOwnPassword', { userId: user.id, currentPassword: pwForm.atual, newPassword: pwForm.nova });
+      if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
+      toast.success('Senha alterada com sucesso!');
+      setPwForm({ atual: '', nova: '', conf: '' });
+    } catch { toast.error('Erro'); }
+    setBusy('');
+  };
 
   // Histórico de vendas (lazy)
   const loadVendas = async () => {
@@ -430,7 +445,20 @@ export default function PainelDistribuidor() {
 
             <div className="flex flex-wrap gap-3">
               <button onClick={() => navigate(createPageUrl('Carteira'))} className="px-4 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4" /> Carteira & KYC</button>
-              <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>
+              {isLoja
+                ? <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
+                : <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>}
+            </div>
+
+            {/* Trocar senha */}
+            <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5 mt-4 max-w-md">
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><KeyRound className="w-4 h-4 text-green-400" /> Trocar senha</h3>
+              <div className="space-y-2.5">
+                <input type="password" value={pwForm.atual} onChange={(e) => setPwForm({ ...pwForm, atual: e.target.value })} placeholder="Senha atual" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                <input type="password" value={pwForm.nova} onChange={(e) => setPwForm({ ...pwForm, nova: e.target.value })} placeholder="Nova senha (mín. 6)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                <input type="password" value={pwForm.conf} onChange={(e) => setPwForm({ ...pwForm, conf: e.target.value })} placeholder="Confirmar nova senha" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                <button onClick={trocarSenha} disabled={busy === 'senha'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'senha' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Alterar senha</button>
+              </div>
             </div>
           </div>
         )}

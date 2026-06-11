@@ -36,6 +36,8 @@ export default async function handler(req, res) {
     const isEmployee = actor.is_pdv_operator === true && actor.active !== false;
     if (!isAdmin && !hasStock && !isEmployee) return res.status(403).json({ success: false, error: 'Sem permissão para tirar pedido' });
     const employerId = isEmployee ? (actor.employer_id || null) : null;
+    // dono de loja (loja_fisica/ponto/parceiro) vende do PRÓPRIO store_inventory
+    const isStoreOwner = ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(actor.primary_career_level);
 
     // lê produtos (preço de referência + estoque + dono)
     const ids = items.map((i) => String(i.product_id)).filter(Boolean);
@@ -44,19 +46,35 @@ export default async function handler(req, res) {
     const prods = await (await sb(`products?select=id,description,price_catalog,selling_price_retail,quantity,quantity_sold,sold_amount,distribuidor_id&id=in.(${inList})`)).json();
     const pmap = {}; (Array.isArray(prods) ? prods : []).forEach((p) => { pmap[p.id] = p; });
 
+    // estoque da loja (quando for dono de loja)
+    const siMap = {};
+    if (isStoreOwner) {
+      const si = await (await sb(`store_inventory?select=id,product_id,quantity,price&owner_id=eq.${encodeURIComponent(actorId)}&product_id=in.(${inList})`)).json();
+      (Array.isArray(si) ? si : []).forEach((s) => { siMap[s.product_id] = s; });
+    }
+
     let total = 0, totalQty = 0; const lines = []; let sellerId = null;
     for (const it of items) {
       const p = pmap[String(it.product_id)];
       if (!p) continue;
       const qty = Math.max(1, Number(it.quantity) || 1);
-      const unit = it.price != null && it.price !== '' ? round2(it.price) : round2(p.price_catalog || p.selling_price_retail || 0);
-      total += unit * qty; totalQty += qty;
-      sellerId = sellerId || p.distribuidor_id || null;
-      lines.push({ p, qty, unit });
+      if (isStoreOwner) {
+        const si = siMap[String(it.product_id)];
+        if (!si) return res.status(200).json({ success: false, error: `"${(p.description || '').slice(0, 40)}" não está na sua loja.` });
+        if ((Number(si.quantity) || 0) < qty) return res.status(200).json({ success: false, error: `Estoque insuficiente de "${(p.description || '').slice(0, 40)}" (tem ${Number(si.quantity) || 0}).` });
+        const unit = it.price != null && it.price !== '' ? round2(it.price) : round2(si.price || p.price_catalog || 0);
+        total += unit * qty; totalQty += qty;
+        lines.push({ p, qty, unit, si });
+      } else {
+        const unit = it.price != null && it.price !== '' ? round2(it.price) : round2(p.price_catalog || p.selling_price_retail || 0);
+        total += unit * qty; totalQty += qty;
+        sellerId = sellerId || p.distribuidor_id || null;
+        lines.push({ p, qty, unit });
+      }
     }
     if (!lines.length) return res.status(400).json({ success: false, error: 'Nenhum produto válido' });
     total = round2(total);
-    sellerId = sellerId || employerId || actorId;
+    sellerId = isStoreOwner ? actorId : (sellerId || employerId || actorId);
 
     const now = new Date().toISOString();
     const saleId = oid();
@@ -77,12 +95,18 @@ export default async function handler(req, res) {
       if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao gravar venda', details: t.slice(0, 200) }); }
     }
 
-    // baixa estoque de cada item
-    for (const { p, qty, unit } of lines) {
-      const newQty = Math.max(0, (Number(p.quantity) || 0) - qty);
-      const newSold = (Number(p.quantity_sold) || 0) + qty;
-      const newSoldAmount = round2((Number(p.sold_amount) || 0) + unit * qty);
-      await sb(`products?id=eq.${encodeURIComponent(p.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, quantity_sold: newSold, sold_amount: newSoldAmount, status: newQty > 0 ? 'ESTOQUE' : 'VENDIDO', updated_date: now }) });
+    // baixa estoque de cada item (loja → store_inventory; distribuidor → products). qty=0 → inativo.
+    for (const ln of lines) {
+      if (isStoreOwner && ln.si) {
+        const newQty = Math.max(0, (Number(ln.si.quantity) || 0) - ln.qty);
+        await sb(`store_inventory?id=eq.${encodeURIComponent(ln.si.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, active: newQty > 0, updated_at: now }) });
+      } else {
+        const p = ln.p;
+        const newQty = Math.max(0, (Number(p.quantity) || 0) - ln.qty);
+        const newSold = (Number(p.quantity_sold) || 0) + ln.qty;
+        const newSoldAmount = round2((Number(p.sold_amount) || 0) + ln.unit * ln.qty);
+        await sb(`products?id=eq.${encodeURIComponent(p.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, quantity_sold: newSold, sold_amount: newSoldAmount, status: newQty > 0 ? 'ESTOQUE' : 'VENDIDO', updated_date: now }) });
+      }
     }
 
     return res.status(200).json({ success: true, sale_id: saleId, total, items: lines.length, status: sale.status });
