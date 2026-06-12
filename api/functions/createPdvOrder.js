@@ -89,11 +89,13 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     const saleId = oid();
     const title = lines.length === 1 ? lines[0].p.description : `${lines[0].p.description} +${lines.length - 1} item(ns)`;
+    const itemsJson = lines.map((ln) => ({ product_id: ln.p.id, title: String(ln.p.description || '').slice(0, 200), qty: ln.qty, unit: ln.unit }));
     const sale = {
       id: saleId, base44_id: saleId, kind: 'produto', source: 'pdv',
       seller_id: sellerId, operator_id: actorId,
       buyer_name: customer.name || 'Cliente balcão', buyer_email: customer.email || null, buyer_phone: customer.phone || null,
       product_title: String(title).slice(0, 300), sale_price: total, total_amount: total, quantity: totalQty,
+      items_json: itemsJson,
       status: delivered ? 'entregue' : 'paid', payment_method: paymentMethod,
       ...(delivered ? { delivered_at: now } : {}),
     };

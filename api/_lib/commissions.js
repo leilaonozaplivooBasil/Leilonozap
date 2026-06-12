@@ -29,12 +29,14 @@ export async function payDirectCommissions({ saleId, sellerId, total }) {
       node = (await (await sb(`app_users?select=id,full_name,primary_career_level,referred_by_id,commission_balance&id=eq.${encodeURIComponent(node.referred_by_id)}&limit=1`)).json())?.[0];
     }
 
+    // CÚPULA (sócio/fundador/CEO): SEMPRE 20% na venda direta das lojas deles
+    const CUPULA = ['fundador', 'ceo', 'socio'];
     const cap = 0.20 * value; let running = 0; let total_pago = 0;
     for (let i = 0; i < chain.length && running < cap - 0.001; i++) {
       const earner = chain[i];
       const child = i === 0 ? null : chain[i - 1];
       const pct = i === 0
-        ? Number(levels[earner.primary_career_level]?.venda_direta_pct || 0)
+        ? (CUPULA.includes(earner.primary_career_level) ? 20 : Number(levels[earner.primary_career_level]?.venda_direta_pct || 0))
         : Number((ov[earner.primary_career_level] || {})[child.primary_career_level] || 0);
       let amount = round2(value * pct / 100);
       if (running + amount > cap) amount = round2(cap - running);

@@ -23,6 +23,7 @@ const CARGO_LABEL = {
   distribuidor: 'Distribuidor', loja_fisica: 'Loja Física', ponto_retirada: 'Ponto de Retirada', parceiro: 'Parceiro',
   licenciado: 'Licenciado', licenciado_catalogo: 'Licenciado Catálogo', licenciado_aplicativo: 'Licenciado App',
   vendedor: 'Vendedor', influenciador: 'Influenciador', plano_lider: 'Líder', trainee: 'Trainee', usuario: 'Usuário',
+  fundador: 'Fundador', ceo: 'CEO', socio: 'Sócio',
 };
 const cargoLabel = (c) => CARGO_LABEL[c] || c || '—';
 
@@ -49,9 +50,9 @@ export default function TirarPedido() {
     let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
     setUser(u);
     loadToday(u);
-    // carrega a rede do distribuidor pra poder vincular a venda a um vendedor
+    // carrega quem pode vender por esse distribuidor: a rede + a cúpula (sócios/fundadores/CEO)
     if (u?.id && !['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level)) {
-      supabase.rpc('distribuidor_rede', { dist_id: u.id })
+      supabase.rpc('vendedores_disponiveis', { _owner: u.id })
         .then(({ data }) => setSellers(Array.isArray(data) ? data : []))
         .catch(() => {});
     }
@@ -259,10 +260,10 @@ export default function TirarPedido() {
                     ) : sellerOptions.map((s) => (
                       <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 hover:bg-gray-800 text-sm border-b border-gray-800/60 last:border-0 flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="truncate font-medium">{s.full_name || s.email}</div>
+                          <div className="truncate font-medium flex items-center gap-1.5">{s.full_name || s.email}{s.cupula && <span className="text-[8px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold">CÚPULA</span>}</div>
                           <div className="text-[10px] text-gray-500 truncate">{s.email}</div>
                         </div>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-300 shrink-0">{cargoLabel(s.primary_career_level)}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded shrink-0 ${s.cupula ? 'bg-yellow-500/15 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>{cargoLabel(s.primary_career_level)}</span>
                       </button>
                     ))}
                   </div>
