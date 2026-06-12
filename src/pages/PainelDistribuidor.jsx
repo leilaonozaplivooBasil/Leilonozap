@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
   ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone,
-  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy
+  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, X
 } from 'lucide-react';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -53,6 +53,7 @@ export default function PainelDistribuidor() {
   const [storeSlug, setStoreSlug] = useState('');
   const [vendasSeller, setVendasSeller] = useState(''); // filtro de vendedor vindo do ranking
   const [dashPeriodo, setDashPeriodo] = useState('dia'); // filtro de período da Visão Geral (dia/semana/mes)
+  const [menuOpen, setMenuOpen] = useState(false); // drawer do menu no mobile
   const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
   const [marketing, setMarketing] = useState(null);
   const [atend, setAtend] = useState(null); // { whatsapp, atividade }
@@ -253,20 +254,36 @@ export default function PainelDistribuidor() {
 
   const cargoNome = CARGO_LABEL[user.primary_career_level] || user.primary_career_level;
 
+  const currentLabel = (MENU.find((m) => m.id === tab)?.label) || 'Visão Geral';
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col md:flex-row">
-      {/* MENU LATERAL */}
-      <aside className="md:w-64 bg-gray-950 border-r border-gray-800 p-4 md:min-h-screen md:sticky md:top-0 md:self-start">
-        <div className="mb-6 px-2">
-          <div className="text-xs text-gray-500 uppercase tracking-wide">Painel do</div>
-          <div className="text-lg font-black text-green-400">{cargoNome}</div>
-          <div className="text-[11px] text-gray-500 truncate">{user.full_name}</div>
+    <div className="min-h-screen bg-gray-900 text-white md:flex">
+      {/* TOPO MOBILE — hambúrguer + seção atual + atalho pedido */}
+      <div className="md:hidden sticky top-0 z-30 bg-gray-950/95 backdrop-blur border-b border-gray-800 px-3 py-2.5 flex items-center justify-between gap-2">
+        <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 text-gray-100 min-w-0">
+          <Menu className="w-6 h-6 shrink-0" />
+          <span className="font-bold truncate">{currentLabel}</span>
+        </button>
+        <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
+      </div>
+
+      {/* backdrop do drawer (mobile) */}
+      {menuOpen && <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setMenuOpen(false)} />}
+
+      {/* MENU LATERAL — drawer no mobile, fixo no desktop */}
+      <aside className={`bg-gray-950 border-r border-gray-800 p-4 w-72 md:w-64 overflow-y-auto fixed md:sticky top-0 left-0 h-full md:h-auto md:min-h-screen md:self-start z-50 transition-transform duration-200 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <div className="mb-6 px-2 flex items-start justify-between">
+          <div className="min-w-0">
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Painel do</div>
+            <div className="text-lg font-black text-green-400">{cargoNome}</div>
+            <div className="text-[11px] text-gray-500 truncate">{user.full_name}</div>
+          </div>
+          <button onClick={() => setMenuOpen(false)} className="md:hidden p-1 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <nav className="space-y-1">
           {MENU.map((m) => {
             const active = !m.ext && !m.route && tab === m.id;
             return (
-              <button key={m.id} onClick={() => onMenu(m)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active ? 'bg-green-500/15 text-green-400 font-semibold' : 'text-gray-300 hover:bg-gray-800'}`}>
+              <button key={m.id} onClick={() => { onMenu(m); setMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active ? 'bg-green-500/15 text-green-400 font-semibold' : 'text-gray-300 hover:bg-gray-800'}`}>
                 <m.icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span className="flex-1 text-left">{m.label}</span>
                 {m.star && <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded">★</span>}
@@ -278,7 +295,7 @@ export default function PainelDistribuidor() {
       </aside>
 
       {/* CONTEÚDO */}
-      <main className="flex-1 p-6 md:p-8">
+      <main className="flex-1 min-w-0 p-4 md:p-8">
         {/* ───────────────────────── RANKING (aba dedicada) ───────────────────────── */}
         {tab === 'ranking' && (
           <div>
