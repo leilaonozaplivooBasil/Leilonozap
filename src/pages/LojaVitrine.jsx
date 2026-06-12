@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import ComparaiModal from '@/components/comparai/ComparaiModal';
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, X, Loader2, Store as StoreIcon,
   ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package, ArrowLeft,
@@ -26,6 +27,7 @@ export default function LojaVitrine() {
   const [cart, setCart] = useState({}); // { product_id: {title, price, image, qty, max} }
   const [cartOpen, setCartOpen] = useState(false);
   const [checkout, setCheckout] = useState(false);
+  const [comparaiItem, setComparaiItem] = useState(null); // produto aberto no Comparaí
   const cartKey = `lnz_cart_${slug}`;
 
   // carrega vitrine
@@ -150,6 +152,10 @@ export default function LojaVitrine() {
                       className="mt-auto w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 disabled:text-gray-400 text-white text-sm font-semibold flex items-center justify-center gap-1.5">
                       {inCart > 0 ? <><CheckCircle2 className="w-4 h-4" /> {inCart} no carrinho</> : <><Plus className="w-4 h-4" /> Adicionar</>}
                     </button>
+                    <button onClick={() => setComparaiItem(it)}
+                      className="mt-1.5 w-full py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+                      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparaí" className="w-4 h-4" /> Comparar preços
+                    </button>
                   </div>
                 </div>
               );
@@ -197,6 +203,14 @@ export default function LojaVitrine() {
       )}
 
       {checkout && <Checkout slug={slug} store={store} cartItems={cartItems} total={cartTotal} onClose={() => setCheckout(false)} onPaid={() => { setCart({}); setCheckout(false); }} />}
+
+      {comparaiItem && (
+        <ComparaiModal
+          auction={{ id: comparaiItem.product_id, title: comparaiItem.title, current_price: comparaiItem.price, starting_price: comparaiItem.price, image_urls: comparaiItem.images }}
+          isProduct
+          onClose={() => setComparaiItem(null)}
+        />
+      )}
 
       <footer className="text-center text-[11px] text-gray-600 py-8">Leilão NoZap · Pagamento seguro via PIX ou Cartão</footer>
     </div>
