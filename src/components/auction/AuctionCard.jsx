@@ -680,6 +680,19 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   Ver Detalhes do Lote
                 </Button>
               </Link>
+              {/* 🆕 COMPARAI também nos lotes encerrados/arrematados */}
+              <Button
+                onClick={(e) => { e.stopPropagation(); setShowComparai(true); }}
+                className="w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', boxShadow: '0 4px 16px rgba(59,130,246,0.35)' }}
+              >
+                <img
+                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                  alt="Comparai"
+                  className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
+                />
+                Comparar Preços
+              </Button>
               <Link
                 to={createPageUrl("Home") + "?filter=ativos"}
                 onClick={(e) => e.stopPropagation()}
