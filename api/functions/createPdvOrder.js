@@ -1,10 +1,10 @@
 // createPdvOrder — tirador de pedido (PDV) do Distribuidor: grava venda física em catalog_sales
 // e baixa o estoque (products). service_role. Guard: ator admin/super_admin OU cargo de estoque.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
 

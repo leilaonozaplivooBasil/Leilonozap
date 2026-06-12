@@ -1,9 +1,9 @@
 // adminEntityWrite — escrita genérica (service_role) p/ entidades da loja: banners, settings, destaque.
 // Resolve entidade→tabela (whitelist) e aplica field-map. Guard: admin/super_admin OU cargo de estoque.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
 
 // whitelist entidade → tabela

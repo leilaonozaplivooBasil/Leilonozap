@@ -1,9 +1,9 @@
 // manageCarriers — CRUD das empresas de envio (shipping_carriers) via service_role.
 // action: 'list' | 'add' | 'remove'. Guard de escrita: ator admin/super_admin.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(10).toString('hex');
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {

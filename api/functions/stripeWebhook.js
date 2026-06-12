@@ -1,12 +1,12 @@
 // stripeWebhook — confirma o pagamento de cartão (busca a sessão/PI na API da Stripe, não confia
 // no corpo), marca a venda paga (idempotente) e paga as comissões pela cadeia (telescópio teto 20%).
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 const round2 = (n) => Math.round(n * 100) / 100;
-const oid = () => crypto.randomBytes(12).toString('hex');
 
 async function activateAdesao(sale) {
   const u = await (await sb(`app_users?select=career_levels&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();

@@ -2,12 +2,12 @@
 // (não confia no corpo), marca a venda como paga e PAGA as comissões pela cadeia (telescópio, teto 20%).
 // Idempotente: se a venda já está paga, não repaga.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const round2 = (n) => Math.round(n * 100) / 100;
-const oid = () => crypto.randomBytes(12).toString('hex');
 
 // Adesão de cargo: ativa o nível, gera pedido de produto (valor volta em produto) e paga 20% pro vendedor
 async function activateAdesao(sale) {

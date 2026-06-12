@@ -2,12 +2,12 @@
 // Valor calculado NO SERVIDOR (nunca confia no client). Cria a venda (pending_payment),
 // gera o PIX e devolve QR + copia-e-cola. O webhook confirma e paga comissões.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
-const oid = () => crypto.randomBytes(12).toString('hex');
 const round2 = (n) => Math.round(n * 100) / 100;
 
 function sb(path, opts = {}) {

@@ -1,3 +1,4 @@
+import { oid } from '../_lib/oid.js';
 // waWebhook — recebe eventos da Evolution API (instância leilonozap).
 // messages.upsert → grava + (se IA ligada) responde via InvokeLLM e envia pela Evolution.
 // connection.update → atualiza status. qrcode.updated → guarda QR.
@@ -8,7 +9,6 @@ const KEY = process.env.EVOLUTION_KEY || '';
 const INST = process.env.EVOLUTION_INSTANCE || 'leilonozap';
 const OWNER = process.env.WA_OWNER_ID || '696bcc0831b99360419f7053'; // distribuidor Bangu
 const APP = process.env.APP_URL || 'https://leilaonozap.net';
-const oid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 // Persona padrão (caso a caixa "Treinar a IA" esteja vazia) — Ribeiro, atendente da Distribuidora de Bangu
 const DEFAULT_RIBEIRO = `Você é o Ribeiro, atendente e vendedor da Distribuidora de Bangu (Leilão NoZap). Cordial, objetivo, pouco texto, sempre puxando pro fechamento da venda. Consulte o estoque, ofereça as melhores oportunidades e os preços mais baratos, e dê suporte. Nunca invente preço, prazo ou produto.`;

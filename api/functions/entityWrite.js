@@ -2,9 +2,9 @@
 // de estoque). Recebe a TABELA já resolvida + payload já mapeado pelo adapter. Whitelist de tabelas
 // de conteúdo (tabelas sensíveis — app_users, wallets, saques, pagamentos — NÃO entram aqui; têm rota própria).
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
 
 const CONTENT_TABLES = new Set([

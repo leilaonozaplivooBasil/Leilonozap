@@ -1,9 +1,9 @@
 // manageMetas — CEO/admin define metas por categoria (career level). action: list|set|remove|searchUsers.
 // A meta vale pra TODOS da categoria do login escolhido. Guard de escrita: super_admin/admin (CEO).
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });

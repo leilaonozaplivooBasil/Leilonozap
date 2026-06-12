@@ -1,10 +1,10 @@
 // requestWithdrawal — pedido de saque. TRAVA ANTIFRAUDE: só com KYC aprovado e chave PIX = CPF do titular.
 // Comprar/ganhar é livre; SACAR exige validação. Reserva o saldo ao pedir.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 const round2 = (n) => Math.round(n * 100) / 100;
 const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
 

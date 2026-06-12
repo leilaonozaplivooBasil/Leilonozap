@@ -1,9 +1,9 @@
 // bulkImportProducts — importa produtos em massa (planilha) pra Loja Virtual (service_role).
 // Guard: ator admin/super_admin. Já publica na loja (catalog_active=true).
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 const num = (v) => {
   if (v == null || v === '') return null;
   const n = Number(String(v).replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));

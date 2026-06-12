@@ -3,13 +3,13 @@
 // (kind='loja', seller_id = dono da loja) e gera PIX (Mercado Pago) ou Cartão (Stripe).
 // O estoque só é baixado e a comissão só é paga QUANDO o pagamento confirma (mpWebhook/stripeWebhook).
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
-const oid = () => crypto.randomBytes(12).toString('hex');
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 function sb(path, opts = {}) {

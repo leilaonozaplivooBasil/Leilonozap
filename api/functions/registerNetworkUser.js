@@ -2,12 +2,12 @@
 // Gera referral_code próprio, resolve o indicador, e valida "quem cadastra quem" lendo das tabelas FASE 0.
 // Sem link mágico: exige o código de 6 dígitos (purpose 'signup') que foi enviado por e-mail.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
-const oid = () => crypto.randomBytes(12).toString('hex');
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
