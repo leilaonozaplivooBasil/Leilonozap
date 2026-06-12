@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { money } from '@/lib/format';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { Crown, Package, Layers, TrendingUp, Loader2, Calendar, Copy, Check, MessageCircle } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const CARGO = { distribuidor: 'Distribuidor', loja_fisica: 'Loja Física', ponto_retirada: 'Ponto', parceiro: 'Parceiro', licenciado: 'Licenciado', licenciado_catalogo: 'Lic. Catálogo', licenciado_aplicativo: 'Lic. App', vendedor: 'Vendedor', influenciador: 'Influenciador', plano_lider: 'Líder', trainee: 'Trainee', usuario: 'Usuário', fundador: 'Fundador', ceo: 'CEO', socio: 'Sócio' };
 const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`);
 const PERIODS = [{ id: 'dia', label: 'Hoje' }, { id: 'semana', label: 'Semana' }, { id: 'mes', label: 'Mês' }];

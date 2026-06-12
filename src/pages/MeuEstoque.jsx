@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -8,7 +9,6 @@ import {
   Box, ShoppingBag, RefreshCw, PackagePlus
 } from 'lucide-react';
 
-const money = (n) => (n == null ? '—' : 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
 
 export default function MeuEstoque() {
   const navigate = useNavigate();

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { money } from '@/lib/format';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -9,7 +10,6 @@ import {
   ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package,
 } from 'lucide-react';
 
-const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const firstImg = (images) => {
   if (Array.isArray(images)) return images[0] || '';
   if (typeof images === 'string') { try { const a = JSON.parse(images); return Array.isArray(a) ? a[0] : images; } catch { return images; } }

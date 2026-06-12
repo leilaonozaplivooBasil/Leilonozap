@@ -72,7 +72,6 @@ const MyCatalogOrders = React.lazy(() => import('./pages/MyCatalogOrders'));
 const MyWinnings = React.lazy(() => import('./pages/MyWinnings'));
 const NetworkOverview = React.lazy(() => import('./pages/NetworkOverview'));
 const OrderTracking = React.lazy(() => import('./pages/OrderTracking'));
-const PDV = React.lazy(() => import('./pages/PDV'));
 const PartnerPlanActivation = React.lazy(() => import('./pages/PartnerPlanActivation'));
 const Partners = React.lazy(() => import('./pages/Partners'));
 const Portal = React.lazy(() => import('./pages/Portal'));
@@ -178,7 +177,6 @@ export const PAGES = {
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
-    "PDV": PDV,
     "PartnerPlanActivation": PartnerPlanActivation,
     "Partners": Partners,
     "Portal": Portal,

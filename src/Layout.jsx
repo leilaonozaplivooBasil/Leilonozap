@@ -662,7 +662,6 @@ export default function Layout({ children, currentPageName }) {
       title: "💰 Financeiro",
       isCategory: true,
       items: [
-        { title: "💰 PDV", pageName: "PDV" },
         { title: "💲 Dashboard Financeiro", pageName: "Financial" },
         { title: "🛡️ KYC & Saques", pageName: "AdminFinanceiro" },
         { title: "💳 Transações", pageName: "TransactionHistory" },

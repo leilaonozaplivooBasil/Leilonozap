@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   logLevel: 'error',
+  // produção: remove console.* e debugger do bundle (mantém em dev)
+  esbuild: command === 'build' ? { drop: ['console', 'debugger'] } : {},
   plugins: [
     base44({
       legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
@@ -33,4 +35,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

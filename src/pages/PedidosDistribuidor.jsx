@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -8,7 +9,6 @@ import {
   PackageCheck, Send, Box, RefreshCw, ShoppingBag, X
 } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // fluxo de status do pedido
 const FLOW = ['paid', 'preparando', 'saiu_entrega', 'entregue'];

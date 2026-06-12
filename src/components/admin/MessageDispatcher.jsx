@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -968,7 +969,7 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
                   </div>
                   <div 
                     className="text-sm max-h-64 overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: previewMessage.body }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewMessage.body) }}
                   />
                 </CardContent>
               </Card>

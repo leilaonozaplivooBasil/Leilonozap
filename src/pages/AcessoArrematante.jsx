@@ -65,7 +65,7 @@ export default function AcessoArrematante() {
       // Auto-migra senha legada para bcrypt (não bloqueante)
       if (!isBcrypt) {
         const hashed = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-        AppUser.update(user.id, { password: hashed }).catch(() => {});
+        AppUser.update(user.id, { password: hashed }).catch((e) => console.warn('Falha ao migrar senha p/ bcrypt:', e?.message));
       }
 
       localStorage.setItem('currentUser', JSON.stringify(user));

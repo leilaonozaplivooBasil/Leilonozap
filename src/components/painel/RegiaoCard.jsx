@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { money } from '@/lib/format';
 import { base44 } from '@/api/base44Client';
 import { MapPin, Users2, TrendingUp, Network, Loader2 } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const num = (n) => Number(n || 0).toLocaleString('pt-BR');
 
 // Inteligência da região do endereço cadastrado (habitantes, potencial, afiliações).

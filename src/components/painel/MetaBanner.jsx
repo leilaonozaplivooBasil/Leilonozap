@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { money } from '@/lib/format';
 import { supabase } from '@/api/supabaseClient';
 import { Target, Trophy, TrendingUp } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Banner da Meta do Dia — aparece pra todos da categoria com meta ativa.
 // Diminui conforme as vendas saem; parabeniza ao atingir.

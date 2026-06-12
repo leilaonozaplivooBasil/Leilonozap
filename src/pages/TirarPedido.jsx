@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -8,7 +9,6 @@ import {
   Package, User as UserIcon, Phone, CreditCard, Banknote, QrCode, Store, Truck
 } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const priceOf = (p) => Number(p.price_catalog || p.selling_price_retail || 0);
 // aceita "69,80", "69.80", "1.234,56", "6980" → número
 const parseBRL = (s) => {

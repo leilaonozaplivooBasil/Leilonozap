@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2 } from "lucide-react";
@@ -469,7 +470,7 @@ export default function CatalogProductDetails() {
                 <div
                   className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none
                     prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
-                  dangerouslySetInnerHTML={{ __html: product.notes }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.notes) }}
                 />
               ) : (
                 <p className="text-gray-400 text-sm">{product.description}</p>

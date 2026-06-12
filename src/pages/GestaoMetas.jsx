@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { ArrowLeft, Target, Search, Trophy, Trash2, Loader2, User as UserIcon } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const CARGO = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor', fundador: 'Fundador', ceo: 'CEO', funcionario: 'Funcionário' };
 
 export default function GestaoMetas() {
