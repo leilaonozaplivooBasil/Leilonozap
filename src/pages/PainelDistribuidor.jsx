@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -13,7 +13,7 @@ import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
-  ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone,
+  ArrowRight, MousePointerClick, UserPlus, Megaphone, Send, MapPin, Hash, Mail, Phone,
   UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, X
 } from 'lucide-react';
 

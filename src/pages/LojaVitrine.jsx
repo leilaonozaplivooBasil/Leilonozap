@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import ComparaiModal from '@/components/comparai/ComparaiModal';
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, X, Loader2, Store as StoreIcon,
-  ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package, ArrowLeft,
+  ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package,
 } from 'lucide-react';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -154,7 +154,7 @@ export default function LojaVitrine() {
                     </button>
                     <button onClick={() => setComparaiItem(it)}
                       className="mt-1.5 w-full py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5">
-                      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparaí" className="w-4 h-4" /> Comparar preços
+                      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparaí" className="w-4 h-4" /> Comparar Preços
                     </button>
                   </div>
                 </div>
