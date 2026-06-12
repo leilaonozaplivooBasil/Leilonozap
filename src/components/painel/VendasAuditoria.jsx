@@ -21,10 +21,10 @@ const itemsOf = (row) => {
 
 // Auditoria de vendas (admin): vê tudo o que foi lançado, quem lançou, baixa no estoque,
 // com busca e filtros por vendedor, data, categoria, origem e status. Tudo clicável.
-export default function VendasAuditoria({ userId }) {
+export default function VendasAuditoria({ userId, initialSeller = '' }) {
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState('');
-  const [seller, setSeller] = useState('');
+  const [seller, setSeller] = useState(initialSeller);
   const [cat, setCat] = useState('');
   const [origem, setOrigem] = useState('');
   const [status, setStatus] = useState('');
@@ -40,6 +40,9 @@ export default function VendasAuditoria({ userId }) {
       .catch(() => { if (alive) setRows([]); });
     return () => { alive = false; };
   }, [userId]);
+
+  // quando vem de um clique no ranking, já aplica o filtro do vendedor
+  useEffect(() => { setSeller(initialSeller || ''); }, [initialSeller]);
 
   const sellers = useMemo(() => {
     const m = new Map();

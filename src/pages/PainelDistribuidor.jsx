@@ -51,6 +51,8 @@ export default function PainelDistribuidor() {
   const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
   const [lojaStats, setLojaStats] = useState(null);
   const [storeSlug, setStoreSlug] = useState('');
+  const [vendasSeller, setVendasSeller] = useState(''); // filtro de vendedor vindo do ranking
+  const [dashPeriodo, setDashPeriodo] = useState('dia'); // filtro de período da Visão Geral (dia/semana/mes)
   const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
   const [marketing, setMarketing] = useState(null);
   const [atend, setAtend] = useState(null); // { whatsapp, atividade }
@@ -243,6 +245,8 @@ export default function PainelDistribuidor() {
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ];
   const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); if (m.id === 'marketing') loadMarketing(); if (m.id === 'atendimento') loadAtendimento(); } };
+  // clique num vendedor no ranking → abre a aba Vendas já filtrada nele
+  const goSellerSales = (id) => { setVendasSeller(id); setTab('vendas'); loadVendas(); };
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando painel…</div>;
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
@@ -280,13 +284,14 @@ export default function PainelDistribuidor() {
           <div>
             <h1 className="text-2xl font-black mb-1 flex items-center gap-2"><Trophy className="w-6 h-6 text-yellow-400" /> Ranking</h1>
             <p className="text-gray-400 text-sm mb-5">Campeões de venda — por dia, semana e mês. Vendedor, produto e categoria.</p>
-            <RankingFull userId={user.id} />
+            <RankingFull userId={user.id} onSeller={goSellerSales} />
           </div>
         )}
         {/* ───────────── VISÃO GERAL — LOJA (loja_fisica/ponto/parceiro) ───────────── */}
         {tab === 'visao' && isLoja && (
           <div>
-            <MetaBanner userId={user.id} />
+            <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
+            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <RegiaoCard user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
@@ -313,7 +318,7 @@ export default function PainelDistribuidor() {
               <Stat icon={Users} label="Minha rede" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
               <Stat icon={Wallet} label="Saldo" value={money(lojaStats?.saldo || 0)} sub="pra sacar" color="text-emerald-400" />
             </div>
-            <RankingDia userId={user.id} />
+            <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
             <SectionLabel>⚡ Atalhos</SectionLabel>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Shortcut onClick={() => navigate(ROUTES.pdv)} icon={ShoppingCart} title="PDV · Tirar pedido" desc="Venda e baixe estoque." highlight />
@@ -327,7 +332,8 @@ export default function PainelDistribuidor() {
         {/* ───────────────────── VISÃO GERAL — DISTRIBUIDOR ───────────────────── */}
         {tab === 'visao' && !isLoja && (
           <div>
-            <MetaBanner userId={user.id} />
+            <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
+            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <RegiaoCard user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
@@ -344,7 +350,7 @@ export default function PainelDistribuidor() {
 
             <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name || 'Leilão NoZap'} />
 
-            <RankingDia userId={user.id} />
+            <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
 
             {/* destaque: vendas hoje + faturado */}
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
@@ -644,7 +650,7 @@ export default function PainelDistribuidor() {
             <h1 className="text-2xl font-black mb-1">Vendas / Histórico</h1>
             <p className="text-gray-400 text-sm mb-1">Tudo que foi lançado — PDV, loja online e histórico.</p>
             <p className="text-[11px] text-gray-500 mb-4">ℹ️ Clique numa venda pra ver os itens e a baixa no estoque. Clique no vendedor pra filtrar as vendas dele. Os totais batem com a Visão Geral e o Ranking.</p>
-            <VendasAuditoria userId={user.id} />
+            <VendasAuditoria userId={user.id} initialSeller={vendasSeller} />
           </div>
         )}
 
@@ -796,6 +802,18 @@ function LojaLinkCard({ slug, name }) {
           <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Compartilhar</a>
         </div>
       </div>
+    </div>
+  );
+}
+
+// filtro de período da Visão Geral (Hoje/Semana/Mês)
+function DashFiltro({ value, onChange }) {
+  const PER = [['dia', 'Hoje'], ['semana', 'Semana'], ['mes', 'Mês']];
+  return (
+    <div className="inline-flex bg-gray-800/70 border border-gray-700 rounded-xl p-1 mb-4">
+      {PER.map(([id, label]) => (
+        <button key={id} onClick={() => onChange(id)} className={`px-5 py-2 rounded-lg text-sm font-bold transition ${value === id ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:text-white'}`}>{label}</button>
+      ))}
     </div>
   );
 }

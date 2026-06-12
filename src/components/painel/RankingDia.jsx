@@ -1,35 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { Trophy, Crown, Package, TrendingUp, Flame, PartyPopper, Target } from 'lucide-react';
+import { Trophy, Crown, Package, TrendingUp, Flame, PartyPopper, BarChart3 } from 'lucide-react';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const CARGO = { distribuidor: 'Distribuidor', loja_fisica: 'Loja Física', ponto_retirada: 'Ponto', parceiro: 'Parceiro', licenciado: 'Licenciado', licenciado_catalogo: 'Lic. Catálogo', licenciado_aplicativo: 'Lic. App', vendedor: 'Vendedor', influenciador: 'Influenciador', plano_lider: 'Líder', trainee: 'Trainee', usuario: 'Usuário' };
+const CARGO = { distribuidor: 'Distribuidor', loja_fisica: 'Loja Física', ponto_retirada: 'Ponto', parceiro: 'Parceiro', licenciado: 'Licenciado', licenciado_catalogo: 'Lic. Catálogo', licenciado_aplicativo: 'Lic. App', vendedor: 'Vendedor', influenciador: 'Influenciador', plano_lider: 'Líder', trainee: 'Trainee', usuario: 'Usuário', fundador: 'Fundador', ceo: 'CEO', socio: 'Sócio' };
 const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`);
+const LABEL = { dia: 'dia', semana: 'semana', mes: 'mês' };
 
-// 🏆 Ranking do dia + mensagem de parabéns (meta batida) ou motivação (o que falta).
-export default function RankingDia({ userId, refreshKey }) {
+// 🏆 Ranking por período (dia: meta+parabéns; semana/mês: faturamento) — vendedor e produto campeão.
+export default function RankingDia({ userId, refreshKey, onSeller, period = 'dia' }) {
   const [r, setR] = useState(null);
 
   useEffect(() => {
     if (!userId) return;
     let alive = true;
-    supabase.rpc('ranking_dia', { _owner: userId })
-      .then(({ data }) => { if (alive) setR(data || null); })
-      .catch(() => {});
+    const call = period === 'dia'
+      ? supabase.rpc('ranking_dia', { _owner: userId })
+      : supabase.rpc('ranking_periodo', { _owner: userId, _period: period });
+    call.then(({ data }) => { if (alive) setR(data || null); }).catch(() => {});
     return () => { alive = false; };
-  }, [userId, refreshKey]);
+  }, [userId, refreshKey, period]);
 
   if (!r) return null;
   const vendedores = r.vendedor_campeao || [];
   const produtos = r.produto_campeao || [];
-  const temMeta = r.meta != null;
+  const total = period === 'dia' ? Number(r.rede_total || r.vendido || 0) : Number(r.total || 0);
+  const pedidos = period === 'dia' ? (r.rede_pedidos || 0) : (r.pedidos || 0);
+  const temMeta = period === 'dia' && r.meta != null;
   const pct = temMeta && r.meta > 0 ? Math.min(100, Math.round((Number(r.vendido) / Number(r.meta)) * 100)) : 0;
   const campeaoProduto = produtos[0]?.produto;
 
   return (
     <div className="mb-8">
-      {/* mensagem motivacional / parabéns */}
-      {temMeta && (
+      {/* banner: dia com meta = parabéns/motivação · semana/mês = faturamento do período */}
+      {temMeta ? (
         r.atingida ? (
           <div className="rounded-2xl p-5 mb-4 border border-yellow-400/50 bg-gradient-to-r from-yellow-500/20 via-amber-500/15 to-green-500/15 flex items-center gap-4">
             <PartyPopper className="w-9 h-9 text-yellow-300 shrink-0" />
@@ -47,29 +51,38 @@ export default function RankingDia({ userId, refreshKey }) {
             </div>
           </div>
         )
+      ) : (
+        <div className="rounded-2xl p-5 mb-4 border border-emerald-500/30 bg-gradient-to-r from-emerald-900/40 to-green-800/10 flex items-center gap-4">
+          <BarChart3 className="w-9 h-9 text-emerald-300 shrink-0" />
+          <div>
+            <div className="text-lg font-black text-emerald-200">Faturamento da {LABEL[period]}</div>
+            <div className="text-sm text-gray-200"><strong className="text-emerald-300 text-xl">{money(total)}</strong> em {pedidos} pedido(s) na rede.</div>
+          </div>
+        </div>
       )}
 
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="w-4 h-4 text-yellow-400" />
-        <h3 className="text-xs font-bold tracking-wider text-gray-400 uppercase">Ranking de hoje</h3>
-        <span className="text-[11px] text-gray-500">· {money(r.rede_total)} em {r.rede_pedidos || 0} pedido(s) na rede</span>
+        <h3 className="text-xs font-bold tracking-wider text-gray-400 uppercase">Ranking — {LABEL[period]}</h3>
+        <span className="text-[11px] text-gray-500">· {money(total)} em {pedidos} pedido(s) na rede</span>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* VENDEDOR CAMPEÃO */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3 text-emerald-300 font-bold"><Crown className="w-4 h-4" /> Vendedor campeão</div>
-          {vendedores.length === 0 ? <p className="text-sm text-gray-500 py-4 text-center">Sem vendas hoje ainda. Bora começar! 🚀</p> : (
+          {vendedores.length === 0 ? <p className="text-sm text-gray-500 py-4 text-center">Sem vendas no período ainda. Bora começar! 🚀</p> : (
             <div className="space-y-1.5">
               {vendedores.slice(0, 5).map((v, i) => (
-                <div key={v.id || i} className={`flex items-center gap-3 rounded-xl px-3 py-2 ${i === 0 ? 'bg-gradient-to-r from-yellow-500/15 to-transparent border border-yellow-500/30' : 'bg-gray-900/50'}`}>
+                <button key={v.id || i} onClick={() => v.id && onSeller && onSeller(v.id)} disabled={!v.id || !onSeller}
+                  className={`w-full text-left flex items-center gap-3 rounded-xl px-3 py-2 transition ${i === 0 ? 'bg-gradient-to-r from-yellow-500/15 to-transparent border border-yellow-500/30' : 'bg-gray-900/50'} ${v.id && onSeller ? 'hover:bg-gray-800 cursor-pointer' : ''}`}>
                   <span className="text-lg w-7 text-center shrink-0">{medal(i)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold truncate">{v.nome}</div>
-                    <div className="text-[10px] text-gray-500">{CARGO[v.cargo] || v.cargo || '—'} · {v.pedidos} pedido(s)</div>
+                    <div className="text-[10px] text-gray-500">{CARGO[v.cargo] || v.cargo || '—'} · {v.pedidos} pedido(s){v.id && onSeller ? ' · ver vendas →' : ''}</div>
                   </div>
                   <div className={`text-sm font-black ${i === 0 ? 'text-yellow-300' : 'text-emerald-400'}`}>{money(v.total)}</div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -78,7 +91,7 @@ export default function RankingDia({ userId, refreshKey }) {
         {/* PRODUTO CAMPEÃO */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3 text-emerald-300 font-bold"><Package className="w-4 h-4" /> Produto campeão</div>
-          {produtos.length === 0 ? <p className="text-sm text-gray-500 py-4 text-center">Nenhum produto vendido hoje ainda.</p> : (
+          {produtos.length === 0 ? <p className="text-sm text-gray-500 py-4 text-center">Nenhum produto vendido no período ainda.</p> : (
             <div className="space-y-1.5">
               {produtos.slice(0, 5).map((p, i) => (
                 <div key={i} className={`flex items-center gap-3 rounded-xl px-3 py-2 ${i === 0 ? 'bg-gradient-to-r from-yellow-500/15 to-transparent border border-yellow-500/30' : 'bg-gray-900/50'}`}>
