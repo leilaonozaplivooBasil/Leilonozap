@@ -10,6 +10,7 @@ import RankingDia from '@/components/painel/RankingDia';
 import RankingFull from '@/components/painel/RankingFull';
 import VendasAuditoria from '@/components/painel/VendasAuditoria';
 import RegiaoCard from '@/components/painel/RegiaoCard';
+import EntrarAoVivo from '@/components/livoo/EntrarAoVivo';
 import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
@@ -310,6 +311,7 @@ export default function PainelDistribuidor() {
             <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
             {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <RegiaoCard user={user} />
+            <EntrarAoVivo user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
@@ -352,6 +354,7 @@ export default function PainelDistribuidor() {
             <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
             {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <RegiaoCard user={user} />
+            <EntrarAoVivo user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão Geral</h1>

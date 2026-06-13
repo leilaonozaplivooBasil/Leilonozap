@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
+import AoVivoAgora from "@/components/livoo/AoVivoAgora";
 
 /**
  * 🛡️ NavDesktop — Cabeçalho público padrão LEILÃO NOZAP
@@ -84,6 +85,9 @@ export default function NavDesktop({
           {item.title}
         </Link>
       ))}
+
+      {/* === AO VIVO AGORA · LIVOO LIVE === */}
+      <div className="ml-2"><AoVivoAgora /></div>
 
       {/* === DIVISOR SUTIL === */}
       <div className="h-6 w-px bg-white/10 mx-3" />
