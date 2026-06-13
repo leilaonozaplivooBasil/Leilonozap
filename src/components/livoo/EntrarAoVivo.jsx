@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Radio, Gavel, ShoppingBag, Loader2, X } from 'lucide-react';
-
-const LIVOO_LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/livoo/livoo-logo.png';
+import LivooMark from './LivooMark';
 
 // Botão "Entrar ao vivo pela Livoo Live" — para vendedor / distribuidor / influenciador.
 // Abre a transmissão na Livoo Live puxando os lotes (leilão) ou produtos já cadastrados.
@@ -39,7 +38,7 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
         <div className="rounded-2xl p-5 mb-6 border" style={{ borderColor: 'rgba(233,30,131,.3)', background: 'linear-gradient(135deg, rgba(233,30,131,.12), rgba(255,107,53,.06))' }}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <img src={LIVOO_LOGO} alt="Livoo Live" className="w-11 h-11 rounded-xl shrink-0" />
+              <LivooMark size={44} />
               <div>
                 <div className="font-extrabold text-white">Transmita ao vivo pela Livoo Live</div>
                 <div className="text-[13px] text-gray-300">Leiloe ou venda ao vivo puxando seus lotes e produtos. <span style={{ color: '#ff8a5c' }}>Sua comissão da rede continua 100% igual.</span></div>
@@ -55,7 +54,7 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
           <div className="absolute inset-0 bg-black/70" />
           <div className="relative w-full max-w-md bg-[#0c1310] border border-gray-800 rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2"><img src={LIVOO_LOGO} className="w-7 h-7 rounded-lg" /> <b>Entrar ao vivo</b></div>
+              <div className="flex items-center gap-2"><LivooMark size={26} /> <b>Entrar ao vivo</b></div>
               <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-800"><X className="w-5 h-5" /></button>
             </div>
             <p className="text-sm text-gray-400 mb-4">Escolha o modo. A transmissão abre na Livoo Live já com o que você cadastrou.</p>
