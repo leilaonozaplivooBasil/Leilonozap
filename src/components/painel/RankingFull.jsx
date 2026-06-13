@@ -26,17 +26,18 @@ const sub = (period) => (period === 'dia' ? 'Ranking do dia' : period === 'seman
 // Aba Ranking — campeões por período (dia/semana/mês): vendedor, produto e categoria.
 export default function RankingFull({ userId, onSeller }) {
   const [period, setPeriod] = useState('dia');
+  const [linha, setLinha] = useState(null); // null=Todos | 'BANGU' | 'ELOAH'
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
     let alive = true; setLoading(true);
-    supabase.rpc('ranking_periodo', { _owner: userId, _period: period })
+    supabase.rpc('ranking_periodo', { _owner: userId, _period: period, _linha: linha })
       .then(({ data }) => { if (alive) { setData(data || null); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [userId, period]);
+  }, [userId, period, linha]);
 
   const [copied, setCopied] = useState(false);
   const vendedores = data?.vendedor_campeao || [];
@@ -69,6 +70,12 @@ export default function RankingFull({ userId, onSeller }) {
         <div className="inline-flex bg-gray-800/70 border border-gray-700 rounded-xl p-1">
           {PERIODS.map((p) => (
             <button key={p.id} onClick={() => setPeriod(p.id)} className={`px-5 py-2 rounded-lg text-sm font-bold transition ${period === p.id ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:text-white'}`}>{p.label}</button>
+          ))}
+        </div>
+        {/* filtro de linha (time) */}
+        <div className="inline-flex bg-gray-800/70 border border-gray-700 rounded-xl p-1">
+          {[[null, 'Todas'], ['BANGU', 'Bangu'], ['ELOAH', 'Eloah']].map(([id, label]) => (
+            <button key={label} onClick={() => setLinha(id)} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${linha === id ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>{label}</button>
           ))}
         </div>
         <div className="flex items-center gap-2.5">

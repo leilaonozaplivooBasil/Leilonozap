@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Radio, Gavel, ShoppingBag, Loader2, X } from 'lucide-react';
 
-const LIVOO_LOGO = 'https://app.livoolive.com.br/logos/livoo-icon-512.png';
+const LIVOO_LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/livoo/livoo-logo.png';
 
 // Botão "Entrar ao vivo pela Livoo Live" — para vendedor / distribuidor / influenciador.
 // Abre a transmissão na Livoo Live puxando os lotes (leilão) ou produtos já cadastrados.
@@ -42,7 +42,7 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
               <img src={LIVOO_LOGO} alt="Livoo Live" className="w-11 h-11 rounded-xl shrink-0" />
               <div>
                 <div className="font-extrabold text-white">Transmita ao vivo pela Livoo Live</div>
-                <div className="text-[13px] text-gray-300">Leiloe ou venda ao vivo puxando seus lotes e produtos. <span style={{ color: '#ff8a5c' }}>A Livoo só retém 5% — sua comissão da rede continua igual.</span></div>
+                <div className="text-[13px] text-gray-300">Leiloe ou venda ao vivo puxando seus lotes e produtos. <span style={{ color: '#ff8a5c' }}>Sua comissão da rede continua 100% igual.</span></div>
               </div>
             </div>
             {Btn}
@@ -69,7 +69,7 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
                 <div><div className="font-bold">Live commerce</div><div className="text-xs text-gray-500">Venda os produtos do catálogo ao vivo.</div></div>
               </button>
             </div>
-            <p className="text-[11px] text-gray-500 mt-4 text-center">Compra, KYC e saque seguem pela Livoo Live. Sua comissão e plano de carreira são calculados pelo Leilão NoZap, sobre o líquido.</p>
+            <p className="text-[11px] text-gray-500 mt-4 text-center">Compra, KYC e saque seguem pela Livoo Live. Sua comissão e plano de carreira continuam pelo Leilão NoZap, do mesmo jeito.</p>
           </div>
         </div>
       )}

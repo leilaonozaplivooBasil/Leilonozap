@@ -3,7 +3,7 @@ import { money } from '@/lib/format';
 import { supabase } from '@/api/supabaseClient';
 import {
   Search, Loader2, ChevronDown, ChevronRight, Package, User as UserIcon, Calendar,
-  Filter, Truck, Store, X, MapPin, Receipt, Tag,
+  Filter, Truck, Store, X, MapPin, Receipt, Tag, Network,
 } from 'lucide-react';
 
 const dt = (s) => (s ? new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
@@ -28,6 +28,7 @@ export default function VendasAuditoria({ userId, initialSeller = '' }) {
   const [cat, setCat] = useState('');
   const [origem, setOrigem] = useState('');
   const [status, setStatus] = useState('');
+  const [linha, setLinha] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [expanded, setExpanded] = useState(null);
@@ -64,6 +65,7 @@ export default function VendasAuditoria({ userId, initialSeller = '' }) {
       if (seller && r.vendedor_id !== seller) return false;
       if (origem && r.origem !== origem) return false;
       if (status && r.status !== status) return false;
+      if (linha && (r.linha || '') !== linha) return false;
       if (cat && !itemsOf(r).some((it) => catOf(it.title) === cat)) return false;
       if (fromT || toT) { const t = new Date(r.data).getTime(); if (fromT && t < fromT) return false; if (toT && t > toT) return false; }
       if (ql) {
@@ -75,8 +77,9 @@ export default function VendasAuditoria({ userId, initialSeller = '' }) {
   }, [rows, q, seller, cat, origem, status, from, to]);
 
   const totalFiltrado = filtered.reduce((s, r) => s + (Number(r.valor) || 0), 0);
-  const limpar = () => { setQ(''); setSeller(''); setCat(''); setOrigem(''); setStatus(''); setFrom(''); setTo(''); };
-  const temFiltro = q || seller || cat || origem || status || from || to;
+  const limpar = () => { setQ(''); setSeller(''); setCat(''); setOrigem(''); setStatus(''); setLinha(''); setFrom(''); setTo(''); };
+  const temFiltro = q || seller || cat || origem || status || linha || from || to;
+  const linhas = useMemo(() => [...new Set((rows || []).map((r) => r.linha).filter(Boolean))], [rows]);
 
   if (rows === null) return <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando vendas…</div>;
 
@@ -88,9 +91,10 @@ export default function VendasAuditoria({ userId, initialSeller = '' }) {
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por produto, vendedor, quem lançou, cliente ou rastreio…" className="w-full bg-gray-950 border border-gray-700 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:border-emerald-600" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <div className={`grid grid-cols-2 ${linhas.length ? 'md:grid-cols-6' : 'md:grid-cols-5'} gap-2`}>
           <Sel icon={UserIcon} value={seller} onChange={setSeller} label="Vendedor"><option value="">Todos vendedores</option>{sellers.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}</Sel>
           <Sel icon={Tag} value={cat} onChange={setCat} label="Categoria"><option value="">Toda categoria</option>{cats.map((c) => <option key={c} value={c}>{c}</option>)}</Sel>
+          {linhas.length > 0 && <Sel icon={Network} value={linha} onChange={setLinha} label="Linha"><option value="">Toda linha</option>{linhas.map((l) => <option key={l} value={l}>{l}</option>)}</Sel>}
           <Sel icon={Store} value={origem} onChange={setOrigem} label="Origem"><option value="">Toda origem</option><option value="PDV">PDV</option><option value="Online">Loja online</option><option value="Histórico">Histórico</option></Sel>
           <Sel icon={Filter} value={status} onChange={setStatus} label="Status"><option value="">Todo status</option>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Sel>
           <div className="flex items-center gap-1">

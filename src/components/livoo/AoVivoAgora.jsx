@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Radio, X } from 'lucide-react';
 
-const LIVOO_LOGO = 'https://app.livoolive.com.br/logos/livoo-icon-512.png';
+const LIVOO_LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/livoo/livoo-logo.png';
 const CARGO = { distribuidor: 'Distribuidor', loja_fisica: 'Loja', ponto_retirada: 'Ponto', parceiro: 'Parceiro', licenciado: 'Licenciado', vendedor: 'Vendedor', influenciador: 'Influenciador' };
 
 // Botão global "🔴 Ao vivo agora pela Livoo Live" — mostra quem está transmitindo agora.
