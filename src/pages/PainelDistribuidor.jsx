@@ -54,6 +54,7 @@ export default function PainelDistribuidor() {
   const [storeSlug, setStoreSlug] = useState('');
   const [vendasSeller, setVendasSeller] = useState(''); // filtro de vendedor vindo do ranking
   const [dashPeriodo, setDashPeriodo] = useState('dia'); // filtro de período da Visão Geral (dia/semana/mes)
+  const [periodoDados, setPeriodoDados] = useState({ total: 0, pedidos: 0 }); // faturamento REAL do período (planilha/PDV)
   const [menuOpen, setMenuOpen] = useState(false); // drawer do menu no mobile
   const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
   const [marketing, setMarketing] = useState(null);
@@ -107,6 +108,14 @@ export default function PainelDistribuidor() {
       } catch (_) { /* silencioso */ }
     })();
   }, []);
+
+  // faturamento REAL do período (catalog_sales = planilha + PDV), period-aware
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.rpc('ranking_periodo', { _owner: user.id, _period: dashPeriodo, _linha: null })
+      .then(({ data }) => setPeriodoDados({ total: Number(data?.total || 0), pedidos: Number(data?.pedidos || 0) }))
+      .catch(() => {});
+  }, [user, dashPeriodo]);
 
   const linkFor = (cargo) => `${ORIGIN}/c/${cargo}?ref=${encodeURIComponent(user?.referral_code || '')}`;
   const copy = (cargo) => { navigator.clipboard.writeText(linkFor(cargo)); setCopied(cargo); toast.success('Link copiado!'); setTimeout(() => setCopied(''), 1500); };
@@ -372,17 +381,17 @@ export default function PainelDistribuidor() {
 
             <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
 
-            {/* destaque: vendas hoje + faturado */}
+            {/* destaque: faturamento REAL do período (espelha a planilha + PDV) */}
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-gradient-to-br from-green-900/50 to-emerald-800/20 border border-green-500/30 rounded-2xl p-5">
-                <div className="flex items-center gap-2 text-green-300 text-xs mb-1"><DollarSign className="w-4 h-4" /> Faturado (vendido)</div>
-                <div className="text-3xl font-black text-green-400">{money(stats.faturado)}</div>
-                <div className="text-xs text-gray-400 mt-1">{Number(stats.vendidos_qtd).toLocaleString('pt-BR')} unidades vendidas</div>
+                <div className="flex items-center gap-2 text-green-300 text-xs mb-1"><DollarSign className="w-4 h-4" /> Faturado · {({ dia: 'Hoje', semana: 'Semana', mes: 'Mês' })[dashPeriodo]}</div>
+                <div className="text-3xl font-black text-green-400">{money(periodoDados.total)}</div>
+                <div className="text-xs text-gray-400 mt-1">{periodoDados.pedidos} venda(s) no período · espelha a planilha</div>
               </div>
               <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-5">
-                <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><ShoppingCart className="w-4 h-4" /> PDV hoje</div>
-                <div className="text-3xl font-black text-white">{money(stats.pdv_hoje)}</div>
-                <div className="text-xs text-gray-400 mt-1">{stats.pedidos_total} pedido(s) no total</div>
+                <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><ShoppingCart className="w-4 h-4" /> Ticket médio · {({ dia: 'Hoje', semana: 'Semana', mes: 'Mês' })[dashPeriodo]}</div>
+                <div className="text-3xl font-black text-white">{money(periodoDados.total / Math.max(1, periodoDados.pedidos))}</div>
+                <div className="text-xs text-gray-400 mt-1">por venda no período</div>
               </div>
             </div>
 
@@ -391,7 +400,7 @@ export default function PainelDistribuidor() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Stat icon={Package} label="Produtos cadastrados" value={Number(stats.produtos_total).toLocaleString('pt-BR')} sub={`${stats.produtos_ativos} ativos na loja`} color="text-white" />
               <Stat icon={Box} label="Em estoque" value={Number(stats.estoque_qtd).toLocaleString('pt-BR')} sub="unidades" color="text-blue-400" />
-              <Stat icon={TrendingUp} label="Vendidos" value={Number(stats.vendidos_qtd).toLocaleString('pt-BR')} sub="unidades" color="text-green-400" />
+              <Stat icon={TrendingUp} label="Vendidos (histórico)" value={Number(stats.vendidos_qtd).toLocaleString('pt-BR')} sub="unidades · migração" color="text-green-400" />
               <Stat icon={DollarSign} label="Capital em estoque" value={money(stats.valor_estoque)} sub="a custo" color="text-amber-400" />
             </div>
 
