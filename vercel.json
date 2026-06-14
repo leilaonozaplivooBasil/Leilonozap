@@ -6,5 +6,8 @@
   "rewrites": [
     { "source": "/c/:cargo", "destination": "/api/convite?cargo=:cargo" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/functions/syncNexusSheet", "schedule": "0 2 * * *" }
   ]
 }
