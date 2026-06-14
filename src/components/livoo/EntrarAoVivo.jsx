@@ -1,14 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { Radio, Gavel, ShoppingBag, Loader2, X } from 'lucide-react';
+import { Radio, Gavel, ShoppingBag, Loader2, X, ShieldCheck, ShieldAlert } from 'lucide-react';
 import LivooMark from './LivooMark';
+
+const KYC = {
+  approved: { icon: ShieldCheck, color: '#34d399', label: 'Identidade verificada — pronto pra receber e sacar.' },
+  pending: { icon: Loader2, color: '#fbbf24', label: 'Identidade em análise na Livoo.' },
+  rejected: { icon: ShieldAlert, color: '#f87171', label: 'Identidade recusada — reenvie os dados na Livoo.' },
+  not_started: { icon: ShieldAlert, color: '#9ca3af', label: 'Verifique sua identidade na Livoo quando for sacar.' },
+};
 
 // Botão "Entrar ao vivo pela Livoo Live" — para vendedor / distribuidor / influenciador.
 // Abre a transmissão na Livoo Live puxando os lotes (leilão) ou produtos já cadastrados.
 export default function EntrarAoVivo({ user, variant = 'card' }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState('');
+  const [kyc, setKyc] = useState(null);
+
+  useEffect(() => {
+    if (!open || !user?.id || kyc) return;
+    base44.functions.invoke('livooStatus', { actorId: user.id })
+      .then((r) => { if (r?.success) setKyc(r.kyc_status || 'not_started'); })
+      .catch(() => {});
+  }, [open, user, kyc]);
 
   const go = async (mode) => {
     if (!user?.id) { toast.error('Faça login.'); return; }
@@ -68,7 +83,12 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
                 <div><div className="font-bold">Live commerce</div><div className="text-xs text-gray-500">Venda os produtos do catálogo ao vivo.</div></div>
               </button>
             </div>
-            <p className="text-[11px] text-gray-500 mt-4 text-center">Compra, KYC e saque seguem pela Livoo Live. Sua comissão e plano de carreira continuam pelo Leilão NoZap, do mesmo jeito.</p>
+            {kyc && (() => { const m = KYC[kyc] || KYC.not_started; const Ic = m.icon; return (
+              <div className="mt-4 flex items-center gap-2 rounded-lg bg-gray-900/60 border border-gray-800 px-3 py-2 text-[12px]" style={{ color: m.color }}>
+                <Ic className={`w-4 h-4 shrink-0 ${kyc === 'pending' ? 'animate-spin' : ''}`} /> {m.label}
+              </div>
+            ); })()}
+            <p className="text-[11px] text-gray-500 mt-3 text-center">Compra, KYC e saque seguem pela Livoo Live. Sua comissão e plano de carreira continuam pelo Leilão NoZap, do mesmo jeito.</p>
           </div>
         </div>
       )}
