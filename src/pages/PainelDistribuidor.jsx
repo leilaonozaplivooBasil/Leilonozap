@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import MetaBanner from '@/components/painel/MetaBanner';
 import RankingDia from '@/components/painel/RankingDia';
 import RankingFull from '@/components/painel/RankingFull';
+import EvolucaoDiaria from '@/components/painel/EvolucaoDiaria';
 import VendasAuditoria from '@/components/painel/VendasAuditoria';
 import RegiaoCard from '@/components/painel/RegiaoCard';
 import EntrarAoVivo from '@/components/livoo/EntrarAoVivo';
@@ -446,6 +447,9 @@ export default function PainelDistribuidor() {
                 <ArrowRight className="w-4 h-4 text-yellow-300" />
               </button>
             )}
+
+            {/* 📈 evolução diária do mês + meta */}
+            <div className="mt-8"><EvolucaoDiaria userId={user.id} /></div>
           </div>
         )}
 
