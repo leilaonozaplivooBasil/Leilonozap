@@ -22,15 +22,15 @@ export default async function handler(req, res) {
     if (!user) return res.status(403).json({ success: false, error: 'Usuário inválido' });
 
     // garante a conta Livoo (idempotente)
-    let livooUserId = user.livoo_user_id;
+    let livooUserId = user.livoo_user_id; let provisionError = null;
     if (!livooUserId) {
       try {
         const lu = await livoo.provisionUser({ partner_user_id: user.id, name: user.full_name || null, email: user.email || null, phone: user.phone || null, role: user.primary_career_level || null });
         livooUserId = lu.livoo_user_id;
         await sb(`app_users?id=eq.${encodeURIComponent(user.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ livoo_user_id: lu.livoo_user_id, livoo_wallet_id: lu.wallet_id, livoo_kyc_status: lu.kyc_status, livoo_provisioned_at: new Date().toISOString() }) });
-      } catch { /* best-effort */ }
+      } catch (e) { provisionError = String(e?.message || e).slice(0, 200); }
     }
-    if (!livooUserId) return res.status(200).json({ success: true, provisioned: false, kyc_status: 'not_started', can_withdraw: false, sandbox: !livoo.configured });
+    if (!livooUserId) return res.status(200).json({ success: true, provisioned: false, kyc_status: 'not_started', can_withdraw: false, sandbox: !livoo.configured, provision_error: provisionError });
 
     const [kyc, wallet] = await Promise.all([livoo.getKyc(livooUserId).catch(() => ({ status: user.livoo_kyc_status || 'not_started', can_withdraw: false })), livoo.getWallet(livooUserId).catch(() => ({ balance_cents: 0, pending_cents: 0 }))]);
     // mantém o kyc local em dia
