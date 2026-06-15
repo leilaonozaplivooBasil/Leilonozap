@@ -2,12 +2,13 @@ import React from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { MessageCircle, X, Radio } from 'lucide-react';
 import LivooMark from '@/components/livoo/LivooMark';
+import ComparaiIcon from '@/assets/comparai-icon.png';
 
 const SUPORTE_PHONE = '5521984072064';
 const CARGO = { distribuidor: 'Distribuidor', loja_fisica: 'Loja', ponto_retirada: 'Ponto', parceiro: 'Parceiro', licenciado: 'Licenciado', vendedor: 'Vendedor', influenciador: 'Influenciador' };
 
-// Botões flutuantes do lado direito da loja: Vendedores ao vivo (Livoo) + Suporte (WhatsApp).
-// Ficam acima do botão do Comparai (que é fixo em bottom-5 right-4).
+// Stack único de botões flutuantes à direita da loja (mesmo tamanho e espaçamento):
+// Vendedores ao vivo (Livoo) · Comparai · Suporte (WhatsApp).
 export default function LojaFloatActions() {
   const [lives, setLives] = React.useState([]);
   const [open, setOpen] = React.useState(false);
@@ -27,10 +28,11 @@ export default function LojaFloatActions() {
 
   const n = lives.length;
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
+  const Label = ({ children }) => <span className="text-[10px] text-gray-200 font-semibold mt-0.5 drop-shadow text-center leading-none">{children}</span>;
 
   return (
-    <div className="fixed right-4 bottom-32 z-50 flex flex-col items-center gap-4" ref={ref}>
-      {/* Vendedores ao vivo (Livoo Live) */}
+    <div className="fixed right-4 bottom-5 z-50 flex flex-col items-center gap-3" ref={ref}>
+      {/* 1) Vendedores ao vivo (Livoo Live) */}
       <div className="relative flex flex-col items-center">
         <button
           onClick={() => setOpen((s) => !s)}
@@ -43,10 +45,10 @@ export default function LojaFloatActions() {
             <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">{n}</span>
           )}
         </button>
-        <span className="text-[10px] text-gray-300 font-semibold mt-0.5 drop-shadow text-center leading-tight">Ao vivo</span>
+        <Label>Ao vivo</Label>
 
         {open && (
-          <div className="absolute right-16 bottom-0 w-72 bg-[#0c1310] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="absolute right-16 top-0 w-72 bg-[#0c1310] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800" style={{ background: 'linear-gradient(135deg, rgba(233,30,131,.18), rgba(255,107,53,.1))' }}>
               <span className="flex items-center gap-2 font-bold text-white text-sm"><LivooMark size={18} /> Vendedores ao vivo</span>
               <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
@@ -69,18 +71,26 @@ export default function LojaFloatActions() {
         )}
       </div>
 
-      {/* Suporte (WhatsApp) */}
-      <a
-        href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`}
-        target="_blank"
-        rel="noreferrer"
-        title="Suporte pelo WhatsApp"
-        className="flex flex-col items-center"
-      >
+      {/* 2) Comparai */}
+      <div className="flex flex-col items-center">
+        <button
+          onClick={() => window.dispatchEvent(new Event('openComparai'))}
+          title="Comparai — compare o preço antes de comprar"
+          className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 relative"
+          style={{ boxShadow: '0 8px 24px rgba(37,99,235,.45)' }}
+        >
+          <img src={ComparaiIcon} alt="Comparai" className="w-full h-full object-cover rounded-full" />
+          <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20" />
+        </button>
+        <Label>Comparai</Label>
+      </div>
+
+      {/* 3) Suporte (WhatsApp) */}
+      <a href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`} target="_blank" rel="noreferrer" title="Suporte pelo WhatsApp" className="flex flex-col items-center">
         <span className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-2xl flex items-center justify-center transition-transform hover:scale-110" style={{ boxShadow: '0 8px 24px rgba(34,197,94,.45)' }}>
           <MessageCircle className="w-7 h-7 text-white" />
         </span>
-        <span className="text-[10px] text-gray-300 font-semibold mt-0.5 drop-shadow">Suporte</span>
+        <Label>Suporte</Label>
       </a>
     </div>
   );

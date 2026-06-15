@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Sparkles, X } from 'lucide-react';
 import ComparaiIcon from '@/assets/comparai-icon.png';
 
-export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
+export default function ComparaiFloatingButton({ auctions, mode = 'home', hideButton = false }) {
   const [showInfo, setShowInfo] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
 
@@ -21,9 +21,9 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
 
   return (
     <>
-      {/* BOTÃO FLUTUANTE FIXO - SEM TOOLTIP */}
+      {/* BOTÃO FLUTUANTE FIXO - SEM TOOLTIP (ocultável quando entra no stack da loja) */}
       <div
-        className={`fixed bottom-5 right-4 z-50 transition-all duration-300 flex flex-col items-center ${showInfo ? 'opacity-0 scale-0 pointer-events-none' : 'opacity-100 scale-100'}`}
+        className={`fixed bottom-5 right-4 z-50 transition-all duration-300 flex flex-col items-center ${hideButton ? 'hidden' : ''} ${showInfo ? 'opacity-0 scale-0 pointer-events-none' : 'opacity-100 scale-100'}`}
       >
         <button
           onClick={handleClick}

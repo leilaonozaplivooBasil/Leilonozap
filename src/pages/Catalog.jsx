@@ -842,7 +842,7 @@ export default function Catalog() {
         </div>
       </div>
 
-      <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
+      <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" hideButton />
       <LojaFloatActions />
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
     </div>
