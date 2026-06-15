@@ -17,6 +17,7 @@ import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButto
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';
+import LojaFloatActions from '../components/loja/LojaFloatActions';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
@@ -842,6 +843,7 @@ export default function Catalog() {
       </div>
 
       <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
+      <LojaFloatActions />
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
     </div>
   );

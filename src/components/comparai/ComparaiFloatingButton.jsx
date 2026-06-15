@@ -9,11 +9,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
   const [isFlying, setIsFlying] = useState(false);
 
   const handleClick = () => {
-    setIsFlying(true);
-    setTimeout(() => {
-      setShowInfo(true);
-      setIsFlying(false);
-    }, 800);
+    setShowInfo(true);
   };
 
   // permite abrir o Comparai de qualquer lugar (ex: card/ícone da loja estilo Shopee)
@@ -27,13 +23,12 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
     <>
       {/* BOTÃO FLUTUANTE FIXO - SEM TOOLTIP */}
       <div
-        className={`fixed bottom-32 left-6 z-50 transition-all duration-700 ${isFlying ? 'left-1/2 bottom-1/2 -translate-x-1/2 translate-y-1/2 scale-150' : ''
-          } ${showInfo ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}
+        className={`fixed bottom-5 right-4 z-50 transition-all duration-300 flex flex-col items-center ${showInfo ? 'opacity-0 scale-0 pointer-events-none' : 'opacity-100 scale-100'}`}
       >
         <button
           onClick={handleClick}
-          disabled={isFlying || showInfo}
-          className="w-20 h-20 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 relative animate-float border-0 p-0 bg-transparent cursor-pointer disabled:cursor-not-allowed"
+          disabled={showInfo}
+          className="w-14 h-14 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 relative animate-float border-0 p-0 bg-transparent cursor-pointer disabled:cursor-not-allowed"
           title="Comparai - Comparação Inteligente"
         >
           <img
@@ -44,6 +39,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
 
           <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
         </button>
+        <span className="text-[10px] text-blue-200 font-semibold mt-0.5 drop-shadow">Comparai</span>
       </div>
 
       {/* MODAL INFORMATIVO */}
