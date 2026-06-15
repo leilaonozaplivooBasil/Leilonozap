@@ -136,6 +136,9 @@ export default function Catalog() {
       filtered = [...filtered].sort((a, b) => (a.description || "").localeCompare(b.description || ""));
     }
 
+    // 🛒 Esgotados sempre por último (não some, mas não atrapalha quem quer comprar)
+    filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
+
     setFilteredProducts(filtered);
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
 
@@ -332,7 +335,7 @@ export default function Catalog() {
 
             if (age > 2000) {
               setTimeout(() => {
-                Product.filter({ catalog_active: true }, "-created_date", 50).then((data) => {
+                Product.filter({ catalog_active: true }, "-created_date", 240).then((data) => {
                   if (Array.isArray(data)) {
                     sessionStorage.setItem('products_catalog_cache', JSON.stringify(data));
                     sessionStorage.setItem('products_catalog_cache_time', Date.now().toString());
@@ -351,7 +354,7 @@ export default function Catalog() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-      const data = await Product.filter({ catalog_active: true }, "-created_date", 50);
+      const data = await Product.filter({ catalog_active: true }, "-created_date", 240);
       clearTimeout(timeoutId);
 
       if (Array.isArray(data) && data.length >= 0) {
@@ -426,8 +429,8 @@ export default function Catalog() {
 
       // Carrega categorias
       try {
-        const allCategories = await base44.entities.Category.filter({ parent_category_id: null });
-        setCategories(allCategories || []);
+        const allCategories = await base44.entities.Category.filter({ parent_category_id: null, is_active: true });
+        setCategories((allCategories || []).filter(c => c.is_active !== false));
       } catch (error) {
         console.debug('Erro ao carregar categorias:', error);
       }
@@ -476,9 +479,27 @@ export default function Catalog() {
     }
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
 
+  // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página)
+  useEffect(() => {
+    let alive = true;
+    const fetchByCategory = async () => {
+      try {
+        if (selectedCategory && selectedCategory !== "all") {
+          const data = await Product.filter({ catalog_active: true, category_id: selectedCategory }, "-created_date", 240);
+          if (alive && Array.isArray(data)) setProducts(data);
+        } else {
+          const data = await Product.filter({ catalog_active: true }, "-created_date", 240);
+          if (alive && Array.isArray(data)) setProducts(data);
+        }
+      } catch (e) { /* mantém o que já tem */ }
+    };
+    fetchByCategory();
+    return () => { alive = false; };
+  }, [selectedCategory]);
+
   const featuredProducts = useMemo(() => {
     return products
-      .filter(p => p.catalog_active && p.is_featured)
+      .filter(p => p.catalog_active && p.is_featured && p.quantity > 0)
       .slice(0, 4);
   }, [products]);
 
@@ -591,7 +612,7 @@ export default function Catalog() {
                 <div className="flex items-center gap-4 text-sm text-gray-400">
                   <div className="flex items-center gap-1.5">
                     <Package className="w-4 h-4" />
-                    <span>{products.length} em estoque</span>
+                    <span>{products.filter(p => p.quantity > 0).length} em estoque</span>
                   </div>
                 </div>
               </div>
