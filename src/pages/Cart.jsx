@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { money } from '@/lib/format';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,8 @@ export default function Cart() {
   const cardExpiry = '';
   const cardCvv = '';
   const [pixConfirmed, setPixConfirmed] = useState(false);
+  const [saldo, setSaldo] = useState(0);
+  const [saldoOk, setSaldoOk] = useState(false);
   const [paymentDetected, setPaymentDetected] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [createdSales, setCreatedSales] = useState([]);
@@ -81,6 +84,7 @@ export default function Cart() {
           const appUsers = await base44.entities.AppUser.filter({ id: user.id });
           if (appUsers && appUsers.length > 0) {
             const fullUser = appUsers[0];
+            setSaldo(Number(fullUser.commission_balance) || 0);
             setFormData(prev => ({
               ...prev,
               name: fullUser.full_name || user.full_name || '',
@@ -382,6 +386,36 @@ export default function Cart() {
           expiryYear: `20${expYear}`,
           ccv: cardCvv
         };
+      }
+
+      // Saldo de comissão (commission_balance) — redime comissão em produto da plataforma.
+      // Validação de preço/estoque/saldo e baixa são ATÔMICAS no servidor (comprar_com_saldo).
+      if (paymentType === 'SALDO') {
+        const pay = await base44.functions.invoke('payWithBalance', {
+          buyer_id: freshUser.id,
+          buyer_name: formData.name.trim(),
+          buyer_phone: formData.phone.replace(/\D/g, ''),
+          buyer_address: deliveryMethod === 'delivery' ? `${formData.street}, ${formData.number} ${formData.complement || ''} - ${formData.neighborhood}, ${formData.city}/${formData.state}`.trim() : 'Retirada',
+          buyer_cep: formData.cep.replace(/\D/g, ''),
+          items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
+          seller_id: sessionStorage.getItem('referralSellerId') || null,
+        });
+        toast.dismiss('checkout-loading');
+        if (!pay?.success) {
+          toast.error(pay?.error === 'Saldo insuficiente'
+            ? `Saldo insuficiente. Você tem ${money(pay?.saldo || saldo)} e o pedido é ${money(pay?.total || totalAmount)}.`
+            : 'Não foi possível pagar com saldo: ' + (pay?.error || 'tente novamente'));
+          setIsProcessing(false);
+          return;
+        }
+        // sucesso — limpa carrinho e mostra confirmação
+        localStorage.setItem('catalogCart', '[]');
+        setCartItems([]);
+        setSaldo(Number(pay.novo_saldo) || 0);
+        setCreatedSales([{ id: pay.sale_id }]);
+        setSaldoOk(true);
+        toast.success(`✅ Compra paga com saldo! Restam ${money(pay.novo_saldo)} na carteira.`, { duration: 5000 });
+        return;
       }
 
       // Cartão via Stripe Checkout (página hospedada e segura) — redireciona pro pagamento
@@ -923,6 +957,15 @@ export default function Cart() {
                   <p className="text-white font-semibold">💳 Cartão de Crédito</p>
                   <p className="text-gray-400 text-xs">Pagamento seguro — até 12x</p>
                 </button>
+
+                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
+                {saldo > 0 && (
+                  <button type="button" onClick={() => setPaymentType('SALDO')}
+                    className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calculateSubtotal() > saldo ? 'opacity-60' : ''}`}>
+                    <p className="text-white font-semibold">👛 Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
+                    <p className="text-gray-400 text-xs">{calculateSubtotal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calculateSubtotal())})` : 'Use suas comissões — aprovação na hora'}</p>
+                  </button>
+                )}
               </Card>
             )}
 
@@ -1041,10 +1084,27 @@ export default function Cart() {
               </Card>
             )}
 
+            {/* Sucesso Saldo */}
+            {saldoOk && (
+              <Card className="bg-gray-800 border-gray-700 p-5">
+                <h3 className="text-lg font-bold text-green-400 text-center mb-4">✅ Compra Confirmada</h3>
+                <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 mb-4">
+                  <p className="text-green-400 text-center">Pago com saldo da carteira!</p>
+                  <p className="text-gray-400 text-sm text-center mt-2">Saldo restante: <span className="text-white font-semibold">{money(saldo)}</span></p>
+                </div>
+                <Button
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  Ver Meus Pedidos
+                </Button>
+              </Card>
+            )}
+
             {/* Sucesso Cartão (mantido para compatibilidade caso existam pagamentos antigos) */}
 
             {/* Botão Pagar */}
-            {!pixData && (
+            {!pixData && !saldoOk && (
               <Button
                 onClick={handleCheckout}
                 disabled={isProcessing || cartItems.length === 0}
@@ -1058,7 +1118,7 @@ export default function Cart() {
                 ) : (
                   <>
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : 'GERAR PIX'}
+                    {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : paymentType === 'SALDO' ? 'PAGAR COM SALDO' : 'GERAR PIX'}
                   </>
                 )}
               </Button>
