@@ -42,6 +42,30 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reachedEnd, setReachedEnd] = useState(false);
+
+  const PAGE = 60;
+  const loadMore = React.useCallback(async () => {
+    if (loadingMore || reachedEnd) return;
+    setLoadingMore(true);
+    try {
+      const f = { catalog_active: true };
+      if (selectedCategory && selectedCategory !== "all") f.category_id = selectedCategory;
+      const next = await base44.entities.Product.filter(f, "-created_date", PAGE, products.length);
+      if (Array.isArray(next) && next.length > 0) {
+        setProducts((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...next.filter((p) => p && p.id && !seen.has(p.id))];
+        });
+        if (next.length < PAGE) setReachedEnd(true);
+      } else {
+        setReachedEnd(true);
+      }
+    } catch (e) { /* silencioso */ } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, reachedEnd, selectedCategory, products.length]);
 
   useEffect(() => {
     const slider = scrollerRef.current;
@@ -482,6 +506,7 @@ export default function Catalog() {
   // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página)
   useEffect(() => {
     let alive = true;
+    setReachedEnd(false);
     const fetchByCategory = async () => {
       try {
         if (selectedCategory && selectedCategory !== "all") {
@@ -837,6 +862,19 @@ export default function Catalog() {
               })}
             </div>
           }
+
+          {/* Carregar mais — só na navegação (sem busca de texto) */}
+          {!searchTerm && !reachedEnd && filteredProducts.length >= 12 && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-8 py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-60 transition-colors"
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais produtos"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -191,11 +191,12 @@ function entityProxy(entity) {
       return data.map((r) => mapFromDB(entity, r));
     },
 
-    async filter(filters, orderBy, limit) {
+    async filter(filters, orderBy, limit, offset) {
       let q = supabase.from(table).select('*');
       q = applyFilters(q, entity, filters);
       q = applyOrderBy(q, orderBy);
-      if (limit) q = q.limit(limit);
+      if (offset != null && limit) q = q.range(offset, offset + limit - 1);
+      else if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
       return data.map((r) => mapFromDB(entity, r));
