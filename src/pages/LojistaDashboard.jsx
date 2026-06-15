@@ -20,6 +20,10 @@ const AuctionEntity = base44.entities.Auction;
 const CatalogSaleEntity = base44.entities.CatalogSale;
 const AppUserEntity = base44.entities.AppUser;
 
+// Status que contam como venda concluída — em inglês (legado) e português (planilha NEXUS).
+const VENDA_CONCLUIDA = ['paid', 'shipped', 'delivered', 'pago', 'enviado', 'entregue', 'concluido', 'concluído'];
+const isVendaConcluida = (s) => VENDA_CONCLUIDA.includes(String(s || '').toLowerCase());
+
 export default function LojistaDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ login: "", password: "" });
@@ -145,9 +149,9 @@ export default function LojistaDashboard() {
         .filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id))
         .reduce((sum, a) => sum + (a.current_price || 0), 0);
       const totalSalesCatalog = storeCatalogSales
-        .filter(s => s.status === 'paid' || s.status === 'shipped' || s.status === 'delivered')
+        .filter(s => isVendaConcluida(s.status))
         .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-      const totalCatalogProducts = storeCatalogSales.filter(s => s.status === 'paid' || s.status === 'shipped' || s.status === 'delivered').length;
+      const totalCatalogProducts = storeCatalogSales.filter(s => isVendaConcluida(s.status)).length;
 
       setStats({
         totalSales: totalSalesAuctions + totalSalesCatalog,

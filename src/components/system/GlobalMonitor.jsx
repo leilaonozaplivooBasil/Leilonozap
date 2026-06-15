@@ -125,7 +125,20 @@ export default function GlobalMonitor() {
           requestUrl.includes('encrypted-tbn') ||
           requestUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i) ||
           requestUrl.includes('shopping?q=tbn');
-        
+
+        // Ignora erros de rede transitórios e não-acionáveis ("Load failed" no Safari,
+        // "Failed to fetch" no Chrome, requisições abortadas em navegação/unmount).
+        // São blips de conexão — logamos, mas NÃO assustamos o usuário com toast crítico.
+        const msg = String(error?.message || '').toLowerCase();
+        const isTransientNetwork =
+          error?.name === 'AbortError' ||
+          msg.includes('load failed') ||
+          msg.includes('failed to fetch') ||
+          msg.includes('networkerror') ||
+          msg.includes('network connection was lost') ||
+          msg.includes('cancelled') ||
+          msg.includes('aborted');
+
         if (!isExternalImageFetch) {
           errorLogRef.current.push({
             error: error.message,
@@ -133,17 +146,19 @@ export default function GlobalMonitor() {
             timestamp: Date.now(),
             duration: endTime - startTime
           });
-          
-          addIssue({
-            level: 'critical',
-            type: 'request_error',
-            message: `Erro na requisição: ${error.message}`,
-            location: requestUrl,
-            timestamp: new Date().toISOString(),
-            prompt: `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${requestUrl}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
-          });
+
+          if (!isTransientNetwork) {
+            addIssue({
+              level: 'critical',
+              type: 'request_error',
+              message: `Erro na requisição: ${error.message}`,
+              location: requestUrl,
+              timestamp: new Date().toISOString(),
+              prompt: `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${requestUrl}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
+            });
+          }
         }
-        
+
         throw error;
       }
     };
