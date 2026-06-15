@@ -9,6 +9,7 @@ import MetaBanner from '@/components/painel/MetaBanner';
 import RankingDia from '@/components/painel/RankingDia';
 import RankingFull from '@/components/painel/RankingFull';
 import EvolucaoDiaria from '@/components/painel/EvolucaoDiaria';
+import EvolucaoVendedores from '@/components/painel/EvolucaoVendedores';
 import VendasAuditoria from '@/components/painel/VendasAuditoria';
 import RegiaoCard from '@/components/painel/RegiaoCard';
 import EntrarAoVivo from '@/components/livoo/EntrarAoVivo';
@@ -450,6 +451,8 @@ export default function PainelDistribuidor() {
 
             {/* 📈 evolução diária do mês + meta */}
             <div className="mt-8"><EvolucaoDiaria userId={user.id} /></div>
+            {/* 👥 evolução dos vendedores por dia */}
+            <div className="mt-2"><EvolucaoVendedores userId={user.id} /></div>
           </div>
         )}
 
