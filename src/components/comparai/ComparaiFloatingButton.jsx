@@ -16,6 +16,13 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
     }, 800);
   };
 
+  // permite abrir o Comparai de qualquer lugar (ex: card/ícone da loja estilo Shopee)
+  React.useEffect(() => {
+    const open = () => setShowInfo(true);
+    window.addEventListener('openComparai', open);
+    return () => window.removeEventListener('openComparai', open);
+  }, []);
+
   return (
     <>
       {/* BOTÃO FLUTUANTE FIXO - SEM TOOLTIP */}

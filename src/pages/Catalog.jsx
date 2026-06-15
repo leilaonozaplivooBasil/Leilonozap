@@ -15,6 +15,8 @@ import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
+import OfertasRelampago from '../components/loja/OfertasRelampago';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
@@ -614,56 +616,17 @@ export default function Catalog() {
           </div>
         )}
 
-        {/* Hero Section */}
-        <div className="mb-8">
-          <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
-            <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+        {/* Header estilo Shopee (identidade Leila) — barra utilitária + busca + hero + rail */}
+        <LojaShopeeHeader
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          categories={categories}
+          onSelectCategory={(id) => setSelectedCategory(id)}
+          banners={banners}
+        />
 
-            <div className="relative flex items-start justify-between">
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
-                  <Flame className="w-9 h-9 text-orange-400 animate-fire" />
-                  {licenseeData ? (
-                    <span>Loja de <span className="text-green-400">{licenseeData.name}</span></span>
-                  ) : (
-                    <span>Loja Virtual <span className="text-green-400">Especial</span>!</span>
-                  )}
-                </h1>
-                <p className="text-gray-300 mb-4 text-base lg:text-lg">
-                  {products.length} produtos incríveis com preços imbatíveis!
-                </p>
-
-                <div className="flex items-center gap-4 text-sm text-gray-400">
-                  <div className="flex items-center gap-1.5">
-                    <Package className="w-4 h-4" />
-                    <span>{products.filter(p => p.quantity > 0).length} em estoque</span>
-                  </div>
-                </div>
-              </div>
-
-              {licenseePhone && !licenseeData && (
-                <a
-                  href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos da loja virtual.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
-                  title="Falar com o licenciado"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span className="hidden sm:inline">Falar com Licenciado</span>
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* BANNER ROTATIVO */}
-        {banners.length > 0 &&
-        <div className="mb-8">
-            <RotatingBanner banners={banners} />
-          </div>
-        }
+        {/* OFERTAS RELÂMPAGO */}
+        <OfertasRelampago products={products} />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">

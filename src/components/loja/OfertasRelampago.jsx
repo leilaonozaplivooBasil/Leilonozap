@@ -1,0 +1,99 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { Zap, ChevronRight } from 'lucide-react';
+
+const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// desconto real a partir do valor de mercado
+function desconto(p) {
+  const de = Number(p.market_value || 0);
+  const por = Number(p.price_catalog || 0);
+  if (de > por && por > 0) return Math.round((1 - por / de) * 100);
+  return 0;
+}
+
+function Box({ v }) {
+  return <span className="bg-gray-900 text-white text-[13px] font-black rounded px-1.5 py-0.5 tabular-nums">{String(v).padStart(2, '0')}</span>;
+}
+
+function FlashCard({ p }) {
+  const navigate = useNavigate();
+  const d = desconto(p);
+  const img = (p.image_urls && p.image_urls[0]) || null;
+  const vendidos = Number(p.quantity_sold || 0);
+  return (
+    <button
+      onClick={() => navigate(createPageUrl('CatalogProductDetails') + `?id=${p.id}`)}
+      className="w-[150px] shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
+    >
+      <div className="relative aspect-square bg-white">
+        {img ? <img src={img} alt={p.description} loading="lazy" className="w-full h-full object-contain" />
+          : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📦</div>}
+        {d > 0 && (
+          <span className="absolute top-0 right-0 text-[11px] font-black text-white px-1.5 py-0.5 rounded-bl-lg flex items-center gap-0.5"
+            style={{ background: 'linear-gradient(135deg,#e0a92e,#d4880b)' }}>
+            <Zap className="w-3 h-3 fill-white" />-{d}%
+          </span>
+        )}
+      </div>
+      <div className="p-2">
+        <p className="text-green-400 font-black text-base leading-none">{money(p.price_catalog)}</p>
+        {desconto(p) > 0 && <p className="text-gray-500 text-[11px] line-through">{money(p.market_value)}</p>}
+        <div className="mt-1.5 relative h-4 rounded-full bg-green-900/40 overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-green-100 z-10">
+            {vendidos > 0 ? `${vendidos} vendidos` : 'POPULAR'}
+          </div>
+          <div className="h-full" style={{ width: vendidos > 0 ? `${Math.min(100, 30 + vendidos * 5)}%` : '60%', background: 'linear-gradient(90deg,#f5c451,#16a34a)' }} />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// Faixa "Ofertas Relâmpago" estilo Shopee, identidade Leila (verde+dourado).
+export default function OfertasRelampago({ products = [] }) {
+  const navigate = useNavigate();
+  const [left, setLeft] = React.useState(0);
+
+  React.useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const end = new Date(now); end.setHours(24, 0, 0, 0); // fim do dia
+      setLeft(Math.max(0, Math.floor((end - now) / 1000)));
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // melhores ofertas: maior desconto primeiro, com imagem e estoque
+  const ofertas = products
+    .filter((p) => p.image_urls?.length && p.quantity > 0)
+    .map((p) => ({ p, d: desconto(p) }))
+    .sort((a, b) => b.d - a.d)
+    .slice(0, 12)
+    .map((x) => x.p);
+
+  if (ofertas.length < 4) return null;
+  const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+
+  return (
+    <div className="bg-gray-800/40 border border-gray-700 rounded-2xl p-4 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-xl font-black flex items-center gap-1.5" style={{ color: '#f5c451' }}>
+            <Zap className="w-6 h-6 fill-yellow-400 text-yellow-400" /> OFERTAS RELÂMPAGO
+          </span>
+          <span className="flex items-center gap-1"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
+        </div>
+        <button onClick={() => navigate(createPageUrl('Catalog'))} className="text-green-400 text-sm font-semibold flex items-center hover:text-green-300">
+          Ver Tudo <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+        {ofertas.map((p) => <FlashCard key={p.id} p={p} />)}
+      </div>
+    </div>
+  );
+}
