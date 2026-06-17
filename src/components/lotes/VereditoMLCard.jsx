@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ShieldCheck, Loader2, Play, RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, HelpCircle, Sparkles } from 'lucide-react';
+import { ShieldCheck, Loader2, Play, RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, HelpCircle, Sparkles, FlaskConical } from 'lucide-react';
 import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
-import { cleanProductTitle, cleanProductTitleAggressive, hashTitle } from '@/lib/cleanProductTitle';
+import { cleanProductTitle, cleanProductTitleAggressive, cleanProductTitleMinimal, hashTitle } from '@/lib/cleanProductTitle';
 
 // Compartilhado com MLValidationButton (cache v3)
 const CACHE_PREFIX = 'ml_valid_v3_';
@@ -32,7 +32,45 @@ function writeCache(key, data) {
     } catch { /* ignora */ }
 }
 
-// Busca 1 item (mesma lógica do MLValidationButton)
+// Match ML FLEXÍVEL — aceita qualquer indicador de Mercado Livre nos campos do produto
+function isMLProduct(p) {
+    if (!p || typeof p.price !== 'number' || p.price <= 0) return false;
+    const hayList = [
+        p.source, p.url, p.link, p.mercadolivre_url, p.product_link,
+        p?.merchant?.name, p?.seller_name
+    ];
+    const hay = hayList.filter(Boolean).join(' ').toLowerCase();
+    if (!hay) return false;
+    return (
+        hay.includes('mercadolivre') ||
+        hay.includes('mercado livre') ||
+        hay.includes('ml.com') ||
+        hay.includes('mlstatic')
+    );
+}
+
+// Extrai URL de um produto (ML preferencialmente, qualquer URL como fallback)
+function extractUrl(p) {
+    return p?.mercadolivre_url || p?.url || p?.link || p?.product_link || null;
+}
+
+// Tenta uma busca e retorna {mlProducts, allProducts, term} — sem efeitos colaterais
+async function attemptSearch(term, signal) {
+    if (!term || term.length < 3) return { mlProducts: [], allProducts: [], term, skipped: true };
+    try {
+        const response = await searchGoogleShopping({ productName: term });
+        if (signal?.aborted) return { aborted: true };
+        const allProducts = response?.data?.products || [];
+        const mlProducts = allProducts.filter(isMLProduct);
+        return { mlProducts, allProducts, term };
+    } catch (err) {
+        return { mlProducts: [], allProducts: [], term, error: err?.message || 'erro' };
+    }
+}
+
+// CASCATA SÊNIOR — 3 camadas em ordem decrescente de especificidade
+// Cada tentativa usa um cleaner diferente. Só dispara a próxima se a anterior
+// não trouxe NENHUM ML *e* o termo MUDOU (otimização: evita SerpAPI duplicado).
 async function fetchMLForItem(item, signal) {
     const cacheKey = hashTitle(item.desc);
     const cached = readCache(cacheKey);
@@ -40,39 +78,57 @@ async function fetchMLForItem(item, signal) {
         return { item, cached: true, ...cached };
     }
 
-    const cleaned = cleanProductTitle(item.desc);
-    if (!cleaned || cleaned.length < 3) {
-        return { item, cached: false, level: 'no_ml' };
-    }
+    const t1 = cleanProductTitle(item.desc);
+    const t2 = cleanProductTitleAggressive(item.desc);
+    const t3 = cleanProductTitleMinimal(item.desc);
 
-    try {
-        const response = await searchGoogleShopping({ productName: cleaned });
-        if (signal?.aborted) return null;
+    const debug = { t1, t2, t3, attempts: [] };
 
-        const results = response?.data?.products || [];
-        const mlProducts = results.filter(r => {
-            if (!r || typeof r.price !== 'number' || r.price <= 0) return false;
-            const isMLSource = typeof r.source === 'string' && r.source.toLowerCase().includes('mercado livre');
-            const hasMLUrl = !!r.mercadolivre_url;
-            return isMLSource || hasMLUrl;
-        });
-
-        if (mlProducts.length === 0) {
-            const data = { level: 'no_ml' };
-            writeCache(cacheKey, data);
-            return { item, cached: false, ...data };
-        }
-
-        const primary = mlProducts[0];
-        const data = {
-            mlPrice: primary.price,
-            productUrl: primary.mercadolivre_url || primary.url || null,
-        };
+    // === Tentativa 1 — Limpeza inteligente ===
+    const a1 = await attemptSearch(t1, signal);
+    if (a1?.aborted) return null;
+    debug.attempts.push({ tier: 1, term: t1, hits: a1.allProducts?.length || 0, ml: a1.mlProducts?.length || 0 });
+    if (a1.mlProducts?.length > 0) {
+        const primary = a1.mlProducts[0];
+        const data = { mlPrice: primary.price, productUrl: extractUrl(primary), tier: 1 };
         writeCache(cacheKey, data);
-        return { item, cached: false, ...data };
-    } catch (err) {
-        return { item, cached: false, error: err?.message || 'erro' };
+        return { item, cached: false, debug, ...data };
     }
+
+    // === Tentativa 2 — Marca + Modelo (só se termo MUDOU) ===
+    if (t2 && t2 !== t1) {
+        const a2 = await attemptSearch(t2, signal);
+        if (a2?.aborted) return null;
+        debug.attempts.push({ tier: 2, term: t2, hits: a2.allProducts?.length || 0, ml: a2.mlProducts?.length || 0 });
+        if (a2.mlProducts?.length > 0) {
+            const primary = a2.mlProducts[0];
+            const data = { mlPrice: primary.price, productUrl: extractUrl(primary), tier: 2 };
+            writeCache(cacheKey, data);
+            return { item, cached: false, debug, ...data };
+        }
+    } else {
+        debug.attempts.push({ tier: 2, term: t2 || '', skipped: 'mesmo termo do tier 1' });
+    }
+
+    // === Tentativa 3 — Mínimo viável (só se termo MUDOU) ===
+    if (t3 && t3 !== t2 && t3 !== t1) {
+        const a3 = await attemptSearch(t3, signal);
+        if (a3?.aborted) return null;
+        debug.attempts.push({ tier: 3, term: t3, hits: a3.allProducts?.length || 0, ml: a3.mlProducts?.length || 0 });
+        if (a3.mlProducts?.length > 0) {
+            const primary = a3.mlProducts[0];
+            const data = { mlPrice: primary.price, productUrl: extractUrl(primary), tier: 3 };
+            writeCache(cacheKey, data);
+            return { item, cached: false, debug, ...data };
+        }
+    } else {
+        debug.attempts.push({ tier: 3, term: t3 || '', skipped: 'mesmo termo dos tiers anteriores' });
+    }
+
+    // Nenhuma das 3 camadas achou ML → no_ml
+    const data = { level: 'no_ml' };
+    writeCache(cacheKey, data);
+    return { item, cached: false, debug, ...data };
 }
 
 export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
@@ -149,7 +205,7 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         setResults([]);
     };
 
-    // 🔄 Retry com busca relaxada — só itens 'no_ml', usa cleanProductTitleAggressive
+    // 🔄 TIER-4 — Último recurso: aceita QUALQUER produto (não filtra ML), marca como 'market'
     const retryNoML = async () => {
         if (status === 'retrying') return;
         const noMlItems = results.filter(r => !r.mlPrice && r.level === 'no_ml');
@@ -163,41 +219,41 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
 
         let cursor = 0;
         let doneCount = 0;
-        const updates = new Map(); // desc → novo resultado
+        const updates = new Map();
 
         const workers = Array.from({ length: Math.min(POOL_SIZE, noMlItems.length) }, async () => {
             while (cursor < noMlItems.length && !controller.signal.aborted) {
                 const myIdx = cursor++;
                 const r = noMlItems[myIdx];
-                const cleaned = cleanProductTitleAggressive(r.item.desc);
-                if (!cleaned || cleaned.length < 3) {
+                // Termo MUITO solto — primeira palavra significativa do tier-minimal
+                const minimal = cleanProductTitleMinimal(r.item.desc);
+                const term = minimal || cleanProductTitleAggressive(r.item.desc);
+                if (!term || term.length < 3) {
                     doneCount++;
                     setRetryProgress({ done: doneCount, total: noMlItems.length });
                     continue;
                 }
                 try {
-                    const response = await searchGoogleShopping({ productName: cleaned });
+                    const response = await searchGoogleShopping({ productName: term });
                     if (controller.signal.aborted) return;
-                    const products = response?.data?.products || [];
-                    const mlProducts = products.filter(p => {
-                        if (!p || typeof p.price !== 'number' || p.price <= 0) return false;
-                        const isMLSource = typeof p.source === 'string' && p.source.toLowerCase().includes('mercado livre');
-                        const hasMLUrl = !!p.mercadolivre_url;
-                        return isMLSource || hasMLUrl;
-                    });
-                    if (mlProducts.length > 0) {
-                        const primary = mlProducts[0];
+                    const products = (response?.data?.products || [])
+                        .filter(p => p && typeof p.price === 'number' && p.price > 0);
+                    if (products.length > 0) {
+                        // Aceita ML primeiro, senão qualquer produto
+                        const ml = products.filter(isMLProduct);
+                        const primary = ml[0] || products[0];
+                        const isML = !!ml[0];
                         const data = {
                             mlPrice: primary.price,
-                            productUrl: primary.mercadolivre_url || primary.url || null,
+                            productUrl: extractUrl(primary),
+                            tier: isML ? 4 : 'market',
                         };
-                        // Persiste no MESMO cache v3 (hashTitle do desc original)
                         try {
                             localStorage.setItem(
                                 CACHE_PREFIX + hashTitle(r.item.desc),
                                 JSON.stringify({ savedAt: Date.now(), data })
                             );
-                        } catch { /* ignora storage cheio */ }
+                        } catch { /* ignora */ }
                         updates.set(r.item.desc, { ...r, ...data, level: undefined });
                     }
                 } catch { /* falha individual não bloqueia */ }
@@ -209,11 +265,49 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         await Promise.all(workers);
         if (controller.signal.aborted) return;
 
-        // Aplica os updates no results (mantém ordem)
         if (updates.size > 0) {
             setResults(prev => prev.map(r => updates.get(r.item.desc) || r));
         }
         setStatus('done');
+    };
+
+    // 🔬 Exporta CSV de diagnóstico — uma linha por item com os termos tentados
+    const exportDiagnosticCSV = () => {
+        if (!results || results.length === 0) return;
+        const escape = (v) => {
+            if (v === null || v === undefined) return '';
+            const s = String(v).replace(/"/g, '""');
+            return /[",\n;]/.test(s) ? `"${s}"` : s;
+        };
+        const header = [
+            'desc_original', 'tentativa_1', 'tentativa_2', 'tentativa_3',
+            'tier_acertou', 'preco_ml', 'ml_url', 'resultado'
+        ].join(',');
+        const lines = results.map(r => {
+            const d = r.debug || {};
+            const tierLabel = r.tier === 'market' ? 'mercado geral' : (r.tier || '');
+            const resultado = r.mlPrice ? 'ENCONTRADO' : 'SEM ML';
+            return [
+                escape(r.item?.desc),
+                escape(d.t1 || ''),
+                escape(d.t2 || ''),
+                escape(d.t3 || ''),
+                escape(tierLabel),
+                escape(r.mlPrice ?? ''),
+                escape(r.productUrl || ''),
+                escape(resultado),
+            ].join(',');
+        });
+        const csv = '\uFEFF' + [header, ...lines].join('\n'); // BOM p/ Excel ler UTF-8
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `veredito-ml-diagnostico-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     // Agregações do veredito
@@ -404,18 +498,26 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                             </div>
                         </div>
 
-                        {/* Botão de retry agressivo — só aparece se há itens "Sem ML" */}
-                        {veredito.semML > 0 && (
-                            <div className="flex justify-center pt-1">
+                        {/* Ações pós-auditoria */}
+                        <div className="flex flex-wrap justify-center gap-2 pt-1">
+                            {veredito.semML > 0 && (
                                 <button
                                     onClick={retryNoML}
                                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 transition-all"
-                                    title="Tenta novamente os itens sem ML usando uma busca mais simples (remove códigos de cor, tamanho, SKU)"
+                                    title="Última tentativa — aceita preços de qualquer loja (não só ML)"
                                 >
-                                    🔄 Retentar {veredito.semML} {veredito.semML === 1 ? 'item' : 'itens'} sem ML (busca relaxada)
+                                    🔄 Retentar {veredito.semML} {veredito.semML === 1 ? 'item' : 'itens'} sem ML (mercado geral)
                                 </button>
-                            </div>
-                        )}
+                            )}
+                            <button
+                                onClick={exportDiagnosticCSV}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 transition-all"
+                                title="Baixa um CSV com cada item e os termos de busca usados — abre no Excel"
+                            >
+                                <FlaskConical size={14} />
+                                Exportar diagnóstico
+                            </button>
+                        </div>
 
                         {/* Rodapé com metadado */}
                         <p className="text-center text-xs text-slate-500">
