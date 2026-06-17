@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 const Auction = base44.entities.Auction;
 import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, ArrowLeft, Eye } from 'lucide-react';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
+import VereditoMLCard from '../components/lotes/VereditoMLCard';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 
@@ -730,6 +731,12 @@ function AnaliseDeLotes() {
                                 </div>
                             ))}
                         </div>
+
+                        {/* VEREDITO ML — auditoria macro do lote contra o Mercado Livre */}
+                        <VereditoMLCard
+                            itens={loteAtual.rawItemsByGrade || []}
+                            totalPlanilha={loteAtual.valorMercadoTotal || 0}
+                        />
 
                         {/* MAIN CONTENT PANELS */}
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
