@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ShieldCheck, Loader2, Play, RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, HelpCircle, Sparkles } from 'lucide-react';
 import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
-import { cleanProductTitle, hashTitle } from '@/lib/cleanProductTitle';
+import { cleanProductTitle, cleanProductTitleAggressive, hashTitle } from '@/lib/cleanProductTitle';
 
 // Compartilhado com MLValidationButton (cache v3)
 const CACHE_PREFIX = 'ml_valid_v3_';
@@ -76,9 +76,10 @@ async function fetchMLForItem(item, signal) {
 }
 
 export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
-    const [status, setStatus] = useState('idle'); // idle | auditing | done
+    const [status, setStatus] = useState('idle'); // idle | auditing | done | retrying
     const [progress, setProgress] = useState({ done: 0, total: 0 });
     const [results, setResults] = useState([]); // array de {item, mlPrice?, level?, productUrl?}
+    const [retryProgress, setRetryProgress] = useState({ done: 0, total: 0 });
     const abortRef = useRef(null);
     const startedAtRef = useRef(null);
 
@@ -148,6 +149,73 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         setResults([]);
     };
 
+    // 🔄 Retry com busca relaxada — só itens 'no_ml', usa cleanProductTitleAggressive
+    const retryNoML = async () => {
+        if (status === 'retrying') return;
+        const noMlItems = results.filter(r => !r.mlPrice && r.level === 'no_ml');
+        if (noMlItems.length === 0) return;
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        setStatus('retrying');
+        setRetryProgress({ done: 0, total: noMlItems.length });
+
+        let cursor = 0;
+        let doneCount = 0;
+        const updates = new Map(); // desc → novo resultado
+
+        const workers = Array.from({ length: Math.min(POOL_SIZE, noMlItems.length) }, async () => {
+            while (cursor < noMlItems.length && !controller.signal.aborted) {
+                const myIdx = cursor++;
+                const r = noMlItems[myIdx];
+                const cleaned = cleanProductTitleAggressive(r.item.desc);
+                if (!cleaned || cleaned.length < 3) {
+                    doneCount++;
+                    setRetryProgress({ done: doneCount, total: noMlItems.length });
+                    continue;
+                }
+                try {
+                    const response = await searchGoogleShopping({ productName: cleaned });
+                    if (controller.signal.aborted) return;
+                    const products = response?.data?.products || [];
+                    const mlProducts = products.filter(p => {
+                        if (!p || typeof p.price !== 'number' || p.price <= 0) return false;
+                        const isMLSource = typeof p.source === 'string' && p.source.toLowerCase().includes('mercado livre');
+                        const hasMLUrl = !!p.mercadolivre_url;
+                        return isMLSource || hasMLUrl;
+                    });
+                    if (mlProducts.length > 0) {
+                        const primary = mlProducts[0];
+                        const data = {
+                            mlPrice: primary.price,
+                            productUrl: primary.mercadolivre_url || primary.url || null,
+                        };
+                        // Persiste no MESMO cache v3 (hashTitle do desc original)
+                        try {
+                            localStorage.setItem(
+                                CACHE_PREFIX + hashTitle(r.item.desc),
+                                JSON.stringify({ savedAt: Date.now(), data })
+                            );
+                        } catch { /* ignora storage cheio */ }
+                        updates.set(r.item.desc, { ...r, ...data, level: undefined });
+                    }
+                } catch { /* falha individual não bloqueia */ }
+                doneCount++;
+                setRetryProgress({ done: doneCount, total: noMlItems.length });
+            }
+        });
+
+        await Promise.all(workers);
+        if (controller.signal.aborted) return;
+
+        // Aplica os updates no results (mantém ordem)
+        if (updates.size > 0) {
+            setResults(prev => prev.map(r => updates.get(r.item.desc) || r));
+        }
+        setStatus('done');
+    };
+
     // Agregações do veredito
     const veredito = useMemo(() => {
         if (status !== 'done' || results.length === 0) return null;
@@ -197,10 +265,10 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
     }, [results, status]);
 
     const levelConfig = {
-        ok:      { Icon: CheckCircle2, classes: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300', label: '🟢 MERCADO VALIDA O LOTE' },
-        warn:    { Icon: AlertTriangle, classes: 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300', label: '🟡 ATENÇÃO — MARGEM APERTADA' },
-        alert:   { Icon: AlertOctagon, classes: 'bg-red-500/10 border-red-500/40 text-red-300', label: '🔴 ALERTA — PLANILHA SUPERFATURADA' },
-        unknown: { Icon: HelpCircle, classes: 'bg-slate-500/10 border-slate-500/40 text-slate-300', label: '❓ INSUFICIENTE PARA VEREDITO' },
+        ok:      { Icon: CheckCircle2, classes: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300', label: '🟢 VEREDITO: LOTE VALIDADO' },
+        warn:    { Icon: AlertTriangle, classes: 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300', label: '🟡 VEREDITO: MARGEM APERTADA' },
+        alert:   { Icon: AlertOctagon, classes: 'bg-red-500/10 border-red-500/40 text-red-300', label: '🔴 VEREDITO: PLANILHA SUPERFATURADA' },
+        unknown: { Icon: HelpCircle, classes: 'bg-slate-500/10 border-slate-500/40 text-slate-300', label: '❓ VEREDITO: DADOS INSUFICIENTES' },
     };
 
     // === RENDER ===
@@ -336,9 +404,46 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                             </div>
                         </div>
 
+                        {/* Botão de retry agressivo — só aparece se há itens "Sem ML" */}
+                        {veredito.semML > 0 && (
+                            <div className="flex justify-center pt-1">
+                                <button
+                                    onClick={retryNoML}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 transition-all"
+                                    title="Tenta novamente os itens sem ML usando uma busca mais simples (remove códigos de cor, tamanho, SKU)"
+                                >
+                                    🔄 Retentar {veredito.semML} {veredito.semML === 1 ? 'item' : 'itens'} sem ML (busca relaxada)
+                                </button>
+                            </div>
+                        )}
+
                         {/* Rodapé com metadado */}
                         <p className="text-center text-xs text-slate-500">
                             {veredito.totalAuditados} itens auditados • para conferir item-a-item, abra cada grade abaixo
+                        </p>
+                    </div>
+                )}
+
+                {/* Estado RETRYING — progresso do retry */}
+                {status === 'retrying' && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-yellow-300 font-semibold">
+                                <Loader2 size={16} className="animate-spin" />
+                                Retentando {retryProgress.done} de {retryProgress.total} itens (busca relaxada)
+                            </div>
+                            <span className="text-2xl font-black text-white tabular-nums">
+                                {retryProgress.total > 0 ? Math.round((retryProgress.done / retryProgress.total) * 100) : 0}%
+                            </span>
+                        </div>
+                        <div className="h-2.5 bg-[#0d1117] rounded-full overflow-hidden border border-[#30363d]">
+                            <div
+                                className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300 shadow-lg shadow-yellow-500/30"
+                                style={{ width: `${retryProgress.total > 0 ? (retryProgress.done / retryProgress.total) * 100 : 0}%` }}
+                            />
+                        </div>
+                        <p className="text-xs text-slate-500 text-center">
+                            Removendo códigos de cor/tamanho/SKU e buscando de novo
                         </p>
                     </div>
                 )}

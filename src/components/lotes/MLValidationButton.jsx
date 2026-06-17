@@ -130,16 +130,22 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
         );
     }
 
-    // Estado: sem anúncio ML encontrado (cinza, não clicável)
+    // Estado: sem anúncio ML encontrado — clicável, abre busca manual no ML em nova aba
     if (state.status === 'no_ml') {
+        const termoBusca = cleanProductTitle(descricao) || descricao;
+        const mlSearchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(termoBusca)}`;
         return (
-            <span
-                title="Nenhum anúncio do Mercado Livre encontrado para este item"
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border bg-slate-500/10 border-slate-500/30 text-slate-400 min-h-[32px]"
+            <a
+                href={mlSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Buscar manualmente no Mercado Livre"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border bg-slate-500/10 border-slate-500/30 text-slate-400 hover:bg-slate-500/20 hover:border-slate-400 hover:text-slate-200 min-h-[32px] transition-colors cursor-pointer no-underline"
             >
                 <Search size={12} />
                 Sem ML
-            </span>
+                <ExternalLink size={11} className="opacity-60" />
+            </a>
         );
     }
 
