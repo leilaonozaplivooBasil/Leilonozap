@@ -67,10 +67,10 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
                 return;
             }
 
-            const response = await searchGoogleShopping({ query: cleaned });
+            const response = await searchGoogleShopping({ productName: cleaned });
             if (controller.signal.aborted) return;
 
-            const results = response?.data?.results || [];
+            const results = response?.data?.products || [];
             const validPrices = results
                 .map(r => r.price)
                 .filter(p => typeof p === 'number' && p > 0);
