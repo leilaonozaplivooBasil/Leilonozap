@@ -3,7 +3,7 @@ import { Loader2, CheckCircle2, AlertTriangle, AlertOctagon, Search, ExternalLin
 import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
 import { cleanProductTitle, hashTitle } from '@/lib/cleanProductTitle';
 
-const CACHE_PREFIX = 'ml_valid_v2_'; // v2: nova semântica de cor + link de prova
+const CACHE_PREFIX = 'ml_valid_v3_'; // v3: paridade absoluta preço↔link (1 anúncio ML, sem média)
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 const formatCurrency = (val) =>
@@ -43,7 +43,10 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
     const cacheKey = hashTitle(descricao);
     const [state, setState] = useState(() => {
         const cached = readCache(cacheKey);
-        return cached ? { status: 'done', ...cached } : { status: 'idle' };
+        if (!cached) return { status: 'idle' };
+        // Cache de "sem anúncio ML" restaura no estado correto
+        if (cached.level === 'no_ml') return { status: 'no_ml' };
+        return { status: 'done', ...cached };
     });
     const abortRef = useRef(null);
 
@@ -72,23 +75,30 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
             if (controller.signal.aborted) return;
 
             const results = response?.data?.products || [];
-            const validPrices = results
-                .map(r => r.price)
-                .filter(p => typeof p === 'number' && p > 0);
 
-            if (validPrices.length === 0) {
-                const errData = { status: 'error', message: 'Sem resultados ML' };
-                setState(errData);
+            // Paridade absoluta: só consideramos resultados que SÃO do Mercado Livre
+            // (source contém "mercado livre" OU mercadolivre_url preenchido)
+            const mlProducts = results.filter(r => {
+                if (!r || typeof r.price !== 'number' || r.price <= 0) return false;
+                const isMLSource = typeof r.source === 'string' && r.source.toLowerCase().includes('mercado livre');
+                const hasMLUrl = !!r.mercadolivre_url;
+                return isMLSource || hasMLUrl;
+            });
+
+            if (mlProducts.length === 0) {
+                // Sem anúncio ML — estado dedicado (cacheia para não reconsultar)
+                const noMlData = { level: 'no_ml' };
+                writeCache(cacheKey, noMlData);
+                setState({ status: 'no_ml' });
                 return;
             }
 
-            const avgPrice = validPrices.reduce((a, b) => a + b, 0) / validPrices.length;
-            const level = getDivergenceLevel(valorPlanilha, avgPrice);
-            // Captura URL: prioriza ML, cai para qualquer URL como fallback
-            const mlProduct = results.find(r => r?.mercadolivre_url);
-            const anyProduct = results.find(r => r?.url);
-            const productUrl = mlProduct?.mercadolivre_url || anyProduct?.url || null;
-            const data = { mlPrice: avgPrice, level, count: validPrices.length, productUrl };
+            // Primeiro produto ML = anúncio em destaque do Google Shopping
+            const primary = mlProducts[0];
+            const mlPrice = primary.price;
+            const productUrl = primary.mercadolivre_url || primary.url || null;
+            const level = getDivergenceLevel(valorPlanilha, mlPrice);
+            const data = { mlPrice, level, count: mlProducts.length, productUrl };
             writeCache(cacheKey, data);
             setState({ status: 'done', ...data });
         } catch (err) {
@@ -116,6 +126,19 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 border border-blue-500/30 text-blue-400">
                 <Loader2 size={12} className="animate-spin" />
                 Buscando...
+            </span>
+        );
+    }
+
+    // Estado: sem anúncio ML encontrado (cinza, não clicável)
+    if (state.status === 'no_ml') {
+        return (
+            <span
+                title="Nenhum anúncio do Mercado Livre encontrado para este item"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border bg-slate-500/10 border-slate-500/30 text-slate-400 min-h-[32px]"
+            >
+                <Search size={12} />
+                Sem ML
             </span>
         );
     }
