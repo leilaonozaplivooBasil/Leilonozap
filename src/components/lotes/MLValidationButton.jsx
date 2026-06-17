@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, CheckCircle2, AlertTriangle, AlertOctagon, Search } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, AlertOctagon, Search, ExternalLink } from 'lucide-react';
 import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
 import { cleanProductTitle, hashTitle } from '@/lib/cleanProductTitle';
 
-const CACHE_PREFIX = 'ml_valid_';
+const CACHE_PREFIX = 'ml_valid_v2_'; // v2: nova semântica de cor + link de prova
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 const formatCurrency = (val) =>
@@ -32,10 +32,11 @@ function writeCache(key, data) {
 
 function getDivergenceLevel(valorPlanilha, mlPrice) {
     if (!valorPlanilha || !mlPrice) return 'unknown';
-    const diff = Math.abs(mlPrice - valorPlanilha) / mlPrice;
-    if (diff < 0.15) return 'ok';
-    if (diff < 0.40) return 'warn';
-    return 'alert';
+    // Semântica de arremate: ML caro = bom (margem); ML barato = alerta (planilha superfaturada)
+    const ratio = (mlPrice - valorPlanilha) / valorPlanilha;
+    if (ratio >= 0) return 'ok';        // ML >= planilha → ótimo
+    if (ratio >= -0.15) return 'warn';  // ML até 15% abaixo → atenção
+    return 'alert';                      // ML mais de 15% abaixo → ALERTA
 }
 
 export default function MLValidationButton({ descricao, valorPlanilha }) {
@@ -83,7 +84,11 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
 
             const avgPrice = validPrices.reduce((a, b) => a + b, 0) / validPrices.length;
             const level = getDivergenceLevel(valorPlanilha, avgPrice);
-            const data = { mlPrice: avgPrice, level, count: validPrices.length };
+            // Captura URL: prioriza ML, cai para qualquer URL como fallback
+            const mlProduct = results.find(r => r?.mercadolivre_url);
+            const anyProduct = results.find(r => r?.url);
+            const productUrl = mlProduct?.mercadolivre_url || anyProduct?.url || null;
+            const data = { mlPrice: avgPrice, level, count: validPrices.length, productUrl };
             writeCache(cacheKey, data);
             setState({ status: 'done', ...data });
         } catch (err) {
@@ -129,20 +134,39 @@ export default function MLValidationButton({ descricao, valorPlanilha }) {
         );
     }
 
-    // Estado: validado — mostra preço ML + badge de divergência
-    const { mlPrice, level } = state;
+    // Estado: validado — mostra preço ML + badge de divergência (clicável se houver URL)
+    const { mlPrice, level, productUrl } = state;
     const config = {
-        ok:    { Icon: CheckCircle2, classes: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', label: 'OK' },
-        warn:  { Icon: AlertTriangle, classes: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400', label: '!' },
-        alert: { Icon: AlertOctagon, classes: 'bg-red-500/10 border-red-500/30 text-red-400', label: 'ALERTA' },
-        unknown: { Icon: AlertTriangle, classes: 'bg-slate-500/10 border-slate-500/30 text-slate-400', label: '?' },
-    }[level] || { Icon: AlertTriangle, classes: 'bg-slate-500/10 border-slate-500/30 text-slate-400', label: '?' };
+        ok:    { Icon: CheckCircle2, classes: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' },
+        warn:  { Icon: AlertTriangle, classes: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20' },
+        alert: { Icon: AlertOctagon, classes: 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20' },
+        unknown: { Icon: AlertTriangle, classes: 'bg-slate-500/10 border-slate-500/30 text-slate-400 hover:bg-slate-500/20' },
+    }[level] || { Icon: AlertTriangle, classes: 'bg-slate-500/10 border-slate-500/30 text-slate-400' };
     const { Icon } = config;
 
-    return (
-        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border ${config.classes}`}>
+    const content = (
+        <>
             <Icon size={12} />
             <span className="tabular-nums">{formatCurrency(mlPrice)}</span>
-        </span>
+            {productUrl && <ExternalLink size={11} className="opacity-70" />}
+        </>
     );
+
+    const baseClasses = `inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold border min-h-[32px] transition-colors ${config.classes}`;
+
+    if (productUrl) {
+        return (
+            <a
+                href={productUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Ver anúncio que serviu de referência"
+                className={`${baseClasses} cursor-pointer no-underline`}
+            >
+                {content}
+            </a>
+        );
+    }
+
+    return <span className={baseClasses}>{content}</span>;
 }
