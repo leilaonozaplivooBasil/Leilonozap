@@ -638,6 +638,17 @@ export default function ProductManagement() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = '/api/functions/exportBaixas';
+                    a.download = 'baixas-estoque.csv';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  }}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <Download className="w-4 h-4 mr-2 text-orange-400" /> Relatório de Baixas (Excel)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
                     sessionStorage.removeItem('products_cache_v3');
                     sessionStorage.removeItem('products_cache_time_v3');
                     loadData();

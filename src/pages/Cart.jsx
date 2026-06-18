@@ -398,7 +398,7 @@ export default function Cart() {
           buyer_address: deliveryMethod === 'delivery' ? `${formData.street}, ${formData.number} ${formData.complement || ''} - ${formData.neighborhood}, ${formData.city}/${formData.state}`.trim() : 'Retirada',
           buyer_cep: formData.cep.replace(/\D/g, ''),
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
-          seller_id: sessionStorage.getItem('referralSellerId') || null,
+          ref_code: sessionStorage.getItem('referralCode') || '',
         });
         toast.dismiss('checkout-loading');
         if (!pay?.success) {

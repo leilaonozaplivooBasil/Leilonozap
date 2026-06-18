@@ -1,9 +1,14 @@
 // payWithBalance — compra paga com o saldo de comissão (commission_balance) do próprio usuário.
 // Para vendedores/lojistas redimirem comissão em produtos da plataforma.
 // Toda a validação (preço, estoque, saldo) e a baixa acontecem ATÔMICAS na função SQL comprar_com_saldo.
+import { payCommissions } from '../_lib/payCommissions.js';
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+function sb(path, opts = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+}
 function rpc(fn, args) {
   return fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
@@ -30,10 +35,18 @@ export default async function handler(req, res) {
       .filter((it) => it.product_id);
     if (!cleanItems.length) return res.status(400).json({ success: false, error: 'Itens inválidos' });
 
+    // resolve o seller (loja) pra atribuição/envio: prioridade ref_code do link, senão o RPC decide
+    let sellerId = body?.seller_id ? String(body.seller_id) : null;
+    const refCode = String(body?.ref_code || '').trim();
+    if (!sellerId && refCode) {
+      const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(refCode)}&limit=1`)).json();
+      if (Array.isArray(r) && r[0]) sellerId = r[0].id;
+    }
+
     const r = await rpc('comprar_com_saldo', {
       _buyer: buyerId,
       _items: cleanItems,
-      _seller: body?.seller_id ? String(body.seller_id) : null,
+      _seller: sellerId,
       _buyer_name: body?.buyer_name || null,
       _buyer_phone: body?.buyer_phone ? String(body.buyer_phone).replace(/\D/g, '') : null,
       _address: body?.buyer_address || null,
@@ -45,7 +58,19 @@ export default async function handler(req, res) {
     if (!data || data.ok !== true) {
       return res.status(200).json({ success: false, error: data?.error || 'Não foi possível concluir', saldo: data?.saldo, total: data?.total });
     }
-    return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, novo_saldo: data.novo_saldo, tracking: data.tracking });
+
+    // distribui a comissão pela cadeia do comprador (igual a uma venda PIX paga) e grava o total
+    let commission = 0;
+    try {
+      const saleArr = await (await sb(`catalog_sales?select=*&id=eq.${encodeURIComponent(data.sale_id)}&limit=1`)).json();
+      const sale = Array.isArray(saleArr) ? saleArr[0] : null;
+      if (sale && !Number(sale.commission_total)) {
+        commission = await payCommissions(sale);
+        await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
+      }
+    } catch (e) { /* venda já concluída; comissão pode ser reprocessada */ }
+
+    return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, novo_saldo: data.novo_saldo, tracking: data.tracking, commission });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });
   }

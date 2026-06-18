@@ -38,7 +38,13 @@ export default async function handler(req, res) {
     }
 
     let patch = {};
+    let prodSnap = null;
     if (action === 'zerarEstoque') {
+      // snapshot ANTES de zerar (pro relatório de baixas: título + quantidade baixada)
+      try {
+        const ps = await (await sb(`products?select=description,quantity&id=eq.${encodeURIComponent(productId)}&limit=1`)).json();
+        prodSnap = Array.isArray(ps) ? ps[0] : null;
+      } catch (_) { /* segue */ }
       patch = { quantity: 0, qty_perfeito: 0, qty_bom: 0, qty_oficina: 0, qty_ruim: 0, updated_date: now };
     } else if (action === 'update' || action === 'setField') {
       const fields = body?.fields || {};
@@ -52,9 +58,20 @@ export default async function handler(req, res) {
     const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
     if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: t.slice(0, 200) }); }
 
-    // log best-effort (não bloqueia)
-    if (action === 'zerarEstoque' && (body?.operator_name || body?.reason)) {
-      try { await sb('stock_operations', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ product_id: productId, operation_type: 'zerar_estoque', operator_name: body.operator_name || null, reason: body.reason || null, operation_date: now, actor_id: actorId }) }); } catch (_) { /* tabela pode não existir */ }
+    // log da baixa (rastreio pra Diana) — agora SEMPRE que zera (operador/motivo opcionais)
+    if (action === 'zerarEstoque') {
+      try {
+        await sb('stock_operations', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+          product_id: productId,
+          product_title: prodSnap?.description || null,
+          operation_type: 'zerar_estoque',
+          quantity_before: Number(prodSnap?.quantity) || 0,
+          operator_name: body.operator_name || null,
+          reason: body.reason || null,
+          operation_date: now,
+          actor_id: actorId,
+        }) });
+      } catch (_) { /* não bloqueia a operação */ }
     }
     return res.status(200).json({ success: true, action });
   } catch (e) {
