@@ -1,7 +1,24 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ShieldCheck, Loader2, Play, RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, HelpCircle, Sparkles, FlaskConical } from 'lucide-react';
 import { searchMercadoLivre } from '@/functions/searchMercadoLivre';
+import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
 import { cleanProductTitle, cleanProductTitleAggressive, cleanProductTitleMinimal, hashTitle } from '@/lib/cleanProductTitle';
+
+// Detecta se um item tem descrição utilizável p/ busca de mercado.
+// Itens "Item linha N", descrições vazias ou que após limpeza ficam < 3 chars
+// NÃO são rastreáveis e não devem entrar como "Sem ML" — entram numa categoria à parte.
+function isUntrackable(item) {
+    const raw = (item?.desc || '').toString().trim();
+    if (!raw || raw.length < 3) return true;
+    // Padrões clássicos de planilhas sem descrição real
+    if (/^item\s+linha\s+\d+/i.test(raw)) return true;
+    if (/^sem\s+descri/i.test(raw)) return true;
+    if (/^-+$/.test(raw)) return true;
+    // Após limpeza máxima, se sobra menos de 3 chars, é lixo
+    const minimal = cleanProductTitleMinimal(raw);
+    if (!minimal || minimal.length < 3) return true;
+    return false;
+}
 
 // Cache v4 — invalidado após migração para searchMercadoLivre (3 camadas)
 const CACHE_PREFIX = 'ml_valid_v4_';
@@ -139,7 +156,7 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
     const [status, setStatus] = useState('idle'); // idle | auditing | done | retrying
     const [progress, setProgress] = useState({ done: 0, total: 0 });
     const [results, setResults] = useState([]); // array de {item, mlPrice?, level?, productUrl?}
-    const [retryProgress, setRetryProgress] = useState({ done: 0, total: 0 });
+    const [retryProgress, setRetryProgress] = useState({ done: 0, total: 0, found: 0 });
     const abortRef = useRef(null);
     const startedAtRef = useRef(null);
 
@@ -166,15 +183,22 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         abortRef.current = controller;
         startedAtRef.current = Date.now();
 
-        // Deduplica por descrição (mesmo item repetido = 1 consulta só)
-        const itemsToProcess = itens.filter(i => i && i.desc);
+        // 🆕 PRÉ-FILTRO: separa itens sem descrição utilizável (não entram em SerpAPI nem na conta)
+        const validItems = itens.filter(i => i && i.desc);
+        const untrackableItems = validItems.filter(isUntrackable);
+        const itemsToProcess = validItems.filter(i => !isUntrackable(i));
         const total = itemsToProcess.length;
 
         setStatus('auditing');
         setProgress({ done: 0, total });
         setResults([]);
 
-        const accumulated = [];
+        // Pré-popula resultados com não-rastreáveis (não vão consumir SerpAPI)
+        const accumulated = untrackableItems.map(item => ({
+            item,
+            level: 'untrackable',
+            cached: false,
+        }));
         let doneCount = 0;
 
         // Pool de workers em paralelo
@@ -209,7 +233,9 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         setResults([]);
     };
 
-    // 🔄 TIER-4 — Último recurso: aceita QUALQUER produto (não filtra ML), marca como 'market'
+    // 🔄 RETRY MERCADO GERAL — busca em Magalu/Amazon/Casas Bahia/Shopee via Google Shopping
+    // Diferente do cascade principal (que só busca no ML), aqui aceitamos QUALQUER varejista.
+    // Conserto crítico: searchGoogleShopping foi reparado (bug googleShoppingUrl removido).
     const retryNoML = async () => {
         if (status === 'retrying') return;
         const noMlItems = results.filter(r => !r.mlPrice && r.level === 'no_ml');
@@ -219,38 +245,37 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         abortRef.current = controller;
 
         setStatus('retrying');
-        setRetryProgress({ done: 0, total: noMlItems.length });
+        setRetryProgress({ done: 0, total: noMlItems.length, found: 0 });
 
         let cursor = 0;
         let doneCount = 0;
+        let foundCount = 0;
         const updates = new Map();
 
         const workers = Array.from({ length: Math.min(POOL_SIZE, noMlItems.length) }, async () => {
             while (cursor < noMlItems.length && !controller.signal.aborted) {
                 const myIdx = cursor++;
                 const r = noMlItems[myIdx];
-                // Termo MUITO solto — primeira palavra significativa do tier-minimal
-                const minimal = cleanProductTitleMinimal(r.item.desc);
-                const term = minimal || cleanProductTitleAggressive(r.item.desc);
+                // Tenta com o termo de limpeza inteligente — mais robusto para varejo geral
+                const term = cleanProductTitle(r.item.desc) || cleanProductTitleMinimal(r.item.desc);
                 if (!term || term.length < 3) {
                     doneCount++;
-                    setRetryProgress({ done: doneCount, total: noMlItems.length });
+                    setRetryProgress({ done: doneCount, total: noMlItems.length, found: foundCount });
                     continue;
                 }
                 try {
-                    const response = await searchMercadoLivre({ productName: term });
+                    // 🆕 GOOGLE SHOPPING GERAL — pega Magalu, Amazon, Casas Bahia, Shopee, etc.
+                    const response = await searchGoogleShopping({ productName: term });
                     if (controller.signal.aborted) return;
                     const products = (response?.data?.products || [])
                         .filter(p => p && typeof p.price === 'number' && p.price > 0);
                     if (products.length > 0) {
-                        // Aceita ML primeiro, senão qualquer produto
-                        const ml = products.filter(isMLProduct);
-                        const primary = ml[0] || products[0];
-                        const isML = !!ml[0];
+                        const primary = products[0];
                         const data = {
                             mlPrice: primary.price,
-                            productUrl: extractUrl(primary),
-                            tier: isML ? 4 : 'market',
+                            productUrl: primary.url || null,
+                            tier: 'market',
+                            store: primary.store || null,
                         };
                         try {
                             localStorage.setItem(
@@ -259,10 +284,11 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                             );
                         } catch { /* ignora */ }
                         updates.set(r.item.desc, { ...r, ...data, level: undefined });
+                        foundCount++;
                     }
                 } catch { /* falha individual não bloqueia */ }
                 doneCount++;
-                setRetryProgress({ done: doneCount, total: noMlItems.length });
+                setRetryProgress({ done: doneCount, total: noMlItems.length, found: foundCount });
             }
         });
 
@@ -320,9 +346,14 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
 
         let totalMLEncontrado = 0;
         let totalPlanilhaConferida = 0;
-        let verdes = 0, amarelos = 0, vermelhos = 0, semML = 0;
+        let verdes = 0, amarelos = 0, vermelhos = 0, semML = 0, naoRastreaveis = 0;
 
         for (const r of results) {
+            // 🆕 Itens sem descrição utilizável vão para categoria separada
+            if (r.level === 'untrackable') {
+                naoRastreaveis++;
+                continue;
+            }
             if (typeof r.mlPrice === 'number' && r.mlPrice > 0) {
                 const qtd = r.item.qtd || 1;
                 const valorPlanilhaUnit = r.item.valor || 0;
@@ -357,8 +388,8 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
             totalPlanilhaConferida,
             ratioGlobal,
             level,
-            verdes, amarelos, vermelhos, semML,
-            totalAuditados: results.length,
+            verdes, amarelos, vermelhos, semML, naoRastreaveis,
+            totalAuditados: results.length - naoRastreaveis,
         };
     }, [results, status]);
 
@@ -502,15 +533,30 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                             </div>
                         </div>
 
+                        {/* 🆕 Não-rastreáveis — só aparece se houver, separado da contagem principal */}
+                        {veredito.naoRastreaveis > 0 && (
+                            <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                    <HelpCircle size={16} />
+                                    <p className="text-xs sm:text-sm">
+                                        <span className="font-bold text-slate-300 tabular-nums">{veredito.naoRastreaveis}</span> {veredito.naoRastreaveis === 1 ? 'item' : 'itens'} sem descrição utilizável
+                                    </p>
+                                </div>
+                                <p className="text-[10px] text-slate-500 hidden sm:block">
+                                    (excluídos do veredito — sem texto para buscar)
+                                </p>
+                            </div>
+                        )}
+
                         {/* Ações pós-auditoria */}
                         <div className="flex flex-wrap justify-center gap-2 pt-1">
                             {veredito.semML > 0 && (
                                 <button
                                     onClick={retryNoML}
                                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-700/40 hover:bg-slate-600/60 border border-slate-600 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 transition-all"
-                                    title="Última tentativa — aceita preços de qualquer loja (não só ML)"
+                                    title="Busca em Magalu, Amazon, Casas Bahia, Shopee e outros varejistas via Google Shopping"
                                 >
-                                    🔄 Retentar {veredito.semML} {veredito.semML === 1 ? 'item' : 'itens'} sem ML (mercado geral)
+                                    🔄 Buscar {veredito.semML} {veredito.semML === 1 ? 'item' : 'itens'} em Magalu / Amazon / Casas Bahia
                                 </button>
                             )}
                             <button
@@ -530,13 +576,13 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                     </div>
                 )}
 
-                {/* Estado RETRYING — progresso do retry */}
+                {/* Estado RETRYING — progresso do retry no mercado geral */}
                 {status === 'retrying' && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-yellow-300 font-semibold">
                                 <Loader2 size={16} className="animate-spin" />
-                                Retentando {retryProgress.done} de {retryProgress.total} itens (busca relaxada)
+                                Buscando {retryProgress.done} de {retryProgress.total} em Magalu / Amazon / Casas Bahia
                             </div>
                             <span className="text-2xl font-black text-white tabular-nums">
                                 {retryProgress.total > 0 ? Math.round((retryProgress.done / retryProgress.total) * 100) : 0}%
@@ -548,8 +594,8 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                                 style={{ width: `${retryProgress.total > 0 ? (retryProgress.done / retryProgress.total) * 100 : 0}%` }}
                             />
                         </div>
-                        <p className="text-xs text-slate-500 text-center">
-                            Removendo códigos de cor/tamanho/SKU e buscando de novo
+                        <p className="text-xs text-emerald-400 text-center font-semibold">
+                            ✓ {retryProgress.found || 0} {(retryProgress.found || 0) === 1 ? 'item encontrado' : 'itens encontrados'} no varejo geral
                         </p>
                     </div>
                 )}

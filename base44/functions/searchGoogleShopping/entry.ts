@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         title: result.title || 'Produto sem título',
         price: price,
         store: result.source || 'Loja não informada',
-        url: result.product_link || result.link || googleShoppingUrl,
+        url: result.product_link || result.link || null,
         image: result.thumbnail || null,
         mercadolivre_url: mercadolivre_url  // 🆕 Campo novo
       };
