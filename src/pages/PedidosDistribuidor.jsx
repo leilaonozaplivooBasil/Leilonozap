@@ -46,7 +46,8 @@ export default function PedidosDistribuidor() {
       // pedidos de PRODUTO (exclui adesão de cargo), pagos e em fulfillment.
       // Cada um vê SÓ os seus pedidos (seller_id = você); admin/super_admin vê todos.
       const isAdmin = ['admin', 'super_admin'].includes(u?.role);
-      let qy = supabase.from('catalog_sales').select('*').neq('kind', 'adesao');
+      // inclui vendas com kind NULL (catálogo normal) — neq sozinho exclui null no SQL
+      let qy = supabase.from('catalog_sales').select('*').or('kind.is.null,kind.neq.adesao');
       if (!isAdmin) qy = qy.eq('seller_id', u?.id);
       const { data } = await qy.order('created_at', { ascending: false }).limit(500);
       setOrders((data || []).filter((o) => ['paid', 'preparando', 'saiu_entrega', 'entregue', 'cancelado'].includes(o.status)));
