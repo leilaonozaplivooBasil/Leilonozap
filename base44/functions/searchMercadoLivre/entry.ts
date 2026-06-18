@@ -1,79 +1,29 @@
-// Busca produtos na API oficial AUTENTICADA do Mercado Livre Brasil (MLB).
-// OAuth Client Credentials usando ML_CLIENT_ID + ML_CLIENT_SECRET (cofre de secrets).
-// Retorna mediana/p25/p75 dos top 10 anúncios mais vendidos — preço de mercado real.
-// CONTRATO DE RESPOSTA: { products, stats, searchUrl } — IGUAL ao formato anterior
-// para preservar compatibilidade com MLValidationButton, VereditoMLCard, comparaiPrices.
+// Busca produtos do Mercado Livre via SerpAPI (Google Shopping).
+// Motivo: api.mercadolibre.com bloqueia o IP do Deno Deploy (403 forbidden).
+// Estratégia: usa Google Shopping (que indexa ML) e filtra somente anúncios do ML.
+//
+// CONTRATO DE RESPOSTA: { products, stats, searchUrl }
+// Formato IDÊNTICO ao anterior — preserva compatibilidade com:
+// - MLValidationButton.jsx
+// - VereditoMLCard.jsx
+// - comparaiPrices.js
+//
+// Resposta:
+// {
+//   products: [{ id, title, price, permalink, thumbnail, sold_quantity, condition, seller_nickname }],
+//   stats: { median, p25, p75, min, max, count, avgSoldQty } | null,
+//   searchUrl: "https://lista.mercadolivre.com.br/..."
+// }
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const ML_API_BASE = 'https://api.mercadolibre.com/sites/MLB/search';
-const ML_OAUTH_URL = 'https://api.mercadolibre.com/oauth/token';
-const ML_TIMEOUT_MS = 10_000;
+const SERPAPI_BASE = 'https://serpapi.com/search.json';
+const SERPAPI_TIMEOUT_MS = 15_000;
 const TOP_N = 10;
 const MAX_PRICE_OUTLIER = 1_000_000;
 const MIN_PRICE = 0.5;
 
-// ===================================================================
-// CACHE DE TOKEN — vive enquanto o módulo Deno estiver "quente"
-// ===================================================================
-let cachedToken = { value: null, expiresAt: 0 };
-
-async function getMLAccessToken() {
-    const now = Date.now();
-    // Reusa token se ainda válido (margem de 60s antes de expirar)
-    if (cachedToken.value && cachedToken.expiresAt - 60_000 > now) {
-        return cachedToken.value;
-    }
-
-    const clientId = Deno.env.get('ML_CLIENT_ID');
-    const clientSecret = Deno.env.get('ML_CLIENT_SECRET');
-    if (!clientId || !clientSecret) {
-        throw new Error('missing_ml_credentials');
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ML_TIMEOUT_MS);
-    try {
-        const body = new URLSearchParams({
-            grant_type: 'client_credentials',
-            client_id: clientId,
-            client_secret: clientSecret,
-        });
-        console.log('[ML OAuth] POST', ML_OAUTH_URL);
-        const res = await fetch(ML_OAUTH_URL, {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json',
-            },
-            body: body.toString(),
-        });
-        console.log('[ML OAuth] status:', res.status);
-        if (!res.ok) {
-            const txt = await res.text().catch(() => '');
-            console.log('[ML OAuth] error body:', txt.slice(0, 500));
-            throw new Error(`oauth_http_${res.status}`);
-        }
-        const json = await res.json();
-        const accessToken = json?.access_token;
-        const expiresIn = typeof json?.expires_in === 'number' ? json.expires_in : 21_600; // default 6h
-        if (!accessToken) throw new Error('oauth_no_token');
-
-        cachedToken = {
-            value: accessToken,
-            expiresAt: now + expiresIn * 1000,
-        };
-        console.log('[ML OAuth] token obtido, expira em', expiresIn, 's');
-        return accessToken;
-    } finally {
-        clearTimeout(timer);
-    }
-}
-
-// ===================================================================
-// Helpers estatísticos (idênticos ao anterior)
-// ===================================================================
+// Helpers estatísticos (idênticos ao formato anterior)
 function percentile(sortedAsc, p) {
     if (!sortedAsc.length) return null;
     const idx = (sortedAsc.length - 1) * p;
@@ -96,40 +46,62 @@ function computeStats(prices) {
     };
 }
 
-// ===================================================================
-// Busca autenticada na API oficial do ML
-// ===================================================================
-async function fetchMLApi(term, condition, accessToken) {
+// Detecta se um resultado do Google Shopping é anúncio do Mercado Livre
+function isMercadoLivreResult(r) {
+    if (!r) return false;
+    const source = typeof r.source === 'string' ? r.source.toLowerCase() : '';
+    if (source.includes('mercado livre') || source.includes('mercadolivre')) return true;
+    const link = typeof r.link === 'string' ? r.link.toLowerCase() : '';
+    if (link.includes('mercadolivre.com')) return true;
+    const productLink = typeof r.product_link === 'string' ? r.product_link.toLowerCase() : '';
+    if (productLink.includes('mercadolivre.com')) return true;
+    return false;
+}
+
+// Extrai preço numérico de campos diversos do SerpAPI
+function extractPrice(r) {
+    if (typeof r?.extracted_price === 'number') return r.extracted_price;
+    if (typeof r?.price === 'number') return r.price;
+    if (typeof r?.price === 'string') {
+        // "R$ 123,45" -> 123.45
+        const num = r.price.replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.');
+        const parsed = parseFloat(num);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+
+async function fetchSerpApi(term, apiKey) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ML_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), SERPAPI_TIMEOUT_MS);
     try {
-        const params = new URLSearchParams({ q: term, limit: '50' });
-        if (condition) params.set('condition', condition);
-        const url = `${ML_API_BASE}?${params.toString()}`;
-        console.log('[ML API] GET', url);
+        const params = new URLSearchParams({
+            engine: 'google_shopping',
+            q: term,
+            location: 'Brazil',
+            google_domain: 'google.com.br',
+            gl: 'br',
+            hl: 'pt-br',
+            api_key: apiKey,
+        });
+        const url = `${SERPAPI_BASE}?${params.toString()}`;
+        console.log('[SerpAPI] GET google_shopping q=', term);
         const res = await fetch(url, {
             signal: controller.signal,
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-                'User-Agent': 'Mozilla/5.0 (compatible; LeilaoNoZapBot/1.0)',
-            },
+            headers: { 'Accept': 'application/json' },
         });
-        console.log('[ML API] status:', res.status, 'ok:', res.ok);
+        console.log('[SerpAPI] status:', res.status);
         if (!res.ok) {
             const txt = await res.text().catch(() => '');
-            console.log('[ML API] error body:', txt.slice(0, 500));
-            // Se 401, invalida cache do token pra forçar refresh na próxima
-            if (res.status === 401) {
-                cachedToken = { value: null, expiresAt: 0 };
-            }
+            console.log('[SerpAPI] error body:', txt.slice(0, 300));
             return { results: [], httpStatus: res.status };
         }
         const json = await res.json();
-        console.log('[ML API] results count:', Array.isArray(json?.results) ? json.results.length : 'NOT_ARRAY');
-        return { results: Array.isArray(json?.results) ? json.results : [] };
+        const results = Array.isArray(json?.shopping_results) ? json.shopping_results : [];
+        console.log('[SerpAPI] shopping_results total:', results.length);
+        return { results };
     } catch (err) {
-        console.log('[ML API] catch:', err?.name, err?.message);
+        console.log('[SerpAPI] catch:', err?.name, err?.message);
         return { results: [], error: err?.name === 'AbortError' ? 'timeout' : (err?.message || 'fetch_error') };
     } finally {
         clearTimeout(timer);
@@ -137,7 +109,6 @@ async function fetchMLApi(term, condition, accessToken) {
 }
 
 Deno.serve(async (req) => {
-    const _debug = { steps: [] };
     try {
         // Auth obrigatória (mesmo padrão do searchGoogleShopping)
         const base44 = createClientFromRequest(req);
@@ -152,61 +123,46 @@ Deno.serve(async (req) => {
             return Response.json({ products: [], stats: null, error: 'empty_query' });
         }
 
-        // === Obtém access_token (cache em memória) ===
-        let accessToken;
-        try {
-            accessToken = await getMLAccessToken();
-        } catch (oauthErr) {
-            console.log('[ML] OAuth falhou:', oauthErr?.message);
+        const apiKey = Deno.env.get('SERPAPI_KEY');
+        if (!apiKey) {
             return Response.json({
                 products: [],
                 stats: null,
                 searchUrl: `https://lista.mercadolivre.com.br/${encodeURIComponent(productName)}`,
-                error: oauthErr?.message || 'oauth_failed',
+                error: 'missing_serpapi_key',
             });
         }
 
-        // === Fase 1: prioriza NOVOS (preço de referência mais confiável) ===
-        let fase1 = await fetchMLApi(productName, 'new', accessToken);
-        _debug.steps.push({ phase: 'new', count: fase1.results.length, httpStatus: fase1.httpStatus || null, error: fase1.error || null });
-        let results = fase1.results;
-        let httpError = fase1.error;
-
-        // === Fase 2: se 0 novos, aceita qualquer condição ===
-        if (!results.length) {
-            // Se token foi invalidado por 401, tenta renovar uma vez
-            if (!cachedToken.value) {
-                try { accessToken = await getMLAccessToken(); } catch (_) { /* mantém o anterior */ }
-            }
-            const fallback = await fetchMLApi(productName, null, accessToken);
-            _debug.steps.push({ phase: 'any', count: fallback.results.length, httpStatus: fallback.httpStatus || null, error: fallback.error || null });
-            results = fallback.results;
-            if (!results.length && fallback.error) httpError = fallback.error;
-        }
+        const { results, error: fetchErr, httpStatus } = await fetchSerpApi(productName, apiKey);
 
         if (!results.length) {
-            const searchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(productName)}`;
             return Response.json({
                 products: [],
                 stats: null,
-                searchUrl,
-                error: httpError || 'no_results',
-                _debug,
+                searchUrl: `https://lista.mercadolivre.com.br/${encodeURIComponent(productName)}`,
+                error: fetchErr || (httpStatus ? `http_${httpStatus}` : 'no_results'),
             });
         }
 
-        // === Normaliza + filtra outliers ===
-        const normalized = results
-            .map(r => ({
-                id: r?.id || null,
-                title: r?.title || '',
-                price: typeof r?.price === 'number' ? r.price : null,
-                permalink: r?.permalink || null,
-                thumbnail: r?.thumbnail || null,
-                sold_quantity: typeof r?.sold_quantity === 'number' ? r.sold_quantity : 0,
-                condition: r?.condition || null,
-                seller_nickname: r?.seller?.nickname || null,
-            }))
+        // Filtra somente anúncios do Mercado Livre
+        const mlOnly = results.filter(isMercadoLivreResult);
+        console.log('[ML-FILTER] total:', results.length, 'ml_only:', mlOnly.length);
+
+        // Normaliza para o formato esperado pelos consumidores
+        const normalized = mlOnly
+            .map(r => {
+                const price = extractPrice(r);
+                return {
+                    id: r?.product_id || r?.position?.toString() || null,
+                    title: r?.title || '',
+                    price,
+                    permalink: r?.link || r?.product_link || null,
+                    thumbnail: r?.thumbnail || null,
+                    sold_quantity: 0, // SerpAPI não fornece — mantém campo p/ compatibilidade
+                    condition: null,
+                    seller_nickname: r?.source || null,
+                };
+            })
             .filter(p => p.price !== null && p.price >= MIN_PRICE && p.price <= MAX_PRICE_OUTLIER);
 
         if (!normalized.length) {
@@ -214,24 +170,20 @@ Deno.serve(async (req) => {
                 products: [],
                 stats: null,
                 searchUrl: `https://lista.mercadolivre.com.br/${encodeURIComponent(productName)}`,
-                error: 'no_valid_prices',
+                error: 'no_ml_results',
             });
         }
 
-        // === Ordena por sold_quantity DESC (mais vendidos = referência) ===
-        normalized.sort((a, b) => b.sold_quantity - a.sold_quantity);
-
-        // === Top N para estatísticas ===
+        // Top N para estatísticas (sem sold_quantity, mantém ordem original do Google = relevância)
         const topProducts = normalized.slice(0, TOP_N);
         const prices = topProducts.map(p => p.price);
         const stats = computeStats(prices);
-        const avgSoldQty = topProducts.reduce((sum, p) => sum + (p.sold_quantity || 0), 0) / topProducts.length;
 
         const products = normalized.slice(0, limit);
 
         return Response.json({
             products,
-            stats: { ...stats, avgSoldQty },
+            stats: { ...stats, avgSoldQty: 0 },
             searchUrl: `https://lista.mercadolivre.com.br/${encodeURIComponent(productName)}`,
         });
     } catch (error) {
