@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ShieldCheck, Loader2, Play, RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, HelpCircle, Sparkles, FlaskConical } from 'lucide-react';
-import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
+import { searchMercadoLivre } from '@/functions/searchMercadoLivre';
 import { cleanProductTitle, cleanProductTitleAggressive, cleanProductTitleMinimal, hashTitle } from '@/lib/cleanProductTitle';
 
-// Compartilhado com MLValidationButton (cache v3)
-const CACHE_PREFIX = 'ml_valid_v3_';
+// Cache v4 — invalidado após migração para searchMercadoLivre (3 camadas)
+const CACHE_PREFIX = 'ml_valid_v4_';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const POOL_SIZE = 5; // chamadas em paralelo
 
@@ -33,11 +33,13 @@ function writeCache(key, data) {
 }
 
 // Match ML FLEXÍVEL — aceita qualquer indicador de Mercado Livre nos campos do produto
+// searchMercadoLivre já retorna SOMENTE produtos do ML (3 camadas filtradas no backend),
+// mas mantemos o filtro como guardião extra de qualidade.
 function isMLProduct(p) {
     if (!p || typeof p.price !== 'number' || p.price <= 0) return false;
     const hayList = [
-        p.source, p.url, p.link, p.mercadolivre_url, p.product_link,
-        p?.merchant?.name, p?.seller_name
+        p.source, p.url, p.link, p.permalink, p.mercadolivre_url, p.product_link,
+        p?.merchant?.name, p?.seller_name, p?.seller_nickname
     ];
     const hay = hayList.filter(Boolean).join(' ').toLowerCase();
     if (!hay) return false;
@@ -51,14 +53,16 @@ function isMLProduct(p) {
 
 // Extrai URL de um produto (ML preferencialmente, qualquer URL como fallback)
 function extractUrl(p) {
-    return p?.mercadolivre_url || p?.url || p?.link || p?.product_link || null;
+    return p?.permalink || p?.mercadolivre_url || p?.url || p?.link || p?.product_link || null;
 }
 
 // Tenta uma busca e retorna {mlProducts, allProducts, term} — sem efeitos colaterais
+// Contrato de searchMercadoLivre: response.data = { products, stats, searchUrl }
+// products[i] = { title, price, permalink, thumbnail, seller_nickname, ... }
 async function attemptSearch(term, signal) {
     if (!term || term.length < 3) return { mlProducts: [], allProducts: [], term, skipped: true };
     try {
-        const response = await searchGoogleShopping({ productName: term });
+        const response = await searchMercadoLivre({ productName: term });
         if (signal?.aborted) return { aborted: true };
         const allProducts = response?.data?.products || [];
         const mlProducts = allProducts.filter(isMLProduct);
@@ -234,7 +238,7 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                     continue;
                 }
                 try {
-                    const response = await searchGoogleShopping({ productName: term });
+                    const response = await searchMercadoLivre({ productName: term });
                     if (controller.signal.aborted) return;
                     const products = (response?.data?.products || [])
                         .filter(p => p && typeof p.price === 'number' && p.price > 0);
