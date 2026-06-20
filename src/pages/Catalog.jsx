@@ -15,6 +15,7 @@ import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import { supabase } from '@/api/supabaseClient';
 import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';
 import LojaFloatActions from '../components/loja/LojaFloatActions';
@@ -45,7 +46,24 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [storeRating, setStoreRating] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // média da loja (resolve o lojista pelo ref) — passada pros cards
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+        if (!ref) return;
+        const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
+        if (!u?.id) return;
+        const { data } = await supabase.rpc('avaliacao_loja', { _seller: u.id });
+        if (alive && data && data.total > 0) setStoreRating(data);
+      } catch (_) { /* sem avaliação */ }
+    })();
+    return () => { alive = false; };
+  }, []);
   const [reachedEnd, setReachedEnd] = useState(false);
 
   const PAGE = 60;
@@ -644,6 +662,7 @@ export default function Catalog() {
                     product={product}
                     currentUser={currentUser}
                     licenseePhone={licenseePhone}
+                    storeRating={storeRating}
                   />
                 ))}
               </div>
@@ -821,6 +840,7 @@ export default function Catalog() {
                     key={product.id}
                     product={product}
                     currentUser={currentUser}
+                    storeRating={storeRating}
                   />
                 );
               })}

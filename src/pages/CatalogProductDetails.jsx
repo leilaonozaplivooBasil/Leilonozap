@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import ComparaiButton from "../components/comparai/ComparaiButton";
 import { createPageUrl } from "@/utils";
 import { proxyImage } from "@/functions/proxyImage";
+import { supabase } from "@/api/supabaseClient";
+import { Stars, RatingBadge } from "@/components/loja/StarRating";
 
 const Product = base44.entities.Product;
 
@@ -23,6 +25,27 @@ export default function CatalogProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [licenseePhone, setLicenseePhone] = useState(null);
+  const [storeRating, setStoreRating] = useState(null);
+  const [reviews, setReviews] = useState([]);
+
+  // avaliação da loja (resolve o lojista pelo ref) + reviews recentes
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+        if (!ref) return;
+        const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
+        if (!u?.id) return;
+        const [{ data: resumo }, { data: revs }] = await Promise.all([
+          supabase.rpc('avaliacao_loja', { _seller: u.id }),
+          supabase.from('seller_ratings').select('stars,comment,buyer_name,created_at').eq('seller_id', u.id).not('comment', 'is', null).order('created_at', { ascending: false }).limit(8),
+        ]);
+        if (alive) { if (resumo) setStoreRating(resumo); setReviews(Array.isArray(revs) ? revs : []); }
+      } catch (_) { /* sem avaliação */ }
+    })();
+    return () => { alive = false; };
+  }, []);
   const DEFAULT_STORE_PHONE = '5521984072064';
 
   useEffect(() => {
@@ -420,6 +443,14 @@ export default function CatalogProductDetails() {
               {product.description}
             </h1>
 
+            {/* AVALIAÇÃO DA LOJA */}
+            {storeRating && storeRating.total > 0 && (
+              <div className="flex items-center gap-2">
+                <RatingBadge media={storeRating.media} total={storeRating.total} size={16} />
+                <span className="text-xs text-gray-500">· avaliações da loja</span>
+              </div>
+            )}
+
             {/* PREÇO */}
             <div className="text-3xl lg:text-4xl font-black text-green-400">
               R$ {product.price_catalog ? product.price_catalog.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"}
@@ -476,6 +507,31 @@ export default function CatalogProductDetails() {
                 <p className="text-gray-400 text-sm">{product.description}</p>
               )}
             </div>
+
+            {/* AVALIAÇÕES DA LOJA */}
+            {storeRating && storeRating.total > 0 && (
+              <div className="border-t border-gray-700 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-white">Avaliações da loja</h3>
+                  <RatingBadge media={storeRating.media} total={storeRating.total} size={15} />
+                </div>
+                {reviews.length === 0 ? (
+                  <p className="text-gray-500 text-sm">As avaliações com comentário aparecem aqui.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {reviews.map((r, i) => (
+                      <div key={i} className="bg-gray-800/50 border border-gray-700 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-white">{r.buyer_name || 'Cliente'}</span>
+                          <Stars value={r.stars} size={13} />
+                        </div>
+                        {r.comment && <p className="text-gray-300 text-sm">{r.comment}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* CARACTERÍSTICAS (se houver) */}
             {(product.peso || product.comprimento || product.altura || product.largura) && (

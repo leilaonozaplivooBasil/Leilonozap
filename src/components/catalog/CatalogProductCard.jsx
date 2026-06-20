@@ -7,10 +7,11 @@ import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2 } from "l
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
+import { Stars } from '../loja/StarRating';
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
-function CatalogProductCard({ product, currentUser, licenseePhone }) {
+function CatalogProductCard({ product, currentUser, licenseePhone, storeRating }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
@@ -345,9 +346,17 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
       </div>
       
       <CardContent className="p-2 sm:p-4 flex-1 flex flex-col">
-        <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-2 mb-2">
+        <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-2 mb-1">
           {product.description}
         </h3>
+
+        {/* avaliação da loja */}
+        {storeRating && storeRating.total > 0 && (
+          <div className="flex items-center gap-1 mb-2">
+            <Stars value={storeRating.media} size={12} />
+            <span className="text-[10px] text-gray-400">{Number(storeRating.media).toFixed(1)} ({storeRating.total})</span>
+          </div>
+        )}
 
         <div className="mb-2 sm:mb-4">
           <div className="flex items-center justify-between mb-0.5">
@@ -461,6 +470,8 @@ export default memo(CatalogProductCard, (prevProps, nextProps) => {
   return (
     prevProps.product.id === nextProps.product.id &&
     prevProps.currentUser?.id === nextProps.currentUser?.id &&
-    prevProps.licenseePhone === nextProps.licenseePhone
+    prevProps.licenseePhone === nextProps.licenseePhone &&
+    prevProps.storeRating?.media === nextProps.storeRating?.media &&
+    prevProps.storeRating?.total === nextProps.storeRating?.total
   );
 });
