@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { supabase } from '@/api/supabaseClient';
 import RotatingBanner from '@/components/banner/RotatingBanner';
+import { RatingBadge } from './StarRating';
 import {
   Search, ShoppingCart, Store, Smartphone, Instagram, MessageCircle, Music2,
   HelpCircle, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt
@@ -39,6 +41,24 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
     read();
     window.addEventListener('cartUpdated', read);
     return () => window.removeEventListener('cartUpdated', read);
+  }, []);
+
+  // avaliação da loja (resolve o lojista pelo ref e busca a média)
+  const [rating, setRating] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const urlRef = new URLSearchParams(window.location.search).get('ref');
+        const ref = urlRef || sessionStorage.getItem('referralCode');
+        if (!ref) return;
+        const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
+        if (!u?.id) return;
+        const { data } = await supabase.rpc('avaliacao_loja', { _seller: u.id });
+        if (alive && data) setRating(data);
+      } catch (_) { /* sem avaliação */ }
+    })();
+    return () => { alive = false; };
   }, []);
 
   const doSearch = () => setSearchTerm?.(q);
@@ -112,11 +132,14 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
                 <Search className="w-5 h-5" />
               </button>
             </div>
-            {/* buscas em alta */}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[12px] text-green-50/90">
+            {/* buscas em alta + avaliação da loja */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[12px] text-green-50/90">
               {trending.map((c) => (
                 <button key={c.id} onClick={() => onSelectCategory?.(c.id)} className="hover:underline">{c.name}</button>
               ))}
+              {rating && (
+                <span className="ml-auto bg-black/15 rounded-full px-2.5 py-0.5"><RatingBadge media={rating.media} total={rating.total} size={13} /></span>
+              )}
             </div>
           </div>
           <button onClick={() => navigate(createPageUrl('Cart'))} className="relative shrink-0 text-white p-2">

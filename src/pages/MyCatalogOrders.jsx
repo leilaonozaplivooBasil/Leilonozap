@@ -3,10 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, Package, Truck, CheckCircle, Eye, ArrowLeft, Clock, Filter, Trash2 } from 'lucide-react';
+import { Loader2, ShoppingBag, Package, Truck, CheckCircle, Eye, ArrowLeft, Clock, Filter, Trash2, Star } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import { Stars } from '@/components/loja/StarRating';
+import AvaliarLojistaModal from '@/components/loja/AvaliarLojistaModal';
+import { supabase } from '@/api/supabaseClient';
 
 const CatalogSale = base44.entities.CatalogSale;
 
@@ -19,9 +22,12 @@ const statusConfig = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 };
 
-const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick }) => {
+const RATEABLE = ['paid', 'preparando', 'saiu_entrega', 'entregue'];
+const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick, onRateClick }) => {
   const config = statusConfig[order.status] || statusConfig.pending_payment;
   const mainImage = order.product_image || "https://via.placeholder.com/150";
+  const podeAvaliar = RATEABLE.includes(order.status) && order.seller_id;
+  const jaAvaliou = order.minha_avaliacao;
 
   return (
     <div className="group cursor-pointer">
@@ -85,6 +91,26 @@ const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick }) => {
           Acompanhar Pedido
         </button>
 
+        {/* AVALIAR O VENDEDOR (estrelas) */}
+        {podeAvaliar && (
+          jaAvaliou ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRateClick(order); }}
+              className="mx-4 mb-4 py-2 px-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              <Stars value={jaAvaliou.stars} size={15} />
+              <span className="text-yellow-300 text-xs font-semibold">Você avaliou · editar</span>
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRateClick(order); }}
+              className="mx-4 mb-4 py-2 px-3 rounded-lg border border-yellow-500/40 bg-gradient-to-r from-yellow-500/15 to-amber-500/10 hover:from-yellow-500/25 text-yellow-300 font-semibold text-xs transition-all flex items-center justify-center gap-1.5"
+            >
+              <Star className="w-4 h-4" fill="#facc15" /> Avaliar vendedor
+            </button>
+          )
+        )}
+
         {/* EXCLUIR — pendentes e cancelados */}
         {(order.status === 'pending_payment' || order.status === 'canceled') && (
           <button
@@ -143,7 +169,14 @@ export default function MyCatalogOrders() {
     // resolve com {ok:false} sem lançar erro — por isso o fallback antigo nunca rodava).
     try {
       const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
-      return Array.isArray(directResult) ? directResult : [];
+      const list = Array.isArray(directResult) ? directResult : [];
+      // anexa as avaliações que o cliente já deu (pra mostrar "Você avaliou")
+      try {
+        const { data: ratings } = await supabase.from('seller_ratings').select('sale_id,stars,comment').eq('buyer_id', userId);
+        const byS = {}; (ratings || []).forEach((r) => { if (r.sale_id) byS[r.sale_id] = r; });
+        list.forEach((o) => { o.minha_avaliacao = byS[o.id] || null; });
+      } catch (_) { /* sem avaliação ainda */ }
+      return list;
     } catch (e) {
       console.error('fetchOrders falhou:', e.message);
       return [];
@@ -214,6 +247,7 @@ export default function MyCatalogOrders() {
   }, []);
 
   const [cancelingId, setCancelingId] = useState(null);
+  const [ratingOrder, setRatingOrder] = useState(null);
 
   const handleDeleteOrder = async (order) => {
     if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
@@ -372,6 +406,7 @@ export default function MyCatalogOrders() {
                     order={order}
                     onTrackClick={handleTrackClick}
                     onDeleteClick={handleDeleteOrder}
+                    onRateClick={setRatingOrder}
                   />
                 ))}
               </div>
@@ -379,6 +414,19 @@ export default function MyCatalogOrders() {
           </>
         )}
       </div>
+
+      {ratingOrder && (
+        <AvaliarLojistaModal
+          order={ratingOrder}
+          buyer={currentUser}
+          onClose={() => setRatingOrder(null)}
+          onDone={({ saleId, stars, comment }) => {
+            setOrders(prev => prev.map(o => o.id === saleId ? { ...o, minha_avaliacao: { stars, comment } } : o));
+            setRatingOrder(null);
+            toast.success('⭐ Avaliação enviada! Obrigado.');
+          }}
+        />
+      )}
     </div>
   );
 }
