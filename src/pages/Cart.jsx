@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { money } from '@/lib/format';
+import { supabase } from '@/api/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,9 @@ export default function Cart() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
   const [coupon, setCoupon] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, desconto }
+  const [couponMsg, setCouponMsg] = useState('');
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [observation, setObservation] = useState('');
   const [paymentType, setPaymentType] = useState('PIX');
   const [pixData, setPixData] = useState(null);
@@ -246,6 +250,40 @@ export default function Cart() {
     }, 0);
   };
 
+  // total já com o desconto do cupom aplicado
+  const descontoCupom = appliedCoupon?.desconto || 0;
+  const calcularTotalFinal = () => Math.max(0, calculateSubtotal() - descontoCupom);
+
+  const aplicarCupom = async () => {
+    const code = (coupon || '').trim();
+    if (!code) { setCouponMsg('Digite um cupom.'); return; }
+    setApplyingCoupon(true); setCouponMsg('');
+    try {
+      // resolve o lojista (pra cupom específico de loja); null = cupom global
+      let sellerId = null;
+      const ref = sessionStorage.getItem('referralCode');
+      if (ref) {
+        const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
+        sellerId = u?.id || null;
+      }
+      const { data } = await supabase.rpc('aplicar_cupom', { _code: code, _subtotal: calculateSubtotal(), _seller: sellerId });
+      if (data?.valido) {
+        setAppliedCoupon({ code: data.code, desconto: Number(data.desconto) || 0 });
+        setCouponMsg('');
+        toast.success(`🎉 Cupom ${data.code} aplicado! -${money(data.desconto)}`);
+      } else {
+        setAppliedCoupon(null);
+        setCouponMsg(data?.motivo || 'Cupom inválido');
+      }
+    } catch (e) {
+      setCouponMsg('Não foi possível validar agora.');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const removerCupom = () => { setAppliedCoupon(null); setCoupon(''); setCouponMsg(''); };
+
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
@@ -328,8 +366,9 @@ export default function Cart() {
 
     // Cartão é coletado na página segura da Stripe — sem validação de cartão inline.
 
-    const totalAmount = calculateSubtotal();
-    if (totalAmount < 5) { toast.error('Valor mínimo para pagamento: R$ 5,00'); return; }
+    const totalAmount = calcularTotalFinal();
+    // PIX/cartão têm mínimo de R$5; saldo (redenção de comissão) não
+    if (paymentType !== 'SALDO' && totalAmount < 5) { toast.error('Valor mínimo para pagamento: R$ 5,00'); return; }
 
     // ✅ Todas validações passaram — agora bloqueia o botão
     setIsProcessing(true);
@@ -399,6 +438,7 @@ export default function Cart() {
           buyer_cep: formData.cep.replace(/\D/g, ''),
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
           ref_code: sessionStorage.getItem('referralCode') || '',
+          coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
         if (!pay?.success) {
@@ -426,6 +466,7 @@ export default function Cart() {
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
           ref_code: sessionStorage.getItem('referralCode') || '',
+          coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
@@ -441,6 +482,7 @@ export default function Cart() {
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
           ref_code: sessionStorage.getItem('referralCode') || '',
+          coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
@@ -894,13 +936,19 @@ export default function Cart() {
                       <span className="text-gray-400">Total de itens ({(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
                       <span className="text-white font-medium">R$ {calculateSubtotal().toFixed(2)}</span>
                     </div>
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-base">
+                        <span className="text-gray-400">Cupom {appliedCoupon.code}</span>
+                        <span className="text-green-400 font-medium">− R$ {Number(appliedCoupon.desconto).toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-base">
                       <span className="text-gray-400">Valor do frete</span>
                       <span className="text-green-400 font-medium">A combinar</span>
                     </div>
                     <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>
-                      <span className="text-green-400">R$ {calculateSubtotal().toFixed(2)}</span>
+                      <span className="text-green-400">R$ {calcularTotalFinal().toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -912,19 +960,31 @@ export default function Cart() {
               {/* Aplicar Cupom */}
               <Card className="bg-gray-800 border-gray-700 p-4">
                 <h3 className="text-white font-medium mb-3">Aplicar cupom</h3>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Cupons em breve..."
-                    disabled={true}
-                    className="bg-gray-700 border-gray-600 text-gray-500 placeholder:text-gray-500 flex-1 h-10 opacity-60 cursor-not-allowed"
-                  />
-                  <Button
-                    disabled={true}
-                    className="bg-gray-700 border-gray-600 text-gray-500 h-10 opacity-60 cursor-not-allowed"
-                  >
-                    Em breve
-                  </Button>
-                </div>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-green-600/15 border border-green-500/40 rounded-lg px-3 py-2.5">
+                    <div>
+                      <p className="text-green-400 font-bold text-sm">🎉 {appliedCoupon.code}</p>
+                      <p className="text-green-300/80 text-xs">−{money(appliedCoupon.desconto)} de desconto</p>
+                    </div>
+                    <button onClick={removerCupom} className="text-gray-400 hover:text-white text-xs underline">remover</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Tem um cupom? Digite aqui"
+                        value={coupon}
+                        onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && aplicarCupom()}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-10 uppercase"
+                      />
+                      <Button onClick={aplicarCupom} disabled={applyingCoupon} className="bg-green-600 hover:bg-green-700 text-white h-10 font-bold">
+                        {applyingCoupon ? '...' : 'Aplicar'}
+                      </Button>
+                    </div>
+                    {couponMsg && <p className="text-red-400 text-xs mt-2">{couponMsg}</p>}
+                  </>
+                )}
               </Card>
 
               {/* Observação */}
@@ -961,9 +1021,9 @@ export default function Cart() {
                 {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
                 {saldo > 0 && (
                   <button type="button" onClick={() => setPaymentType('SALDO')}
-                    className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calculateSubtotal() > saldo ? 'opacity-60' : ''}`}>
+                    className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
                     <p className="text-white font-semibold">👛 Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
-                    <p className="text-gray-400 text-xs">{calculateSubtotal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calculateSubtotal())})` : 'Use suas comissões — aprovação na hora'}</p>
+                    <p className="text-gray-400 text-xs">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use suas comissões — aprovação na hora'}</p>
                   </button>
                 )}
               </Card>

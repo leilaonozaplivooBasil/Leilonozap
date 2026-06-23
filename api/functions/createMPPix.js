@@ -55,6 +55,18 @@ export default async function handler(req, res) {
       if (Array.isArray(b) && b[0]) seller_id = b[0].referred_by_id || null;
     }
 
+    // cupom (desconto validado e calculado no servidor — não confia no cliente)
+    const subtotal = total;
+    let coupon_code = null, discount_amount = 0, coupon_id = null;
+    const couponInput = String(body?.coupon_code || '').trim();
+    if (couponInput) {
+      try {
+        const cr = await (await sb('rpc/aplicar_cupom', { method: 'POST', body: JSON.stringify({ _code: couponInput, _subtotal: subtotal, _seller: seller_id }) })).json();
+        if (cr?.valido) { discount_amount = Number(cr.desconto) || 0; total = round2(Number(cr.total_final) || subtotal); coupon_code = cr.code; coupon_id = cr.coupon_id; }
+      } catch (_) { /* cupom inválido → ignora, cobra cheio */ }
+    }
+    if (total < 5) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 5,00' });
+
     // cria a venda pendente (com entrega/endereço)
     const addr = body?.address || {};
     const saleId = oid();
@@ -63,8 +75,10 @@ export default async function handler(req, res) {
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: total, total_amount: total, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: l.p.price_catalog })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null },
+      coupon_code, discount_amount: discount_amount || null,
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: l.p.price_catalog })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id },
     }) });
+    if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 
     // cria o PIX no Mercado Pago
     const [first, ...rest] = String(buyer.name || 'Cliente').trim().split(/\s+/);

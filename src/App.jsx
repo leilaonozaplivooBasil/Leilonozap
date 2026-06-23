@@ -17,6 +17,7 @@ import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
 import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
 import CatalogOrdersAdmin from '@/pages/CatalogOrdersAdmin';
+import CuponsAdmin from '@/pages/CuponsAdmin';
 import AnaliseLoteEstoque from '@/pages/AnaliseLoteEstoque';
 import EstoqueLotes from '@/pages/EstoqueLotes';
 import Evoluir from '@/pages/Evoluir';
@@ -272,6 +273,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="CatalogOrdersAdmin">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <CatalogOrdersAdmin />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      <Route path="/CuponsAdmin" element={
+        <LayoutWrapper currentPageName="CuponsAdmin">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <CuponsAdmin />
           </RequireRole>
         </LayoutWrapper>
       } />

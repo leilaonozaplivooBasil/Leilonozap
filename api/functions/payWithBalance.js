@@ -51,6 +51,7 @@ export default async function handler(req, res) {
       _buyer_phone: body?.buyer_phone ? String(body.buyer_phone).replace(/\D/g, '') : null,
       _address: body?.buyer_address || null,
       _cep: body?.buyer_cep ? String(body.buyer_cep).replace(/\D/g, '') : null,
+      _coupon: body?.coupon_code ? String(body.coupon_code) : null,
     });
     const out = await r.json();
     const data = Array.isArray(out) ? out[0] : out; // rpc retorna o json direto

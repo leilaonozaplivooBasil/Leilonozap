@@ -654,6 +654,7 @@ export default function Layout({ children, currentPageName }) {
       items: [
         { title: "Gerenciar Loja Virtual", pageName: "CatalogManagement" },
         { title: "🚚 Pedidos", pageName: "CatalogOrdersAdmin" },
+        { title: "🎟️ Cupons", pageName: "CuponsAdmin" },
         { title: "🎨 Banners", pageName: "BannerManagement" },
         { title: "🎨 Material Promocional", pageName: "PromoCreator" },
       ]
