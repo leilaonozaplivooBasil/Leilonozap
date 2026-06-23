@@ -2,8 +2,27 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
+import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
 import { RatingBadge } from './StarRating';
+
+const WHATSAPP = '5521984072064';
+const SOCIAL = {
+  instagram: 'https://instagram.com/leilaonozap',
+  tiktok: 'https://tiktok.com/@leilaonozap',
+  whatsapp: `https://wa.me/${WHATSAPP}`,
+};
+
+async function mostrarCupons() {
+  try {
+    const { data } = await supabase.from('coupons').select('code,tipo,valor,min_order').eq('active', true).is('seller_id', null).order('created_at', { ascending: false }).limit(3);
+    if (!data || !data.length) { toast('Nenhum cupom ativo no momento.'); return; }
+    const c = data[0];
+    const off = c.tipo === 'percent' ? `${c.valor}% OFF` : `R$ ${Number(c.valor).toFixed(2)} OFF`;
+    const min = Number(c.min_order) > 0 ? ` (mín. R$ ${Number(c.min_order).toFixed(2)})` : '';
+    toast.success(`🎟️ Cupom ${c.code}: ${off}${min} — use no carrinho!`, { duration: 6000 });
+  } catch (_) { toast('Confira os cupons no carrinho.'); }
+}
 import {
   Search, ShoppingCart, Store, Smartphone, Instagram, MessageCircle, Music2,
   HelpCircle, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt
@@ -68,9 +87,9 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
   const railFixed = [
     { icon: ScanSearch, label: 'Comparai', accent: 'gold', onClick: () => window.dispatchEvent(new Event('openComparai')) },
     { icon: Gavel, label: 'Leilões ao vivo', onClick: () => navigate(createPageUrl('Home')) },
-    { icon: Ticket, label: 'Cupons', accent: 'gold', onClick: () => {} },
-    { icon: Truck, label: 'Frete Grátis', onClick: () => {} },
-    { icon: BadgeCheck, label: 'Lojas Oficiais', onClick: () => {} },
+    { icon: Ticket, label: 'Cupons', accent: 'gold', onClick: mostrarCupons },
+    { icon: Truck, label: 'Frete Grátis', onClick: () => toast('🚚 Frete combinado direto no WhatsApp da loja.') },
+    { icon: BadgeCheck, label: 'Lojas Oficiais', onClick: () => navigate(createPageUrl('Catalog')) },
   ];
   const catIconByName = (name) => {
     const n = (name || '').toLowerCase();
@@ -99,9 +118,9 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
             <span className="flex items-center gap-1"><Smartphone className="w-3.5 h-3.5" /> Baixe o App</span>
             <span className="opacity-40">|</span>
             <span className="flex items-center gap-1.5">Siga-nos
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:opacity-80"><Instagram className="w-4 h-4" /></a>
-              <a href="https://wa.me/5521984072064" target="_blank" rel="noreferrer" className="hover:opacity-80"><MessageCircle className="w-4 h-4" /></a>
-              <a href="https://tiktok.com" target="_blank" rel="noreferrer" className="hover:opacity-80"><Music2 className="w-4 h-4" /></a>
+              <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="hover:opacity-80" title="Instagram"><Instagram className="w-4 h-4" /></a>
+              <a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="hover:opacity-80" title="WhatsApp"><MessageCircle className="w-4 h-4" /></a>
+              <a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="hover:opacity-80" title="TikTok"><Music2 className="w-4 h-4" /></a>
             </span>
           </div>
           <div className="flex items-center gap-4 ml-auto">

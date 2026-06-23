@@ -20,6 +20,11 @@ const statusConfig = {
   shipped: { text: "Enviado", icon: Truck, color: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
   delivered: { text: "Entregue", icon: Package, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
+  // status reais (em português) dos pedidos da loja
+  preparando: { text: "Preparando", icon: Package, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  saiu_entrega: { text: "Saiu para entrega", icon: Truck, color: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
+  entregue: { text: "Entregue", icon: CheckCircle, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  cancelado: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 };
 
 const RATEABLE = ['paid', 'preparando', 'saiu_entrega', 'entregue'];

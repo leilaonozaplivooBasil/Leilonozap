@@ -40,6 +40,9 @@ export default function Cart() {
   const [couponMsg, setCouponMsg] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [observation, setObservation] = useState('');
+  const [freteOpcoes, setFreteOpcoes] = useState(null); // null=não calculado, []=sem opções
+  const [freteMsg, setFreteMsg] = useState('');
+  const [calculandoFrete, setCalculandoFrete] = useState(false);
   const [paymentType, setPaymentType] = useState('PIX');
   const [pixData, setPixData] = useState(null);
   // Estados de cartão mantidos para compatibilidade com backend (não usados na UI)
@@ -283,6 +286,29 @@ export default function Cart() {
   };
 
   const removerCupom = () => { setAppliedCoupon(null); setCoupon(''); setCouponMsg(''); };
+
+  const calcularFrete = async () => {
+    const cep = (formData.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) { setFreteMsg('Preencha o CEP pra calcular.'); return; }
+    setCalculandoFrete(true); setFreteMsg('');
+    try {
+      const r = await base44.functions.invoke('calcularFrete', {
+        cep,
+        items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
+      });
+      if (r?.success && r?.configured && Array.isArray(r.opcoes)) {
+        setFreteOpcoes(r.opcoes);
+        if (!r.opcoes.length) setFreteMsg('Sem opções de frete pra esse CEP.');
+      } else {
+        setFreteOpcoes([]);
+        setFreteMsg(r?.message || 'Frete combinado no WhatsApp da loja.');
+      }
+    } catch (e) {
+      setFreteMsg('Não foi possível calcular agora.');
+    } finally {
+      setCalculandoFrete(false);
+    }
+  };
 
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
@@ -942,10 +968,24 @@ export default function Cart() {
                         <span className="text-green-400 font-medium">− R$ {Number(appliedCoupon.desconto).toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-base">
+                    <div className="flex justify-between items-center text-base">
                       <span className="text-gray-400">Valor do frete</span>
-                      <span className="text-green-400 font-medium">A combinar</span>
+                      {freteOpcoes && freteOpcoes.length > 0 ? (
+                        <span className="text-green-400 font-medium">a partir de R$ {Math.min(...freteOpcoes.map(o => o.preco)).toFixed(2)}</span>
+                      ) : (
+                        <button onClick={calcularFrete} disabled={calculandoFrete} className="text-green-400 font-medium text-sm underline hover:text-green-300 disabled:opacity-60">
+                          {calculandoFrete ? 'calculando…' : 'Calcular frete'}
+                        </button>
+                      )}
                     </div>
+                    {freteMsg && <p className="text-gray-500 text-xs -mt-1">{freteMsg}</p>}
+                    {freteOpcoes && freteOpcoes.length > 0 && (
+                      <div className="text-xs text-gray-400 space-y-0.5 -mt-1">
+                        {freteOpcoes.slice(0, 3).map((o) => (
+                          <div key={o.id} className="flex justify-between"><span>{o.nome}{o.prazo ? ` · ${o.prazo} dias` : ''}</span><span className="text-green-400">R$ {o.preco.toFixed(2)}</span></div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>
                       <span className="text-green-400">R$ {calcularTotalFinal().toFixed(2)}</span>
