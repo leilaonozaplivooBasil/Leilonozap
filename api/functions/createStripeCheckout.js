@@ -45,6 +45,7 @@ export default async function handler(req, res) {
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: total, total_amount: total, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
+      kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'card_stripe', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
     }) });
 

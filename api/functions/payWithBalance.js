@@ -1,7 +1,7 @@
 // payWithBalance — compra paga com o saldo de comissão (commission_balance) do próprio usuário.
 // Para vendedores/lojistas redimirem comissão em produtos da plataforma.
 // Toda a validação (preço, estoque, saldo) e a baixa acontecem ATÔMICAS na função SQL comprar_com_saldo.
-import { payCommissions } from '../_lib/payCommissions.js';
+import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -60,16 +60,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: data?.error || 'Não foi possível concluir', saldo: data?.saldo, total: data?.total });
     }
 
-    // distribui a comissão pela cadeia do comprador (igual a uma venda PIX paga) e grava o total
+    // conclui como venda de loja: comissão pro DONO da loja (modelo marketplace) + fulfillment.
+    // Mesma rota de uma venda PIX paga (kind='loja' → fulfillStoreOrder no webhook).
     let commission = 0;
     try {
       const saleArr = await (await sb(`catalog_sales?select=*&id=eq.${encodeURIComponent(data.sale_id)}&limit=1`)).json();
       const sale = Array.isArray(saleArr) ? saleArr[0] : null;
       if (sale && !Number(sale.commission_total)) {
-        commission = await payCommissions(sale);
-        await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
+        const r = await fulfillStoreOrder(sale);
+        commission = r?.commission || 0;
       }
-    } catch (e) { /* venda já concluída; comissão pode ser reprocessada */ }
+    } catch (e) { console.error('fulfillStoreOrder (saldo) falhou:', e?.message || e); }
 
     return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, novo_saldo: data.novo_saldo, tracking: data.tracking, commission });
   } catch (e) {
