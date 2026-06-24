@@ -44,7 +44,8 @@ async function payStoreCommissions(sale) {
         sale_id: sale.id, beneficiary_id: earner.id, beneficiary_name: earner.full_name, beneficiary_level: earner.primary_career_level,
         role_in_sale: i === 0 ? 'venda_loja' : 'override', pct, amount,
       }) });
-      await sb(`app_users?id=eq.${earner.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: round2((Number(earner.commission_balance) || 0) + amount) }) });
+      // crédito ATÔMICO (commission_balance += amount no banco) — evita lost-update sob concorrência
+      await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: earner.id, _amount: amount }) });
       running += amount; total += amount;
     }
   }
