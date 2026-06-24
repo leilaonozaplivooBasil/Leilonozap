@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, DollarSign, TrendingUp, RotateCw, AlertTriangle } from "lucide-react";
+import { Loader2, RotateCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import SellerStatsCards from "../components/sellers/SellerStatsCards";
 import SellerSalesTable from "../components/sellers/SellerSalesTable";

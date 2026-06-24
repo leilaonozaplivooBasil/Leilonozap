@@ -5,8 +5,8 @@ import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Package, Loader2, Search, Plus, Minus, Trash2, Check, X,
-  Box, ShoppingBag, RefreshCw, PackagePlus
+  ArrowLeft, Package, Loader2, Search, Plus, Minus, Trash2, Check,
+  Box, RefreshCw, PackagePlus
 } from 'lucide-react';
 
 
@@ -30,7 +30,7 @@ export default function MeuEstoque() {
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
     load(u, '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const load = async (u = user, q = term) => {
@@ -42,7 +42,7 @@ export default function MeuEstoque() {
     setLoading(false);
   };
 
-  useEffect(() => { if (user) { const t = setTimeout(() => load(user, term), 350); return () => clearTimeout(t); } }, [term]); // eslint-disable-line
+  useEffect(() => { if (user) { const t = setTimeout(() => load(user, term), 350); return () => clearTimeout(t); } }, [term]);  
 
   const setQty = async (it, qty) => {
     qty = Math.max(0, qty);

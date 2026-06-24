@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 // import { User } from "@/entities/User"; // Removed as per instructions (no login flow)
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, ArrowRight } from "lucide-react";
@@ -112,7 +111,7 @@ export default function LandingPage() {
             src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
             alt="Leilão NoZap"
             className="h-12 w-auto"
-            fetchpriority="high"
+            fetchPriority="high"
             decoding="async"
             width={192}
             height={48}

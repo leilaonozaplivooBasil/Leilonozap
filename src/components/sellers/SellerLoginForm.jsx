@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import bcrypt from 'bcryptjs';
 import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 
 export default function SellerLoginForm({ onSuccess }) {

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Zap, Users, TrendingUp, Shield, Play, RefreshCw, Activity,
-  ArrowUpCircle, ArrowDownCircle, AlertTriangle, CheckCircle2, HelpCircle
+  ArrowUpCircle, ArrowDownCircle, CheckCircle2, HelpCircle
 } from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger

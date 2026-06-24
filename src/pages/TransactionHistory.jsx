@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Receipt, Search, DollarSign, Clock, CheckCircle, CreditCard, QrCode, RefreshCw } from "lucide-react";
+import { Receipt, Search, DollarSign, Clock, CheckCircle, CreditCard, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 

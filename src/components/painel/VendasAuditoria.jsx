@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { money } from '@/lib/format';
 import { supabase } from '@/api/supabaseClient';
 import {
-  Search, Loader2, ChevronDown, ChevronRight, Package, User as UserIcon, Calendar,
-  Filter, Truck, Store, X, MapPin, Receipt, Tag, Network,
+  Search, Loader2, ChevronDown, ChevronRight, Package, User as UserIcon,
+  Filter, Truck, Store, X, Receipt, Tag, Network,
 } from 'lucide-react';
 
 const dt = (s) => (s ? new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');

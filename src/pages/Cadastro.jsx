@@ -62,7 +62,7 @@ export default function Cadastro() {
       } catch (e) { console.error(e); }
       setLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [cargo, refCode]);
 
   const adesao = Number(level?.adesao_valor) || 0;

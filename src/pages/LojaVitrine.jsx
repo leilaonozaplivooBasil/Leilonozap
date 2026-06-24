@@ -52,7 +52,7 @@ export default function LojaVitrine() {
     if (data === undefined) return;
     setSearching(true);
     load(debouncedQ).finally(() => setSearching(false));
-    // eslint-disable-next-line
+     
   }, [debouncedQ]);
 
   // confirmação de pagamento via cartão (volta da Stripe)

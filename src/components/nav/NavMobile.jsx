@@ -73,21 +73,21 @@ export default function NavMobile({
   onLoginClick,
   onLogout,
   // props legadas — mantidas para compatibilidade
-  // eslint-disable-next-line no-unused-vars
+   
   finalMenuItems,
-  // eslint-disable-next-line no-unused-vars
+   
   isLoggedIn,
-  // eslint-disable-next-line no-unused-vars
+   
   isAdmin,
-  // eslint-disable-next-line no-unused-vars
+   
   isInvestidor,
-  // eslint-disable-next-line no-unused-vars
+   
   isLeiloeiro,
-  // eslint-disable-next-line no-unused-vars
+   
   isCatalogPage,
-  // eslint-disable-next-line no-unused-vars
+   
   adminMenuItems,
-  // eslint-disable-next-line no-unused-vars
+   
   onShareClick,
 }) {
   const navigate = useNavigate();

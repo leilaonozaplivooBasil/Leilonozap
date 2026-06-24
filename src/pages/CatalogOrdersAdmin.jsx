@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { getCatalogOrders } from '@/functions/getCatalogOrders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +16,11 @@ const STATUS_CONFIG = {
   shipped: { label: 'Enviado', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: Truck },
   delivered: { label: 'Entregue', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
   canceled: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
+  // status reais em português (gravados pelo painel do vendedor / updateOrderStatus)
+  preparando: { label: 'Preparando', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Package },
+  saiu_entrega: { label: 'Saiu para entrega', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: Truck },
+  entregue: { label: 'Entregue', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
+  cancelado: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
 };
 
 export default function CatalogOrdersAdmin() {
@@ -70,9 +74,9 @@ export default function CatalogOrdersAdmin() {
 
   const stats = useMemo(() => ({
     total: orders.length,
-    paid: orders.filter(o => o.status === 'paid').length,
-    shipped: orders.filter(o => o.status === 'shipped').length,
-    delivered: orders.filter(o => o.status === 'delivered').length,
+    paid: orders.filter(o => o.status === 'paid' || o.status === 'preparando').length,
+    shipped: orders.filter(o => o.status === 'shipped' || o.status === 'saiu_entrega').length,
+    delivered: orders.filter(o => o.status === 'delivered' || o.status === 'entregue').length,
     pending: orders.filter(o => o.status === 'pending_payment').length,
   }), [orders]);
 

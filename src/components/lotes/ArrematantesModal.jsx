@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Search, ArrowLeft, Pencil, Mail, CheckCircle2, AlertCircle, Loader2, ChevronRight, KeyRound } from 'lucide-react';
+import { X, UserPlus, Search, ArrowLeft, Pencil, Mail, CheckCircle2, Loader2, ChevronRight, KeyRound } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 

@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   ChevronDown, ChevronUp, FileImage, Edit, Trash2, ArrowRight,
-  Package, Calendar, DollarSign, Hash, Layers, Eye, Pencil, Check
+  Package, Calendar, DollarSign, Hash, Layers, Pencil, Check
 } from 'lucide-react';
 
 const MARKETPLACE_ICONS = {

@@ -87,6 +87,31 @@ export default function CatalogOrderTracking() {
         color: 'bg-red-500',
         icon: Clock,
         description: 'Este pedido foi cancelado'
+      },
+      // status reais em português (gravados pelo painel do vendedor)
+      preparando: {
+        label: 'Preparando',
+        color: 'bg-blue-500',
+        icon: Package,
+        description: 'Seu pedido está sendo preparado para envio'
+      },
+      saiu_entrega: {
+        label: 'Saiu para entrega',
+        color: 'bg-indigo-500',
+        icon: TruckIcon,
+        description: 'Seu pedido está a caminho'
+      },
+      entregue: {
+        label: 'Entregue',
+        color: 'bg-green-600',
+        icon: Package,
+        description: 'Pedido entregue com sucesso!'
+      },
+      cancelado: {
+        label: 'Cancelado',
+        color: 'bg-red-500',
+        icon: Clock,
+        description: 'Este pedido foi cancelado'
       }
     };
     return statuses[status] || statuses.pending_payment;
@@ -116,9 +141,9 @@ export default function CatalogOrderTracking() {
   const StatusIcon = statusInfo.icon;
 
   // Verifica se passou por cada etapa
-  const isPaid = status === 'paid' || status === 'processing' || status === 'shipped' || status === 'delivered';
-  const isShipped = status === 'shipped' || status === 'delivered';
-  const isDelivered = status === 'delivered';
+  const isPaid = ['paid', 'processing', 'shipped', 'delivered', 'preparando', 'saiu_entrega', 'entregue'].includes(status);
+  const isShipped = ['shipped', 'delivered', 'saiu_entrega', 'entregue'].includes(status);
+  const isDelivered = ['delivered', 'entregue'].includes(status);
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">

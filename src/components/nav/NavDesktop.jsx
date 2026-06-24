@@ -29,22 +29,22 @@ export default function NavDesktop({
   onLogout,
   // props legadas — mantidas no signature para compatibilidade com Layout.jsx
   // (não são mais usadas, mas evita warning de prop desconhecida)
-  // eslint-disable-next-line no-unused-vars
+   
   finalMenuItems,
-  // eslint-disable-next-line no-unused-vars
+   
   isLoggedIn,
-  // eslint-disable-next-line no-unused-vars
+   
   isAdmin,
-  // eslint-disable-next-line no-unused-vars
+   
   isInvestidor,
-  // eslint-disable-next-line no-unused-vars
+   
   isLeiloeiro,
-  // eslint-disable-next-line no-unused-vars
+   
   isCatalogPage,
   adminMenuItems,
-  // eslint-disable-next-line no-unused-vars
+   
   onShareClick,
-  // eslint-disable-next-line no-unused-vars
+   
   navigate,
 }) {
   // Links públicos — universais

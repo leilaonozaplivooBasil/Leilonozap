@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 const AppUser = base44.entities.AppUser;
 const SendEmail = (params) => base44.integrations.Core.SendEmail(params);
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Eye, EyeOff, Mail, Key, Loader2, Pencil, Save, X, User, Shield, ChevronRight, ChevronDown, Users } from 'lucide-react';

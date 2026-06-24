@@ -3,7 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ArrowUp, Check, Lock, X, Loader2, TrendingUp, Package, Users, Crown } from 'lucide-react';
+import { ArrowUp, Check, X, Loader2, TrendingUp, Package, Users, Crown } from 'lucide-react';
 
 // descrição de conversão por nível pago
 const PITCH = {

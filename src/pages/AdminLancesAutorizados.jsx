@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
 import { adminDataProxy } from '@/functions/adminDataProxy';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Download, Filter, AlertCircle } from 'lucide-react';
+import { Eye, Download, Filter } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 export default function AdminLancesAutorizados() {

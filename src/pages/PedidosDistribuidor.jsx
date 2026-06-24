@@ -37,7 +37,7 @@ export default function PedidosDistribuidor() {
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
     reload(u);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const reload = async (u = user) => {

@@ -3,8 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
     Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users,
-    DollarSign, Gavel, ArrowLeft, Trash2, Copy, ChevronDown, ChevronUp,
-    TrendingUp, Calendar, Filter, ArrowUpDown, Pencil
+    DollarSign, Gavel, ArrowLeft, Trash2, Copy,
+    TrendingUp, Calendar, ArrowUpDown, Pencil
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';

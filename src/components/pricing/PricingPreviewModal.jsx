@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Check, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
+import { X, Check, Loader2, TrendingUp } from 'lucide-react';
 
 export default function PricingPreviewModal({ isOpen, onClose, products, onConfirm, isLoading }) {
   const [selectedProducts, setSelectedProducts] = useState([]);

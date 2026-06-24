@@ -22,7 +22,7 @@ export default function GestaoMetas() {
     setUser(u);
     if (u && !['admin', 'super_admin'].includes(u.role)) { navigate('/painel'); return; }
     loadMetas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const loadMetas = async () => {

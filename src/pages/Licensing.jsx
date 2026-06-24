@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, DollarSign, Zap, Loader2, Search, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, X, Wallet, Clock, Package, GripVertical } from 'lucide-react';
+import { Copy, Users, BarChart, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, Package, GripVertical } from 'lucide-react';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -35,13 +35,11 @@ import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CommissionsTab from '../components/licensing/CommissionsTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
 import WithdrawalModal from '../components/licensing/WithdrawalModal';
-import WithdrawalsHistoryTab from '../components/licensing/WithdrawalsHistoryTab';
 import MyClientsTab from '../components/licensing/MyClientsTab';
 import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';

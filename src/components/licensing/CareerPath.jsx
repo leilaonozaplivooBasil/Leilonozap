@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, BookOpen, Briefcase, Star, ArrowUp, Users, Crown, Gem, Trophy, Megaphone, Store, MapPin, Building2 } from 'lucide-react';
+import { Award, Briefcase, ArrowUp, Users, Gem, Megaphone, Store, MapPin, Building2 } from 'lucide-react';
 import { cn } from "@/lib/utils"
 
 // Comissão de VENDA DIRETA por cargo (plano de carreira atual — bloco rede).

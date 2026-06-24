@@ -6,7 +6,7 @@ const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Filter, Package, Flame, MessageCircle, SlidersHorizontal } from "lucide-react";
+import { Filter, MessageCircle, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
-import RotatingBanner from '../components/banner/RotatingBanner';
 import { supabase } from '@/api/supabaseClient';
 import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';

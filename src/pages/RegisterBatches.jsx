@@ -4,14 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, Loader2, FileText, Package, CheckCircle, X, 
-  Edit, Trash2, Save, Plus, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, FileImage,
-  Calendar, DollarSign
+import { Loader2, Package, CheckCircle, X, Trash2, Save, Plus, ArrowLeft,
+  Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
+import { brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
 import BatchCard from '@/components/batches/BatchCard';
 import BatchLoteDetail from '@/components/batches/BatchLoteDetail';
 import LoteAnalysisView from '@/components/lotes/LoteAnalysisView';

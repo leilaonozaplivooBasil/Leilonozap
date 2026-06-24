@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import {
-  MessageCircle, Bot, Power, Loader2, Send, Search, QrCode, RefreshCw, BrainCircuit, User as UserIcon
+import { Bot, Power, Loader2, Send, Search, QrCode, RefreshCw, BrainCircuit, User as UserIcon
 } from 'lucide-react';
 
 // Inbox WhatsApp estilo Dra. Isabela: QR + conversas + ligar/desligar IA (global e por conversa) + treinar.
@@ -29,13 +28,13 @@ export default function WhatsAppInbox({ user }) {
   const loadConvs = async () => { const r = await call('listConvs'); setConvs(r?.conversas || []); };
   const loadMsgs = async (chat) => { const r = await call('listMsgs', { chat }); setMsgs(r?.mensagens || []); setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 50); };
 
-  useEffect(() => { if (user?.id) { loadCfg(); loadConvs(); } /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { if (user?.id) { loadCfg(); loadConvs(); }   }, [user]);
   // polling leve quando conectado
   useEffect(() => {
     if (!cfg?.connected) return;
     const t = setInterval(() => { loadConvs(); if (active) loadMsgs(active.chat_id); }, 8000);
     return () => clearInterval(t);
-    // eslint-disable-next-line
+     
   }, [cfg?.connected, active]);
 
   const openConv = (c) => { setActive(c); loadMsgs(c.chat_id); };

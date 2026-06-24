@@ -9,7 +9,6 @@ import LoginModal from "@/components/common/LoginModal";
 
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
-import AdminPanelMenu from "@/components/nav/AdminPanelMenu";
 import NavDesktop from "@/components/nav/NavDesktop";
 import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
@@ -17,7 +16,6 @@ import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPo
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import DevLogoutButton from "@/components/dev/DevLogoutButton";
-import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import RoleSidebar from "@/components/layout/RoleSidebar";
@@ -25,15 +23,9 @@ import PanelSwitcherCard from "@/components/portal/PanelSwitcherCard";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
-import { Menu, Share2, LogOut, Settings, MessageCircle, User as UserIcon, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Menu, MessageCircle, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
+
+
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -914,7 +906,7 @@ export default function Layout({ children, currentPageName }) {
                   alt="Leilão NoZap"
                   className="h-10 w-auto cursor-pointer hover:scale-105 transition-transform"
                   onClick={() => navigate(createPageUrl(isCatalogPage ? "Catalog" : "Home"))}
-                  fetchpriority="high"
+                  fetchPriority="high"
                   decoding="async"
                   width={160}
                   height={40}

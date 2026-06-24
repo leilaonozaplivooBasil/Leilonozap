@@ -7,7 +7,7 @@ export default function VendedoresDoDia({ daySales, date, allCommissions = [] })
 
   useEffect(() => {
     loadSellersForDay();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [daySales.length, date, allCommissions.length]);
 
   const loadSellersForDay = async () => {
