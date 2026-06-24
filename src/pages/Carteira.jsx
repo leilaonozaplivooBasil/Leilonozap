@@ -78,19 +78,15 @@ export default function Carteira() {
       <div className="max-w-3xl mx-auto space-y-5">
         <div className="flex items-center gap-2"><Wallet className="w-6 h-6 text-green-400" /><h1 className="text-2xl font-black">Minha Carteira</h1></div>
 
-        {/* Saldo */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Saldo — commission_balance é a fonte de verdade (sacável e usável na loja) */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Disponível</div>
-            <div className="text-2xl font-black text-green-400">{money(w?.saldo_disponivel)}</div>
+            <div className="text-xs text-gray-400">Disponível (sacar / usar na loja)</div>
+            <div className="text-2xl font-black text-green-400">{money(w?.commission_balance)}</div>
           </div>
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Em saque</div>
+            <div className="text-xs text-gray-400">Em saque (aguardando aprovação)</div>
             <div className="text-2xl font-black text-yellow-400">{money(w?.saldo_alocado)}</div>
-          </div>
-          <div className="bg-gray-700/40 border border-gray-600 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Comissões (total)</div>
-            <div className="text-2xl font-black">{money(w?.commission_balance)}</div>
           </div>
         </div>
 
