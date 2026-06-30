@@ -85,4 +85,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* 🛡️ Guarda anti-overflow horizontal no mobile: nenhum elemento largo demais
+     deve permitir scroll lateral nem cortar conteúdo na borda direita. */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
 }
