@@ -198,7 +198,9 @@ export default function Register() {
         }
       }
 
-      const newUser = await AppUser.create({
+      // 🔒 Cadastro via backend service_role (anon não pode inserir em app_users por RLS).
+      const refForBackend = sessionStorage.getItem('referralCode') || sessionStorage.getItem('influencerCode') || '';
+      const reg = await base44.functions.invoke('publicRegister', {
         full_name: fullName.trim(),
         display_first_name: firstName || null,
         display_last_name: lastName || null,
@@ -206,7 +208,6 @@ export default function Register() {
         phone: phoneDigits,
         cpf: cpfDigits,
         password: password,
-        role: 'user',
         address_street: addressStreet,
         address_number: addressNumber,
         address_complement: addressComplement,
@@ -214,8 +215,15 @@ export default function Register() {
         address_city: addressCity,
         address_state: addressState,
         address_zip_code: addressZipCode,
-        referred_by_id: referredById
+        ref_code: refForBackend,
       });
+
+      if (!reg || reg.success !== true || !reg.user) {
+        setErrorMessage('❌ ' + ((reg && reg.error) || 'Erro ao criar conta. Tente novamente.'));
+        setIsRegistering(false);
+        return;
+      }
+      const newUser = reg.user;
 
       localStorage.setItem('currentUser', JSON.stringify(newUser));
       sessionStorage.setItem('isLoggedIn', 'true');
