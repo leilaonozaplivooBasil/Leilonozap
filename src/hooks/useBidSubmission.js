@@ -178,6 +178,7 @@ export default function useBidSubmission({
         setAuction(prev => ({
           ...prev,
           current_price: revalidatePrice,
+          winner_id: revalidateAuction[0].winner_id,
           winner_name: revalidateAuction[0].winner_name
         }));
         return;
@@ -223,6 +224,7 @@ export default function useBidSubmission({
 
       await Auction.update(auctionId, {
         current_price: bidAmount,
+        winner_id: currentUser.id,
         winner_name: currentUser.nickname || currentUser.full_name,
         end_time: newEndTimeISO
       });
@@ -230,6 +232,7 @@ export default function useBidSubmission({
       setAuction(prev => ({
         ...prev,
         current_price: bidAmount,
+        winner_id: currentUser.id,
         winner_name: currentUser.nickname || currentUser.full_name,
         end_time: newEndTimeISO
       }));

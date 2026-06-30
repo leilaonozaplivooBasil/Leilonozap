@@ -92,4 +92,11 @@
     overflow-x: hidden;
     max-width: 100%;
   }
+
+  /* 🩹 Anti-"tremida" ao navegar: reserva sempre o espaço da barra de rolagem
+     vertical, pra o conteúdo centralizado (mx-auto) não pular ~15px de lado
+     entre páginas curtas (sem scroll) e longas (com scroll). */
+  html {
+    scrollbar-gutter: stable;
+  }
 }
