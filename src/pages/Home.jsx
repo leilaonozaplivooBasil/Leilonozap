@@ -217,6 +217,7 @@ export default function Home() {
 
       // mantém todos (inclusive factory) sem filtro pesado
     } else if (activeSourceFilter === "factory") {filtered = filtered.filter((a) => a.product_source === 'factory_new');
+    } else if (activeSourceFilter === "returns") {filtered = filtered.filter((a) => a.product_source === 'return_resale');
     }
 
     // CATEGORIA
@@ -529,7 +530,15 @@ export default function Home() {
 
   // Debug removido para performance
 
-  const activeCount = auctions.filter(a => a.status === 'active').length;
+  // Conta SÓ leilões realmente no ar (active E dentro do prazo) — mesmo critério da listagem,
+  // pra o banner nunca mostrar número que não bate com os lotes exibidos.
+  const activeCount = auctions.filter(a => a.status === 'active' && (!a.end_time || new Date(a.end_time) > new Date())).length;
+
+  // Categorias com pelo menos 1 leilão carregado (todos/ativos sempre aparecem).
+  const visibleCategories = useMemo(() => {
+    const present = new Set((auctions || []).map(a => a?.category).filter(Boolean));
+    return categories.filter(c => c.value === 'todos' || c.value === 'ativos' || present.has(c.value));
+  }, [auctions, categories]);
 
   return (
     <div className="bg-gray-900 text-white min-h-screen relative overflow-hidden">
@@ -674,7 +683,7 @@ export default function Home() {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => {setActiveSourceFilter("factory");setShowFavoritesOnly(false);}}
+                  onClick={() => {setActiveSourceFilter(activeSourceFilter === "factory" ? "todos" : "factory");setShowFavoritesOnly(false);}}
                   className={`w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] text-white`}
                   style={activeSourceFilter === "factory" && !showFavoritesOnly ? {
                     background: 'linear-gradient(135deg, #059669, #065f46)',
@@ -709,9 +718,12 @@ export default function Home() {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}}
+                  onClick={() => {setActiveSourceFilter(activeSourceFilter === "returns" ? "todos" : "returns");setShowFavoritesOnly(false);}}
                   className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm text-white transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.02]"
-                  style={{ background: 'linear-gradient(135deg, #ea580c, #9a3412)', border: '2px solid #f97316', boxShadow: '0 4px 20px rgba(249, 115, 22, 0.3)' }}>
+                  style={activeSourceFilter === "returns" && !showFavoritesOnly ? {
+                    background: 'linear-gradient(135deg, #ea580c, #9a3412)', border: '2px solid #fb923c', boxShadow: '0 4px 24px rgba(249, 115, 22, 0.55)'
+                  } : { background: 'linear-gradient(135deg, #ea580c, #9a3412)', border: '2px solid #f97316', boxShadow: '0 4px 20px rgba(249, 115, 22, 0.3)' }}
+                  aria-label="Arremate & Devoluções">
                   <Percent className="w-4 h-4" />
                   🔥 Arremate & Devoluções
                 </button>
@@ -747,16 +759,15 @@ export default function Home() {
               <RecommendedSection currentUser={currentUser} isAdmin={currentUser?.role === 'admin'} partnerStore="nozap" />
             </Suspense>
 
-            <div ref={scrollerRef} className="mb-8 category-scroller">
-              <div className="category-scroller__inner">
-                {[...categories, ...categories].map((category, index) => {
+            <div ref={scrollerRef} className="mb-8 flex gap-2.5 overflow-x-auto pb-2 cursor-grab [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {visibleCategories.map((category) => {
                 const Icon = category.icon;
                 const isActiveCat = activeCategory === category.value;
                 return (
                   <button
-                    key={`${category.value}-${index}`}
+                    key={category.value}
                     onClick={() => setActiveCategory(category.value)}
-                    className={`flex items-center gap-2.5 whitespace-nowrap text-sm font-medium py-2.5 px-5 rounded-full transition-all duration-300 ${
+                    className={`flex items-center gap-2.5 whitespace-nowrap text-sm font-medium py-2.5 px-5 rounded-full transition-all duration-300 flex-shrink-0 ${
                     isActiveCat
                       ? 'glass-pill-active text-emerald-300'
                       : 'glass-pill text-gray-400 hover:text-gray-200'
@@ -765,7 +776,6 @@ export default function Home() {
                       <span>{category.label}</span>
                     </button>);
               })}
-              </div>
             </div>
 
             {/* Glow separator */}
