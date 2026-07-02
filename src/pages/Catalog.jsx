@@ -6,11 +6,12 @@ const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Filter, Package } from "lucide-react";
+import { Filter, Package, Flame, MessageCircle, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+
+
 import CatalogProductCard from "../components/catalog/CatalogProductCard";
-import CatalogHeaderML from "../components/catalog/CatalogHeaderML";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RotatingBanner from '../components/banner/RotatingBanner';
@@ -20,6 +21,7 @@ const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
 export default function Catalog() {
   const navigate = useNavigate();
+  const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const location = useLocation();
 
@@ -40,6 +42,52 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  useEffect(() => {
+    const slider = scrollerRef.current;
+    if (!slider) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    const mouseDownHandler = (e) => {
+      isDown = true;
+      slider.classList.add('grabbing');
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    };
+
+    const mouseLeaveHandler = () => {
+      isDown = false;
+      slider.classList.remove('grabbing');
+    };
+
+    const mouseUpHandler = () => {
+      isDown = false;
+      slider.classList.remove('grabbing');
+    };
+
+    const mouseMoveHandler = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 2;
+      slider.scrollLeft = scrollLeft - walk;
+    };
+
+    slider.addEventListener('mousedown', mouseDownHandler);
+    slider.addEventListener('mouseleave', mouseLeaveHandler);
+    slider.addEventListener('mouseup', mouseUpHandler);
+    slider.addEventListener('mousemove', mouseMoveHandler);
+
+    return () => {
+      slider.removeEventListener('mousedown', mouseDownHandler);
+      slider.removeEventListener('mouseleave', mouseLeaveHandler);
+      slider.removeEventListener('mouseup', mouseUpHandler);
+      slider.removeEventListener('mousemove', mouseMoveHandler);
+    };
+  }, []);
 
   const filterProducts = React.useCallback(() => {
     if (!Array.isArray(products)) {
@@ -94,18 +142,22 @@ export default function Catalog() {
   const loadLicenseePhone = React.useCallback(async () => {
     try {
       let refCode = sessionStorage.getItem('referralCode');
-
+      
+      // Se não há ref no sessionStorage, tenta pegar da URL diretamente
       if (!refCode) {
         const urlParams = new URLSearchParams(window.location.search);
         refCode = urlParams.get('ref');
         if (refCode) sessionStorage.setItem('referralCode', refCode);
       }
-
+      
+      // Se ainda não há ref, tenta usar o referral_code do próprio usuário logado (se for vendedor/licenciado)
+      // 🔧 PRIORIDADE: Se é vendedor logado, USA SEMPRE SEU CÓDIGO
       if (!refCode) {
         try {
           const savedUser = localStorage.getItem('currentUser');
           if (savedUser) {
             const u = JSON.parse(savedUser);
+            // Se é vendedor E tem referral_code, força usar o dele
             if (u?.is_seller === true && u?.referral_code) {
               refCode = u.referral_code;
               sessionStorage.setItem('referralCode', refCode);
@@ -116,15 +168,17 @@ export default function Catalog() {
           }
         } catch (e) {}
       }
-
+      
       if (!refCode) return;
 
+      // Busca em AppUser
       const licensees = await AppUser.filter({ referral_code: refCode });
       if (licensees && licensees.length > 0) {
         const licensee = licensees[0];
-
+        
+        // Busca foto do Store (vendedor/lojista)
         let photoUrl = licensee.profile_photo_url || licensee.avatar_url;
-
+        
         try {
           const stores = await Store.filter({ email: licensee.email });
           if (stores && stores.length > 0 && stores[0].logo_url) {
@@ -134,17 +188,17 @@ export default function Catalog() {
         } catch (storeError) {
           console.debug('Store não encontrada, usando foto do perfil');
         }
-
+        
         if (licensee.phone) {
           setLicenseePhone(licensee.phone);
         }
-
+        
         setLicenseeData({
           name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
           photo: photoUrl,
           phone: licensee.phone
         });
-
+        
         console.log('✅ Dados do licenciado:', {
           name: licensee.full_name,
           photo: photoUrl,
@@ -161,6 +215,7 @@ export default function Catalog() {
       const savedUserJSON = localStorage.getItem('currentUser');
       let isLoggedIn = sessionStorage.getItem('isLoggedIn');
 
+      // 🛡️ Se localStorage tem usuário mas sessionStorage não (nova aba), restaura
       if (savedUserJSON && !isLoggedIn) {
         sessionStorage.setItem('isLoggedIn', 'true');
         isLoggedIn = 'true';
@@ -191,14 +246,16 @@ export default function Catalog() {
 
             localStorage.setItem('currentUser', JSON.stringify(freshUser));
             sessionStorage.setItem('lastUserValidation', now.toString());
-
+            
+            // 🔧 FORÇA URL para vendedor DENTRO da validação (síncrono)
             if (freshUser?.is_seller === true && freshUser?.referral_code) {
               const sellerCode = freshUser.referral_code;
               const newUrl = `/Loja-Virtual?ref=${sellerCode}`;
               window.history.replaceState(null, '', newUrl);
               console.log(`✅ [VENDEDOR] URL forçada SÍNCRONO para: ${newUrl}`);
               sessionStorage.setItem('referralCode', sellerCode);
-
+              
+              // 🔧 Recarrega dados do licenciado COM O NOVO REF
               setTimeout(async () => {
                 const licensees = await AppUser.filter({ referral_code: sellerCode });
                 if (licensees && licensees.length > 0) {
@@ -219,16 +276,16 @@ export default function Catalog() {
                 }
               }, 0);
             }
-
+            
             setCurrentUser(freshUser);
-
+            
             console.log("✅ Usuário validado no Catalog:", freshUser.full_name, "Role:", freshUser.role);
             return;
           }
         } catch (dbError) {
           console.error("⚠️ Erro ao validar usuário no DB, usando cache:", dbError);
           setCurrentUser(userFromStorage);
-
+          
           if (dbError.message?.includes('Rate limit') && retryCount < 1) {
             const delay = 3000;
             setTimeout(() => loadCurrentUser(retryCount + 1), delay);
@@ -310,7 +367,7 @@ export default function Catalog() {
 
     } catch (error) {
       console.error("❌ Erro:", error);
-
+      
       try {
         await base44.entities.SystemLog.create({
           step: 'FETCH_CATALOG_PRODUCTS',
@@ -351,22 +408,23 @@ export default function Catalog() {
   }, [retryCount]);
 
   useEffect(() => {
-
+    
     const loadInitialData = async () => {
       setIsLoading(true);
 
       const urlParams = new URLSearchParams(window.location.search);
-
+      
       if (urlParams.get('search')) {
         setSearchTerm(urlParams.get('search'));
       }
 
       await loadProducts();
-      await loadCurrentUser();
-      await loadLicenseePhone();
+      await loadCurrentUser(); // 🔧 SETA sessionStorage.referralCode AQUI
+      await loadLicenseePhone(); // 🔧 LÊ sessionStorage COM GARANTIA
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
+      // Carrega categorias
       try {
         const allCategories = await base44.entities.Category.filter({ parent_category_id: null });
         setCategories(allCategories || []);
@@ -442,123 +500,133 @@ export default function Catalog() {
   }, [currentUser]);
 
   return (
-    <div className="bg-[#f5f5f5] text-gray-900 min-h-screen">
+    <div className="bg-gray-900 text-white min-h-screen">
       <PagePerformanceTracker pageName="Catalog" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 lg:space-y-8">
-
-        {/* 🆕 HEADER ML — busca gigante + categorias + ⋮ (substitui o hero verde escuro) */}
-        <CatalogHeaderML
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          licenseeData={licenseeData}
-          currentUser={currentUser}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-        />
-
-        {/* Painel de Filtros Avançados (colapsável) */}
-        {showFilters && (
-          <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-gray-900 font-bold flex items-center gap-2">
-                <Filter className="w-4 h-4 text-emerald-600" />
-                Filtros avançados
-              </h3>
-              <button
-                onClick={() => {
-                  setSelectedCategory("all");
-                  setPriceRange({ min: "", max: "" });
-                  setSortBy("recent");
-                  setStockFilter("all");
-                }}
-                className="text-sm text-gray-500 hover:text-emerald-600 font-semibold transition-colors"
-              >
-                Limpar filtros
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Preço mínimo</label>
-                <input
-                  type="number"
-                  placeholder="R$ 0"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+      <style>{`
+        .category-scroller {
+          overflow-x: scroll;
+          cursor: grab;
+          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          scrollbar-width: none;
+        }
+        .category-scroller::-webkit-scrollbar {
+          display: none;
+        }
+        .category-scroller.grabbing {
+            cursor: grabbing;
+        }
+        @keyframes fire {
+          0% { transform: scale(1) rotate(0deg); opacity: 1; }
+          25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
+          50% { transform: scale(1) rotate(-1deg); opacity: 1; }
+          75% { transform: scale(1.03) rotate(1deg); opacity: 0.98; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .animate-fire {
+          animation: fire 1.8s ease-in-out infinite;
+        }
+      `}</style>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        {/* BANNER PERSONALIZADO DO LICENCIADO */}
+        {licenseeData && (
+          <div className="mb-6 bg-gradient-to-r from-green-900/40 via-teal-900/40 to-green-900/40 border border-green-500/30 rounded-xl p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              {licenseeData.photo ? (
+                <img 
+                  src={licenseeData.photo} 
+                  alt={licenseeData.name}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-green-400/50 shadow-lg"
                 />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white text-xl font-bold border-2 border-green-400/50 shadow-lg">
+                  {licenseeData.name?.charAt(0)}
+                </div>
+              )}
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-white">
+                  Loja Virtual de {licenseeData.name}
+                </h2>
+                <p className="text-green-200 text-xs">
+                  ✨ Produtos exclusivos selecionados especialmente para você
+                </p>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Preço máximo</label>
-                <input
-                  type="number"
-                  placeholder="R$ 9999"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Ordenar por</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              {licenseeData.phone && (
+                <a
+                  href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-xl"
                 >
-                  <option value="recent">Mais recentes</option>
-                  <option value="priceAsc">Menor preço</option>
-                  <option value="priceDesc">Maior preço</option>
-                  <option value="nameAsc">Nome A-Z</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Disponibilidade</label>
-                <select
-                  value={stockFilter}
-                  onChange={(e) => setStockFilter(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                >
-                  <option value="all">Todos</option>
-                  <option value="inStock">Em estoque</option>
-                  <option value="outOfStock">Esgotados</option>
-                </select>
-              </div>
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="hidden sm:inline">Falar Comigo</span>
+                </a>
+              )}
             </div>
           </div>
         )}
 
-        {/* BANNER ROTATIVO */}
-        {banners.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <RotatingBanner banners={banners} />
-          </div>
-        )}
+        {/* Hero Section */}
+        <div className="mb-8">
+          <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
+            <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-        {/* Info de estoque (linha simples estilo ML) */}
-        <div className="flex items-center gap-4 text-sm text-gray-600 px-1">
-          <div className="flex items-center gap-1.5">
-            <Package className="w-4 h-4 text-emerald-600" />
-            <span className="font-semibold">{products.length}</span>
-            <span>produtos em estoque</span>
+            <div className="relative flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
+                  <Flame className="w-9 h-9 text-orange-400 animate-fire" />
+                  {licenseeData ? (
+                    <span>Loja de <span className="text-green-400">{licenseeData.name}</span></span>
+                  ) : (
+                    <span>Loja Virtual <span className="text-green-400">Especial</span>!</span>
+                  )}
+                </h1>
+                <p className="text-gray-300 mb-4 text-base lg:text-lg">
+                  {products.length} produtos incríveis com preços imbatíveis!
+                </p>
+
+                <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <div className="flex items-center gap-1.5">
+                    <Package className="w-4 h-4" />
+                    <span>{products.length} em estoque</span>
+                  </div>
+                </div>
+              </div>
+
+              {licenseePhone && !licenseeData && (
+                <a
+                  href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos da loja virtual.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                  title="Falar com o licenciado"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="hidden sm:inline">Falar com Licenciado</span>
+                </a>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* BANNER ROTATIVO */}
+        {banners.length > 0 &&
+        <div className="mb-8">
+            <RotatingBanner banners={banners} />
+          </div>
+        }
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
           {/* Produtos em Destaque */}
-          {featuredProducts.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6">
-              <h2 className="text-lg sm:text-2xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-orange-500">⭐</span>
-                Produtos em Destaque
-              </h2>
+           {featuredProducts.length > 0 && (
+             <div className="mb-8">
+               <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2 justify-center">
+                 ⭐ Produtos em Destaque
+               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {featuredProducts.map((product) => (
                   <CatalogProductCard
@@ -572,15 +640,127 @@ export default function Catalog() {
             </div>
           )}
 
-          {loadError && retryCount >= 3 && (
-            <div className="mb-6 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 shadow-sm">
+          {/* Busca e Filtros */}
+          <div className="mb-8 space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Buscar produtos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+              />
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-6 h-[46px] ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base shadow-lg transition-all`}
+              >
+                <SlidersHorizontal className="w-5 h-5 mr-2" />
+                <span>Filtros</span>
+              </Button>
+            </div>
+
+            {/* Painel de Filtros */}
+            {showFilters && (
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filtros
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory("all");
+                      setPriceRange({ min: "", max: "" });
+                      setSortBy("recent");
+                      setStockFilter("all");
+                    }}
+                    className="text-sm text-gray-400 hover:text-white"
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {/* Categoria */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Categoria</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="all">Todas</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Faixa de Preço */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
+                    <input
+                      type="number"
+                      placeholder="R$ 0"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Preço máximo</label>
+                    <input
+                      type="number"
+                      placeholder="R$ 9999"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Ordenação */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="recent">Mais recentes</option>
+                      <option value="priceAsc">Menor preço</option>
+                      <option value="priceDesc">Maior preço</option>
+                      <option value="nameAsc">Nome A-Z</option>
+                    </select>
+                  </div>
+
+                  {/* Estoque */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Disponibilidade</label>
+                    <select
+                      value={stockFilter}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="inStock">Em estoque</option>
+                      <option value="outOfStock">Esgotados</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {loadError && retryCount >= 3 &&
+          <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">
               <div className="flex items-start gap-4">
-                <div className="text-4xl">⚠️</div>
+                <div className="text-5xl">⚠️</div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-yellow-800 mb-2">Conexão Instável</h3>
-                  <p className="text-gray-700 mb-4">{loadError}</p>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-blue-800">
+                  <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
+                  <p className="text-gray-300 mb-4">{loadError}</p>
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-300">
                       💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
                     </p>
                   </div>
@@ -591,36 +771,36 @@ export default function Catalog() {
                       setLoadError(null);
                       loadProducts(true);
                     }}
-                    className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold">
+                    className="bg-yellow-600 hover:bg-yellow-700 font-bold">
                     🔄 Tentar Novamente
                   </Button>
                 </div>
               </div>
             </div>
-          )}
+          }
 
-          {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="bg-white border border-gray-100 rounded-2xl p-3 sm:p-4 animate-pulse shadow-sm">
-                  <div className="w-full aspect-square bg-gray-200 rounded-xl mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+          {isLoading ?
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {Array(6).fill(0).map((_, i) =>
+            <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
+                  <div className="w-full aspect-square bg-gray-700 rounded-xl mb-3"></div>
+                  <div className="h-5 bg-gray-700 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-700 rounded w-2/3"></div>
                 </div>
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 && !loadError ? (
-            <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100">
+            )}
+            </div> :
+          filteredProducts.length === 0 && !loadError ?
+          <div className="text-center py-12 text-gray-400">
               <div className="text-6xl mb-4">📦</div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">
+              <h3 className="text-xl font-semibold mb-2 text-white">
                 Nenhum produto encontrado
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-500 mb-6">
                 Tente ajustar a busca ou volte mais tarde para novos produtos!
               </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            </div> :
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {filteredProducts.map((product) => {
                 if (!product || !product.id) {
                   console.warn('⚠️ Product inválido detectado:', product);
@@ -635,7 +815,7 @@ export default function Catalog() {
                 );
               })}
             </div>
-          )}
+          }
         </div>
       </div>
 

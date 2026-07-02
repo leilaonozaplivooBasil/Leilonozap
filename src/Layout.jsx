@@ -1016,9 +1016,6 @@ export default function Layout({ children, currentPageName }) {
           {(() => {
             const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
             if (!cfg.showSidebar || !cfg.context) return null;
-            // 🛍️ Loja Virtual usa seu próprio seletor (menu ⋮ no header do Catalog)
-            // → não renderiza a barra colorida de painéis aqui.
-            if (currentPageName === 'Catalog') return null;
             return <PanelSwitcherCard currentUser={currentUser} currentContext={cfg.context} />;
           })()}
           {children}
