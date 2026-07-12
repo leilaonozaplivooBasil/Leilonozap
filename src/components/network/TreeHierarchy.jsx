@@ -2,24 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-
-const getCareerColor = (level) => {
-  const colors = {
-    usuario: 'bg-slate-500',
-    licenciado_aplicativo: 'bg-amber-500',
-    licenciado_catalogo: 'bg-blue-500',
-    influencer: 'bg-pink-500',
-    trainee: 'bg-purple-500',
-    executivo: 'bg-indigo-500',
-    kit_start: 'bg-emerald-500',
-    plano_lider: 'bg-red-500',
-    plano_lojista: 'bg-cyan-500',
-    distribuidor: 'bg-orange-500',
-    diretor: 'bg-fuchsia-500',
-    diretoria: 'bg-violet-500',
-  };
-  return colors[level] || 'bg-slate-500';
-};
+import { levelColor as getCareerColor } from '@/lib/careerLevels';
 
 const getInitials = (name) => {
   if (!name) return '??';

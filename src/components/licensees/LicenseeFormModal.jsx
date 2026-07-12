@@ -76,33 +76,54 @@ const fileInputRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!fullName.trim()) { alert("Informe o nome do vendedor."); return; }
     setIsSubmitting(true);
+
+    // actor = admin logado (necessário p/ a rota server-side com service_role)
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem("currentUser") || "null")?.id || null; } catch { /* noop */ }
 
     const common = {
       full_name: fullName.trim(),
       store_name: storeName.trim() || null,
-      email: (email || "").trim().toLowerCase(),
+      email: (email || "").trim().toLowerCase() || null,
       phone: (phone || "").trim(),
-      role: "licensee",
-      career_levels: ["licenciado_catalogo"],
-      primary_career_level: "licenciado_catalogo",
-      terms_accepted: true,
+      career_level: "licenciado_catalogo",
       referral_code: suggestedCode,
       nickname: suggestedSlug,
       avatar_url: avatarUrl,
     };
 
-    let res;
-    if (foundUser) {
-      res = await base44.entities.AppUser.update(foundUser.id, common);
-    } else {
-      const genPass = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-      res = await base44.entities.AppUser.create({ ...common, password: genPass });
+    try {
+      let res;
+      if (foundUser) {
+        // upgrade de usuário existente → rota admin (service_role)
+        res = await base44.functions.invoke("adminUpdateUser", {
+          userId: foundUser.id,
+          actorId,
+          updates: {
+            full_name: common.full_name, store_name: common.store_name, email: common.email,
+            phone: common.phone, role: "licensee", nickname: common.nickname,
+            career_levels: ["licenciado_catalogo"], primary_career_level: "licenciado_catalogo",
+            avatar_url: common.avatar_url,
+          },
+        });
+      } else {
+        const genPass = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        res = await base44.functions.invoke("createLicensee", { ...common, password: genPass, actor_id: actorId });
+      }
+      if (!res?.success) {
+        setIsSubmitting(false);
+        alert("❌ " + (res?.error || "Não foi possível salvar o licenciado."));
+        return;
+      }
+      setIsSubmitting(false);
+      onCreated?.(res.user || res);
+      onClose?.();
+    } catch (err) {
+      setIsSubmitting(false);
+      alert("❌ Erro ao salvar: " + (err?.message || "tente novamente."));
     }
-
-    setIsSubmitting(false);
-    onCreated?.(res);
-    onClose?.();
   };
 
   return (

@@ -150,29 +150,62 @@ export default function EditCatalogProduct() {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const getActorId = () => {
+        try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { return null; }
+    };
+
     const handleSaveChanges = async () => {
         setIsSaving(true);
         try {
+            const priceCatalog = parseFloat(formData.price_catalog) || 0;
             const updatePayload = {
                 description: formData.description,
                 cost_price: parseFloat(formData.cost_price) || 0,
-                price_catalog: parseFloat(formData.price_catalog) || 0,
+                price_catalog: priceCatalog,
+                // 🔑 mantém o "Varejo" da gestão em sincronia com o Preço Catálogo (antes ficava desatualizado)
+                selling_price_retail: priceCatalog,
                 quantity: parseInt(formData.quantity) || 1,
                 status: formData.status,
                 catalog_active: formData.catalog_active,
                 image_urls: imageUrls
             };
-            
+
             await Product.update(productId, updatePayload);
-            
+
+            // 🏬 propaga o preço para a vitrine das lojas (store_inventory.price), que era um snapshot congelado
+            if (priceCatalog > 0) {
+                try {
+                    await base44.functions.invoke('syncStoreProduct', { product_id: productId, price: priceCatalog, actor_id: getActorId() });
+                } catch (e) { console.warn('syncStoreProduct falhou (preço na loja pode demorar a refletir):', e?.message); }
+            }
+
             setIsSaving(false);
             alert("✅ Produto atualizado com sucesso!");
             navigate(createPageUrl("Catalog"), { replace: true });
-            
+
         } catch (error) {
             console.error("Erro ao salvar alterações:", error);
             alert("❌ Erro ao salvar alterações. Tente novamente.");
             setIsSaving(false);
+        }
+    };
+
+    const [isRemoving, setIsRemoving] = useState(false);
+    const handleRemoveFromStore = async () => {
+        if (!window.confirm("Retirar este produto da loja? Ele SAI da vitrine, mas continua na sua gestão e no estoque (você pode reativar depois).")) return;
+        setIsRemoving(true);
+        try {
+            await Product.update(productId, { catalog_active: false });
+            try {
+                await base44.functions.invoke('syncStoreProduct', { product_id: productId, active: false, actor_id: getActorId() });
+            } catch (e) { console.warn('syncStoreProduct(active=false) falhou:', e?.message); }
+            setIsRemoving(false);
+            alert("✅ Produto retirado da loja. Continua na gestão/estoque.");
+            navigate(createPageUrl("Catalog"), { replace: true });
+        } catch (error) {
+            console.error("Erro ao retirar da loja:", error);
+            alert("❌ Erro ao retirar da loja. Tente novamente.");
+            setIsRemoving(false);
         }
     };
 
@@ -387,6 +420,33 @@ export default function EditCatalogProduct() {
                     </CardContent>
                 </Card>
 
+                {/* RETIRAR DA LOJA (sem apagar da gestão) */}
+                <Card className="border-amber-300 bg-amber-50/60">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-amber-700">
+                            <Package className="w-5 h-5" />
+                            Retirar da Loja
+                        </CardTitle>
+                        <p className="text-sm text-amber-700">
+                            Tira o produto da vitrine da loja, mas mantém tudo na sua gestão e no estoque. Você pode reativar quando quiser.
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <Button
+                            variant="outline"
+                            onClick={handleRemoveFromStore}
+                            disabled={isRemoving || isDeleting || isSaving || isUploading}
+                            className="w-full border-amber-400 text-amber-800 hover:bg-amber-100"
+                        >
+                            {isRemoving ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Retirando...</>
+                            ) : (
+                                <><Package className="w-4 h-4 mr-2" /> Retirar da Loja (mantém no estoque)</>
+                            )}
+                        </Button>
+                    </CardContent>
+                </Card>
+
                 {/* EXCLUIR PRODUTO */}
                 <Card className="border-red-400 bg-red-50/50">
                     <CardHeader>
@@ -395,14 +455,14 @@ export default function EditCatalogProduct() {
                             Excluir Produto
                         </CardTitle>
                         <p className="text-sm text-red-600">
-                            Esta ação excluirá permanentemente o produto e todos os dados associados. Esta ação é irreversível.
+                            Esta ação excluirá permanentemente o produto e todos os dados associados (gestão + estoque). Esta ação é irreversível. Para só tirar da vitrine, use "Retirar da Loja" acima.
                         </p>
                     </CardHeader>
                     <CardContent>
                         <Button
                             variant="destructive"
                             onClick={handleDeleteProduct}
-                            disabled={isDeleting || isSaving || isUploading}
+                            disabled={isDeleting || isSaving || isUploading || isRemoving}
                             className="w-full"
                         >
                             {isDeleting ? (

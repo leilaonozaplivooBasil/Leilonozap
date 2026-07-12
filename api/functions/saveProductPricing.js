@@ -33,7 +33,16 @@ export default async function handler(req, res) {
         if (it.market_price != null) min.market_value = round2(it.market_price);
         r = await sb(`products?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(min) });
       }
-      if (r.ok) saved++;
+      if (r.ok) {
+        saved++;
+        // 🏬 propaga o novo preço para a vitrine das lojas (store_inventory.price era snapshot congelado).
+        try {
+          await sb(`store_inventory?product_id=eq.${encodeURIComponent(id)}`, {
+            method: 'PATCH', headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({ price: selling, updated_at: now }),
+          });
+        } catch { /* não bloqueia o salvamento do preço no produto */ }
+      }
     }
     return res.status(200).json({ success: saved > 0, saved, total: items.length });
   } catch (e) {

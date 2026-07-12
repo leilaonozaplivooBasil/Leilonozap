@@ -16,8 +16,9 @@ function sb(path, opts = {}) {
   });
 }
 
-// valida + consome o código de e-mail (mesma lógica do verifyEmailCode, em 1 passo com o cadastro)
-async function consumeCode(email, code) {
+// valida o código de e-mail SEM consumir (o consumo é adiado até todas as validações passarem,
+// senão uma falha posterior queima o código e a 2ª tentativa dá "Nenhum código pendente").
+async function checkCode(email, code) {
   const rows = await (await sb(`email_codes?select=*&email=eq.${encodeURIComponent(email)}&purpose=eq.signup&consumed=eq.false&order=created_at.desc&limit=1`)).json();
   const rec = Array.isArray(rows) ? rows[0] : null;
   if (!rec) return { ok: false, error: 'Nenhum código pendente. Solicite um novo.' };
@@ -28,9 +29,12 @@ async function consumeCode(email, code) {
     await sb(`email_codes?id=eq.${rec.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ attempts: rec.attempts + 1 }) });
     return { ok: false, error: 'Código incorreto.' };
   }
-  await consume();
-  return { ok: true };
+  return { ok: true, id: rec.id }; // válido; consumir só depois de aprovado em tudo
 }
+
+// níveis GRÁTIS de auto-cadastro público (link viral) — não exigem indicador habilitado nem permissão.
+// Demais níveis grátis (ceo, fundador, socio, diretoria...) continuam só por concessão/permissão.
+const SELF_SERVICE_FREE = new Set(['influenciador']);
 
 function genReferral(name) {
   const base = String(name || 'user').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '').slice(0, 8) || 'user';
@@ -69,8 +73,8 @@ export default async function handler(req, res) {
     if (!code) return res.status(400).json({ success: false, error: 'Código de verificação obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    // 1) valida o código por e-mail
-    const v = await consumeCode(email, code);
+    // 1) valida o código por e-mail (sem consumir ainda)
+    const v = await checkCode(email, code);
     if (!v.ok) return res.status(200).json({ success: false, error: v.error });
 
     // 2) e-mail já cadastrado?
@@ -92,17 +96,23 @@ export default async function handler(req, res) {
     let level = 'usuario';
     let needsAdesao = null; // cargo pago pendente de pagamento
     if (as_level && as_level !== 'usuario') {
-      // precisa que o indicador tenha permissão de cadastrar essa categoria (tabela register_permissions)
-      if (!actorLevel) return res.status(200).json({ success: false, error: 'Categoria exige um indicador habilitado.' });
-      const perm = await (await sb(`register_permissions?select=can_register_level&actor_level=eq.${encodeURIComponent(actorLevel)}&can_register_level=eq.${encodeURIComponent(as_level)}&limit=1`)).json();
-      if (!Array.isArray(perm) || !perm.length) {
-        return res.status(200).json({ success: false, error: `Seu cargo (${actorLevel}) não pode cadastrar a categoria "${as_level}".` });
+      if (SELF_SERVICE_FREE.has(as_level)) {
+        // 🌱 Auto-cadastro público grátis (ex.: Influenciador via link viral):
+        // não exige indicador habilitado nem permissão. Vincula ao indicador do link (se houver).
+        level = as_level;
+      } else {
+        // precisa que o indicador tenha permissão de cadastrar essa categoria (tabela register_permissions)
+        if (!actorLevel) return res.status(200).json({ success: false, error: 'Categoria exige um indicador habilitado.' });
+        const perm = await (await sb(`register_permissions?select=can_register_level&actor_level=eq.${encodeURIComponent(actorLevel)}&can_register_level=eq.${encodeURIComponent(as_level)}&limit=1`)).json();
+        if (!Array.isArray(perm) || !perm.length) {
+          return res.status(200).json({ success: false, error: `Seu cargo (${actorLevel}) não pode cadastrar a categoria "${as_level}".` });
+        }
+        // 🔒 Cargo PAGO não é concedido de graça pelo link: entra como Usuário e paga a adesão depois (Evoluir).
+        const lv = await (await sb(`career_levels?select=adesao_valor&id=eq.${encodeURIComponent(as_level)}&limit=1`)).json();
+        const adesao = Array.isArray(lv) && lv[0] ? Number(lv[0].adesao_valor) || 0 : 0;
+        if (adesao > 0) { level = 'usuario'; needsAdesao = as_level; }
+        else { level = as_level; }
       }
-      // 🔒 Cargo PAGO não é concedido de graça pelo link: entra como Usuário e paga a adesão depois (Evoluir).
-      const lv = await (await sb(`career_levels?select=adesao_valor&id=eq.${encodeURIComponent(as_level)}&limit=1`)).json();
-      const adesao = Array.isArray(lv) && lv[0] ? Number(lv[0].adesao_valor) || 0 : 0;
-      if (adesao > 0) { level = 'usuario'; needsAdesao = as_level; }
-      else { level = as_level; }
     }
 
     // 5) referral_code único
@@ -124,6 +134,8 @@ export default async function handler(req, res) {
       created_date: now, updated_date: now,
       ...extra,
     };
+    // consome o código só agora, com TODAS as validações aprovadas (evita queimar o código à toa)
+    await sb(`email_codes?id=eq.${v.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ consumed: true }) });
     const ins = await sb('app_users', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) });
     const rows = await ins.json();
     if (!ins.ok || !Array.isArray(rows) || !rows.length) {

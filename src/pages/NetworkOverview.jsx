@@ -26,23 +26,7 @@ import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
 import TreeHierarchy from "../components/network/TreeHierarchy";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
-
-const CAREER_LEVELS = [
-  { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
-  { id: 'licenciado_aplicativo', name: 'Influencer', color: 'bg-green-500', textColor: 'text-green-400', borderColor: 'border-green-500' },
-  { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500', textColor: 'text-yellow-400', borderColor: 'border-yellow-500' },
-  { id: 'trainee', name: 'Trainee', color: 'bg-blue-500', textColor: 'text-blue-400', borderColor: 'border-blue-500' },
-  { id: 'executivo', name: 'Executivo', color: 'bg-purple-500', textColor: 'text-purple-400', borderColor: 'border-purple-500' },
-  { id: 'kit_start', name: 'Kit Start', color: 'bg-emerald-500', textColor: 'text-emerald-400', borderColor: 'border-emerald-500' },
-  { id: 'plano_lider', name: 'Plano Líder', color: 'bg-indigo-500', textColor: 'text-indigo-400', borderColor: 'border-indigo-500' },
-  { id: 'plano_lojista', name: 'Plano Lojista', color: 'bg-sky-500', textColor: 'text-sky-400', borderColor: 'border-sky-500' },
-  { id: 'distribuidor', name: 'Distribuidor', color: 'bg-teal-500', textColor: 'text-teal-400', borderColor: 'border-teal-500' },
-  { id: 'diretor', name: 'Diretor', color: 'bg-orange-500', textColor: 'text-orange-400', borderColor: 'border-orange-500' },
-  { id: 'diretoria', name: 'Diretoria', color: 'bg-fuchsia-500', textColor: 'text-fuchsia-400', borderColor: 'border-fuchsia-500' },
-  { id: 'ceo', name: 'CEO', color: 'bg-red-500', textColor: 'text-red-400', borderColor: 'border-red-500' },
-  { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500', textColor: 'text-cyan-400', borderColor: 'border-cyan-500' },
-  { id: 'fundador', name: 'Fundador', color: 'bg-amber-500', textColor: 'text-amber-400', borderColor: 'border-amber-500' }
-];
+import { CAREER_LEVELS } from "@/lib/careerLevels";
 
 function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit, onDelete }) {
   const [showDetails, setShowDetails] = useState(false);

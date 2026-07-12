@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { money } from '@/lib/format';
+import { copyLink } from '@/lib/clipboard';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -110,7 +111,7 @@ export default function LojaVitrine() {
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{CARGO_LABEL[store.career] || 'Loja'}</span>
             </div>
           </div>
-          <button onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success('Link da loja copiado!'); }} className="p-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300" title="Compartilhar">
+          <button onClick={async () => { const ok = await copyLink(window.location.href); ok ? toast.success('Link da loja copiado!') : toast.error('Não consegui copiar. Copie da barra de endereço.'); }} className="p-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300" title="Compartilhar">
             <Share2 className="w-4 h-4" />
           </button>
           <button onClick={() => setCartOpen(true)} className="relative p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">

@@ -100,102 +100,30 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                 return;
             }
 
-            // 🏢 LÓGICA DE INDICAÇÃO COM LICENCIADO SITE
-            let referredById = null;
-            const incomingReferralCode = sessionStorage.getItem('referralCode');
-            
-            if (incomingReferralCode) {
-                console.log(`[LICENCIADO] Código de indicação encontrado: ${incomingReferralCode}`);
-                try {
-                    const licensees = await AppUser.filter({ referral_code: incomingReferralCode });
-                    if (licensees.length > 0) {
-                        const referrer = licensees[0];
-                        referredById = referrer.id;
-                        console.log(`✅ Indicado por: ${referrer.full_name}`);
-                    } else {
-                        console.log(`⚠️ Código de indicação "${incomingReferralCode}" não encontrado.`);
-                    }
-                } catch (error) {
-                    console.warn("Erro ao buscar indicador:", error);
-                }
-            }
-            
-            // 🏢 SE NÃO TEM INDICAÇÃO, USA O "LICENCIADO SITE"
-            if (!referredById) {
-                console.log("🏢 [LICENCIADO] Sem código de indicação. Buscando Licenciado Site...");
-                
-                try {
-                    let siteLicensees = await AppUser.filter({ email: "site@leilaonozap.com" });
-                    let siteLicensee;
-                    
-                    if (siteLicensees.length > 0) {
-                        siteLicensee = siteLicensees[0];
-                        referredById = siteLicensee.id;
-                        console.log(`✅ Vinculado ao Licenciado Site: ${siteLicensee.full_name}`);
-                    } else {
-                        // 🆕 CRIA O LICENCIADO SITE SE NÃO EXISTIR
-                        console.log("🏗️ [LICENCIADO] Criando Licenciado Site...");
-                        
-                        siteLicensee = await AppUser.create({
-                            full_name: "Leilão NoZap - Site Oficial",
-                            nickname: "Site Oficial",
-                            email: "site@leilaonozap.com",
-                            password: "SITE_ADMIN_2025_SECURE", // This should ideally be hashed
-                            phone: "(21) 00000-0000",
-                            role: "licensee",
-                            referral_code: "SITE2025",
-                            terms_accepted: true,
-                            avatar_color: "#22c55e",
-                            points: 0,
-                            total_bids: 0,
-                            won_auctions: 0,
-                            valora_pay_balance: 0,
-                            commission_balance: 0,
-                            indicated_clients_count: 0,
-                            network_bids_count: 0,
-                            career_levels: ["licenciado_aplicativo"],
-                            primary_career_level: "licenciado_aplicativo"
-                        });
-                        
-                        referredById = siteLicensee.id;
-                        console.log(`✅ Licenciado Site criado: ${siteLicensee.id}`);
-                    }
-                } catch (error) {
-                    console.error("❌ Erro ao criar/buscar Licenciado Site:", error);
-                    setErrorMessage("❌ Erro interno ao processar indicação. Tente novamente.");
-                    setIsRegistering(false);
-                    return;
-                }
-            }
+            // Indicação: passa o código do link (o servidor resolve o indicador com service_role).
+            const incomingReferralCode = sessionStorage.getItem('referralCode') || '';
 
-            const generatedCode = generateReferralCode(fullName);
-            
-            console.log("✅ [LICENCIADO] Criando novo licenciado...");
-            const newUserPayload = {
+            // 🔐 Cadastro REAL via rota server-side (service_role). O AppUser.create anon era
+            // bloqueado por RLS (42501) e o cadastro nunca finalizava.
+            const resp = await base44.functions.invoke('createLicensee', {
                 full_name: fullName.trim(),
                 nickname: nickname.trim(),
                 email: normalizedEmail,
                 phone: phone.trim(),
                 password: password,
-                role: 'licensee',
-                career_levels: ['licenciado_aplicativo'], // Updated to array
-                primary_career_level: 'licenciado_aplicativo', // New field
-                referral_code: generatedCode, // This is the new user's own referral code
-                referred_by_id: referredById, // 🏢 SEMPRE TEM INDICAÇÃO AGORA!
-                valora_pay_balance: 0,
-                commission_balance: 0,
-                indicated_clients_count: 0,
-                network_bids_count: 0,
-                points: 0,
-                total_bids: 0,
-                won_auctions: 0,
-                terms_accepted: true,
-                avatar_color: '#' + Math.floor(Math.random()*16777215).toString(16),
-                avatar_url: avatarUrl || null, // Use generated avatar or null if none
-            };
+                career_level: 'licenciado_aplicativo',
+                referral_code: generateReferralCode(fullName),
+                ref_code: incomingReferralCode,
+                avatar_url: avatarUrl || null,
+            });
 
-            const createdUser = await AppUser.create(newUserPayload);
-            console.log("✅ Licenciado criado:", createdUser);
+            if (!resp?.success) {
+                setErrorMessage("❌ " + (resp?.error || "Não foi possível concluir o cadastro."));
+                setIsRegistering(false);
+                return;
+            }
+            const createdUser = resp.user;
+            console.log("✅ Licenciado criado:", createdUser?.id);
 
             if (!createdUser || !createdUser.id) {
                 throw new Error("A criação do usuário falhou.");
