@@ -72,6 +72,7 @@ export default function Layout({ children, currentPageName }) {
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRefRegister, setShowRefRegister] = useState(false);
+  const [referrerName, setReferrerName] = useState('');
   const [cartCount, setCartCount] = useState(0);
   const [showCartPopup, setShowCartPopup] = useState(false);
 
@@ -138,6 +139,14 @@ export default function Layout({ children, currentPageName }) {
     // não abre em cima da própria tela de cadastro/login
     const path = (window.location.pathname || '').toLowerCase();
     if (path.includes('register') || path.includes('cadastro')) return;
+    // busca o nome de quem indicou (SELECT anon), pra mostrar no popup
+    (async () => {
+      try {
+        const users = await base44.entities.AppUser.filter({ referral_code: ref });
+        const r = users && users[0];
+        if (r) setReferrerName(r.display_first_name || (r.full_name || '').split(' ')[0] || r.nickname || '');
+      } catch { /* segue sem nome */ }
+    })();
     const t = setTimeout(() => setShowRefRegister(true), 900);
     return () => clearTimeout(t);
   }, [currentUser, isLoading]);
@@ -1091,6 +1100,7 @@ export default function Layout({ children, currentPageName }) {
         {/* 🎯 Convite de cadastro por indicação (chegou por link ?ref= e não está logado) */}
         {showRefRegister && !(currentUser && currentUser.email) && (
           <GuestRegistrationModal
+            referrerName={referrerName}
             onClose={() => { setShowRefRegister(false); sessionStorage.setItem('refRegisterDismissed', '1'); }}
             onSuccess={(user) => {
               setShowRefRegister(false);

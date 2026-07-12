@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { User as UserIcon, Sparkles, ShieldCheck, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { ensureSiteLicensee } from '@/functions/ensureSiteLicensee'; // New import for the ensureSiteLicensee function
 
-export default function GuestRegistrationModal({ onClose, onSuccess }) {
+export default function GuestRegistrationModal({ onClose, onSuccess, referrerName }) {
   const [fullName, setFullName] = useState('');
   const [nickname, setNickname] = useState('');
   const [avatarPrompt, setAvatarPrompt] = useState('');
@@ -460,6 +460,12 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
         >
           <X className="w-4 h-4" />
         </Button>
+        {referrerName && (
+          <div className="mx-4 mt-4 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm font-semibold text-white"
+            style={{ background: 'linear-gradient(135deg, rgba(233,30,131,.18), rgba(255,107,53,.1))', border: '1px solid rgba(233,30,131,.35)' }}>
+            <span>🎉</span> Você foi convidado por <span style={{ color: '#ff8a5c' }}>{referrerName}</span>
+          </div>
+        )}
         {step === 1 ? renderStepOne() : renderStepTwo()}
       </Card>
     </div>
