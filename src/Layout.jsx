@@ -6,6 +6,7 @@ import WelcomeModal from "@/components/common/WelcomeModal";
 import TermsModal from "@/components/common/TermsModal";
 import GlobalMonitor from "@/components/system/GlobalMonitor";
 import LoginModal from "@/components/common/LoginModal";
+import GuestRegistrationModal from "@/components/common/GuestRegistrationModal";
 
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
@@ -70,6 +71,7 @@ export default function Layout({ children, currentPageName }) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRefRegister, setShowRefRegister] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [showCartPopup, setShowCartPopup] = useState(false);
 
@@ -123,6 +125,22 @@ export default function Layout({ children, currentPageName }) {
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
     };
   }, []);
+
+  // 🎯 Popup de cadastro por indicação: quem chega por um link ?ref= (influenciador/licenciado)
+  // e ainda não é logado recebe o convite pra se cadastrar vinculado a quem indicou.
+  useEffect(() => {
+    if (isLoading) return;
+    const isLogged = currentUser && currentUser.email;
+    if (isLogged) return;
+    const ref = sessionStorage.getItem('referralCode');
+    if (!ref) return;
+    if (sessionStorage.getItem('refRegisterDismissed')) return;
+    // não abre em cima da própria tela de cadastro/login
+    const path = (window.location.pathname || '').toLowerCase();
+    if (path.includes('register') || path.includes('cadastro')) return;
+    const t = setTimeout(() => setShowRefRegister(true), 900);
+    return () => clearTimeout(t);
+  }, [currentUser, isLoading]);
 
 
 
@@ -1066,6 +1084,18 @@ export default function Layout({ children, currentPageName }) {
             onSwitchToRegister={() => {
               setShowLoginModal(false);
               navigate(createPageUrl("Register"));
+            }}
+          />
+        )}
+
+        {/* 🎯 Convite de cadastro por indicação (chegou por link ?ref= e não está logado) */}
+        {showRefRegister && !(currentUser && currentUser.email) && (
+          <GuestRegistrationModal
+            onClose={() => { setShowRefRegister(false); sessionStorage.setItem('refRegisterDismissed', '1'); }}
+            onSuccess={(user) => {
+              setShowRefRegister(false);
+              sessionStorage.setItem('refRegisterDismissed', '1');
+              if (user) setCurrentUser(user);
             }}
           />
         )}
