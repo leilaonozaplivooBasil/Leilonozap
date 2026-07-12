@@ -20,9 +20,9 @@ export default function LojaFloatActions() {
       <a href={LIVOO_FEED} target="_blank" rel="noreferrer" title="Ao vivo pela Livoo Live" className="flex flex-col items-center">
         <span
           className="relative w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
-          style={{ background: 'linear-gradient(135deg,#ff2d2d,#d61010)', boxShadow: '0 8px 24px rgba(220,20,20,.5)' }}
+          style={{ background: 'linear-gradient(135deg,#E91E83,#ff6b35)', boxShadow: '0 8px 24px rgba(233,30,131,.45)' }}
         >
-          <span aria-hidden className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-30" />
+          <span aria-hidden className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ background: '#E91E83' }} />
           <LivooMark size={26} plain className="relative text-white" />
         </span>
         <Label>Ao vivo</Label>
