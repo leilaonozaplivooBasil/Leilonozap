@@ -27,10 +27,12 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR || !STRIPE_KEY) return res.status(500).json({ success: false, error: 'Config do servidor ausente (Stripe/Supabase)' });
 
     const ids = items.map((i) => i.product_id).filter(Boolean);
-    const prods = await (await sb(`products?select=id,description,price_catalog,image_urls&id=in.(${ids.map((x) => `"${x}"`).join(',')})`)).json();
+    const prods = await (await sb(`products?select=id,description,price_catalog,selling_price_retail,image_urls&id=in.(${ids.map((x) => `"${x}"`).join(',')})`)).json();
     const pmap = Object.fromEntries((Array.isArray(prods) ? prods : []).map((p) => [p.id, p]));
+    // preço = mesmo fallback da vitrine (price_catalog → varejo), senão itens sem price_catalog quebram
+    const unitPrice = (p) => (Number(p.price_catalog) > 0 ? Number(p.price_catalog) : Number(p.selling_price_retail) || 0);
     let total = 0; const lines = [];
-    for (const it of items) { const p = pmap[it.product_id]; if (!p) continue; const q = Math.max(1, parseInt(it.quantity) || 1); total += Number(p.price_catalog) * q; lines.push({ p, q }); }
+    for (const it of items) { const p = pmap[it.product_id]; if (!p) continue; const q = Math.max(1, parseInt(it.quantity) || 1); total += unitPrice(p) * q; lines.push({ p, q }); }
     total = round2(total);
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
@@ -60,7 +62,7 @@ export default async function handler(req, res) {
     lines.forEach((l, i) => {
       form.set(`line_items[${i}][price_data][currency]`, 'brl');
       form.set(`line_items[${i}][price_data][product_data][name]`, String(l.p.description).slice(0, 120));
-      form.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(Number(l.p.price_catalog) * 100)));
+      form.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(unitPrice(l.p) * 100)));
       form.set(`line_items[${i}][quantity]`, String(l.q));
     });
     const r = await fetch('https://api.stripe.com/v1/checkout/sessions', {

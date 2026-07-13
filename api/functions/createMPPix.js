@@ -30,13 +30,16 @@ export default async function handler(req, res) {
 
     // Preço SEMPRE do banco (anti-fraude). Pega o primeiro item como produto principal da venda.
     const ids = items.map((i) => i.product_id).filter(Boolean);
-    const prods = await (await sb(`products?select=id,description,price_catalog,image_urls&id=in.(${ids.map((x) => `"${x}"`).join(',')})`)).json();
+    const prods = await (await sb(`products?select=id,description,price_catalog,selling_price_retail,image_urls&id=in.(${ids.map((x) => `"${x}"`).join(',')})`)).json();
     const pmap = Object.fromEntries((Array.isArray(prods) ? prods : []).map((p) => [p.id, p]));
+    // preço = mesmo fallback da vitrine (price_catalog → varejo). Sem isso, os 376 itens sem
+    // price_catalog que a vitrine mostra dariam total 0 e o PIX não gerava.
+    const unitPrice = (p) => (Number(p.price_catalog) > 0 ? Number(p.price_catalog) : Number(p.selling_price_retail) || 0);
     let total = 0; const lines = [];
     for (const it of items) {
       const p = pmap[it.product_id]; if (!p) continue;
       const q = Math.max(1, parseInt(it.quantity) || 1);
-      total += Number(p.price_catalog) * q;
+      total += unitPrice(p) * q;
       lines.push({ p, q });
     }
     total = round2(total);
@@ -77,7 +80,7 @@ export default async function handler(req, res) {
       kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       coupon_code, discount_amount: discount_amount || null,
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: l.p.price_catalog })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id },
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id },
     }) });
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 

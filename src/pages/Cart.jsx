@@ -703,32 +703,32 @@ export default function Cart() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-300 text-sm">Celular</Label>
-                    <div className="flex gap-2 mt-1.5">
-                      <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-3 text-gray-300 text-sm h-11">
-                        <span>BR</span>
-                        <span>+55</span>
-                      </div>
-                      <Input
-                        placeholder="Telefone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
-                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-11"
-                      />
+                <div>
+                  <Label className="text-gray-300 text-sm">Celular</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-3 text-gray-300 text-sm h-11 shrink-0">
+                      <span>BR</span>
+                      <span>+55</span>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-gray-300 text-sm">CPF</Label>
                     <Input
-                      placeholder="000.000.000-00"
-                      value={formData.cpf}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
-                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
-                      maxLength={14}
+                      inputMode="numeric"
+                      placeholder="(21) 90000-0000"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-11 text-base"
                     />
                   </div>
+                </div>
+                <div>
+                  <Label className="text-gray-300 text-sm">CPF</Label>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="000.000.000-00"
+                    value={formData.cpf}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11 text-base"
+                    maxLength={14}
+                  />
                 </div>
 
                 <div>
