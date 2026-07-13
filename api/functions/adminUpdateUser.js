@@ -62,6 +62,22 @@ export default async function handler(req, res) {
     if (Object.keys(payload).length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum campo válido para atualizar' });
     }
+
+    // 🛡️ ANTI-REBAIXAMENTO: nunca tirar o acesso de um admin/super_admin sem pedir explicitamente.
+    // O form "Loja Virtual do Vendedor" manda role='licensee'; se o alvo já é admin, isso apagava
+    // o acesso dele (aconteceu com um super_admin em 12/07). Só rebaixa com allow_role_downgrade=true.
+    const tgtArr = await (await sb(`app_users?select=id,role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    const target = Array.isArray(tgtArr) ? tgtArr[0] : null;
+    const targetIsAdmin = target && ['admin', 'super_admin'].includes(target.role);
+    if (targetIsAdmin && payload.role && !['admin', 'super_admin'].includes(payload.role) && body?.allow_role_downgrade !== true) {
+      delete payload.role;            // preserva o acesso admin
+      delete payload.career_levels;   // e o cargo que vem junto (ex.: ceo → licenciado_catalogo)
+      delete payload.primary_career_level;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return res.status(200).json({ success: true, skipped: 'nada a atualizar (role de admin preservado)' });
+    }
     payload.updated_date = new Date().toISOString();
 
     const upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
