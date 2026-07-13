@@ -29,3 +29,4 @@ dist-ssr
 
 .env
 .vercel
+base44/.app.jsonc
