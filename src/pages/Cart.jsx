@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { money } from '@/lib/format';
+import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,9 @@ export default function Cart() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+  // Endereço do CD (galpão do distribuidor) — vem do cadastro, não fica chumbado no código
+  const [pickupAddress, setPickupAddress] = useState(DEFAULT_PICKUP_ADDRESS);
+  useEffect(() => { fetchPickupAddress().then(setPickupAddress); }, []);
   const [coupon, setCoupon] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, desconto }
   const [couponMsg, setCouponMsg] = useState('');
@@ -784,7 +788,7 @@ export default function Cart() {
                       <div>
                         <p className="text-gray-300 text-sm font-medium">Endereço para retirada:</p>
                         <p className="text-gray-400 text-sm mt-1">
-                          Estrada do Pontal, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ, 22790877
+                          {pickupAddress}
                         </p>
                       </div>
                     </div>

@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 
 const Product = base44.entities.Product;
 const Auction = base44.entities.Auction;
@@ -13,6 +14,9 @@ const CatalogSale = base44.entities.CatalogSale;
 export default function CatalogCheckout2() {
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    // Endereço do CD (galpão do distribuidor) — vem do cadastro, não fica chumbado no código
+    const [pickupAddress, setPickupAddress] = useState(DEFAULT_PICKUP_ADDRESS);
+    useEffect(() => { fetchPickupAddress().then(setPickupAddress); }, []);
     const [currentUser, setCurrentUser] = useState(null);
     const [phone, setPhone] = useState('');
     const [cpf, setCpf] = useState('');
@@ -553,7 +557,7 @@ export default function CatalogCheckout2() {
                                             <div className="flex-1">
                                                 <p className="text-gray-300 font-medium mb-1">Endereço para retirada:</p>
                                                 <p className="text-white text-sm leading-relaxed">
-                                                    Estrada do Pontal, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ, 22790877
+                                                    {pickupAddress}
                                                 </p>
                                             </div>
                                         </div>
