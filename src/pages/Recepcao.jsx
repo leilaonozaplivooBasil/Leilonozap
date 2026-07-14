@@ -137,7 +137,7 @@ export default function Recepcao() {
               return (
                 <button
                   key={s.title}
-                  onClick={() => navigate(createPageUrl(s.page))}
+                  onClick={() => (s.external ? window.open(s.external, '_blank', 'noopener') : navigate(createPageUrl(s.page)))}
                   className="prod-card"
                   style={{
                     textAlign: 'left', cursor: 'pointer', padding: 22, borderRadius: 18,

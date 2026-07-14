@@ -5,6 +5,7 @@ import { ShoppingCart as CartIcon, ChevronDown } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
 import AoVivoAgora from "@/components/livoo/AoVivoAgora";
 import { SECTORS } from "@/lib/sectors";
+import SectorLink from "@/components/nav/SectorLink";
 
 /**
  * 🛡️ NavDesktop — Cabeçalho público padrão LEILÃO NOZAP
@@ -57,7 +58,7 @@ export default function NavDesktop({
     if (pageName === "Licensing" && currentPageName === "Licensing") return true;
     return false;
   };
-  const sectorActive = (s) => isActive(s.href.page) || s.items.some((i) => isActive(i.page));
+  const sectorActive = (s) => (s.href?.page ? isActive(s.href.page) : false) || s.items.some((i) => i.page && isActive(i.page));
 
   return (
     <div className="hidden md:flex md:gap-x-1 items-center">
@@ -69,8 +70,8 @@ export default function NavDesktop({
           onMouseEnter={() => setOpenSector(s.key)}
           onMouseLeave={() => setOpenSector((cur) => (cur === s.key ? null : cur))}
         >
-          <Link
-            to={createPageUrl(s.href.page)}
+          <SectorLink
+            target={s.external ? { external: s.external } : s.href}
             className={`flex items-center gap-1.5 text-sm font-semibold transition-all duration-200 px-3 py-1.5 rounded-lg ${
               sectorActive(s) || openSector === s.key ? "text-emerald-300 bg-emerald-500/10" : "text-gray-300 hover:text-white hover:bg-white/5"
             }`}
@@ -83,7 +84,7 @@ export default function NavDesktop({
             )}
             {s.title}
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openSector === s.key ? "rotate-180" : ""}`} />
-          </Link>
+          </SectorLink>
 
           {openSector === s.key && (
             <div
@@ -100,15 +101,15 @@ export default function NavDesktop({
                 </div>
                 <div className="p-1.5">
                   {s.items.map((it) => (
-                    <Link
+                    <SectorLink
                       key={it.title}
-                      to={createPageUrl(it.page) + (it.query || "")}
+                      target={it}
                       onClick={() => setOpenSector(null)}
                       className="block px-3 py-2.5 rounded-xl hover:bg-emerald-500/10 transition-colors group"
                     >
                       <p className="text-sm font-semibold text-gray-100 group-hover:text-emerald-300">{it.title}</p>
                       <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
-                    </Link>
+                    </SectorLink>
                   ))}
                 </div>
               </div>

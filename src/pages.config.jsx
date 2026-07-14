@@ -47,6 +47,7 @@ const CustomerDetails = React.lazy(() => import('./pages/CustomerDetails'));
 const DailyReportView = React.lazy(() => import('./pages/DailyReportView'));
 const DiretoDeFabrica = React.lazy(() => import('./pages/DiretoDeFabrica'));
 const ArremateDevolucoes = React.lazy(() => import('./pages/ArremateDevolucoes'));
+const SejaVendedor = React.lazy(() => import('./pages/SejaVendedor'));
 const EditAuction = React.lazy(() => import('./pages/EditAuction'));
 const EditCatalogProduct = React.lazy(() => import('./pages/EditCatalogProduct'));
 const ErrorReport = React.lazy(() => import('./pages/ErrorReport'));
@@ -154,6 +155,7 @@ export const PAGES = {
     "DailyReportView": DailyReportView,
     "DiretoDeFabrica": DiretoDeFabrica,
     "ArremateDevolucoes": ArremateDevolucoes,
+    "SejaVendedor": SejaVendedor,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
     "ErrorReport": ErrorReport,

@@ -38,7 +38,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
               <span className="text-green-500">📱</span>
               <div>
                 <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>App (3%):</strong>
-                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 3% sobre cada arremate feito pelos seus indicados no aplicativo.</span>
+                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 5% sobre cada venda e arremate feitos pelos seus indicados.</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
@@ -60,7 +60,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
               </div>
               <div>
                 <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📱 App (Influencer)</p>
-                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>3% por arremate dos indicados</p>
+                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>5% por venda e arremate dos indicados</p>
               </div>
             </div>
             <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>

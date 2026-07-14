@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import { SECTORS } from "@/lib/sectors";
+import SectorLink from "@/components/nav/SectorLink";
 
 const ICON_MAP = {
   ShoppingBag,
@@ -208,15 +209,15 @@ export default function NavMobile({
                   {open && (
                     <div className="pl-4 pb-1 space-y-0.5">
                       {s.items.map((it) => (
-                        <Link
+                        <SectorLink
                           key={it.title}
-                          to={createPageUrl(it.page) + (it.query || "")}
+                          target={it}
                           onClick={onClose}
                           className="block px-4 py-2.5 rounded-xl hover:bg-white/5"
                         >
                           <p className="text-sm font-semibold text-gray-200">{it.title}</p>
                           <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
-                        </Link>
+                        </SectorLink>
                       ))}
                     </div>
                   )}

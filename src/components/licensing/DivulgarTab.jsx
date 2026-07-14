@@ -34,8 +34,8 @@ function buildLinks(user) {
     },
     {
       key: 'leiloes',
-      title: '🔨 Link dos Leilões (3% por arremate)',
-      desc: 'Você ganha 3% sobre cada arremate dos seus indicados.',
+      title: '🔨 Link dos Leilões (5% por venda e arremate)',
+      desc: 'Você ganha 5% sobre cada venda e arremate dos seus indicados.',
       url: `${BASE}${createPageUrl('Home')}?ref=${ref}`,
       msg: `Tem leilão rolando agora no Leilão NoZap! 🔨\n\nDá pra arrematar por uma fração do preço.\n\nEntra por aqui:`,
     },

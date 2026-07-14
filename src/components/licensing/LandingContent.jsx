@@ -16,7 +16,7 @@ export default function LandingContent({ onRegisterClick, onLoginClick }) {
 
   const benefits = [
     { icon: DollarSign, text: "Ganhos em Dinheiro Real", description: "Receba comissões em dinheiro (R$) toda vez que seus indicados arrematarem produtos." },
-    { icon: Zap, text: "Comissões Recorrentes", description: "Ganhe 3% em cada arremate dos seus indicados. Renda passiva e recorrente!" },
+    { icon: Zap, text: "Comissões Recorrentes", description: "Ganhe 5% em cada venda e arremate dos seus indicados. Renda passiva e recorrente!" },
     { icon: BarChart, text: "Dashboard em Tempo Real", description: "Acompanhe suas comissões, indicados e performance ao vivo." },
     { icon: ShieldCheck, text: "Sistema de Alavancagem", description: "Construa sua rede de indicados e multiplique seus ganhos." }
   ];
@@ -57,7 +57,7 @@ export default function LandingContent({ onRegisterClick, onLoginClick }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <p className="text-gray-200 text-base leading-relaxed">Torne-se um <strong className="text-white">Influenciador Leilão NoZap</strong> e receba <strong className="text-green-400">3% em dinheiro real (R$)</strong> sobre CADA arremate!</p>
+            <p className="text-gray-200 text-base leading-relaxed">Torne-se um <strong className="text-white">Influenciador Leilão NoZap</strong> e receba <strong className="text-green-400">5% em dinheiro real (R$)</strong> sobre CADA venda e arremate!</p>
             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 space-y-2">
               <p className="text-green-400 font-semibold flex items-center gap-2"><Star className="w-4 h-4" />Benefícios:</p>
               <ul className="space-y-1 text-sm text-gray-300">
