@@ -49,6 +49,13 @@ export default async function handler(req, res) {
     } else if (action === 'update' || action === 'setField') {
       const fields = body?.fields || {};
       for (const k of Object.keys(fields)) { if (ALLOWED.includes(k)) patch[k] = fields[k]; }
+      // "Preço Varejo" e "Preço Catálogo" são o MESMO preço de venda em telas diferentes.
+      // A Gestão de Estoque só mandava selling_price_retail, então o price_catalog ficava velho
+      // e a loja continuava no preço antigo. Agora um espelha o outro.
+      const varejo = Number(patch.selling_price_retail);
+      const catalogo = Number(patch.price_catalog);
+      if (varejo > 0 && !(catalogo > 0)) patch.price_catalog = varejo;
+      else if (catalogo > 0 && !(varejo > 0)) patch.selling_price_retail = catalogo;
       patch.updated_date = now;
       if (Object.keys(patch).length <= 1) return res.status(400).json({ success: false, error: 'Nenhum campo válido pra atualizar' });
     } else {
@@ -57,6 +64,28 @@ export default async function handler(req, res) {
 
     const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
     if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: t.slice(0, 200) }); }
+
+    // 🏬 PROPAGA PRA VITRINE. A vitrine lê store_inventory.price (COALESCE com o produto), e esse
+    // preço é um snapshot gravado quando o item entrou na loja. Sem reescrever aqui, mudar o
+    // "Preço Varejo" na Gestão de Estoque não refletia na loja (ela seguia no valor antigo).
+    const novoPreco = Number(patch.selling_price_retail ?? patch.price_catalog);
+    if (novoPreco > 0) {
+      try {
+        await sb(`store_inventory?product_id=eq.${encodeURIComponent(productId)}`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ price: Math.round(novoPreco * 100) / 100, updated_at: now }),
+        });
+      } catch (_) { /* preço do produto já foi salvo; não bloqueia */ }
+    }
+    // Zerou o estoque → some da vitrine (senão fica produto esgotado à venda)
+    if (action === 'zerarEstoque') {
+      try {
+        await sb(`store_inventory?product_id=eq.${encodeURIComponent(productId)}`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ quantity: 0, active: false, updated_at: now }),
+        });
+      } catch (_) { /* não bloqueia */ }
+    }
 
     // log da baixa (rastreio pra Diana) — agora SEMPRE que zera (operador/motivo opcionais)
     if (action === 'zerarEstoque') {
