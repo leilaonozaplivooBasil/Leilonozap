@@ -57,6 +57,13 @@ export default async function handler(req, res) {
       const b = await (await sb(`app_users?select=referred_by_id&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
       if (Array.isArray(b) && b[0]) seller_id = b[0].referred_by_id || null;
     }
+    // 🛡️ o vendedor PRECISA existir. Havia venda gravada com seller_id apontando pra um usuário
+    // inexistente (id legado do Base44): a cadeia de comissão nascia vazia e NINGUÉM recebia,
+    // em silêncio. Se não existir, a venda fica sem vendedor (não paga fantasma).
+    if (seller_id) {
+      const ex = await (await sb(`app_users?select=id&id=eq.${encodeURIComponent(seller_id)}&limit=1`)).json();
+      if (!Array.isArray(ex) || !ex.length) seller_id = null;
+    }
 
     // cupom (desconto validado e calculado no servidor — não confia no cliente)
     const subtotal = total;

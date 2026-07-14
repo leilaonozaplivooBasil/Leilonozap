@@ -41,6 +41,11 @@ export default async function handler(req, res) {
     const refCode = String(body?.ref_code || '').trim();
     if (refCode) { const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(refCode)}&limit=1`)).json(); if (Array.isArray(r) && r[0]) seller_id = r[0].id; }
     if (!seller_id && buyer.id) { const b = await (await sb(`app_users?select=referred_by_id&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json(); if (Array.isArray(b) && b[0]) seller_id = b[0].referred_by_id || null; }
+    // 🛡️ o vendedor precisa EXISTIR (havia venda apontando pra usuário inexistente → comissão zero em silêncio)
+    if (seller_id) {
+      const ex = await (await sb(`app_users?select=id&id=eq.${encodeURIComponent(seller_id)}&limit=1`)).json();
+      if (!Array.isArray(ex) || !ex.length) seller_id = null;
+    }
 
     const saleId = oid();
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
