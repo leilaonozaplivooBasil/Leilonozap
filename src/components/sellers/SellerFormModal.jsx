@@ -97,6 +97,11 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
     }
   };
 
+  // quem está cadastrando (o licenciado): é o que amarra o vendedor na cadeia de comissão
+  const getActorId = () => {
+    try { return JSON.parse(localStorage.getItem("currentUser") || "null")?.id || null; } catch { return null; }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -112,16 +117,15 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
     setIsSubmitting(true);
     try {
       if (isEditMode) {
-        const response = await base44.functions.invoke("updateSeller", {
+        const data = await base44.functions.invoke("updateSeller", {
           seller_id: editingSeller.id,
+          actor_id: getActorId(),
           full_name: fullName.trim(),
           store_name: storeName.trim(),
           phone: phone.trim(),
           cpf: normalizeCpf(cpf),
           avatar_url: avatarUrl || null,
         });
-
-        const data = response?.data;
         if (data?.success) {
           toast.success("Vendedor atualizado com sucesso!");
           onUpdated?.(data.seller);
@@ -130,7 +134,8 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
           toast.error(data?.error || "Erro ao atualizar vendedor");
         }
       } else {
-        const response = await base44.functions.invoke("registerSeller", {
+        const data = await base44.functions.invoke("registerSeller", {
+          actor_id: getActorId(),
           cpf: normalizeCpf(cpf),
           full_name: fullName.trim(),
           store_name: storeName.trim(),
@@ -138,8 +143,6 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
           phone: phone.trim(),
           avatar_url: avatarUrl || null,
         });
-
-        const data = response?.data;
         if (data?.success) {
           toast.success(`Vendedor cadastrado! Loja: ${data.store_link}`, { duration: 6000 });
           onCreated?.(data.seller);
