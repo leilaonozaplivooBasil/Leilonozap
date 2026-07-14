@@ -1,6 +1,9 @@
 // Helper (não é rota — pasta _lib é ignorada pela Vercel): conclui um pedido ONLINE de loja
-// quando o pagamento confirma. Baixa o estoque DA LOJA e paga a comissão pro dono + override
-// pela cadeia (telescópio, teto 20%). Idempotência fica por conta do webhook (só chama 1x).
+// quando o pagamento confirma. Baixa o estoque DA LOJA e paga a comissão pelo PLANO DIRETOR (26%).
+// Idempotência fica por conta do webhook (só chama 1x).
+import { calcularComissao } from './planoDiretor.js';
+import { oid } from './oid.js';
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -12,42 +15,52 @@ function sb(path, opts = {}) {
   });
 }
 
-// store owner ganha a venda_direta_pct do nível dele; a cadeia acima ganha override (cap 20%)
+// 💰 Comissão pelo PLANO DIRETOR (26%): âncora + cadeia + pool do bloco diretor.
+// O motor antigo lia `commission_overrides`, que NÃO tem regra nenhuma pro bloco diretor
+// (CEO, Fundador, Conselheiro, Diretoria, Diretor) — eles recebiam R$0 em toda venda.
+// Agora usa a mesma regra do histórico real, em api/_lib/planoDiretor.js.
 async function payStoreCommissions(sale) {
   const value = Number(sale.total_amount) || 0;
-  const ownerId = sale.seller_id;
-  if (!value || !ownerId) return 0;
-  const levels = Object.fromEntries((await (await sb('career_levels?select=id,venda_direta_pct')).json()).map((l) => [l.id, l]));
-  const ovRows = await (await sb('commission_overrides?select=earner_level,on_level,pct&condicao=eq.direto')).json();
-  const ov = {}; (Array.isArray(ovRows) ? ovRows : []).forEach((r) => { (ov[r.earner_level] = ov[r.earner_level] || {})[r.on_level] = r.pct; });
+  if (!value || !sale.seller_id) return 0;
 
-  // cadeia começando NO dono da loja: [dono, upline1, upline2, ...]
-  const chain = [];
-  let node = (await (await sb(`app_users?select=id,full_name,primary_career_level,referred_by_id,commission_balance&id=eq.${encodeURIComponent(ownerId)}&limit=1`)).json())?.[0];
-  while (node && chain.length < 11) {
-    chain.push(node);
-    if (!node.referred_by_id) break;
-    node = (await (await sb(`app_users?select=id,full_name,primary_career_level,referred_by_id,commission_balance&id=eq.${encodeURIComponent(node.referred_by_id)}&limit=1`)).json())?.[0];
+  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id&limit=2000')).json();
+  if (!Array.isArray(users) || !users.length) return 0;
+  const { assignments, companyPercent, companyAmount } = calcularComissao(sale, users);
+
+  const anchor = users.find((u) => u.id === sale.seller_id) || null;
+  const site = users.find((u) => u.full_name === 'Leilão NoZap - Site Oficial');
+  const now = new Date().toISOString();
+  const linhas = [];
+  let total = 0;
+
+  for (const a of assignments) {
+    const id = oid();
+    linhas.push({
+      id, base44_id: id, sale_id: sale.id, user_id: a.user_id, user_name: a.user_name, role: a.role,
+      percent: Math.round(a.percent * 1000) / 1000, amount: a.amount, sale_amount: value,
+      sale_type: 'catalog', status: 'confirmed', product_title: sale.product_title || null,
+      anchor_user_id: anchor?.id || null, anchor_user_name: anchor?.full_name || null, created_date: now,
+    });
+    total += a.amount;
+  }
+  if (companyAmount > 0 && site) {
+    const id = oid();
+    linhas.push({
+      id, base44_id: id, sale_id: sale.id, user_id: site.id, user_name: site.full_name, role: 'site_official_rollup',
+      percent: Math.round(companyPercent * 1000) / 1000, amount: companyAmount, sale_amount: value,
+      sale_type: 'catalog', status: 'confirmed', product_title: sale.product_title || null,
+      anchor_user_id: anchor?.id || null, anchor_user_name: anchor?.full_name || null, created_date: now,
+    });
   }
 
-  const cap = 0.20 * value; let running = 0; let total = 0;
-  for (let i = 0; i < chain.length && running < cap - 0.001; i++) {
-    const earner = chain[i];
-    const child = i === 0 ? null : chain[i - 1];
-    const pct = i === 0
-      ? Number(levels[earner.primary_career_level]?.venda_direta_pct || 0)
-      : Number((ov[earner.primary_career_level] || {})[child.primary_career_level] || 0);
-    let amount = round2(value * pct / 100);
-    if (running + amount > cap) amount = round2(cap - running);
-    if (amount > 0.001) {
-      await sb('commission_ledger', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
-        sale_id: sale.id, beneficiary_id: earner.id, beneficiary_name: earner.full_name, beneficiary_level: earner.primary_career_level,
-        role_in_sale: i === 0 ? 'venda_loja' : 'override', pct, amount,
-      }) });
-      // crédito ATÔMICO (commission_balance += amount no banco) — evita lost-update sob concorrência
-      await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: earner.id, _amount: amount }) });
-      running += amount; total += amount;
-    }
+  if (linhas.length) {
+    await sb('commission_records', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(linhas) });
+  }
+  // crédito ATÔMICO por pessoa (commission_balance += amount no banco)
+  const porPessoa = {};
+  for (const a of assignments) porPessoa[a.user_id] = round2((porPessoa[a.user_id] || 0) + a.amount);
+  for (const [uid, amount] of Object.entries(porPessoa)) {
+    if (amount > 0.001) await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: uid, _amount: amount }) });
   }
   return round2(total);
 }

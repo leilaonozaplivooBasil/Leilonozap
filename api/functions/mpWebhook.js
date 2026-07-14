@@ -108,7 +108,10 @@ export default async function handler(req, res) {
       const r = await fulfillStoreOrder(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
-    const commission = await payCommissions(sale);
+    // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não
+    // pagava NADA ao bloco diretor). fulfillStoreOrder aplica a mesma regra de 26%.
+    const rr = await fulfillStoreOrder(sale);
+    const commission = rr?.commission ?? 0;
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
     return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission });
   } catch (e) {

@@ -50,19 +50,26 @@ export default async function handler(req, res) {
         const HH = String(Math.floor(mins / 60)).padStart(2, '0'); const MM = String(mins % 60).padStart(2, '0');
         const created = `${dia.y}-${dia.mo}-${dia.d}T${HH}:${MM}:00-03:00`;
         const canal = String(r[5] || '').trim();
-        const id = oid();
+        // 🔒 ID DETERMINÍSTICO (hash da própria linha da planilha). Antes era aleatório e o sync
+        // fazia DELETE+INSERT, então a MESMA venda voltava com id novo a cada sincronização.
+        // Isso quebrava qualquer coisa amarrada na venda — e, com comissão paga, geraria
+        // PAGAMENTO EM DOBRO a cada sync. Agora a mesma linha gera sempre o mesmo id.
+        const id = crypto.createHash('sha256')
+          .update(`nexus|${mp.id}|${created}|${valor}|${String(r[3] || '')}`)
+          .digest('hex').slice(0, 24);
         out.push({ id, base44_id: id, kind: 'produto', source: 'nexus', linha: mp.linha, seller_id: mp.id, product_title: String(r[3] || '(sem descrição)').slice(0, 300), sale_price: valor, total_amount: valor, quantity: 1, status: 'entregue', payment_method: canal === 'whatsapp' ? 'nexus_whatsapp' : canal === 'showroom' ? 'nexus_showroom' : 'nexus', created_at: created, created_date: created, delivered_at: created });
       }
     }
 
     if (out.length < MIN_ROWS) return res.status(200).json({ ok: false, reason: 'too_few_rows', got: out.length, skip });
 
-    // substitui (delete + insert) — só depois de validar a quantidade
-    await sb('catalog_sales?source=eq.nexus', { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    // UPSERT pelo id determinístico (não apaga mais). O DELETE+INSERT antigo recriava a venda com
+    // id novo a cada sync, o que desamarraria a comissão já paga e pagaria tudo de novo.
+    // Linha da planilha alterada → id novo → entra como venda nova (correto).
     let inserted = 0;
     for (let i = 0; i < out.length; i += 200) {
       const batch = out.slice(i, i + 200);
-      const r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(batch) });
+      const r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(batch) });
       if (r.ok) inserted += batch.length;
     }
     const total = out.reduce((s, x) => s + x.total_amount, 0);
