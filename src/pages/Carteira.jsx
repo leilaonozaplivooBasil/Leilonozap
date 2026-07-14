@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Wallet, ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -140,27 +141,24 @@ export default function Carteira() {
         </div>
 
         {/* Extrato */}
-        <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
-          <h2 className="font-bold mb-3">Extrato</h2>
-          {(!w?.commissions?.length && !w?.withdrawals?.length) ? (
-            <p className="text-sm text-gray-400">Nenhuma movimentação ainda.</p>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+        {/* SAQUES */}
+        {(w?.withdrawals?.length > 0) && (
+          <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+            <h2 className="font-bold mb-3">Saques</h2>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {(w?.withdrawals || []).map((s, i) => (
                 <div key={'w' + i} className="flex items-center justify-between text-sm border-b border-gray-700/50 pb-2">
                   <span className="text-gray-300">Saque · <span className={s.status === 'paid' ? 'text-green-400' : s.status === 'rejected' ? 'text-red-400' : 'text-yellow-400'}>{s.status === 'paid' ? 'pago' : s.status === 'rejected' ? 'rejeitado' : 'pendente'}</span></span>
                   <span className="text-red-300 font-semibold">- {money(s.valor)}</span>
                 </div>
               ))}
-              {(w?.commissions || []).map((c, i) => (
-                <div key={'c' + i} className="flex items-center justify-between text-sm border-b border-gray-700/50 pb-2">
-                  <span className="text-gray-300">{c.role_in_sale === 'bonus_adesao' ? 'Bônus de adesão' : c.role_in_sale === 'venda_direta' ? 'Venda direta' : 'Override'} ({c.pct}%)</span>
-                  <span className="text-green-400 font-semibold">+ {money(c.amount)}</span>
-                </div>
-              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* 📄 EXTRATO DE COMISSÕES — transparência: data, produto, quem vendeu, cargo, % e ganho.
+            Antes aqui só aparecia "Override (3%)", sem dizer de qual venda veio. */}
+        <ExtratoComissoes user={user} />
       </div>
     </div>
   );

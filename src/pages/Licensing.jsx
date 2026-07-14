@@ -39,6 +39,7 @@ import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CommissionsTab from '../components/licensing/CommissionsTab';
+import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 import WithdrawalsHistoryTab from '../components/licensing/WithdrawalsHistoryTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
@@ -1410,6 +1411,8 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: MEU CRM — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
 
         <TabsContent value="comissoes" className="space-y-6">
+          {/* Extrato TRANSPARENTE: de onde veio cada centavo (data, produto, quem vendeu, cargo, %) */}
+          <ExtratoComissoes user={user} isSaiDeBaixo={isSaiDeBaixo} />
           <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
         </TabsContent>
 
