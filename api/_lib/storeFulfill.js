@@ -1,7 +1,7 @@
 // Helper (não é rota — pasta _lib é ignorada pela Vercel): conclui um pedido ONLINE de loja
-// quando o pagamento confirma. Baixa o estoque DA LOJA e paga a comissão pelo PLANO DIRETOR (26%).
+// quando o pagamento confirma. Baixa o estoque DA LOJA e paga a comissão pela ÁRVORE OFICIAL (30%).
 // Idempotência fica por conta do webhook (só chama 1x).
-import { calcularComissao } from './planoDiretor.js';
+import { calcularComissao } from './arvoreOficial.js';
 import { oid } from './oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -15,15 +15,16 @@ function sb(path, opts = {}) {
   });
 }
 
-// 💰 Comissão pelo PLANO DIRETOR (26%): âncora + cadeia + pool do bloco diretor.
-// O motor antigo lia `commission_overrides`, que NÃO tem regra nenhuma pro bloco diretor
-// (CEO, Fundador, Conselheiro, Diretoria, Diretor) — eles recebiam R$0 em toda venda.
-// Agora usa a mesma regra do histórico real, em api/_lib/planoDiretor.js.
+// 💰 Comissão pela ÁRVORE OFICIAL (30%) — api/_lib/arvoreOficial.js.
+// TOPO (10%): governança + gestão recebem SEMPRE, pelo cargo (inclusive na venda orgânica).
+// CADEIA (20%): operação + comercial só recebem se estiverem na cadeia da venda; sem dono, empresa.
+// ⚠️ sem seller_id (venda orgânica) NÃO retorna zero: o topo tem que receber.
 async function payStoreCommissions(sale) {
   const value = Number(sale.total_amount) || 0;
-  if (!value || !sale.seller_id) return 0;
+  if (!value) return 0;
 
-  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id&limit=2000')).json();
+  // active=neq.false → conta desativada (ex.: duplicata) NÃO entra nos pools
+  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id&active=neq.false&limit=2000')).json();
   if (!Array.isArray(users) || !users.length) return 0;
   const { assignments, companyPercent, companyAmount } = calcularComissao(sale, users);
 
@@ -46,7 +47,7 @@ async function payStoreCommissions(sale) {
   if (companyAmount > 0 && site) {
     const id = oid();
     linhas.push({
-      id, base44_id: id, sale_id: sale.id, user_id: site.id, user_name: site.full_name, role: 'site_official_rollup',
+      id, base44_id: id, sale_id: sale.id, user_id: site.id, user_name: site.full_name, role: 'empresa_rollup',
       percent: Math.round(companyPercent * 1000) / 1000, amount: companyAmount, sale_amount: value,
       sale_type: 'catalog', status: 'confirmed', product_title: sale.product_title || null,
       anchor_user_id: anchor?.id || null, anchor_user_name: anchor?.full_name || null, created_date: now,
