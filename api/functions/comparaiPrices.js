@@ -6,6 +6,10 @@
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
+// 🔑 SearchAPI (Google Shopping) — a chave JÁ EXISTIA na Vercel e nunca era usada. É a fonte
+// que cobre item genérico (borrifador, esponja, copo); o Zoom só tem eletrônico/marca grande,
+// por isso a comparação funcionava em alguns produtos e falhava na maioria.
+const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
@@ -78,6 +82,22 @@ async function fetchSerpApi(query) {
   }));
 }
 
+// ---- busca no SearchAPI / Google Shopping (cobre produto genérico, não só eletrônico) ----
+async function fetchSearchApi(query) {
+  const u = `https://www.searchapi.io/api/v1/search?engine=google_shopping&q=${encodeURIComponent(query)}&gl=br&hl=pt-br&location=Brazil&api_key=${SEARCHAPI_KEY}`;
+  const resp = await fetch(u);
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || data?.error) throw new Error(`SearchAPI: ${data?.error || resp.status}`);
+  const results = data.shopping_results || [];
+  return results.slice(0, 20).map((r) => ({
+    store: r.seller || r.source || 'Loja',
+    productNameFound: r.title || '',
+    price: Number(r.extracted_price) || parseFloat(String(r.price || '').replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.')),
+    url: r.product_link || r.link || '#',
+    image: r.thumbnail || '',
+  })).filter((r) => r.price > 0);
+}
+
 async function getEntity(productId, auctionId) {
   const table = auctionId ? 'auctions' : 'products';
   const id = auctionId || productId;
@@ -118,29 +138,46 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: 'Título não é descritivo o suficiente para busca', errorCode: 'INVALID_TITLE' });
     }
 
-    // 1) tenta SerpAPI se houver key; senão Zoom
-    let raw = [];
-    try {
-      raw = SERPAPI_KEY ? await fetchSerpApi(cleaned) : await fetchZoom(cleaned);
-    } catch (e) {
-      // fallback: se SerpAPI falhar, tenta Zoom
-      if (SERPAPI_KEY) { try { raw = await fetchZoom(cleaned); } catch { raw = []; } }
-      else throw e;
-    }
-
-    // 2) filtra por preço válido + relevância
+    // 1) CASCATA de fontes: a primeira que trouxer resultado relevante vence.
+    //    Google Shopping (SearchAPI/SerpAPI) cobre produto genérico; o Zoom só cobre
+    //    eletrônico/marca grande — sozinho ele fazia a comparação falhar na maioria do catálogo.
     const titleWords = cleaned.toLowerCase().split(' ').filter((w) => w.length > 2);
-    const valid = raw
+    const relevantes = (raw) => raw
       .filter((c) => isValidPrice(c.price))
       .filter((c) => {
         const found = (c.productNameFound || '').toLowerCase();
         const match = titleWords.filter((w) => found.includes(w)).length;
-        const ratio = titleWords.length ? match / titleWords.length : 0;
-        return ratio >= 0.25;
+        // 2 palavras batendo já indica o mesmo tipo de produto (antes exigia 25% do título
+        // inteiro, o que zerava qualquer item com nome longo — a causa do "indisponível").
+        return match >= Math.min(2, titleWords.length);
       });
 
+    const fontes = [
+      SEARCHAPI_KEY && { nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) },
+      SERPAPI_KEY && { nome: 'serpapi', fn: () => fetchSerpApi(cleaned) },
+      { nome: 'zoom', fn: () => fetchZoom(cleaned) },
+    ].filter(Boolean);
+
+    let valid = [];
+    let source = 'nenhuma';
+    const falhas = [];
+    for (const f of fontes) {
+      try {
+        const r = relevantes(await f.fn());
+        if (r.length > 0) { valid = r; source = f.nome; break; }
+        falhas.push(`${f.nome}: 0 relevantes`);
+      } catch (e) {
+        falhas.push(`${f.nome}: ${String(e?.message || e).slice(0, 60)}`);
+      }
+    }
+
     if (valid.length === 0) {
-      return res.status(200).json({ success: false, error: 'Não encontramos preços reais para comparar no momento', errorCode: 'NO_VALID_RESULTS' });
+      return res.status(200).json({
+        success: false,
+        error: 'Não encontramos preços reais para comparar no momento',
+        errorCode: 'NO_VALID_RESULTS',
+        debug: { query: cleaned, fontes: falhas }, // ajuda a diagnosticar sem precisar de log
+      });
     }
 
     const prices = valid.map((c) => c.price);
@@ -166,7 +203,7 @@ export default async function handler(req, res) {
         searchAttempts: 1,
         priceLabel: 'Preço Médio do Mercado',
         referencePrice,
-        source: SERPAPI_KEY ? 'serpapi' : 'zoom',
+        source,
       },
       cached: false,
     });
