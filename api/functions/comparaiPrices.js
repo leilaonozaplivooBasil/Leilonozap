@@ -16,16 +16,22 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 // ---- limpeza de título (port da function original) ----
 function cleanTitle(title) {
   if (!title) return '';
-  let clean = title
+  let clean = String(title)
     .replace(/leil[aã]o\s*(nozap|no\s*zap)?/gi, '')
     .replace(/\b(novo|usado|semi[-\s]?novo|original|lacrado|garantia|frete\s*gr[aá]tis)\b/gi, '')
-    .replace(/\b(arremate|devolu[çc][aã]o|promo[çc][aã]o|kit|combo)\b/gi, '')
+    .replace(/\b(arremate|devolu[çc][aã]o|promo[çc][aã]o|kit|combo|un|und|unidade)\b/gi, '')
     .replace(/\b(110v|220v|bivolt)\b/gi, '')
-    .replace(/[-_]+/g, ' ')
+    // 🔑 desgruda palavra+número: "Pequeno500ml" → "Pequeno 500ml".
+    // Títulos do catálogo vêm com isso colado e a busca não achava NADA (era a causa real
+    // de boa parte do "Comparação indisponível" — não faltava fonte, faltava query limpa).
+    .replace(/([a-zA-ZÀ-ÿ])(\d)/g, '$1 $2')
+    .replace(/(\d)([a-zA-ZÀ-ÿ]{3,})/g, '$1 $2')
+    .replace(/[^\wÀ-ÿ\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  const words = clean.split(' ').filter((w) => w.length > 1);
-  return words.slice(0, 8).join(' ');
+  // fora números soltos ("6", "5") — só somam ruído na busca
+  const words = clean.split(' ').filter((w) => w.length > 1 && !/^\d+$/.test(w));
+  return words.slice(0, 5).join(' ');
 }
 
 function isValidPrice(price) {
