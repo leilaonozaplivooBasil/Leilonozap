@@ -14,6 +14,8 @@ import { resetAllBalances } from "@/functions/resetAllBalances";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DivulgarTab from "@/components/licensing/DivulgarTab";
+import PromoCreator from "@/pages/PromoCreator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +39,7 @@ import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CommissionsTab from '../components/licensing/CommissionsTab';
+import WithdrawalsHistoryTab from '../components/licensing/WithdrawalsHistoryTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
 import WithdrawalModal from '../components/licensing/WithdrawalModal';
@@ -1080,6 +1083,9 @@ const DashboardContent = ({ user, isAdmin }) => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
           <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
+          {/* 📣 Tudo de divulgação do licenciado mora aqui dentro (pedido do Santana) */}
+          <TabsTrigger value="divulgar" className="text-xs sm:text-sm whitespace-nowrap">📣 Divulgar</TabsTrigger>
+          <TabsTrigger value="material" className="text-xs sm:text-sm whitespace-nowrap">🎨 Material / Banner</TabsTrigger>
           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Loja Virtual</TabsTrigger>}
 
           <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
@@ -1088,11 +1094,30 @@ const DashboardContent = ({ user, isAdmin }) => {
           {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
           <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
           <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
+          <TabsTrigger value="saques" className="text-xs sm:text-sm whitespace-nowrap">💸 Saques</TabsTrigger>
           <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
           {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
         </TabsList>
 
+        {/* ABA: DIVULGAR — links (cadastro/loja/leilões) + WhatsApp + QR Code */}
+        <TabsContent value="divulgar" className="space-y-6">
+          <DivulgarTab user={user} isSaiDeBaixo={isSaiDeBaixo} />
+        </TabsContent>
 
+        {/* ABA: MATERIAL / BANNER — o gerador de artes agora é do licenciado também (era admin-only) */}
+        <TabsContent value="material" className="space-y-6">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎨 Gerador de Material de Divulgação</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Monte a arte do produto, baixe em PNG e publique. Pegue o seu link e o QR Code na aba <strong>📣 Divulgar</strong> para acompanhar o material.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PromoCreator embedded />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ABA: MINHAS VENDAS */}
         <TabsContent value="minhas-vendas" className="space-y-6">
@@ -1388,7 +1413,10 @@ const DashboardContent = ({ user, isAdmin }) => {
           <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
         </TabsContent>
 
-        {/* ABA: SAQUES — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
+        {/* ABA: SAQUES — religada (o componente existia mas estava sem TabsTrigger) */}
+        <TabsContent value="saques" className="space-y-6">
+          <WithdrawalsHistoryTab isSaiDeBaixo={isSaiDeBaixo} isLoadingWithdrawals={isLoadingWithdrawals} myWithdrawals={myWithdrawals} />
+        </TabsContent>
 
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">

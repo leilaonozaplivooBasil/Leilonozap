@@ -13,7 +13,10 @@ import PromoCustomizer from "@/components/promo/PromoCustomizer";
 import PromoLayoutSelector from "@/components/promo/PromoLayoutSelector";
 import PromoDesignSelector from "@/components/promo/PromoDesignSelector";
 
-export default function PromoCreator() {
+// `embedded`: renderiza sem o cabeçalho/voltar e sem a moldura de página inteira,
+// pra poder viver DENTRO do Painel de Alavancagem (aba "Material de Divulgação")
+// sem duplicar código — a página admin continua existindo igual.
+export default function PromoCreator({ embedded = false }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState("oferta");
   const [selectedLayout, setSelectedLayout] = useState("square");
@@ -27,23 +30,25 @@ export default function PromoCreator() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Link
-            to={createPageUrl("CatalogManagement")}
-            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Criador de Material Promocional</h1>
-            <p className="text-sm text-gray-400">
-              Gere imagens, textos e materiais para divulgar seus produtos do catálogo
-            </p>
+    <div className={embedded ? "text-white" : "min-h-screen bg-gray-900 text-white"}>
+      <div className={embedded ? "" : "max-w-6xl mx-auto px-4 sm:px-6 py-6"}>
+        {/* Header (só na página cheia) */}
+        {!embedded && (
+          <div className="flex items-center gap-3 mb-6">
+            <Link
+              to={createPageUrl("CatalogManagement")}
+              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-400" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">Criador de Material Promocional</h1>
+              <p className="text-sm text-gray-400">
+                Gere imagens, textos e materiais para divulgar seus produtos do catálogo
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Step 1: Product Selection */}
         <div className="mb-8">
