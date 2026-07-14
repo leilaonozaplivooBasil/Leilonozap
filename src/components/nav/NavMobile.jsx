@@ -15,8 +15,10 @@ import {
   Hammer,
   Shield,
   Crown,
+  ChevronDown,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
+import { SECTORS } from "@/lib/sectors";
 
 const ICON_MAP = {
   ShoppingBag,
@@ -91,6 +93,7 @@ export default function NavMobile({
   onShareClick,
 }) {
   const navigate = useNavigate();
+  const [openSector, setOpenSector] = React.useState(null);
 
   if (!isOpen) return null;
 
@@ -105,12 +108,6 @@ export default function NavMobile({
   const initials = getInitials(fullName);
   const avatarColor = currentUser?.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
   const photoUrl = currentUser?.profile_photo_url || currentUser?.avatar_url;
-
-  const PUBLIC_LINKS = [
-    { title: "Leilões", pageName: "Home" },
-    { title: "Loja", pageName: "Catalog" },
-    { title: "Seja Licenciado", pageName: "Licensing" },
-  ];
 
   const isActive = (pageName) => {
     if (pageName === "Home" && currentPageName === "Home") return true;
@@ -186,29 +183,46 @@ export default function NavMobile({
 
           {/* ===== Content ===== */}
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            {/* === LINKS PÚBLICOS === */}
-            {PUBLIC_LINKS.map((item) => (
-              <Link
-                key={item.title}
-                to={createPageUrl(item.pageName)}
-                onClick={onClose}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${
-                  isActive(item.pageName)
-                    ? "text-emerald-300"
-                    : "text-gray-400 hover:text-white hover:translate-x-1"
-                }`}
-                style={
-                  isActive(item.pageName)
-                    ? {
-                        background: "rgba(16,185,129,0.1)",
-                        borderLeft: "3px solid rgba(16,185,129,0.5)",
-                      }
-                    : {}
-                }
-              >
-                {item.title}
-              </Link>
-            ))}
+            {/* === SETORES (acordeão — mesma fonte do desktop) === */}
+            {SECTORS.map((s) => {
+              const open = openSector === s.key;
+              return (
+                <div key={s.key}>
+                  <button
+                    onClick={() => setOpenSector(open ? null : s.key)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 ${
+                      open ? "text-emerald-300" : "text-gray-300 hover:text-white"
+                    }`}
+                    style={open ? { background: "rgba(16,185,129,0.1)", borderLeft: "3px solid rgba(16,185,129,0.5)" } : {}}
+                  >
+                    <span>{s.emoji}</span>
+                    <span className="flex-1 text-left">{s.title}</span>
+                    {s.live && (
+                      <span className="relative flex h-2 w-2" aria-hidden>
+                        <span className="animate-ping absolute h-full w-full rounded-full bg-red-500 opacity-75" />
+                        <span className="relative rounded-full h-2 w-2 bg-red-500" />
+                      </span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                  </button>
+                  {open && (
+                    <div className="pl-4 pb-1 space-y-0.5">
+                      {s.items.map((it) => (
+                        <Link
+                          key={it.title}
+                          to={createPageUrl(it.page) + (it.query || "")}
+                          onClick={onClose}
+                          className="block px-4 py-2.5 rounded-xl hover:bg-white/5"
+                        >
+                          <p className="text-sm font-semibold text-gray-200">{it.title}</p>
+                          <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {/* === CARRINHO === */}
             <Link

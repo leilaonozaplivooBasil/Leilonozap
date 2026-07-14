@@ -1,9 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ShoppingCart as CartIcon } from "lucide-react";
+import { ShoppingCart as CartIcon, ChevronDown } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
 import AoVivoAgora from "@/components/livoo/AoVivoAgora";
+import { SECTORS } from "@/lib/sectors";
 
 /**
  * 🛡️ NavDesktop — Cabeçalho público padrão LEILÃO NOZAP
@@ -47,12 +48,8 @@ export default function NavDesktop({
    
   navigate,
 }) {
-  // Links públicos — universais
-  const PUBLIC_LINKS = [
-    { title: "Leilões", pageName: "Home" },
-    { title: "Loja", pageName: "Catalog" },
-    { title: "Seja Licenciado", pageName: "Licensing" },
-  ];
+  // 🧭 Setores (fonte única em @/lib/sectors) — abrem no hover, como o cliente pediu.
+  const [openSector, setOpenSector] = React.useState(null);
 
   const isActive = (pageName) => {
     if (pageName === "Home" && currentPageName === "Home") return true;
@@ -60,30 +57,64 @@ export default function NavDesktop({
     if (pageName === "Licensing" && currentPageName === "Licensing") return true;
     return false;
   };
+  const sectorActive = (s) => isActive(s.href.page) || s.items.some((i) => isActive(i.page));
 
   return (
-    <div className="hidden md:flex md:gap-x-2 items-center">
-      {/* === LINKS PÚBLICOS CENTRAIS === */}
-      {PUBLIC_LINKS.map((item) => (
-        <Link
-          key={item.title}
-          to={createPageUrl(item.pageName)}
-          className={`text-sm font-semibold transition-all duration-300 px-3 py-1.5 rounded-lg ${
-            isActive(item.pageName)
-              ? "text-emerald-300"
-              : "text-gray-300 hover:text-white"
-          }`}
-          style={
-            isActive(item.pageName)
-              ? {
-                  background: "rgba(16, 185, 129, 0.1)",
-                  boxShadow: "0 0 12px rgba(16, 185, 129, 0.08)",
-                }
-              : {}
-          }
+    <div className="hidden md:flex md:gap-x-1 items-center">
+      {/* === SETORES (hover abre o painel) === */}
+      {SECTORS.map((s) => (
+        <div
+          key={s.key}
+          className="relative"
+          onMouseEnter={() => setOpenSector(s.key)}
+          onMouseLeave={() => setOpenSector((cur) => (cur === s.key ? null : cur))}
         >
-          {item.title}
-        </Link>
+          <Link
+            to={createPageUrl(s.href.page)}
+            className={`flex items-center gap-1.5 text-sm font-semibold transition-all duration-200 px-3 py-1.5 rounded-lg ${
+              sectorActive(s) || openSector === s.key ? "text-emerald-300 bg-emerald-500/10" : "text-gray-300 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            {s.live && (
+              <span className="relative flex h-2 w-2" aria-hidden>
+                <span className="animate-ping absolute h-full w-full rounded-full bg-red-500 opacity-75" />
+                <span className="relative rounded-full h-2 w-2 bg-red-500" />
+              </span>
+            )}
+            {s.title}
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openSector === s.key ? "rotate-180" : ""}`} />
+          </Link>
+
+          {openSector === s.key && (
+            <div
+              className="absolute left-0 top-full pt-2 w-72 z-50"
+              // pt-2 mantém o hover vivo na "ponte" entre o botão e o painel
+            >
+              <div
+                className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl"
+                style={{ background: "rgba(10,15,28,0.97)", backdropFilter: "blur(20px)" }}
+              >
+                <div className="px-4 py-3 border-b border-white/10">
+                  <p className="text-sm font-bold text-white">{s.emoji} {s.title}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{s.blurb}</p>
+                </div>
+                <div className="p-1.5">
+                  {s.items.map((it) => (
+                    <Link
+                      key={it.title}
+                      to={createPageUrl(it.page) + (it.query || "")}
+                      onClick={() => setOpenSector(null)}
+                      className="block px-3 py-2.5 rounded-xl hover:bg-emerald-500/10 transition-colors group"
+                    >
+                      <p className="text-sm font-semibold text-gray-100 group-hover:text-emerald-300">{it.title}</p>
+                      <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       ))}
 
       {/* === AO VIVO AGORA · LIVOO LIVE === */}

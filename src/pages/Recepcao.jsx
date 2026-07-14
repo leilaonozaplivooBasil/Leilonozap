@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { createPageUrl } from '@/utils';
-import { Gavel, ShoppingBag, Flame, Truck, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
+import { Gavel, ShoppingBag, Flame, Truck, ShieldCheck, ArrowRight, Zap, Search } from 'lucide-react';
+import { HOME_SECTOR_CARDS } from '@/lib/sectors';
+
+// cores por setor (o card carrega a identidade da vertical)
+const ACCENT = {
+  emerald: '#34d399', green: '#22c55e', red: '#ef4444',
+  blue: '#60a5fa', orange: '#fb923c', amber: '#fbbf24',
+};
 
 const LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -26,8 +33,15 @@ export default function Recepcao() {
     })();
   }, []);
 
+  const [q, setQ] = useState('');
   const goLeiloes = () => navigate(createPageUrl('leiloes'));
   const goLoja = () => navigate('/Loja-Virtual');
+  // produto agora abre o PRODUTO (antes qualquer card jogava na lista genérica = atrito puro)
+  const goProduto = (id) => navigate(createPageUrl('CatalogProductDetails') + `?id=${id}`);
+  const buscar = (e) => {
+    e.preventDefault();
+    navigate('/Loja-Virtual' + (q.trim() ? `?search=${encodeURIComponent(q.trim())}` : ''));
+  };
 
   return (
     <div className="recepcao">
@@ -80,6 +94,23 @@ export default function Recepcao() {
             </button>
           </div>
 
+          {/* BUSCA — gesto nº 1 de quem chega em loja (antes não existia na abertura) */}
+          <form onSubmit={buscar} className="rise" style={{ animationDelay: '.35s', marginTop: 28, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={20} style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: '#6b8a7c' }} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="O que você está procurando?"
+                aria-label="Buscar produtos"
+                style={{ width: '100%', padding: '17px 120px 17px 50px', borderRadius: 14, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.16)', color: '#e9f5ef', fontSize: 16, fontFamily: 'Manrope', outline: 'none' }}
+              />
+              <button type="submit" style={{ position: 'absolute', right: 6, top: 6, bottom: 6, padding: '0 22px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#16a34a,#22c55e)', color: '#fff', fontWeight: 800, fontFamily: 'Manrope' }}>
+                Buscar
+              </button>
+            </div>
+          </form>
+
           {/* stats */}
           <div className="rise" style={{ animationDelay: '.4s', display: 'flex', gap: 28, justifyContent: 'center', flexWrap: 'wrap', marginTop: 44 }}>
             {[[<Flame size={18} key="f" />, `${stats.leiloes}`, 'leilões ativos'], [<ShoppingBag size={18} key="s" />, `${stats.produtos}+`, 'produtos na loja'], [<Truck size={18} key="t" />, 'Brasil', 'entrega em todo o país'], [<ShieldCheck size={18} key="sh" />, 'PIX & Cartão', 'pagamento seguro']].map((s, i) => (
@@ -88,6 +119,41 @@ export default function Recepcao() {
                 <span><strong style={{ color: '#fff' }}>{s[1]}</strong> <span style={{ fontSize: 13 }}>{s[2]}</span></span>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SETORES — cada vertical do negócio com porta própria (antes ficavam escondidas) */}
+      <section style={{ padding: '56px 20px', background: '#07140d' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <h2 className="display" style={{ fontSize: 'clamp(24px,4vw,38px)', margin: '0 0 8px', textAlign: 'center' }}>
+            POR ONDE VOCÊ QUER <span className="shine">COMEÇAR?</span>
+          </h2>
+          <p style={{ color: '#9fb3aa', textAlign: 'center', margin: '0 0 30px' }}>Escolha o setor e vá direto ao ponto.</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 16 }}>
+            {HOME_SECTOR_CARDS.map((s) => {
+              const c = ACCENT[s.accent] || '#34d399';
+              return (
+                <button
+                  key={s.title}
+                  onClick={() => navigate(createPageUrl(s.page))}
+                  className="prod-card"
+                  style={{
+                    textAlign: 'left', cursor: 'pointer', padding: 22, borderRadius: 18,
+                    background: '#0b1a12', border: '1px solid rgba(255,255,255,.08)',
+                    color: '#e9f5ef', fontFamily: 'Manrope', display: 'flex', flexDirection: 'column', gap: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 30 }}>{s.emoji}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: c }}>{s.title}</span>
+                  <span style={{ fontSize: 13.5, color: '#9fb3aa', lineHeight: 1.45 }}>{s.desc}</span>
+                  <span style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: c }}>
+                    Acessar <ArrowRight size={14} />
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -104,7 +170,7 @@ export default function Recepcao() {
               {produtos.map((p) => {
                 const off = p.market_value > p.price_catalog ? Math.round((1 - p.price_catalog / p.market_value) * 100) : 0;
                 return (
-                  <div key={p.id} onClick={goLoja} className="prod-card" style={{ cursor: 'pointer', borderRadius: 16, overflow: 'hidden', background: '#0b1a12', border: '1px solid rgba(255,255,255,.07)' }}>
+                  <div key={p.id} onClick={() => goProduto(p.id)} className="prod-card" style={{ cursor: 'pointer', borderRadius: 16, overflow: 'hidden', background: '#0b1a12', border: '1px solid rgba(255,255,255,.07)' }}>
                     <div style={{ position: 'relative', aspectRatio: '1', background: '#fff' }}>
                       <img src={p.image_urls[0]} alt={p.description} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       {off > 0 && <span style={{ position: 'absolute', top: 8, left: 8, background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 8px', borderRadius: 8 }}>-{off}%</span>}

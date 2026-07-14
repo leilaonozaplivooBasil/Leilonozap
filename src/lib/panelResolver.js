@@ -62,6 +62,16 @@ export const PANEL_METADATA = {
     iconColor: "bg-amber-600",
     route: "/MarketplaceLotes",
   },
+  // 💰 Parceiro de Compra (quem contratou plano em /Partners) — é AQUI que ele acompanha
+  // o rendimento. Sem este painel, o parceiro logado não tinha nenhum link para o painel dele.
+  parceiro_compra: {
+    key: "parceiro_compra",
+    title: "Painel do Parceiro",
+    description: "Acompanhe suas compras e seu rendimento",
+    iconName: "TrendingUp",
+    iconColor: "bg-amber-600",
+    route: "/InvestorDashboard",
+  },
   leiloeiro: {
     key: "leiloeiro",
     title: "Painel do Leiloeiro",
@@ -119,6 +129,11 @@ function derivePanelsFromLegacyFields(user) {
   // Investidor
   if (role === "investidor") {
     panels.add("investidor");
+  }
+
+  // Parceiro de Compra: quem contratou/ativou um plano em /Partners (role continua 'user')
+  if (user.partner_plan_activated_at || user.active_partner_plan) {
+    panels.add("parceiro_compra");
   }
 
   // Licenciado (via role OU career_level)

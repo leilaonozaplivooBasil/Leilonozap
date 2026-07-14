@@ -46,6 +46,7 @@ const CreateLuxuryAuction = React.lazy(() => import('./pages/CreateLuxuryAuction
 const CustomerDetails = React.lazy(() => import('./pages/CustomerDetails'));
 const DailyReportView = React.lazy(() => import('./pages/DailyReportView'));
 const DiretoDeFabrica = React.lazy(() => import('./pages/DiretoDeFabrica'));
+const ArremateDevolucoes = React.lazy(() => import('./pages/ArremateDevolucoes'));
 const EditAuction = React.lazy(() => import('./pages/EditAuction'));
 const EditCatalogProduct = React.lazy(() => import('./pages/EditCatalogProduct'));
 const ErrorReport = React.lazy(() => import('./pages/ErrorReport'));
@@ -102,7 +103,12 @@ const WalletHistory = React.lazy(() => import('./pages/WalletHistory'));
 
 export const PAGES = {
     "AcessoVendedor": AcessoVendedor,
-    "ActivePartners": ActivePartners,
+    // 🔒 Carteira de parceiros (nomes, e-mails, CPFs, valores investidos) — só admin.
+    "ActivePartners": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <ActivePartners />
+        </RequireRole>
+    ),
     "AddCatalogProduct": AddCatalogProduct,
     "AnaliseDeLotes": AnaliseDeLotes,
     "AddFunds": AddFunds,
@@ -147,6 +153,7 @@ export const PAGES = {
     "CustomerDetails": CustomerDetails,
     "DailyReportView": DailyReportView,
     "DiretoDeFabrica": DiretoDeFabrica,
+    "ArremateDevolucoes": ArremateDevolucoes,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
     "ErrorReport": ErrorReport,
@@ -177,8 +184,13 @@ export const PAGES = {
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
-    "PartnerPlanActivation": PartnerPlanActivation,
-    "Partners": Partners,
+    // 🔒 Ativação de plano de parceiro (mexe em dinheiro/plano) — só admin.
+    "PartnerPlanActivation": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <PartnerPlanActivation />
+        </RequireRole>
+    ),
+    "Partners": Partners, // pública de propósito: é a landing "Seja um Parceiro"
     "Portal": Portal,
     "SuperAdminPanels": SuperAdminPanels,
     "PaymentFailure": PaymentFailure,
