@@ -31,7 +31,7 @@ const careerSteps = [
   { id: 'diretor', title: 'Diretor Operacional', icon: ShieldCheck,
     achievedDescription: '🛡️ Diretor Operacional.',
     lockedDescription: 'Convidado para assumir uma posição na Diretoria Operacional.' },
-  { id: 'socio', title: 'Sócio', icon: BookOpen,
+  { id: 'socio', title: 'Sócio Executivo', icon: BookOpen,
     achievedDescription: '📖 Sócio: 1% sobre todo o seu sistema de alavancagem.',
     lockedDescription: 'Convidado para participar da mentoria X-OS (nossa Academia de Desenvolvimento). Ao concluir, torna-se Sócio e ganha 1% sobre todo o seu sistema de alavancagem — ex: se um Distribuidor da sua rede vender R$ 10 milhões, você ganha 1% sobre esse total.' },
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,

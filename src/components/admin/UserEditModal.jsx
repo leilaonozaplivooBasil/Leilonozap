@@ -21,7 +21,7 @@ const CAREER_LEVELS = [
     { id: 'ponto_retirada', name: 'Ponto de Retirada', color: 'bg-indigo-500' },
     { id: 'loja_fisica', name: 'Loja Física', color: 'bg-lime-500' },
     { id: 'distribuidor', name: 'Distribuidor', color: 'bg-sky-500' },
-    { id: 'socio', name: 'Sócio', color: 'bg-emerald-500' },
+    { id: 'socio', name: 'Sócio Executivo', color: 'bg-emerald-500' },
     { id: 'diretor', name: 'Diretor Operacional', color: 'bg-orange-500' },
     { id: 'diretoria', name: 'Diretoria Executiva', color: 'bg-fuchsia-500' },
     { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
