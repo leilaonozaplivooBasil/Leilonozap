@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     y += 12;
 
     // Introduction
-    addText('Pelo presente instrumento particular, de um lado COMPRAS FULL COMERCIO LTDA, pessoa juridica de direito privado, inscrita no CNPJ sob n. 51.544.091/0001-67, com sede em Av. das Americas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, neste ato representada por sua marca LEILAO NOZAP, doravante denominada simplesmente PLATAFORMA, e de outro lado PARCEIRO COMERCIAL, pessoa fisica ou juridica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria Comercial e Participacao em Operacao Estruturada de Venda de Produtos, que se regera pelas clausulas e condicoes a seguir estabelecidas.');
+    addText('Pelo presente instrumento particular, de um lado COMPRAS FULL COMERCIO LTDA, pessoa juridica de direito privado, inscrita no CNPJ sob n. 51.544.091/0001-67, com sede em Av. das Americas, 19.005, Torre 1, Sala 1106, Barra da Tijuca, Rio de Janeiro - RJ, 22790-704, neste ato representada por sua marca LEILAO NOZAP, doravante denominada simplesmente PLATAFORMA, e de outro lado PARCEIRO COMERCIAL, pessoa fisica ou juridica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria Comercial e Participacao em Operacao Estruturada de Venda de Produtos, que se regera pelas clausulas e condicoes a seguir estabelecidas.');
 
     // Section 1
     addTitle('1. DA QUALIFICACAO E DA ATIVIDADE DA PLATAFORMA');
