@@ -55,7 +55,7 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
       <CardContent className="space-y-4">
         {user?.referral_code && (
           <StoreShareLinkCard
-            storeLink={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
+            storeLink={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`}
             isSaiDeBaixo={isSaiDeBaixo}
           />
         )}

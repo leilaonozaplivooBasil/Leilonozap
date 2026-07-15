@@ -1396,12 +1396,12 @@ const DashboardContent = ({ user, isAdmin }) => {
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                    value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
+                    value={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`}
                     readOnly
                     className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
-                  <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
-                  <a href={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
+                  <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
+                  <a href={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
