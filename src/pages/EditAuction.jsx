@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload } from 'lucide-react';
+import ReactivateAuction from '@/components/auction/ReactivateAuction';
 
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -335,13 +336,8 @@ export default function EditAuction() {
         }
     };
 
-    // 🆕 FUNÇÃO REATIVAR COM BOTÃO DEDICADO
-    const handleReactivate = async () => {
-        if (!reactivateTime) {
-            alert("⚠️ Por favor, defina uma nova data e hora para reativar o leilão.");
-            return;
-        }
-        
+    // 🆕 FUNÇÃO REATIVAR COM BOTÃO DEDICADO (agora recebe UTC pronto do componente)
+    const handleReactivate = async (utcEndTimeString, brtDisplay) => {
         if (!confirm("⚠️ ATENÇÃO:\n\n- O histórico de LANCES será mantido\n- Mensagens de ARREMATADO serão removidas\n- Vencedor será limpo\n- Status mudará para ATIVO\n\nContinuar?")) {
             return;
         }
@@ -349,17 +345,7 @@ export default function EditAuction() {
         setIsReactivating(true);
         try {
             console.log(`🔄 INICIANDO REATIVAÇÃO...`);
-            
-            // 🔧 CALCULA NOVO HORÁRIO (UTC) - CORRIGIDO
-            const [datePart, timePart] = reactivateTime.split('T');
-            const [year, month, day] = datePart.split('-');
-            const [hour, minute] = timePart.split(':');
-            
-            // Cria data em Brasília (UTC-3)
-            const brtDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:00-03:00`);
-            const utcEndTimeString = brtDate.toISOString();
 
-            console.log(`⏰ Input BRT: ${reactivateTime}`);
             console.log(`⏰ Convertido UTC: ${utcEndTimeString}`);
             console.log(`⏰ Verificação: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
 
@@ -768,42 +754,13 @@ export default function EditAuction() {
                   </CardContent>
                 </Card>
 
-                {/* 🆕 CARD DE REATIVAR LEILÃO */}
+                {/* 🆕 CARD DE REATIVAR LEILÃO — componente inteligente com presets rápidos */}
                 {auction && (auction.status === 'ended' || auction.status === 'sold') && (
-                    <Card className="border-orange-500/50 bg-orange-500/5">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-orange-400">
-                                <RefreshCw className="w-5 h-5 text-orange-500" />
-                                Reativar Leilão
-                            </CardTitle>
-                            <p className="text-sm text-slate-400">
-                                Este leilão já terminou. Você pode reativá-lo para uma nova rodada, mas o vencedor anterior será removido.
-                            </p>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label htmlFor="reactivate_time" className="text-slate-300">Nova Data de Término</Label>
-                                <Input
-                                    id="reactivate_time"
-                                    type="datetime-local"
-                                    value={reactivateTime}
-                                    onChange={(e) => setReactivateTime(e.target.value)}
-                                    className="mt-1 bg-[#0d1117] border-[#30363d] text-white"
-                                />
-                            </div>
-                            <Button
-                                className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold"
-                                onClick={handleReactivate}
-                                disabled={isReactivating || isSaving || isUploading || isDeleting}
-                            >
-                                {isReactivating ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reativando...</>
-                                ) : (
-                                    <><RefreshCw className="w-4 h-4 mr-2" /> Reativar Agora</>
-                                )}
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <ReactivateAuction
+                        onReactivate={handleReactivate}
+                        isReactivating={isReactivating}
+                        disabled={isSaving || isUploading || isDeleting}
+                    />
                 )}
 
                 <Card className="border-rose-500/30 bg-rose-500/5">
