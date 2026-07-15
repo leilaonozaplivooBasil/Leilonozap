@@ -106,6 +106,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
   const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [catalogSubTab, setCatalogSubTab] = useState('catalogo-produtos');
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -1228,7 +1229,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
         {(userLevels.includes('licenciado_catalogo') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
-            <Tabs defaultValue="catalogo-produtos" className="w-full">
+            <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
                 <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Sua Loja Virtual</TabsTrigger>
                 <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
@@ -1240,7 +1241,13 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
-                <CatalogHome currentStore={null} catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} user={user} />
+                <CatalogHome
+                  currentStore={null}
+                  catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []}
+                  user={user}
+                  onGoToPedidos={() => setCatalogSubTab('catalogo-pedidos')}
+                  onGoToComissoes={() => setCatalogSubTab('catalogo-comissoes')}
+                />
               </TabsContent>
 
               <TabsContent value="catalogo-pedidos" className="mt-6">

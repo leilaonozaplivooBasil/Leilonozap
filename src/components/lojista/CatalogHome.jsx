@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, ShoppingBag, Eye, Loader2 } from 'lucide-react';
 
-export default function CatalogHome({ currentStore, catalogSales = [], user }) {
+export default function CatalogHome({ currentStore, catalogSales = [], user, onGoToPedidos, onGoToComissoes }) {
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
@@ -73,7 +73,9 @@ export default function CatalogHome({ currentStore, catalogSales = [], user }) {
     <div className="space-y-6">
       {/* Cards principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-gray-800 border-gray-700">
+        <Card
+          onClick={onGoToPedidos}
+          className={`bg-gray-800 border-gray-700 ${onGoToPedidos ? 'cursor-pointer hover:border-green-500/50 transition-colors' : ''}`}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
@@ -85,7 +87,9 @@ export default function CatalogHome({ currentStore, catalogSales = [], user }) {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800 border-gray-700">
+        <Card
+          onClick={onGoToComissoes}
+          className={`bg-gray-800 border-gray-700 ${onGoToComissoes ? 'cursor-pointer hover:border-green-500/50 transition-colors' : ''}`}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
@@ -136,7 +140,10 @@ export default function CatalogHome({ currentStore, catalogSales = [], user }) {
           <div className="space-y-3">
             {stats.recentOrders.length > 0 ? (
               stats.recentOrders.map((order, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                <div
+                  key={idx}
+                  onClick={onGoToPedidos}
+                  className={`flex items-center justify-between p-3 bg-gray-700/50 rounded-lg ${onGoToPedidos ? 'cursor-pointer hover:bg-gray-700 transition-colors' : ''}`}>
                   <div className="flex-1">
                     <p className="text-white font-medium text-sm">{order.product_title || 'Produto'}</p>
                     <p className="text-gray-400 text-xs mt-1">{new Date(order.created_date).toLocaleDateString('pt-BR')}</p>
