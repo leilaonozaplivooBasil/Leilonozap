@@ -1191,7 +1191,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs defaultValue="catalogo-produtos" className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
-                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Loja Virtual</TabsTrigger>
+                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Sua Loja Virtual</TabsTrigger>
                 <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
                 <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
                 <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes</TabsTrigger>
