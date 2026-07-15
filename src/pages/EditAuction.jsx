@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
@@ -403,7 +404,7 @@ export default function EditAuction() {
             
             console.log(`✅ ${deletedCount} mensagens deletadas`);
 
-            // 🔧 ATUALIZA O LEILÃO (updateMany evita erro "Cannot coerce to single JSON object")
+            // 🔧 ATUALIZA O LEILÃO (supabase direto — evita erro .single() do adapter)
             if (!auctionId) {
                 throw new Error("ID do leilão não encontrado na URL.");
             }
@@ -417,11 +418,13 @@ export default function EditAuction() {
                 last_processed_bid_time: null,
             };
             console.log(`📦 Payload:`, JSON.stringify(reactivatePayload));
-            try {
-                await Auction.update(auctionId, reactivatePayload);
-            } catch (updateErr) {
-                console.warn("⚠️ Auction.update falhou, tentando updateMany como fallback:", updateErr?.message || updateErr);
-                await Auction.updateMany({ id: auctionId }, { $set: reactivatePayload });
+            const { error: reactivateUpdateError } = await supabase
+                .from('auctions')
+                .update(reactivatePayload)
+                .eq('id', auctionId);
+            if (reactivateUpdateError) {
+                console.error("❌ Erro Supabase ao reativar:", reactivateUpdateError);
+                throw new Error(reactivateUpdateError.message || 'Falha ao atualizar leilão');
             }
             
             console.log(`✅ Leilão reativado com sucesso!`);
