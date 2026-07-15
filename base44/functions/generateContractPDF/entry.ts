@@ -95,98 +95,116 @@ Deno.serve(async (req) => {
     }
 
     // Title
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(34, 139, 34);
     doc.setFont('helvetica', 'bold');
-    doc.text(removeAccents('CONTRATO DE PARCERIA DE COMPRA E OPERACAO COMERCIAL'), pageWidth/2, y, { align: 'center' });
-    y += 15;
+    doc.text(removeAccents('CONTRATO DE PARCERIA COMERCIAL E PARTICIPACAO EM OPERACAO ESTRUTURADA DE VENDA DE PRODUTOS'), pageWidth/2, y, { align: 'center', maxWidth: maxWidth });
+    y += 12;
 
     // Introduction
-    addText('Pelo presente instrumento particular, de um lado LEILAO NOZAP, pessoa juridica de direito privado, inscrita no CNPJ sob n. 51.544.091/0001-67, com sede em Av. das Americas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, doravante denominada PLATAFORMA, e de outro lado PARCEIRO DE COMPRA, pessoa fisica ou juridica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria de Compra e Operacao Comercial, que se regera pelas clausulas e condicoes abaixo.');
+    addText('Pelo presente instrumento particular, de um lado LEILAO NOZAP, pessoa juridica de direito privado, inscrita no CNPJ sob n. 51.544.091/0001-67, com sede em Av. das Americas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, doravante denominada PLATAFORMA, e de outro lado PARCEIRO COMERCIAL, pessoa fisica ou juridica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria Comercial e Participacao em Operacao Estruturada de Venda de Produtos, que se regera pelas clausulas e condicoes a seguir estabelecidas.');
 
     // Section 1
-    addTitle('1. OBJETO');
-    addText('1.1. O presente contrato tem por objeto a formalizacao da parceria comercial entre a PLATAFORMA e o PARCEIRO para a aquisicao de produtos selecionados, disponibilizados no catalogo digital da PLATAFORMA, com finalidade de operacoes comerciais estruturadas, sob gestao integral da PLATAFORMA.');
-    addText('1.2. O PARCEIRO participa das operacoes por meio da compra de produtos, os quais sao destinados a comercializacao conforme a estrategia operacional da PLATAFORMA.');
+    addTitle('1. DA QUALIFICACAO E DA ATIVIDADE DA PLATAFORMA');
+    addText('1.1. A PLATAFORMA, sob a marca LEILAO NOZAP, e uma empresa brasileira de tecnologia e operacao comercial especializada na aquisicao, curadoria e comercializacao de produtos de alto giro, oriundos de devolucoes dentro do prazo legal de 7 (sete) dias, estoques de fabrica, mostruarios e lotes de estoque parado, adquiridos com desconto de 25% (vinte e cinco por cento) a 40% (quarenta por cento) sobre o valor de mercado, posteriormente comercializados por meio de equipe de vendas propria e canais digitais proprios.');
+    addText('1.2. A PLATAFORMA opera com metodologia propria de curadoria, baseada em curva ABC, analise de liquidez, calculo de rentabilidade e gestao operacional integral, garantindo o giro comercial dos produtos adquiridos.');
 
     // Section 2
-    addTitle('2. NATUREZA DA PARCERIA');
-    addText('2.1. As partes reconhecem que esta relacao possui natureza estritamente comercial, nao caracterizando, em nenhuma hipotese:');
-    addText('- investimento financeiro;');
-    addText('- contrato de investimento coletivo;');
-    addText('- sociedade;');
-    addText('- joint venture;');
-    addText('- relacao trabalhista;');
-    addText('- captacao publica de recursos;');
-    addText('- promessa de rendimento financeiro.');
-    addText('2.2. O PARCEIRO atua como parceiro comercial de compra, participando de operacoes reais de circulacao de mercadorias.');
+    addTitle('2. DO OBJETO');
+    addText('2.1. O presente contrato tem por objeto a formalizacao da parceria comercial entre a PLATAFORMA e o PARCEIRO, mediante a qual o PARCEIRO aporta capital para participacao no resultado financeiro das operacoes comerciais estruturadas de compra e venda de produtos realizadas pela PLATAFORMA, conforme condicoes aqui pactuadas.');
+    addText('2.2. O capital aportado pelo PARCEIRO sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos, dentro da estrategia operacional da PLATAFORMA, gerando resultados comerciais compartilhados nos termos deste instrumento.');
 
     // Section 3
-    addTitle('3. FUNCIONAMENTO DA PARCERIA');
-    addText('3.1. O PARCEIRO selecionara produtos disponiveis no catalogo da PLATAFORMA e realizara a compra minima definida no momento da adesao.');
-    addText('3.2. A PLATAFORMA sera responsavel por:');
-    addText('- curadoria e selecao dos produtos;');
-    addText('- validacao de qualidade e procedencia;');
-    addText('- gestao comercial e logistica;');
-    addText('- acompanhamento operacional via painel digital;');
-    addText('- comercializacao dos produtos nos canais proprios.');
-    addText('3.3. O PARCEIRO podera acompanhar, em tempo real, por meio do painel exclusivo: status das operacoes; evolucao comercial; valores a receber; historico das compras realizadas.');
+    addTitle('3. DA NATUREZA JURIDICA DA PARCERIA');
+    addText('3.1. As partes declaram e reconhecem, de forma expressa e inequivoca, que a relacao ora formalizada possui natureza estritamente comercial, caracterizando-se como parceria comercial de participacao em operacao estruturada de venda de produtos.');
+    addText('3.2. Em nenhuma hipotese este contrato podera ser interpretado como:');
+    addText('- aplicacao financeira, investimento financeiro ou produto de renda fixa ou variavel;');
+    addText('- captacao de recursos junto ao publico, nos termos da legislacao pertinente;');
+    addText('- contrato de mutuo, emprestimo ou financiamento;');
+    addText('- promessa de rendimento, taxa de juros ou remuneracao garantida sobre capital;');
+    addText('- contrato de sociedade, joint venture ou associacao;');
+    addText('- relacao de consumo sujeita ao Codigo de Defesa do Consumidor;');
+    addText('- relacao de emprego ou trabalho subordinado;');
+    addText('- oferta publica de valores mobiliarios nos termos da Lei n. 6.385/1976.');
+    addText('3.3. O PARCEIRO declara estar ciente de que o resultado comercial compartilhado decorre exclusivamente do lucro liquido apurado nas operacoes de compra e venda de produtos realizadas pela PLATAFORMA, nao constituindo, sob qualquer aspecto, rendimento financeiro, remuneracao de capital ou taxa de juros.');
 
     // Section 4
-    addTitle('4. RETORNO COMERCIAL AO PARCEIRO');
-    addText('4.1. Em contrapartida a compra realizada, o PARCEIRO fara jus a um retorno comercial previamente estabelecido, calculado sobre o valor da compra, conforme condicoes apresentadas no momento da adesao.');
-    addText('4.2. O retorno comercial nao esta vinculado a volume de vendas individuais do PARCEIRO, mas sim a execucao operacional da PLATAFORMA, dentro de seu modelo de negocios.');
-    addText('4.3. O prazo estimado para encerramento da operacao e disponibilizacao do retorno sera informado no painel, respeitando o ciclo comercial de cada produto.');
+    addTitle('4. DA OPERACAO COMERCIAL ESTRUTURADA');
+    addText('4.1. A operacao comercial estruturada consiste na aquisicao, pela PLATAFORMA, de produtos provenientes das seguintes origens:');
+    addText('- produtos devolvidos dentro do prazo legal de 7 (sete) dias;');
+    addText('- estoques de fabrica e produtos direto de fabrica;');
+    addText('- mostruarios e amostras comerciais;');
+    addText('- lotes de estoque parado ou excedente.');
+    addText('4.2. A aquisicao e realizada com desconto de 25% (vinte e cinco por cento) a 40% (quarenta por cento) sobre o valor de mercado dos produtos, garantindo margem operacional favoravel.');
+    addText('4.3. Os produtos adquiridos sao posteriormente comercializados pela PLATAFORMA por meio de equipe de vendas propria e canais digitais, com giro comercial acelerado devido a alta liquidez dos itens selecionados.');
 
     // Section 5
-    addTitle('5. PAGAMENTOS');
-    addText('5.1. Os pagamentos ao PARCEIRO ocorrerao por meio eletronico, em conta de titularidade do PARCEIRO, conforme dados cadastrados.');
-    addText('5.2. Os valores serao liberados apos a conclusao do ciclo operacional correspondente a compra realizada.');
+    addTitle('5. DA CURADORIA E SELECAO DE PRODUTOS');
+    addText('5.1. A selecao dos produtos que compoem a operacao comercial e de competencia exclusiva da PLATAFORMA, baseada em metodologia propria de curva ABC, analise de liquidez, calculo de rentabilidade e gestao de risco operacional.');
+    addText('5.2. O PARCEIRO nao participa, nao interfere e nao decide sobre a escolha dos produtos a serem adquiridos, cabendo a PLATAFORMA a definicao estrategica das operacoes comerciais.');
+    addText('5.3. A PLATAFORMA manterá registro detalhado das operacoes realizadas, disponivel para consulta pelo PARCEIRO por meio de painel digital exclusivo.');
 
     // Section 6
-    addTitle('6. RISCOS OPERACIONAIS');
-    addText('6.1. A PLATAFORMA adota criterios rigorosos de selecao, controle e gestao, reduzindo riscos operacionais.');
-    addText('6.2. Ainda assim, o PARCEIRO declara estar ciente de que toda operacao comercial envolve variaveis de mercado, logistica e fornecedores.');
-    addText('6.3. A PLATAFORMA compromete-se a atuar com diligencia maxima, transparencia e boa-fe.');
+    addTitle('6. DO CAPITAL APORTADO E SUA ALOCACAO');
+    addText('6.1. O PARCEIRO aportara o valor correspondente ao plano de parceria selecionado no momento da adesao, conforme condicoes apresentadas na plataforma.');
+    addText('6.2. O capital aportado sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos, dentro da estrategia operacional da PLATAFORMA, durante toda a vigencia deste contrato.');
+    addText('6.3. O capital aportado nao podera ser retirado antecipadamente, ressalvadas as condicoes de encerramento previstas na Clausula 8.');
 
     // Section 7
-    addTitle('7. OBRIGACOES DO PARCEIRO');
-    addText('7.1. Realizar o cadastro com informacoes verdadeiras;');
-    addText('7.2. Efetuar as compras conforme as regras da plataforma;');
-    addText('7.3. Acompanhar as informacoes disponibilizadas no painel;');
-    addText('7.4. Manter seus dados atualizados.');
+    addTitle('7. DO COMPARTILHAMENTO DE LUCROS');
+    addText('7.1. Em contrapartida ao capital aportado, o PARCEIRO fara jus a uma cota de participacao sobre o lucro liquido apurado nas operacoes comerciais realizadas pela PLATAFORMA, calculada conforme percentual estabelecido no momento da adesao e aplicada sobre o valor do capital aportado.');
+    addText('7.2. O lucro compartilhado decorre exclusivamente do resultado positivo das operacoes de compra e venda de produtos, nao constituindo rendimento financeiro, remuneracao de capital, taxa de juros ou qualquer modalidade de aplicacao financeira.');
+    addText('7.3. O compartilhamento de lucros nao esta vinculado ao volume de vendas individuais do PARCEIRO, mas sim a execucao operacional global da PLATAFORMA, dentro de seu modelo de negocios.');
+    addText('7.4. A PLATAFORMA compromete-se a disponibilizar, por meio do painel digital exclusivo, a prestacao de contas e o demonstrativo de resultados das operacoes comerciais realizadas.');
 
     // Section 8
-    addTitle('8. OBRIGACOES DA PLATAFORMA');
-    addText('8.1. Disponibilizar produtos de alta liquidez;');
-    addText('8.2. Operar a logistica e comercializacao;');
-    addText('8.3. Garantir transparencia total via painel;');
-    addText('8.4. Efetuar os repasses conforme estabelecido.');
+    addTitle('8. DA VIGENCIA E DO CICLO OPERACIONAL');
+    addText('8.1. O presente contrato tera vigencia de 12 (doze) meses, contados a partir da data de aceite eletronico pelo PARCEIRO.');
+    addText('8.2. O ciclo financeiro da parceria observara as seguintes regras:');
+    addText('a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 60 (sessenta) dias contados da data do aporte inicial;');
+    addText('b) Apos o primeiro ciclo, os compartilhamentos subsequentes ocorrerao em ciclos mensais, com disponibilizacao a cada 30 (trinta) dias;');
+    addText('c) O capital aportado permanecera alocado continuamente em novas operacoes de compra e recompra de produtos, enquanto vigente o contrato.');
+    addText('8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 60 (sessenta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.');
+    addText('8.4. Ao final do prazo de 12 (doze) meses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para celebracao de novo acordo, o qual podera conter condicoes, prazos e criterios distintos.');
+    addText('8.5. Encerrada a vigencia contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO sera disponibilizado para retirada em ate 60 (sessenta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.');
 
     // Section 9
-    addTitle('9. VIGENCIA, PRAZO E CICLO OPERACIONAL');
-    addText('9.1. O presente contrato tera vigencia de 12 (doze) meses, contados a partir da data de aceite eletronico pelo PARCEIRO.');
-    addText('9.2. Durante a vigencia, o valor correspondente ao plano de parceria adquirido pelo PARCEIRO sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos, dentro da estrategia operacional da PLATAFORMA.');
-    addText('9.3. O ciclo financeiro da parceria observara as seguintes regras:');
-    addText('a) O primeiro retorno comercial sera disponibilizado ao PARCEIRO em ate 60 (sessenta) dias contados da data da compra inicial;');
-    addText('b) Apos o primeiro ciclo, os retornos subsequentes ocorrerao em ciclos mensais, com disponibilizacao a cada 30 (trinta) dias;');
-    addText('c) O valor principal do plano adquirido permanecera reaplicado continuamente em novas operacoes de compra, enquanto vigente o contrato.');
-    addText('9.4. Os valores de retorno comercial apurados apos o periodo inicial de 60 (sessenta) dias poderao ser sacados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.');
-    addText('9.5. Ao final do prazo de 12 (doze) meses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para celebracao de novo acordo, o qual podera conter condicoes, prazos e criterios distintos.');
-    addText('9.6. Encerrada a vigencia contratual, o valor integral correspondente a compra realizada pelo PARCEIRO sera disponibilizado para saque em ate 60 (sessenta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.');
+    addTitle('9. DAS OBRIGACOES DO PARCEIRO');
+    addText('9.1. Realizar o cadastro na plataforma com informacoes verdadeiras, completas e atualizadas;');
+    addText('9.2. Aportar o capital correspondente ao plano de parceria selecionado;');
+    addText('9.3. Acompanhar as informacoes disponibilizadas no painel digital exclusivo;');
+    addText('9.4. Manter seus dados cadastrais, bancarios e de contato atualizados;');
+    addText('9.5. Abster-se de interferir na selecao de produtos ou na gestao operacional da PLATAFORMA.');
 
     // Section 10
-    addTitle('10. CONFIDENCIALIDADE');
-    addText('10.1. As partes comprometem-se a manter sigilo absoluto sobre informacoes estrategicas, comerciais e operacionais.');
+    addTitle('10. DAS OBRIGACOES DA PLATAFORMA');
+    addText('10.1. Alocar o capital aportado em operacoes comerciais de compra e venda de produtos;');
+    addText('10.2. Realizar a curadoria, selecao e aquisicao dos produtos com criterios tecnicos rigorosos;');
+    addText('10.3. Operar a logistica, armazenamento e comercializacao dos produtos;');
+    addText('10.4. Garantir transparencia total por meio do painel digital exclusivo;');
+    addText('10.5. Efetuar o compartilhamento de lucros e a devolucao do capital aportado nos prazos estabelecidos.');
 
     // Section 11
-    addTitle('11. DISPOSICOES GERAIS');
-    addText('11.1. O aceite eletronico deste contrato possui plena validade juridica.');
-    addText('11.2. Este contrato representa a totalidade do acordo entre as partes.');
+    addTitle('11. DOS RISCOS OPERACIONAIS');
+    addText('11.1. A PLATAFORMA adota criterios rigorosos de selecao, controle e gestao, com o objetivo de mitigar riscos operacionais.');
+    addText('11.2. O PARCEIRO declara estar ciente de que toda operacao comercial envolve variaveis de mercado, logistica e fornecedores, podendo o resultado operacional sofrer oscilacoes.');
+    addText('11.3. A PLATAFORMA compromete-se a atuar com diligencia maxima, transparencia e boa-fe objetiva em todas as etapas da operacao.');
 
     // Section 12
-    addTitle('12. FORO');
-    addText('12.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ para dirimir quaisquer questoes oriundas deste contrato.');
+    addTitle('12. DA CONFIDENCIALIDADE');
+    addText('12.1. As partes comprometem-se a manter sigilo absoluto sobre todas as informacoes estrategicas, comerciais, operacionais e financeiras a que tiverem acesso em decorrencia deste contrato, obrigacao que subsistira pelo prazo de 5 (cinco) anos contados do encerramento da vigencia contratual.');
+
+    // Section 13
+    addTitle('13. DAS DISPOSICOES GERAIS');
+    addText('13.1. O aceite eletronico deste contrato, realizado por meio de marcacao de checkbox ou clique em botao de confirmacao na plataforma, possui plena validade juridica, nos termos da Lei n. 14.063/2020 e da Medida Provisoria n. 2.200-2/2001.');
+    addText('13.2. Este contrato representa a totalidade do acordo entre as partes, prevalecendo sobre quaisquer negociacoes, declaracoes ou entendimentos previos, verbais ou escritos.');
+    addText('13.3. Qualquer modificacao deste contrato devera ser formalizada por meio de termo aditivo, com aceite eletronico do PARCEIRO.');
+    addText('13.4. A tolerancia de qualquer das partes em exigir o cumprimento de qualquer clausula deste contrato nao sera considerada renuncia ou novacao.');
+    addText('13.5. Caso qualquer clausula deste contrato seja declarada nula ou inexequivel, as demais clausulas permanecerao plenamente validas e eficazes.');
+
+    // Section 14
+    addTitle('14. DO FORO');
+    addText('14.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ, com renuncia expressa a qualquer outro, por mais privilegiado que seja, para dirimir quaisquer questoes oriundas ou relacionadas ao presente contrato.');
 
     // Final
     y += 10;
