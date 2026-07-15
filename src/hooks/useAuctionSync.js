@@ -43,6 +43,13 @@ export default function useAuctionSync({
       if (!auctions || auctions.length === 0) return;
 
       const freshAuction = auctions[0];
+      // 🛡️ Sanitiza campos numéricos nulos (evita crash .toFixed no AuctionRoom)
+      if (freshAuction) {
+        if (freshAuction.starting_price === null || freshAuction.starting_price === undefined) freshAuction.starting_price = 0;
+        if (freshAuction.increment === null || freshAuction.increment === undefined) freshAuction.increment = 0;
+        if (freshAuction.current_price === null || freshAuction.current_price === undefined) freshAuction.current_price = freshAuction.starting_price || 0;
+        if (freshAuction.buy_now_price === null || freshAuction.buy_now_price === undefined) freshAuction.buy_now_price = 0;
+      }
       const hasChanges =
         freshAuction.current_price !== auction.current_price ||
         freshAuction.winner_name !== auction.winner_name ||
