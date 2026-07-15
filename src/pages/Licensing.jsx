@@ -122,6 +122,39 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [sellersRefreshCounter, setSellersRefreshCounter] = useState(0);
 
+  // 🎯 FASE 4.7.1 — Rotação de destaque das cédulas Valora (a cada 5s, uma diferente vai pra frente)
+  // Índices: 0=guardian(R$10) · 1=backBack(R$50) · 2=back(R$100) · 3=side(R$20) · 4=front(R$200)
+  const [featuredNoteIndex, setFeaturedNoteIndex] = useState(4); // começa na R$ 200
+  useEffect(() => {
+    let intervalId = null;
+    const startInterval = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        setFeaturedNoteIndex((prev) => (prev + 1) % 5);
+      }, 5000);
+    };
+    const stopInterval = () => {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    };
+    // Só começa a rotação após a entrada completa (~3s) pra não sobrepor com a queda
+    const startTimeout = setTimeout(startInterval, 3000);
+    // Pausa quando aba oculta, retoma ao voltar (protocolo multi-dispositivo)
+    const handleVisibility = () => {
+      if (document.hidden) stopInterval();
+      else startInterval();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', startInterval);
+    window.addEventListener('blur', stopInterval);
+    return () => {
+      clearTimeout(startTimeout);
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', startInterval);
+      window.removeEventListener('blur', stopInterval);
+    };
+  }, []);
+
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
     networkBidsCount: null
@@ -1012,8 +1045,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={guardianNote.url}
                   alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-15 translate-y-3 -translate-x-1 nota-stack-guardian nota-entrance-guardian"
-                  style={{ zIndex: 0, opacity: 0.65 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.55 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1022,8 +1055,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={backBackNote.url}
                   alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
-                  style={{ zIndex: 1, opacity: 0.7 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.65 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1032,8 +1065,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={backNote.url}
                   alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
-                  style={{ zIndex: 2, opacity: 0.8 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.75 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1042,8 +1075,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={sideNote.url}
                   alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
-                  style={{ zIndex: 3, opacity: 0.9 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.85 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1052,8 +1085,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={frontNote.url}
                   alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-2 nota-stack-front nota-entrance-front"
-                  style={{ zIndex: 4 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: 1 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -2001,58 +2034,155 @@ export default function LicensingPage() {
         }
 
         /* ============================================================
-           🛡️ FASE 4.7 — CÉDULAS VALORA DO SALDO DISPONÍVEL
-           Animação original restaurada: caem de cima da tela em
-           sequência (stagger) → aterrissam nas posições rotacionadas
-           → entram em flutuação infinita suave ("respiração").
-           As posições finais (rotate/translate) já estão nas classes
-           Tailwind das <img>. Aqui só entra a animação de entrada
-           + a flutuação em loop.
+           🛡️ FASE 4.7.1 — CÉDULAS VALORA DO SALDO DISPONÍVEL
+           
+           Entrada dramática: cada cédula vem de um canto diferente
+           da tela (SL, ID, L, SD, cima), rotacionando durante a queda,
+           aterrissa espalhada como "dinheiro bagunçado na mesa" e
+           depois flutua suavemente. Uma delas fica em destaque por
+           5s antes da próxima assumir (rotação via React state).
+           
+           Estrutura de cada .nota-pos-* (posição final):
+             1. translate/rotate espalhado (visual bagunçado)
+             2. animação de entrada de um canto específico
+             3. flutuação infinita depois que aterrissa
            ============================================================ */
 
-        /* Estado inicial: fora da tela, invisível.
-           A animação de entrada aterrissa na posição neutra
-           (translate/rotate ficam por conta das classes Tailwind
-           inline nas <img>). */
-        .nota-entrance-guardian,
-        .nota-entrance-backback,
-        .nota-entrance-back,
-        .nota-entrance-side,
+        /* POSIÇÕES FINAIS ESPALHADAS (visual bagunçado) — bases fixas.
+           Aplicadas como transform base; animation atua sobre esse transform
+           via translate/rotate combinados. Como os keyframes definem
+           transform inteiro, o "estado final" (100%) já reflete a bagunça. */
+
+        /* Guardian (R$ 10) — inclinada forte pra esquerda, atrás */
+        .nota-pos-guardian {
+          transform: translate(-32px, -8px) rotate(-18deg);
+        }
+        /* BackBack (R$ 50) — inclinada pra direita, embaixo */
+        .nota-pos-backback {
+          transform: translate(40px, 12px) rotate(14deg);
+        }
+        /* Back (R$ 100) — pouco pra esquerda, embaixo */
+        .nota-pos-back {
+          transform: translate(-20px, 16px) rotate(-8deg);
+        }
+        /* Side (R$ 20) — direita, um pouco pra cima */
+        .nota-pos-side {
+          transform: translate(24px, -12px) rotate(9deg);
+        }
+        /* Front (R$ 200) — quase centralizada, leve inclinação */
+        .nota-pos-front {
+          transform: translate(4px, 4px) rotate(3deg);
+        }
+
+        /* ENTRADA: cada uma vem de um canto diferente, roda no ar
+           e aterrissa na sua posição final espalhada.
+           Duração 1.4–1.8s, easing suave (desacelera no final). */
+
+        .nota-entrance-guardian {
+          animation:
+            notaEntranceGuardian 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0ms both,
+            notaFloatGuardian 3.4s ease-in-out infinite 2800ms;
+          will-change: transform;
+        }
+        .nota-entrance-backback {
+          animation:
+            notaEntranceBackBack 1.5s cubic-bezier(0.22, 1, 0.36, 1) 250ms both,
+            notaFloatBackBack 3.2s ease-in-out infinite 3000ms;
+          will-change: transform;
+        }
+        .nota-entrance-back {
+          animation:
+            notaEntranceBack 1.7s cubic-bezier(0.22, 1, 0.36, 1) 500ms both,
+            notaFloatBack 3.6s ease-in-out infinite 3200ms;
+          will-change: transform;
+        }
+        .nota-entrance-side {
+          animation:
+            notaEntranceSide 1.4s cubic-bezier(0.22, 1, 0.36, 1) 800ms both,
+            notaFloatSide 3.0s ease-in-out infinite 3400ms;
+          will-change: transform;
+        }
         .nota-entrance-front {
           animation:
-            notaEntrance 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both,
-            notaFloat 3s ease-in-out infinite 0.9s;
+            notaEntranceFront 1.8s cubic-bezier(0.22, 1, 0.36, 1) 1100ms both,
+            notaFloatFront 3.8s ease-in-out infinite 3600ms;
           will-change: transform;
         }
 
-        /* Stagger da queda: guardian → back-back → back → side → front */
-        .nota-entrance-guardian { animation-delay: 0ms,   900ms;  }
-        .nota-entrance-backback { animation-delay: 150ms, 1050ms; }
-        .nota-entrance-back     { animation-delay: 300ms, 1200ms; }
-        .nota-entrance-side     { animation-delay: 450ms, 1350ms; }
-        .nota-entrance-front    { animation-delay: 600ms, 1500ms; }
+        /* Keyframes — cada cédula sai de um canto e termina na posição final */
 
-        @keyframes notaEntrance {
-          0% {
-            transform: translateY(-420px) scale(0.85);
-            opacity: 0;
-          }
-          70% {
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(0) scale(1);
-            opacity: 1;
+        @keyframes notaEntranceGuardian {
+          0%   { transform: translate(-600px, -400px) rotate(-45deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.55; }
+          100% { transform: translate(-32px, -8px) rotate(-18deg) scale(1); opacity: 0.55; }
+        }
+        @keyframes notaEntranceBackBack {
+          0%   { transform: translate(600px, 400px) rotate(60deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.65; }
+          100% { transform: translate(40px, 12px) rotate(14deg) scale(1); opacity: 0.65; }
+        }
+        @keyframes notaEntranceBack {
+          0%   { transform: translate(-800px, 0) rotate(-30deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.75; }
+          100% { transform: translate(-20px, 16px) rotate(-8deg) scale(1); opacity: 0.75; }
+        }
+        @keyframes notaEntranceSide {
+          0%   { transform: translate(700px, -500px) rotate(50deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.85; }
+          100% { transform: translate(24px, -12px) rotate(9deg) scale(1); opacity: 0.85; }
+        }
+        @keyframes notaEntranceFront {
+          0%   { transform: translate(0, -500px) rotate(-15deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 1; }
+          100% { transform: translate(4px, 4px) rotate(3deg) scale(1); opacity: 1; }
+        }
+
+        /* Flutuação individualizada — cada uma respira em torno da sua
+           posição final espalhada (± 5-6px em Y), com ritmo próprio */
+
+        @keyframes notaFloatGuardian {
+          0%, 100% { transform: translate(-32px, -8px)  rotate(-18deg); }
+          50%      { transform: translate(-32px, -14px) rotate(-18deg); }
+        }
+        @keyframes notaFloatBackBack {
+          0%, 100% { transform: translate(40px, 12px) rotate(14deg); }
+          50%      { transform: translate(40px, 6px)  rotate(14deg); }
+        }
+        @keyframes notaFloatBack {
+          0%, 100% { transform: translate(-20px, 16px) rotate(-8deg); }
+          50%      { transform: translate(-20px, 10px) rotate(-8deg); }
+        }
+        @keyframes notaFloatSide {
+          0%, 100% { transform: translate(24px, -12px) rotate(9deg); }
+          50%      { transform: translate(24px, -18px) rotate(9deg); }
+        }
+        @keyframes notaFloatFront {
+          0%, 100% { transform: translate(4px, 4px)  rotate(3deg); }
+          50%      { transform: translate(4px, -2px) rotate(3deg); }
+        }
+
+        /* DESTAQUE: cédula em foco cresce suavemente e brilha um pouco.
+           A transição do zIndex/opacity é feita pelo React (inline style),
+           aqui só cuidamos do scale + filter em cima da animação de float. */
+        .nota-featured {
+          filter: drop-shadow(0 20px 40px rgba(29, 178, 74, 0.35)) brightness(1.05);
+          animation-play-state: running !important;
+          transform-origin: center center;
+          /* Amplifica levemente o scale sem quebrar a flutuação */
+          zoom: 1.08;
+        }
+        /* Fallback pra browsers sem 'zoom' (Firefox) */
+        @supports not (zoom: 1) {
+          .nota-featured {
+            /* Aplica scale via variável — não conflita com keyframes de float
+               porque a mudança de destaque acontece raramente (a cada 5s) */
+            outline: 2px solid rgba(29, 178, 74, 0.4);
+            outline-offset: 4px;
           }
         }
 
-        /* Flutuação infinita: sobe e desce ~5px, respirando */
-        @keyframes notaFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-5px); }
-        }
-
-        /* Acessibilidade: quem prefere menos movimento vê tudo estático */
+        /* Acessibilidade: quem prefere menos movimento vê tudo estático
+           nas posições finais espalhadas (sem entrada, sem flutuação) */
         @media (prefers-reduced-motion: reduce) {
           .nota-entrance-guardian,
           .nota-entrance-backback,
@@ -2060,6 +2190,11 @@ export default function LicensingPage() {
           .nota-entrance-side,
           .nota-entrance-front {
             animation: none !important;
+          }
+          .nota-featured {
+            filter: none;
+            zoom: 1;
+            outline: none;
           }
         }
       `}</style>
