@@ -403,16 +403,26 @@ export default function EditAuction() {
             
             console.log(`✅ ${deletedCount} mensagens deletadas`);
 
-            // 🔧 ATUALIZA O LEILÃO
+            // 🔧 ATUALIZA O LEILÃO (updateMany evita erro "Cannot coerce to single JSON object")
+            if (!auctionId) {
+                throw new Error("ID do leilão não encontrado na URL.");
+            }
             console.log(`✅ Atualizando leilão ${auctionId} para ATIVO...`);
-            await Auction.update(auctionId, {
+            const reactivatePayload = {
                 status: 'active',
                 end_time: utcEndTimeString,
                 winner_id: null,
                 winner_name: null,
                 order_status: null,
                 last_processed_bid_time: null,
-            });
+            };
+            console.log(`📦 Payload:`, JSON.stringify(reactivatePayload));
+            try {
+                await Auction.update(auctionId, reactivatePayload);
+            } catch (updateErr) {
+                console.warn("⚠️ Auction.update falhou, tentando updateMany como fallback:", updateErr?.message || updateErr);
+                await Auction.updateMany({ id: auctionId }, { $set: reactivatePayload });
+            }
             
             console.log(`✅ Leilão reativado com sucesso!`);
             
