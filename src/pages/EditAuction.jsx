@@ -16,8 +16,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, AlertTriangle, X } from 'lucide-react';
 import ReactivateAuction from '@/components/auction/ReactivateAuction';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from '@/components/ui/dialog';
 
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -57,6 +65,8 @@ export default function EditAuction() {
     const [reactivateTime, setReactivateTime] = useState("");
 
     const [supplierLogoPreview, setSupplierLogoPreview] = useState(""); // 🆕 PREVIEW
+    const [showReactivateConfirm, setShowReactivateConfirm] = useState(false);
+    const [pendingReactivateTime, setPendingReactivateTime] = useState(null);
 
     const fileInputRef = useRef(null);
 
@@ -338,10 +348,14 @@ export default function EditAuction() {
 
     // 🆕 FUNÇÃO REATIVAR COM BOTÃO DEDICADO (agora recebe UTC pronto do componente)
     const handleReactivate = async (utcEndTimeString, brtDisplay) => {
-        if (!confirm("⚠️ ATENÇÃO:\n\n- O histórico de LANCES será mantido\n- Mensagens de ARREMATADO serão removidas\n- Vencedor será limpo\n- Status mudará para ATIVO\n\nContinuar?")) {
-            return;
-        }
-        
+        setPendingReactivateTime(utcEndTimeString);
+        setShowReactivateConfirm(true);
+    };
+
+    const confirmReactivate = async () => {
+        const utcEndTimeString = pendingReactivateTime;
+        if (!utcEndTimeString) return;
+        setShowReactivateConfirm(false);
         setIsReactivating(true);
         try {
             console.log(`🔄 INICIANDO REATIVAÇÃO...`);
@@ -784,6 +798,39 @@ export default function EditAuction() {
                   </CardContent>
                 </Card>
             </div>
+
+            {/* 🆕 MODAL DE CONFIRMAÇÃO ESTILIZADO — substitui o confirm() nativo */}
+            <Dialog open={showReactivateConfirm} onOpenChange={setShowReactivateConfirm}>
+              <DialogContent className="bg-[#1a2120] border-[#2a3a35] text-white max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-amber-400 text-lg font-bold">
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                    ATENÇÃO:
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-300 space-y-1 pt-2">
+                    <p className="text-sm">• O histórico de LANCES será mantido</p>
+                    <p className="text-sm">• Mensagens de ARREMATADO serão removidas</p>
+                    <p className="text-sm">• Vencedor será limpo</p>
+                    <p className="text-sm">• Status mudará para ATIVO</p>
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex gap-3 pt-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowReactivateConfirm(false)}
+                    className="bg-[#1a332f] hover:bg-[#244a42] text-slate-200 border-none rounded-lg px-6"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={confirmReactivate}
+                    className="bg-[#74e3cf] hover:bg-[#5fc9b5] text-[#0f0f0f] font-bold border-none rounded-lg px-6"
+                  >
+                    OK
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
     );
 }
