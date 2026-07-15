@@ -148,17 +148,20 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             }
             const updatePayload = {
                 full_name: userData.full_name,
-                nickname: userData.nickname || null,
+                nickname: userData.nickname || '',
                 email: userData.email,
-                phone: userData.phone || null,
+                phone: userData.phone || '',
                 role: userData.role,
-                referred_by_id: newReferrerId,
                 career_levels: selectedLevels,
                 primary_career_level: primaryLevel,
-                display_first_name: displayFirstName.trim() || null,
-                display_last_name: displayLastName.trim() || null,
-                avatar_url: userData.avatar_url || null
+                display_first_name: displayFirstName.trim() || '',
+                display_last_name: displayLastName.trim() || '',
+                avatar_url: userData.avatar_url || ''
             };
+            // referred_by_id só vai no payload se tiver valor real (campo string não aceita null)
+            if (newReferrerId) {
+                updatePayload.referred_by_id = newReferrerId;
+            }
 
             // Salva via service_role (RLS impede escrita pela anon key — sem isso o save é no-op silencioso)
             const result = await base44.functions.invoke('adminUpdateUser', { userId: user.id, updates: updatePayload, actorId });
