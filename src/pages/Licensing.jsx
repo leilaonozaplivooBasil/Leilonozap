@@ -1999,6 +1999,69 @@ export default function LicensingPage() {
             transform: scale(1.05);
           }
         }
+
+        /* ============================================================
+           🛡️ FASE 4.7 — CÉDULAS VALORA DO SALDO DISPONÍVEL
+           Animação original restaurada: caem de cima da tela em
+           sequência (stagger) → aterrissam nas posições rotacionadas
+           → entram em flutuação infinita suave ("respiração").
+           As posições finais (rotate/translate) já estão nas classes
+           Tailwind das <img>. Aqui só entra a animação de entrada
+           + a flutuação em loop.
+           ============================================================ */
+
+        /* Estado inicial: fora da tela, invisível.
+           A animação de entrada aterrissa na posição neutra
+           (translate/rotate ficam por conta das classes Tailwind
+           inline nas <img>). */
+        .nota-entrance-guardian,
+        .nota-entrance-backback,
+        .nota-entrance-back,
+        .nota-entrance-side,
+        .nota-entrance-front {
+          animation:
+            notaEntrance 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+            notaFloat 3s ease-in-out infinite 0.9s;
+          will-change: transform;
+        }
+
+        /* Stagger da queda: guardian → back-back → back → side → front */
+        .nota-entrance-guardian { animation-delay: 0ms,   900ms;  }
+        .nota-entrance-backback { animation-delay: 150ms, 1050ms; }
+        .nota-entrance-back     { animation-delay: 300ms, 1200ms; }
+        .nota-entrance-side     { animation-delay: 450ms, 1350ms; }
+        .nota-entrance-front    { animation-delay: 600ms, 1500ms; }
+
+        @keyframes notaEntrance {
+          0% {
+            transform: translateY(-420px) scale(0.85);
+            opacity: 0;
+          }
+          70% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+
+        /* Flutuação infinita: sobe e desce ~5px, respirando */
+        @keyframes notaFloat {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-5px); }
+        }
+
+        /* Acessibilidade: quem prefere menos movimento vê tudo estático */
+        @media (prefers-reduced-motion: reduce) {
+          .nota-entrance-guardian,
+          .nota-entrance-backback,
+          .nota-entrance-back,
+          .nota-entrance-side,
+          .nota-entrance-front {
+            animation: none !important;
+          }
+        }
       `}</style>
     </>);
 
