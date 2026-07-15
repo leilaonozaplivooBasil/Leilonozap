@@ -7,6 +7,20 @@ const ALLOWED = [
   'display_last_name', 'avatar_url', 'enabled_panels', 'is_seller', 'store_name',
 ];
 
+// Retry helper — base44.asServiceRole falha intermitentemente com 401 no Deno
+async function withRetry(fn, retries = 4) {
+  let lastErr;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      if (i < retries - 1) await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -23,7 +37,18 @@ Deno.serve(async (req) => {
     }
 
     // Guard: actor precisa ser admin/super_admin
-    const actor = await base44.asServiceRole.entities.AppUser.get(actorId);
+    // Usa retry + fallback filter para contornar 401 intermitente do asServiceRole no Deno
+    let actor = null;
+    try {
+      actor = await withRetry(() => base44.asServiceRole.entities.AppUser.get(actorId));
+    } catch (e1) {
+      try {
+        const results = await withRetry(() => base44.asServiceRole.entities.AppUser.filter({ id: actorId }));
+        actor = results && results[0];
+      } catch (e2) {
+        return Response.json({ success: false, error: 'Erro ao verificar permissões: ' + e1.message }, { status: 500 });
+      }
+    }
     if (!actor || !['admin', 'super_admin'].includes(actor.role)) {
       return Response.json({ success: false, error: 'Apenas admin pode editar usuários' }, { status: 403 });
     }
@@ -37,7 +62,14 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Nenhum campo válido para atualizar' }, { status: 400 });
     }
 
-    const updatedUser = await base44.asServiceRole.entities.AppUser.update(userId, payload);
+    // Sanitiza campos string — null vira string vazia para evitar 422
+    for (const k of ['phone', 'nickname', 'full_name', 'email', 'display_first_name', 'display_last_name', 'avatar_url']) {
+      if (k in payload && (payload[k] === null || payload[k] === undefined)) {
+        payload[k] = '';
+      }
+    }
+
+    const updatedUser = await withRetry(() => base44.asServiceRole.entities.AppUser.update(userId, payload));
 
     return Response.json({ success: true, user: updatedUser });
   } catch (error) {
