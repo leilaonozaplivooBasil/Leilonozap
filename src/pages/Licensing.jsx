@@ -1025,22 +1025,24 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm ${isSaiDeBaixo ?
-        'from-red-900/30 to-red-800/20 border-red-500/30' :
-        'from-green-900/30 to-green-800/20 border-green-500/30'}`
+      <Card ref={walletCardRef} className={`mb-8 relative bg-gradient-to-br backdrop-blur-xl border-2 shadow-2xl ${isSaiDeBaixo ?
+        'from-red-950/60 via-red-900/40 to-red-950/60 border-red-500/40 shadow-red-900/30' :
+        'from-emerald-950/70 via-green-900/50 to-emerald-950/70 border-emerald-500/40 shadow-emerald-900/40'}`
       }>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-white mb-2">Saldo Disponível</h3>
+              <h3 className={`text-sm font-medium uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-300/80' : 'text-emerald-300/80'}`}>Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-5xl font-bold text-white">
+                <span className="text-5xl font-black text-white tracking-tight drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]">
                   R$ {totalAvailable.toFixed(2)}
                 </span>
               </div>
 
+              <div className={`h-px bg-gradient-to-r from-transparent to-transparent my-4 max-w-[280px] ${isSaiDeBaixo ? 'via-red-500/30' : 'via-emerald-500/30'}`} />
+
               {pendingWithdrawalAmount > 0 &&
-                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4 max-w-[280px]">
                   <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
@@ -1050,17 +1052,21 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </p>
                 </div>
               }
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex flex-col gap-2 max-w-[280px]">
                 <Button
                   onClick={() => setIsAuctionSelectionModalOpen(true)}
-                  className={`w-full sm:flex-1 text-sm sm:text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                  className={`text-white font-semibold h-10 text-sm shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSaiDeBaixo ?
+                    'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-red-500/20 hover:shadow-red-500/40' :
+                    'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 shadow-green-500/20 hover:shadow-green-500/40'}`}>
 
                   <Zap className="w-4 h-4 mr-2" />
                   Usar em Leilões
                 </Button>
                 <Button
                   onClick={() => setShowWithdrawalModal(true)}
-                  className="w-full sm:flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm sm:text-base">
+                  className={`bg-gray-800/60 border text-white font-medium h-10 text-sm transition-all duration-300 hover:bg-gray-700 hover:shadow-md ${isSaiDeBaixo ?
+                    'border-gray-600/50 hover:border-red-500/50 hover:shadow-red-500/20' :
+                    'border-gray-600/50 hover:border-emerald-500/50 hover:shadow-emerald-500/20'}`}>
 
                   <Wallet className="w-4 h-4 mr-2" />
                   Sacar
@@ -1068,12 +1074,12 @@ const DashboardContent = ({ user, isAdmin }) => {
               </div>
             </div>
 
-            <div className="relative w-64 h-40 flex items-center justify-center nota-stack-container">
+            <div className="relative w-56 h-36 flex items-center justify-center nota-stack-container">
               {guardianNote && guardianNote.url &&
                 <img
                   src={guardianNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
@@ -1083,7 +1089,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={backBackNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
@@ -1093,7 +1099,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={backNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
@@ -1103,7 +1109,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={sideNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
@@ -1113,7 +1119,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={frontNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
@@ -2086,19 +2092,19 @@ export default function LicensingPage() {
 
         /* Guardian (R$ 10) — extremo esquerdo, leve inclinação */
         .nota-pos-guardian {
-          transform: translate(-58px, -6px) rotate(-14deg);
+          transform: translate(-46px, -5px) rotate(-14deg);
         }
         /* BackBack (R$ 50) — direita-baixo */
         .nota-pos-backback {
-          transform: translate(52px, 14px) rotate(11deg);
+          transform: translate(42px, 11px) rotate(11deg);
         }
         /* Back (R$ 100) — esquerda-baixo, mais pra fora */
         .nota-pos-back {
-          transform: translate(-38px, 18px) rotate(-6deg);
+          transform: translate(-30px, 14px) rotate(-6deg);
         }
         /* Side (R$ 20) — direita-cima */
         .nota-pos-side {
-          transform: translate(44px, -14px) rotate(7deg);
+          transform: translate(35px, -11px) rotate(7deg);
         }
         /* Front (R$ 200) — CENTRALIZADA, quase reta, dominante */
         .nota-pos-front {
@@ -2147,22 +2153,22 @@ export default function LicensingPage() {
         @keyframes notaEntranceGuardian {
           0%   { transform: translate(-900px, -1000px) rotate(-60deg) scale(0.7); opacity: 0; }
           40%  { opacity: 0.80; }
-          100% { transform: translate(-58px, -6px) rotate(-14deg) scale(1); opacity: 0.80; }
+          100% { transform: translate(-46px, -5px) rotate(-14deg) scale(1); opacity: 0.80; }
         }
         @keyframes notaEntranceBackBack {
           0%   { transform: translate(900px, 1000px) rotate(75deg) scale(0.7); opacity: 0; }
           40%  { opacity: 0.82; }
-          100% { transform: translate(52px, 14px) rotate(11deg) scale(1); opacity: 0.82; }
+          100% { transform: translate(42px, 11px) rotate(11deg) scale(1); opacity: 0.82; }
         }
         @keyframes notaEntranceBack {
           0%   { transform: translate(-1200px, -800px) rotate(-40deg) scale(0.7); opacity: 0; }
           40%  { opacity: 0.85; }
-          100% { transform: translate(-38px, 18px) rotate(-6deg) scale(1); opacity: 0.85; }
+          100% { transform: translate(-30px, 14px) rotate(-6deg) scale(1); opacity: 0.85; }
         }
         @keyframes notaEntranceSide {
           0%   { transform: translate(1100px, -1100px) rotate(65deg) scale(0.7); opacity: 0; }
           40%  { opacity: 0.90; }
-          100% { transform: translate(44px, -14px) rotate(7deg) scale(1); opacity: 0.90; }
+          100% { transform: translate(35px, -11px) rotate(7deg) scale(1); opacity: 0.90; }
         }
         @keyframes notaEntranceFront {
           0%   { transform: translate(-200px, -1200px) rotate(-25deg) scale(0.7); opacity: 0; }
@@ -2173,20 +2179,20 @@ export default function LicensingPage() {
         /* Flutuação individualizada — respira em torno da posição de leque */
 
         @keyframes notaFloatGuardian {
-          0%, 100% { transform: translate(-58px, -6px)  rotate(-14deg); }
-          50%      { transform: translate(-58px, -12px) rotate(-14deg); }
+          0%, 100% { transform: translate(-46px, -5px)  rotate(-14deg); }
+          50%      { transform: translate(-46px, -11px) rotate(-14deg); }
         }
         @keyframes notaFloatBackBack {
-          0%, 100% { transform: translate(52px, 14px) rotate(11deg); }
-          50%      { transform: translate(52px, 8px)  rotate(11deg); }
+          0%, 100% { transform: translate(42px, 11px) rotate(11deg); }
+          50%      { transform: translate(42px, 5px)  rotate(11deg); }
         }
         @keyframes notaFloatBack {
-          0%, 100% { transform: translate(-38px, 18px) rotate(-6deg); }
-          50%      { transform: translate(-38px, 12px) rotate(-6deg); }
+          0%, 100% { transform: translate(-30px, 14px) rotate(-6deg); }
+          50%      { transform: translate(-30px, 8px) rotate(-6deg); }
         }
         @keyframes notaFloatSide {
-          0%, 100% { transform: translate(44px, -14px) rotate(7deg); }
-          50%      { transform: translate(44px, -20px) rotate(7deg); }
+          0%, 100% { transform: translate(35px, -11px) rotate(7deg); }
+          50%      { transform: translate(35px, -17px) rotate(7deg); }
         }
         @keyframes notaFloatFront {
           0%, 100% { transform: translate(0, 0)  rotate(2deg); }
