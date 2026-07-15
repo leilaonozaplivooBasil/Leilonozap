@@ -99,7 +99,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     try {
       const params = new URLSearchParams(window.location.search);
       const t = params.get('tab');
-      const VALID_TABS = ['visao-geral', 'catalogo', 'minhas-vendas', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'];
+      const VALID_TABS = ['visao-geral', 'catalogo', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'];
       return VALID_TABS.includes(t) ? t : 'visao-geral';
     } catch {
       return 'visao-geral';
@@ -1186,113 +1186,6 @@ const DashboardContent = ({ user, isAdmin }) => {
 
 
 
-        {/* ABA: MINHAS VENDAS */}
-        <TabsContent value="minhas-vendas" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Acompanhe suas vendas de leilão e loja virtual
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingSales ?
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                </div> :
-
-                <Tabs defaultValue="leilao" className="w-full">
-                  <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
-                    <TabsTrigger value="leilao">Leilão</TabsTrigger>
-                    <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
-                    {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="equipe">Equipe</TabsTrigger>}
-                  </TabsList>
-
-                  <TabsContent value="leilao" className="mt-4">
-                    {myAuctions.length === 0 ?
-                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Arremates dos indicados: 0
-                      </p> :
-
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (3%)</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {myAuctions.map((auction) =>
-                              <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.03).toFixed(2)}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
-                                  {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    }
-                  </TabsContent>
-
-                  <TabsContent value="catalogo" className="mt-4">
-                    {mySales.length === 0 ?
-                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Nenhuma venda da loja virtual
-                      </p> :
-
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comprador</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Sua Comissão</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mySales.map((sale) =>
-                              <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
-                                  {new Date(sale.created_date).toLocaleDateString('pt-BR')}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    }
-                  </TabsContent>
-
-                  {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
-                    <TabsContent value="equipe" className="mt-4">
-                      <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
-                        <p>Seu sistema de alavancagem está crescendo!</p>
-                        <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
-                      </div>
-                    </TabsContent>
-                  }
-                </Tabs>
-              }
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
         {(userLevels.includes('licenciado_catalogo') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
@@ -1442,7 +1335,122 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="comissoes" className="space-y-6">
-          <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
+          <Tabs defaultValue="extrato" className="w-full">
+            <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <TabsTrigger value="extrato">Extrato</TabsTrigger>
+              <TabsTrigger value="vendas">Vendas</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="extrato" className="mt-4">
+              <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
+            </TabsContent>
+
+            <TabsContent value="vendas" className="mt-4">
+              <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                <CardHeader>
+                  <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
+                  <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                    As vendas que geraram suas comissões
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingSales ?
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                    </div> :
+
+                    <Tabs defaultValue="leilao" className="w-full">
+                      <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
+                        <TabsTrigger value="leilao">Leilão</TabsTrigger>
+                        <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
+                        {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="equipe">Equipe</TabsTrigger>}
+                      </TabsList>
+
+                      <TabsContent value="leilao" className="mt-4">
+                        {myAuctions.length === 0 ?
+                          <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                            Arremates dos indicados: 0
+                          </p> :
+
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (3%)</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {myAuctions.map((auction) =>
+                                  <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
+                                    <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.03).toFixed(2)}</TableCell>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                      {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        }
+                      </TabsContent>
+
+                      <TabsContent value="catalogo" className="mt-4">
+                        {mySales.length === 0 ?
+                          <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                            Nenhuma venda da loja virtual
+                          </p> :
+
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comprador</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Sua Comissão</TableHead>
+                                  <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {mySales.map((sale) =>
+                                  <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
+                                    <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                                    <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                      {new Date(sale.created_date).toLocaleDateString('pt-BR')}
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        }
+                      </TabsContent>
+
+                      {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
+                        <TabsContent value="equipe" className="mt-4">
+                          <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                            <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
+                            <p>Seu sistema de alavancagem está crescendo!</p>
+                            <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                          </div>
+                        </TabsContent>
+                      }
+                    </Tabs>
+                  }
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {isAdmin &&

@@ -1,11 +1,10 @@
 import React from 'react';
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, ShoppingBag, Receipt, Users, Wallet, Award, Shield } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Wallet, Award, Shield } from 'lucide-react';
 
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
-  { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
-  { value: 'minhas-vendas', label: 'Vendas', icon: Receipt, show: () => true },
+  { value: 'catalogo', label: 'Minha Loja', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
   { value: 'meus-clientes', label: (ctx) => `Clientes (${ctx.myClientsCount})`, icon: Users, show: () => true },
   { value: 'comissoes', label: 'Comissões', icon: Wallet, show: () => true },
   { value: 'plano-carreira', label: 'Carreira', icon: Award, show: () => true },
