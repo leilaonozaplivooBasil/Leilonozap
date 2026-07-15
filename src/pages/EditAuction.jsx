@@ -421,13 +421,17 @@ export default function EditAuction() {
                 increment: parseFloat(formData.increment) || auction?.increment || 0,
             };
             console.log(`📦 Payload:`, JSON.stringify(reactivatePayload));
-            const { error: reactivateUpdateError } = await supabase
-                .from('auctions')
-                .update(reactivatePayload)
-                .eq('id', auctionId);
-            if (reactivateUpdateError) {
-                console.error("❌ Erro Supabase ao reativar:", reactivateUpdateError);
-                throw new Error(reactivateUpdateError.message || 'Falha ao atualizar leilão');
+            
+            // 🔧 USA BACKEND FUNCTION com service role key (bypassa RLS do Supabase)
+            const reactivateResponse = await fetch('/api/functions/reactivateAuction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auctionId, payload: reactivatePayload })
+            });
+            const reactivateResult = await reactivateResponse.json();
+            if (!reactivateResponse.ok || !reactivateResult.success) {
+                console.error("❌ Erro ao reativar:", reactivateResult);
+                throw new Error(reactivateResult?.error || 'Falha ao atualizar leilão');
             }
             
             console.log(`✅ Leilão reativado com sucesso!`);
