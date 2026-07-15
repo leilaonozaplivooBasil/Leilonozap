@@ -100,13 +100,13 @@ const CONTEXTS = {
 //    Define qual contexto a sidebar deve mostrar quando o admin está em X página
 // =====================================================================
 const CONTEXT_BY_PAGE = {
-  // Loja Virtual (cliente público comprando)
-  Catalog: "loja_virtual",
-  CatalogProductDetails: "loja_virtual",
-  Cart: "loja_virtual",
-  CatalogCheckout: "loja_virtual",
-  CatalogCheckout2: "loja_virtual",
-  MyCatalogOrders: "loja_virtual",
+  // 🛍️ LOJA VIRTUAL: ambiente 100% do cliente. Admin acessa IGUAL cliente vê.
+  // Zero sidebar admin dentro da loja. Ferramentas admin da loja continuam
+  // acessíveis por rotas diretas (/CatalogManagement, /BannerManagement, /PDV etc.)
+  // e pelo dropdown do avatar. NÃO mapear páginas da Loja aqui.
+  //
+  //   Catalog, CatalogProductDetails, Cart, CatalogCheckout, CatalogCheckout2,
+  //   MyCatalogOrders  →  sem sidebar (mesmo pra admin)
 
   // Arrematante (rota /leiloes vai pra Home, AuctionRoom é sala de leilão)
   Home: "arrematante",
@@ -150,25 +150,26 @@ export function getSidebarConfigForUser(currentUser, currentPageName, adminMenuI
   const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
   if (!isAdmin) return empty;
 
-  // 🛡️ Profile com ?from=catalog: contexto = loja virtual (admin veio gerenciar perfil
-  // a partir da loja, então mostra menu da loja virtual ao invés do menu admin)
-  let fromCatalog = false;
+  // 🛍️ LOJA VIRTUAL: nunca mostrar sidebar admin dentro da Loja.
+  // A Loja é ambiente do cliente — admin acessa igual cliente vê. Ferramentas
+  // admin da loja continuam acessíveis via rotas diretas e dropdown do avatar.
+  const LOJA_PAGES = new Set([
+    "Catalog",
+    "CatalogProductDetails",
+    "Cart",
+    "CatalogCheckout",
+    "CatalogCheckout2",
+    "MyCatalogOrders",
+  ]);
+  if (LOJA_PAGES.has(currentPageName)) return empty;
+
+  // Profile com ?from=catalog também é parte do fluxo da Loja → sem sidebar
   try {
     const params = new URLSearchParams(window.location.search);
-    fromCatalog = params.get("from") === "catalog";
-  } catch {
-    fromCatalog = false;
-  }
-  if (currentPageName === "Profile" && fromCatalog) {
-    const ctx = CONTEXTS.loja_virtual;
-    return {
-      showSidebar: true,
-      categorized: false,
-      context: "loja_virtual",
-      title: ctx.title,
-      items: ctx.items,
-    };
-  }
+    if (currentPageName === "Profile" && params.get("from") === "catalog") {
+      return empty;
+    }
+  } catch { /* URLSearchParams indisponível — ignora */ }
 
   // 1️⃣ A página atual mapeia para algum contexto específico de painel?
   const contextKey = CONTEXT_BY_PAGE[currentPageName];
