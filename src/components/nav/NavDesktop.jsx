@@ -3,17 +3,18 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
+import ShopDropdown from "@/components/nav/dropdowns/ShopDropdown";
+import AuctionsDropdown from "@/components/nav/dropdowns/AuctionsDropdown";
+import LiveDropdown from "@/components/nav/dropdowns/LiveDropdown";
+import EarnMoneyDropdown from "@/components/nav/dropdowns/EarnMoneyDropdown";
+import AoVivoAgoraButton from "@/components/nav/AoVivoAgoraButton";
 
 /**
  * 🛡️ NavDesktop — Cabeçalho público padrão LEILÃO NOZAP
  *
- * Estrutura:
- *   [Links públicos centrais]  [🛒 Carrinho]  [👤 Avatar / Entrar]
- *
- * Links públicos (sempre visíveis — visitante + logado):
- *   • Leilões → /Home
- *   • Loja → /Loja-Virtual
- *   • Seja Licenciado → /Licensing
+ * Estrutura (FASE 4A):
+ *   [🛒 Comprar ▼] [🔨 Leilões ▼] [🔴 Ao Vivo ▼] [💰 Ganhe Dinheiro ▼]
+ *   [▶ AO VIVO AGORA] | [🛒 Carrinho] [👤 Avatar]
  *
  * ❌ REMOVIDO do topo (migrado para dropdown do avatar):
  *   • Painel de Controle (admin)
@@ -27,7 +28,6 @@ export default function NavDesktop({
   onLoginClick,
   onLogout,
   // props legadas — mantidas no signature para compatibilidade com Layout.jsx
-  // (não são mais usadas, mas evita warning de prop desconhecida)
   // eslint-disable-next-line no-unused-vars
   finalMenuItems,
   // eslint-disable-next-line no-unused-vars
@@ -40,50 +40,25 @@ export default function NavDesktop({
   isLeiloeiro,
   // eslint-disable-next-line no-unused-vars
   isCatalogPage,
+  // eslint-disable-next-line no-unused-vars
   adminMenuItems,
   // eslint-disable-next-line no-unused-vars
   onShareClick,
   // eslint-disable-next-line no-unused-vars
   navigate,
 }) {
-  // Links públicos — universais
-  const PUBLIC_LINKS = [
-    { title: "Leilões", pageName: "Home" },
-    { title: "Loja", pageName: "Catalog" },
-    { title: "Seja Licenciado", pageName: "Licensing" },
-  ];
-
-  const isActive = (pageName) => {
-    if (pageName === "Home" && currentPageName === "Home") return true;
-    if (pageName === "Catalog" && (currentPageName === "Catalog" || currentPageName === "CatalogProductDetails")) return true;
-    if (pageName === "Licensing" && currentPageName === "Licensing") return true;
-    return false;
-  };
-
   return (
-    <div className="hidden md:flex md:gap-x-2 items-center">
-      {/* === LINKS PÚBLICOS CENTRAIS === */}
-      {PUBLIC_LINKS.map((item) => (
-        <Link
-          key={item.title}
-          to={createPageUrl(item.pageName)}
-          className={`text-sm font-semibold transition-all duration-300 px-3 py-1.5 rounded-lg ${
-            isActive(item.pageName)
-              ? "text-emerald-300"
-              : "text-gray-300 hover:text-white"
-          }`}
-          style={
-            isActive(item.pageName)
-              ? {
-                  background: "rgba(16, 185, 129, 0.1)",
-                  boxShadow: "0 0 12px rgba(16, 185, 129, 0.08)",
-                }
-              : {}
-          }
-        >
-          {item.title}
-        </Link>
-      ))}
+    <div className="hidden md:flex md:gap-x-1 items-center">
+      {/* === 4 DROPDOWNS CATEGORIZADOS === */}
+      <ShopDropdown />
+      <AuctionsDropdown />
+      <LiveDropdown />
+      <EarnMoneyDropdown />
+
+      {/* === BOTÃO "AO VIVO AGORA" === */}
+      <div className="ml-2">
+        <AoVivoAgoraButton />
+      </div>
 
       {/* === DIVISOR SUTIL === */}
       <div className="h-6 w-px bg-white/10 mx-3" />
