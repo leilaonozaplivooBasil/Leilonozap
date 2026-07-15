@@ -236,6 +236,12 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const highestLevel = careerHierarchy.find((level) => userLevels.includes(level)) || 'usuario';
 
+  // 🆕 Só existe UM link de indicação ativo por vez: quem já avançou para
+  // Licenciado (ou além, na carreira) ganha pela Loja Virtual, não mais pelo App.
+  const hasAdvancedBeyondInfluencer = userLevels.some((l) =>
+    ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor', 'diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].includes(l)
+  );
+
   const shortName = user.display_first_name && user.display_last_name ?
     `${user.display_first_name} ${user.display_last_name}` :
     (() => {
@@ -1379,34 +1385,10 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Link Influencer (App) - 3% por arremate</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Ganhe 3% em R$ sobre cada arremate feito pelos seus indicados no App
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={referralLink}
-                  readOnly
-                  className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
-
-                <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
-                <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
-              </div>
-              <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
-                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
-                <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-
-          {userLevels.includes('licenciado_catalogo') &&
+          {hasAdvancedBeyondInfluencer ?
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Loja Virtual) - 26% distribuídos</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Seu Link (Loja Virtual) - 26% distribuídos</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                   Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
                 </CardDescription>
@@ -1424,6 +1406,30 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
                   <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card> :
+
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <CardHeader>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Seu Link (Influencer) - 3% por arremate</CardTitle>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Ganhe 3% em R$ sobre cada arremate feito pelos seus indicados no App
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={referralLink}
+                    readOnly
+                    className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+
+                  <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
+                  <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
+                </div>
+                <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
+                  <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
