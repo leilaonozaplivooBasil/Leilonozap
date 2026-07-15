@@ -104,9 +104,9 @@ export default function CommissionDistributionFull() {
                     <p className="text-xl font-bold text-green-400">R$ {result.sale_value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">Total em Comissão (26%)</p>
+                    <p className="text-gray-400 text-sm">Total em Comissão (30%)</p>
                     <p className="text-xl font-bold text-yellow-400">
-                      R$ {(result.sale_value * 0.26).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      R$ {(result.sale_value * 0.30).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>

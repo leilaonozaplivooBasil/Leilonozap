@@ -5,7 +5,7 @@ export default function HowItWorksCard({ isSaiDeBaixo }) {
   const steps = [
     { n: 1, title: "Compartilhe seu Link", desc: "Envie seu link de indicação para amigos e familiares." },
     { n: 2, title: "Eles Se Cadastram", desc: "Quando usam seu link, são automaticamente seus indicados." },
-    { n: 3, title: "Você Ganha Comissões em R$", desc: "App: 5% por venda e arremate | Loja Virtual: até 26% distribuídos na rede!" }
+    { n: 3, title: "Você Ganha Comissões em R$", desc: "App: 5% por venda e arremate | Loja Virtual: 30% distribuídos na rede!" }
   ];
 
   return (

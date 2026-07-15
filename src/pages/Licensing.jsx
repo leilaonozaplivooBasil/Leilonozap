@@ -1354,9 +1354,9 @@ const DashboardContent = ({ user, isAdmin }) => {
           {userLevels.includes('licenciado_catalogo') &&
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Loja Virtual) - 26% distribuídos</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Loja Virtual) - 30% distribuídos na rede</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
+                  Você é o ÂNCORA da venda e recebe 3% de Licenciado + as fatias dos seus outros cargos ativos
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1371,7 +1371,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (30% na rede):</strong> Como Licenciado Âncora, você recebe 3% + as comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
