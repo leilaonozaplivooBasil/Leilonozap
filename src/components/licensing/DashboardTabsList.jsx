@@ -4,7 +4,7 @@ import { LayoutDashboard, ShoppingBag, Receipt, Users, Wallet, Award, Shield } f
 
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
-  { value: 'catalogo', label: 'Loja Virtual', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
+  { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
   { value: 'minhas-vendas', label: 'Vendas', icon: Receipt, show: () => true },
   { value: 'meus-clientes', label: (ctx) => `Clientes (${ctx.myClientsCount})`, icon: Users, show: () => true },
   { value: 'comissoes', label: 'Comissões', icon: Wallet, show: () => true },

@@ -1296,12 +1296,12 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
         {(userLevels.includes('licenciado_catalogo') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
-            <Tabs defaultValue="catalogo-home" className="w-full">
+            <Tabs defaultValue="catalogo-produtos" className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
-                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Página Inicial</TabsTrigger>
+                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Loja Virtual</TabsTrigger>
+                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
                 <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
                 <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes</TabsTrigger>
-                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Produtos</TabsTrigger>
                 <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm">🤝 Vendedores</TabsTrigger>
               </TabsList>
 
