@@ -67,12 +67,15 @@ const CONTEXTS = {
   },
   licenciado: {
     title: "Painel Licenciado",
+    // 🛡️ FASE 4.5 — Links apontam pras ABAS INTERNAS do próprio /Licensing
+    // via query param ?tab=xxx. Evita "teleporte" pra páginas admin genéricas
+    // (CRM, NetworkOverview) que confundiam o usuário.
     items: [
       { title: "📜 Dashboard", pageName: "Licensing" },
-      { title: "👥 CRM", pageName: "CRM" },
-      { title: "🌐 Minha Rede", pageName: "NetworkOverview" },
-      { title: "💰 Carteira", pageName: "AddFunds" },
-      { title: "🤝 Parceiros Ativos", pageName: "ActivePartners" },
+      { title: "👥 Meus Clientes", pageName: "Licensing?tab=meus-clientes" },
+      { title: "🌐 Minha Rede", pageName: "Licensing?tab=meus-vendedores" },
+      { title: "💰 Comissões", pageName: "Licensing?tab=comissoes" },
+      { title: "🎯 Plano de Carreira", pageName: "Licensing?tab=plano-carreira" },
     ],
   },
   investidor: {

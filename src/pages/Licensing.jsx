@@ -76,7 +76,36 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
   const walletCardRef = useRef(null);
-  const [activeTab, setActiveTab] = useState('visao-geral');
+
+  // 🛡️ FASE 4.5 — Lê ?tab=xxx da URL pra ativar a aba correta ao chegar via sidebar
+  const getInitialTab = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('tab');
+      const VALID_TABS = ['visao-geral', 'catalogo', 'minhas-vendas', 'vendas-equipe', 'pedidos', 'meus-vendedores', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'];
+      return VALID_TABS.includes(t) ? t : 'visao-geral';
+    } catch {
+      return 'visao-geral';
+    }
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // 🛡️ Sincroniza aba quando o usuário navega pelos links da sidebar
+  // (mesma URL /Licensing muda apenas o ?tab= — React Router não desmonta o componente)
+  useEffect(() => {
+    const syncTabFromURL = () => setActiveTab(getInitialTab());
+    window.addEventListener('popstate', syncTabFromURL);
+    // Escuta cliques em links internos que mudam a URL sem reload
+    const interval = setInterval(() => {
+      const current = new URLSearchParams(window.location.search).get('tab') || 'visao-geral';
+      setActiveTab((prev) => (prev !== current && ['visao-geral', 'catalogo', 'minhas-vendas', 'vendas-equipe', 'pedidos', 'meus-vendedores', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'].includes(current) ? current : prev));
+    }, 400);
+    return () => {
+      window.removeEventListener('popstate', syncTabFromURL);
+      clearInterval(interval);
+    };
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isAuctionSelectionModalOpen, setIsAuctionSelectionModalOpen] = useState(false);
@@ -1384,13 +1413,9 @@ const DashboardContent = ({ user, isAdmin }) => {
           />
         </TabsContent>
 
-        {/* ABA: MEU CRM — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
-
         <TabsContent value="comissoes" className="space-y-6">
           <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
         </TabsContent>
-
-        {/* ABA: SAQUES — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
 
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">
@@ -1798,7 +1823,10 @@ export default function LicensingPage() {
         'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
         'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
       }>
-        {/* Hero Section */}
+        {/* 🛡️ FASE 4.5 — Hero pública SÓ para visitantes (isLicensee=false).
+            Usuário logado (licenciado/admin) vai direto pro Dashboard, sem
+            landing de recrutamento em cima. */}
+        {!isLicensee && (
         <div className="relative overflow-hidden py-20 px-6">
           <div className={`absolute inset-0 bg-gradient-to-r ${isSaiDeBaixo ?
             'from-red-500/10 to-orange-500/10' :
@@ -1904,6 +1932,7 @@ export default function LicensingPage() {
             </motion.div>
           </div>
         </div>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {isLicensee ?
@@ -1918,6 +1947,8 @@ export default function LicensingPage() {
           }
         </div>
 
+        {/* 🛡️ FASE 4.5 — Rodapé motivacional também é copy pública. Só para visitantes. */}
+        {!isLicensee && (
         <div className={`py-20 px-6 ${isSaiDeBaixo ? 'bg-gray-100/50' : 'bg-gray-800/50'}`}>
           <div className="max-w-6xl mx-auto">
             <h2 className={`text-4xl font-bold text-center mb-4 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
@@ -1928,6 +1959,7 @@ export default function LicensingPage() {
             </p>
           </div>
         </div>
+        )}
 
       </div>
 
