@@ -881,7 +881,10 @@ export default function InvestorDashboard() {
                         // Para todos os dispositivos: usa base64 (mais compatível)
                         const response = await base44.functions.invoke('generateContractPDF', { format: 'base64' });
 
-                        if (response?.pdf_base64) {
+                        // base44.functions.invoke retorna objeto axios — dados em .data
+                        const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
+
+                        if (pdfBase64) {
                           if (isIOS) {
                             // iOS: abre em nova aba (Safari lida melhor assim)
                             const newWindow = window.open('', '_blank');
@@ -898,7 +901,7 @@ export default function InvestorDashboard() {
                                     </style>
                                   </head>
                                   <body>
-                                    <iframe src="${response.pdf_base64}"></iframe>
+                                    <iframe src="${pdfBase64}"></iframe>
                                   </body>
                                 </html>
                               `);
@@ -906,12 +909,12 @@ export default function InvestorDashboard() {
                               toast.success("PDF aberto! Use 'Compartilhar' para salvar.");
                             } else {
                               // Fallback: redireciona
-                              window.location.href = response.pdf_base64;
+                              window.location.href = pdfBase64;
                             }
                           } else if (isMobile) {
                             // Android e outros mobile: tenta download, fallback para nova aba
                             const link = document.createElement('a');
-                            link.href = response.pdf_base64;
+                            link.href = pdfBase64;
                             link.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
                             document.body.appendChild(link);
                             link.click();
@@ -919,7 +922,7 @@ export default function InvestorDashboard() {
                             toast.success("PDF baixado!");
                           } else {
                             // Desktop: converte base64 para blob e faz download
-                            const byteCharacters = atob(response.pdf_base64.split(',')[1]);
+                            const byteCharacters = atob(pdfBase64.split(',')[1]);
                             const byteNumbers = new Array(byteCharacters.length);
                             for (let i = 0; i < byteCharacters.length; i++) {
                               byteNumbers[i] = byteCharacters.charCodeAt(i);
