@@ -147,11 +147,17 @@ export default function Catalog() {
       filtered = filtered.filter((p) => p.category_id === selectedCategory);
     }
 
-    // Filtro por texto
+    // Filtro por texto — por PALAVRAS (cada termo tem que aparecer, em qualquer ordem) e
+    // ignorando pontuação. Antes buscava a frase LITERAL: "fonte chocolate" não achava
+    // "Fonte de Chocolate" (o "de" no meio) e um "#" colado zerava tudo.
     if (searchTerm) {
-      filtered = filtered.filter((p) =>
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const termos = searchTerm.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+      if (termos.length) {
+        filtered = filtered.filter((p) => {
+          const desc = (p.description || '').toLowerCase();
+          return termos.every((t) => desc.includes(t));
+        });
+      }
     }
 
     // Filtro por preço mínimo
@@ -541,6 +547,31 @@ export default function Catalog() {
     fetchByCategory();
     return () => { alive = false; };
   }, [selectedCategory]);
+
+  // 🔎 Busca no SERVIDOR (catálogo inteiro, não só os 240 carregados). Cada palavra vira um
+  // ilike (%palavra%) — assim "fonte chocolate" acha "Fonte de Chocolate". Debounce de 350ms.
+  useEffect(() => {
+    const termo = (searchTerm || '').trim();
+    if (!termo) return;
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        // pega a palavra mais longa (mais específica) e busca no servidor com ilike; o refino
+        // AND das demais palavras acontece no filtro do cliente (filterProducts).
+        const palavras = termo.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 1);
+        if (!palavras.length) return;
+        const chave = palavras.sort((a, b) => b.length - a.length)[0];
+        const data = await Product.filter({ catalog_active: true, description: { $contains: chave } }, "-created_date", 240);
+        if (alive && Array.isArray(data) && data.length) {
+          setProducts((prev) => {
+            const seen = new Set(prev.map((p) => p.id));
+            return [...prev, ...data.filter((p) => p && p.id && !seen.has(p.id))];
+          });
+        }
+      } catch (e) { /* mantém local; o filtro por palavras ainda roda no cliente */ }
+    }, 350);
+    return () => { alive = false; clearTimeout(t); };
+  }, [searchTerm]);
 
   const featuredProducts = useMemo(() => {
     return products
