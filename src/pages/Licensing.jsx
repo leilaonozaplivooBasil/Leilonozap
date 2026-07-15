@@ -1029,8 +1029,8 @@ const DashboardContent = ({ user, isAdmin }) => {
         'from-red-950/60 via-red-900/40 to-red-950/60 border-red-500/40 shadow-red-900/30' :
         'from-emerald-950/70 via-green-900/50 to-emerald-950/70 border-emerald-500/40 shadow-emerald-900/40'}`
       }>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-12">
+        <CardContent className="p-6 md:px-12 md:py-8">
+          <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-20">
             <div className="w-full md:w-auto">
               <h3 className={`text-sm font-medium uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-300/80' : 'text-emerald-300/80'}`}>Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
