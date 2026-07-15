@@ -96,9 +96,20 @@ export default async function handler(req, res) {
     const rows = await (await sb(`catalog_sales?select=*&or=(id.eq.${saleId},mp_payment_id.eq.${pay.id})&limit=1`)).json();
     const sale = Array.isArray(rows) ? rows[0] : null;
     if (!sale) return res.status(200).json({ ok: true, sale_notfound: true });
-    if (sale.status === 'paid') return res.status(200).json({ ok: true, already_paid: true }); // idempotência
+    if (sale.status === 'paid') return res.status(200).json({ ok: true, already_paid: true }); // idempotência rápida
 
-    await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }) });
+    // 🔒 FLIP ATÔMICO: o webhook do MP dispara VÁRIAS vezes. A checagem acima (ler-status →
+    // marcar-paid) NÃO é atômica: dois webhooks liam 'pending' ao mesmo tempo, os dois passavam
+    // e a comissão era paga EM DOBRO (aconteceu numa venda real). Aqui só flipa quem pegar a linha
+    // AINDA em pending_payment; os outros recebem 0 linhas e param. Só quem flipou paga a comissão.
+    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=eq.pending_payment`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
+    });
+    const flipped = await flip.json().catch(() => []);
+    if (!Array.isArray(flipped) || !flipped.length) {
+      return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+    }
 
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);

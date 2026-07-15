@@ -23,6 +23,11 @@ async function payStoreCommissions(sale) {
   const value = Number(sale.total_amount) || 0;
   if (!value) return 0;
 
+  // 🔒 Guarda de idempotência: se JÁ existe comissão pra esta venda, não paga de novo.
+  // Protege contra qualquer caminho que chame isto 2x (webhook em corrida, retry, etc.).
+  const jaTem = await (await sb(`commission_records?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&limit=1`)).json();
+  if (Array.isArray(jaTem) && jaTem.length) return 0;
+
   // active=neq.false → conta desativada (ex.: duplicata) NÃO entra nos pools
   const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id&active=neq.false&limit=2000')).json();
   if (!Array.isArray(users) || !users.length) return 0;
