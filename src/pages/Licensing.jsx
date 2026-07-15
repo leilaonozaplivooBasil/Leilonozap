@@ -1080,7 +1080,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   src={guardianNote.url}
                   alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80 }}
+                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1090,7 +1090,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   src={backBackNote.url}
                   alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82 }}
+                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1100,7 +1100,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   src={backNote.url}
                   alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85 }}
+                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1110,7 +1110,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   src={sideNote.url}
                   alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90 }}
+                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1120,7 +1120,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   src={frontNote.url}
                   alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92 }}
+                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
