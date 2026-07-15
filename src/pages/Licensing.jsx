@@ -1207,7 +1207,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
-                <CatalogHome currentStore={null} catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} />
+                <CatalogHome currentStore={null} catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} user={user} />
               </TabsContent>
 
               <TabsContent value="catalogo-pedidos" className="mt-6">

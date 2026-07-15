@@ -1,43 +1,73 @@
 import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, ShoppingBag, Eye } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Eye, Loader2 } from 'lucide-react';
 
-export default function CatalogHome({ currentStore, catalogSales = [] }) {
+export default function CatalogHome({ currentStore, catalogSales = [], user }) {
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
     topProducts: [],
-    recentOrders: [],
-    visitData: []
+    recentOrders: []
   });
+  const [visitData, setVisitData] = useState([]);
+  const [isLoadingVisits, setIsLoadingVisits] = useState(true);
 
   useEffect(() => {
-    if (catalogSales.length > 0) {
-      const total = catalogSales.length;
-      const revenue = catalogSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-      const recent = catalogSales.slice(0, 5);
-      
-      setStats({
-        totalOrders: total,
-        totalRevenue: revenue,
-        topProducts: [],
-        recentOrders: recent,
-        visitData: generateVisitData()
-      });
-    }
+    const total = catalogSales.length;
+    const revenue = catalogSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    const recent = catalogSales.slice(0, 5);
+
+    setStats({
+      totalOrders: total,
+      totalRevenue: revenue,
+      topProducts: [],
+      recentOrders: recent
+    });
   }, [catalogSales]);
 
-  const generateVisitData = () => {
-    return [
-      { date: '22 de Jan', visits: 120 },
-      { date: '23 de Jan', visits: 200 },
-      { date: '24 de Jan', visits: 180 },
-      { date: '25 de Jan', visits: 250 },
-      { date: '26 de Jan', visits: 300 },
-    ];
-  };
+  // 🆕 Visitas reais da loja virtual (CatalogVisit), últimos 7 dias
+  useEffect(() => {
+    const loadVisits = async () => {
+      if (!user?.id) {
+        setIsLoadingVisits(false);
+        return;
+      }
+      setIsLoadingVisits(true);
+      try {
+        const visits = await base44.entities.CatalogVisit.filter({ licensee_id: user.id }, "-visited_at", 1000);
+
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          days.push(d);
+        }
+
+        const counts = days.map((d) => {
+          const dayStr = d.toLocaleDateString('pt-BR');
+          const count = (Array.isArray(visits) ? visits : []).filter((v) => {
+            const vDate = new Date(v.visited_at || v.created_date);
+            return vDate.toLocaleDateString('pt-BR') === dayStr;
+          }).length;
+          return {
+            date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+            visits: count
+          };
+        });
+
+        setVisitData(counts);
+      } catch (error) {
+        console.error('Erro ao carregar visitas da loja virtual:', error);
+        setVisitData([]);
+      } finally {
+        setIsLoadingVisits(false);
+      }
+    };
+    loadVisits();
+  }, [user?.id]);
 
   return (
     <div className="space-y-6">
@@ -77,17 +107,23 @@ export default function CatalogHome({ currentStore, catalogSales = [] }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={stats.visitData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', color: '#FFF' }}
-              />
-              <Line type="monotone" dataKey="visits" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {isLoadingVisits ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={visitData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="date" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', color: '#FFF' }}
+                />
+                <Line type="monotone" dataKey="visits" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
