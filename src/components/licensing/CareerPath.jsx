@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 const rolePercentages = {
   influenciador: 5,
   vendedor: 10,
-  licenciado: 13,
+  licenciado_catalogo: 13,
   parceiro: 15,
   ponto_retirada: 16,
   loja_fisica: 19,
@@ -46,7 +46,7 @@ const careerSteps = [
   { id: 'parceiro', title: 'Parceiro', icon: Store,
     achievedDescription: '🤝 Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
     lockedDescription: 'Adesão R$ 20.000 (100% em produto). 15% na venda direta.' },
-  { id: 'licenciado', title: 'Licenciado', icon: Briefcase,
+  { id: 'licenciado_catalogo', title: 'Licenciado', icon: Briefcase,
     achievedDescription: '📚 Licenciado. 13% na venda direta pelo seu link.',
     lockedDescription: 'Adesão R$ 5.000 (100% em produto). 13% na venda direta.' },
   { id: 'vendedor', title: 'Vendedor', icon: Award,
