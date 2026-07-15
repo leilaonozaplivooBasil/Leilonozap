@@ -162,11 +162,13 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
             // Salva via service_role (RLS impede escrita pela anon key — sem isso o save é no-op silencioso)
             const result = await base44.functions.invoke('adminUpdateUser', { userId: user.id, updates: updatePayload, actorId });
-            if (!result || result.success !== true) {
-                throw new Error(result?.error || 'Não foi possível salvar. Verifique se você está logado como admin.');
+            // base44.functions.invoke retorna um objeto axios — os dados reais estão em result.data
+            const data = result?.data || result;
+            if (!data || data.success !== true) {
+                throw new Error(data?.error || 'Não foi possível salvar. Verifique se você está logado como admin.');
             }
             // Confirma que o banco realmente gravou o que mandamos
-            if (result.user && result.user.primary_career_level !== primaryLevel) {
+            if (data.user && data.user.primary_career_level !== primaryLevel) {
                 throw new Error('O servidor não confirmou a alteração da função principal. Tente novamente.');
             }
 
@@ -174,7 +176,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
 
             toast.success(`✅ Usuário atualizado!\nCargos: ${levelNames}\n⭐ Principal: ${primaryName}`);
-            onSuccess(result.user);
+            onSuccess(data.user);
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);
