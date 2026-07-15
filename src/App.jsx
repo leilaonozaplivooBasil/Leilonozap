@@ -65,6 +65,44 @@ const RedirectWithParams = ({ to }) => {
   return <Navigate to={`${to}${location.search}`} replace />;
 };
 
+// 🧭 APELIDOS DE ROTA — o app usa rotas em PT e case-sensitive (/Loja-Virtual, /Licensing…),
+// então quem digita /loja, /store, /entrar, /leiloes minúsculo caía num 404 (reclamação do
+// teste: "páginas internas dão 404 por rota direta"). Aqui um mapa case-insensitive manda a
+// pessoa (ou o buscador) pra rota certa, preservando ?ref= etc.
+const ROUTE_ALIASES = {
+  // Loja
+  'loja': '/Loja-Virtual', 'loja-virtual': '/Loja-Virtual', 'store': '/Loja-Virtual',
+  'shop': '/Loja-Virtual', 'lojavirtual': '/Loja-Virtual', 'catalogo': '/Loja-Virtual',
+  'catalog': '/Loja-Virtual', 'produtos': '/Loja-Virtual',
+  // Leilões
+  'leiloes': '/leiloes', 'leilao': '/leiloes', 'auctions': '/leiloes',
+  // Entrar / conta
+  'entrar': '/Home', 'login': '/Home', 'signin': '/Home', 'conta': '/Carteira',
+  'carteira': '/Carteira', 'wallet': '/Carteira', 'carrinho': '/Cart', 'cart': '/Cart',
+  // Ganhe dinheiro / rede
+  'ganhe-dinheiro': '/Licensing', 'ganhedinheiro': '/Licensing', 'licenciado': '/Licensing',
+  'seja-licenciado': '/Licensing', 'licensing': '/Licensing', 'alavancagem': '/Licensing',
+  'parceiro': '/Partners', 'seja-parceiro': '/Partners', 'investidor': '/Partners',
+  'partners': '/Partners', 'vendedor': '/SejaVendedor', 'seja-vendedor': '/SejaVendedor',
+  'sejavendedor': '/SejaVendedor',
+  // Setores
+  'direto-de-fabrica': '/DiretoDeFabrica', 'diretodefabrica': '/DiretoDeFabrica',
+  'fabrica': '/DiretoDeFabrica', 'arremate-devolucoes': '/ArremateDevolucoes',
+  'arremate': '/ArremateDevolucoes', 'devolucoes': '/ArremateDevolucoes',
+  'collection': '/LuxuryCollection', 'luxo': '/LuxuryCollection',
+  'ao-vivo': '/LiveShopNoZap', 'aovivo': '/LiveShopNoZap', 'live': '/LiveShopNoZap',
+  // Perfil
+  'perfil': '/Profile', 'profile': '/Profile', 'minha-conta': '/Profile',
+};
+
+// Resolve o apelido antes de mostrar 404. Mantém query e casa sem diferenciar maiúsculas.
+const AliasOrNotFound = () => {
+  const raw = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  const alvo = ROUTE_ALIASES[raw.toLowerCase()];
+  if (alvo) return <Navigate to={`${alvo}${window.location.search}`} replace />;
+  return <PageNotFound />;
+};
+
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
@@ -305,7 +343,8 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
-      <Route path="*" element={<PageNotFound />} />
+      {/* Antes de 404: tenta resolver como apelido de rota (/loja, /store, /entrar…) */}
+      <Route path="*" element={<AliasOrNotFound />} />
     </Routes>
     </Suspense>
   );
