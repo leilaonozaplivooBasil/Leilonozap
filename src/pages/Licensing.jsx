@@ -48,7 +48,22 @@ import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 
 const Product = base44.entities.Product;
-const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => <Card onClick={onClick} className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle><Icon className="h-4 w-4 text-gray-400" /></CardHeader><CardContent>{isL ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl font-bold text-white">{value}</div>}</CardContent></Card>;
+const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
+  <Card
+    onClick={onClick}
+    className={`relative overflow-hidden bg-gradient-to-br from-gray-900 ${isSaiDeBaixo ? 'via-red-950/20' : 'via-emerald-950/20'} to-gray-900 border ${isSaiDeBaixo ? 'border-red-500/20' : 'border-emerald-500/20'} shadow-lg backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer hover:-translate-y-0.5 hover:shadow-xl ${isSaiDeBaixo ? 'hover:border-red-500/50 hover:shadow-red-900/20' : 'hover:border-emerald-500/50 hover:shadow-emerald-900/20'}` : ''}`}>
+    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${isSaiDeBaixo ? 'via-red-500/70' : 'via-emerald-400/70'} to-transparent`} />
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</CardTitle>
+      <div className={`flex items-center justify-center w-9 h-9 rounded-lg border ${isSaiDeBaixo ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+        <Icon className={`h-4 w-4 ${isSaiDeBaixo ? 'text-red-400' : 'text-emerald-400'}`} />
+      </div>
+    </CardHeader>
+    <CardContent>
+      {isL ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl md:text-3xl font-black text-white tracking-tight">{value}</div>}
+    </CardContent>
+  </Card>
+);
 // 🆕 FUNÇÃO AUXILIAR PARA RETRY COM EXPONENTIAL BACKOFF
 const fetchWithRetry = async (fetchFunction, maxRetries = 3, baseDelay = 1000) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1161,19 +1176,21 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
-          <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Loja Virtual</TabsTrigger>}
+        <div className={`rounded-xl border p-1 shadow-lg bg-gradient-to-r from-gray-900 ${isSaiDeBaixo ? 'via-red-950/10 border-red-500/20' : 'via-emerald-950/10 border-emerald-500/20'} to-gray-900`}>
+        <TabsList className={`bg-transparent border-0 flex-wrap h-auto gap-2 p-2`}>
+          <TabsTrigger value="visao-geral" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Visão Geral</TabsTrigger>
+          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>🛍️ Loja Virtual</TabsTrigger>}
 
-          <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
-          {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
-          {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
-          <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
-          <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
-          <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
-          {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
+          <TabsTrigger value="minhas-vendas" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Minhas Vendas</TabsTrigger>
+          {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Vendas Equipe</TabsTrigger>}
+          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>📦 Pedidos</TabsTrigger>}
+          {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>🤝 Meus Vendedores</TabsTrigger>}
+          <TabsTrigger value="meus-clientes" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>👥 Clientes ({myClients.length})</TabsTrigger>
+          <TabsTrigger value="comissoes" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>💰 Comissões</TabsTrigger>
+          <TabsTrigger value="plano-carreira" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>🎯 Carreira</TabsTrigger>
+          {isAdmin && <TabsTrigger value="admin" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Admin</TabsTrigger>}
         </TabsList>
+        </div>
 
 
 
