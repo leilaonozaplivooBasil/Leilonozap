@@ -39,7 +39,6 @@ import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
 import Portal from '@/pages/Portal';
 import SuperAdminPanels from '@/pages/SuperAdminPanels';
-import LivooLive from '@/pages/LivooLive';
 import PortalArrematante from '@/pages/portal/PortalArrematante';
 import PortalLojaVirtual from '@/pages/portal/PortalLojaVirtual';
 import PortalLicenciado from '@/pages/portal/PortalLicenciado';
@@ -245,12 +244,6 @@ const AuthenticatedApp = () => {
       <Route path="/Loja-Virtual" element={
         <LayoutWrapper currentPageName="Catalog">
           <Catalog />
-        </LayoutWrapper>
-      } />
-      {/* 🆕 FASE 4A: Livoo Live — placeholder oficial de live commerce */}
-      <Route path="/LivooLive" element={
-        <LayoutWrapper currentPageName="LivooLive">
-          <LivooLive />
         </LayoutWrapper>
       } />
       {/* 🆕 FASE 4A: Aliases de recrutamento (landings dedicadas virão na Fase 4C) */}

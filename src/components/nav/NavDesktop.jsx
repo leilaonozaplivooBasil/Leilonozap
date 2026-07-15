@@ -5,7 +5,6 @@ import { ShoppingCart as CartIcon } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
 import ShopDropdown from "@/components/nav/dropdowns/ShopDropdown";
 import AuctionsDropdown from "@/components/nav/dropdowns/AuctionsDropdown";
-import LiveDropdown from "@/components/nav/dropdowns/LiveDropdown";
 import EarnMoneyDropdown from "@/components/nav/dropdowns/EarnMoneyDropdown";
 import AoVivoAgoraButton from "@/components/nav/AoVivoAgoraButton";
 
@@ -49,10 +48,9 @@ export default function NavDesktop({
 }) {
   return (
     <div className="hidden md:flex md:gap-x-1 items-center">
-      {/* === 4 DROPDOWNS CATEGORIZADOS === */}
+      {/* === 3 DROPDOWNS CATEGORIZADOS === */}
       <ShopDropdown />
       <AuctionsDropdown />
-      <LiveDropdown />
       <EarnMoneyDropdown />
 
       {/* === BOTÃO "AO VIVO AGORA" === */}
