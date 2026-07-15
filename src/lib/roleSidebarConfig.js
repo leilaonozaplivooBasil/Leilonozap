@@ -65,19 +65,11 @@ const CONTEXTS = {
       { title: "🎨 Material Promocional", pageName: "PromoCreator" },
     ],
   },
-  licenciado: {
-    title: "Painel Licenciado",
-    // 🛡️ FASE 4.5 — Links apontam pras ABAS INTERNAS do próprio /Licensing
-    // via query param ?tab=xxx. Evita "teleporte" pra páginas admin genéricas
-    // (CRM, NetworkOverview) que confundiam o usuário.
-    items: [
-      { title: "📜 Dashboard", pageName: "Licensing" },
-      { title: "👥 Meus Clientes", pageName: "Licensing?tab=meus-clientes" },
-      { title: "🌐 Minha Rede", pageName: "Licensing?tab=meus-vendedores" },
-      { title: "💰 Comissões", pageName: "Licensing?tab=comissoes" },
-      { title: "🎯 Plano de Carreira", pageName: "Licensing?tab=plano-carreira" },
-    ],
-  },
+  // 🛡️ FASE 4.6 — Contexto "licenciado" REMOVIDO.
+  // O painel /Licensing tem 10 abas internas próprias (Visão Geral, Loja Virtual,
+  // Minhas Vendas, Vendas Equipe, Pedidos, Meus Vendedores, Clientes, Comissões,
+  // Carreira, Admin). Sidebar externa duplicava navegação e confundia. A troca
+  // de painel é feita pelo dropdown do avatar (UserAvatarMenu) — fonte única.
   investidor: {
     title: "Painel Investidor",
     items: [
@@ -126,8 +118,8 @@ const CONTEXT_BY_PAGE = {
   // Lojista
   LojistaDashboard: "lojista",
 
-  // Licenciado
-  Licensing: "licenciado",
+  // Licenciado — 🛡️ FASE 4.6: sem sidebar externa. /Licensing usa apenas suas
+  // 10 abas internas. Troca de painel via dropdown do avatar (regra mestra).
 
   // Investidor
   CarteiraInvestidor: "investidor",

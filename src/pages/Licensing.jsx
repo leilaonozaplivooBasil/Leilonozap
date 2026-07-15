@@ -77,7 +77,8 @@ const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
   const walletCardRef = useRef(null);
 
-  // 🛡️ FASE 4.5 — Lê ?tab=xxx da URL pra ativar a aba correta ao chegar via sidebar
+  // 🛡️ FASE 4.6 — Lê ?tab=xxx APENAS na primeira render (links externos ainda
+  // funcionam). Sem polling — a sidebar do Licenciado foi removida na FASE 4.6.
   const getInitialTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -89,22 +90,6 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
   const [activeTab, setActiveTab] = useState(getInitialTab);
-
-  // 🛡️ Sincroniza aba quando o usuário navega pelos links da sidebar
-  // (mesma URL /Licensing muda apenas o ?tab= — React Router não desmonta o componente)
-  useEffect(() => {
-    const syncTabFromURL = () => setActiveTab(getInitialTab());
-    window.addEventListener('popstate', syncTabFromURL);
-    // Escuta cliques em links internos que mudam a URL sem reload
-    const interval = setInterval(() => {
-      const current = new URLSearchParams(window.location.search).get('tab') || 'visao-geral';
-      setActiveTab((prev) => (prev !== current && ['visao-geral', 'catalogo', 'minhas-vendas', 'vendas-equipe', 'pedidos', 'meus-vendedores', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'].includes(current) ? current : prev));
-    }, 400);
-    return () => {
-      window.removeEventListener('popstate', syncTabFromURL);
-      clearInterval(interval);
-    };
-  }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
 
