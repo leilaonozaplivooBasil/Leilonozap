@@ -411,7 +411,7 @@ export default function EditAuction() {
             
         } catch (error) {
             console.error("❌ Erro ao reativar:", error);
-            alert("❌ Erro ao reativar o leilão. Tente novamente.");
+            alert("❌ Erro ao reativar o leilão: " + (error?.message || error));
             setIsReactivating(false);
         }
     };
