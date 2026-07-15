@@ -354,44 +354,57 @@ export default function EditAuction() {
 
     const confirmReactivate = async () => {
         const utcEndTimeString = pendingReactivateTime;
-        if (!utcEndTimeString) return;
+        if (!utcEndTimeString) {
+            alert("❌ Erro: data de reativação não encontrada.");
+            return;
+        }
         setShowReactivateConfirm(false);
         setIsReactivating(true);
         try {
             console.log(`🔄 INICIANDO REATIVAÇÃO...`);
-
-            console.log(`⏰ Convertido UTC: ${utcEndTimeString}`);
+            console.log(`⏰ UTC: ${utcEndTimeString}`);
             console.log(`⏰ Verificação: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
 
             // 🔧 BUSCA E DELETA MENSAGENS DE ENCERRAMENTO
-            console.log(`🧹 Buscando mensagens de encerramento...`);
-            const allMessages = await AuctionMessage.filter({ auction_id: auctionId });
-            
             let deletedCount = 0;
-            
-            for (const msg of allMessages) {
-                const shouldDelete = 
-                    msg.message_type === 'winner_announcement' ||
-                    (msg.is_system_message && (
-                        msg.content.includes('ARREMATADO') ||
-                        msg.content.includes('VENDIDO') ||
-                        msg.content.includes('Parabéns') ||
-                        msg.content.includes('vencedor') ||
-                        msg.content.includes('arrematou')
-                    ));
-                
-                if (shouldDelete) {
-                    console.log(`   ❌ Deletando: "${msg.content}"`);
-                    await AuctionMessage.delete(msg.id);
-                    deletedCount++;
-                    await new Promise(resolve => setTimeout(resolve, 200));
+            try {
+                console.log(`🧹 Buscando mensagens de encerramento...`);
+                const allMessages = await AuctionMessage.filter({ auction_id: auctionId });
+                console.log(`📋 Encontradas ${allMessages?.length || 0} mensagens`);
+
+                if (Array.isArray(allMessages)) {
+                    for (const msg of allMessages) {
+                        if (!msg || !msg.id) continue;
+                        const shouldDelete = 
+                            msg.message_type === 'winner_announcement' ||
+                            (msg.is_system_message && (
+                                (msg.content || '').includes('ARREMATADO') ||
+                                (msg.content || '').includes('VENDIDO') ||
+                                (msg.content || '').includes('Parabéns') ||
+                                (msg.content || '').includes('vencedor') ||
+                                (msg.content || '').includes('arrematou')
+                            ));
+                        
+                        if (shouldDelete) {
+                            console.log(`   ❌ Deletando: "${msg.content}"`);
+                            try {
+                                await AuctionMessage.delete(msg.id);
+                                deletedCount++;
+                            } catch (delErr) {
+                                console.warn(`   ⚠️ Erro ao deletar mensagem ${msg.id}:`, delErr?.message || delErr);
+                            }
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                    }
                 }
+            } catch (msgErr) {
+                console.warn("⚠️ Erro ao buscar/deletar mensagens (continuando):", msgErr?.message || msgErr);
             }
             
             console.log(`✅ ${deletedCount} mensagens deletadas`);
 
             // 🔧 ATUALIZA O LEILÃO
-            console.log(`✅ Atualizando leilão para ATIVO...`);
+            console.log(`✅ Atualizando leilão ${auctionId} para ATIVO...`);
             await Auction.update(auctionId, {
                 status: 'active',
                 end_time: utcEndTimeString,
