@@ -422,55 +422,59 @@ const DashboardContent = ({ user, isAdmin }) => {
       console.log('🏆 Arremates encontrados:', wonAuctions.length);
       setMyAuctions(wonAuctions);
 
-      // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor) + vendas da rede que geraram minhas comissões
+      // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor)
+      let ownSales = [];
       try {
         const CatalogSale = base44.entities.CatalogSale;
 
         // ✅ ISOLAMENTO CRÍTICO: Filtrar NO SERVIDOR, não na UI
         // Busca vendas onde licensee_id = meu ID (minha loja direta)
-        const ownSales = Array.isArray(user.id) ? [] :
+        ownSales = Array.isArray(user.id) ? [] :
           await CatalogSale.filter(
             { licensee_id: user.id },
             '-created_date',
             300
           );
+        ownSales = Array.isArray(ownSales) ? ownSales : [];
 
         console.log('✅ [ISOLAMENTO] Vendas catálogo do user_id:', user.id, '→', ownSales.length, 'vendas');
+        setMySales(ownSales);
+        setMyCatalogSales(ownSales);
+      } catch (catalogError) {
+        console.error("Erro ao buscar vendas do catálogo:", catalogError);
+        ownSales = [];
+        setMySales([]);
+        setMyCatalogSales([]);
+      }
 
-        // 🆕 SINCRONIA: cargos diretor+ (fundador, conselheiro, ceo, etc) recebem
-        // bônus de TODA a rede, não só da própria loja. Para o Relatório/Pedidos
-        // baterem com o extrato de Comissões, incluímos também as vendas que
-        // geraram registros de comissão para este usuário.
+      // 🆕 SINCRONIA: cargos diretor+ (fundador, conselheiro, ceo, etc) recebem
+      // bônus de TODA a rede, não só da própria loja. Para o Relatório/Pedidos
+      // baterem com o extrato de Comissões, tentamos incluir também as vendas
+      // que geraram registros de comissão para este usuário. Isolado em seu
+      // próprio try/catch para NUNCA apagar as vendas próprias já carregadas.
+      try {
+        const CatalogSale = base44.entities.CatalogSale;
         const commissionRecords = await base44.entities.CommissionRecord.filter(
           { user_id: user.id, sale_type: 'catalog' },
           '-created_date',
           300
         );
-        const ownSaleIds = new Set((Array.isArray(ownSales) ? ownSales : []).map((s) => s.id));
+        const ownSaleIds = new Set(ownSales.map((s) => s.id));
         const extraSaleIds = [...new Set(
           (Array.isArray(commissionRecords) ? commissionRecords : [])
             .map((r) => r.sale_id)
             .filter((id) => id && !ownSaleIds.has(id))
         )];
 
-        let networkSales = [];
         if (extraSaleIds.length > 0) {
-          try {
-            networkSales = await CatalogSale.filter({ id: { $in: extraSaleIds } }, '-created_date', 300);
-          } catch (networkError) {
-            console.error("Erro ao buscar vendas da rede vinculadas às comissões:", networkError);
-          }
+          const networkSales = await CatalogSale.filter({ id: { $in: extraSaleIds } }, '-created_date', 300);
+          const allSales = [...ownSales, ...(Array.isArray(networkSales) ? networkSales : [])]
+            .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+          setMySales(allSales);
+          setMyCatalogSales(allSales);
         }
-
-        const allSales = [...(Array.isArray(ownSales) ? ownSales : []), ...(Array.isArray(networkSales) ? networkSales : [])]
-          .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-
-        setMySales(allSales);
-        setMyCatalogSales(allSales);
-      } catch (catalogError) {
-        console.error("Erro ao buscar vendas do catálogo:", catalogError);
-        setMySales([]);
-        setMyCatalogSales([]);
+      } catch (networkError) {
+        console.error("Erro ao buscar vendas da rede vinculadas às comissões (mantendo vendas próprias):", networkError);
       }
 
     } catch (error) {
