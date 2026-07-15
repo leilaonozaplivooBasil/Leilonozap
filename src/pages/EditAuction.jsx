@@ -416,6 +416,9 @@ export default function EditAuction() {
                 winner_name: null,
                 order_status: null,
                 last_processed_bid_time: null,
+                current_price: parseFloat(formData.current_price) || auction?.current_price || 0,
+                starting_price: parseFloat(formData.starting_price) || auction?.starting_price || 0,
+                increment: parseFloat(formData.increment) || auction?.increment || 0,
             };
             console.log(`📦 Payload:`, JSON.stringify(reactivatePayload));
             const { error: reactivateUpdateError } = await supabase
