@@ -915,81 +915,51 @@ export default function InvestorDashboard() {
                     onClick={async () => {
                       try {
                         toast.info("Gerando PDF do contrato...");
-
-                        // Detecta dispositivo
-                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-                        // Para todos os dispositivos: usa base64 (mais compatível)
                         const response = await base44.functions.invoke('generateContractPDF', { 
                           format: 'base64',
                           partner_name: pixFormData?.name || '',
                           partner_cpf: pixFormData?.cpf || ''
                         });
-
-                        // base44.functions.invoke retorna objeto axios — dados em .data
                         const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
+                        if (!pdfBase64) throw new Error('PDF não gerado');
 
-                        if (pdfBase64) {
-                          if (isIOS) {
-                            // iOS: abre em nova aba (Safari lida melhor assim)
-                            const newWindow = window.open('', '_blank');
-                            if (newWindow) {
-                              newWindow.document.write(`
-                                <!DOCTYPE html>
-                                <html>
-                                  <head>
-                                    <title>Contrato de Parceria</title>
-                                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                                    <style>
-                                      body { margin: 0; padding: 0; }
-                                      iframe { width: 100vw; height: 100vh; border: none; }
-                                    </style>
-                                  </head>
-                                  <body>
-                                    <iframe src="${pdfBase64}"></iframe>
-                                  </body>
-                                </html>
-                              `);
-                              newWindow.document.close();
-                              toast.success("PDF aberto! Use 'Compartilhar' para salvar.");
-                            } else {
-                              // Fallback: redireciona
-                              window.location.href = pdfBase64;
-                            }
-                          } else if (isMobile) {
-                            // Android e outros mobile: tenta download, fallback para nova aba
-                            const link = document.createElement('a');
-                            link.href = pdfBase64;
-                            link.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            toast.success("PDF baixado!");
-                          } else {
-                            // Desktop: converte base64 para blob e faz download
-                            const byteCharacters = atob(pdfBase64.split(',')[1]);
-                            const byteNumbers = new Array(byteCharacters.length);
-                            for (let i = 0; i < byteCharacters.length; i++) {
-                              byteNumbers[i] = byteCharacters.charCodeAt(i);
-                            }
-                            const byteArray = new Uint8Array(byteNumbers);
-                            const blob = new Blob([byteArray], { type: 'application/pdf' });
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
-                            document.body.appendChild(a);
-                            a.click();
-                            setTimeout(() => {
-                              window.URL.revokeObjectURL(url);
-                              a.remove();
-                            }, 100);
-                            toast.success("Contrato PDF baixado!");
-                          }
-                        } else {
-                          throw new Error('Erro ao gerar PDF');
+                        // Converte base64 para blob (funciona em todos os dispositivos)
+                        const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
+                        const byteCharacters = atob(base64Data);
+                        const byteArray = new Uint8Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                          byteArray[i] = byteCharacters.charCodeAt(i);
                         }
+                        const blob = new Blob([byteArray], { type: 'application/pdf' });
+                        const blobUrl = URL.createObjectURL(blob);
+
+                        // Tenta Web Share API primeiro (mobile)
+                        if (navigator.share) {
+                          try {
+                            const file = new File([blob], 'Contrato_Parceria_LeilaoNoZap.pdf', { type: 'application/pdf' });
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                              await navigator.share({ files: [file], title: 'Contrato de Parceria' });
+                              toast.success("PDF compartilhado!");
+                              URL.revokeObjectURL(blobUrl);
+                              return;
+                            }
+                          } catch (shareErr) {
+                            // Usuário cancelou ou erro — continua para download
+                          }
+                        }
+
+                        // Fallback: download via link
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
+                        a.target = '_blank';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                          URL.revokeObjectURL(blobUrl);
+                          a.remove();
+                        }, 200);
+                        toast.success("Contrato PDF baixado!");
                       } catch (error) {
                         console.error('Erro ao baixar PDF:', error);
                         toast.error("Erro ao gerar PDF: " + error.message);
@@ -1000,6 +970,45 @@ export default function InvestorDashboard() {
                     📥 Baixar PDF
                   </Button>
                 </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      toast.info("Gerando PDF para compartilhar...");
+                      const response = await base44.functions.invoke('generateContractPDF', { 
+                        format: 'base64',
+                        partner_name: pixFormData?.name || '',
+                        partner_cpf: pixFormData?.cpf || ''
+                      });
+                      const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
+                      if (!pdfBase64) throw new Error('PDF não gerado');
+
+                      const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
+                      const byteCharacters = atob(base64Data);
+                      const byteArray = new Uint8Array(byteCharacters.length);
+                      for (let i = 0; i < byteCharacters.length; i++) {
+                        byteArray[i] = byteCharacters.charCodeAt(i);
+                      }
+                      const blob = new Blob([byteArray], { type: 'application/pdf' });
+                      const file = new File([blob], 'Contrato_Parceria_LeilaoNoZap.pdf', { type: 'application/pdf' });
+
+                      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+                        await navigator.share({ files: [file], title: 'Contrato de Parceria' });
+                        toast.success("PDF compartilhado!");
+                      } else {
+                        // Fallback: abre em nova aba
+                        const blobUrl = URL.createObjectURL(blob);
+                        window.open(blobUrl, '_blank');
+                        toast.info("PDF aberto em nova aba!");
+                      }
+                    } catch (error) {
+                      console.error('Erro ao compartilhar:', error);
+                      toast.error("Erro: " + error.message);
+                    }
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4"
+                >
+                  📤 Compartilhar Contrato
+                </Button>
               </motion.div>
             ) : !selectedPlan ? (
               <>

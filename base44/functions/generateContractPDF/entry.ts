@@ -23,13 +23,7 @@ function removeAccents(str) {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    // Contract PDF is public — no auth required
     // Parse partner info from request body
     let partnerName = '____________________';
     let partnerCpf = '____________________';
