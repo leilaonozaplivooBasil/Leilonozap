@@ -1227,7 +1227,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsContent>
 
               <TabsContent value="catalogo-produtos" className="mt-6">
-                <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} />
+                <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} user={user} />
               </TabsContent>
 
               <TabsContent value="catalogo-vendedores" className="mt-6">
