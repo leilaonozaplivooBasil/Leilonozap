@@ -46,13 +46,18 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             setUserData({ ...user });
             
             // Carregar níveis de carreira
-            const userLevels = Array.isArray(user.career_levels) 
+            const validLevelIds = CAREER_LEVELS.map(l => l.id);
+            const rawLevels = Array.isArray(user.career_levels) 
                 ? user.career_levels 
                 : (user.career_levels ? [user.career_levels] : ['usuario']);
-            setSelectedLevels(userLevels);
+            const userLevels = rawLevels.filter(l => validLevelIds.includes(l));
+            setSelectedLevels(userLevels.length > 0 ? userLevels : ['usuario']);
             
-            // Carregar nível principal
-            setPrimaryLevel(user.primary_career_level || userLevels[0] || 'usuario');
+            // Carregar nível principal — só aceita IDs que existem no CAREER_LEVELS
+            const validPrimary = user.primary_career_level && validLevelIds.includes(user.primary_career_level)
+                ? user.primary_career_level
+                : (userLevels[0] || 'usuario');
+            setPrimaryLevel(validPrimary);
             
             // Carregar nomes para exibição
             const nameParts = user.full_name.split(' ').filter(part => part.trim() !== '');
