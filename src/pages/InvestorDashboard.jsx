@@ -778,10 +778,10 @@ export default function InvestorDashboard() {
                   <div className="text-gray-300 text-sm space-y-4 pr-4">
                     <h4 className="text-green-400 font-bold text-center text-base">CONTRATO DE PARCERIA COMERCIAL E PARTICIPAÇÃO EM OPERAÇÃO ESTRUTURADA DE VENDA DE PRODUTOS</h4>
 
-                    <p>Pelo presente instrumento particular, de um lado <strong className="text-white">LEILÃO NOZAP</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 51.544.091/0001-67, com sede em Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, doravante denominada PLATAFORMA, e de outro lado <strong className="text-white">PARCEIRO COMERCIAL</strong>, pessoa física ou jurídica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria Comercial e Participação em Operação Estruturada de Venda de Produtos, que se regerá pelas cláusulas e condições a seguir estabelecidas.</p>
+                    <p>Pelo presente instrumento particular, de um lado <strong className="text-white">COMPRAS FULL COMÉRCIO LTDA</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 51.544.091/0001-67, com sede em Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, neste ato representada por sua marca <strong className="text-white">LEILÃO NOZAP</strong>, doravante denominada simplesmente PLATAFORMA, e de outro lado <strong className="text-white">PARCEIRO COMERCIAL</strong>, pessoa física ou jurídica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria Comercial e Participação em Operação Estruturada de Venda de Produtos, que se regerá pelas cláusulas e condições a seguir estabelecidas.</p>
 
                     <h5 className="text-green-400 font-bold mt-4">1. DA QUALIFICAÇÃO E DA ATIVIDADE DA PLATAFORMA</h5>
-                    <p>1.1. A PLATAFORMA, sob a marca LEILÃO NOZAP, é uma empresa brasileira de tecnologia e operação comercial especializada na aquisição, curadoria e comercialização de produtos de alto giro, oriundos de devoluções dentro do prazo legal de 7 (sete) dias, estoques de fábrica, mostruários e lotes de estoque parado, adquiridos com desconto de 25% (vinte e cinco por cento) a 40% (quarenta por cento) sobre o valor de mercado, posteriormente comercializados por meio de equipe de vendas própria e canais digitais próprios.</p>
+                    <p>1.1. A PLATAFORMA, razão social Compras Full Comércio LTDA, inscrita no CNPJ sob nº 51.544.091/0001-67, sob a marca Leilão NoZap, é uma empresa brasileira de tecnologia e operação comercial especializada na aquisição, curadoria e comercialização de produtos de alto giro, oriundos de devoluções dentro do prazo legal de 7 (sete) dias, estoques de fábrica, mostruários e lotes de estoque parado, adquiridos com desconto de 25% (vinte e cinco por cento) a 40% (quarenta por cento) sobre o valor de mercado, posteriormente comercializados por meio de equipe de vendas própria e canais digitais próprios.</p>
                     <p>1.2. A PLATAFORMA opera com metodologia própria de curadoria, baseada em curva ABC, análise de liquidez, cálculo de rentabilidade e gestão operacional integral, garantindo o giro comercial dos produtos adquiridos.</p>
 
                     <h5 className="text-green-400 font-bold mt-4">2. DO OBJETO</h5>
@@ -823,6 +823,7 @@ export default function InvestorDashboard() {
                     <p>6.1. O PARCEIRO aportará o valor correspondente ao plano de parceria selecionado no momento da adesão, conforme condições apresentadas na plataforma.</p>
                     <p>6.2. O capital aportado será integralmente alocado em operações sucessivas de compra e recompra de produtos, dentro da estratégia operacional da PLATAFORMA, durante toda a vigência deste contrato.</p>
                     <p>6.3. O capital aportado não poderá ser retirado antecipadamente, ressalvadas as condições de encerramento previstas na Cláusula 8.</p>
+                    <p>6.4. O aporte de capital deverá ser realizado via PIX ou transferência bancária para a conta da PLATAFORMA: <strong className="text-white">Banco Santander, Agência 0142, Conta Corrente 1030358-7</strong>, CNPJ 51.544.091/0001-67, em nome de Compras Full Comércio LTDA.</p>
 
                     <h5 className="text-green-400 font-bold mt-4">7. DO COMPARTILHAMENTO DE LUCROS</h5>
                     <p>7.1. Em contrapartida ao capital aportado, o PARCEIRO fará jus a uma cota de participação sobre o lucro líquido apurado nas operações comerciais realizadas pela PLATAFORMA, calculada conforme percentual estabelecido no momento da adesão e aplicada sobre o valor do capital aportado.</p>
@@ -833,12 +834,12 @@ export default function InvestorDashboard() {
                     <h5 className="text-green-400 font-bold mt-4">8. DA VIGÊNCIA E DO CICLO OPERACIONAL</h5>
                     <p>8.1. O presente contrato terá vigência de 12 (doze) meses, contados a partir da data de aceite eletrônico pelo PARCEIRO.</p>
                     <p>8.2. O ciclo financeiro da parceria observará as seguintes regras:</p>
-                    <p className="ml-4">a) O primeiro compartilhamento de lucros será disponibilizado ao PARCEIRO em até 60 (sessenta) dias contados da data do aporte inicial;</p>
+                    <p className="ml-4">a) O primeiro compartilhamento de lucros será disponibilizado ao PARCEIRO em até 60 (sessenta) dias contados da data do aporte inicial, prazo necessário para os 15 (quinze) primeiros dias destinados a testes, disponibilização e colocação à venda dos produtos na plataforma, seguidos de 45 (quarenta e cinco) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e segurança da operação;</p>
                     <p className="ml-4">b) Após o primeiro ciclo, os compartilhamentos subsequentes ocorrerão em ciclos mensais, com disponibilização a cada 30 (trinta) dias;</p>
                     <p className="ml-4">c) O capital aportado permanecerá alocado continuamente em novas operações de compra e recompra de produtos, enquanto vigente o contrato.</p>
                     <p>8.3. Os valores de lucro compartilhado, apurados após o período inicial de 60 (sessenta) dias, poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
                     <p>8.4. Ao final do prazo de 12 (doze) meses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para celebração de novo acordo, o qual poderá conter condições, prazos e critérios distintos.</p>
-                    <p>8.5. Encerrada a vigência contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO será disponibilizado para retirada em até 60 (sessenta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.</p>
+                    <p>8.5. Encerrada a vigência contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO será disponibilizado para retirada em até 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.</p>
 
                     <h5 className="text-green-400 font-bold mt-4">9. DAS OBRIGAÇÕES DO PARCEIRO</h5>
                     <p>9.1. Realizar o cadastro na plataforma com informações verdadeiras, completas e atualizadas;</p>
@@ -863,7 +864,7 @@ export default function InvestorDashboard() {
                     <p>12.1. As partes comprometem-se a manter sigilo absoluto sobre todas as informações estratégicas, comerciais, operacionais e financeiras a que tiverem acesso em decorrência deste contrato, obrigação que subsistirá pelo prazo de 5 (cinco) anos contados do encerramento da vigência contratual.</p>
 
                     <h5 className="text-green-400 font-bold mt-4">13. DAS DISPOSIÇÕES GERAIS</h5>
-                    <p>13.1. O aceite eletrônico deste contrato, realizado por meio de marcação de checkbox ou clique em botão de confirmação na plataforma, possui plena validade jurídica, nos termos da Lei nº 14.063/2020 e da Medida Provisória nº 2.200-2/2001.</p>
+                    <p>13.1. O presente contrato poderá ser firmado por aceite eletrônico, mediante marcação de checkbox ou clique em botão de confirmação na plataforma, nos termos da Lei nº 14.063/2020 e da Medida Provisória nº 2.200-2/2001, ou por assinatura manual, mediante aposição da assinatura de próprio punho nos campos abaixo, sendo ambas as modalidades igualmente válidas e eficazes.</p>
                     <p>13.2. Este contrato representa a totalidade do acordo entre as partes, prevalecendo sobre quaisquer negociações, declarações ou entendimentos prévios, verbais ou escritos.</p>
                     <p>13.3. Qualquer modificação deste contrato deverá ser formalizada por meio de termo aditivo, com aceite eletrônico do PARCEIRO.</p>
                     <p>13.4. A tolerância de qualquer das partes em exigir o cumprimento de qualquer cláusula deste contrato não será considerada renúncia ou novação.</p>
@@ -872,8 +873,33 @@ export default function InvestorDashboard() {
                     <h5 className="text-green-400 font-bold mt-4">14. DO FORO</h5>
                     <p>14.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ, com renúncia expressa a qualquer outro, por mais privilegiado que seja, para dirimir quaisquer questões oriundas ou relacionadas ao presente contrato.</p>
 
-                    <div className="border-t border-gray-600 mt-6 pt-4 text-center">
-                      <p className="text-gray-400 italic">E, por estarem de pleno acordo, o PARCEIRO manifesta seu aceite eletrônico aos termos acima, declarando ter lido, compreendido e concordado com a totalidade das cláusulas deste instrumento.</p>
+                    <div className="border-t border-gray-600 mt-6 pt-4">
+                      <p className="text-gray-400 italic text-center mb-6">E, por estarem de pleno acordo, as partes manifestam seu aceite aos termos acima, seja por meio eletrônico ou por assinatura manual, declarando ter lido, compreendido e concordado com a totalidade das cláusulas deste instrumento.</p>
+
+                      <div className="grid grid-cols-2 gap-8 mt-12">
+                        <div className="text-center">
+                          <div className="border-t border-gray-400 pt-2 mt-8">
+                            <p className="text-gray-300 text-xs font-bold">COMPRAS FULL COMÉRCIO LTDA</p>
+                            <p className="text-gray-500 text-xs">CNPJ: 51.544.091/0001-67</p>
+                            <p className="text-gray-400 text-xs mt-1">Marca: Leilão NoZap</p>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="border-t border-gray-400 pt-2 mt-8">
+                            <p className="text-gray-300 text-xs font-bold">PARCEIRO COMERCIAL</p>
+                            <p className="text-gray-500 text-xs">Nome / Assinatura</p>
+                            <p className="text-gray-400 text-xs mt-1">CPF/CNPJ: ____________________</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-center mt-6">
+                        <p className="text-gray-500 text-xs">Local e Data: _____/_____/_______</p>
+                      </div>
+
+                      <div className="text-center mt-4">
+                        <p className="text-gray-400 text-xs italic">Este contrato pode ser assinado eletronicamente, mediante aceite no checkbox acima, ou manualmente, mediante assinatura nos campos acima.</p>
+                      </div>
                     </div>
                   </div>
                 </ScrollArea>
@@ -895,7 +921,11 @@ export default function InvestorDashboard() {
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
                         // Para todos os dispositivos: usa base64 (mais compatível)
-                        const response = await base44.functions.invoke('generateContractPDF', { format: 'base64' });
+                        const response = await base44.functions.invoke('generateContractPDF', { 
+                          format: 'base64',
+                          partner_name: pixFormData?.name || '',
+                          partner_cpf: pixFormData?.cpf || ''
+                        });
 
                         // base44.functions.invoke retorna objeto axios — dados em .data
                         const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
