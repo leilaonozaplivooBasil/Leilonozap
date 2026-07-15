@@ -13,21 +13,20 @@ import { toast } from "sonner";
 const AppUser = base44.entities.AppUser;
 
 const CAREER_LEVELS = [
-  { id: 'usuario', name: 'Usuário', color: 'bg-gray-500' },
-  { id: 'licenciado_aplicativo', name: 'Licenciado Aplicativo', color: 'bg-green-500' },
-  { id: 'influencer', name: 'Influencer', color: 'bg-pink-500' },
-  { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500' },
-  { id: 'trainee', name: 'Trainee', color: 'bg-blue-500' },
-  { id: 'executivo', name: 'Executivo', color: 'bg-purple-500' },
-  { id: 'kit_start', name: 'Kit Start', color: 'bg-teal-500' },
-  { id: 'plano_lider', name: 'Plano Líder', color: 'bg-indigo-500' },
-  { id: 'plano_lojista', name: 'Plano Lojista', color: 'bg-lime-500' },
-  { id: 'distribuidor', name: 'Distribuidor', color: 'bg-sky-500' },
-  { id: 'diretoria', name: 'Diretoria', color: 'bg-fuchsia-500' },
-  { id: 'diretor', name: 'Diretor', color: 'bg-orange-500' },
-  { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
-  { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500' },
-  { id: 'fundador', name: 'Fundador', color: 'bg-amber-500' }
+    { id: 'usuario', name: 'Usuário', color: 'bg-gray-500' },
+    { id: 'influenciador', name: 'Influenciador', color: 'bg-pink-500' },
+    { id: 'vendedor', name: 'Vendedor', color: 'bg-blue-500' },
+    { id: 'licenciado_catalogo', name: 'Licenciado', color: 'bg-yellow-500' },
+    { id: 'parceiro', name: 'Parceiro', color: 'bg-teal-500' },
+    { id: 'ponto_retirada', name: 'Ponto de Retirada', color: 'bg-indigo-500' },
+    { id: 'loja_fisica', name: 'Loja Física', color: 'bg-lime-500' },
+    { id: 'distribuidor', name: 'Distribuidor', color: 'bg-sky-500' },
+    { id: 'socio', name: 'Sócio', color: 'bg-emerald-500' },
+    { id: 'diretor', name: 'Diretor Operacional', color: 'bg-orange-500' },
+    { id: 'diretoria', name: 'Diretoria Executiva', color: 'bg-fuchsia-500' },
+    { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
+    { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500' },
+    { id: 'fundador', name: 'Fundador', color: 'bg-amber-500' }
 ];
 
 export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
