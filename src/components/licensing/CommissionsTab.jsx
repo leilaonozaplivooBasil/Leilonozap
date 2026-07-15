@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { BarChart, Wallet, Smartphone, Package, Loader2 } from 'lucide-react';
+import { BarChart, Wallet, Gavel, Package, Loader2 } from 'lucide-react';
 
 export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommissions, myCommissionRecords, onViewHistory }) {
   return (
@@ -35,16 +35,16 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
           <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📊 Como funcionam suas comissões:</h4>
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">
-              <span className="text-green-500">📱</span>
+              <span className="text-green-500">🔨</span>
               <div>
-                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>App (3%):</strong>
-                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 3% sobre cada arremate feito pelos seus indicados no aplicativo.</span>
+                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Leilão (3%):</strong>
+                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 3% sobre cada arremate feito por quem comprou através do seu link.</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-blue-500">🛍️</span>
               <div>
-                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo (26%):</strong>
+                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Loja Virtual (26%):</strong>
                 <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> 26% de cada venda é distribuído entre os cargos da hierarquia. Você recebe de acordo com seus cargos ativos.</span>
               </div>
             </div>
@@ -53,38 +53,38 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
 
         {/* Cards por Canal */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Smartphone className="w-5 h-5 text-green-400" />
+          <div className={`p-5 rounded-2xl border shadow-lg ${isSaiDeBaixo ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300' : 'bg-gradient-to-br from-green-900/30 to-emerald-950/40 border-green-500/30'}`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                <Gavel className="w-6 h-6 text-green-400" />
               </div>
               <div>
-                <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📱 App (Influencer)</p>
-                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>3% por arremate dos indicados</p>
+                <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🔨 Leilão</p>
+                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>3% por arremate de quem usou seu link</p>
               </div>
             </div>
-            <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
+            <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
               R$ {Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)).toFixed(2)}
             </p>
             <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
             <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-green-200' : 'border-green-500/30'}`}>
               <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                ✅ Compartilhe seu link do App<br/>
-                ✅ Quando seu indicado arremata, você ganha 3%
+                ✅ Compartilhe seu link único<br/>
+                ✅ Quando alguém arremata pelo seu link, você ganha 3%
               </p>
             </div>
           </div>
-          <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Package className="w-5 h-5 text-blue-400" />
+          <div className={`p-5 rounded-2xl border shadow-lg ${isSaiDeBaixo ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300' : 'bg-gradient-to-br from-blue-900/30 to-indigo-950/40 border-blue-500/30'}`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                <Package className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🛍️ Catálogo (Licenciado)</p>
+                <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🛍️ Loja Virtual</p>
                 <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>26% distribuídos na hierarquia</p>
               </div>
             </div>
-            <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
+            <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
               R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
             </p>
             <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
@@ -106,7 +106,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
         <div className={`mt-6 rounded-xl border ${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}`}>
           <div className="p-4 border-b border-gray-700/50">
             <h4 className={`${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} font-semibold`}>Histórico de Comissões</h4>
-            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm`}>Últimos lançamentos de App e Catálogo</p>
+            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm`}>Últimos lançamentos de Leilão e Loja Virtual</p>
           </div>
           {isLoadingCommissions ? (
             <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div>
@@ -130,7 +130,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
                   {myCommissionRecords.map((rec) => (
                     <TableRow key={rec.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
                       <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{new Date(rec.created_date).toLocaleString('pt-BR')}</TableCell>
-                      <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.sale_type === 'catalog' ? 'Catálogo' : 'App'}</TableCell>
+                      <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.sale_type === 'catalog' ? 'Loja Virtual' : 'Leilão'}</TableCell>
                       <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.role}</TableCell>
                       <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.product_title || '-'}</TableCell>
                       <TableCell className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-right text-sm`}>{(rec.percent || 0).toFixed(2)}%</TableCell>
