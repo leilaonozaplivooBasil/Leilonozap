@@ -1,14 +1,11 @@
 import React from 'react';
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, ShoppingBag, Receipt, TrendingUp, Package, Handshake, Users, Wallet, Award, Shield } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Receipt, Users, Wallet, Award, Shield } from 'lucide-react';
 
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
-  { value: 'catalogo', label: 'Loja Virtual', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') },
-  { value: 'minhas-vendas', label: 'Minhas Vendas', icon: Receipt, show: () => true },
-  { value: 'vendas-equipe', label: 'Vendas Equipe', icon: TrendingUp, show: (ctx) => ['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => ctx.userLevels.includes(l)) },
-  { value: 'pedidos', label: 'Pedidos', icon: Package, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') },
-  { value: 'meus-vendedores', label: 'Meus Vendedores', icon: Handshake, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
+  { value: 'catalogo', label: 'Loja Virtual', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
+  { value: 'minhas-vendas', label: 'Vendas', icon: Receipt, show: () => true },
   { value: 'meus-clientes', label: (ctx) => `Clientes (${ctx.myClientsCount})`, icon: Users, show: () => true },
   { value: 'comissoes', label: 'Comissões', icon: Wallet, show: () => true },
   { value: 'plano-carreira', label: 'Carreira', icon: Award, show: () => true },

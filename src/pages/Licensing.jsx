@@ -99,7 +99,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     try {
       const params = new URLSearchParams(window.location.search);
       const t = params.get('tab');
-      const VALID_TABS = ['visao-geral', 'catalogo', 'minhas-vendas', 'vendas-equipe', 'pedidos', 'meus-vendedores', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'];
+      const VALID_TABS = ['visao-geral', 'catalogo', 'minhas-vendas', 'meus-clientes', 'comissoes', 'plano-carreira', 'admin'];
       return VALID_TABS.includes(t) ? t : 'visao-geral';
     } catch {
       return 'visao-geral';
@@ -1205,6 +1205,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
                     <TabsTrigger value="leilao">Leilão</TabsTrigger>
                     <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
+                    {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="equipe">Equipe</TabsTrigger>}
                   </TabsList>
 
                   <TabsContent value="leilao" className="mt-4">
@@ -1276,76 +1277,24 @@ const DashboardContent = ({ user, isAdmin }) => {
                       </div>
                     }
                   </TabsContent>
+
+                  {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
+                    <TabsContent value="equipe" className="mt-4">
+                      <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                        <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
+                        <p>Seu sistema de alavancagem está crescendo!</p>
+                        <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                      </div>
+                    </TabsContent>
+                  }
                 </Tabs>
               }
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ABA: VENDAS DA EQUIPE - Apenas diretores+ */}
-        {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
-          <TabsContent value="vendas-equipe" className="space-y-6">
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-              <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Vendas da Minha Equipe</CardTitle>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Acompanhe as vendas dos seus licenciados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                  <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
-                  <p>Seu sistema de alavancagem está crescendo!</p>
-                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        }
-
-        {/* ABA: PEDIDOS - Apenas licenciados de catálogo */}
-        {userLevels.includes('licenciado_catalogo') &&
-          <TabsContent value="pedidos" className="space-y-6">
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-              <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Pedidos da Loja Virtual</CardTitle>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Acompanhe seus pedidos de venda direta
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                  <Package className="w-12 h-12 mx-auto opacity-50 mb-4" />
-                  <p>Nenhum pedido ainda</p>
-                  <p className="text-sm mt-2">Comece a vender pelo seu link da loja virtual!</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        }
-
-        {/* ABA: MEUS VENDEDORES - Licenciados de catálogo ou admin */}
-        {(userLevels.includes('licenciado_catalogo') || isAdmin) && (
-          <TabsContent value="meus-vendedores" className="space-y-6">
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
-                    <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Cadastre vendedores que vão vender pela sua rede (10% por venda).</CardDescription>
-                  </div>
-                  <Button onClick={() => setShowSellerModal(true)} className="bg-green-600 hover:bg-green-700 text-white min-h-[44px]">+ Cadastrar Vendedor</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {/* ABA: CATÁLOGO - Produtos para vender + Dashboard */}
-        {userLevels.includes('licenciado_catalogo') &&
+        {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
+        {(userLevels.includes('licenciado_catalogo') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs defaultValue="catalogo-home" className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
@@ -1353,6 +1302,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
                 <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes</TabsTrigger>
                 <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Produtos</TabsTrigger>
+                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm">🤝 Vendedores</TabsTrigger>
               </TabsList>
 
               <TabsContent value="catalogo-home" className="mt-6">
@@ -1372,6 +1322,23 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <TabsContent value="catalogo-produtos" className="mt-6">
                 <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} />
+              </TabsContent>
+
+              <TabsContent value="catalogo-vendedores" className="mt-6">
+                <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
+                        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Cadastre vendedores que vão vender pela sua rede (10% por venda).</CardDescription>
+                      </div>
+                      <Button onClick={() => setShowSellerModal(true)} className="bg-green-600 hover:bg-green-700 text-white min-h-[44px]">+ Cadastrar Vendedor</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </TabsContent>
