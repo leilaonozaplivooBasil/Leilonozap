@@ -1025,7 +1025,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm overflow-hidden ${isSaiDeBaixo ?
+      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm ${isSaiDeBaixo ?
         'from-red-900/30 to-red-800/20 border-red-500/30' :
         'from-green-900/30 to-green-800/20 border-green-500/30'}`
       }>
