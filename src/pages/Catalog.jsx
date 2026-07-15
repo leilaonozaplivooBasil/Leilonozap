@@ -519,7 +519,7 @@ export default function Catalog() {
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-10">
 
         {/* a) HEADER INTERNO DA LOJA — ⋮ painéis + região */}
         <CatalogInternalHeader
@@ -527,16 +527,23 @@ export default function Catalog() {
           licenseeData={licenseeData}
         />
 
-        {/* b) CARD UNIFICADO DO VENDEDOR */}
-        <motion.div {...fadeIn}>
+        {/* b) 🎯 BANNER HERO PANORÂMICO — HERÓI da tela */}
+        {banners.length > 0 && (
+          <motion.div {...fadeIn}>
+            <CatalogHero banners={banners} />
+          </motion.div>
+        )}
+
+        {/* c) CARD DO VENDEDOR — barra compacta */}
+        <motion.div {...fadeIn} className={banners.length > 0 ? "mt-4 sm:mt-6" : ""}>
           <CatalogSellerCard
             licenseeData={licenseeData}
             productCount={products.length}
           />
         </motion.div>
 
-        {/* c) BUSCA PROTAGONISTA */}
-        <motion.div {...fadeIn} className="mt-10 sm:mt-14">
+        {/* d) BUSCA PROTAGONISTA */}
+        <motion.div {...fadeIn} className="mt-6 sm:mt-8">
           <CatalogSearchBar
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
@@ -546,7 +553,7 @@ export default function Catalog() {
 
           {/* Painel de Filtros (mesma lógica, só reorganizado) */}
           {showFilters && (
-            <div className="mt-4 bg-gray-800/80 border border-gray-700 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div className="mt-3 bg-gray-800/80 border border-gray-700 rounded-2xl p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-semibold flex items-center gap-2">
                   <Filter className="w-4 h-4" />
@@ -633,9 +640,9 @@ export default function Catalog() {
           )}
         </motion.div>
 
-        {/* d) CATEGORIAS LINEARES */}
+        {/* e) CATEGORIAS LINEARES */}
         {categories.length > 0 && (
-          <motion.div {...fadeIn} className="mt-6 sm:mt-8">
+          <motion.div {...fadeIn} className="mt-4 sm:mt-6">
             <CatalogCategoriesBar
               categories={categories}
               selectedCategory={selectedCategory}
@@ -644,18 +651,12 @@ export default function Catalog() {
           </motion.div>
         )}
 
-        {/* e) BANNER HERO PANORÂMICO */}
-        {banners.length > 0 && (
-          <motion.div {...fadeIn} className="mt-8 sm:mt-10">
-            <CatalogHero banners={banners} />
-          </motion.div>
-        )}
-
         {/* f) PRODUTOS EM DESTAQUE */}
         {featuredProducts.length > 0 && (
-          <motion.section {...fadeIn} className="mt-10 sm:mt-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 flex items-center gap-2">
-              ⭐ Produtos em Destaque
+          <motion.section {...fadeIn} className="mt-6 sm:mt-8">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-4 flex items-center gap-3">
+              <span className="inline-block w-1 h-6 bg-emerald-500 rounded-full" />
+              <span>⭐ Produtos em Destaque</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {featuredProducts.map((product) => (
@@ -672,7 +673,7 @@ export default function Catalog() {
 
         {/* Alerta de erro de conexão (preservado, apenas reestilizado sutil) */}
         {loadError && retryCount >= 3 && (
-          <div className="mt-10 sm:mt-14 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-2xl p-6">
+          <div className="mt-6 sm:mt-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-2xl p-6">
             <div className="flex items-start gap-4">
               <div className="text-5xl">⚠️</div>
               <div className="flex-1">
@@ -699,7 +700,7 @@ export default function Catalog() {
         )}
 
         {/* g) GRID COMPLETO DE PRODUTOS */}
-        <motion.section {...fadeIn} className="mt-10 sm:mt-14">
+        <motion.section {...fadeIn} className="mt-6 sm:mt-8">
           {isLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {Array(6).fill(0).map((_, i) => (

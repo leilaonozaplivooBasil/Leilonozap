@@ -1,11 +1,9 @@
 import React from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /**
- * CatalogSearchBar — busca protagonista + botão Filtros.
- * Layout: input gigante centralizado + botão outline ao lado.
- * Toda a lógica de busca continua sendo estado do Catalog.jsx.
+ * CatalogSearchBar — busca protagonista + botão Filtros discreto.
+ * A busca é a estrela; Filtros é auxiliar (border-1, texto menor).
  */
 export default function CatalogSearchBar({
   searchTerm,
@@ -14,7 +12,7 @@ export default function CatalogSearchBar({
   onToggleFilters,
 }) {
   return (
-    <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3">
+    <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-3">
       <div className="relative flex-1 max-w-2xl w-full">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
         <input
@@ -27,20 +25,19 @@ export default function CatalogSearchBar({
         />
       </div>
 
-      <Button
+      <button
         type="button"
         onClick={onToggleFilters}
         aria-pressed={showFilters}
-        variant="outline"
-        className={`h-12 sm:h-14 px-5 rounded-2xl border-2 font-bold text-base transition-all flex-shrink-0 ${
+        className={`inline-flex items-center justify-center gap-1.5 h-11 sm:h-12 px-4 rounded-xl border font-medium text-sm transition-all flex-shrink-0 ${
           showFilters
             ? "border-emerald-500 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/15"
-            : "border-gray-700 text-gray-300 bg-gray-800/40 hover:border-emerald-500/50 hover:text-white"
+            : "border-gray-800 text-gray-400 bg-gray-800/40 hover:border-gray-600 hover:text-white"
         }`}
       >
-        <SlidersHorizontal className="w-5 h-5 mr-2" />
+        <SlidersHorizontal className="w-4 h-4" />
         <span>Filtros</span>
-      </Button>
+      </button>
     </div>
   );
 }
