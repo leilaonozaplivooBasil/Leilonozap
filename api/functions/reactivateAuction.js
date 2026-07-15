@@ -1,5 +1,5 @@
 // reactivateAuction — admin reativa leilão finalizado (PATCH via service role key, bypassa RLS)
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_URL = 'https://gezvviyegtxytnwjkrjv.supabase.co';
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function sb(path, opts = {}) {

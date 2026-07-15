@@ -324,7 +324,24 @@ export default function EditAuction() {
             }
             
             console.log(`💾 [SAVE] Salvando com payload:`, updatePayload);
-            await Auction.update(auctionId, updatePayload);
+            if (isReactivating) {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const reactivateResponse = await fetch('/api/functions/reactivateAuction', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actor_id: currentUser.id, auctionId, payload: updatePayload })
+                });
+                const reactivateText = await reactivateResponse.text();
+                let reactivateResult;
+                try { reactivateResult = JSON.parse(reactivateText); } catch (e) {
+                    throw new Error('Resposta inválida da API route (possível 404/HTML). Verifique se a rota /api/functions/reactivateAuction existe no Vercel.');
+                }
+                if (!reactivateResponse.ok || !reactivateResult.success) {
+                    throw new Error(reactivateResult?.error || 'Falha ao reativar leilão');
+                }
+            } else {
+                await Auction.update(auctionId, updatePayload);
+            }
             
             setIsSaving(false);
             
