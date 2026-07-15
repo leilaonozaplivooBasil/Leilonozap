@@ -422,13 +422,18 @@ export default function EditAuction() {
             };
             console.log(`📦 Payload:`, JSON.stringify(reactivatePayload));
             
-            // 🔧 USA BACKEND FUNCTION com service role key (bypassa RLS do Supabase)
+            // 🔧 USA API ROUTE VERCEL com service role key (bypassa RLS do Supabase)
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
             const reactivateResponse = await fetch('/api/functions/reactivateAuction', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ auctionId, payload: reactivatePayload })
+                body: JSON.stringify({ actor_id: currentUser.id, auctionId, payload: reactivatePayload })
             });
-            const reactivateResult = await reactivateResponse.json();
+            const reactivateText = await reactivateResponse.text();
+            let reactivateResult;
+            try { reactivateResult = JSON.parse(reactivateText); } catch (e) {
+                throw new Error('Resposta inválida da API route (possível 404/HTML). Verifique se a rota /api/functions/reactivateAuction existe no Vercel.');
+            }
             if (!reactivateResponse.ok || !reactivateResult.success) {
                 console.error("❌ Erro ao reativar:", reactivateResult);
                 throw new Error(reactivateResult?.error || 'Falha ao atualizar leilão');
