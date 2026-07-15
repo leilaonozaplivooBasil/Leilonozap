@@ -5,8 +5,6 @@ import { LayoutDashboard, ShoppingBag, Users, Wallet, Award, Shield } from 'luci
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
   { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
-  { value: 'meus-clientes', label: (ctx) => `Clientes (${ctx.myClientsCount})`, icon: Users, show: () => true },
-  { value: 'comissoes', label: 'Comissões', icon: Wallet, show: () => true },
   { value: 'plano-carreira', label: 'Carreira', icon: Award, show: () => true },
   { value: 'admin', label: 'Admin', icon: Shield, show: (ctx) => ctx.isAdmin },
 ];
