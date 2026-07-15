@@ -1016,6 +1016,10 @@ export default function Layout({ children, currentPageName }) {
           {(() => {
             const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
             if (!cfg.showSidebar || !cfg.context) return null;
+            // 🆕 Contexto loja_virtual: a própria Loja renderiza o seu header interno
+            // com o botão ⋮ (drawer de painéis). Esconder o switcher aqui evita
+            // duplicidade visual e devolve o espaço da barra pra loja respirar.
+            if (cfg.context === "loja_virtual") return null;
             return <PanelSwitcherCard currentUser={currentUser} currentContext={cfg.context} />;
           })()}
           {children}

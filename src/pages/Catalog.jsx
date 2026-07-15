@@ -6,16 +6,21 @@ const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Filter, Package, Flame, MessageCircle, SlidersHorizontal } from "lucide-react";
+import { Filter } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-
-
 
 import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
-import RotatingBanner from '../components/banner/RotatingBanner';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
+
+// 🆕 Novos componentes de layout da Loja Virtual
+import CatalogInternalHeader from "../components/catalog/CatalogInternalHeader";
+import CatalogSellerCard from "../components/catalog/CatalogSellerCard";
+import CatalogHero from "../components/catalog/CatalogHero";
+import CatalogSearchBar from "../components/catalog/CatalogSearchBar";
+import CatalogCategoriesBar from "../components/catalog/CatalogCategoriesBar";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -499,298 +504,214 @@ export default function Catalog() {
     }
   }, [currentUser]);
 
+  // 🎬 Animação sutil de entrada por sessão (efeito premium — 300ms)
+  const fadeIn = {
+    initial: { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3, ease: "easeOut" },
+  };
+
   return (
     <div className="bg-gray-900 text-white min-h-screen">
       <PagePerformanceTracker pageName="Catalog" />
       <style>{`
-        .category-scroller {
-          overflow-x: scroll;
-          cursor: grab;
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          scrollbar-width: none;
-        }
-        .category-scroller::-webkit-scrollbar {
-          display: none;
-        }
-        .category-scroller.grabbing {
-            cursor: grabbing;
-        }
-        @keyframes fire {
-          0% { transform: scale(1) rotate(0deg); opacity: 1; }
-          25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
-          50% { transform: scale(1) rotate(-1deg); opacity: 1; }
-          75% { transform: scale(1.03) rotate(1deg); opacity: 0.98; }
-          100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        .animate-fire {
-          animation: fire 1.8s ease-in-out infinite;
-        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-        {/* BANNER PERSONALIZADO DO LICENCIADO */}
-        {licenseeData && (
-          <div className="mb-6 bg-gradient-to-r from-green-900/40 via-teal-900/40 to-green-900/40 border border-green-500/30 rounded-xl p-4 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              {licenseeData.photo ? (
-                <img 
-                  src={licenseeData.photo} 
-                  alt={licenseeData.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-green-400/50 shadow-lg"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white text-xl font-bold border-2 border-green-400/50 shadow-lg">
-                  {licenseeData.name?.charAt(0)}
-                </div>
-              )}
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-white">
-                  Loja Virtual de {licenseeData.name}
-                </h2>
-                <p className="text-green-200 text-xs">
-                  ✨ Produtos exclusivos selecionados especialmente para você
-                </p>
-              </div>
-              {licenseeData.phone && (
-                <a
-                  href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-xl"
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16">
+
+        {/* a) HEADER INTERNO DA LOJA — ⋮ painéis + região */}
+        <CatalogInternalHeader
+          currentUser={currentUser}
+          licenseeData={licenseeData}
+        />
+
+        {/* b) CARD UNIFICADO DO VENDEDOR */}
+        <motion.div {...fadeIn}>
+          <CatalogSellerCard
+            licenseeData={licenseeData}
+            productCount={products.length}
+          />
+        </motion.div>
+
+        {/* c) BUSCA PROTAGONISTA */}
+        <motion.div {...fadeIn} className="mt-10 sm:mt-14">
+          <CatalogSearchBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters(!showFilters)}
+          />
+
+          {/* Painel de Filtros (mesma lógica, só reorganizado) */}
+          {showFilters && (
+            <div className="mt-4 bg-gray-800/80 border border-gray-700 rounded-2xl p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  Filtros
+                </h3>
+                <button
+                  onClick={() => {
+                    setSelectedCategory("all");
+                    setPriceRange({ min: "", max: "" });
+                    setSortBy("recent");
+                    setStockFilter("all");
+                  }}
+                  className="text-sm text-gray-400 hover:text-white"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">Falar Comigo</span>
-                </a>
-              )}
+                  Limpar filtros
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Categoria</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="all">Todas</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
+                  <input
+                    type="number"
+                    placeholder="R$ 0"
+                    value={priceRange.min}
+                    onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Preço máximo</label>
+                  <input
+                    type="number"
+                    placeholder="R$ 9999"
+                    value={priceRange.max}
+                    onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="recent">Mais recentes</option>
+                    <option value="priceAsc">Menor preço</option>
+                    <option value="priceDesc">Maior preço</option>
+                    <option value="nameAsc">Nome A-Z</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Disponibilidade</label>
+                  <select
+                    value={stockFilter}
+                    onChange={(e) => setStockFilter(e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="inStock">Em estoque</option>
+                    <option value="outOfStock">Esgotados</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* d) CATEGORIAS LINEARES */}
+        {categories.length > 0 && (
+          <motion.div {...fadeIn} className="mt-6 sm:mt-8">
+            <CatalogCategoriesBar
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+          </motion.div>
+        )}
+
+        {/* e) BANNER HERO PANORÂMICO */}
+        {banners.length > 0 && (
+          <motion.div {...fadeIn} className="mt-8 sm:mt-10">
+            <CatalogHero banners={banners} />
+          </motion.div>
+        )}
+
+        {/* f) PRODUTOS EM DESTAQUE */}
+        {featuredProducts.length > 0 && (
+          <motion.section {...fadeIn} className="mt-10 sm:mt-14">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 flex items-center gap-2">
+              ⭐ Produtos em Destaque
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {featuredProducts.map((product) => (
+                <CatalogProductCard
+                  key={product.id}
+                  product={product}
+                  currentUser={currentUser}
+                  licenseePhone={licenseePhone}
+                />
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Alerta de erro de conexão (preservado, apenas reestilizado sutil) */}
+        {loadError && retryCount >= 3 && (
+          <div className="mt-10 sm:mt-14 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-2xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="text-5xl">⚠️</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
+                <p className="text-gray-300 mb-4">{loadError}</p>
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-blue-300">
+                    💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setRetryCount(0);
+                    setIsLoading(true);
+                    setLoadError(null);
+                    loadProducts(true);
+                  }}
+                  className="bg-yellow-600 hover:bg-yellow-700 font-bold">
+                  🔄 Tentar Novamente
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Hero Section */}
-        <div className="mb-8">
-          <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
-            <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-
-            <div className="relative flex items-start justify-between">
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
-                  <Flame className="w-9 h-9 text-orange-400 animate-fire" />
-                  {licenseeData ? (
-                    <span>Loja de <span className="text-green-400">{licenseeData.name}</span></span>
-                  ) : (
-                    <span>Loja Virtual <span className="text-green-400">Especial</span>!</span>
-                  )}
-                </h1>
-                <p className="text-gray-300 mb-4 text-base lg:text-lg">
-                  {products.length} produtos incríveis com preços imbatíveis!
-                </p>
-
-                <div className="flex items-center gap-4 text-sm text-gray-400">
-                  <div className="flex items-center gap-1.5">
-                    <Package className="w-4 h-4" />
-                    <span>{products.length} em estoque</span>
-                  </div>
-                </div>
-              </div>
-
-              {licenseePhone && !licenseeData && (
-                <a
-                  href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos da loja virtual.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
-                  title="Falar com o licenciado"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span className="hidden sm:inline">Falar com Licenciado</span>
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* BANNER ROTATIVO */}
-        {banners.length > 0 &&
-        <div className="mb-8">
-            <RotatingBanner banners={banners} />
-          </div>
-        }
-
-        {/* CONTEÚDO PRINCIPAL */}
-        <div className="w-full">
-          {/* Produtos em Destaque */}
-           {featuredProducts.length > 0 && (
-             <div className="mb-8">
-               <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2 justify-center">
-                 ⭐ Produtos em Destaque
-               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {featuredProducts.map((product) => (
-                  <CatalogProductCard
-                    key={product.id}
-                    product={product}
-                    currentUser={currentUser}
-                    licenseePhone={licenseePhone}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Busca e Filtros */}
-          <div className="mb-8 space-y-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Buscar produtos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
-              />
-              <Button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-6 h-[46px] ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base shadow-lg transition-all`}
-              >
-                <SlidersHorizontal className="w-5 h-5 mr-2" />
-                <span>Filtros</span>
-              </Button>
-            </div>
-
-            {/* Painel de Filtros */}
-            {showFilters && (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-white font-semibold flex items-center gap-2">
-                    <Filter className="w-4 h-4" />
-                    Filtros
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setSelectedCategory("all");
-                      setPriceRange({ min: "", max: "" });
-                      setSortBy("recent");
-                      setStockFilter("all");
-                    }}
-                    className="text-sm text-gray-400 hover:text-white"
-                  >
-                    Limpar filtros
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {/* Categoria */}
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Categoria</label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
-                    >
-                      <option value="all">Todas</option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Faixa de Preço */}
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
-                    <input
-                      type="number"
-                      placeholder="R$ 0"
-                      value={priceRange.min}
-                      onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Preço máximo</label>
-                    <input
-                      type="number"
-                      placeholder="R$ 9999"
-                      value={priceRange.max}
-                      onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Ordenação */}
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
-                    >
-                      <option value="recent">Mais recentes</option>
-                      <option value="priceAsc">Menor preço</option>
-                      <option value="priceDesc">Maior preço</option>
-                      <option value="nameAsc">Nome A-Z</option>
-                    </select>
-                  </div>
-
-                  {/* Estoque */}
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Disponibilidade</label>
-                    <select
-                      value={stockFilter}
-                      onChange={(e) => setStockFilter(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
-                    >
-                      <option value="all">Todos</option>
-                      <option value="inStock">Em estoque</option>
-                      <option value="outOfStock">Esgotados</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {loadError && retryCount >= 3 &&
-          <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">
-              <div className="flex items-start gap-4">
-                <div className="text-5xl">⚠️</div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
-                  <p className="text-gray-300 mb-4">{loadError}</p>
-                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-blue-300">
-                      💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      setRetryCount(0);
-                      setIsLoading(true);
-                      setLoadError(null);
-                      loadProducts(true);
-                    }}
-                    className="bg-yellow-600 hover:bg-yellow-700 font-bold">
-                    🔄 Tentar Novamente
-                  </Button>
-                </div>
-              </div>
-            </div>
-          }
-
-          {isLoading ?
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {Array(6).fill(0).map((_, i) =>
-            <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
+        {/* g) GRID COMPLETO DE PRODUTOS */}
+        <motion.section {...fadeIn} className="mt-10 sm:mt-14">
+          {isLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {Array(6).fill(0).map((_, i) => (
+                <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
                   <div className="w-full aspect-square bg-gray-700 rounded-xl mb-3"></div>
                   <div className="h-5 bg-gray-700 rounded mb-2"></div>
                   <div className="h-4 bg-gray-700 rounded w-2/3"></div>
                 </div>
-            )}
-            </div> :
-          filteredProducts.length === 0 && !loadError ?
-          <div className="text-center py-12 text-gray-400">
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 && !loadError ? (
+            <div className="text-center py-16 text-gray-400">
               <div className="text-6xl mb-4">📦</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
                 Nenhum produto encontrado
@@ -798,9 +719,9 @@ export default function Catalog() {
               <p className="text-gray-500 mb-6">
                 Tente ajustar a busca ou volte mais tarde para novos produtos!
               </p>
-            </div> :
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {filteredProducts.map((product) => {
                 if (!product || !product.id) {
                   console.warn('⚠️ Product inválido detectado:', product);
@@ -815,8 +736,8 @@ export default function Catalog() {
                 );
               })}
             </div>
-          }
-        </div>
+          )}
+        </motion.section>
       </div>
 
       <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
