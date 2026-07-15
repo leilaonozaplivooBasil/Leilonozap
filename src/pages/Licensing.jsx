@@ -122,36 +122,64 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [sellersRefreshCounter, setSellersRefreshCounter] = useState(0);
 
-  // 🎯 FASE 4.7.1 — Rotação de destaque das cédulas Valora (a cada 5s, uma diferente vai pra frente)
+  // 🎯 FASE 4.7.2 — Rotação de destaque das cédulas Valora
   // Índices: 0=guardian(R$10) · 1=backBack(R$50) · 2=back(R$100) · 3=side(R$20) · 4=front(R$200)
+  // R$ 200 (índice 4) fica 10s em destaque (protagonismo). Demais ficam 5s cada.
   const [featuredNoteIndex, setFeaturedNoteIndex] = useState(4); // começa na R$ 200
   useEffect(() => {
-    let intervalId = null;
-    const startInterval = () => {
-      if (intervalId) return;
-      intervalId = setInterval(() => {
-        setFeaturedNoteIndex((prev) => (prev + 1) % 5);
-      }, 5000);
+    let timeoutId = null;
+    let isPaused = false;
+
+    const scheduleNext = () => {
+      if (isPaused || timeoutId) return;
+      // Usa functional setState pra ler o índice atual sem virar dependência
+      setFeaturedNoteIndex((current) => {
+        // Agenda a próxima troca com base no PRÓXIMO índice que vai assumir
+        const nextIndex = (current + 1) % 5;
+        const delayForNext = nextIndex === 4 ? 10000 : 5000; // R$ 200 = 10s
+        timeoutId = setTimeout(() => {
+          timeoutId = null;
+          scheduleNext();
+        }, delayForNext);
+        return nextIndex;
+      });
     };
-    const stopInterval = () => {
-      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+
+    const startCycle = () => {
+      if (isPaused || timeoutId) return;
+      // Primeira troca: R$ 200 começa destacada, então após 10s troca pra R$ 10
+      isPaused = false;
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        scheduleNext();
+      }, 10000);
     };
-    // Só começa a rotação após a entrada completa (~3s) pra não sobrepor com a queda
-    const startTimeout = setTimeout(startInterval, 3000);
+
+    const stopCycle = () => {
+      isPaused = true;
+      if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
+    };
+
+    // Só começa a rotação após a entrada completa (~4.5s) pra não sobrepor com a queda escalonada
+    const startTimeout = setTimeout(() => {
+      isPaused = false;
+      startCycle();
+    }, 4500);
+
     // Pausa quando aba oculta, retoma ao voltar (protocolo multi-dispositivo)
     const handleVisibility = () => {
-      if (document.hidden) stopInterval();
-      else startInterval();
+      if (document.hidden) stopCycle();
+      else startCycle();
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', startInterval);
-    window.addEventListener('blur', stopInterval);
+    window.addEventListener('focus', startCycle);
+    window.addEventListener('blur', stopCycle);
     return () => {
       clearTimeout(startTimeout);
-      stopInterval();
+      stopCycle();
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', startInterval);
-      window.removeEventListener('blur', stopInterval);
+      window.removeEventListener('focus', startCycle);
+      window.removeEventListener('blur', stopCycle);
     };
   }, []);
 
@@ -1045,8 +1073,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={guardianNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.55 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1055,8 +1083,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={backBackNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.65 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1065,8 +1093,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={backNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.75 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1075,8 +1103,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={sideNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.85 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -1085,8 +1113,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <img
                   src={frontNote.url}
                   alt=""
-                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: 1 }}
+                  className={`absolute w-60 h-36 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92 }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
@@ -2034,155 +2062,153 @@ export default function LicensingPage() {
         }
 
         /* ============================================================
-           🛡️ FASE 4.7.1 — CÉDULAS VALORA DO SALDO DISPONÍVEL
+           🛡️ FASE 4.7.2 — CÉDULAS VALORA DO SALDO DISPONÍVEL
            
-           Entrada dramática: cada cédula vem de um canto diferente
-           da tela (SL, ID, L, SD, cima), rotacionando durante a queda,
-           aterrissa espalhada como "dinheiro bagunçado na mesa" e
-           depois flutua suavemente. Uma delas fica em destaque por
-           5s antes da próxima assumir (rotação via React state).
-           
-           Estrutura de cada .nota-pos-* (posição final):
-             1. translate/rotate espalhado (visual bagunçado)
-             2. animação de entrada de um canto específico
-             3. flutuação infinita depois que aterrissa
+           Refinamento final:
+           • Cédulas caem do TOPO REAL da tela (translates 900–1200px)
+           • Posições finais em "leque aberto" (menos embaralhado)
+           • Opacidades secundárias elevadas (0.80–0.92) → sempre nítidas
+           • Transição suave (0.6s) na troca de destaque
+           • Stagger de entrada: 0/350/700/1050/1400ms
+           • R$ 200 fica 10s em destaque (gerenciado no React state)
            ============================================================ */
 
-        /* POSIÇÕES FINAIS ESPALHADAS (visual bagunçado) — bases fixas.
-           Aplicadas como transform base; animation atua sobre esse transform
-           via translate/rotate combinados. Como os keyframes definem
-           transform inteiro, o "estado final" (100%) já reflete a bagunça. */
+        /* TRANSIÇÃO SUAVE — aplicada em TODAS as .nota-* para que
+           opacity/zIndex mudem de forma animada quando o React troca o
+           featuredNoteIndex a cada 5-10s. Não afeta os keyframes de
+           entrada/float (que usam transform). */
+        .nota-transition {
+          transition: opacity 0.6s ease-out;
+        }
 
-        /* Guardian (R$ 10) — inclinada forte pra esquerda, atrás */
+        /* POSIÇÕES FINAIS EM LEQUE ABERTO — R$ 200 domina o centro,
+           demais espalhadas no eixo X (menos sobreposição no meio). */
+
+        /* Guardian (R$ 10) — extremo esquerdo, leve inclinação */
         .nota-pos-guardian {
-          transform: translate(-32px, -8px) rotate(-18deg);
+          transform: translate(-58px, -6px) rotate(-14deg);
         }
-        /* BackBack (R$ 50) — inclinada pra direita, embaixo */
+        /* BackBack (R$ 50) — direita-baixo */
         .nota-pos-backback {
-          transform: translate(40px, 12px) rotate(14deg);
+          transform: translate(52px, 14px) rotate(11deg);
         }
-        /* Back (R$ 100) — pouco pra esquerda, embaixo */
+        /* Back (R$ 100) — esquerda-baixo, mais pra fora */
         .nota-pos-back {
-          transform: translate(-20px, 16px) rotate(-8deg);
+          transform: translate(-38px, 18px) rotate(-6deg);
         }
-        /* Side (R$ 20) — direita, um pouco pra cima */
+        /* Side (R$ 20) — direita-cima */
         .nota-pos-side {
-          transform: translate(24px, -12px) rotate(9deg);
+          transform: translate(44px, -14px) rotate(7deg);
         }
-        /* Front (R$ 200) — quase centralizada, leve inclinação */
+        /* Front (R$ 200) — CENTRALIZADA, quase reta, dominante */
         .nota-pos-front {
-          transform: translate(4px, 4px) rotate(3deg);
+          transform: translate(0, 0) rotate(2deg);
         }
 
-        /* ENTRADA: cada uma vem de um canto diferente, roda no ar
-           e aterrissa na sua posição final espalhada.
-           Duração 1.4–1.8s, easing suave (desacelera no final). */
+        /* ENTRADA: cada cédula vem de MUITO longe (topo real da tela),
+           rotacionando forte, aterrissa suavemente na posição de leque.
+           Duração 2.0–2.4s, stagger 0/350/700/1050/1400ms. */
 
         .nota-entrance-guardian {
           animation:
-            notaEntranceGuardian 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0ms both,
-            notaFloatGuardian 3.4s ease-in-out infinite 2800ms;
+            notaEntranceGuardian 2.0s cubic-bezier(0.22, 1, 0.36, 1) 0ms both,
+            notaFloatGuardian 3.4s ease-in-out infinite 3000ms;
           will-change: transform;
         }
         .nota-entrance-backback {
           animation:
-            notaEntranceBackBack 1.5s cubic-bezier(0.22, 1, 0.36, 1) 250ms both,
-            notaFloatBackBack 3.2s ease-in-out infinite 3000ms;
+            notaEntranceBackBack 2.1s cubic-bezier(0.22, 1, 0.36, 1) 350ms both,
+            notaFloatBackBack 3.2s ease-in-out infinite 3200ms;
           will-change: transform;
         }
         .nota-entrance-back {
           animation:
-            notaEntranceBack 1.7s cubic-bezier(0.22, 1, 0.36, 1) 500ms both,
-            notaFloatBack 3.6s ease-in-out infinite 3200ms;
+            notaEntranceBack 2.2s cubic-bezier(0.22, 1, 0.36, 1) 700ms both,
+            notaFloatBack 3.6s ease-in-out infinite 3400ms;
           will-change: transform;
         }
         .nota-entrance-side {
           animation:
-            notaEntranceSide 1.4s cubic-bezier(0.22, 1, 0.36, 1) 800ms both,
-            notaFloatSide 3.0s ease-in-out infinite 3400ms;
+            notaEntranceSide 2.0s cubic-bezier(0.22, 1, 0.36, 1) 1050ms both,
+            notaFloatSide 3.0s ease-in-out infinite 3600ms;
           will-change: transform;
         }
         .nota-entrance-front {
           animation:
-            notaEntranceFront 1.8s cubic-bezier(0.22, 1, 0.36, 1) 1100ms both,
-            notaFloatFront 3.8s ease-in-out infinite 3600ms;
+            notaEntranceFront 2.4s cubic-bezier(0.22, 1, 0.36, 1) 1400ms both,
+            notaFloatFront 3.8s ease-in-out infinite 3800ms;
           will-change: transform;
         }
 
-        /* Keyframes — cada cédula sai de um canto e termina na posição final */
+        /* Keyframes — cada cédula sai de um ponto distante (topo/cantos
+           da viewport) e termina na sua posição final em leque.
+           Opacity FINAL sincronizada com a opacity base do inline style. */
 
         @keyframes notaEntranceGuardian {
-          0%   { transform: translate(-600px, -400px) rotate(-45deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.55; }
-          100% { transform: translate(-32px, -8px) rotate(-18deg) scale(1); opacity: 0.55; }
+          0%   { transform: translate(-900px, -1000px) rotate(-60deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.80; }
+          100% { transform: translate(-58px, -6px) rotate(-14deg) scale(1); opacity: 0.80; }
         }
         @keyframes notaEntranceBackBack {
-          0%   { transform: translate(600px, 400px) rotate(60deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.65; }
-          100% { transform: translate(40px, 12px) rotate(14deg) scale(1); opacity: 0.65; }
+          0%   { transform: translate(900px, 1000px) rotate(75deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.82; }
+          100% { transform: translate(52px, 14px) rotate(11deg) scale(1); opacity: 0.82; }
         }
         @keyframes notaEntranceBack {
-          0%   { transform: translate(-800px, 0) rotate(-30deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.75; }
-          100% { transform: translate(-20px, 16px) rotate(-8deg) scale(1); opacity: 0.75; }
+          0%   { transform: translate(-1200px, -800px) rotate(-40deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.85; }
+          100% { transform: translate(-38px, 18px) rotate(-6deg) scale(1); opacity: 0.85; }
         }
         @keyframes notaEntranceSide {
-          0%   { transform: translate(700px, -500px) rotate(50deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.85; }
-          100% { transform: translate(24px, -12px) rotate(9deg) scale(1); opacity: 0.85; }
+          0%   { transform: translate(1100px, -1100px) rotate(65deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.90; }
+          100% { transform: translate(44px, -14px) rotate(7deg) scale(1); opacity: 0.90; }
         }
         @keyframes notaEntranceFront {
-          0%   { transform: translate(0, -500px) rotate(-15deg) scale(0.7); opacity: 0; }
+          0%   { transform: translate(-200px, -1200px) rotate(-25deg) scale(0.7); opacity: 0; }
           40%  { opacity: 1; }
-          100% { transform: translate(4px, 4px) rotate(3deg) scale(1); opacity: 1; }
+          100% { transform: translate(0, 0) rotate(2deg) scale(1); opacity: 1; }
         }
 
-        /* Flutuação individualizada — cada uma respira em torno da sua
-           posição final espalhada (± 5-6px em Y), com ritmo próprio */
+        /* Flutuação individualizada — respira em torno da posição de leque */
 
         @keyframes notaFloatGuardian {
-          0%, 100% { transform: translate(-32px, -8px)  rotate(-18deg); }
-          50%      { transform: translate(-32px, -14px) rotate(-18deg); }
+          0%, 100% { transform: translate(-58px, -6px)  rotate(-14deg); }
+          50%      { transform: translate(-58px, -12px) rotate(-14deg); }
         }
         @keyframes notaFloatBackBack {
-          0%, 100% { transform: translate(40px, 12px) rotate(14deg); }
-          50%      { transform: translate(40px, 6px)  rotate(14deg); }
+          0%, 100% { transform: translate(52px, 14px) rotate(11deg); }
+          50%      { transform: translate(52px, 8px)  rotate(11deg); }
         }
         @keyframes notaFloatBack {
-          0%, 100% { transform: translate(-20px, 16px) rotate(-8deg); }
-          50%      { transform: translate(-20px, 10px) rotate(-8deg); }
+          0%, 100% { transform: translate(-38px, 18px) rotate(-6deg); }
+          50%      { transform: translate(-38px, 12px) rotate(-6deg); }
         }
         @keyframes notaFloatSide {
-          0%, 100% { transform: translate(24px, -12px) rotate(9deg); }
-          50%      { transform: translate(24px, -18px) rotate(9deg); }
+          0%, 100% { transform: translate(44px, -14px) rotate(7deg); }
+          50%      { transform: translate(44px, -20px) rotate(7deg); }
         }
         @keyframes notaFloatFront {
-          0%, 100% { transform: translate(4px, 4px)  rotate(3deg); }
-          50%      { transform: translate(4px, -2px) rotate(3deg); }
+          0%, 100% { transform: translate(0, 0)  rotate(2deg); }
+          50%      { transform: translate(0, -5px) rotate(2deg); }
         }
 
-        /* DESTAQUE: cédula em foco cresce suavemente e brilha um pouco.
-           A transição do zIndex/opacity é feita pelo React (inline style),
-           aqui só cuidamos do scale + filter em cima da animação de float. */
+        /* DESTAQUE: cédula em foco brilha e cresce sutilmente */
         .nota-featured {
           filter: drop-shadow(0 20px 40px rgba(29, 178, 74, 0.35)) brightness(1.05);
           animation-play-state: running !important;
           transform-origin: center center;
-          /* Amplifica levemente o scale sem quebrar a flutuação */
           zoom: 1.08;
         }
         /* Fallback pra browsers sem 'zoom' (Firefox) */
         @supports not (zoom: 1) {
           .nota-featured {
-            /* Aplica scale via variável — não conflita com keyframes de float
-               porque a mudança de destaque acontece raramente (a cada 5s) */
             outline: 2px solid rgba(29, 178, 74, 0.4);
             outline-offset: 4px;
           }
         }
 
-        /* Acessibilidade: quem prefere menos movimento vê tudo estático
-           nas posições finais espalhadas (sem entrada, sem flutuação) */
+        /* Acessibilidade */
         @media (prefers-reduced-motion: reduce) {
           .nota-entrance-guardian,
           .nota-entrance-backback,
@@ -2190,6 +2216,9 @@ export default function LicensingPage() {
           .nota-entrance-side,
           .nota-entrance-front {
             animation: none !important;
+          }
+          .nota-transition {
+            transition: none !important;
           }
           .nota-featured {
             filter: none;
