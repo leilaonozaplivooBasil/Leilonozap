@@ -46,6 +46,7 @@ import MyClientsTab from '../components/licensing/MyClientsTab';
 import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
+import DashboardTabsList from '../components/licensing/DashboardTabsList';
 
 const Product = base44.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
@@ -1176,21 +1177,12 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className={`rounded-xl border p-1 shadow-lg bg-gradient-to-r from-gray-900 ${isSaiDeBaixo ? 'via-red-950/10 border-red-500/20' : 'via-emerald-950/10 border-emerald-500/20'} to-gray-900`}>
-        <TabsList className={`bg-transparent border-0 flex-wrap h-auto gap-2 p-2`}>
-          <TabsTrigger value="visao-geral" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Visão Geral</TabsTrigger>
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>🛍️ Loja Virtual</TabsTrigger>}
-
-          <TabsTrigger value="minhas-vendas" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Minhas Vendas</TabsTrigger>
-          {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Vendas Equipe</TabsTrigger>}
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>📦 Pedidos</TabsTrigger>}
-          {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>🤝 Meus Vendedores</TabsTrigger>}
-          <TabsTrigger value="meus-clientes" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>👥 Clientes ({myClients.length})</TabsTrigger>
-          <TabsTrigger value="comissoes" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>💰 Comissões</TabsTrigger>
-          <TabsTrigger value="plano-carreira" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>🎯 Carreira</TabsTrigger>
-          {isAdmin && <TabsTrigger value="admin" className={`text-xs sm:text-sm whitespace-nowrap rounded-lg ${isSaiDeBaixo ? 'data-[state=active]:bg-red-600' : 'data-[state=active]:bg-emerald-600'} data-[state=active]:text-white data-[state=active]:shadow-md`}>Admin</TabsTrigger>}
-        </TabsList>
-        </div>
+        <DashboardTabsList
+          isSaiDeBaixo={isSaiDeBaixo}
+          userLevels={userLevels}
+          isAdmin={isAdmin}
+          myClientsCount={myClients.length}
+        />
 
 
 
