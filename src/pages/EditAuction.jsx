@@ -25,6 +25,28 @@ const reorder = (list, startIndex, endIndex) => {
   return result;
 };
 
+// Converte uma Date (instante real) para o formato do input datetime-local em horário de Brasília
+// (YYYY-MM-DDTHH:mm). Mesmo padrão do carregamento do end_time — Safari no Mac é bugado com
+// datetime-local, então os botões de reativação rápida setam este valor diretamente (não dependem
+// do usuário mexer no seletor nativo).
+function toBrtLocal(date) {
+    const parts = new Intl.DateTimeFormat('fr-CA', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Sao_Paulo',
+    }).formatToParts(date);
+    const g = (t) => parts.find((p) => p.type === t).value;
+    return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`;
+}
+// Presets de reativação rápida (rótulo → minutos a partir de agora)
+const REACTIVATE_PRESETS = [
+    { label: '⚡ +1h', min: 60 },
+    { label: '🕐 +6h', min: 360 },
+    { label: '🕐 +12h', min: 720 },
+    { label: '🕐 +24h', min: 1440 },
+    { label: '📅 +3 dias', min: 4320 },
+    { label: '📅 +7 dias', min: 10080 },
+];
+
 export default function EditAuction() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -54,6 +76,13 @@ export default function EditAuction() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isReactivating, setIsReactivating] = useState(false);
     const [reactivateTime, setReactivateTime] = useState("");
+    const [reactivatePreset, setReactivatePreset] = useState(720); // qual botão rápido está ativo (default +12h)
+
+    // aplica um preset rápido: agora + X minutos, no formato BRT do input
+    const aplicarPresetReativacao = (min) => {
+        setReactivatePreset(min);
+        setReactivateTime(toBrtLocal(new Date(Date.now() + min * 60000)));
+    };
 
     const [supplierLogoPreview, setSupplierLogoPreview] = useState(""); // 🆕 PREVIEW
 
@@ -96,7 +125,12 @@ export default function EditAuction() {
             const currentAuction = auctionData[0];
             setAuction(currentAuction);
             setImageUrls(currentAuction.image_urls || []);
-            
+            // 🔧 leilão encerrado → já pré-preenche a nova data de reativação (agora +12h),
+            // pra o campo NUNCA nascer vazio (era a causa do "defina uma nova data" no Safari).
+            if (currentAuction.status === 'ended' || currentAuction.status === 'sold') {
+                setReactivateTime(toBrtLocal(new Date(Date.now() + 720 * 60000)));
+            }
+
             const utcDate = new Date(currentAuction.end_time);
 
             const brtOptions = {
@@ -777,19 +811,44 @@ export default function EditAuction() {
                                 Reativar Leilão
                             </CardTitle>
                             <p className="text-sm text-slate-400">
-                                Este leilão já terminou. Você pode reativá-lo para uma nova rodada, mas o vencedor anterior será removido.
+                                Este leilão já terminou. Escolha uma data rápida abaixo e clique em Reativar — o vencedor anterior será removido.
                             </p>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* ⚡ REATIVAÇÃO RÁPIDA — botões que setam a data direto (não depende do seletor nativo do Safari) */}
                             <div>
-                                <Label htmlFor="reactivate_time" className="text-slate-300">Nova Data de Término</Label>
+                                <Label className="text-slate-300 flex items-center gap-1.5">⚡ Reativação Rápida</Label>
+                                <div className="mt-2 grid grid-cols-3 gap-2">
+                                    {REACTIVATE_PRESETS.map((p) => (
+                                        <button
+                                            key={p.min}
+                                            type="button"
+                                            onClick={() => aplicarPresetReativacao(p.min)}
+                                            className={`py-2.5 px-2 rounded-lg text-sm font-semibold border transition-colors ${
+                                                reactivatePreset === p.min
+                                                    ? 'bg-orange-600 border-orange-500 text-white'
+                                                    : 'bg-[#0d1117] border-[#30363d] text-slate-300 hover:border-orange-500/60'
+                                            }`}
+                                        >
+                                            {p.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="reactivate_time" className="text-slate-300 flex items-center gap-1.5">📅 Nova Data de Término (Brasília)</Label>
                                 <Input
                                     id="reactivate_time"
                                     type="datetime-local"
                                     value={reactivateTime}
-                                    onChange={(e) => setReactivateTime(e.target.value)}
+                                    onChange={(e) => { setReactivateTime(e.target.value); setReactivatePreset(null); }}
                                     className="mt-1 bg-[#0d1117] border-[#30363d] text-white"
                                 />
+                                {reactivateTime && (
+                                    <p className="text-xs text-orange-300 mt-1.5">
+                                        🕒 O leilão será encerrado em: <strong>{reactivateTime.replace('T', ', ').replace(/-/g, '/').replace(/^(\d{4})\/(\d{2})\/(\d{2})/, '$3/$2/$1')}</strong>
+                                    </p>
+                                )}
                             </div>
                             <Button
                                 className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold"
