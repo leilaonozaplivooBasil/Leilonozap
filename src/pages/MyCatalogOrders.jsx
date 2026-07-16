@@ -28,7 +28,9 @@ const statusConfig = {
 };
 
 const RATEABLE = ['paid', 'preparando', 'saiu_entrega', 'entregue'];
-const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick, onRateClick }) => {
+// estados em que o comprador já pode confirmar o recebimento (libera o saldo do vendedor)
+const CONFIRMABLE = ['paid', 'preparando', 'saiu_entrega', 'shipped', 'entregue', 'delivered'];
+const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick, onRateClick, onConfirmReceipt, confirmado, confirmando }) => {
   const config = statusConfig[order.status] || statusConfig.pending_payment;
   const mainImage = order.product_image || "https://via.placeholder.com/150";
   const podeAvaliar = RATEABLE.includes(order.status) && order.seller_id;
@@ -112,6 +114,23 @@ const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick, onRateClick }) =
               className="mx-4 mb-4 py-2 px-3 rounded-lg border border-yellow-500/40 bg-gradient-to-r from-yellow-500/15 to-amber-500/10 hover:from-yellow-500/25 text-yellow-300 font-semibold text-xs transition-all flex items-center justify-center gap-1.5"
             >
               <Star className="w-4 h-4" fill="#facc15" /> Avaliar vendedor
+            </button>
+          )
+        )}
+
+        {/* CONFIRMAR RECEBIMENTO — libera o saldo do vendedor na hora (antes do prazo) */}
+        {CONFIRMABLE.includes(order.status) && (
+          confirmado ? (
+            <div className="mx-4 mb-4 py-2 px-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-300 font-semibold text-xs flex items-center justify-center gap-1.5">
+              <CheckCircle className="w-4 h-4" /> Recebimento confirmado
+            </div>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onConfirmReceipt(order); }}
+              disabled={confirmando}
+              className="mx-4 mb-4 py-2 px-3 rounded-lg border border-green-500/40 bg-gradient-to-r from-green-500/15 to-emerald-500/10 hover:from-green-500/25 text-green-300 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
+            >
+              <CheckCircle className="w-4 h-4" /> {confirmando ? 'Confirmando…' : 'Confirmar recebimento'}
             </button>
           )
         )}
@@ -253,6 +272,30 @@ export default function MyCatalogOrders() {
 
   const [cancelingId, setCancelingId] = useState(null);
   const [ratingOrder, setRatingOrder] = useState(null);
+  const [confirmedIds, setConfirmedIds] = useState(new Set());
+  const [confirmingId, setConfirmingId] = useState(null);
+
+  // 🟢 comprador confirma recebimento → libera o saldo a liberar do vendedor na hora
+  const handleConfirmReceipt = async (order) => {
+    if (confirmingId) return;
+    if (!window.confirm(`Confirmar que você recebeu "${order.product_title}"?\n\nIsso libera o pagamento pro vendedor.`)) return;
+    setConfirmingId(order.id);
+    try {
+      const uid = currentUser?.id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
+      const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
+      if (r?.success) {
+        setConfirmedIds(prev => new Set(prev).add(order.id));
+        toast.success('Recebimento confirmado! Pagamento liberado pro vendedor.');
+      } else {
+        toast.error(r?.error || 'Não foi possível confirmar agora.');
+      }
+    } catch (err) {
+      console.error('confirmarRecebimento falhou:', err);
+      toast.error('Erro ao confirmar recebimento.');
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const handleDeleteOrder = async (order) => {
     if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
@@ -412,6 +455,9 @@ export default function MyCatalogOrders() {
                     onTrackClick={handleTrackClick}
                     onDeleteClick={handleDeleteOrder}
                     onRateClick={setRatingOrder}
+                    onConfirmReceipt={handleConfirmReceipt}
+                    confirmado={confirmedIds.has(order.id)}
+                    confirmando={confirmingId === order.id}
                   />
                 ))}
               </div>
