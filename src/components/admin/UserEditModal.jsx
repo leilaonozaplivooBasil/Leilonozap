@@ -47,28 +47,15 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             
             // Carregar níveis de carreira
             const validLevelIds = CAREER_LEVELS.map(l => l.id);
-            // 🔧 Normaliza IDs legados do banco que não existem mais na lista atual
-            const LEGACY_ALIAS = {
-                influencer: 'influenciador',
-                licenciado_aplicativo: 'licenciado_catalogo',
-                executivo: 'diretor',
-                trainee: 'vendedor',
-                kit_start: 'vendedor',
-                plano_lider: 'distribuidor',
-                plano_lojista: 'loja_fisica'
-            };
-            const normalizeLevel = (l) => LEGACY_ALIAS[l] || l;
             const rawLevels = Array.isArray(user.career_levels) 
                 ? user.career_levels 
                 : (user.career_levels ? [user.career_levels] : ['usuario']);
-            // Normaliza, remove duplicatas e mantém só os válidos
-            const userLevels = [...new Set(rawLevels.map(normalizeLevel))].filter(l => validLevelIds.includes(l));
+            const userLevels = rawLevels.filter(l => validLevelIds.includes(l));
             setSelectedLevels(userLevels.length > 0 ? userLevels : ['usuario']);
             
-            // Carregar nível principal — normaliza e só aceita IDs válidos
-            const normalizedPrimary = normalizeLevel(user.primary_career_level);
-            const validPrimary = normalizedPrimary && validLevelIds.includes(normalizedPrimary)
-                ? normalizedPrimary
+            // Carregar nível principal — só aceita IDs que existem no CAREER_LEVELS
+            const validPrimary = user.primary_career_level && validLevelIds.includes(user.primary_career_level)
+                ? user.primary_career_level
                 : (userLevels[0] || 'usuario');
             setPrimaryLevel(validPrimary);
             
@@ -193,20 +180,11 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             }
 
             // Update direto via Supabase (AppUser tem RLS null — funciona com anon key)
-            await AppUser.update(user.id, updatePayload);
+            const updatedUser = await AppUser.update(user.id, updatePayload);
 
-            // Confirma via RELEITURA (fonte de verdade = o que está gravado no banco).
-            // Evita falso "não salvou" quando o retorno do update chega diferente por timing/serialização.
-            const rows = await AppUser.filter({ id: user.id });
-            const updatedUser = (rows && rows[0]) || null;
-            if (!updatedUser) {
-                throw new Error('Não foi possível confirmar a gravação. Tente novamente.');
-            }
-            if (updatedUser.primary_career_level !== primaryLevel) {
-                throw new Error('A função principal não foi gravada. Tente novamente.');
-            }
-            if (newReferrerId && updatedUser.referred_by_id !== newReferrerId) {
-                throw new Error('O indicador não foi gravado. Tente novamente.');
+            // Confirma que o banco realmente gravou o que mandamos
+            if (updatedUser && updatedUser.primary_career_level !== primaryLevel) {
+                throw new Error('O servidor não confirmou a alteração da função principal. Tente novamente.');
             }
 
             const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
