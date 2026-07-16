@@ -927,6 +927,8 @@ export default function AuctionRoom() {
   const displayTime = getDisplayTime();
   const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
   const currentPrice = auction.current_price || auction.starting_price;
+  // Leilão pode vir sem incremento definido (ex.: reativado/legado) — nunca deixar null quebrar o render nem gerar NaN no lance
+  const safeIncrement = Number(auction.increment) > 0 ? Number(auction.increment) : 1;
   const mainImageUrl = auction.image_urls?.[0] || "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400";
 
   const isWarMode = timeRemaining !== null && timeRemaining <= COUNTDOWN_DURATION && isAuctionActive;
@@ -1182,7 +1184,7 @@ export default function AuctionRoom() {
 
       {isAuctionActive && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          <BidInput currentPrice={currentPrice} increment={auction.increment} onSubmitBid={submitBid} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={submitBid} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (
@@ -1228,7 +1230,7 @@ export default function AuctionRoom() {
               </div>
               <div className="stat">
                 <span className="stat__label">Incremento</span>
-                <span className="stat__value">R$ {auction.increment.toFixed(2)}</span>
+                <span className="stat__value">R$ {safeIncrement.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -1330,7 +1332,7 @@ export default function AuctionRoom() {
       <LowBalanceModal
         isOpen={showLowBalanceModal}
         currentBalance={userWallet?.balance || 0}
-        requiredAmount={currentPrice + (auction?.increment || 0)}
+        requiredAmount={currentPrice + safeIncrement}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);
