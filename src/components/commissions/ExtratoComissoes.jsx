@@ -28,6 +28,11 @@ const CARGO_LABEL = {
   ponto_retirada: 'Ponto de Retirada',
   loja_fisica: 'Loja Física',
   site_official_rollup: 'Empresa',
+  venda: 'Venda',
+};
+const fmtPrazo = (iso) => {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch { return ''; }
 };
 const rotulo = (c) => CARGO_LABEL[c] || c;
 
@@ -175,20 +180,31 @@ export default function ExtratoComissoes({ user, isSaiDeBaixo = false }) {
                 <div key={i.id} className={`rounded-xl border ${linha} p-3 ${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-900/50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-semibold ${txt} truncate`}>{i.produto}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`text-sm font-semibold ${txt} truncate`}>{i.produto}</p>
+                        {i.is_venda && i.status === 'a_liberar' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+                            🔒 A liberar{i.release_at ? ` · ${fmtPrazo(i.release_at)}` : ''}
+                          </span>
+                        )}
+                        {i.is_venda && i.status === 'disponivel' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/15 text-green-300 border border-green-500/30 whitespace-nowrap">✓ Liberado</span>
+                        )}
+                      </div>
                       <p className={`text-[11px] ${sub} mt-0.5`}>
                         {new Date(i.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         {' · '}{i.origem}
                       </p>
                       <p className={`text-[11px] ${sub} mt-1`}>
-                        Vendido por <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{i.vendedor}</strong>
-                        {' · '}venda de <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{money(i.valor_venda)}</strong>
+                        {i.is_venda
+                          ? <>Sua venda {i.comprador ? <>para <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{i.comprador}</strong></> : ''}</>
+                          : <>Vendido por <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{i.vendedor}</strong>{' · '}venda de <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{money(i.valor_venda)}</strong></>}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-base font-black text-green-400">+{money(i.ganho)}</p>
+                      <p className={`text-base font-black ${i.is_venda && i.status === 'a_liberar' ? 'text-blue-300' : 'text-green-400'}`}>+{money(i.ganho)}</p>
                       <p className={`text-[11px] ${sub}`}>
-                        {rotulo(i.cargo)} · {Number(i.percentual).toFixed(2).replace(/\.?0+$/, '')}%
+                        {i.is_venda ? 'Venda' : `${rotulo(i.cargo)} · ${Number(i.percentual).toFixed(2).replace(/\.?0+$/, '')}%`}
                       </p>
                     </div>
                   </div>

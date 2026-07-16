@@ -83,12 +83,50 @@ export default async function handler(req, res) {
 
     const saldo = await (await sb(`app_users?select=commission_balance&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
 
+    // 💸 MINHAS VENDAS em hold ("saldo a liberar") — linhas role_in_sale='venda' do
+    // commission_ledger (criadas pelo trigger). Mostra a venda no extrato mesmo antes
+    // de virar sacável. Defensivo: se a migração ainda não rodou, ignora.
+    let saldo_a_liberar = 0;
+    try {
+      const vend = await (await sb(`commission_ledger?select=id,sale_id,amount,status,release_at,created_at&beneficiary_id=eq.${encodeURIComponent(userId)}&role_in_sale=eq.venda&order=created_at.desc&limit=300`)).json();
+      if (Array.isArray(vend) && vend.length) {
+        const vids = [...new Set(vend.map((r) => r.sale_id).filter((x) => x && !vendas[x]))];
+        if (vids.length) {
+          const vs2 = await (await sb(`catalog_sales?select=id,payment_method,buyer_name&id=in.(${vids.map((x) => `"${x}"`).join(',')})`)).json();
+          (Array.isArray(vs2) ? vs2 : []).forEach((v) => { vendas[v.id] = v; });
+        }
+        for (const r of vend) {
+          const v = vendas[r.sale_id] || {};
+          const st = r.status || 'a_liberar';
+          if (st === 'a_liberar') saldo_a_liberar += Number(r.amount) || 0;
+          itens.push({
+            id: `venda-${r.id}`,
+            data: r.created_at,
+            produto: 'Venda do seu catálogo',
+            vendedor: v.buyer_name ? `para ${v.buyer_name}` : 'venda',
+            comprador: v.buyer_name || null,
+            origem: ORIGEM[v.payment_method] || v.payment_method || '—',
+            valor_venda: Number(r.amount) || 0,
+            cargo: 'venda',
+            percentual: 100,
+            ganho: Number(r.amount) || 0,
+            status: st,                 // 'a_liberar' | 'disponivel'
+            release_at: r.release_at || null,
+            is_venda: true,
+          });
+        }
+        itens.sort((a, b) => new Date(b.data) - new Date(a.data));
+      }
+    } catch { /* coluna status/role ainda não existe → ignora */ }
+    saldo_a_liberar = round2(saldo_a_liberar);
+
     return res.status(200).json({
       success: true,
       total: round2(total),
       total_lancamentos: all.length,
       por_cargo: porCargo,
       saldo_carteira: Number(saldo?.[0]?.commission_balance) || 0,
+      saldo_a_liberar,
       itens,
       tem_mais: lista.length === limit,
     });
