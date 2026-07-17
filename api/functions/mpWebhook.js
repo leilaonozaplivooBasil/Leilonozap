@@ -9,6 +9,26 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// Depósito na carteira: credita saldo gastável (app_users.saldo_disponivel) de forma atômica (CAS).
+// NÃO paga comissão nem cumpre pedido — é só recarga. Chamado só depois do flip atômico (execução única por venda).
+async function creditWalletDeposit(sale) {
+  const amount = round2(Number(sale.total_amount || sale.sale_price) || 0);
+  if (!sale.buyer_id || amount <= 0) return { credited: 0, skipped: true };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const rows = await (await sb(`app_users?select=saldo_disponivel&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+    const user = Array.isArray(rows) ? rows[0] : null;
+    if (!user) return { credited: 0, error: 'buyer_notfound' };
+    const current = round2(Number(user.saldo_disponivel) || 0);
+    const novo = round2(current + amount);
+    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&saldo_disponivel=eq.${current}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novo }),
+    });
+    const updated = await patch.json().catch(() => []);
+    if (Array.isArray(updated) && updated.length) return { credited: amount, new_balance: novo };
+  }
+  return { credited: 0, error: 'cas_conflict' };
+}
+
 // Adesão de cargo: ativa o nível, gera pedido de produto (valor volta em produto) e paga 20% pro vendedor
 async function activateAdesao(sale) {
   const u = await (await sb(`app_users?select=career_levels&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
@@ -111,6 +131,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
     }
 
+    if (sale.kind === 'wallet_deposit') {
+      // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
+      const r = await creditWalletDeposit(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r });
+    }
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
