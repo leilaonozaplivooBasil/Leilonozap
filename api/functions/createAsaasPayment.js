@@ -44,9 +44,13 @@ export default async function handler(req, res) {
     }
     if (!MP_TOKEN) return res.status(200).json({ success: false, error: 'PIX indisponível no momento' });
 
-    // registra a venda pendente (fonte única; o webhook confirma e credita)
+    // registra a venda pendente (fonte única; o webhook confirma e credita).
+    // deposit_type nao existe como coluna -> codificamos a carteira-destino no 'kind':
+    //   commission_deposit -> credita commission_balance | wallet_deposit -> credita saldo_disponivel
     const saleId = oid();
-    const kind = isWalletDeposit ? 'wallet_deposit' : 'arremate';
+    const kind = !isWalletDeposit
+      ? 'arremate'
+      : (depositType === 'commission_wallet' ? 'commission_deposit' : 'wallet_deposit');
     await sb('catalog_sales', {
       method: 'POST', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({

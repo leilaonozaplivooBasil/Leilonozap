@@ -9,22 +9,25 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const round2 = (n) => Math.round(n * 100) / 100;
 
-// Depósito na carteira: credita saldo gastável (app_users.saldo_disponivel) de forma atômica (CAS).
-// NÃO paga comissão nem cumpre pedido — é só recarga. Chamado só depois do flip atômico (execução única por venda).
+// Depósito na carteira: credita saldo de forma atômica (CAS). NÃO paga comissão nem cumpre pedido — é só recarga.
+// Chamado só depois do flip atômico (execução única por venda). A coluna depende da carteira-destino:
+//   wallet_deposit -> saldo_disponivel (carteira digital, usada em arremate/lance)
+//   commission_deposit -> commission_balance (carteira de comissões, usada no 'Pagar com saldo' da loja)
 async function creditWalletDeposit(sale) {
+  const col = sale.kind === 'commission_deposit' ? 'commission_balance' : 'saldo_disponivel';
   const amount = round2(Number(sale.total_amount || sale.sale_price) || 0);
   if (!sale.buyer_id || amount <= 0) return { credited: 0, skipped: true };
   for (let attempt = 0; attempt < 6; attempt++) {
-    const rows = await (await sb(`app_users?select=saldo_disponivel&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+    const rows = await (await sb(`app_users?select=${col}&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
     const user = Array.isArray(rows) ? rows[0] : null;
     if (!user) return { credited: 0, error: 'buyer_notfound' };
-    const current = round2(Number(user.saldo_disponivel) || 0);
+    const current = round2(Number(user[col]) || 0);
     const novo = round2(current + amount);
-    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&saldo_disponivel=eq.${current}`, {
-      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novo }),
+    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&${col}=eq.${current}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ [col]: novo }),
     });
     const updated = await patch.json().catch(() => []);
-    if (Array.isArray(updated) && updated.length) return { credited: amount, new_balance: novo };
+    if (Array.isArray(updated) && updated.length) return { credited: amount, wallet: col, new_balance: novo };
   }
   return { credited: 0, error: 'cas_conflict' };
 }
@@ -131,7 +134,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
     }
 
-    if (sale.kind === 'wallet_deposit') {
+    if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r });
