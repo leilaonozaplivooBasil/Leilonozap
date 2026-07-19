@@ -7,8 +7,7 @@ import { searchMarket } from '../_lib/marketSearch.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-const DESCONTO = 0.20;     // venda = média do mercado - 20% (regra do Heloim)
-const MARKUP_CUSTO = 2.0;  // último recurso, sem mercado nenhum: mercado estimado = custo × 2
+const DESCONTO = 0.20;     // venda = média do mercado - 20% (regra do Heloim). ÚNICA regra de preço.
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
@@ -32,33 +31,32 @@ export default async function handler(req, res) {
       const cost = Number(p.cost_price) || 0;
       const prevMarket = Number(p.market_value) || 0;
       const prevPrice = Number(p.selling_price_retail || p.price_catalog) || 0;
-      let market = 0; let source = 'custo'; let sourceUrl = ''; let stores = 0;
-
-      // 1) BUSCA DE MERCADO REAL (média de várias lojas) — o caminho principal.
+      // REGRA ÚNICA (pilar do negócio): preço SÓ sai da busca de mercado real (média das lojas − 20%).
+      // NUNCA custo×2, NUNCA faixa antiga do import. Sem mercado real → não inventa preço, marca p/ revisão.
       const mk = await searchMarket(p.description);
-      if (mk.found && mk.avg > 0) {
-        market = mk.avg; source = mk.source; stores = mk.count;
-        sourceUrl = (mk.results && mk.results[0] && mk.results[0].url) || '';
-      }
-      // 2) Sem mercado na busca: preserva o mercado já existente (não achatar). Nunca sobrescreve com markup.
-      if (market === 0) {
-        if (prevMarket > 0) { market = prevMarket; source = 'mercado_anterior'; }
-        else if (cost > 0) { market = round2(cost * MARKUP_CUSTO); source = 'custo'; }
+      if (!mk.found || !(mk.avg > 0)) {
+        out.push({
+          id: p.id, description: p.description, lot: p.lot,
+          status: 'sem_mercado', // não achou mercado real: NÃO precifica
+          market_price: 0, selling_price_retail: 0, calculated_price: 0,
+          previous_market: prevMarket, previous_price: prevPrice,
+          source: 'sem_mercado', source_url: '', stores_analyzed: 0, cost_price: cost,
+          needs_review: true, query: mk.query || '',
+        });
+        continue;
       }
 
-      // venda = mercado - 20% (regra do Heloim). Sem piso artificial (o piso custo×1,25 criava
-      // paredões de preço repetido em itens de lote com custo médio único).
-      const selling = market > 0 ? round2(market * (1 - DESCONTO)) : 0;
-
+      const market = mk.avg;
+      const selling = round2(market * (1 - DESCONTO)); // venda = média do mercado − 20%
       out.push({
         id: p.id, description: p.description, lot: p.lot,
-        status: selling > 0 ? 'success' : 'failed',
+        status: 'success',
         market_price: market, selling_price_retail: selling,
         calculated_price: selling, // alias usado pelo PricingPreviewModal
         previous_market: prevMarket, previous_price: prevPrice,
-        source, source_url: sourceUrl, stores_analyzed: stores,
-        cost_price: cost,
-        below_cost: selling > 0 && cost > 0 && selling < cost, // sinaliza p/ o operador conferir
+        source: mk.source, source_url: (mk.results && mk.results[0] && mk.results[0].url) || '',
+        stores_analyzed: mk.count, cost_price: cost,
+        below_cost: cost > 0 && selling < cost, // sinaliza p/ o operador conferir
       });
     }
     return res.status(200).json({ success: true, products: out });
