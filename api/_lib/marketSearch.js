@@ -115,13 +115,19 @@ export async function searchMarket(title) {
     try {
       const r = relevantes(await f.fn());
       if (r.length > 0) {
-        const prices = r.map((c) => c.price);
-        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+        // MÉDIA APARADA (robusta a outliers): a busca casa itens parecidos mas de tamanhos/capacidades
+        // diferentes (16gb x 256gb, kit 6 x kit 24) e um item caro inflava a média. Ancora na mediana
+        // e mantém só os preços dentro de uma banda ao redor dela (0,4x a 2,2x), depois tira a média.
+        const sorted = r.map((c) => c.price).sort((a, b) => a - b);
+        const med = sorted[Math.floor(sorted.length / 2)];
+        let band = sorted.filter((p) => p >= med * 0.4 && p <= med * 2.2);
+        if (band.length < 3) band = sorted; // poucos dados: usa tudo
+        const avg = band.reduce((a, b) => a + b, 0) / band.length;
         return {
           found: true, source: f.nome, query: cleaned,
           avg: Math.round(avg * 100) / 100,
-          min: Math.min(...prices), max: Math.max(...prices),
-          count: r.length, results: r.slice(0, 12),
+          median: med, min: sorted[0], max: sorted[sorted.length - 1],
+          count: band.length, total_found: r.length, results: r.slice(0, 12),
         };
       }
       falhas.push(`${f.nome}: 0 relevantes`);
