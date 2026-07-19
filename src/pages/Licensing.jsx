@@ -1120,23 +1120,37 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
-          <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
-          {/* 📣 Tudo de divulgação do licenciado mora aqui dentro (pedido do Santana) */}
-          <TabsTrigger value="divulgar" className="text-xs sm:text-sm whitespace-nowrap">📣 Divulgar</TabsTrigger>
-          <TabsTrigger value="material" className="text-xs sm:text-sm whitespace-nowrap">🎨 Material / Banner</TabsTrigger>
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Loja Virtual</TabsTrigger>}
+        {/* 3 GRUPOS PRINCIPAIS (Santana: enxugar ~9 abas → 3) */}
+        {(() => {
+          const grupo = activeTab === 'visao-geral' ? 'geral' : activeTab === 'plano-carreira' ? 'carreira' : 'vendas';
+          const base = 'flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap';
+          const on = 'bg-green-600 text-white shadow-lg';
+          const off = isSaiDeBaixo ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-700';
+          return (
+            <div className={`flex flex-wrap gap-2 p-2 rounded-xl mb-3 ${isSaiDeBaixo ? 'bg-white border border-gray-300' : 'bg-gray-800 border border-gray-700'}`}>
+              <button onClick={() => setActiveTab('visao-geral')} className={`${base} ${grupo === 'geral' ? on : off}`}>🗂️ Visão Geral</button>
+              <button onClick={() => setActiveTab('divulgar')} className={`${base} ${grupo === 'vendas' ? on : off}`}>🛒 Central de Vendas</button>
+              <button onClick={() => setActiveTab('plano-carreira')} className={`${base} ${grupo === 'carreira' ? on : off}`}>🎯 Carreira</button>
+            </div>
+          );
+        })()}
 
-          <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
-          {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
-          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
-          {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
-          <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
-          <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
-          <TabsTrigger value="saques" className="text-xs sm:text-sm whitespace-nowrap">💸 Saques</TabsTrigger>
-          <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
-          {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
-        </TabsList>
+        {/* SUB-NAVEGAÇÃO da Central de Vendas (só aparece dentro do grupo vendas) */}
+        {activeTab !== 'visao-geral' && activeTab !== 'plano-carreira' &&
+          <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800/60 border-gray-700'} flex-wrap h-auto gap-2 p-2 mb-4`}>
+            <TabsTrigger value="divulgar" className="text-xs sm:text-sm whitespace-nowrap">📣 Divulgar</TabsTrigger>
+            <TabsTrigger value="material" className="text-xs sm:text-sm whitespace-nowrap">🎨 Material / Banner</TabsTrigger>
+            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Loja Virtual</TabsTrigger>}
+            <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
+            {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
+            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
+            {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
+            <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
+            <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
+            <TabsTrigger value="saques" className="text-xs sm:text-sm whitespace-nowrap">💸 Saques</TabsTrigger>
+            {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
+          </TabsList>
+        }
 
         {/* ABA: DIVULGAR — links (cadastro/loja/leilões) + WhatsApp + QR Code */}
         <TabsContent value="divulgar" className="space-y-6">
