@@ -8,7 +8,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const DESCONTO = 0.20;     // venda = média do mercado - 20% (regra do Heloim). ÚNICA regra de preço.
-const TETO_CUSTO = 8;      // freio de sanidade: mercado acima de custo×8 = busca provavelmente casou
+const TETO_CUSTO = 5;      // freio de sanidade (spec Heloim): mercado acima de custo×5 = busca casou
                            // produto de classe errada (ex.: torneira de R$90 cotada a R$920). NÃO aplica: revisão.
 
 function sb(path, opts = {}) {
