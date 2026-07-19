@@ -8,6 +8,8 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const DESCONTO = 0.20;     // venda = média do mercado - 20% (regra do Heloim). ÚNICA regra de preço.
+const TETO_CUSTO = 8;      // freio de sanidade: mercado acima de custo×8 = busca provavelmente casou
+                           // produto de classe errada (ex.: torneira de R$90 cotada a R$920). NÃO aplica: revisão.
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
@@ -47,6 +49,20 @@ export default async function handler(req, res) {
       }
 
       const market = mk.avg;
+      // FREIO DE SANIDADE: mercado muito acima do custo = a busca casou produto de classe errada
+      // (torneira de R$90 saindo cotada a R$920). Não aplica preço absurdo — manda pra revisão.
+      if (cost > 0 && market > cost * TETO_CUSTO) {
+        out.push({
+          id: p.id, description: p.description, lot: p.lot,
+          status: 'revisar_preco_alto',
+          market_price: market, selling_price_retail: 0, calculated_price: 0,
+          previous_market: prevMarket, previous_price: prevPrice,
+          source: mk.source, source_url: (mk.results && mk.results[0] && mk.results[0].url) || '',
+          stores_analyzed: mk.count, cost_price: cost, needs_review: true,
+          ratio_custo: Math.round(market / cost),
+        });
+        continue;
+      }
       const selling = round2(market * (1 - DESCONTO)); // venda = média do mercado − 20%
       out.push({
         id: p.id, description: p.description, lot: p.lot,
