@@ -88,10 +88,12 @@ export default async function handler(req, res) {
         const zm = await zoomMarket(String(p.description).slice(0, 80));
         if (zm > 0 && (cost === 0 || zm > cost)) { market = zm; source = 'zoom'; }
       }
-      // 3) markup sobre custo (fallback final)
+      // 3) fallback: PRESERVA o preço de mercado real que já existe. Só estima por markup (custo×2)
+      // quando o produto NÃO tem mercado. Antes o markup sobrescrevia mercado real -> achatou lotes
+      // inteiros em custo×2 (bug lote 46-48/51/58). Nunca destruir mercado individual já pesquisado.
       if (market === 0) {
-        if (cost > 0) { market = round2(cost * MARKUP_CUSTO); source = 'custo'; }
-        else if (prevMarket > 0) { market = prevMarket; source = 'mercado_anterior'; }
+        if (prevMarket > 0) { market = prevMarket; source = 'mercado_anterior'; }
+        else if (cost > 0) { market = round2(cost * MARKUP_CUSTO); source = 'custo'; }
       }
 
       let selling = market > 0 ? round2(market * (1 - DESCONTO)) : 0;
