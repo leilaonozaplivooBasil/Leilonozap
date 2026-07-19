@@ -1,5 +1,7 @@
 // saveProductPricing — salva os preços calculados nos produtos (service_role, anon não persiste).
 // Atualiza selling_price_retail + price_catalog (preço da loja) + market_value.
+// Validar o preço real = PUBLICAR: com preço válido (>0), ativa o produto na loja (catalog_active=true).
+// É o único caminho que faz um produto importado aparecer na vitrine (importação entra inativa).
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -23,13 +25,13 @@ export default async function handler(req, res) {
       const id = String(it.id || '').trim();
       const selling = round2(it.selling_price_retail);
       if (!id || !(selling > 0)) continue;
-      const patch = { selling_price_retail: selling, price_catalog: selling, updated_date: now };
+      const patch = { selling_price_retail: selling, price_catalog: selling, catalog_active: true, status: 'ESTOQUE', updated_date: now };
       if (it.market_price != null) patch.market_value = round2(it.market_price);
       if (it.source_url) patch.source_url = it.source_url;
       let r = await sb(`products?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
       if (!r.ok) {
         // alguma coluna pode não existir (ex.: source_url) → tenta só o essencial
-        const min = { selling_price_retail: selling, price_catalog: selling, updated_date: now };
+        const min = { selling_price_retail: selling, price_catalog: selling, catalog_active: true, status: 'ESTOQUE', updated_date: now };
         if (it.market_price != null) min.market_value = round2(it.market_price);
         r = await sb(`products?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(min) });
       }
