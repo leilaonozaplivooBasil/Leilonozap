@@ -14,9 +14,8 @@ export function validarPrecoLoja({ cost, selling, market }) {
 
   if (!(v > 0)) return { ok: false, motivo: 'sem_preco_venda' };
 
-  // CHECK 1 — custo vs venda
+  // CHECK 1 — custo vs venda (abaixo do custo é PERMITIDO — decisão do Diogo; só barra preço absurdo alto)
   if (c >= 1) {
-    if (v < c) return { ok: false, motivo: `venda (R$${v}) abaixo do custo (R$${c})` };
     if (v > c * TETO_CUSTO) return { ok: false, motivo: `venda (R$${v}) acima de ${TETO_CUSTO}x o custo (R$${c})` };
     if (m > 0 && m > c * TETO_MERCADO_CUSTO) return { ok: false, motivo: `mercado (R$${m}) acima de ${TETO_MERCADO_CUSTO}x o custo — provável erro de busca` };
   }
