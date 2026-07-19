@@ -450,6 +450,34 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const [guardianNote, backBackNote, backNote, frontNote, sideNote] = getNoteStack(user.valora_pay_balance || 0);
 
+  // Destaque rotativo das cédulas: R$200 (índice 4) fica 10s, as demais 5s cada.
+  const [featuredNoteIndex, setFeaturedNoteIndex] = useState(4);
+  useEffect(() => {
+    let timeoutId = null;
+    let stopped = false;
+    const scheduleNext = () => {
+      if (stopped) return;
+      setFeaturedNoteIndex((current) => {
+        const next = (current + 1) % 5;
+        timeoutId = setTimeout(scheduleNext, next === 4 ? 10000 : 5000);
+        return next;
+      });
+    };
+    // começa depois da animação de entrada (~4,5s)
+    const startTimeout = setTimeout(scheduleNext, 10000);
+    const onVisibility = () => {
+      if (document.hidden) { stopped = true; if (timeoutId) clearTimeout(timeoutId); }
+      else if (stopped) { stopped = false; timeoutId = setTimeout(scheduleNext, 5000); }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      stopped = true;
+      clearTimeout(startTimeout);
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
     toast.success('Link copiado!');
@@ -905,6 +933,37 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+      <style>{`
+        /* ===== CÉDULAS VALORA: caem, se organizam em leque e flutuam em loop ===== */
+        .nota-transition { transition: opacity 0.6s ease-out; }
+        .nota-pos-guardian { transform: translate(-46px, -5px) rotate(-14deg); }
+        .nota-pos-backback { transform: translate(42px, 11px)  rotate(11deg);  }
+        .nota-pos-back     { transform: translate(-30px, 14px) rotate(-6deg);  }
+        .nota-pos-side     { transform: translate(35px, -11px) rotate(7deg);   }
+        .nota-pos-front    { transform: translate(0, 0)        rotate(2deg);   }
+        .nota-entrance-guardian { animation: notaEntranceGuardian 2.0s cubic-bezier(0.22,1,0.36,1) 0ms both, notaFloatGuardian 3.4s ease-in-out infinite 3000ms; will-change: transform; }
+        .nota-entrance-backback { animation: notaEntranceBackBack 2.1s cubic-bezier(0.22,1,0.36,1) 350ms both, notaFloatBackBack 3.2s ease-in-out infinite 3200ms; will-change: transform; }
+        .nota-entrance-back     { animation: notaEntranceBack 2.2s cubic-bezier(0.22,1,0.36,1) 700ms both, notaFloatBack 3.6s ease-in-out infinite 3400ms; will-change: transform; }
+        .nota-entrance-side     { animation: notaEntranceSide 2.0s cubic-bezier(0.22,1,0.36,1) 1050ms both, notaFloatSide 3.0s ease-in-out infinite 3600ms; will-change: transform; }
+        .nota-entrance-front    { animation: notaEntranceFront 2.4s cubic-bezier(0.22,1,0.36,1) 1400ms both, notaFloatFront 3.8s ease-in-out infinite 3800ms; will-change: transform; }
+        @keyframes notaEntranceGuardian { 0% { transform: translate(-900px,-1000px) rotate(-60deg) scale(0.7); opacity:0 } 40% { opacity:.80 } 100% { transform: translate(-46px,-5px) rotate(-14deg) scale(1); opacity:.80 } }
+        @keyframes notaEntranceBackBack { 0% { transform: translate(900px,1000px) rotate(75deg) scale(0.7); opacity:0 } 40% { opacity:.82 } 100% { transform: translate(42px,11px) rotate(11deg) scale(1); opacity:.82 } }
+        @keyframes notaEntranceBack { 0% { transform: translate(-1200px,-800px) rotate(-40deg) scale(0.7); opacity:0 } 40% { opacity:.85 } 100% { transform: translate(-30px,14px) rotate(-6deg) scale(1); opacity:.85 } }
+        @keyframes notaEntranceSide { 0% { transform: translate(1100px,-1100px) rotate(65deg) scale(0.7); opacity:0 } 40% { opacity:.90 } 100% { transform: translate(35px,-11px) rotate(7deg) scale(1); opacity:.90 } }
+        @keyframes notaEntranceFront { 0% { transform: translate(-200px,-1200px) rotate(-25deg) scale(0.7); opacity:0 } 40% { opacity:1 } 100% { transform: translate(0,0) rotate(2deg) scale(1); opacity:1 } }
+        @keyframes notaFloatGuardian { 0%,100% { transform: translate(-46px,-5px) rotate(-14deg); } 50% { transform: translate(-46px,-11px) rotate(-14deg); } }
+        @keyframes notaFloatBackBack { 0%,100% { transform: translate(42px,11px) rotate(11deg); } 50% { transform: translate(42px,5px) rotate(11deg); } }
+        @keyframes notaFloatBack { 0%,100% { transform: translate(-30px,14px) rotate(-6deg); } 50% { transform: translate(-30px,8px) rotate(-6deg); } }
+        @keyframes notaFloatSide { 0%,100% { transform: translate(35px,-11px) rotate(7deg); } 50% { transform: translate(35px,-17px) rotate(7deg); } }
+        @keyframes notaFloatFront { 0%,100% { transform: translate(0,0) rotate(2deg); } 50% { transform: translate(0,-5px) rotate(2deg); } }
+        .nota-featured { filter: drop-shadow(0 20px 40px rgba(29,178,74,0.35)) brightness(1.05); transform-origin: center center; zoom: 1.08; }
+        @supports not (zoom: 1) { .nota-featured { outline: 2px solid rgba(29,178,74,0.4); outline-offset: 4px; } }
+        @media (prefers-reduced-motion: reduce) {
+          .nota-entrance-guardian, .nota-entrance-backback, .nota-entrance-back, .nota-entrance-side, .nota-entrance-front { animation: none !important; }
+          .nota-transition { transition: none !important; }
+          .nota-featured { filter: none; zoom: 1; outline: none; }
+        }
+      `}</style>
       <div className="flex flex-col gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Painel de Alavancagem
@@ -952,98 +1011,77 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm overflow-hidden ${isSaiDeBaixo ?
-        'from-red-900/30 to-red-800/20 border-red-500/30' :
-        'from-green-900/30 to-green-800/20 border-green-500/30'}`
+      <Card ref={walletCardRef} className={`mb-8 relative shadow-2xl backdrop-blur-xl overflow-hidden ${isSaiDeBaixo ?
+        'bg-gradient-to-br from-red-950/70 via-red-900/50 to-red-950/70 border-2 border-red-500/40 shadow-red-900/40' :
+        'bg-gradient-to-br from-emerald-950/70 via-green-900/50 to-emerald-950/70 border-2 border-emerald-500/40 shadow-emerald-900/40'}`
       }>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold text-white mb-2">Saldo Disponível</h3>
+        <CardContent className="p-6 md:px-12 md:py-8">
+          <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-20">
+
+            <div className="w-full md:w-auto">
+              <h3 className={`text-sm font-medium uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-300/80' : 'text-emerald-300/80'}`}>Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-5xl font-bold text-white">
+                <span className={`text-5xl font-black text-white tracking-tight ${isSaiDeBaixo ? 'drop-shadow-[0_2px_8px_rgba(239,68,68,0.3)]' : 'drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'}`}>
                   R$ {totalAvailable.toFixed(2)}
                 </span>
               </div>
 
               {pendingWithdrawalAmount > 0 &&
-                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 my-3 max-w-[280px]">
                   <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
                   </p>
-                  <p className="text-xs text-yellow-300/70 mt-1">
-                    Aguardando aprovação
-                  </p>
+                  <p className="text-xs text-yellow-300/70 mt-1">Aguardando aprovação</p>
                 </div>
               }
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button
-                  onClick={() => setIsAuctionSelectionModalOpen(true)}
-                  className={`w-full sm:flex-1 text-sm sm:text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
 
+              <div className={`h-px bg-gradient-to-r from-transparent to-transparent my-4 max-w-[280px] ${isSaiDeBaixo ? 'via-red-500/30' : 'via-emerald-500/30'}`} />
+
+              <div className="flex flex-col gap-2 max-w-[280px]">
+                <Button onClick={() => setIsAuctionSelectionModalOpen(true)}
+                  className={`text-white font-semibold h-10 text-sm shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSaiDeBaixo ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-red-500/20' : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 shadow-green-500/20 hover:shadow-green-500/40'}`}>
                   <Zap className="w-4 h-4 mr-2" />
                   Usar em Leilões
                 </Button>
-                <Button
-                  onClick={() => setShowWithdrawalModal(true)}
-                  className="w-full sm:flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm sm:text-base">
-
+                <Button onClick={() => setShowWithdrawalModal(true)}
+                  className="bg-gray-800/60 border border-gray-600/50 text-white font-medium h-10 text-sm transition-all duration-300 hover:bg-gray-700 hover:border-emerald-500/50">
                   <Wallet className="w-4 h-4 mr-2" />
                   Sacar
                 </Button>
               </div>
             </div>
 
-            <div className="relative w-64 h-40 flex items-center justify-center nota-stack-container">
-              {guardianNote && guardianNote.url &&
-                <img
-                  src={guardianNote.url}
-                  alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-15 translate-y-3 -translate-x-1 nota-stack-guardian nota-entrance-guardian"
-                  style={{ zIndex: 0, opacity: 0.65 }}
+            <div className="relative w-56 h-36 flex items-center justify-center nota-stack-container">
+              {guardianNote?.url &&
+                <img src={guardianNote.url} alt=""
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
-
               }
-
-              {backBackNote && backBackNote.url &&
-                <img
-                  src={backBackNote.url}
-                  alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
-                  style={{ zIndex: 1, opacity: 0.7 }}
+              {backBackNote?.url &&
+                <img src={backBackNote.url} alt=""
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
-
               }
-
-              {backNote && backNote.url &&
-                <img
-                  src={backNote.url}
-                  alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
-                  style={{ zIndex: 2, opacity: 0.8 }}
+              {backNote?.url &&
+                <img src={backNote.url} alt=""
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
-
               }
-
-              {sideNote && sideNote.url &&
-                <img
-                  src={sideNote.url}
-                  alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
-                  style={{ zIndex: 3, opacity: 0.9 }}
+              {sideNote?.url &&
+                <img src={sideNote.url} alt=""
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
-
               }
-
-              {frontNote && frontNote.url &&
-                <img
-                  src={frontNote.url}
-                  alt=""
-                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-2 nota-stack-front nota-entrance-front"
-                  style={{ zIndex: 4 }}
+              {frontNote?.url &&
+                <img src={frontNote.url} alt=""
+                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
+                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
-
               }
             </div>
           </div>
