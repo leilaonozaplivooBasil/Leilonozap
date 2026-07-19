@@ -131,9 +131,12 @@ export default function ProductManagement() {
 
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
-        const response = await calculateProductPricing({ product_ids: batch, searchapi: false, zoom: false });
+        // busca de mercado REAL por produto (média das lojas → venda = média − 20%). Igual ao individual.
+        const response = await calculateProductPricing({ product_ids: batch });
         const batchProducts = response?.products || response?.data?.products || [];
         allResults.push(...batchProducts);
+        // pausa entre lotes pra não estourar o limite da busca de mercado
+        if (i + BATCH_SIZE < ids.length) await new Promise((r) => setTimeout(r, 700));
       }
 
       setPricingPreviewData(allResults);
