@@ -60,7 +60,7 @@ export default async function handler(req, res) {
           previous_market: prevMarket, previous_price: prevPrice,
           source: mk.source, source_url: (mk.results && mk.results[0] && mk.results[0].url) || '',
           stores_analyzed: mk.count, cost_price: cost, needs_review: true,
-          ratio_custo: Math.round(market / cost),
+          ratio_custo: Math.round(market / cost), debug: mk.attempts,
         });
         continue;
       }

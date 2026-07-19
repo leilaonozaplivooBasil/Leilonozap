@@ -137,7 +137,9 @@ export async function searchMarket(title, imageUrl) {
   const falhas = [];
   for (const f of fontes) {
     try {
-      const r = relevantes(await f.fn(), f.image);
+      const raw = await f.fn();
+      const r = relevantes(raw, f.image);
+      falhas.push(`${f.nome}: ${raw.length} brutos, ${r.length} relevantes`);
       if (r.length > 0) {
         // MÉDIA APARADA (robusta a outliers): a busca casa itens parecidos mas de tamanhos/capacidades
         // diferentes (16gb x 256gb, kit 6 x kit 24) e um item caro inflava a média. Ancora na mediana
@@ -152,6 +154,7 @@ export async function searchMarket(title, imageUrl) {
           avg: Math.round(avg * 100) / 100,
           median: med, min: sorted[0], max: sorted[sorted.length - 1],
           count: band.length, total_found: r.length, results: r.slice(0, 12),
+          attempts: falhas,
         };
       }
       falhas.push(`${f.nome}: 0 relevantes`);
