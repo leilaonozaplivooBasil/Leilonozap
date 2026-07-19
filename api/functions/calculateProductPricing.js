@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config ausente' });
 
     const inList = ids.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-    const prods = await (await sb(`products?select=id,description,lot,cost_price,market_value,selling_price_retail,price_catalog&id=in.(${inList})`)).json();
+    const prods = await (await sb(`products?select=id,description,lot,cost_price,market_value,selling_price_retail,price_catalog,image_urls&id=in.(${inList})`)).json();
     const list = Array.isArray(prods) ? prods : [];
 
     const out = [];
@@ -35,7 +35,8 @@ export default async function handler(req, res) {
       const prevPrice = Number(p.selling_price_retail || p.price_catalog) || 0;
       // REGRA ÚNICA (pilar do negócio): preço SÓ sai da busca de mercado real (média das lojas − 20%).
       // NUNCA custo×2, NUNCA faixa antiga do import. Sem mercado real → não inventa preço, marca p/ revisão.
-      const mk = await searchMarket(p.description);
+      const imgUrl = Array.isArray(p.image_urls) && p.image_urls[0] ? p.image_urls[0] : null;
+      const mk = await searchMarket(p.description, imgUrl); // imagem primeiro, texto de fallback
       if (!mk.found || !(mk.avg > 0)) {
         out.push({
           id: p.id, description: p.description, lot: p.lot,

@@ -74,6 +74,24 @@ async function fetchSerpApi(query) {
   }));
 }
 
+// ---- BUSCA POR IMAGEM (Google Lens via SearchAPI) — acha o PRODUTO EXATO, não por nome ----
+// É o método principal: "torneira monocomando" por texto casa torneira profissional (R$920);
+// por imagem o Lens acha a mesma torneira no ML (R$89,99). Bem mais assertivo.
+async function fetchGoogleLens(imageUrl) {
+  const u = `https://www.searchapi.io/api/v1/search?engine=google_lens&search_type=all&url=${encodeURIComponent(imageUrl)}&gl=br&hl=pt-br&api_key=${SEARCHAPI_KEY}`;
+  const resp = await fetch(u);
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || data?.error) throw new Error(`Lens: ${data?.error || resp.status}`);
+  const vm = data.visual_matches || [];
+  return vm.map((m) => ({
+    store: m.source || m.source_name || 'Loja',
+    productNameFound: m.title || '',
+    price: Number(m.price?.extracted_value) || Number(m.extracted_price) || 0,
+    url: m.link || '#',
+    image: m.thumbnail || '',
+  })).filter((r) => r.price > 0);
+}
+
 async function fetchSearchApi(query) {
   const u = `https://www.searchapi.io/api/v1/search?engine=google_shopping&q=${encodeURIComponent(query)}&gl=br&hl=pt-br&location=Brazil&api_key=${SEARCHAPI_KEY}`;
   const resp = await fetch(u);
@@ -89,31 +107,37 @@ async function fetchSearchApi(query) {
   })).filter((r) => r.price > 0);
 }
 
-// searchMarket(title) — roda a cascata e devolve a MÉDIA + resultados relevantes.
+// searchMarket(title, imageUrl) — roda a cascata e devolve a MÉDIA + resultados.
+// PRINCIPAL = busca por IMAGEM (Google Lens, pela URL da foto do produto): acha o produto exato.
+// Texto (nome) é só fallback quando não há imagem ou o Lens não trouxe nada.
 // { found, source, avg, min, max, count, results:[{store,productNameFound,price,url,image}] }
-export async function searchMarket(title) {
+export async function searchMarket(title, imageUrl) {
   const cleaned = cleanTitle(title);
-  if (!cleaned || cleaned.length < 4) return { found: false, reason: 'titulo_curto', query: cleaned, results: [] };
-
   const titleWords = cleaned.toLowerCase().split(' ').filter((w) => w.length > 2);
-  const relevantes = (raw) => raw
-    .filter((c) => isValidPrice(c.price))
-    .filter((c) => {
+  // busca por imagem: os matches já são visuais, não filtra por palavra (só preço válido).
+  // busca por texto: exige 2 palavras do título batendo (senão casa produto de outra classe).
+  const relevantes = (raw, isImage) => {
+    let r = raw.filter((c) => isValidPrice(c.price));
+    if (!isImage) r = r.filter((c) => {
       const found = (c.productNameFound || '').toLowerCase();
-      const match = titleWords.filter((w) => found.includes(w)).length;
-      return match >= Math.min(2, titleWords.length);
+      return titleWords.filter((w) => found.includes(w)).length >= Math.min(2, titleWords.length);
     });
+    return r;
+  };
 
-  const fontes = [
-    SEARCHAPI_KEY && { nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) },
-    SERPAPI_KEY && { nome: 'serpapi', fn: () => fetchSerpApi(cleaned) },
-    { nome: 'zoom', fn: () => fetchZoom(cleaned) },
-  ].filter(Boolean);
+  const fontes = [];
+  if (imageUrl && SEARCHAPI_KEY) fontes.push({ nome: 'google_lens_imagem', image: true, fn: () => fetchGoogleLens(imageUrl) });
+  if (cleaned && cleaned.length >= 4) {
+    if (SEARCHAPI_KEY) fontes.push({ nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) });
+    if (SERPAPI_KEY) fontes.push({ nome: 'serpapi', fn: () => fetchSerpApi(cleaned) });
+    fontes.push({ nome: 'zoom', fn: () => fetchZoom(cleaned) });
+  }
+  if (!fontes.length) return { found: false, reason: 'sem_titulo_sem_imagem', query: cleaned, results: [] };
 
   const falhas = [];
   for (const f of fontes) {
     try {
-      const r = relevantes(await f.fn());
+      const r = relevantes(await f.fn(), f.image);
       if (r.length > 0) {
         // MÉDIA APARADA (robusta a outliers): a busca casa itens parecidos mas de tamanhos/capacidades
         // diferentes (16gb x 256gb, kit 6 x kit 24) e um item caro inflava a média. Ancora na mediana

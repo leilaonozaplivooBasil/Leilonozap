@@ -41,7 +41,9 @@ export default async function handler(req, res) {
       ? (entity.current_price || entity.starting_price || 0)
       : (entity.price_catalog || entity.selling_price_retail || 0);
 
-    const mk = await searchMarket(searchTitle);
+    const imgUrl = Array.isArray(entity.image_urls) && entity.image_urls[0] ? entity.image_urls[0]
+      : (Array.isArray(entity.images) && entity.images[0] ? entity.images[0] : null);
+    const mk = await searchMarket(searchTitle, imgUrl); // busca por imagem primeiro
     if (!mk.found) {
       const code = mk.reason === 'titulo_curto' ? 'INVALID_TITLE' : 'NO_VALID_RESULTS';
       const err = mk.reason === 'titulo_curto'
