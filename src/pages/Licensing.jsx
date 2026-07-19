@@ -1067,15 +1067,15 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <StatCard
           icon={TrendingUp}
-          label="Arremates do Sistema de Alavancagem"
+          label="Arremates da Rede"
           value={realMetrics.networkBidsCount !== null ? realMetrics.networkBidsCount : '...'}
           isLoading={realMetrics.networkBidsCount === null}
           isSaiDeBaixo={isSaiDeBaixo} />
 
         <StatCard
           icon={BarChart}
-          label="Total Comissões (App + Loja Virtual)"
-          value={`R$ ${((user.commission_balance || 0) + (user.catalog_commission_balance || 0)).toFixed(2)}`}
+          label="Comissões Totais (histórico)"
+          value={`R$ ${(user.total_commissions_generated || 0).toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
@@ -1362,11 +1362,11 @@ const DashboardContent = ({ user, isAdmin }) => {
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                    value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
+                    value={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`}
                     readOnly
                     className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
-                  <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
+                  <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
                   <a href={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
@@ -1456,6 +1456,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                       <Input
                         type="number"
                         placeholder="100.00"
+                        value={commissionAmount}
                         onChange={(e) => setCommissionAmount(e.target.value)}
                         className="bg-gray-700 border-gray-600 text-white" />
 
