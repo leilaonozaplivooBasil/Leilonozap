@@ -180,10 +180,12 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             }
 
             // Update direto via Supabase (AppUser tem RLS null — funciona com anon key)
-            const updatedUser = await AppUser.update(user.id, updatePayload);
+            await AppUser.update(user.id, updatePayload);
 
-            // Confirma que o banco realmente gravou o que mandamos
-            if (updatedUser && updatedUser.primary_career_level !== primaryLevel) {
+            // Confirma relendo o registro do banco (o retorno do update pode vir incompleto)
+            const confirmRows = await AppUser.filter({ id: user.id });
+            const confirmed = confirmRows && confirmRows[0];
+            if (!confirmed || confirmed.primary_career_level !== primaryLevel) {
                 throw new Error('O servidor não confirmou a alteração da função principal. Tente novamente.');
             }
 
@@ -191,7 +193,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
 
             toast.success(`✅ Usuário atualizado!\nCargos: ${levelNames}\n⭐ Principal: ${primaryName}`);
-            onSuccess(updatedUser);
+            onSuccess(confirmed);
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);
