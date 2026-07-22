@@ -23,18 +23,30 @@ export default function useAuctionTimer({ auction, onEndAuction, playSound }) {
   const calibrateServerOffset = useCallback(async () => {
     try {
       const clientBeforeCall = Date.now();
-      const { data } = await getServerTime();
+      // Guarda de timeout: getServerTime (função Base44) NÃO pode pendurar a sala.
+      const { data } = await Promise.race([
+        getServerTime(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("getServerTime timeout")), 4000)),
+      ]);
       const clientAfterCall = Date.now();
 
-      if (!data || typeof data.timestamp !== 'number') return false;
+      if (!data || typeof data.timestamp !== 'number') {
+        // Resposta inválida: cai pro relógio do cliente pra NÃO travar o leilão.
+        if (serverOffsetRef.current === null) serverOffsetRef.current = 0;
+        lastOffsetCalibrationRef.current = Date.now();
+        return false;
+      }
 
       const clientAverage = (clientBeforeCall + clientAfterCall) / 2;
       serverOffsetRef.current = data.timestamp - clientAverage;
       lastOffsetCalibrationRef.current = Date.now();
       return true;
     } catch (error) {
-      console.error("❌ [CALIBRATE] Erro:", error);
-      serverOffsetRef.current = null;
+      console.error("❌ [CALIBRATE] Falhou, usando relógio do cliente como fallback:", error?.message || error);
+      // NUNCA deixar null depois de tentar — senão a sala fica "Sincronizando..." pra sempre
+      // e NENHUM lance é aceito (sem lance = sem venda = sem comissão). Auto-cura quando o servidor voltar.
+      if (serverOffsetRef.current === null) serverOffsetRef.current = 0;
+      lastOffsetCalibrationRef.current = Date.now();
       return false;
     }
   }, []);
