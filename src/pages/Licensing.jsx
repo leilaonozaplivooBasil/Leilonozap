@@ -1129,7 +1129,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           return (
             <div className={`flex flex-wrap gap-2 p-2 rounded-xl mb-3 ${isSaiDeBaixo ? 'bg-white border border-gray-300' : 'bg-gray-800 border border-gray-700'}`}>
               <button onClick={() => setActiveTab('visao-geral')} className={`${base} ${grupo === 'geral' ? on : off}`}>🗂️ Visão Geral</button>
-              <button onClick={() => setActiveTab('divulgar')} className={`${base} ${grupo === 'vendas' ? on : off}`}>🛒 Central de Vendas</button>
+              <button onClick={() => setActiveTab((userLevels.includes('licenciado_catalogo') || userLevels.includes('licenciado') || isAdmin) ? 'catalogo' : 'divulgar')} className={`${base} ${grupo === 'vendas' ? on : off}`}>🛒 Central de Vendas</button>
               <button onClick={() => setActiveTab('plano-carreira')} className={`${base} ${grupo === 'carreira' ? on : off}`}>🎯 Carreira</button>
             </div>
           );
@@ -1138,12 +1138,14 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* SUB-NAVEGAÇÃO da Central de Vendas (só aparece dentro do grupo vendas) */}
         {activeTab !== 'visao-geral' && activeTab !== 'plano-carreira' &&
           <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800/60 border-gray-700'} flex-wrap h-auto gap-2 p-2 mb-4`}>
+            {/* P04: Sua Loja Virtual é a PRIMEIRA aba (padrão Base44). Gate ampliado — antes usava
+                'licenciado_catalogo' (id obsoleto) e a aba ficava escondida pros licenciados atuais. */}
+            {(userLevels.includes('licenciado_catalogo') || userLevels.includes('licenciado') || isAdmin) && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Sua Loja Virtual</TabsTrigger>}
             <TabsTrigger value="divulgar" className="text-xs sm:text-sm whitespace-nowrap">📣 Divulgar</TabsTrigger>
             <TabsTrigger value="material" className="text-xs sm:text-sm whitespace-nowrap">🎨 Material / Banner</TabsTrigger>
-            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Loja Virtual</TabsTrigger>}
             <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
             {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
-            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
+            {(userLevels.includes('licenciado_catalogo') || userLevels.includes('licenciado') || isAdmin) && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
             {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
             <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
             <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
