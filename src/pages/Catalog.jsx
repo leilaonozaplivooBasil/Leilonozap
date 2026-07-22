@@ -21,6 +21,7 @@ import CatalogSellerCard from "../components/catalog/CatalogSellerCard";
 import CatalogHero from "../components/catalog/CatalogHero";
 import CatalogSearchBar from "../components/catalog/CatalogSearchBar";
 import CatalogCategoriesBar from "../components/catalog/CatalogCategoriesBar";
+import CatalogFlashDeals from "../components/catalog/CatalogFlashDeals";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -534,8 +535,15 @@ export default function Catalog() {
           </motion.div>
         )}
 
+        {/* b.2) ⚡ OFERTAS RELÂMPAGO — carrossel fluido abaixo do banner */}
+        {!isLoading && products.length > 0 && (
+          <motion.div {...fadeIn} className={banners.length > 0 ? "mt-4 sm:mt-6" : ""}>
+            <CatalogFlashDeals products={products} />
+          </motion.div>
+        )}
+
         {/* c) CARD DO VENDEDOR — barra compacta */}
-        <motion.div {...fadeIn} className={banners.length > 0 ? "mt-4 sm:mt-6" : ""}>
+        <motion.div {...fadeIn} className="mt-4 sm:mt-6">
           <CatalogSellerCard
             licenseeData={licenseeData}
             productCount={products.length}
