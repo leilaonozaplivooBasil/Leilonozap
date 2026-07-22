@@ -11,6 +11,30 @@ const medal = (p) => (p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : `
 const maskCpf = (v) => { const d = v.replace(/\D/g, '').slice(0, 11); return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); };
 const maskZap = (v) => { const d = v.replace(/\D/g, '').slice(0, 11); if (d.length <= 2) return d; if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`; return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`; };
 
+// Comprime a foto no navegador (quadrada, ~256px) pra subir leve.
+function fileToSmallDataUrl(file, max = 256, q = 0.72) {
+  return new Promise((resolve, reject) => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+        const c = document.createElement('canvas'); c.width = max; c.height = max;
+        c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, max, max);
+        resolve(c.toDataURL('image/jpeg', q));
+      };
+      img.onerror = reject; img.src = rd.result;
+    };
+    rd.onerror = reject; rd.readAsDataURL(file);
+  });
+}
+function Avatar({ url, nome, size = 32 }) {
+  const s = { width: size, height: size };
+  if (url) return <img src={url} alt={nome} style={s} className="rounded-full object-cover border border-white/20" />;
+  return <div style={s} className="rounded-full flex items-center justify-center font-black text-white/90 border border-white/20" >{(nome || '?')[0].toUpperCase()}</div>;
+}
+
 export default function ConcursoLeilaoNozap() {
   const params = new URLSearchParams(window.location.search);
   const ref = params.get('ref');
@@ -52,6 +76,19 @@ export default function ConcursoLeilaoNozap() {
       load();
     } catch { setErr('Erro de conexão. Tente de novo.'); }
     finally { setSaving(false); }
+  };
+
+  const handleFormPhoto = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ }
+  };
+  const trocarFoto = async (e) => {
+    const f = e.target.files?.[0]; if (!f || !myCode) return;
+    try {
+      const url = await fileToSmallDataUrl(f);
+      await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) });
+      setJoinMsg('Foto atualizada! 📸'); setTimeout(() => setJoinMsg(''), 3000); load();
+    } catch { /* */ }
   };
 
   const entrarNoGrupo = async () => {
@@ -113,7 +150,13 @@ export default function ConcursoLeilaoNozap() {
                 <p className="text-xs text-green-300/80 uppercase tracking-wider font-bold">Seu link de divulgação</p>
                 {myRow && <p className="text-2xl font-black mt-1">{medal(myRow.posicao)} lugar · <span className="text-yellow-300">{myRow.pontos} {myRow.pontos === 1 ? 'pessoa' : 'pessoas'}</span></p>}
               </div>
-              <div className="text-4xl">🔥</div>
+              <label className="cursor-pointer flex flex-col items-center gap-1">
+                <div style={{ background: 'linear-gradient(135deg,#166534,#052e16)' }} className="w-16 h-16 rounded-full flex items-center justify-center text-2xl overflow-hidden">
+                  <Avatar url={myRow?.foto_url} nome={myRow?.nome} size={64} />
+                </div>
+                <span className="text-[10px] text-green-300/80">{myRow?.foto_url ? 'trocar foto' : '📷 add foto'}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={trocarFoto} />
+              </label>
             </div>
             <div className="mt-3 bg-black/30 rounded-lg px-3 py-2 text-xs break-all text-green-100 border border-white/10">{myLink}</div>
             <div className="grid grid-cols-2 gap-2 mt-3">
@@ -126,6 +169,13 @@ export default function ConcursoLeilaoNozap() {
           <div className="mt-6 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.3)' }}>
             <p className="font-black text-lg mb-1">🎯 Participe agora</p>
             <p className="text-xs text-green-300/80 mb-4">Preencha pra gerar seu link. CPF é só pra validar o prêmio, não aparece pra ninguém.</p>
+            <label className="flex flex-col items-center gap-2 cursor-pointer mb-4">
+              {form.foto
+                ? <img src={form.foto} alt="sua foto" className="w-24 h-24 rounded-full object-cover border-2 border-yellow-400" />
+                : <div className="w-24 h-24 rounded-full bg-black/40 border-2 border-dashed border-white/25 flex items-center justify-center text-3xl">📷</div>}
+              <span className="text-xs text-green-300/90 font-semibold">{form.foto ? '✅ Trocar foto' : 'Adicionar sua foto (deixa o ranking mais legal!)'}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFormPhoto} />
+            </label>
             <div className="space-y-3">
               <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
               <input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })} inputMode="numeric" placeholder="CPF" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
@@ -168,7 +218,8 @@ export default function ConcursoLeilaoNozap() {
                 return (
                   <div key={x.code} className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${isMe ? 'border-yellow-400' : 'border-white/10'}`}
                     style={{ background: x.posicao <= 3 ? 'linear-gradient(90deg,rgba(245,196,81,.15),rgba(34,197,94,.06))' : 'rgba(255,255,255,.04)' }}>
-                    <span className="text-2xl w-10 text-center font-black">{medal(x.posicao)}</span>
+                    <span className="text-2xl w-8 text-center font-black">{medal(x.posicao)}</span>
+                    <div style={{ background: x.foto_url ? 'transparent' : 'linear-gradient(135deg,#166534,#052e16)' }} className="rounded-full flex items-center justify-center flex-shrink-0"><Avatar url={x.foto_url} nome={x.nome} size={40} /></div>
                     <span className="font-bold flex-1 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
                     <span className="font-black text-yellow-300">{x.pontos}</span>
                     <span className="text-xs text-green-300/60">{x.pontos === 1 ? 'pessoa' : 'pessoas'}</span>
