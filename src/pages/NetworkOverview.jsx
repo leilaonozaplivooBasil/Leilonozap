@@ -870,19 +870,12 @@ export default function NetworkOverview() {
 
         if (isDescendant(draggedId, targetId)) {
           // Quebra o ciclo: solta o alvo na raiz antes de mover o arrastado
-          const base44Client = (await import('@/api/base44Client')).base44;
-          await base44Client.functions.invoke('updateUserNetwork', {
-            target_user_id: targetId,
-            update_data: { referred_by_id: null }
-          });
+          await AppUser.update(targetId, { referred_by_id: '' });
         }
       }
 
-      const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
-        target_user_id: draggedId,
-        update_data: { referred_by_id: targetId }
-      });
+      // Grava direto no Supabase (AppUser tem RLS null — mesmo mecanismo do UserEditModal)
+      await AppUser.update(draggedId, { referred_by_id: targetId || '' });
       toast.success('Vínculo atualizado!');
       await fetchData();
     } catch (error) {
