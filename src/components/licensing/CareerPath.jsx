@@ -25,6 +25,23 @@ const roleRebate = {
   distribuidor:   { pct: 1, sobre: 'Loja Física' },
 };
 
+// Bloco DIRETORIA (cargos institucionais TTT) — só aparece pra quem tem algum deles.
+// % = governança do topo (card oficial Heloim 22/07). Aliases cobrem ids antigos.
+const directorSteps = [
+  { id: 'fundador', match: ['fundador'], title: 'Fundador', gov: '1% governança', icon: Gem,
+    desc: 'Topo institucional do ecossistema.' },
+  { id: 'conselheiro', match: ['conselheiro'], title: 'Conselheiro', gov: '1% governança', icon: Award,
+    desc: 'Conselho da holding.' },
+  { id: 'ceo', match: ['ceo'], title: 'CEO', gov: '3% governança + 3% faturamento', icon: Briefcase,
+    desc: 'Direção geral.' },
+  { id: 'diretoria_executiva', match: ['diretoria_executiva', 'diretoria'], title: 'Diretoria Executiva', gov: '0,5% governança', icon: Building2,
+    desc: 'Convidados pelo CEO.' },
+  { id: 'diretor_operacional', match: ['diretor_operacional', 'diretor', 'diretoria_operacao'], title: 'Diretor Operacional', gov: '0,5% governança', icon: Building2,
+    desc: 'Logística, comercial, operações, administrativo.' },
+  { id: 'socio', match: ['socio', 'socio_executivo'], title: 'Sócio Executivo', gov: 'cadeia + licenciado', icon: Store,
+    desc: 'Executivo que também é licenciado: recebe da cadeia que cadastrou e como licenciado.' },
+];
+
 const careerSteps = [
   // Topo → Base (hierarquia de rede atual)
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
@@ -62,9 +79,33 @@ export default function CareerPath({ currentUser }) {
           );
     
     const primaryLevel = currentUser?.primary_career_level || userLevels[0] || 'usuario';
-    
+
+    // Diretoria: só mostra os cargos institucionais que o usuário realmente tem (destacados em verde).
+    const myDirectorSteps = directorSteps.filter((s) => s.match.some((m) => userLevels.includes(m)));
+
     return (
         <div className="p-6">
+            {myDirectorSteps.length > 0 && (
+                <div className="mb-6 pb-6 border-b border-gray-700">
+                    <h3 className="text-sm font-bold text-green-400 mb-3 flex items-center gap-2">🏛️ Seus Cargos de Diretoria</h3>
+                    <ul className="space-y-3">
+                        {myDirectorSteps.map((s) => (
+                            <li key={s.id} className="flex items-start gap-4">
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-500 ring-4 ring-green-500/30">
+                                    <s.icon className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold flex items-center gap-2 text-green-400">
+                                        {s.title}
+                                        <span className="ml-1 text-xs px-2 py-0.5 rounded border bg-green-600/20 text-green-300 border-green-500/30">{s.gov}</span>
+                                    </h4>
+                                    <p className="mt-1 text-sm text-gray-300">{s.desc}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
             <div className="relative">
                 {/* Linha de Conexão - ATRÁS DOS CÍRCULOS */}
                 <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-gray-700 z-0" aria-hidden="true" />
