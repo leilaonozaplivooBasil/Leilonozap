@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 
 const API = '/api/concurso';
+const GROUP_LINK = 'https://chat.whatsapp.com/FyKc2sXiB5fBG7ikYlmvri?s=cl&p=i&mlu=4';
 
 function getVisitorId() {
   let v = localStorage.getItem('concurso_visitor');
@@ -62,9 +63,21 @@ export default function ConcursoLeilaoNozap() {
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
+  // Opção A: link com ?ref → registra o clique (dedup por aparelho) e manda DIRETO pro grupo,
+  // sem página e sem cadastro pra quem foi convidado.
+  useEffect(() => {
+    if (!ref) return;
+    let done = false;
+    const go = (link) => { if (done) return; done = true; window.location.replace(link || GROUP_LINK); };
+    fetch(`${API}?action=join`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, visitor_id: getVisitorId() }) })
+      .then((r) => r.json()).then((j) => go(j.group_link)).catch(() => go(GROUP_LINK));
+    const t = setTimeout(() => go(GROUP_LINK), 2500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const myLink = myCode ? `${window.location.origin}/concursoleilaonozap?ref=${myCode}` : '';
   const myRow = data.ranking.find((x) => x.code === myCode);
-  const inviter = ref ? data.ranking.find((x) => x.code === ref) : null;
 
   const register = async () => {
     setErr(''); setSaving(true);
@@ -92,16 +105,6 @@ export default function ConcursoLeilaoNozap() {
     } catch { /* */ }
   };
 
-  const entrarNoGrupo = async () => {
-    try {
-      const r = await fetch(`${API}?action=join`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, visitor_id: getVisitorId() }) });
-      const j = await r.json();
-      setJoinMsg(j.inviter ? `Boa! Você entrou pelo convite de ${j.inviter}. Falta só clicar em ENTRAR NO GRUPO no WhatsApp. 🎉` : 'Abrindo o grupo do WhatsApp...');
-      window.open(j.group_link || data.group_link, '_blank');
-      load();
-    } catch { window.open(data.group_link, '_blank'); }
-  };
-
   const copyLink = () => { navigator.clipboard?.writeText(myLink); setJoinMsg('Link copiado! Cole no seu status e mande pros contatos. 🚀'); setTimeout(() => setJoinMsg(''), 4000); };
   const shareZap = () => { const txt = encodeURIComponent(`🏆 Tô participando do Concurso Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar prêmio:\n${myLink}`); window.open(`https://wa.me/?text=${txt}`, '_blank'); };
 
@@ -117,6 +120,19 @@ export default function ConcursoLeilaoNozap() {
 
   const premioDe = (pos) => (data.premios.find((p) => p.posicao === pos) || {}).premio || '';
 
+  // Convidado (?ref): tela mínima enquanto manda direto pro grupo — sem cadastro.
+  if (ref) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white flex items-center justify-center p-6 text-center">
+        <div>
+          <img src={logoNozap} alt="Leilão NoZap" className="w-28 h-28 mx-auto object-contain drop-shadow-xl" />
+          <p className="mt-4 text-xl font-black">Entrando no grupo do WhatsApp... 💬</p>
+          <p className="text-green-300/70 text-sm mt-2">Se não abrir sozinho, <a href={GROUP_LINK} className="underline text-green-300 font-semibold">toque aqui pra entrar</a>.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white w-full overflow-x-hidden">
       <div className="max-w-2xl w-full mx-auto px-4 py-8 pb-24">
@@ -130,18 +146,7 @@ export default function ConcursoLeilaoNozap() {
           <p className="text-green-200/90 mt-2 font-semibold">Encha o grupo e ganhe prêmio! Quem levar mais gente vence. 🚀</p>
         </div>
 
-        {/* CONVITE (chegou por link de alguém) */}
-        {ref && (
-          <div className="mt-6 rounded-2xl p-5 text-center" style={{ background: 'linear-gradient(135deg,#166534,#052e16)', border: '1px solid rgba(245,196,81,.35)' }}>
-            <p className="text-sm text-green-200">Você foi convidado {inviter ? <>por <b className="text-yellow-300">{inviter.nome}</b></> : ''} 💚</p>
-            <p className="text-xs text-green-300/80 mt-1">Entre no grupo pra ajudar {inviter ? inviter.nome.split(' ')[0] : 'o convidador'} a subir no ranking!</p>
-            <button onClick={entrarNoGrupo} className="mt-4 w-full py-4 rounded-xl font-black text-lg text-[#052e16]" style={{ background: 'linear-gradient(90deg,#25D366,#22c55e)', boxShadow: '0 8px 24px rgba(37,211,102,.4)' }}>
-              💬 ENTRAR NO GRUPO DO WHATSAPP
-            </button>
-          </div>
-        )}
-
-        {joinMsg && <div className="mt-4 text-center text-sm bg-white/10 rounded-lg py-2 px-3">{joinMsg}</div>}
+        {joinMsg &&<div className="mt-4 text-center text-sm bg-white/10 rounded-lg py-2 px-3">{joinMsg}</div>}
 
         {/* MEU LINK (já cadastrado) ou FORM */}
         {myCode ? (
