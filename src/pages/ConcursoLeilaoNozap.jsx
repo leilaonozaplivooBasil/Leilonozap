@@ -80,13 +80,13 @@ export default function ConcursoLeilaoNozap() {
   const premioDe = (pos) => (data.premios.find((p) => p.posicao === pos) || {}).premio || '';
 
   return (
-    <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white">
-      <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
+    <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white w-full overflow-x-hidden">
+      <div className="max-w-2xl w-full mx-auto px-4 py-8 pb-24">
 
         {/* HERO */}
         <div className="text-center relative">
           <div className="text-6xl mb-2 animate-bounce">🏆</div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 className="font-black tracking-tight break-words" style={{ fontSize: 'clamp(1.6rem,7vw,2.4rem)', lineHeight: 1.05, background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             CONCURSO LEILÃO NOZAP
           </h1>
           <p className="text-green-200/90 mt-2 font-semibold">Encha o grupo e ganhe prêmio! Quem levar mais gente vence. 🚀</p>
