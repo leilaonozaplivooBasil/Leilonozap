@@ -1381,30 +1381,8 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Link Influencer (App) - 5% por venda e arremate</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Ganhe 5% em R$ sobre cada venda e arremate feitos pelos seus indicados
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={referralLink}
-                  readOnly
-                  className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
-
-                <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
-                <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
-              </div>
-              <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
-                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
-                <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (5%):</strong> Você ganha 5% sobre cada venda e arremate dos seus indicados.</AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-
+          {/* P02: Link Influencer (App 5%) REMOVIDO da Visão Geral — só a Loja Virtual aparece.
+              A árvore oficial (30%) é o que vale; o "App 5%" isolado saiu conforme pedido do Heloim. */}
           {userLevels.includes('licenciado_catalogo') &&
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
