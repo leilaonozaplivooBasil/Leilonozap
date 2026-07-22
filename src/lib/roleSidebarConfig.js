@@ -123,9 +123,8 @@ const CONTEXT_BY_PAGE = {
   // Lojista
   LojistaDashboard: "lojista",
 
-  // Licenciado
-  Licensing: "licenciado",
-
+  // Licenciado — /Licensing é o Painel de Alavancagem (tela do usuário), NÃO deve ter
+  // menu lateral (P01). Sem mapeamento aqui, nem o admin vê sidebar nessa página.
   // Investidor
   CarteiraInvestidor: "investidor",
   MarketplaceLotes: "investidor",

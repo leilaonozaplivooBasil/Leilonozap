@@ -1105,7 +1105,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <StatCard
           icon={TrendingUp}
-          label="Arremates da Rede"
+          label="Arremates do Sistema de Alavancagem"
           value={realMetrics.networkBidsCount !== null ? realMetrics.networkBidsCount : '...'}
           isLoading={realMetrics.networkBidsCount === null}
           isSaiDeBaixo={isSaiDeBaixo} />
