@@ -532,7 +532,11 @@ export default function Catalog() {
         {banners.length > 0 && (
           <motion.div
             {...fadeIn}
-            className="relative left-1/2 -translate-x-1/2 w-screen max-w-[100vw] overflow-hidden mb-2"
+            className="relative overflow-hidden mb-2"
+            style={{
+              marginLeft: "calc(50% - 50vw)",
+              marginRight: "calc(50% - 50vw)",
+            }}
           >
             <CatalogHero banners={banners} />
             {/* Degradês suaves nas bordas laterais — acabamento premium */}
