@@ -25,6 +25,17 @@ const roleRebate = {
   distribuidor:   { pct: 1, sobre: 'Loja Física' },
 };
 
+// Quem cada nível cadastra na rede (card oficial Heloim 22/07).
+const roleCadastra = {
+  influenciador:  'Não cadastra ninguém, só compartilha o link',
+  vendedor:       'Cadastra: influenciador',
+  licenciado:     'Cadastra: vendedor e influenciador',
+  parceiro:       'Cadastra: licenciado, vendedor e influenciador',
+  ponto_retirada: 'Cadastra: parceiro, licenciado, vendedor e influenciador',
+  loja_fisica:    'Cadastra: ponto de retirada, parceiro, licenciado, vendedor e influenciador',
+  distribuidor:   'Cadastra: todo mundo',
+};
+
 // Bloco DIRETORIA (cargos institucionais TTT) — só aparece pra quem tem algum deles.
 // % = governança do topo (card oficial Heloim 22/07). Aliases cobrem ids antigos.
 const directorSteps = [
@@ -157,7 +168,12 @@ export default function CareerPath({ currentUser }) {
                                     </p>
                                     {roleRebate[step.id] ? (
                                       <p className={cn("mt-0.5 text-xs", isActive ? "text-amber-300/80" : "text-gray-500")}>
-                                        Rebate de {roleRebate[step.id].pct}% quando o {roleRebate[step.id].sobre} da sua rede vende.
+                                        Rebate de {roleRebate[step.id].pct}% sobre {roleRebate[step.id].sobre} (quando alguém da sua rede vende).
+                                      </p>
+                                    ) : null}
+                                    {roleCadastra[step.id] ? (
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-gray-400" : "text-gray-600")}>
+                                        {roleCadastra[step.id]}
                                       </p>
                                     ) : null}
                                 </div>
