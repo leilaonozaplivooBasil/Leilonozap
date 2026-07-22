@@ -91,8 +91,8 @@ export default function OfertasRelampago({ products = [] }) {
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-        {ofertas.map((p) => <FlashCard key={p.id} p={p} />)}
+      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pr-4 snap-x snap-mandatory scroll-smooth">
+        {ofertas.map((p) => <div key={p.id} className="snap-start"><FlashCard p={p} /></div>)}
       </div>
     </div>
   );
