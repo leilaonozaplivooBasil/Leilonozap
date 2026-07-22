@@ -528,10 +528,16 @@ export default function Catalog() {
           licenseeData={licenseeData}
         />
 
-        {/* b) 🎯 BANNER HERO PANORÂMICO — HERÓI da tela */}
+        {/* b) 🎯 BANNER HERO PANORÂMICO — FULL-BLEED edge-to-edge (estilo Mercado Livre) */}
         {banners.length > 0 && (
-          <motion.div {...fadeIn}>
+          <motion.div
+            {...fadeIn}
+            className="relative left-1/2 -translate-x-1/2 w-screen max-w-[100vw] overflow-hidden mb-2"
+          >
             <CatalogHero banners={banners} />
+            {/* Degradês suaves nas bordas laterais — acabamento premium */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-16 bg-gradient-to-r from-gray-900 to-transparent z-10" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-16 bg-gradient-to-l from-gray-900 to-transparent z-10" />
           </motion.div>
         )}
 
