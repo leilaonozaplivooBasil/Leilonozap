@@ -14,6 +14,17 @@ const rolePercentages = {
   distribuidor: 20,
 };
 
+// REBATE por nível (card oficial Heloim 22/07): quando alguém da sua rede vende, você ganha
+// a diferença entre o seu nível e o dele. É o que o motor (arvoreOficial.js) paga na cadeia.
+const roleRebate = {
+  vendedor:       { pct: 5, sobre: 'Influenciador' },
+  licenciado:     { pct: 3, sobre: 'Vendedor' },
+  parceiro:       { pct: 2, sobre: 'Licenciado' },
+  ponto_retirada: { pct: 1, sobre: 'Parceiro' },
+  loja_fisica:    { pct: 3, sobre: 'Ponto de Retirada' },
+  distribuidor:   { pct: 1, sobre: 'Loja Física' },
+};
+
 const careerSteps = [
   // Topo → Base (hierarquia de rede atual)
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
@@ -90,6 +101,12 @@ export default function CareerPath({ currentUser }) {
                                             isActive ? "bg-green-600/20 text-green-300 border-green-500/30" : "bg-gray-700/40 text-gray-400 border-gray-600/40"
                                           )}>{rolePercentages[step.id]}% venda direta</span>
                                         ) : null}
+                                        {roleRebate[step.id] ? (
+                                          <span className={cn(
+                                            "ml-1 text-xs px-2 py-0.5 rounded border",
+                                            isActive ? "bg-amber-600/20 text-amber-300 border-amber-500/30" : "bg-gray-700/40 text-gray-400 border-gray-600/40"
+                                          )}>+{roleRebate[step.id].pct}% rebate</span>
+                                        ) : null}
                                     </h4>
                                     <p className={cn(
                                         "mt-1 text-sm",
@@ -97,6 +114,11 @@ export default function CareerPath({ currentUser }) {
                                     )}>
                                         {isActive ? step.achievedDescription : step.lockedDescription}
                                     </p>
+                                    {roleRebate[step.id] ? (
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-amber-300/80" : "text-gray-500")}>
+                                        Rebate de {roleRebate[step.id].pct}% quando o {roleRebate[step.id].sobre} da sua rede vende.
+                                      </p>
+                                    ) : null}
                                 </div>
                             </li>
                         );
