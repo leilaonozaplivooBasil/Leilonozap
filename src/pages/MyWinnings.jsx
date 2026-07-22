@@ -109,17 +109,23 @@ export default function MyWinningsPage() {
                 const user = JSON.parse(savedUser);
                 setCurrentUser(user);
                 
-                // Busca saldo da carteira digital
-                const digitalWallets = await base44.entities.DigitalWallet.filter({ user_id: user.id });
-                if (digitalWallets && digitalWallets.length > 0) {
-                    setWalletBalance(digitalWallets[0].balance || 0);
+                // Saldo pela função canônica (a tabela digital_wallets não tem coluna 'balance').
+                try {
+                    const wRes = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+                    const wData = wRes?.data || wRes;
+                    setWalletBalance(wData?.balance || 0);
+                } catch (_) {
+                    setWalletBalance(0);
                 }
-                
-                const allAuctions = await Auction.list("-updated_date", 500);
-                const wonAuctions = allAuctions.filter(auction => 
-                    auction.winner_id === user.id &&
+
+                // Busca DIRETO por winner_id no servidor. Antes usava Auction.list(500) + filtro
+                // 'winner_id === user.id' no cliente, que não trazia os arremates. Exclui planos de
+                // carreira/investimento (não são produtos e poluíam a lista).
+                const wonRaw = await Auction.filter({ winner_id: user.id }, "-updated_date", 500);
+                const wonAuctions = (Array.isArray(wonRaw) ? wonRaw : []).filter(auction =>
                     (auction.status === 'sold' || auction.status === 'ended' || auction.status === 'processing') &&
-                    !auction.is_investment_plan
+                    !auction.is_investment_plan &&
+                    !/\bplano\b/i.test(auction.title || '')
                 );
                 setWinnings(wonAuctions);
 

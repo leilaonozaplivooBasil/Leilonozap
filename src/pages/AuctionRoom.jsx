@@ -98,6 +98,24 @@ export default function AuctionRoom() {
     if (!audioContextRef.current) return;
     try {
       const ctx = audioContextRef.current;
+      // Martelo do arremate: batida percussiva "bum" (queda de pitch + ataque rápido/decaimento curto).
+      // Disparado 3x em sequência no encerramento -> "bum bum bum".
+      if (type === 'hammer') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        const t = ctx.currentTime;
+        osc.frequency.setValueAtTime(190, t);
+        osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.9, t + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.22);
+        osc.start(t);
+        osc.stop(t + 0.24);
+        return;
+      }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
