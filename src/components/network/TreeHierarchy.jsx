@@ -31,8 +31,6 @@ const getInitials = (name) => {
 export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRelink }) {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [lineKey, setLineKey] = useState(0);
-  const [draggedNode, setDraggedNode] = useState(null);
-  const [dropTarget, setDropTarget] = useState(null);
   const nodePositions = useRef({});
   const svgRef = useRef(null);
   const containerRef = useRef(null);
@@ -136,55 +134,90 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     return () => window.removeEventListener('resize', drawAllConnections);
   }, [drawAllConnections]);
 
-  // 🆕 Drag & drop baseado em POINTER EVENTS (funciona desktop + mobile/touch)
-  // Estado do arraste em ref para não re-renderizar a cada movimento
-  const dragState = useRef({ active: false, node: null, startX: 0, startY: 0, moved: false });
+  // 🆕 Drag & drop baseado em POINTER EVENTS + manipulação DIRETA do DOM.
+  // CRÍTICO: NÃO usar setState durante o arraste. TreeNode é definido dentro
+  // deste componente, então qualquer setState remonta a árvore inteira e MATA
+  // o gesto de arraste. Por isso o feedback visual (opacity/ring) é aplicado
+  // por classe CSS direto no DOM, e o React só é acionado no final (onRelink).
+  const dragState = useRef({
+    active: false,
+    node: null,
+    startX: 0,
+    startY: 0,
+    moved: false,
+    sourceEl: null,   // elemento da bolinha arrastada
+    lastTargetEl: null, // wrapper [data-node-id] atualmente destacado
+  });
 
-  const finishRelink = async (draggedNode, targetId) => {
-    const draggedUser = users.find(u => u.id === draggedNode.id);
-    if (!draggedUser || !targetId || draggedNode.id === targetId) return;
-    if (!onRelink) return;
-    try {
-      await onRelink(draggedNode.id, targetId, true);
-      const targetUser = users.find(u => u.id === targetId);
-      toast.success(`${draggedUser.full_name} agora está abaixo de ${targetUser?.full_name || 'novo líder'}`);
-    } catch (err) {
-      toast.error('Erro ao mover: ' + err.message);
+  const clearTargetHighlight = () => {
+    const st = dragState.current;
+    if (st.lastTargetEl) {
+      st.lastTargetEl.classList.remove('ring-4', 'ring-green-400', 'rounded-full', 'z-50');
+      st.lastTargetEl = null;
     }
   };
 
-  const handlePointerMove = useCallback((e) => {
+  const handlePointerMove = (e) => {
     const st = dragState.current;
     if (!st.active) return;
     const dx = e.clientX - st.startX;
     const dy = e.clientY - st.startY;
-    if (!st.moved && Math.hypot(dx, dy) < 8) return; // ainda é clique
+    if (!st.moved && Math.hypot(dx, dy) < 8) return; // ainda é clique, não arraste
+
     if (!st.moved) {
       st.moved = true;
-      setDraggedNode(st.node);
+      // Feedback visual da bolinha arrastada — DOM direto, sem setState
+      if (st.sourceEl) st.sourceEl.style.opacity = '0.4';
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
     }
+
     // Detecta a bolinha sob o cursor
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const wrapper = el && el.closest('[data-node-id]');
     const targetId = wrapper ? wrapper.getAttribute('data-node-id') : null;
-    setDropTarget(targetId && targetId !== st.node.id ? targetId : null);
-  }, []);
 
-  const handlePointerUp = useCallback(async (e) => {
+    if (!wrapper || targetId === st.node.id) {
+      clearTargetHighlight();
+      return;
+    }
+    if (wrapper !== st.lastTargetEl) {
+      clearTargetHighlight();
+      wrapper.classList.add('ring-4', 'ring-green-400', 'rounded-full', 'z-50');
+      st.lastTargetEl = wrapper;
+    }
+  };
+
+  const handlePointerUp = async (e) => {
     const st = dragState.current;
     window.removeEventListener('pointermove', handlePointerMove);
     window.removeEventListener('pointerup', handlePointerUp);
     if (!st.active) return;
+
+    // Restaura visual
+    if (st.sourceEl) st.sourceEl.style.opacity = '';
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    clearTargetHighlight();
+
     const draggedNode = st.node;
     const wasMoved = st.moved;
-    dragState.current = { active: false, node: null, startX: 0, startY: 0, moved: false };
+    // Zera o estado ANTES de qualquer await
+    dragState.current = { active: false, node: null, startX: 0, startY: 0, moved: false, sourceEl: null, lastTargetEl: null };
 
     if (wasMoved) {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const wrapper = el && el.closest('[data-node-id]');
       const targetId = wrapper ? wrapper.getAttribute('data-node-id') : null;
-      if (targetId && targetId !== draggedNode.id) {
-        await finishRelink(draggedNode, targetId);
+      if (targetId && targetId !== draggedNode.id && onRelink) {
+        const draggedUser = users.find(u => u.id === draggedNode.id);
+        const targetUser = users.find(u => u.id === targetId);
+        try {
+          await onRelink(draggedNode.id, targetId, true);
+          toast.success(`${draggedUser?.full_name || 'Usuário'} agora está abaixo de ${targetUser?.full_name || 'novo líder'}`);
+        } catch (err) {
+          toast.error('Erro ao mover: ' + err.message);
+        }
       }
     } else {
       // Clique curto = expandir/colapsar
@@ -192,13 +225,20 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
         toggleExpand(draggedNode.id);
       }
     }
-    setDraggedNode(null);
-    setDropTarget(null);
-  }, [handlePointerMove, users]);
+  };
 
   const handlePointerDown = (e, node) => {
     e.stopPropagation();
-    dragState.current = { active: true, node, startX: e.clientX, startY: e.clientY, moved: false };
+    // Guarda o elemento da bolinha (currentTarget) para feedback visual direto
+    dragState.current = {
+      active: true,
+      node,
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+      sourceEl: e.currentTarget,
+      lastTargetEl: null,
+    };
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
   };
@@ -224,8 +264,6 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node.id);
-    const isDragging = draggedNode?.id === node.id;
-    const isDropTarget = dropTarget === node.id;
 
     useEffect(() => {
       if (nodeRef.current && containerRef.current) {
@@ -243,7 +281,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
       <div className="flex flex-col items-center">
         {/* Círculo do nó */}
         <div 
-          className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-125 z-50' : ''}`}
+          className="relative flex flex-col items-center"
           ref={nodeRef}
           data-node-id={node.id}
           onMouseEnter={openCard}
@@ -255,10 +293,9 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
               w-16 h-16 rounded-full ${bgColor}
               flex items-center justify-center
               text-white font-bold text-sm
-              hover:shadow-2xl transition-all duration-300
+              hover:shadow-2xl transition-shadow duration-300
               cursor-grab active:cursor-grabbing
-              ${hasChildren ? 'hover:scale-110' : ''}
-              shadow-lg border-4 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50 animate-pulse' : 'border-white/20'}
+              shadow-lg border-4 border-white/20
               overflow-hidden flex-shrink-0
               relative select-none touch-none
             `}
