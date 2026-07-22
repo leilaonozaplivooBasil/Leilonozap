@@ -136,94 +136,71 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     return () => window.removeEventListener('resize', drawAllConnections);
   }, [drawAllConnections]);
 
-  // Handlers de drag and drop
-  const handleDragStart = (e, node) => {
-    e.stopPropagation();
-    setDraggedNode(node);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', node.id);
-    // Visual feedback
-    if (e.target) {
-      e.target.style.opacity = '0.5';
+  // 🆕 Drag & drop baseado em POINTER EVENTS (funciona desktop + mobile/touch)
+  // Estado do arraste em ref para não re-renderizar a cada movimento
+  const dragState = useRef({ active: false, node: null, startX: 0, startY: 0, moved: false });
+
+  const finishRelink = async (draggedNode, targetId) => {
+    const draggedUser = users.find(u => u.id === draggedNode.id);
+    if (!draggedUser || !targetId || draggedNode.id === targetId) return;
+    if (!onRelink) return;
+    try {
+      await onRelink(draggedNode.id, targetId, true);
+      const targetUser = users.find(u => u.id === targetId);
+      toast.success(`${draggedUser.full_name} agora está abaixo de ${targetUser?.full_name || 'novo líder'}`);
+    } catch (err) {
+      toast.error('Erro ao mover: ' + err.message);
     }
   };
 
-  const handleDragOver = (e, node) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (draggedNode && draggedNode.id !== node.id) {
-      e.dataTransfer.dropEffect = 'move';
-      setDropTarget(node.id);
+  const handlePointerMove = useCallback((e) => {
+    const st = dragState.current;
+    if (!st.active) return;
+    const dx = e.clientX - st.startX;
+    const dy = e.clientY - st.startY;
+    if (!st.moved && Math.hypot(dx, dy) < 8) return; // ainda é clique
+    if (!st.moved) {
+      st.moved = true;
+      setDraggedNode(st.node);
     }
-  };
+    // Detecta a bolinha sob o cursor
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const wrapper = el && el.closest('[data-node-id]');
+    const targetId = wrapper ? wrapper.getAttribute('data-node-id') : null;
+    setDropTarget(targetId && targetId !== st.node.id ? targetId : null);
+  }, []);
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDropTarget(null);
-  };
+  const handlePointerUp = useCallback(async (e) => {
+    const st = dragState.current;
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+    if (!st.active) return;
+    const draggedNode = st.node;
+    const wasMoved = st.moved;
+    dragState.current = { active: false, node: null, startX: 0, startY: 0, moved: false };
 
-  const handleDrop = async (e, newParent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const draggedId = e.dataTransfer.getData('text/plain') || draggedNode?.id;
-    
-    if (!draggedId || draggedId === newParent.id) {
-      setDraggedNode(null);
-      setDropTarget(null);
-      return;
-    }
-
-    const draggedUser = users.find(u => u.id === draggedId);
-    if (!draggedUser) {
-      setDraggedNode(null);
-      setDropTarget(null);
-      return;
-    }
-
-    // Verifica se o alvo é descendente do arrastado (causaria ciclo)
-    const isDescendantOf = (ancestorId, maybeDescendantId) => {
-      const queue = [ancestorId];
-      const seen = new Set();
-      while (queue.length > 0) {
-        const currentId = queue.shift();
-        for (const u of users) {
-          if (u.referred_by_id === currentId && !seen.has(u.id)) {
-            if (u.id === maybeDescendantId) return true;
-            seen.add(u.id);
-            queue.push(u.id);
-          }
-        }
+    if (wasMoved) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const wrapper = el && el.closest('[data-node-id]');
+      const targetId = wrapper ? wrapper.getAttribute('data-node-id') : null;
+      if (targetId && targetId !== draggedNode.id) {
+        await finishRelink(draggedNode, targetId);
       }
-      return false;
-    };
-
-    if (isDescendantOf(draggedId, newParent.id)) {
-      toast.error('Não pode mover para um descendente! O ciclo será resolvido automaticamente.');
-    }
-
-    // Chama callback de relink (com flag para resolver ciclos)
-    if (onRelink) {
-      try {
-        await onRelink(draggedId, newParent.id, true);
-        toast.success(`${draggedUser.full_name} agora está abaixo de ${newParent.full_name}`);
-      } catch (err) {
-        toast.error('Erro ao mover: ' + err.message);
+    } else {
+      // Clique curto = expandir/colapsar
+      if (draggedNode.children && draggedNode.children.length > 0) {
+        toggleExpand(draggedNode.id);
       }
-    }
-
-    setDraggedNode(null);
-    setDropTarget(null);
-  };
-
-  const handleDragEnd = (e) => {
-    // Reset visual feedback
-    if (e.target) {
-      e.target.style.opacity = '1';
     }
     setDraggedNode(null);
     setDropTarget(null);
+  }, [handlePointerMove, users]);
+
+  const handlePointerDown = (e, node) => {
+    e.stopPropagation();
+    dragState.current = { active: true, node, startX: e.clientX, startY: e.clientY, moved: false };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
   };
 
   // Componente do nó (círculo) com filhos expansíveis
@@ -268,17 +245,12 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
         <div 
           className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-125 z-50' : ''}`}
           ref={nodeRef}
+          data-node-id={node.id}
           onMouseEnter={openCard}
           onMouseLeave={scheduleClose}
-          onDragOver={(e) => handleDragOver(e, node)}
-          onDragLeave={(e) => handleDragLeave(e)}
-          onDrop={(e) => handleDrop(e, node)}
         >
           <div
-            draggable="true"
-            onDragStart={(e) => handleDragStart(e, node)}
-            onDragEnd={(e) => handleDragEnd(e)}
-            onClick={() => hasChildren && toggleExpand(node.id)}
+            onPointerDown={(e) => handlePointerDown(e, node)}
             className={`
               w-16 h-16 rounded-full ${bgColor}
               flex items-center justify-center
@@ -288,7 +260,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
               ${hasChildren ? 'hover:scale-110' : ''}
               shadow-lg border-4 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50 animate-pulse' : 'border-white/20'}
               overflow-hidden flex-shrink-0
-              relative select-none
+              relative select-none touch-none
             `}
           >
             {node.avatar_url ? (
