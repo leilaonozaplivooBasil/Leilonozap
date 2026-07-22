@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import logoNozap from '@/assets/leilao-nozap-logo.png';
 
 const API = '/api/concurso';
 
@@ -122,9 +123,9 @@ export default function ConcursoLeilaoNozap() {
 
         {/* HERO */}
         <div className="text-center relative">
-          <div className="text-6xl mb-2 animate-bounce">🏆</div>
-          <h1 className="font-black tracking-tight break-words" style={{ fontSize: 'clamp(1.6rem,7vw,2.4rem)', lineHeight: 1.05, background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            CONCURSO LEILÃO NOZAP
+          <img src={logoNozap} alt="Leilão NoZap" className="mx-auto w-40 h-40 object-contain drop-shadow-xl" />
+          <h1 className="font-black tracking-tight -mt-1" style={{ fontSize: 'clamp(1.7rem,7vw,2.4rem)', lineHeight: 1.05, background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            🏆 CONCURSO
           </h1>
           <p className="text-green-200/90 mt-2 font-semibold">Encha o grupo e ganhe prêmio! Quem levar mais gente vence. 🚀</p>
         </div>
