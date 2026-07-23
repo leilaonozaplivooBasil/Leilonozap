@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays } from 'lucide-react';
 
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -37,18 +37,18 @@ function toBrtLocal(date) {
     const g = (t) => parts.find((p) => p.type === t).value;
     return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`;
 }
-// Presets de reativação rápida (rótulo → minutos a partir de agora)
-// ⚡ Relâmpago (+3/+5/+10min): apresentação rápida ao vivo, demonstração em tempo real, ativação de engajamento
+// Presets de reativação rápida (ícone + rótulo → minutos a partir de agora)
+// Relâmpago (+3/+5/+10min): apresentação rápida ao vivo, demonstração em tempo real, ativação de engajamento
 const REACTIVATE_PRESETS = [
-    { label: '⚡ +3min', min: 3 },
-    { label: '⚡ +5min', min: 5 },
-    { label: '⚡ +10min', min: 10 },
-    { label: '⚡ +1h', min: 60 },
-    { label: '🌑 +6h', min: 360 },
-    { label: '🌑 +12h', min: 720 },
-    { label: '🌑 +24h', min: 1440 },
-    { label: '📅 +3 dias', min: 4320 },
-    { label: '📅 +7 dias', min: 10080 },
+    { icon: Zap, label: '+3min', min: 3 },
+    { icon: Zap, label: '+5min', min: 5 },
+    { icon: Zap, label: '+10min', min: 10 },
+    { icon: Zap, label: '+1h', min: 60 },
+    { icon: Moon, label: '+6h', min: 360 },
+    { icon: Moon, label: '+12h', min: 720 },
+    { icon: Moon, label: '+24h', min: 1440 },
+    { icon: CalendarDays, label: '+3 dias', min: 4320 },
+    { icon: CalendarDays, label: '+7 dias', min: 10080 },
 ];
 
 // Converte o valor do input datetime-local (YYYY-MM-DDTHH:mm) para exibição DD/MM/AAAA, HH:MM

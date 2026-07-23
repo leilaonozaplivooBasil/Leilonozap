@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import {
   Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
-  Camera, Briefcase, Play, Eye, Gavel, Crown, Clock, Megaphone,
+  Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -332,55 +332,70 @@ export default function ConcursoLeilaoNozap() {
           </div>
         </div>
 
-        {/* ADMIN */}
+        {/* ADMIN — organizado em cards, aproveitando a largura */}
         {isAdmin && (
-          <div className="mt-6 rounded-2xl p-5 space-y-5" style={{ background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.4)' }}>
-            <p className="font-black text-lg flex items-center gap-2"><Crown className="w-5 h-5 text-purple-300" /> Painel Admin do Concurso</p>
-
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-purple-200 uppercase">Destaque / Sorteio do dia</p>
-              <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.produto_foto || ''} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder="URL da foto do produto" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={2} className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+          <div className="mt-6 rounded-2xl p-4 sm:p-5" style={{ background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.4)' }}>
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+              <p className="font-black text-lg flex items-center gap-2"><Crown className="w-5 h-5 text-purple-300" /> Painel Admin do Concurso</p>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 text-purple-200" style={{ background: 'rgba(139,92,246,.18)', border: '1px solid rgba(139,92,246,.4)' }}><Lock className="w-3 h-3" /> Só você vê isto</span>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-purple-200 uppercase">Live (Livoo)</p>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!cfg.live_ativa} onChange={(e) => setCfg({ ...cfg, live_ativa: e.target.checked })} className="w-5 h-5 accent-pink-500" /> Live AO VIVO agora</label>
-              <input value={cfg.live_url || ''} onChange={(e) => setCfg({ ...cfg, live_url: e.target.value })} placeholder={`Link da live (padrão: ${LIVOO_VENDEDOR})`} className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.live_horario || ''} onChange={(e) => setCfg({ ...cfg, live_horario: e.target.value })} placeholder="Horário da próxima live (ex: hoje 20h)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.live_produto || ''} onChange={(e) => setCfg({ ...cfg, live_produto: e.target.value })} placeholder="Produto que será leiloado na live" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-            </div>
+            {/* 3 cards de configuração lado a lado */}
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
+              {/* Destaque */}
+              <div className="rounded-xl p-4 bg-black/25 border border-white/10 space-y-2">
+                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-1"><Gift className="w-3.5 h-3.5" /> Destaque / Sorteio do dia</p>
+                <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.produto_foto || ''} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder="URL da foto do produto" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={3} className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+              </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-purple-200 uppercase">Prêmios dos sorteios</p>
-              <input value={cfg.premio_dia || ''} onChange={(e) => setCfg({ ...cfg, premio_dia: e.target.value })} placeholder="Prêmio do sorteio DIÁRIO" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.premio_semana || ''} onChange={(e) => setCfg({ ...cfg, premio_semana: e.target.value })} placeholder="Prêmio do sorteio SEMANAL" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <input value={cfg.premio_mes || ''} onChange={(e) => setCfg({ ...cfg, premio_mes: e.target.value })} placeholder="Prêmio do sorteio MENSAL" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-            </div>
+              {/* Live */}
+              <div className="rounded-xl p-4 border space-y-2" style={{ background: 'rgba(233,30,131,.06)', borderColor: 'rgba(233,30,131,.3)' }}>
+                <p className="text-xs font-bold uppercase tracking-wide flex items-center gap-2 mb-1" style={{ color: '#f5a3cf' }}><Radio className="w-3.5 h-3.5" /> Live (Livoo)</p>
+                <label className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 bg-black/25 border border-white/10 cursor-pointer"><input type="checkbox" checked={!!cfg.live_ativa} onChange={(e) => setCfg({ ...cfg, live_ativa: e.target.checked })} className="w-5 h-5 accent-pink-500" /> <b>Live AO VIVO agora</b></label>
+                <input value={cfg.live_url || ''} onChange={(e) => setCfg({ ...cfg, live_url: e.target.value })} placeholder="Link da live (padrão: vendedor/leilaonozap)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.live_horario || ''} onChange={(e) => setCfg({ ...cfg, live_horario: e.target.value })} placeholder="Horário da próxima live (ex: hoje 20h)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.live_produto || ''} onChange={(e) => setCfg({ ...cfg, live_produto: e.target.value })} placeholder="Produto que será leiloado na live" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+              </div>
 
-            <button onClick={saveConfig} disabled={savingCfg} className="w-full py-3 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-60">{savingCfg ? 'Salvando...' : 'Salvar configuração'}</button>
-
-            <div className="space-y-2 pt-2 border-t border-white/10">
-              <p className="text-xs font-bold text-purple-200 uppercase">Realizar sorteio (coroa o 1º do período)</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => realizarSorteio('dia')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Dia</button>
-                <button onClick={() => realizarSorteio('semana')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Semana</button>
-                <button onClick={() => realizarSorteio('mes')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Mês</button>
+              {/* Prêmios dos sorteios */}
+              <div className="rounded-xl p-4 bg-black/25 border border-white/10 space-y-2 md:col-span-2 xl:col-span-1">
+                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-1"><Award className="w-3.5 h-3.5" /> Prêmios dos sorteios</p>
+                <input value={cfg.premio_dia || ''} onChange={(e) => setCfg({ ...cfg, premio_dia: e.target.value })} placeholder="Prêmio do sorteio DIÁRIO" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.premio_semana || ''} onChange={(e) => setCfg({ ...cfg, premio_semana: e.target.value })} placeholder="Prêmio do sorteio SEMANAL" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+                <input value={cfg.premio_mes || ''} onChange={(e) => setCfg({ ...cfg, premio_mes: e.target.value })} placeholder="Prêmio do sorteio MENSAL" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-white/10">
-              <p className="text-xs font-bold text-purple-200 uppercase">Prêmios do pódio (top 10)</p>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
-                <div key={pos} className="flex items-center gap-2">
-                  <PosBadge pos={pos} size={24} />
-                  <input value={premiosEdit[pos] ?? ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: e.target.value })} placeholder={`Prêmio do ${pos}º`} className="flex-1 bg-black/30 border border-white/15 rounded-lg px-3 py-1.5 text-sm" />
+            <button onClick={saveConfig} disabled={savingCfg} className="mt-3 w-full py-3 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2">{savingCfg ? 'Salvando...' : <>Salvar configuração <span className="text-purple-200 text-xs font-medium">(destaque + live + prêmios)</span></>}</button>
+
+            {/* Ações: sorteio + pódio lado a lado no desktop */}
+            <div className="grid lg:grid-cols-2 gap-3 mt-3 items-start">
+              <div className="rounded-xl p-4 bg-black/25 border border-white/10">
+                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-3"><Gavel className="w-3.5 h-3.5" /> Realizar sorteio (coroa o 1º do período)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => realizarSorteio('dia')} className="py-2.5 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Dia</button>
+                  <button onClick={() => realizarSorteio('semana')} className="py-2.5 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Semana</button>
+                  <button onClick={() => realizarSorteio('mes')} className="py-2.5 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Mês</button>
                 </div>
-              ))}
-              <button onClick={savePremios} className="w-full py-2 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 text-sm">Salvar prêmios do pódio</button>
+                <p className="text-[11px] text-purple-200/60 mt-3">Escolha o período para coroar quem trouxe mais gente. Registra o vencedor no histórico.</p>
+              </div>
+
+              <div className="rounded-xl p-4 bg-black/25 border border-white/10">
+                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-3"><Crown className="w-3.5 h-3.5" /> Prêmios do pódio (top 10)</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
+                    <div key={pos} className="flex items-center gap-2">
+                      <PosBadge pos={pos} size={22} />
+                      <input value={premiosEdit[pos] ?? ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: e.target.value })} placeholder={`Prêmio do ${pos}º`} className="flex-1 min-w-0 bg-black/30 border border-white/15 rounded-lg px-3 py-1.5 text-sm" />
+                    </div>
+                  ))}
+                </div>
+                <button onClick={savePremios} className="mt-3 w-full py-2.5 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 text-sm">Salvar prêmios do pódio</button>
+              </div>
             </div>
           </div>
         )}
