@@ -49,6 +49,7 @@ export default function ConcursoLeilaoNozap() {
   const [cfg, setCfg] = useState({});
   const [premiosEdit, setPremiosEdit] = useState({});
   const [savingCfg, setSavingCfg] = useState(false);
+  const [rankExpanded, setRankExpanded] = useState(false);
 
   // Convidado (?ref): manda DIRETO pro grupo (registra o clique, sem página/cadastro)
   useEffect(() => {
@@ -233,19 +234,32 @@ export default function ConcursoLeilaoNozap() {
           {data.ranking.length === 0 ? (
             <p className="text-center text-green-300/60 py-8">Ninguém pontuou nesse período ainda. Seja o primeiro! 🥇</p>
           ) : (
-            <div className="space-y-2">
-              {data.ranking.slice(0, 30).map((x) => {
-                const isMe = x.code === myCode;
-                return (
-                  <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-yellow-400' : 'border-white/10'}`} style={{ background: x.posicao <= 3 ? 'linear-gradient(90deg,rgba(245,196,81,.15),rgba(34,197,94,.06))' : 'rgba(255,255,255,.04)' }}>
-                    <span className="text-2xl w-8 text-center font-black">{medal(x.posicao)}</span>
-                    <Avatar url={x.foto_url} nome={x.nome} size={40} />
-                    <span className="font-bold flex-1 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
-                    <span className="font-black text-yellow-300">{x.pontos}</span>
-                  </div>
-                );
-              })}
-            </div>
+            <>
+              <div className="space-y-2">
+                {(rankExpanded ? data.ranking.slice(0, 50) : data.ranking.slice(0, 5)).map((x) => {
+                  const isMe = x.code === myCode;
+                  return (
+                    <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-yellow-400' : 'border-white/10'}`} style={{ background: x.posicao <= 3 ? 'linear-gradient(90deg,rgba(245,196,81,.15),rgba(34,197,94,.06))' : 'rgba(255,255,255,.04)' }}>
+                      <span className="text-2xl w-8 text-center font-black">{medal(x.posicao)}</span>
+                      <Avatar url={x.foto_url} nome={x.nome} size={40} />
+                      <span className="font-bold flex-1 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
+                      {/* Pontuação só pro admin (parâmetros de conversão). Público vê o ranking, não os números. */}
+                      {isAdmin && <span className="font-black text-yellow-300">{x.pontos}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              {data.ranking.length > 5 && (
+                <button
+                  onClick={() => setRankExpanded((v) => !v)}
+                  className="mt-3 w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                  style={{ border: '1px dashed rgba(245,196,81,.5)', background: 'rgba(245,196,81,.06)', color: '#f5c451' }}
+                >
+                  {rankExpanded ? 'Mostrar menos' : 'Ver ranking completo'}
+                  <span style={{ transform: rankExpanded ? 'rotate(180deg)' : 'none', transition: '.2s' }}>▾</span>
+                </button>
+              )}
+            </>
           )}
         </div>
 
