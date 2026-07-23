@@ -38,14 +38,32 @@ function toBrtLocal(date) {
     return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`;
 }
 // Presets de reativação rápida (rótulo → minutos a partir de agora)
+// ⚡ Relâmpago (+3/+5/+10min): apresentação rápida ao vivo, demonstração em tempo real, ativação de engajamento
 const REACTIVATE_PRESETS = [
+    { label: '⚡ +3min', min: 3 },
+    { label: '⚡ +5min', min: 5 },
+    { label: '⚡ +10min', min: 10 },
     { label: '⚡ +1h', min: 60 },
-    { label: '🕐 +6h', min: 360 },
-    { label: '🕐 +12h', min: 720 },
-    { label: '🕐 +24h', min: 1440 },
+    { label: '🌑 +6h', min: 360 },
+    { label: '🌑 +12h', min: 720 },
+    { label: '🌑 +24h', min: 1440 },
     { label: '📅 +3 dias', min: 4320 },
     { label: '📅 +7 dias', min: 10080 },
 ];
+
+// Converte o valor do input datetime-local (YYYY-MM-DDTHH:mm) para exibição DD/MM/AAAA, HH:MM
+function formatBrtLabel(value) {
+    if (!value) return '';
+    const [date, time] = value.split('T');
+    const [y, m, d] = date.split('-');
+    return `${d}/${m}/${y}, ${time || ''}`.trim();
+}
+
+// Abre o seletor nativo (calendário/hora) ao clicar em qualquer parte do campo — mais fluido que
+// só o ícone. showPicker() precisa de gesto do usuário (onClick garante); try/catch p/ navegadores antigos.
+function abrirSeletorNativo(e) {
+    try { e.currentTarget.showPicker?.(); } catch { /* fallback: input segue editável normalmente */ }
+}
 
 export default function EditAuction() {
     const navigate = useNavigate();
@@ -796,8 +814,15 @@ export default function EditAuction() {
                         type="datetime-local"
                         value={formData.end_time}
                         onChange={(e) => handleInputChange('end_time', e.target.value)}
-                        className="mt-1 bg-[#0d1117] border-[#30363d] text-white"
+                        onClick={abrirSeletorNativo}
+                        onFocus={abrirSeletorNativo}
+                        className="mt-1 bg-[#0d1117] border-[#30363d] text-white cursor-pointer"
                       />
+                      {formData.end_time && (
+                        <p className="text-xs text-amber-300 mt-1.5">
+                            🕒 O leilão será encerrado em: <strong>{formatBrtLabel(formData.end_time)}</strong>
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -842,11 +867,13 @@ export default function EditAuction() {
                                     type="datetime-local"
                                     value={reactivateTime}
                                     onChange={(e) => { setReactivateTime(e.target.value); setReactivatePreset(null); }}
-                                    className="mt-1 bg-[#0d1117] border-[#30363d] text-white"
+                                    onClick={abrirSeletorNativo}
+                                    onFocus={abrirSeletorNativo}
+                                    className="mt-1 bg-[#0d1117] border-[#30363d] text-white cursor-pointer"
                                 />
                                 {reactivateTime && (
                                     <p className="text-xs text-orange-300 mt-1.5">
-                                        🕒 O leilão será encerrado em: <strong>{reactivateTime.replace('T', ', ').replace(/-/g, '/').replace(/^(\d{4})\/(\d{2})\/(\d{2})/, '$3/$2/$1')}</strong>
+                                        🕒 O leilão será encerrado em: <strong>{formatBrtLabel(reactivateTime)}</strong>
                                     </p>
                                 )}
                             </div>

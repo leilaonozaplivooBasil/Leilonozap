@@ -1,16 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
+import {
+  Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
+  Camera, Briefcase, Play, Eye, Gavel, Crown, Clock, Megaphone,
+} from 'lucide-react';
 
 const API = '/api/concurso';
 const GROUP_LINK = 'https://chat.whatsapp.com/FyKc2sXiB5fBG7ikYlmvri?s=cl&p=i&mlu=4';
+// Página oficial da Leilão NoZap na Livoo Live — é onde a pessoa entra pra assistir a transmissão.
+const LIVOO_VENDEDOR = 'https://livoolive.com.br/vendedor/leilaonozap';
 const PERIODOS = [{ id: 'dia', l: 'Hoje' }, { id: 'semana', l: 'Semana' }, { id: 'mes', l: 'Mês' }, { id: 'geral', l: 'Geral' }];
+// gradiente/identidade Livoo Live
+const LIVOO_GRAD = 'linear-gradient(135deg,#E91E83,#ff6b35)';
 
 function getVisitorId() {
   let v = localStorage.getItem('concurso_visitor');
   if (!v) { v = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('concurso_visitor', v); }
   return v;
 }
-const medal = (p) => (p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : `${p}º`);
 const maskCpf = (v) => { const d = v.replace(/\D/g, '').slice(0, 11); return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); };
 const maskZap = (v) => { const d = v.replace(/\D/g, '').slice(0, 11); if (d.length <= 2) return d; if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`; return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`; };
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -31,6 +38,16 @@ function Avatar({ url, nome, size = 32 }) {
   const s = { width: size, height: size };
   if (url) return <img src={url} alt={nome} style={s} className="rounded-full object-cover border border-white/20" />;
   return <div style={s} className="rounded-full flex items-center justify-center font-black text-white/90 border border-white/20 bg-green-800">{(nome || '?')[0].toUpperCase()}</div>;
+}
+// Badge de posição (dourado/prata/bronze pro pódio) — substitui os emojis de medalha.
+function PosBadge({ pos, size = 26 }) {
+  const bg = pos === 1 ? '#f5c451' : pos === 2 ? '#cbd5d8' : pos === 3 ? '#d0894c' : 'rgba(255,255,255,.1)';
+  const fg = pos <= 3 ? '#1a1205' : '#eaf6ee';
+  return (
+    <span className="inline-grid place-items-center font-black rounded-full" style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.5 }}>
+      {pos}
+    </span>
+  );
 }
 
 export default function ConcursoLeilaoNozap() {
@@ -83,6 +100,7 @@ export default function ConcursoLeilaoNozap() {
   const myLink = myCode ? `${window.location.origin}/concursoleilaonozap?ref=${myCode}` : '';
   const config = data.config || {};
   const liveOn = !!config.live_ativa;
+  const liveLink = config.live_url || LIVOO_VENDEDOR;
 
   const register = async () => {
     setErr(''); setSaving(true);
@@ -97,19 +115,18 @@ export default function ConcursoLeilaoNozap() {
     } catch { setErr('Erro de conexão. Tente de novo.'); } finally { setSaving(false); }
   };
   const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ } };
-  const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada! 📸'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
-  const copyLink = () => { navigator.clipboard?.writeText(myLink); setMsg('Link copiado! 🚀'); setTimeout(() => setMsg(''), 3500); };
-  const shareZap = () => { const t = encodeURIComponent(`🏆 Tô no Concurso Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
+  const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
+  const copyLink = () => { navigator.clipboard?.writeText(myLink); setMsg('Link copiado!'); setTimeout(() => setMsg(''), 3500); };
+  const shareZap = () => { const t = encodeURIComponent(`Tô no Concurso Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
 
-  const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva! ✅'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
-  const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, premio]) => ({ posicao: Number(posicao), premio })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos! ✅'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
+  const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
+  const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, premio]) => ({ posicao: Number(posicao), premio })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
   const realizarSorteio = async (per) => {
     if (!window.confirm(`Realizar sorteio do período "${per}"? Coroa quem trouxe mais gente.`)) return;
-    try { const r = await fetch(`${API}?action=sorteio`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, periodo: per }) }); const j = await r.json(); setMsg(j.ok ? `🎉 Vencedor: ${j.vencedor.nome} (${j.vencedor.pontos})` : (j.error || 'Erro')); setTimeout(() => setMsg(''), 6000); } catch { /* */ }
+    try { const r = await fetch(`${API}?action=sorteio`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, periodo: per }) }); const j = await r.json(); setMsg(j.ok ? `Vencedor: ${j.vencedor.nome} (${j.vencedor.pontos})` : (j.error || 'Erro')); setTimeout(() => setMsg(''), 6000); } catch { /* */ }
   };
 
   const premioPeriodo = periodo === 'dia' ? config.premio_dia : periodo === 'semana' ? config.premio_semana : periodo === 'mes' ? config.premio_mes : null;
-  const audPct = config.live_meta > 0 ? Math.min(100, Math.round(((config.live_audiencia || 0) / config.live_meta) * 100)) : 0;
 
   // Tela mínima do convidado enquanto redireciona
   if (ref) {
@@ -117,158 +134,209 @@ export default function ConcursoLeilaoNozap() {
       <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white flex items-center justify-center p-6 text-center">
         <div>
           <img src={logoNozap} alt="Leilão NoZap" className="w-28 h-28 mx-auto object-contain drop-shadow-xl" />
-          <p className="mt-4 text-xl font-black">Entrando no grupo do WhatsApp... 💬</p>
+          <p className="mt-4 text-xl font-black">Entrando no grupo do WhatsApp...</p>
           <p className="text-green-300/70 text-sm mt-2">Se não abrir sozinho, <a href={GROUP_LINK} className="underline text-green-300 font-semibold">toque aqui</a>.</p>
         </div>
       </div>
     );
   }
 
+  const CARD = { background: 'rgba(255,255,255,.045)', border: '1px solid rgba(245,196,81,.26)' };
+  const rankingVisible = rankExpanded ? data.ranking.slice(0, 50) : data.ranking.slice(0, 5);
+
+  // ------ blocos reaproveitados nas duas colunas ------
+  const LiveBlock = (
+    <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(233,30,131,.45)', background: 'linear-gradient(135deg,rgba(233,30,131,.16),rgba(255,107,53,.08)), #160510' }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-lg grid place-items-center text-white" style={{ background: LIVOO_GRAD, boxShadow: '0 4px 12px rgba(233,30,131,.5)' }}><Radio className="w-4 h-4" /></span>
+          <b className="text-sm tracking-wide">Livoo <span style={{ color: '#E91E83' }}>Live</span></b>
+        </div>
+        {liveOn && (
+          <span className="text-[11px] font-black text-white px-2.5 py-1 rounded-full inline-flex items-center gap-1.5" style={{ background: 'rgba(233,30,131,.9)' }}>
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> AO VIVO
+          </span>
+        )}
+      </div>
+
+      {liveOn ? (
+        <>
+          <div className="relative grid place-items-center" style={{ aspectRatio: '16/9', background: 'radial-gradient(60% 60% at 50% 40%, #3a0f28, #160510)' }}>
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(50% 50% at 50% 45%, rgba(233,30,131,.25), transparent 70%)' }} />
+            <span className="relative w-16 h-16 rounded-full grid place-items-center text-white" style={{ background: LIVOO_GRAD, boxShadow: '0 10px 30px rgba(233,30,131,.55)' }}><Play className="w-7 h-7 ml-1" fill="currentColor" /></span>
+            {config.live_audiencia > 0 && (
+              <span className="absolute top-2.5 right-3 text-[11px] font-bold text-white px-2.5 py-1 rounded-full inline-flex items-center gap-1.5" style={{ background: 'rgba(0,0,0,.45)' }}><Eye className="w-3.5 h-3.5" /> {config.live_audiencia} assistindo</span>
+            )}
+            {config.live_produto && (
+              <div className="absolute bottom-3 left-3.5 right-3.5">
+                <span className="inline-flex items-center gap-2 text-white text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: 'rgba(0,0,0,.5)', border: '1px solid rgba(255,255,255,.15)' }}><Gavel className="w-4 h-4" style={{ color: '#ff6b35' }} /> {config.live_produto}</span>
+              </div>
+            )}
+          </div>
+          <a href={liveLink} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 py-3.5 font-black text-white" style={{ background: LIVOO_GRAD }}>
+            <Radio className="w-5 h-5" /> Assistir ao vivo na Livoo
+          </a>
+        </>
+      ) : (
+        <div className="flex items-center gap-3 p-4">
+          <span className="w-11 h-11 rounded-xl grid place-items-center" style={{ background: 'rgba(233,30,131,.14)', color: '#E91E83' }}><Radio className="w-5 h-5" /></span>
+          <div className="min-w-0">
+            <p className="font-bold text-sm">Nenhuma live agora</p>
+            <p className="text-[12px] text-pink-100/70">{config.live_horario ? <>Próxima live: <b className="text-pink-200">{config.live_horario}</b></> : 'Quando começar, o botão de assistir aparece aqui.'}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const DestaqueBlock = (config.produto_nome || config.propaganda) ? (
+    <div className="rounded-2xl p-4" style={CARD}>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-green-300/60 mb-3 flex items-center gap-2"><Gift className="w-3.5 h-3.5" /> Destaque / Sorteio do dia</p>
+      {config.produto_nome && (
+        <div className="flex items-center gap-3">
+          {config.produto_foto ? <img src={config.produto_foto} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" /> : <span className="w-16 h-16 rounded-xl grid place-items-center bg-green-900/60 border border-yellow-400/20"><Gift className="w-7 h-7 text-yellow-300" /></span>}
+          <div>
+            <p className="font-black">{config.produto_nome}</p>
+            {config.produto_valor > 0 && <p className="text-xs text-yellow-300">{money(config.produto_valor)}</p>}
+          </div>
+        </div>
+      )}
+      {config.propaganda && <p className="text-xs text-green-100/90 mt-3 whitespace-pre-wrap flex gap-2"><Megaphone className="w-4 h-4 text-yellow-300 shrink-0 mt-0.5" /> {config.propaganda}</p>}
+    </div>
+  ) : null;
+
+  const MinePanel = (
+    <div className="rounded-2xl p-5" style={CARD}>
+      <div className="flex items-center gap-3">
+        <label className="cursor-pointer relative">
+          <Avatar url={me?.foto_url} nome={me?.nome} size={56} />
+          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-black/80 grid place-items-center"><Camera className="w-3 h-3 text-white" /></span>
+          <input type="file" accept="image/*" className="hidden" onChange={trocarFoto} />
+        </label>
+        <div>
+          <p className="font-black">{me?.nome || 'Seu painel'}</p>
+          <p className="text-xs text-green-300/70">Seu link de divulgação</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        {[['dia', 'Hoje'], ['semana', 'Semana'], ['mes', 'Mês']].map(([k, l]) => (
+          <div key={k} className="bg-black/30 rounded-lg p-2 text-center border border-white/10">
+            <p className="text-[10px] text-green-300/70 uppercase">{l}</p>
+            <div className="my-1 h-6 flex items-center justify-center">{me?.periodos?.[k]?.posicao ? <PosBadge pos={me.periodos[k].posicao} size={24} /> : <span className="text-white/40">—</span>}</div>
+            <p className="text-[10px] text-yellow-300 flex items-center justify-center gap-1"><Users className="w-3 h-3" />{me?.periodos?.[k]?.pontos || 0}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 bg-black/30 rounded-lg px-3 py-2 text-xs break-all text-green-100 border border-white/10 flex items-center gap-2"><Link2 className="w-4 h-4 text-yellow-300 shrink-0" />{myLink}</div>
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <button onClick={copyLink} className="py-3 rounded-lg font-bold bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center gap-2"><Copy className="w-4 h-4" /> Copiar link</button>
+        <button onClick={shareZap} className="py-3 rounded-lg font-bold text-[#052e16] flex items-center justify-center gap-2" style={{ background: '#25D366' }}><MessageCircle className="w-4 h-4" /> WhatsApp</button>
+      </div>
+      <a href="/Licensing" className="mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#8b5cf6,#22c55e)' }}>
+        <Briefcase className="w-5 h-5" /> Quero ser Influência Leilão NoZap
+      </a>
+    </div>
+  );
+
+  const FormPanel = (
+    <div className="rounded-2xl p-5" style={CARD}>
+      <p className="font-black text-lg mb-1 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-300" /> Participe agora</p>
+      <p className="text-xs text-green-300/80 mb-4">Preencha pra gerar seu link. O CPF é só pra validar o prêmio, não aparece pra ninguém.</p>
+      <label className="flex flex-col items-center gap-2 cursor-pointer mb-4">
+        {form.foto ? <img src={form.foto} alt="sua foto" className="w-24 h-24 rounded-full object-cover border-2 border-yellow-400" /> : <div className="w-24 h-24 rounded-full bg-black/40 border-2 border-dashed border-white/25 flex items-center justify-center"><Camera className="w-8 h-8 text-white/60" /></div>}
+        <span className="text-xs text-green-300/90 font-semibold">{form.foto ? 'Trocar foto' : 'Adicionar sua foto (deixa o ranking mais legal!)'}</span>
+        <input type="file" accept="image/*" className="hidden" onChange={handleFormPhoto} />
+      </label>
+      <div className="space-y-3">
+        <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
+        <input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })} inputMode="numeric" placeholder="CPF" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
+        <input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskZap(e.target.value) })} inputMode="numeric" placeholder="WhatsApp (com DDD)" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
+      </div>
+      {err && <p className="text-red-300 text-sm mt-2">{err}</p>}
+      <button onClick={register} disabled={saving} className="mt-4 w-full py-4 rounded-xl font-black text-lg text-[#052e16] disabled:opacity-60" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>{saving ? 'Gerando seu link...' : 'GERAR MEU LINK'}</button>
+    </div>
+  );
+
+  const RankingBlock = (
+    <div className="rounded-2xl p-4" style={CARD}>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-black text-lg flex items-center gap-2"><Crown className="w-5 h-5 text-yellow-300" /> Ranking</h2>
+        <span className="text-xs text-green-300/70">{data.total || 0} participando</span>
+      </div>
+      <div className="flex gap-2 mb-3">
+        {PERIODOS.map((p) => (
+          <button key={p.id} onClick={() => setPeriodo(p.id)} className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold ${periodo === p.id ? 'text-[#052e16]' : 'bg-white/5 text-green-200 border border-white/10'}`} style={periodo === p.id ? { background: 'linear-gradient(90deg,#f5c451,#22c55e)' } : {}}>{p.l}</button>
+        ))}
+      </div>
+      {premioPeriodo ? <div className="text-center text-xs text-yellow-300 mb-3 flex items-center justify-center gap-1.5"><Gift className="w-3.5 h-3.5" /> Prêmio {PERIODOS.find((p) => p.id === periodo)?.l}: <b>{premioPeriodo}</b></div> : null}
+      {data.ranking.length === 0 ? (
+        <p className="text-center text-green-300/60 py-8">Ninguém pontuou nesse período ainda. Seja o primeiro!</p>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {rankingVisible.map((x) => {
+              const isMe = x.code === myCode;
+              return (
+                <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-yellow-400' : 'border-white/10'}`} style={{ background: x.posicao <= 3 ? 'linear-gradient(90deg,rgba(245,196,81,.15),rgba(34,197,94,.06))' : 'rgba(255,255,255,.04)' }}>
+                  <PosBadge pos={x.posicao} />
+                  <Avatar url={x.foto_url} nome={x.nome} size={38} />
+                  <span className="font-bold flex-1 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
+                  {/* Pontuação só pro admin (parâmetros de conversão). Público vê o ranking, não os números. */}
+                  {isAdmin && <span className="font-black text-yellow-300 inline-flex items-center gap-1"><Users className="w-3.5 h-3.5 opacity-80" />{x.pontos}</span>}
+                </div>
+              );
+            })}
+          </div>
+          {data.ranking.length > 5 && (
+            <button onClick={() => setRankExpanded((v) => !v)} className="mt-3 w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ border: '1px dashed rgba(245,196,81,.5)', background: 'rgba(245,196,81,.06)', color: '#f5c451' }}>
+              {rankExpanded ? 'Mostrar menos' : 'Ver ranking completo'}
+              <ChevronDown className="w-4 h-4" style={{ transform: rankExpanded ? 'rotate(180deg)' : 'none', transition: '.2s' }} />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white w-full overflow-x-hidden">
-      <div className="max-w-2xl w-full mx-auto px-4 py-6 pb-24">
+      <div className="max-w-5xl w-full mx-auto px-4 py-6 pb-24">
 
-        {/* HERO */}
-        <div className="text-center">
-          <img src={logoNozap} alt="Leilão NoZap" className="mx-auto w-24 h-24 object-contain drop-shadow-xl" />
-          <h1 className="font-black -mt-1" style={{ fontSize: 'clamp(1.6rem,7vw,2.2rem)', lineHeight: 1, background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>🏆 CONCURSO</h1>
-          <p className="text-green-200/90 mt-1 font-semibold text-sm">Encha o grupo e ganhe prêmio todo dia! 🚀</p>
-        </div>
+        {/* HEADER + STATUS */}
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="w-14 h-14 rounded-2xl grid place-items-center" style={{ background: 'conic-gradient(from 200deg,#0e4d38,#0a2c22)', border: '1px solid rgba(245,196,81,.35)' }}><Trophy className="w-7 h-7 text-yellow-300" /></span>
+            <div>
+              <h1 className="font-black leading-none" style={{ fontSize: 'clamp(1.5rem,6vw,2rem)', background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CONCURSO</h1>
+              <p className="text-green-200/85 mt-1 font-semibold text-sm">Encha o grupo e ganhe prêmio todo dia</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {liveOn && <span className="text-xs font-black px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-white" style={{ background: LIVOO_GRAD }}><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> AO VIVO AGORA</span>}
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-green-100"><Users className="w-3.5 h-3.5" /> {data.total || 0} participando</span>
+            {premioPeriodo && <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-yellow-300" style={{ background: 'rgba(245,196,81,.12)', border: '1px solid rgba(245,196,81,.4)' }}><Gift className="w-3.5 h-3.5" /> {premioPeriodo}</span>}
+          </div>
+        </header>
 
         {msg && <div className="mt-4 text-center text-sm bg-white/10 rounded-lg py-2 px-3">{msg}</div>}
 
-        {/* LIVE AO VIVO */}
-        {liveOn && (
-          <div className="mt-5 rounded-2xl p-4" style={{ background: 'linear-gradient(135deg,#7f1d1d,#450a0a)', border: '1px solid rgba(255,80,80,.5)' }}>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" /><span className="font-black text-red-300">AO VIVO AGORA</span>
-            </div>
-            {config.live_produto && <p className="text-sm mt-1 font-semibold">🔨 {config.live_produto}</p>}
-            <div className="mt-2 h-3 rounded-full bg-black/40 overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${audPct}%`, background: 'linear-gradient(90deg,#f5c451,#22c55e)' }} />
-            </div>
-            <p className="text-[11px] text-red-200/80 mt-1">{config.live_audiencia || 0} de {config.live_meta || 300} pessoas na live ({audPct}%)</p>
-            {config.live_url && <a href={config.live_url} target="_blank" rel="noreferrer" className="mt-3 block text-center py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#ef4444,#f97316)' }}>▶️ ENTRAR NA LIVE</a>}
+        {/* DASHBOARD GRID */}
+        <div className="grid lg:grid-cols-[1.5fr_1fr] gap-4 mt-6 items-start">
+          <div className="flex flex-col gap-4">
+            {LiveBlock}
+            {DestaqueBlock}
           </div>
-        )}
-
-        {/* PRÓXIMA LIVE / DESTAQUE (quando não está ao vivo) */}
-        {!liveOn && (config.live_horario || config.propaganda || config.produto_nome) && (
-          <div className="mt-5 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.25)' }}>
-            {config.live_horario && <p className="text-sm">📺 Próxima live: <b className="text-yellow-300">{config.live_horario}</b></p>}
-            {config.produto_nome && (
-              <div className="flex items-center gap-3 mt-2">
-                {config.produto_foto && <img src={config.produto_foto} alt="" className="w-16 h-16 rounded-lg object-cover" />}
-                <div><p className="text-xs text-green-300/80">🎁 Sorteio em destaque</p><p className="font-bold">{config.produto_nome}</p>{config.produto_valor > 0 && <p className="text-xs text-yellow-300">{money(config.produto_valor)}</p>}</div>
-              </div>
-            )}
-            {config.propaganda && <p className="text-xs text-green-100/90 mt-2 whitespace-pre-wrap">{config.propaganda}</p>}
+          <div className="flex flex-col gap-4">
+            {myCode ? MinePanel : FormPanel}
+            {RankingBlock}
           </div>
-        )}
-
-        {/* MEU PAINEL (cadastrado) ou FORM */}
-        {myCode ? (
-          <div className="mt-5 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.3)' }}>
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer relative">
-                <Avatar url={me?.foto_url} nome={me?.nome} size={56} />
-                <span className="absolute -bottom-1 -right-1 text-xs bg-black/70 rounded-full px-1">📷</span>
-                <input type="file" accept="image/*" className="hidden" onChange={trocarFoto} />
-              </label>
-              <div>
-                <p className="font-black">{me?.nome || 'Seu painel'}</p>
-                <p className="text-xs text-green-300/70">Seu link de divulgação</p>
-              </div>
-            </div>
-            {/* posições nos 3 períodos */}
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              {[['dia', 'Hoje'], ['semana', 'Semana'], ['mes', 'Mês']].map(([k, l]) => (
-                <div key={k} className="bg-black/30 rounded-lg p-2 text-center border border-white/10">
-                  <p className="text-[10px] text-green-300/70 uppercase">{l}</p>
-                  <p className="font-black text-lg">{me?.periodos?.[k]?.posicao ? medal(me.periodos[k].posicao) : '—'}</p>
-                  <p className="text-[10px] text-yellow-300">{me?.periodos?.[k]?.pontos || 0} pessoas</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 bg-black/30 rounded-lg px-3 py-2 text-xs break-all text-green-100 border border-white/10">{myLink}</div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <button onClick={copyLink} className="py-3 rounded-lg font-bold bg-white/10 hover:bg-white/20 border border-white/10">📋 Copiar link</button>
-              <button onClick={shareZap} className="py-3 rounded-lg font-bold text-[#052e16]" style={{ background: '#25D366' }}>💬 WhatsApp</button>
-            </div>
-            {/* Funil: virar Influência Leilão NoZap (dados já foram coletados) */}
-            <a href="/Licensing" className="mt-3 block text-center py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#8b5cf6,#22c55e)' }}>
-              💼 Quero ser Influência Leilão NoZap
-            </a>
-          </div>
-        ) : (
-          <div className="mt-5 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.3)' }}>
-            <p className="font-black text-lg mb-1">🎯 Participe agora</p>
-            <p className="text-xs text-green-300/80 mb-4">Preencha pra gerar seu link. CPF é só pra validar o prêmio, não aparece pra ninguém.</p>
-            <label className="flex flex-col items-center gap-2 cursor-pointer mb-4">
-              {form.foto ? <img src={form.foto} alt="sua foto" className="w-24 h-24 rounded-full object-cover border-2 border-yellow-400" /> : <div className="w-24 h-24 rounded-full bg-black/40 border-2 border-dashed border-white/25 flex items-center justify-center text-3xl">📷</div>}
-              <span className="text-xs text-green-300/90 font-semibold">{form.foto ? '✅ Trocar foto' : 'Adicionar sua foto (deixa o ranking mais legal!)'}</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleFormPhoto} />
-            </label>
-            <div className="space-y-3">
-              <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
-              <input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })} inputMode="numeric" placeholder="CPF" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
-              <input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskZap(e.target.value) })} inputMode="numeric" placeholder="WhatsApp (com DDD)" className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 outline-none focus:border-yellow-400" />
-            </div>
-            {err && <p className="text-red-300 text-sm mt-2">⚠️ {err}</p>}
-            <button onClick={register} disabled={saving} className="mt-4 w-full py-4 rounded-xl font-black text-lg text-[#052e16] disabled:opacity-60" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>{saving ? 'Gerando seu link...' : '🚀 GERAR MEU LINK'}</button>
-          </div>
-        )}
-
-        {/* RANKING com abas de período */}
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-black text-lg">🏅 Ranking</h2>
-            <span className="text-xs text-green-300/70">{data.total || 0} participando</span>
-          </div>
-          <div className="flex gap-2 mb-3">
-            {PERIODOS.map((p) => (
-              <button key={p.id} onClick={() => setPeriodo(p.id)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${periodo === p.id ? 'text-[#052e16]' : 'bg-white/5 text-green-200 border border-white/10'}`} style={periodo === p.id ? { background: 'linear-gradient(90deg,#f5c451,#22c55e)' } : {}}>{p.l}</button>
-            ))}
-          </div>
-          {premioPeriodo ? <div className="text-center text-xs text-yellow-300 mb-3">🎁 Prêmio {PERIODOS.find((p) => p.id === periodo)?.l}: <b>{premioPeriodo}</b></div> : null}
-          {data.ranking.length === 0 ? (
-            <p className="text-center text-green-300/60 py-8">Ninguém pontuou nesse período ainda. Seja o primeiro! 🥇</p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {(rankExpanded ? data.ranking.slice(0, 50) : data.ranking.slice(0, 5)).map((x) => {
-                  const isMe = x.code === myCode;
-                  return (
-                    <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-yellow-400' : 'border-white/10'}`} style={{ background: x.posicao <= 3 ? 'linear-gradient(90deg,rgba(245,196,81,.15),rgba(34,197,94,.06))' : 'rgba(255,255,255,.04)' }}>
-                      <span className="text-2xl w-8 text-center font-black">{medal(x.posicao)}</span>
-                      <Avatar url={x.foto_url} nome={x.nome} size={40} />
-                      <span className="font-bold flex-1 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
-                      {/* Pontuação só pro admin (parâmetros de conversão). Público vê o ranking, não os números. */}
-                      {isAdmin && <span className="font-black text-yellow-300">{x.pontos}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-              {data.ranking.length > 5 && (
-                <button
-                  onClick={() => setRankExpanded((v) => !v)}
-                  className="mt-3 w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-                  style={{ border: '1px dashed rgba(245,196,81,.5)', background: 'rgba(245,196,81,.06)', color: '#f5c451' }}
-                >
-                  {rankExpanded ? 'Mostrar menos' : 'Ver ranking completo'}
-                  <span style={{ transform: rankExpanded ? 'rotate(180deg)' : 'none', transition: '.2s' }}>▾</span>
-                </button>
-              )}
-            </>
-          )}
         </div>
 
         {/* ADMIN */}
         {isAdmin && (
-          <div className="mt-10 rounded-2xl p-5 space-y-5" style={{ background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.4)' }}>
-            <p className="font-black text-lg">🛡️ Painel Admin do Concurso</p>
+          <div className="mt-6 rounded-2xl p-5 space-y-5" style={{ background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.4)' }}>
+            <p className="font-black text-lg flex items-center gap-2"><Crown className="w-5 h-5 text-purple-300" /> Painel Admin do Concurso</p>
 
-            {/* Produto do dia + propaganda */}
             <div className="space-y-2">
               <p className="text-xs font-bold text-purple-200 uppercase">Destaque / Sorteio do dia</p>
               <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
@@ -277,20 +345,15 @@ export default function ConcursoLeilaoNozap() {
               <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={2} className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
             </div>
 
-            {/* Live */}
             <div className="space-y-2">
-              <p className="text-xs font-bold text-purple-200 uppercase">Live</p>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!cfg.live_ativa} onChange={(e) => setCfg({ ...cfg, live_ativa: e.target.checked })} className="w-5 h-5 accent-red-500" /> Live AO VIVO agora</label>
-              <input value={cfg.live_url || ''} onChange={(e) => setCfg({ ...cfg, live_url: e.target.value })} placeholder="Link da live" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+              <p className="text-xs font-bold text-purple-200 uppercase">Live (Livoo)</p>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!cfg.live_ativa} onChange={(e) => setCfg({ ...cfg, live_ativa: e.target.checked })} className="w-5 h-5 accent-pink-500" /> Live AO VIVO agora</label>
+              <input value={cfg.live_url || ''} onChange={(e) => setCfg({ ...cfg, live_url: e.target.value })} placeholder={`Link da live (padrão: ${LIVOO_VENDEDOR})`} className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
               <input value={cfg.live_horario || ''} onChange={(e) => setCfg({ ...cfg, live_horario: e.target.value })} placeholder="Horário da próxima live (ex: hoje 20h)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
               <input value={cfg.live_produto || ''} onChange={(e) => setCfg({ ...cfg, live_produto: e.target.value })} placeholder="Produto que será leiloado na live" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              <div className="grid grid-cols-2 gap-2">
-                <input value={cfg.live_meta || ''} onChange={(e) => setCfg({ ...cfg, live_meta: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Meta de audiência" className="bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className="bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              </div>
+              <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
             </div>
 
-            {/* Prêmios por período */}
             <div className="space-y-2">
               <p className="text-xs font-bold text-purple-200 uppercase">Prêmios dos sorteios</p>
               <input value={cfg.premio_dia || ''} onChange={(e) => setCfg({ ...cfg, premio_dia: e.target.value })} placeholder="Prêmio do sorteio DIÁRIO" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
@@ -300,22 +363,20 @@ export default function ConcursoLeilaoNozap() {
 
             <button onClick={saveConfig} disabled={savingCfg} className="w-full py-3 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-60">{savingCfg ? 'Salvando...' : 'Salvar configuração'}</button>
 
-            {/* Realizar sorteio */}
             <div className="space-y-2 pt-2 border-t border-white/10">
               <p className="text-xs font-bold text-purple-200 uppercase">Realizar sorteio (coroa o 1º do período)</p>
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => realizarSorteio('dia')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">🥇 Dia</button>
-                <button onClick={() => realizarSorteio('semana')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">🥇 Semana</button>
-                <button onClick={() => realizarSorteio('mes')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">🥇 Mês</button>
+                <button onClick={() => realizarSorteio('dia')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Dia</button>
+                <button onClick={() => realizarSorteio('semana')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Semana</button>
+                <button onClick={() => realizarSorteio('mes')} className="py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Mês</button>
               </div>
             </div>
 
-            {/* Prêmios do pódio (top 10) */}
             <div className="space-y-2 pt-2 border-t border-white/10">
               <p className="text-xs font-bold text-purple-200 uppercase">Prêmios do pódio (top 10)</p>
               {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
                 <div key={pos} className="flex items-center gap-2">
-                  <span className="w-8 text-center">{medal(pos)}</span>
+                  <PosBadge pos={pos} size={24} />
                   <input value={premiosEdit[pos] ?? ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: e.target.value })} placeholder={`Prêmio do ${pos}º`} className="flex-1 bg-black/30 border border-white/15 rounded-lg px-3 py-1.5 text-sm" />
                 </div>
               ))}
@@ -324,7 +385,7 @@ export default function ConcursoLeilaoNozap() {
           </div>
         )}
 
-        <p className="text-center text-[11px] text-green-300/40 mt-10">Concurso Leilão NoZap · a contagem é por pessoas que entram no grupo pelo seu link.</p>
+        <p className="text-center text-[11px] text-green-300/40 mt-10 flex items-center justify-center gap-1.5"><Users className="w-3 h-3" /> A contagem é por pessoas que entram no grupo pelo seu link.</p>
       </div>
     </div>
   );
