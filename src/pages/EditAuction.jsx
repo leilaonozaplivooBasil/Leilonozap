@@ -819,8 +819,8 @@ export default function EditAuction() {
                         className="mt-1 bg-[#0d1117] border-[#30363d] text-white cursor-pointer"
                       />
                       {formData.end_time && (
-                        <p className="text-xs text-amber-300 mt-1.5">
-                            🕒 O leilão será encerrado em: <strong>{formatBrtLabel(formData.end_time)}</strong>
+                        <p className="text-xs text-amber-300 mt-1.5 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 shrink-0" /> O leilão será encerrado em: <strong>{formatBrtLabel(formData.end_time)}</strong>
                         </p>
                       )}
                     </div>
@@ -842,26 +842,30 @@ export default function EditAuction() {
                         <CardContent className="space-y-4">
                             {/* ⚡ REATIVAÇÃO RÁPIDA — botões que setam a data direto (não depende do seletor nativo do Safari) */}
                             <div>
-                                <Label className="text-slate-300 flex items-center gap-1.5">⚡ Reativação Rápida</Label>
+                                <Label className="text-slate-300 flex items-center gap-1.5"><Zap className="w-4 h-4 text-orange-500" /> Reativação Rápida</Label>
                                 <div className="mt-2 grid grid-cols-3 gap-2">
-                                    {REACTIVATE_PRESETS.map((p) => (
+                                    {REACTIVATE_PRESETS.map((p) => {
+                                        const Icon = p.icon;
+                                        return (
                                         <button
                                             key={p.min}
                                             type="button"
                                             onClick={() => aplicarPresetReativacao(p.min)}
-                                            className={`py-2.5 px-2 rounded-lg text-sm font-semibold border transition-colors ${
+                                            className={`py-2.5 px-2 rounded-lg text-sm font-semibold border transition-colors flex items-center justify-center gap-1.5 ${
                                                 reactivatePreset === p.min
                                                     ? 'bg-orange-600 border-orange-500 text-white'
                                                     : 'bg-[#0d1117] border-[#30363d] text-slate-300 hover:border-orange-500/60'
                                             }`}
                                         >
+                                            <Icon className="w-3.5 h-3.5 shrink-0" />
                                             {p.label}
                                         </button>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                             <div>
-                                <Label htmlFor="reactivate_time" className="text-slate-300 flex items-center gap-1.5">📅 Nova Data de Término (Brasília)</Label>
+                                <Label htmlFor="reactivate_time" className="text-slate-300 flex items-center gap-1.5"><CalendarDays className="w-4 h-4 text-orange-400" /> Nova Data de Término (Brasília)</Label>
                                 <Input
                                     id="reactivate_time"
                                     type="datetime-local"
@@ -872,8 +876,8 @@ export default function EditAuction() {
                                     className="mt-1 bg-[#0d1117] border-[#30363d] text-white cursor-pointer"
                                 />
                                 {reactivateTime && (
-                                    <p className="text-xs text-orange-300 mt-1.5">
-                                        🕒 O leilão será encerrado em: <strong>{formatBrtLabel(reactivateTime)}</strong>
+                                    <p className="text-xs text-orange-300 mt-1.5 flex items-center gap-1.5">
+                                        <Clock className="w-3.5 h-3.5 shrink-0" /> O leilão será encerrado em: <strong>{formatBrtLabel(reactivateTime)}</strong>
                                     </p>
                                 )}
                             </div>
