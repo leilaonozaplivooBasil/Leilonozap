@@ -1,4 +1,4 @@
-// Concurso Leilão NoZap — API única (registro, ranking, join, prêmios do admin).
+// Concurso Leilão NoZap — API (registro, ranking por período, join, prêmios, config admin, sorteios, painel pessoal).
 // Usa a service key (bypassa RLS). CPF e WhatsApp NUNCA são expostos no ranking público.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -7,12 +7,7 @@ const GROUP_LINK = 'https://chat.whatsapp.com/FyKc2sXiB5fBG7ikYlmvri?s=cl&p=i&ml
 const sb = (path, opts = {}) =>
   fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
-    headers: {
-      apikey: SR,
-      Authorization: `Bearer ${SR}`,
-      'Content-Type': 'application/json',
-      ...(opts.headers || {}),
-    },
+    headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
@@ -30,9 +25,7 @@ function cpfValido(cpf) {
 }
 
 const slug = (s) =>
-  String(s || '')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 10);
+  String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 10);
 
 function genCode(nome) {
   const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -41,7 +34,6 @@ function genCode(nome) {
   return `${slug(nome.split(' ')[0]) || 'user'}${r}`;
 }
 
-// Sobe a foto (dataURL base64) pro Storage público e devolve a URL pública.
 async function uploadFoto(code, dataUrl) {
   try {
     const m = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/i.exec(dataUrl || '');
@@ -61,7 +53,28 @@ async function uploadFoto(code, dataUrl) {
   } catch { return null; }
 }
 
-async function jset(res, code, obj) {
+// ranking do período via RPC (dia | semana | mes | geral) — timezone Brasília
+async function rankingPeriodo(periodo) {
+  const r = await sb('rpc/concurso_ranking_periodo', { method: 'POST', body: JSON.stringify({ p_periodo: periodo }) });
+  const rows = await r.json().catch(() => []);
+  if (!Array.isArray(rows)) return [];
+  return rows.map((x, i) => ({ posicao: i + 1, code: x.code, nome: x.nome, pontos: Number(x.pontos) || 0, foto_url: x.foto_url || null }));
+}
+
+async function getConfig() {
+  const r = await sb('concurso_config?id=eq.main&limit=1');
+  const rows = await r.json().catch(() => []);
+  return (Array.isArray(rows) && rows[0]) || {};
+}
+
+async function isAdmin(userId) {
+  if (!userId) return false;
+  const u = await (await sb(`app_users?select=role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+  const role = Array.isArray(u) && u[0] ? u[0].role : null;
+  return role === 'admin' || role === 'super_admin';
+}
+
+function jset(res, code, obj) {
   res.status(code).setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
   res.end(JSON.stringify(obj));
@@ -73,14 +86,28 @@ export default async function handler(req, res) {
     const action = (req.query?.action || '').toString();
     const body = req.body && typeof req.body === 'object' ? req.body : {};
 
-    // ---------- RANKING (público) ----------
+    // ---------- RANKING + CONFIG (público) ----------
     if (req.method === 'GET' || action === 'ranking') {
-      const r = await sb('concurso_participantes?select=code,nome,pontos,foto_url&order=pontos.desc,created_at.asc&limit=100');
-      const parts = (await r.json()) || [];
+      const periodo = (req.query?.periodo || 'geral').toString();
+      const ranking = await rankingPeriodo(['dia', 'semana', 'mes', 'geral'].includes(periodo) ? periodo : 'geral');
       const p = await sb('concurso_premios?select=posicao,premio&order=posicao');
-      const premios = (await p.json()) || [];
-      const ranking = parts.map((x, i) => ({ posicao: i + 1, nome: x.nome, pontos: x.pontos, code: x.code, foto_url: x.foto_url || null }));
-      return jset(res, 200, { ranking, premios, group_link: GROUP_LINK, total: parts.length });
+      const premios = (await p.json().catch(() => [])) || [];
+      const config = await getConfig();
+      return jset(res, 200, { ranking, premios, config, group_link: GROUP_LINK, total: ranking.length, periodo });
+    }
+
+    // ---------- PAINEL PESSOAL (posições nos 3 períodos) ----------
+    if (action === 'me') {
+      const code = (req.query?.code || body.code || '').toString();
+      if (!code) return jset(res, 400, { error: 'code' });
+      const out = {};
+      for (const per of ['dia', 'semana', 'mes', 'geral']) {
+        const rk = await rankingPeriodo(per);
+        const row = rk.find((x) => x.code === code);
+        out[per] = row ? { posicao: row.posicao, pontos: row.pontos } : { posicao: null, pontos: 0 };
+      }
+      const pr = await (await sb(`concurso_participantes?select=nome,foto_url&code=eq.${encodeURIComponent(code)}&limit=1`)).json();
+      return jset(res, 200, { code, nome: pr?.[0]?.nome || null, foto_url: pr?.[0]?.foto_url || null, periodos: out, config: await getConfig(), group_link: GROUP_LINK });
     }
 
     // ---------- REGISTRO ----------
@@ -92,7 +119,6 @@ export default async function handler(req, res) {
       if (!cpfValido(cpf)) return jset(res, 400, { error: 'CPF inválido.' });
       if (whatsapp.length < 10 || whatsapp.length > 13) return jset(res, 400, { error: 'WhatsApp inválido (com DDD).' });
 
-      // já existe? devolve o mesmo code (re-login pelo CPF); atualiza a foto se veio uma nova
       const ex = await (await sb(`concurso_participantes?select=code,nome&cpf=eq.${cpf}&limit=1`)).json();
       if (Array.isArray(ex) && ex[0]) {
         let foto_url = null;
@@ -102,11 +128,7 @@ export default async function handler(req, res) {
 
       let code = genCode(nome);
       for (let t = 0; t < 4; t++) {
-        const r = await sb('concurso_participantes', {
-          method: 'POST',
-          headers: { Prefer: 'return=representation' },
-          body: JSON.stringify({ code, nome, cpf, whatsapp }),
-        });
+        const r = await sb('concurso_participantes', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ code, nome, cpf, whatsapp }) });
         if (r.status === 201) {
           const row = (await r.json())[0];
           let foto_url = null;
@@ -115,26 +137,20 @@ export default async function handler(req, res) {
         }
         const txt = await r.text();
         if (txt.includes('concurso_participantes_cpf_key')) return jset(res, 400, { error: 'Esse CPF já está participando.' });
-        if (txt.includes('concurso_participantes_code_key')) { code = genCode(nome); continue; } // colisão de code, tenta outro
+        if (txt.includes('concurso_participantes_code_key')) { code = genCode(nome); continue; }
         return jset(res, 500, { error: 'Erro ao salvar. Tente de novo.' });
       }
       return jset(res, 500, { error: 'Não foi possível gerar seu link. Tente de novo.' });
     }
 
-    // ---------- JOIN (alguém entrou pelo link de um participante) ----------
+    // ---------- JOIN (entrou pelo link) ----------
     if (action === 'join') {
       const ref = (body.ref || '').toString().trim();
       const visitor = (body.visitor_id || '').toString().trim().slice(0, 80);
       if (!ref || !visitor) return jset(res, 400, { error: 'dados' });
       const pr = await (await sb(`concurso_participantes?select=code,nome&code=eq.${encodeURIComponent(ref)}&limit=1`)).json();
       if (!Array.isArray(pr) || !pr[0]) return jset(res, 200, { ok: false, group_link: GROUP_LINK });
-      // grava referral (dedup por visitante); ignora conflito
-      await sb('concurso_referrals', {
-        method: 'POST',
-        headers: { Prefer: 'resolution=ignore-duplicates' },
-        body: JSON.stringify({ referrer_code: ref, visitor_id: visitor }),
-      });
-      // recomputa pontos = total de referrals únicos
+      await sb('concurso_referrals', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify({ referrer_code: ref, visitor_id: visitor }) });
       const cnt = await sb(`concurso_referrals?select=id&referrer_code=eq.${encodeURIComponent(ref)}`, { headers: { Prefer: 'count=exact' } });
       const range = cnt.headers.get('content-range') || '*/0';
       const pontos = parseInt(range.split('/')[1] || '0', 10);
@@ -142,7 +158,53 @@ export default async function handler(req, res) {
       return jset(res, 200, { ok: true, group_link: GROUP_LINK, inviter: pr[0].nome, pontos });
     }
 
-    // ---------- TROCAR FOTO (pelo dono, via code) ----------
+    // ---------- ADMIN: prêmios do pódio (1..10) ----------
+    if (action === 'prizes') {
+      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      const premios = Array.isArray(body.premios) ? body.premios : [];
+      for (const it of premios) {
+        const pos = parseInt(it.posicao, 10);
+        if (pos >= 1 && pos <= 10) await sb(`concurso_premios?posicao=eq.${pos}`, { method: 'PATCH', body: JSON.stringify({ premio: (it.premio || '').toString().slice(0, 200) }) });
+      }
+      return jset(res, 200, { ok: true });
+    }
+
+    // ---------- ADMIN: config (produto do dia, live, propaganda, prêmios por período) ----------
+    if (action === 'save_config') {
+      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      const c = body.config || {};
+      const patch = {};
+      const campos = ['produto_nome', 'produto_foto', 'produto_valor', 'produto_desc', 'propaganda', 'live_ativa', 'live_url', 'live_horario', 'live_produto', 'live_meta', 'live_audiencia', 'premio_dia', 'premio_semana', 'premio_mes'];
+      for (const k of campos) if (k in c) patch[k] = c[k];
+      patch.updated_at = new Date().toISOString();
+      await sb('concurso_config?id=eq.main', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
+      return jset(res, 200, { ok: true });
+    }
+
+    // ---------- ADMIN: realizar sorteio (coroa o 1º do período + registra) ----------
+    if (action === 'sorteio') {
+      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      const periodo = ['dia', 'semana', 'mes'].includes(body.periodo) ? body.periodo : 'dia';
+      const rk = await rankingPeriodo(periodo);
+      const vencedor = rk.find((x) => x.pontos > 0);
+      if (!vencedor) return jset(res, 200, { ok: false, error: 'Ninguém pontuou nesse período ainda.' });
+      const cfg = await getConfig();
+      const premio = periodo === 'dia' ? cfg.premio_dia : periodo === 'semana' ? cfg.premio_semana : cfg.premio_mes;
+      const r = await sb('concurso_sorteios', {
+        method: 'POST', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ periodo, data_ref: new Date().toISOString().slice(0, 10), ganhador_code: vencedor.code, ganhador_nome: vencedor.nome, ganhador_foto: vencedor.foto_url, pontos: vencedor.pontos, premio: premio || '' }),
+      });
+      const row = (await r.json().catch(() => []))?.[0] || {};
+      return jset(res, 200, { ok: true, vencedor: { nome: vencedor.nome, pontos: vencedor.pontos, foto_url: vencedor.foto_url, premio: premio || '' }, sorteio: row });
+    }
+
+    // ---------- histórico de sorteios (público) ----------
+    if (action === 'sorteios') {
+      const r = await sb('concurso_sorteios?select=periodo,data_ref,ganhador_nome,ganhador_foto,pontos,premio,created_at&order=created_at.desc&limit=30');
+      return jset(res, 200, { sorteios: (await r.json().catch(() => [])) || [] });
+    }
+
+    // ---------- TROCAR FOTO ----------
     if (action === 'photo') {
       const code = (body.code || '').toString().trim();
       if (!code) return jset(res, 400, { error: 'code' });
@@ -152,23 +214,6 @@ export default async function handler(req, res) {
       if (!foto_url) return jset(res, 400, { error: 'foto inválida' });
       await sb(`concurso_participantes?code=eq.${encodeURIComponent(code)}`, { method: 'PATCH', body: JSON.stringify({ foto_url }) });
       return jset(res, 200, { ok: true, foto_url });
-    }
-
-    // ---------- ADMIN: definir prêmios (1..10) ----------
-    if (action === 'prizes') {
-      const userId = (body.user_id || '').toString();
-      if (!userId) return jset(res, 403, { error: 'auth' });
-      const u = await (await sb(`app_users?select=role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
-      const role = Array.isArray(u) && u[0] ? u[0].role : null;
-      if (role !== 'admin' && role !== 'super_admin') return jset(res, 403, { error: 'Sem permissão.' });
-      const premios = Array.isArray(body.premios) ? body.premios : [];
-      for (const it of premios) {
-        const pos = parseInt(it.posicao, 10);
-        if (pos >= 1 && pos <= 10) {
-          await sb(`concurso_premios?posicao=eq.${pos}`, { method: 'PATCH', body: JSON.stringify({ premio: (it.premio || '').toString().slice(0, 200) }) });
-        }
-      }
-      return jset(res, 200, { ok: true });
     }
 
     return jset(res, 400, { error: 'ação desconhecida' });
