@@ -9,26 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Award, Upload } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from "sonner";
+// P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
+import { CAREER_LEVELS } from '@/lib/careerLevels';
 
 const AppUser = base44.entities.AppUser;
-
-const CAREER_LEVELS = [
-  { id: 'usuario', name: 'Usuário', color: 'bg-gray-500' },
-  { id: 'licenciado_aplicativo', name: 'Licenciado Aplicativo', color: 'bg-green-500' },
-  { id: 'influencer', name: 'Influencer', color: 'bg-pink-500' },
-  { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500' },
-  { id: 'trainee', name: 'Trainee', color: 'bg-blue-500' },
-  { id: 'executivo', name: 'Executivo', color: 'bg-purple-500' },
-  { id: 'kit_start', name: 'Kit Start', color: 'bg-teal-500' },
-  { id: 'plano_lider', name: 'Plano Líder', color: 'bg-indigo-500' },
-  { id: 'plano_lojista', name: 'Plano Lojista', color: 'bg-lime-500' },
-  { id: 'distribuidor', name: 'Distribuidor', color: 'bg-sky-500' },
-  { id: 'diretoria', name: 'Diretoria', color: 'bg-fuchsia-500' },
-  { id: 'diretor', name: 'Diretor', color: 'bg-orange-500' },
-  { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
-  { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500' },
-  { id: 'fundador', name: 'Fundador', color: 'bg-amber-500' }
-];
 
 export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
     const [userData, setUserData] = useState(null);
@@ -379,41 +363,47 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         
                         <p className="text-xs text-gray-400">Selecione um ou mais cargos:</p>
                         
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {CAREER_LEVELS.slice().reverse().map(level => {
-                                const isSelected = selectedLevels.includes(level.id);
-                                const isPrimary = primaryLevel === level.id;
-                                
-                                return (
-                                    <div key={level.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
-                                        <div className="flex items-center space-x-3">
-                                            <Checkbox
-                                                id={`level-${level.id}`}
-                                                checked={isSelected}
-                                                onCheckedChange={() => toggleLevel(level.id)}
-                                                className="border-gray-600"
-                                            />
-                                            <label htmlFor={`level-${level.id}`} className="flex items-center gap-2 flex-1 cursor-pointer">
-                                                <Badge className={`${level.color} text-white text-xs`}>
-                                                    {level.name}
-                                                </Badge>
-                                            </label>
-                                        </div>
-                                        {isSelected && (
-                                            <div className="flex items-center gap-2">
-                                                <label className="text-xs text-gray-400">Principal</label>
-                                                <input
-                                                    type="radio"
-                                                    name="primary"
-                                                    checked={isPrimary}
-                                                    onChange={() => setPrimaryLevel(level.id)}
-                                                    className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500"
-                                                />
+                        <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
+                            {/* P18/19: 2 categorias — Institucional (TTT, topo) × Rede (plano de carreira) */}
+                            {[
+                                { bloco: 'diretor', label: '🏛️ Cargos Institucionais (Diretoria / TTT)' },
+                                { bloco: 'rede', label: '🌐 Cargos de Rede (Plano de Carreira)' },
+                            ].map((grp) => (
+                                <div key={grp.bloco} className="space-y-2">
+                                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-300">{grp.label}</p>
+                                    {CAREER_LEVELS.filter((l) => l.bloco === grp.bloco).slice().reverse().map((level) => {
+                                        const isSelected = selectedLevels.includes(level.id);
+                                        const isPrimary = primaryLevel === level.id;
+                                        return (
+                                            <div key={level.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
+                                                <div className="flex items-center space-x-3">
+                                                    <Checkbox
+                                                        id={`level-${level.id}`}
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => toggleLevel(level.id)}
+                                                        className="border-gray-600"
+                                                    />
+                                                    <label htmlFor={`level-${level.id}`} className="flex items-center gap-2 flex-1 cursor-pointer">
+                                                        <Badge className={`${level.color} text-white text-xs`}>{level.name}</Badge>
+                                                    </label>
+                                                </div>
+                                                {isSelected && (
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="text-xs text-gray-400">Principal</label>
+                                                        <input
+                                                            type="radio"
+                                                            name="primary"
+                                                            checked={isPrimary}
+                                                            onChange={() => setPrimaryLevel(level.id)}
+                                                            className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500"
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    })}
+                                </div>
+                            ))}
                         </div>
                         
                         {selectedLevels.length > 0 && (
