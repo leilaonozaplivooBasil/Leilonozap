@@ -67,6 +67,23 @@ async function getConfig() {
   return (Array.isArray(rows) && rows[0]) || {};
 }
 
+// Cria conta NÍVEL 1 na plataforma reusando publicRegister (bcrypt, referral_code, indicador).
+// Só cria pra CADASTRO NOVO — se o CPF/telefone já existe, publicRegister falha e retornamos null
+// (nunca auto-logamos numa conta existente por CPF: seria takeover).
+async function criarContaPlataforma(host, nome, cpf, whatsapp) {
+  try {
+    if (!host) return null;
+    const email = `c${cpf}@concurso.leilaonozap.net`;
+    const password = 'Cc' + Math.random().toString(36).slice(2, 12) + Math.floor(Math.random() * 90 + 10) + '!';
+    const r = await fetch(`https://${host}/api/functions/publicRegister`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: nome, email, password, phone: whatsapp, cpf }),
+    });
+    const j = await r.json().catch(() => ({}));
+    return j?.success && j.user ? j.user : null;
+  } catch { return null; }
+}
+
 async function isAdmin(userId) {
   if (!userId) return false;
   const u = await (await sb(`app_users?select=role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
@@ -133,7 +150,9 @@ export default async function handler(req, res) {
           const row = (await r.json())[0];
           let foto_url = null;
           if (body.foto) { foto_url = await uploadFoto(code, body.foto); if (foto_url) await sb(`concurso_participantes?code=eq.${encodeURIComponent(code)}`, { method: 'PATCH', body: JSON.stringify({ foto_url }) }); }
-          return jset(res, 200, { code: row.code, nome: row.nome, foto_url });
+          // cria conta NÍVEL 1 na plataforma (só cadastro novo) → auto-login no front
+          const app_user = await criarContaPlataforma(req.headers?.host, nome, cpf, whatsapp);
+          return jset(res, 200, { code: row.code, nome: row.nome, foto_url, app_user });
         }
         const txt = await r.text();
         if (txt.includes('concurso_participantes_cpf_key')) return jset(res, 400, { error: 'Esse CPF já está participando.' });

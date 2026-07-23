@@ -118,6 +118,15 @@ export default function NavDesktop({
         </div>
       ))}
 
+      {/* === CONCURSO LEILÃO NOZAP === */}
+      <Link
+        to="/concursoleilaonozap"
+        className="ml-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold text-yellow-300 hover:text-yellow-200 hover:bg-yellow-400/10 transition-all"
+        aria-label="Concurso Leilão NoZap"
+      >
+        🏆 Concurso
+      </Link>
+
       {/* === AO VIVO AGORA · LIVOO LIVE === */}
       <div className="ml-2"><AoVivoAgora /></div>
 

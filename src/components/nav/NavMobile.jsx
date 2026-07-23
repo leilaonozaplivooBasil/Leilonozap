@@ -225,6 +225,15 @@ export default function NavMobile({
               );
             })}
 
+            {/* === CONCURSO LEILÃO NOZAP === */}
+            <Link
+              to="/concursoleilaonozap"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-bold text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
+            >
+              🏆 Concurso
+            </Link>
+
             {/* === CARRINHO === */}
             <Link
               to={createPageUrl("Cart")}

@@ -89,7 +89,10 @@ export default function ConcursoLeilaoNozap() {
       const r = await fetch(`${API}?action=register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       const j = await r.json();
       if (!r.ok) { setErr(j.error || 'Erro ao salvar.'); return; }
-      localStorage.setItem('concurso_code', j.code); setMyCode(j.code); load(periodo); setTimeout(loadMe, 300);
+      localStorage.setItem('concurso_code', j.code); setMyCode(j.code);
+      // auto-login: se criou conta NÍVEL 1 na plataforma (cadastro novo), já entra logado
+      if (j.app_user) { try { localStorage.setItem('currentUser', JSON.stringify(j.app_user)); sessionStorage.setItem('isLoggedIn', 'true'); } catch (_) {} }
+      load(periodo); setTimeout(loadMe, 300);
     } catch { setErr('Erro de conexão. Tente de novo.'); } finally { setSaving(false); }
   };
   const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ } };
@@ -191,6 +194,10 @@ export default function ConcursoLeilaoNozap() {
               <button onClick={copyLink} className="py-3 rounded-lg font-bold bg-white/10 hover:bg-white/20 border border-white/10">📋 Copiar link</button>
               <button onClick={shareZap} className="py-3 rounded-lg font-bold text-[#052e16]" style={{ background: '#25D366' }}>💬 WhatsApp</button>
             </div>
+            {/* Funil: virar Influência Leilão NoZap (dados já foram coletados) */}
+            <a href="/Licensing" className="mt-3 block text-center py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#8b5cf6,#22c55e)' }}>
+              💼 Quero ser Influência Leilão NoZap
+            </a>
           </div>
         ) : (
           <div className="mt-5 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.3)' }}>
