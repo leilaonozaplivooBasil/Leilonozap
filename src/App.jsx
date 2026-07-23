@@ -27,6 +27,7 @@ import Recepcao from '@/pages/Recepcao';
 import PainelDistribuidor from '@/pages/PainelDistribuidor';
 import Cadastro from '@/pages/Cadastro';
 import ConcursoLeilaoNozap from '@/pages/ConcursoLeilaoNozap';
+import PassaporteLances from '@/pages/PassaporteLances';
 import LojaVitrine from '@/pages/LojaVitrine';
 import PedidosDistribuidor from '@/pages/PedidosDistribuidor';
 import TirarPedido from '@/pages/TirarPedido';
@@ -176,6 +177,8 @@ const AuthenticatedApp = () => {
       <Route path="/Evoluir" element={<Evoluir />} />
       <Route path="/Cadastro" element={<Cadastro />} />
       <Route path="/concursoleilaonozap" element={<ConcursoLeilaoNozap />} />
+      <Route path="/passaporte" element={<PassaporteLances />} />
+      <Route path="/Passaporte" element={<PassaporteLances />} />
       {/* 🏪 Vitrine pública por loja da rede (standalone, sem Layout) */}
       <Route path="/loja/:slug" element={<LojaVitrine />} />
       <Route path="/Carteira" element={<Carteira />} />

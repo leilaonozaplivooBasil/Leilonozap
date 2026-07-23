@@ -50,7 +50,9 @@ export default async function handler(req, res) {
     const saleId = oid();
     const kind = !isWalletDeposit
       ? 'arremate'
-      : (depositType === 'commission_wallet' ? 'commission_deposit' : 'wallet_deposit');
+      : (depositType === 'passaporte' ? 'passaporte'
+        : depositType === 'commission_wallet' ? 'commission_deposit'
+        : 'wallet_deposit');
     await sb('catalog_sales', {
       method: 'POST', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({

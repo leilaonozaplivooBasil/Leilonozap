@@ -256,9 +256,11 @@ export default function AuctionCheckoutModern() {
         description: isWalletDeposit
           ? (isInvestorCapital
             ? `Depósito de Capital — Lote de Investimento - R$ ${amount.toFixed(2)}`
-            : depositType === 'digital_wallet'
-              ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
-              : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
+            : depositType === 'passaporte'
+              ? `Passaporte de Lances NoZap - R$ ${amount.toFixed(2)}`
+              : depositType === 'digital_wallet'
+                ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
+                : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
           : `Arremate - ${auction.title}`,
         card_data: cardData,
         deposit_type: depositType,

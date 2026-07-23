@@ -56,6 +56,7 @@ const TABLE_MAP = {
   LuxuryAuction: 'luxury_auctions',
   Negotiation: 'negotiations',
   PartnerPlanPurchase: 'partner_plan_purchases',
+  Passaporte: 'passaportes',
   Payment: 'payments',
   PaymentSettings: 'payment_settings',
   PriceHistory: 'price_history',

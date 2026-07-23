@@ -134,6 +134,25 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
     }
 
+    if (sale.kind === 'passaporte') {
+      // Passaporte de Lances: credita o valor na carteira (saldo_disponivel) E cria o passaporte
+      // (20 acessos + validade 90d saldo / 30d acessos). Sem comissão nem fulfillment.
+      const r = await creditWalletDeposit({ ...sale, kind: 'wallet_deposit' });
+      try {
+        const now = Date.now();
+        await sb('passaportes', {
+          method: 'POST', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            user_id: sale.buyer_id, sale_id: sale.id, valor: round2(Number(sale.total_amount) || 0),
+            acessos_total: 20, acessos_restantes: 20,
+            validade_saldo: new Date(now + 90 * 86400000).toISOString(),
+            validade_acessos: new Date(now + 30 * 86400000).toISOString(),
+            status: 'ativo',
+          }),
+        });
+      } catch (_) { /* crédito já entrou; registro do passaporte é secundário */ }
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r });
+    }
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
