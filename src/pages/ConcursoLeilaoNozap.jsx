@@ -92,7 +92,7 @@ export default function ConcursoLeilaoNozap() {
       localStorage.setItem('concurso_code', j.code); setMyCode(j.code); load(periodo); setTimeout(loadMe, 300);
     } catch { setErr('Erro de conexão. Tente de novo.'); } finally { setSaving(false); }
   };
-  const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { setForm((s) => ({ ...s, foto: await fileToSmallDataUrl(f) })); } catch { /* */ } };
+  const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ } };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada! 📸'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
   const copyLink = () => { navigator.clipboard?.writeText(myLink); setMsg('Link copiado! 🚀'); setTimeout(() => setMsg(''), 3500); };
   const shareZap = () => { const t = encodeURIComponent(`🏆 Tô no Concurso Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
