@@ -32,19 +32,8 @@ export const SECTORS = [
       { title: '👑 Collection', desc: 'Itens de luxo selecionados', page: 'LuxuryCollection' },
     ],
   },
-  {
-    key: 'aovivo',
-    title: 'Ao Vivo',
-    emoji: '🔴',
-    // 📺 A ÚNICA plataforma de live do grupo é a Livoo Live (decisão do Santana, 14/07).
-    // O Live Shop interno foi aposentado — tudo aqui aponta pro feed da Livoo.
-    external: LIVOO_FEED,
-    live: true,                          // pulso vermelho no menu
-    blurb: 'Compre ao vivo, com o vendedor na tela',
-    items: [
-      { title: 'Livoo Live', desc: 'As lives acontecem na Livoo — assista e compre', external: LIVOO_FEED },
-    ],
-  },
+  // 'Ao Vivo' removido da navbar (duplicava o botão "AO VIVO AGORA"). O acesso à live
+  // segue pelo botão rosa "AO VIVO AGORA" e pelo FAB da loja.
   {
     key: 'ganhar',
     title: 'Ganhe Dinheiro',
