@@ -29,7 +29,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
           onClick={handleClick}
           disabled={showInfo}
           className="w-14 h-14 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 relative animate-float border-0 p-0 bg-transparent cursor-pointer disabled:cursor-not-allowed"
-          title="Comparai - Comparação Inteligente"
+          title="Compare - Comparação Inteligente"
         >
           <img
             src={ComparaiIcon}
@@ -39,7 +39,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
 
           <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
         </button>
-        <span className="text-[10px] text-blue-200 font-semibold mt-0.5 drop-shadow">Comparai</span>
+        <span className="text-[10px] text-blue-200 font-semibold mt-0.5 drop-shadow">Compare</span>
       </div>
 
       {/* MODAL INFORMATIVO */}

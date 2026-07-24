@@ -317,7 +317,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                 alt="Comparai"
                 className="w-12 h-12 rounded-full"
               />
-              <span>Comparai</span>
+              <span>Compare</span>
             </DialogTitle>
           </DialogHeader>
           
@@ -349,7 +349,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                 className="w-16 h-16 rounded-full bg-white p-2 shadow-lg"
               />
               <div>
-                <div className="text-blue-400 font-bold text-2xl">Comparai</div>
+                <div className="text-blue-400 font-bold text-2xl">Compare</div>
                 <div className="text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
               </div>
             </DialogTitle>

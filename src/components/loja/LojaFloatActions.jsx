@@ -20,14 +20,14 @@ export default function LojaFloatActions() {
       <div className="fixed left-4 bottom-5 z-50 flex flex-col items-center">
         <button
           onClick={() => window.dispatchEvent(new Event('openComparai'))}
-          title="Comparai — compare o preço antes de comprar"
+          title="Compare — compare o preço antes de comprar"
           className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 relative"
           style={{ boxShadow: '0 8px 24px rgba(37,99,235,.45)' }}
         >
           <img src={ComparaiIcon} alt="Comparai" className="w-full h-full object-cover rounded-full" />
           <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20" />
         </button>
-        <Label>Comparai</Label>
+        <Label>Compare</Label>
       </div>
 
       {/* Ao vivo + Suporte — canto DIREITO inferior */}

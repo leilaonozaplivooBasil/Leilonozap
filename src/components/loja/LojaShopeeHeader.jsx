@@ -85,7 +85,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
 
   // ícones fixos do rail (diferenciais + atalhos). Categorias reais entram depois.
   const railFixed = [
-    { icon: ScanSearch, label: 'Comparai', accent: 'gold', onClick: () => window.dispatchEvent(new Event('openComparai')) },
+    { icon: ScanSearch, label: 'Compare', accent: 'gold', onClick: () => window.dispatchEvent(new Event('openComparai')) },
     { icon: Gavel, label: 'Leilões ao vivo', onClick: () => navigate(createPageUrl('Home')) },
     { icon: Ticket, label: 'Cupons', accent: 'gold', onClick: mostrarCupons },
     { icon: Truck, label: 'Frete Grátis', onClick: () => toast('🚚 Frete combinado direto no WhatsApp da loja.') },
@@ -192,7 +192,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
               className="rounded-xl p-5 text-left text-white flex flex-col justify-center"
               style={{ background: 'linear-gradient(135deg,#e0a92e,#b8860b)' }}>
               <ScanSearch className="w-7 h-7 text-white mb-2" />
-              <p className="font-black leading-tight">COMPARAI</p>
+              <p className="font-black leading-tight">COMPARE</p>
               <p className="text-[12px] text-yellow-50">Compare o preço antes de comprar — só aqui.</p>
             </button>
           </div>
