@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -313,11 +314,11 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <img 
-                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                alt="Comparai"
+                src={CompareAquiIcon}
+                alt="CompareAQUI"
                 className="w-12 h-12 rounded-full"
               />
-              <span>Compare</span>
+              <span>CompareAQUI</span>
             </DialogTitle>
           </DialogHeader>
           
@@ -344,12 +345,12 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-2xl pr-12">
               <img 
-                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                alt="Comparai"
+                src={CompareAquiIcon}
+                alt="CompareAQUI"
                 className="w-16 h-16 rounded-full bg-white p-2 shadow-lg"
               />
               <div>
-                <div className="text-blue-400 font-bold text-2xl">Compare</div>
+                <div className="text-blue-400 font-bold text-2xl">CompareAQUI</div>
                 <div className="text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
               </div>
             </DialogTitle>
@@ -388,7 +389,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                   >
                     <Sparkles className="w-5 h-5 mr-3" />
                     <div className="text-left">
-                      <div className="font-bold">🔍 Usar Comparai (página de arremate)</div>
+                      <div className="font-bold">🔍 Usar CompareAQUI (página de arremate)</div>
                       <div className="text-xs opacity-90">Mesma comparação dos produtos de arremate</div>
                     </div>
                   </Button>
@@ -462,8 +463,8 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                     <div className="bg-gradient-to-br from-orange-900/30 to-red-900/20 border-2 border-orange-500 rounded-xl p-6 text-center">
                       <div className="flex items-center justify-center gap-2 mb-4">
                         <img 
-                          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                          alt="Comparai"
+                          src={CompareAquiIcon}
+                          alt="CompareAQUI"
                           className="w-10 h-10"
                         />
                         <div className="text-orange-300 text-sm font-bold uppercase">📊 {comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>

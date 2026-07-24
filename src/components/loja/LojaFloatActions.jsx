@@ -9,7 +9,7 @@ const SUPORTE_PHONE = '5521984072064';
 const LIVOO_FEED = 'https://livoolive.com.br/app';
 
 // Stack único de botões flutuantes à direita da loja (mesmo tamanho e espaçamento):
-// Ao vivo (Livoo Live) · Comparai · Suporte (WhatsApp).
+// Ao vivo (Livoo Live) · CompareAQUI · Suporte (WhatsApp).
 export default function LojaFloatActions() {
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
   const Label = ({ children }) => <span className="text-[10px] text-gray-200 font-semibold mt-0.5 drop-shadow text-center leading-none">{children}</span>;

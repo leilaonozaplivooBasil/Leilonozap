@@ -161,7 +161,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
       )}
       
       <style>{`
-        /* 📱 MOBILE - Posiciona ACIMA do Comparai */
+        /* 📱 MOBILE - Posiciona ACIMA do CompareAQUI */
         .auctioneer-position {
           bottom: 200px;
           left: 6px;

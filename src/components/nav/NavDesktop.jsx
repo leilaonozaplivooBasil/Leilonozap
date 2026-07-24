@@ -123,7 +123,7 @@ export default function NavDesktop({
 
       {/* === CONCURSO LEILÃO NOZAP === */}
       <Link
-        to="/concursoleilaonozap"
+        to="/rankpremiado"
         className="ml-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold text-yellow-300 hover:text-yellow-200 hover:bg-yellow-400/10 transition-all"
         aria-label="Rank Premiado Leilão NoZap"
       >

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from "react";
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -411,8 +412,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating }
                 className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
               >
                 <img
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                  alt="Compare"
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
                   className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
                 />
                 <span className="truncate">COMPARAR PREÇOS</span>

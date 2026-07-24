@@ -85,7 +85,7 @@ export default function EditAuction() {
       supplier_url: "", // 🆕 NOVO: URL do fornecedor
       supplier_logo_url: "", // 🆕 ADICIONA LOGO
       comparai_mode: "google_shopping", // 🆕 Modo padrão: Google Shopping
-      manual_market_price: "" // 🆕 Preço manual quando Comparai não acha
+      manual_market_price: "" // 🆕 Preço manual quando o CompareAQUI não acha
     });
     const [imageUrls, setImageUrls] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -706,7 +706,7 @@ export default function EditAuction() {
                     </div>
 
                     <div className="mt-4">
-                        <Label htmlFor="comparai_mode" className="text-slate-300">🔍 Onde a Comparai vai buscar o preço?</Label>
+                        <Label htmlFor="comparai_mode" className="text-slate-300">🔍 Onde o CompareAQUI vai buscar o preço?</Label>
                         <Select value={formData.comparai_mode} onValueChange={(value) => handleInputChange("comparai_mode", value)}>
                           <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
                             <SelectValue />
@@ -716,7 +716,7 @@ export default function EditAuction() {
                                 <span>🏭 Site do Fornecedor (exato)</span>
                             </SelectItem>
                             <SelectItem value="google_shopping">
-                                <span>🔎 Usar Comparai (padrão)</span>
+                                <span>🔎 Usar CompareAQUI (padrão)</span>
                             </SelectItem>
                           </SelectContent>
                         </Select>

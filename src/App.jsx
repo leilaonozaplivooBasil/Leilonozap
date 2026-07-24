@@ -176,7 +176,8 @@ const AuthenticatedApp = () => {
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<Evoluir />} />
       <Route path="/Cadastro" element={<Cadastro />} />
-      <Route path="/concursoleilaonozap" element={<ConcursoLeilaoNozap />} />
+      <Route path="/rankpremiado" element={<ConcursoLeilaoNozap />} />
+      <Route path="/concursoleilaonozap" element={<Navigate to={`/rankpremiado${window.location.search}`} replace />} />
       <Route path="/passaporte" element={<PassaporteLances />} />
       <Route path="/Passaporte" element={<PassaporteLances />} />
       {/* 🏪 Vitrine pública por loja da rede (standalone, sem Layout) */}

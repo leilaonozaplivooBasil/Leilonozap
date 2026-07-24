@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sparkles, X } from 'lucide-react';
-import ComparaiIcon from '@/assets/comparai-icon.png';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 
 export default function ComparaiFloatingButton({ auctions, mode = 'home', hideButton = false }) {
   const [showInfo, setShowInfo] = useState(false);
@@ -29,17 +29,17 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
           onClick={handleClick}
           disabled={showInfo}
           className="w-14 h-14 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 relative animate-float border-0 p-0 bg-transparent cursor-pointer disabled:cursor-not-allowed"
-          title="Compare - Comparação Inteligente"
+          title="CompareAQUI - Comparação Inteligente"
         >
           <img
-            src={ComparaiIcon}
-            alt="Comparai"
+            src={CompareAquiIcon}
+            alt="CompareAQUI"
             className="w-full h-full object-cover rounded-full"
           />
 
           <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
         </button>
-        <span className="text-[10px] text-blue-200 font-semibold mt-0.5 drop-shadow">Compare</span>
+        <span className="text-[10px] text-blue-200 font-semibold mt-0.5 drop-shadow">CompareAQUI</span>
       </div>
 
       {/* MODAL INFORMATIVO */}
@@ -58,12 +58,12 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-2xl pr-12">
                 <img
-                  src={ComparaiIcon}
-                  alt="Comparai"
-                  className="w-16 h-16 rounded-full bg-white p-2 shadow-lg"
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
+                  className="w-16 h-16 rounded-full shadow-lg"
                 />
                 <div>
-                  <div className="text-blue-400 font-bold text-2xl">Comparai</div>
+                  <div className="text-blue-400 font-bold text-2xl">CompareAQUI</div>
                   <div className="text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
                 </div>
               </DialogTitle>
@@ -75,7 +75,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
                 <div className="flex items-start gap-3">
                   <Sparkles className="w-8 h-8 text-blue-400 flex-shrink-0 mt-1" />
                   <div>
-                    <h3 className="text-xl font-bold text-blue-300 mb-3">🤖 O que é o Comparai?</h3>
+                    <h3 className="text-xl font-bold text-blue-300 mb-3">🤖 O que é o CompareAQUI?</h3>
                     <p className="text-gray-300 leading-relaxed">
                       Uma <span className="font-bold text-blue-400">inteligência artificial independente</span> que busca produtos em
                       <span className="font-bold text-green-400"> tempo real</span> em dezenas de sites da internet!
@@ -86,7 +86,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
 
               {/* ONDE BUSCA */}
               <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-green-300 mb-3">🌐 Onde o Comparai Busca?</h3>
+                <h3 className="text-xl font-bold text-green-300 mb-3">🌐 Onde o CompareAQUI Busca?</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-400 rounded-full"></div>

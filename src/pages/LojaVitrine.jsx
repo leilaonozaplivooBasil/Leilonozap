@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { money } from '@/lib/format';
 import { copyLink } from '@/lib/clipboard';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -155,7 +156,7 @@ export default function LojaVitrine() {
                     </button>
                     <button onClick={() => setComparaiItem(it)}
                       className="mt-1.5 w-full py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5">
-                      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparaí" className="w-4 h-4" /> Comparar Preços
+                      <img src={CompareAquiIcon} alt="CompareAQUI" className="w-4 h-4" /> Comparar Preços
                     </button>
                   </div>
                 </div>

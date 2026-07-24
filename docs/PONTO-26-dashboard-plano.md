@@ -2,7 +2,7 @@
 
 Arquivo da tela: `src/pages/ConcursoLeilaoNozap.jsx` (317 linhas)
 Backend: `api/concurso.js` (242 linhas)
-Rota pública: `/concursoleilaonozap`
+Rota pública: `/rankpremiado` (antiga `/concursoleilaonozap` redireciona)
 
 ## O que JÁ existe hoje
 - Hero (logo + "CONCURSO").

@@ -11,6 +11,7 @@
  * ========================================================================
  */
 import React, { useState, useEffect, useRef, memo, useMemo } from "react";
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
@@ -637,8 +638,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 } : {}}
               >
                 <img
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                  alt="Comparai"
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
                   className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
                 />
                 Comparar Preços
@@ -688,8 +689,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', boxShadow: '0 4px 16px rgba(59,130,246,0.35)' }}
               >
                 <img
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                  alt="Comparai"
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
                   className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
                 />
                 Comparar Preços

@@ -84,8 +84,8 @@ const MESSAGE_TEMPLATES = {
     },
     {
       id: 'comparai_introduction',
-      name: '🔍 Apresentando o Comparai',
-      subject: '🔍 {{name}}, conheça o COMPARAI - Comparação Inteligente!',
+      name: '🔍 Apresentando o CompareAQUI',
+      subject: '🔍 {{name}}, conheça o CompareAQUI - Comparação Inteligente!',
       body: `<!DOCTYPE html>
 <html>
 <head>
@@ -101,14 +101,14 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparai" style="width: 150px;">
-      <h1 style="color: white; margin: 10px 0;">🔍 COMPARAI</h1>
+      <img src="https://leilaonozap.net/compareaqui-icon.png" alt="CompareAQUI" style="width: 150px;">
+      <h1 style="color: white; margin: 10px 0;">🔍 CompareAQUI</h1>
       <p style="color: #dbeafe;">Comparação Inteligente de Preços</p>
     </div>
     
     <div class="content">
       <h2>Olá {{name}}! 👋</h2>
-      <p>Conheça o <strong>COMPARAI</strong>, nossa ferramenta EXCLUSIVA que garante que você SEMPRE pague o melhor preço!</p>
+      <p>Conheça o <strong>CompareAQUI</strong>, nossa ferramenta EXCLUSIVA que garante que você SEMPRE pague o melhor preço!</p>
       
       <h3>🤖 Como Funciona?</h3>
       <p>✅ Analisamos AUTOMATICAMENTE dezenas de lojas</p>
@@ -116,17 +116,17 @@ const MESSAGE_TEMPLATES = {
       <p>✅ Mostramos se você está ECONOMIZANDO</p>
       <p>🛡️ Serviço 100% INDEPENDENTE e IMPARCIAL!</p>
       
-      <p style="text-align: center;"><strong>Acesse nossos leilões e veja o Comparai em ação!</strong></p>
+      <p style="text-align: center;"><strong>Acesse nossos leilões e veja o CompareAQUI em ação!</strong></p>
     </div>
 
     <div class="footer">
-      <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png" alt="Comparai" style="width: 60px;">
+      <img src="https://leilaonozap.net/compareaqui-icon.png" alt="CompareAQUI" style="width: 60px;">
       <p>Equipe Leilão NoZap - Transparência garantida!</p>
     </div>
   </div>
 </body>
 </html>`,
-      sms: 'Oi {{name}}! 🔍 Conheça o COMPARAI - Compare preços e economize! Acesse nossos leilões!'
+      sms: 'Oi {{name}}! 🔍 Conheça o CompareAQUI - Compare preços e economize! Acesse nossos leilões!'
     },
     {
       id: 'new_auction_alert',

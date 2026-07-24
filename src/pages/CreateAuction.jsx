@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 
@@ -1756,7 +1757,7 @@ export default function CreateAuction() {
                       {/* 🆕 MODO COMPARAI */}
                       <div>
                         <Label htmlFor="comparai_mode" className="text-sm font-medium text-gray-400">
-                          🔍 Onde a Comparai vai buscar o preço?
+                          🔍 Onde o CompareAQUI vai buscar o preço?
                         </Label>
                         <Select value={formData.comparai_mode} onValueChange={(value) => handleInputChange("comparai_mode", value)}>
                           <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100">
@@ -1770,14 +1771,14 @@ export default function CreateAuction() {
                             </SelectItem>
                             <SelectItem value="google_shopping">
                               <div className="flex items-center gap-2">
-                                <span>🔎 Usar Comparai (página de arremate)</span>
+                                <span>🔎 Usar CompareAQUI (página de arremate)</span>
                               </div>
                             </SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500 mt-1">
                           {formData.comparai_mode === 'supplier'
-                            ? '🏭 A Comparai buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)'
+                            ? '🏭 O CompareAQUI buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)'
                             : '🔎 Mesma comparação usada nos produtos de arremate'}
                         </p>
                       </div>
@@ -1788,7 +1789,7 @@ export default function CreateAuction() {
                           <div>
                             <Label htmlFor="supplier_url" className="text-sm font-bold text-green-300 flex items-center gap-2 mb-2">
                               <LinkIcon className="w-4 h-4" />
-                              🏭 URL do Fornecedor (para Comparai) *
+                              🏭 URL do Fornecedor (para o CompareAQUI) *
                             </Label>
                             <Input
                               id="supplier_url"
@@ -1801,11 +1802,11 @@ export default function CreateAuction() {
                             />
                             <p className="text-xs text-green-300 mt-2 flex items-center gap-1">
                               <img
-                                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                                alt="Comparai"
+                                src={CompareAquiIcon}
+                                alt="CompareAQUI"
                                 className="w-4 h-4 rounded-full"
                               />
-                              <span>A Comparai usará esta URL para buscar o preço oficial do fornecedor!</span>
+                              <span>O CompareAQUI usará esta URL para buscar o preço oficial do fornecedor!</span>
                             </p>
                           </div>
 
@@ -1867,7 +1868,7 @@ export default function CreateAuction() {
                             />
 
                             <p className="text-xs text-green-300 mt-2">
-                              Esta logo aparecerá no card "Preço no Fabricante" da Comparai
+                              Esta logo aparecerá no card "Preço no Fabricante" do CompareAQUI
                             </p>
                           </div>
                         </div>

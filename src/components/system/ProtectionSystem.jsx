@@ -81,10 +81,10 @@ const PROTECTED_FILES = {
     { path: 'components/admin/MessageDispatcher.jsx', critical: false, description: 'Envio de mensagens em massa' },
     
     // Comparai Components
-    { path: 'components/comparai/ComparaiButton.jsx', critical: true, description: 'Botão Comparai' },
+    { path: 'components/comparai/ComparaiButton.jsx', critical: true, description: 'Botão CompareAQUI' },
     { path: 'components/comparai/ComparaiModal.jsx', critical: true, description: 'Modal de comparação' },
     { path: 'components/comparai/PechincaBadge.jsx', critical: false, description: 'Badge de pechincha' },
-    { path: 'components/comparai/ComparaiFloatingButton.jsx', critical: true, description: 'Botão flutuante Comparai' },
+    { path: 'components/comparai/ComparaiFloatingButton.jsx', critical: true, description: 'Botão flutuante CompareAQUI' },
     
     // System Components
     { path: 'components/system/ProtectionRules.jsx', critical: true, description: 'Regras de proteção' },
@@ -105,7 +105,7 @@ const PROTECTED_FILES = {
     { path: 'entities/Bid.json', critical: true, description: 'Entidade de lances' },
     { path: 'entities/AuctionMessage.json', critical: true, description: 'Mensagens de leilão' },
     { path: 'entities/AppUser.json', critical: true, description: 'Usuários do app' },
-    { path: 'entities/ComparaiLog.json', critical: false, description: 'Logs da Comparai' },
+    { path: 'entities/ComparaiLog.json', critical: false, description: 'Logs do CompareAQUI' },
     { path: 'entities/SystemLog.json', critical: false, description: 'Logs do sistema' },
     { path: 'entities/User.json', critical: true, description: 'Usuários da plataforma' },
   ],

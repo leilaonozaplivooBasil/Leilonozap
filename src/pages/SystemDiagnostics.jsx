@@ -227,7 +227,7 @@ export default function SystemDiagnostics() {
               Sistema ({systemLogs.length})
             </TabsTrigger>
             <TabsTrigger value="comparai">
-              Comparai ({comparaiLogs.length})
+              CompareAQUI ({comparaiLogs.length})
             </TabsTrigger>
             <TabsTrigger value="frontend">
               Frontend ({frontendLogs.length})
