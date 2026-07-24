@@ -55,6 +55,7 @@ function FlashCard({ p }) {
 export default function OfertasRelampago({ products = [] }) {
   const navigate = useNavigate();
   const [left, setLeft] = React.useState(0);
+  const trackRef = React.useRef(null);
 
   React.useEffect(() => {
     const tick = () => {
@@ -75,6 +76,45 @@ export default function OfertasRelampago({ products = [] }) {
     .slice(0, 12)
     .map((x) => x.p);
 
+  // Carrossel andando sozinho (marquee contínuo). Os cards são duplicados; quando o
+  // scroll passa de um "período" (largura de uma leva), volta o mesmo tanto → loop sem
+  // emenda. Pausa ao passar o mouse / tocar. Respeita "reduzir movimento".
+  React.useEffect(() => {
+    const el = trackRef.current;
+    if (!el || ofertas.length < 4) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    let paused = false, raf = 0, last = 0, period = 0;
+    const enter = () => { paused = true; };
+    const leave = () => { paused = false; };
+    el.addEventListener('pointerenter', enter);
+    el.addEventListener('pointerleave', leave);
+    el.addEventListener('touchstart', enter, { passive: true });
+    el.addEventListener('touchend', leave, { passive: true });
+    const SPEED = 34; // px por segundo
+    const step = (ts) => {
+      if (!last) last = ts;
+      const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+      if (!period) {
+        const c = el.children;
+        period = c[ofertas.length] ? c[ofertas.length].offsetLeft - c[0].offsetLeft : 0;
+      }
+      if (!paused && period > 0) {
+        let n = el.scrollLeft + SPEED * dt;
+        if (n >= period) n -= period;
+        el.scrollLeft = n;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('pointerenter', enter);
+      el.removeEventListener('pointerleave', leave);
+      el.removeEventListener('touchstart', enter);
+      el.removeEventListener('touchend', leave);
+    };
+  }, [ofertas.length]);
+
   if (ofertas.length < 4) return null;
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
 
@@ -82,7 +122,7 @@ export default function OfertasRelampago({ products = [] }) {
   // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="bg-gray-800/40 border border-gray-700 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden">
+    <div className="relative z-10 -mt-10 sm:-mt-16 bg-gray-900/60 backdrop-blur-md border border-gray-700 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden shadow-2xl shadow-black/40">
       {/* cabeçalho com respiro lateral normal */}
       <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
@@ -95,18 +135,17 @@ export default function OfertasRelampago({ products = [] }) {
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      {/* faixa deslizante — full-bleed até a borda da caixa, com fade de continuação à direita */}
+      {/* faixa deslizante — anda sozinha (marquee). Cards duplicados p/ loop sem emenda. */}
       <div className="relative">
         <div
-          className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pl-4 snap-x snap-mandatory scroll-smooth"
-          style={{ scrollPaddingLeft: '1rem' }}
+          ref={trackRef}
+          className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-4"
         >
-          {ofertas.map((p) => <div key={p.id} className="snap-start"><FlashCard p={p} /></div>)}
-          {/* respiro final: garante o último card inteiro e mostra que a faixa continua até o fim */}
-          <div className="shrink-0 w-4" aria-hidden />
+          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0"><FlashCard p={p} /></div>)}
         </div>
-        {/* fade suave na borda direita (não bloqueia o scroll) */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-gray-900/60 to-transparent" aria-hidden />
+        {/* fades nas bordas (não bloqueiam o scroll) */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-gray-900/70 to-transparent" aria-hidden />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-gray-900/50 to-transparent" aria-hidden />
       </div>
     </div>
   );
