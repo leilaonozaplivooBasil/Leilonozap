@@ -5,6 +5,13 @@ import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
 import { RatingBadge } from './StarRating';
+// 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
+// imediata em produção. Formato 16:5 (1920×600) — mostrados com fit=contain, sem cortar.
+import bannerCat1 from '@/assets/banners/banner1.webp';
+import bannerCat2 from '@/assets/banners/banner2.webp';
+import bannerCat3 from '@/assets/banners/banner3.webp';
+import bannerCat4 from '@/assets/banners/banner4.webp';
+import bannerCat5 from '@/assets/banners/banner5.webp';
 
 const WHATSAPP = '5521984072064';
 const SOCIAL = {
@@ -29,6 +36,19 @@ import {
 } from 'lucide-react';
 
 const LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+
+// Banners oficiais da loja (rotativos). Cada um entra como desktop + mobile para
+// aparecer em qualquer dispositivo. Os de licenciado (4 e 5) linkam para /Licensing.
+const CATALOG_BANNERS = [
+  { image_url: bannerCat1, title: 'Catálogo Leilão NoZap — até 70% OFF · Entrega Full' },
+  { image_url: bannerCat2, title: 'Ferramentas Entrega Full — até 85% de desconto' },
+  { image_url: bannerCat3, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
+  { image_url: bannerCat4, title: 'Torne-se um Licenciado — receba até 20% de comissão', link_url: createPageUrl('Licensing') },
+  { image_url: bannerCat5, title: 'Seja um Licenciado — venda no catálogo e ganhe de casa', link_url: createPageUrl('Licensing') },
+].flatMap((b, i) => [
+  { ...b, id: `nz-banner-${i}-d`, device_type: 'desktop' },
+  { ...b, id: `nz-banner-${i}-m`, device_type: 'mobile' },
+]);
 
 // Ícone redondo do rail de categorias (estilo Shopee, cores Leila)
 function RailIcon({ icon: Icon, label, onClick, accent = 'green' }) {
@@ -173,15 +193,9 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
       {/* 3) Hero: banner + 2 cards promo */}
       <div className="max-w-[1280px] mx-auto px-4 pt-5">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="lg:col-span-2 relative rounded-xl overflow-hidden min-h-[200px] flex flex-col items-center justify-center text-white p-8"
-            style={{ background: 'linear-gradient(120deg,#15803d,#16a34a,#22c55e)' }}>
-            <span className="text-2xl sm:text-3xl font-black tracking-tight text-center">CATÁLOGO LEILÃO NOZAP</span>
-            <span className="mt-2 text-green-50">Até <b className="text-yellow-300">70% OFF</b> · Entrega Full</span>
-            {banners.length > 0 && (
-              <div className="absolute inset-0">
-                <RotatingBanner banners={banners} heightClass="h-full" rounded={false} />
-              </div>
-            )}
+          {/* Carrossel de banners oficiais da loja — rotativo, 16:5, sem cortar (fit=contain) */}
+          <div className="lg:col-span-2 relative rounded-xl overflow-hidden aspect-[16/5] bg-[#0f172a]">
+            <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
           </div>
           <div className="grid grid-rows-2 gap-3">
             <div className="rounded-xl p-5 text-white flex flex-col justify-center" style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}>
