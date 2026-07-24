@@ -100,13 +100,9 @@ const CONTEXTS = {
 //    Define qual contexto a sidebar deve mostrar quando o admin está em X página
 // =====================================================================
 const CONTEXT_BY_PAGE = {
-  // Loja Virtual (cliente público comprando)
-  Catalog: "loja_virtual",
-  CatalogProductDetails: "loja_virtual",
-  Cart: "loja_virtual",
-  CatalogCheckout: "loja_virtual",
-  CatalogCheckout2: "loja_virtual",
-  MyCatalogOrders: "loja_virtual",
+  // Loja Virtual (cliente público comprando): admin NÃO vê sidebar aqui — enxerga a
+  // loja igual a um cliente comum. A navegação admin da loja fica nos painéis de
+  // gestão (CatalogManagement etc.), não sobreposta na vitrine.
 
   // Arrematante (rota /leiloes vai pra Home, AuctionRoom é sala de leilão)
   Home: "arrematante",
