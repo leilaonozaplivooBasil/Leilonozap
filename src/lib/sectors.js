@@ -54,12 +54,20 @@ export const SECTORS = [
 ];
 
 // Cards de setor da página de abertura (o "organizado por setores" que o cliente pediu).
-// Ícones lucide — os emojis saíram daqui no rebranding visual de 24/07.
+// Ícones 3D próprios (gerados no Magnific, fundo removido) — os emojis saíram no
+// rebranding visual de 24/07. `icon` (lucide) fica como fallback para outros usos.
+import icoLeiloes from '@/assets/setores/leiloes.webp';
+import icoLoja from '@/assets/setores/loja.webp';
+import icoAoVivo from '@/assets/setores/aovivo.webp';
+import icoFabrica from '@/assets/setores/fabrica.webp';
+import icoFoguinho from '@/assets/setores/foguinho.webp';
+import icoDinheiro from '@/assets/setores/dinheiro.webp';
+
 export const HOME_SECTOR_CARDS = [
-  { title: 'Leilões', desc: 'Dê seu lance e arremate', icon: Gavel, page: 'Home', accent: 'emerald' },
-  { title: 'Loja Virtual', desc: 'Compre agora, entrega no Brasil', icon: ShoppingBag, page: 'Catalog', accent: 'green' },
-  { title: 'Ao Vivo na Livoo', desc: 'Compre com o vendedor na tela', icon: Radio, external: LIVOO_FEED, accent: 'red' },
-  { title: 'Direto de Fábrica', desc: 'Novos, direto do fabricante', icon: Factory, page: 'DiretoDeFabrica', accent: 'blue' },
-  { title: 'Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', icon: Flame, page: 'ArremateDevolucoes', accent: 'orange' },
-  { title: 'Ganhe Dinheiro', desc: 'Seja licenciado ou parceiro', icon: DollarSign, page: 'Licensing', accent: 'amber' },
+  { title: 'Leilões', desc: 'Dê seu lance e arremate', icon: Gavel, icon3d: icoLeiloes, page: 'Home', accent: 'emerald' },
+  { title: 'Loja Virtual', desc: 'Compre agora, entrega no Brasil', icon: ShoppingBag, icon3d: icoLoja, page: 'Catalog', accent: 'green' },
+  { title: 'Ao Vivo na Livoo', desc: 'Compre com o vendedor na tela', icon: Radio, icon3d: icoAoVivo, external: LIVOO_FEED, accent: 'red' },
+  { title: 'Direto de Fábrica', desc: 'Novos, direto do fabricante', icon: Factory, icon3d: icoFabrica, page: 'DiretoDeFabrica', accent: 'blue' },
+  { title: 'Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', icon: Flame, icon3d: icoFoguinho, page: 'ArremateDevolucoes', accent: 'orange' },
+  { title: 'Ganhe Dinheiro', desc: 'Seja licenciado ou parceiro', icon: DollarSign, icon3d: icoDinheiro, page: 'Licensing', accent: 'amber' },
 ];

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { createPageUrl } from '@/utils';
-import { Gavel, ShoppingBag, Flame, Truck, ShieldCheck, ArrowRight, Zap, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Gavel, ShoppingBag, Flame, Truck, ShieldCheck, ArrowRight, Zap, Search } from 'lucide-react';
 import { HOME_SECTOR_CARDS } from '@/lib/sectors';
 
 // cores por setor (o card carrega a identidade da vertical)
@@ -18,50 +18,6 @@ export default function Recepcao() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ leiloes: 0, produtos: 0 });
   const [produtos, setProdutos] = useState([]);
-
-  // carrossel de setores
-  const sectorsRef = useRef(null);
-  const [sectorIndex, setSectorIndex] = useState(0);
-  const [sectorPages, setSectorPages] = useState(1);
-
-  // largura de um card + gap; quantos cabem por vez muda com o breakpoint (CSS)
-  const metrics = () => {
-    const rail = sectorsRef.current;
-    if (!rail) return { step: 1, perView: 1, pages: 1 };
-    const card = rail.querySelector('.sector-card');
-    const step = card ? card.offsetWidth + 16 : rail.clientWidth;
-    const perView = Math.max(1, Math.round(rail.clientWidth / step));
-    return { step, perView, pages: Math.max(1, Math.ceil(HOME_SECTOR_CARDS.length / perView)) };
-  };
-
-  const scrollSectors = (dir) => {
-    const rail = sectorsRef.current;
-    if (!rail) return;
-    const { step, perView } = metrics();
-    rail.scrollBy({ left: dir * step * perView, behavior: 'smooth' });
-  };
-
-  const goToSector = (page) => {
-    const rail = sectorsRef.current;
-    if (!rail) return;
-    const { step, perView } = metrics();
-    rail.scrollTo({ left: page * step * perView, behavior: 'smooth' });
-  };
-
-  const onSectorsScroll = () => {
-    const rail = sectorsRef.current;
-    if (!rail) return;
-    const { step, perView, pages } = metrics();
-    setSectorPages(pages);
-    setSectorIndex(Math.min(pages - 1, Math.round(rail.scrollLeft / (step * perView))));
-  };
-
-  useEffect(() => {
-    const sync = () => { setSectorPages(metrics().pages); onSectorsScroll(); };
-    sync();
-    window.addEventListener('resize', sync);
-    return () => window.removeEventListener('resize', sync);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -106,26 +62,20 @@ export default function Recepcao() {
         .prod-card:hover { transform: translateY(-6px); border-color: rgba(52,211,153,.6); }
         .shine { background: linear-gradient(110deg,#34d399 0%, #fbbf24 60%, #34d399 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
 
-        /* carrossel de setores: swipe nativo no mobile, setas no desktop */
-        .sector-rail {
-          display: flex; gap: 16px;
-          overflow-x: auto; scroll-snap-type: x mandatory;
-          scroll-padding-left: 0; padding: 4px 2px 8px;
-          -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        /* faixa de setores correndo sozinha (mesmo padrão das Ofertas Relâmpago) */
+        @keyframes sectorMarquee { to { transform: translateX(-50%); } }
+        .sector-viewport { position: relative; overflow: hidden; }
+        .sector-marquee {
+          display: flex; gap: 16px; width: max-content; padding: 4px 2px 8px;
+          animation: sectorMarquee 48s linear infinite; will-change: transform;
         }
-        .sector-rail::-webkit-scrollbar { display: none; }
-        .sector-card { flex: 0 0 auto; width: 250px; scroll-snap-align: start; }
-        @media (min-width: 700px)  { .sector-card { width: calc((100% - 16px) / 2); } }
-        @media (min-width: 1000px) { .sector-card { width: calc((100% - 48px) / 4); } }
-        .sector-nav {
-          position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
-          width: 40px; height: 40px; border-radius: 999px; cursor: pointer;
-          display: none; align-items: center; justify-content: center;
-          background: rgba(11,26,18,.92); border: 1px solid rgba(255,255,255,.14);
-          color: #e9f5ef; transition: background .2s, border-color .2s;
-        }
-        .sector-nav:hover { background: #12271b; border-color: rgba(52,211,153,.5); }
-        @media (min-width: 1000px) { .sector-nav { display: inline-flex; } }
+        .sector-viewport:hover .sector-marquee,
+        .sector-viewport:active .sector-marquee { animation-play-state: paused; }
+        .sector-card { flex: 0 0 auto; width: 252px; }
+        @media (prefers-reduced-motion: reduce) { .sector-marquee { animation: none; } }
+        .sector-fade { position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; }
+        .sector-fade-l { left: 0; background: linear-gradient(90deg, #07140d, transparent); }
+        .sector-fade-r { right: 0; background: linear-gradient(270deg, #07140d, transparent); }
       `}</style>
 
       {/* HERO */}
@@ -196,25 +146,16 @@ export default function Recepcao() {
           </h2>
           <p style={{ color: '#9fb3aa', textAlign: 'center', margin: '0 0 30px' }}>Escolha o setor e vá direto ao ponto.</p>
 
-          {/* CARROSSEL — swipe no mobile, setas no desktop. Antes era um grid que deixava
-              uma segunda fileira órfã com 2 cards. */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => scrollSectors(-1)}
-              aria-label="Setores anteriores"
-              className="sector-nav"
-              style={{ left: -8 }}
-            >
-              <ChevronLeft size={20} />
-            </button>
-
-            <div ref={sectorsRef} onScroll={onSectorsScroll} className="sector-rail">
-              {HOME_SECTOR_CARDS.map((s) => {
+          {/* MARQUEE — a faixa corre sozinha, igual às Ofertas Relâmpago da loja.
+              Cards duplicados fazem translateX(-50%) fechar o loop sem emenda.
+              Pausa no hover (desktop) e ao tocar (mobile). */}
+          <div className="sector-viewport">
+            <div className="sector-marquee">
+              {[...HOME_SECTOR_CARDS, ...HOME_SECTOR_CARDS].map((s, i) => {
                 const c = ACCENT[s.accent] || '#34d399';
-                const Icon = s.icon;
                 return (
                   <button
-                    key={s.title}
+                    key={`${s.title}-${i}`}
                     onClick={() => (s.external ? window.open(s.external, '_blank', 'noopener') : navigate(createPageUrl(s.page)))}
                     className="prod-card sector-card"
                     style={{
@@ -225,12 +166,18 @@ export default function Recepcao() {
                   >
                     <span
                       style={{
-                        width: 44, height: 44, borderRadius: 12, marginBottom: 4,
+                        width: 56, height: 56, borderRadius: 14, marginBottom: 4,
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        background: `${c}1f`, border: `1px solid ${c}40`,
+                        background: `${c}14`, border: `1px solid ${c}33`,
                       }}
                     >
-                      <Icon size={22} color={c} strokeWidth={2} />
+                      <img
+                        src={s.icon3d}
+                        alt=""
+                        aria-hidden
+                        style={{ width: 40, height: 40, objectFit: 'contain' }}
+                        loading="lazy"
+                      />
                     </span>
                     <span style={{ fontSize: 18, fontWeight: 800, color: c }}>{s.title}</span>
                     <span style={{ fontSize: 13.5, color: '#9fb3aa', lineHeight: 1.45 }}>{s.desc}</span>
@@ -241,31 +188,9 @@ export default function Recepcao() {
                 );
               })}
             </div>
-
-            <button
-              onClick={() => scrollSectors(1)}
-              aria-label="Próximos setores"
-              className="sector-nav"
-              style={{ right: -8 }}
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-
-          {/* indicadores */}
-          <div style={{ display: sectorPages > 1 ? 'flex' : 'none', justifyContent: 'center', gap: 7, marginTop: 18 }}>
-            {Array.from({ length: sectorPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goToSector(i)}
-                aria-label={`Ir para a página ${i + 1} dos setores`}
-                style={{
-                  width: i === sectorIndex ? 22 : 7, height: 7, borderRadius: 99, border: 'none',
-                  cursor: 'pointer', padding: 0, transition: 'width .25s, background .25s',
-                  background: i === sectorIndex ? '#34d399' : 'rgba(255,255,255,.18)',
-                }}
-              />
-            ))}
+            {/* fades nas bordas */}
+            <div className="sector-fade sector-fade-l" aria-hidden />
+            <div className="sector-fade sector-fade-r" aria-hidden />
           </div>
         </div>
       </section>
