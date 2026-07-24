@@ -78,21 +78,35 @@ export default function OfertasRelampago({ products = [] }) {
   if (ofertas.length < 4) return null;
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
 
+  // Carrossel "estende até o final" (padrão Base44): a faixa de cards sangra até a borda
+  // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
+  // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="bg-gray-800/40 border border-gray-700 rounded-2xl p-4 mb-8">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-gray-800/40 border border-gray-700 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden">
+      {/* cabeçalho com respiro lateral normal */}
+      <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
           <span className="text-xl font-black flex items-center gap-1.5" style={{ color: '#f5c451' }}>
             <Zap className="w-6 h-6 fill-yellow-400 text-yellow-400" /> OFERTAS RELÂMPAGO
           </span>
           <span className="flex items-center gap-1"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
         </div>
-        <button onClick={() => navigate(createPageUrl('Catalog'))} className="text-green-400 text-sm font-semibold flex items-center hover:text-green-300">
+        <button onClick={() => navigate(createPageUrl('Catalog'))} className="text-green-400 text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pr-4 snap-x snap-mandatory scroll-smooth">
-        {ofertas.map((p) => <div key={p.id} className="snap-start"><FlashCard p={p} /></div>)}
+      {/* faixa deslizante — full-bleed até a borda da caixa, com fade de continuação à direita */}
+      <div className="relative">
+        <div
+          className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pl-4 snap-x snap-mandatory scroll-smooth"
+          style={{ scrollPaddingLeft: '1rem' }}
+        >
+          {ofertas.map((p) => <div key={p.id} className="snap-start"><FlashCard p={p} /></div>)}
+          {/* respiro final: garante o último card inteiro e mostra que a faixa continua até o fim */}
+          <div className="shrink-0 w-4" aria-hidden />
+        </div>
+        {/* fade suave na borda direita (não bloqueia o scroll) */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-gray-900/60 to-transparent" aria-hidden />
       </div>
     </div>
   );
