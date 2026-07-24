@@ -937,6 +937,16 @@ export default function Layout({ children, currentPageName }) {
                   width={160}
                   height={40}
                 />
+                {/* Nome ao lado da logo (estilo Mercado Livre) */}
+                <span
+                  onClick={() => navigate("/")}
+                  className="hidden sm:flex flex-col leading-none cursor-pointer select-none -ml-1"
+                >
+                  <span className="text-lg font-black text-white tracking-tight">
+                    Leilão <span className="text-yellow-400">NoZap</span>
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-300/80 tracking-wide">leilão &amp; loja virtual</span>
+                </span>
               </div>
 
               {/* MENU DESKTOP */}

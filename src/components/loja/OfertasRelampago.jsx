@@ -56,7 +56,6 @@ function FlashCard({ p }) {
 export default function OfertasRelampago({ products = [] }) {
   const navigate = useNavigate();
   const [left, setLeft] = React.useState(0);
-  const trackRef = React.useRef(null);
 
   React.useEffect(() => {
     const tick = () => {
@@ -76,45 +75,6 @@ export default function OfertasRelampago({ products = [] }) {
     .sort((a, b) => b.d - a.d)
     .slice(0, 12)
     .map((x) => x.p);
-
-  // Carrossel andando sozinho (marquee contínuo). Os cards são duplicados; quando o
-  // scroll passa de um "período" (largura de uma leva), volta o mesmo tanto → loop sem
-  // emenda. Pausa ao passar o mouse / tocar. Respeita "reduzir movimento".
-  React.useEffect(() => {
-    const el = trackRef.current;
-    if (!el || ofertas.length < 4) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
-    let paused = false, raf = 0, last = 0, period = 0;
-    const enter = () => { paused = true; };
-    const leave = () => { paused = false; };
-    el.addEventListener('pointerenter', enter);
-    el.addEventListener('pointerleave', leave);
-    el.addEventListener('touchstart', enter, { passive: true });
-    el.addEventListener('touchend', leave, { passive: true });
-    const SPEED = 34; // px por segundo
-    const step = (ts) => {
-      if (!last) last = ts;
-      const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
-      if (!period) {
-        const c = el.children;
-        period = c[ofertas.length] ? c[ofertas.length].offsetLeft - c[0].offsetLeft : 0;
-      }
-      if (!paused && period > 0) {
-        let n = el.scrollLeft + SPEED * dt;
-        if (n >= period) n -= period;
-        el.scrollLeft = n;
-      }
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => {
-      cancelAnimationFrame(raf);
-      el.removeEventListener('pointerenter', enter);
-      el.removeEventListener('pointerleave', leave);
-      el.removeEventListener('touchstart', enter);
-      el.removeEventListener('touchend', leave);
-    };
-  }, [ofertas.length]);
 
   if (ofertas.length < 4) return null;
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
@@ -137,15 +97,19 @@ export default function OfertasRelampago({ products = [] }) {
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      {/* faixa deslizante — anda sozinha (marquee). Cards duplicados p/ loop sem emenda. */}
-      <div className="relative">
-        <div
-          ref={trackRef}
-          className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-4"
-        >
-          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0"><FlashCard p={p} /></div>)}
+      {/* faixa deslizante — marquee 100% CSS (transform na GPU, sem reflow). Cards duplicados
+          (cada um com pr-3) fazem translateX(-50%) fechar o loop sem emenda. Pausa no hover. */}
+      <style>{`
+        @keyframes ofrMarquee { to { transform: translateX(-50%); } }
+        .ofr-marquee { animation: ofrMarquee 45s linear infinite; will-change: transform; }
+        .ofr-marquee:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .ofr-marquee { animation: none; } }
+      `}</style>
+      <div className="relative overflow-hidden">
+        <div className="ofr-marquee flex w-max px-2">
+          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} /></div>)}
         </div>
-        {/* fades nas bordas (não bloqueiam o scroll) */}
+        {/* fades nas bordas */}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-gray-900/70 to-transparent" aria-hidden />
         <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-gray-900/50 to-transparent" aria-hidden />
       </div>
