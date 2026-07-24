@@ -32,13 +32,13 @@ export default function LojaFloatActions() {
 
       {/* Ao vivo + Suporte — canto DIREITO inferior */}
       <div className="fixed right-4 bottom-5 z-50 flex flex-col items-center gap-3">
-        {/* Ao vivo — abre o feed da Livoo Live (padrão pulsante) */}
-        <a href={LIVOO_FEED} target="_blank" rel="noreferrer" title="Ao vivo pela Livoo Live" className="flex flex-col items-center">
+        {/* Ao vivo — abre o feed da Livoo Live. Vermelho pulsante (padrão definitivo Heloim / site publicado) */}
+        <a href={LIVOO_FEED} target="_blank" rel="noreferrer" title="Ao vivo agora" className="flex flex-col items-center">
           <span
             className="relative w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
-            style={{ background: 'linear-gradient(135deg,#E91E83,#ff6b35)', boxShadow: '0 8px 24px rgba(233,30,131,.45)' }}
+            style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 8px 24px rgba(220,38,38,.5)' }}
           >
-            <span aria-hidden className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ background: '#E91E83' }} />
+            <span aria-hidden className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ background: '#ef4444' }} />
             <LivooMark size={26} plain className="relative text-white" />
           </span>
           <Label>Ao vivo</Label>

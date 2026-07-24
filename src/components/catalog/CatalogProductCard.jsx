@@ -402,21 +402,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating }
                 )}
               </Button>
 
-              {/* COMPARAR PREÇOS */}
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowComparai(true);
-                }}
-                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
-              >
-                <img 
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                  alt="Comparai"
-                  className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
-                />
-                <span className="truncate">COMPARAR PREÇOS</span>
-              </Button>
+              {/* COMPARAR PREÇOS — removido dos cards (não validado por Heloim / PONTO 21).
+                  O Comparai segue disponível pelo botão flutuante no canto esquerdo. */}
 
               {/* PEDIR PELO WHATSAPP — conversa direta */}
               <Button
