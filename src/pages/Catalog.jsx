@@ -597,7 +597,7 @@ export default function Catalog() {
   }, [currentUser]);
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
+    <div className="bg-gray-900 text-white min-h-screen overflow-x-hidden">
       <PagePerformanceTracker pageName="Catalog" />
       <style>{`
         .category-scroller {

@@ -176,10 +176,10 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
         </div>
       </div>
 
-      {/* 3) HERO: banner full-width rotativo */}
-      <div className="max-w-[1280px] mx-auto px-4 pt-4">
-        <div className="relative rounded-2xl overflow-hidden aspect-[16/5] bg-[#0f172a]">
-          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
+      {/* 3) HERO: banner full-bleed (borda a borda, estilo Mercado Livre) */}
+      <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
+        <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a]">
+          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="cover" />
         </div>
       </div>
     </div>
