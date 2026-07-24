@@ -127,6 +127,8 @@ export default function ConcursoLeilaoNozap() {
     } catch { setErr('Erro de conexão. Tente de novo.'); } finally { setSaving(false); }
   };
   const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ } };
+  // Admin: anexar foto do produto do dispositivo (converte em data URL leve, sem depender de URL externa)
+  const handleProdutoFoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setCfg((s) => ({ ...s, produto_foto: url })); } catch { /* */ } };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
   const copyLink = () => { navigator.clipboard?.writeText(myLink); setMsg('Link copiado!'); setTimeout(() => setMsg(''), 3500); };
   const shareZap = () => { const t = encodeURIComponent(`Tô no Concurso Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
@@ -329,7 +331,24 @@ export default function ConcursoLeilaoNozap() {
           <SecHead icon={Gift}>Destaque / Sorteio do dia</SecHead>
           <div className="space-y-2.5">
             <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className={inp} />
-            <input value={cfg.produto_foto || ''} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder="URL da foto do produto" className={inp} />
+            {/* Foto do produto: anexar do dispositivo OU colar uma URL */}
+            <div className="rounded-lg border border-white/10 bg-black/25 p-2.5 space-y-2">
+              <div className="flex items-center gap-2.5">
+                {cfg.produto_foto ? (
+                  <div className="relative shrink-0">
+                    <img src={cfg.produto_foto} alt="Prévia do produto" className="w-14 h-14 rounded-lg object-cover border border-white/15" />
+                    <button type="button" onClick={() => setCfg({ ...cfg, produto_foto: '' })} title="Remover foto" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full grid place-items-center bg-black/80 border border-white/20 text-white/90 text-xs leading-none hover:bg-red-600">×</button>
+                  </div>
+                ) : (
+                  <span className="w-14 h-14 rounded-lg grid place-items-center bg-black/40 border border-dashed border-white/20 shrink-0"><Gift className="w-6 h-6 text-white/40" /></span>
+                )}
+                <label className="flex-1 cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleProdutoFoto} />
+                  <span className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-purple-100 border border-purple-400/40 bg-purple-500/15 hover:bg-purple-500/25 transition-colors"><Camera className="w-4 h-4" /> {cfg.produto_foto ? 'Trocar foto' : 'Anexar foto do dispositivo'}</span>
+                </label>
+              </div>
+              <input value={(cfg.produto_foto || '').startsWith('data:') ? '' : (cfg.produto_foto || '')} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder={(cfg.produto_foto || '').startsWith('data:') ? 'Foto anexada ✓ — ou cole uma URL aqui' : 'ou cole a URL da foto do produto'} className={inp} />
+            </div>
             <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className={inp} />
             <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={3} className={`${inp} resize-none`} />
           </div>
