@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon, ChevronDown } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
+import DevLogoutButton from "@/components/dev/DevLogoutButton";
 import AoVivoAgora from "@/components/livoo/AoVivoAgora";
 import { SECTORS } from "@/lib/sectors";
 import SectorLink from "@/components/nav/SectorLink";
@@ -145,6 +146,9 @@ export default function NavDesktop({
       >
         <CartIcon className="w-5 h-5" />
       </Link>
+
+      {/* Botão dev "Sair (teste)" — ao lado do nome do usuário (só admin/super_admin/mestre) */}
+      <DevLogoutButton currentUser={currentUser} inline />
 
       {/* === AVATAR DO USUÁRIO / BOTÃO ENTRAR === */}
       <div className="ml-1">

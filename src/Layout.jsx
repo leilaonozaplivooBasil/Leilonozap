@@ -1119,8 +1119,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
 
-        {/* 🧪 DEV — Botão "Sair (teste)" visível apenas para admin/super_admin/email-master */}
-        <DevLogoutButton currentUser={currentUser} />
+        {/* 🧪 DEV — "Sair (teste)" agora fica inline na navbar (NavDesktop), ao lado do nome do usuário */}
 
       </div>
 
