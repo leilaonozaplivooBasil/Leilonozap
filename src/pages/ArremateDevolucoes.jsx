@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import AuctionCard from "../components/auction/AuctionCard";
+import { Flame, ShieldCheck, Truck, Package } from "lucide-react";
+import foguinho from "@/assets/foguinho-animado.webp";
 
 const Auction = base44.entities.Auction;
 
@@ -9,6 +11,7 @@ const Auction = base44.entities.Auction;
 export default function ArremateDevolucoes() {
   const [auctions, setAuctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     const cached = sessionStorage.getItem("return_auctions_cache");
@@ -67,33 +70,105 @@ export default function ArremateDevolucoes() {
     });
   }, [auctions]);
 
+  const activeCount = useMemo(() => sorted.filter((a) => a.status === 'active').length, [sorted]);
+  const closedCount = sorted.length - activeCount;
+
+  const visible = useMemo(() => {
+    if (filter === 'active') return sorted.filter((a) => a.status === 'active');
+    if (filter === 'closed') return sorted.filter((a) => a.status !== 'active');
+    return sorted;
+  }, [sorted, filter]);
+
+  const tabs = [
+    { id: 'all', label: 'Todos', count: sorted.length },
+    { id: 'active', label: 'Ativos', count: activeCount },
+    { id: 'closed', label: 'Encerrados', count: closedCount },
+  ];
+
   return (
     <div className="bg-gray-900 text-white min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">🔥 Arremate &amp; Devoluções</h1>
-          <p className="text-gray-300 mt-1">Lotes e devoluções de grandes varejistas — testados e funcionais, por uma fração do preço.</p>
+
+        {/* HERO */}
+        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-950/50 via-gray-900 to-gray-900 p-5 sm:p-7 mb-5">
+          <div className="absolute -top-24 -right-10 w-64 h-64 rounded-full bg-orange-500/10 blur-3xl pointer-events-none" />
+          <div className="relative flex items-start gap-3 sm:gap-4">
+            <img
+              src={foguinho}
+              alt=""
+              aria-hidden
+              className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 -mt-1 object-contain drop-shadow-[0_0_18px_rgba(249,115,22,0.35)]"
+            />
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Arremate &amp; Devoluções</h1>
+              <p className="text-gray-300 mt-1.5 text-sm sm:text-base max-w-2xl">
+                Lotes e devoluções de grandes varejistas — testados e funcionais, por uma fração do preço.
+              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-4 text-xs text-gray-300">
+                <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+                  <Flame className="w-3.5 h-3.5 text-orange-400" />
+                  {activeCount} {activeCount === 1 ? 'lote ativo' : 'lotes ativos'}
+                </span>
+                <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  Testados e funcionais
+                </span>
+                <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+                  <Truck className="w-3.5 h-3.5 text-emerald-400" />
+                  Envio para todo Brasil
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* FILTROS */}
+        {!isLoading && sorted.length > 0 && (
+          <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+                  filter === tab.id
+                    ? 'bg-white text-gray-900 border-white'
+                    : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                {tab.label}
+                <span className={filter === tab.id ? 'text-gray-500 ml-1.5' : 'text-gray-500 ml-1.5'}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {Array(9).fill(0).map((_, i) => (
-              <div key={i} className="bg-gray-800/70 backdrop-blur rounded-2xl p-4 sm:p-6 animate-pulse">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+            {Array(8).fill(0).map((_, i) => (
+              <div key={i} className="bg-gray-800/70 backdrop-blur rounded-2xl p-4 animate-pulse">
                 <div className="w-full aspect-square bg-gray-700/80 rounded-xl mb-4" />
-                <div className="h-6 bg-gray-700/80 rounded mb-2" />
+                <div className="h-5 bg-gray-700/80 rounded mb-2" />
                 <div className="h-4 bg-gray-700/70 rounded w-2/3" />
               </div>
             ))}
           </div>
-        ) : sorted.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-6xl mb-4">📦</div>
-            <h3 className="text-xl font-semibold mb-2 text-white">Nenhum lote disponível agora</h3>
-            <p className="text-gray-500">Volte mais tarde — novos lotes chegam toda semana.</p>
+        ) : visible.length === 0 ? (
+          <div className="text-center py-16 border border-white/10 bg-white/[0.02] rounded-2xl">
+            <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+              <Package className="w-7 h-7 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-white">
+              {sorted.length === 0 ? 'Nenhum lote disponível agora' : 'Nenhum lote nesta aba'}
+            </h3>
+            <p className="text-gray-500">
+              {sorted.length === 0 ? 'Volte mais tarde — novos lotes chegam toda semana.' : 'Escolha outra aba para ver os demais lotes.'}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {sorted.map((auction) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 items-stretch [&>*]:h-full">
+            {visible.map((auction) => (
               <AuctionCard key={auction.id} auction={auction} showFavoriteButton={false} />
             ))}
           </div>
