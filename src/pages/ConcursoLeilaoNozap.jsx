@@ -423,10 +423,18 @@ export default function ConcursoLeilaoNozap() {
               <p className="text-green-200/85 mt-1 font-semibold text-sm">Encha o grupo e ganhe prêmio todo dia</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {liveOn && <span className="text-xs font-black px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-white" style={{ background: LIVOO_GRAD }}><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> AO VIVO AGORA</span>}
-            <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-green-100"><Users className="w-3.5 h-3.5" /> {data.total || 0} participando</span>
-            {premioPeriodo && <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-yellow-300" style={{ background: 'rgba(245,196,81,.12)', border: '1px solid rgba(245,196,81,.4)' }}><Gift className="w-3.5 h-3.5" /> {premioPeriodo}</span>}
+          <div className="flex flex-col items-start sm:items-end gap-2">
+            <div className="flex flex-wrap gap-2">
+              {liveOn && <span className="text-xs font-black px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-white" style={{ background: LIVOO_GRAD }}><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> AO VIVO AGORA</span>}
+              <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-green-100"><Users className="w-3.5 h-3.5" /> {data.total || 0} participando</span>
+              {premioPeriodo && <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-yellow-300" style={{ background: 'rgba(245,196,81,.12)', border: '1px solid rgba(245,196,81,.4)' }}><Gift className="w-3.5 h-3.5" /> {premioPeriodo}</span>}
+            </div>
+            {/* Atalho do painel admin — abre direto em tela cheia (só admin vê) */}
+            {isAdmin && (
+              <button onClick={() => setAdminExpanded(true)} className="text-xs font-bold px-3.5 py-2 rounded-full inline-flex items-center gap-2 text-purple-100 shadow-lg shadow-purple-900/30 transition-transform active:scale-[.97]" style={{ background: 'linear-gradient(90deg,#8b5cf6,#7c3aed)', border: '1px solid rgba(139,92,246,.6)' }}>
+                <Settings2 className="w-4 h-4" /> Painel Admin <Maximize2 className="w-3.5 h-3.5 opacity-80" />
+              </button>
+            )}
           </div>
         </header>
 
@@ -444,15 +452,7 @@ export default function ConcursoLeilaoNozap() {
           </div>
         </div>
 
-        {/* ADMIN — card inline com botão pra expandir em tela cheia */}
-        {isAdmin && !adminExpanded && (
-          <div className="mt-6 rounded-2xl p-4 sm:p-5" style={{ background: 'linear-gradient(180deg,rgba(139,92,246,.12),rgba(139,92,246,.05))', border: '1px solid rgba(139,92,246,.4)' }}>
-            {AdminHeader(false)}
-            <div className="mt-4">{AdminInner}</div>
-          </div>
-        )}
-
-        {/* ADMIN — modo tela cheia (overlay) */}
+        {/* ADMIN — modo tela cheia (overlay), aberto pelo botão do topo */}
         {isAdmin && adminExpanded && (
           <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(3,10,7,.72)', backdropFilter: 'blur(6px)' }} onClick={() => setAdminExpanded(false)}>
             <div
