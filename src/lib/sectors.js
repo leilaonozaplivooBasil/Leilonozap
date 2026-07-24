@@ -3,14 +3,17 @@
 // Antes, cada vertical do negócio vivia escondida (botão solto na Home, filtro interno ou
 // página órfã sem link nenhum) e o cliente se perdia. Um setor novo entra só aqui.
 
+import { ShoppingBag, Gavel, DollarSign, Sparkles, Flame, Crown } from 'lucide-react';
+
 // 📺 Live é SEMPRE na Livoo Live (única plataforma de live do grupo).
 export const LIVOO_FEED = 'https://livoolive.com.br/app';
 
+// Ícones (lucide) usados no menu da navbar — substituem os emojis nos cabeçalhos/itens.
 export const SECTORS = [
   {
     key: 'comprar',
     title: 'Comprar',
-    emoji: '🛍️',
+    icon: ShoppingBag,
     href: { page: 'Catalog' },          // o título também é clicável
     blurb: 'Produtos com entrega em todo o Brasil',
     items: [
@@ -22,14 +25,14 @@ export const SECTORS = [
   {
     key: 'leiloes',
     title: 'Leilões',
-    emoji: '🔨',
+    icon: Gavel,
     href: { page: 'Home' },
     blurb: 'Arremate por uma fração do preço',
     items: [
       { title: 'Leilões ativos', desc: 'Entre na sala e dê seu lance', page: 'Home' },
-      { title: '✨ Direto de Fábrica', desc: 'Produtos novos, direto do fabricante', page: 'DiretoDeFabrica' },
-      { title: '🔥 Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', page: 'ArremateDevolucoes' },
-      { title: '👑 Collection', desc: 'Itens de luxo selecionados', page: 'LuxuryCollection' },
+      { title: 'Direto de Fábrica', icon: Sparkles, desc: 'Produtos novos, direto do fabricante', page: 'DiretoDeFabrica' },
+      { title: 'Arremate & Devoluções', icon: Flame, desc: 'Lotes e devoluções de varejistas', page: 'ArremateDevolucoes' },
+      { title: 'Collection', icon: Crown, desc: 'Itens de luxo selecionados', page: 'LuxuryCollection' },
     ],
   },
   // 'Ao Vivo' removido da navbar (duplicava o botão "AO VIVO AGORA"). O acesso à live
@@ -37,7 +40,7 @@ export const SECTORS = [
   {
     key: 'ganhar',
     title: 'Ganhe Dinheiro',
-    emoji: '💰',
+    icon: DollarSign,
     href: { page: 'Licensing' },
     blurb: 'Trabalhe com a gente e lucre junto',
     // Escada da rede (career_levels): Influenciador 5% → Vendedor 10% → Licenciado 13% → Parceiro 15%

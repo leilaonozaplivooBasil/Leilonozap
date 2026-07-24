@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon, ChevronDown } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
-import DevLogoutButton from "@/components/dev/DevLogoutButton";
 import AoVivoAgora from "@/components/livoo/AoVivoAgora";
 import { SECTORS } from "@/lib/sectors";
 import SectorLink from "@/components/nav/SectorLink";
@@ -97,7 +96,7 @@ export default function NavDesktop({
                 style={{ background: "rgba(10,15,28,0.97)", backdropFilter: "blur(20px)" }}
               >
                 <div className="px-4 py-3 border-b border-white/10">
-                  <p className="text-sm font-bold text-white">{s.emoji} {s.title}</p>
+                  <p className="text-sm font-bold text-white flex items-center gap-2">{s.icon && <s.icon className="w-4 h-4 text-emerald-300 shrink-0" />} {s.title}</p>
                   <p className="text-[11px] text-gray-400 mt-0.5">{s.blurb}</p>
                 </div>
                 <div className="p-1.5">
@@ -106,10 +105,13 @@ export default function NavDesktop({
                       key={it.title}
                       target={it}
                       onClick={() => setOpenSector(null)}
-                      className="block px-3 py-2.5 rounded-xl hover:bg-emerald-500/10 transition-colors group"
+                      className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl hover:bg-emerald-500/10 transition-colors group"
                     >
-                      <p className="text-sm font-semibold text-gray-100 group-hover:text-emerald-300">{it.title}</p>
-                      <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
+                      {it.icon && <it.icon className="w-4 h-4 mt-0.5 text-emerald-400 shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-100 group-hover:text-emerald-300">{it.title}</p>
+                        <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
+                      </div>
                     </SectorLink>
                   ))}
                 </div>
@@ -146,9 +148,6 @@ export default function NavDesktop({
       >
         <CartIcon className="w-5 h-5" />
       </Link>
-
-      {/* Botão dev "Sair (teste)" — ao lado do nome do usuário (só admin/super_admin/mestre) */}
-      <DevLogoutButton currentUser={currentUser} inline />
 
       {/* === AVATAR DO USUÁRIO / BOTÃO ENTRAR === */}
       <div className="ml-1">

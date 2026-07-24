@@ -16,7 +16,6 @@ import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
-import DevLogoutButton from "@/components/dev/DevLogoutButton";
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import RoleSidebar from "@/components/layout/RoleSidebar";
@@ -896,7 +895,6 @@ export default function Layout({ children, currentPageName }) {
         )}
         <PainelSelector />
         <PaymentConfirmationPopup />
-        <DevLogoutButton currentUser={currentUser} />
       </ErrorBoundary>
     );
   }

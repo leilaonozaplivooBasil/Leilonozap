@@ -196,7 +196,7 @@ export default function NavMobile({
                     }`}
                     style={open ? { background: "rgba(16,185,129,0.1)", borderLeft: "3px solid rgba(16,185,129,0.5)" } : {}}
                   >
-                    <span>{s.emoji}</span>
+                    {s.icon && <s.icon className="w-5 h-5 text-emerald-300 shrink-0" />}
                     <span className="flex-1 text-left">{s.title}</span>
                     {s.live && (
                       <span className="relative flex h-2 w-2" aria-hidden>
