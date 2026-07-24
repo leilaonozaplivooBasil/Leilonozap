@@ -401,19 +401,26 @@ export default function EditAuction() {
         setIsReactivating(true);
         try {
             console.log(`🔄 INICIANDO REATIVAÇÃO...`);
-            
-            // 🔧 CALCULA NOVO HORÁRIO (UTC) - CORRIGIDO
-            const [datePart, timePart] = reactivateTime.split('T');
-            const [year, month, day] = datePart.split('-');
-            const [hour, minute] = timePart.split(':');
-            
-            // Cria data em Brasília (UTC-3)
-            const brtDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:00-03:00`);
-            const utcEndTimeString = brtDate.toISOString();
 
-            console.log(`⏰ Input BRT: ${reactivateTime}`);
-            console.log(`⏰ Convertido UTC: ${utcEndTimeString}`);
-            console.log(`⏰ Verificação: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+            // 🔧 CALCULA NOVO HORÁRIO (UTC)
+            // ⚠️ Para presets relâmpago (+3min/+5min/etc.) o tempo tem que ser contado a partir
+            // do INSTANTE em que o leilão volta a ficar ativo — não do clique no botão. O clique
+            // congela um horário absoluto, mas entre o clique e a gravação passam-se o confirm e a
+            // deleção das mensagens (200ms cada), o que fazia o relógio voltar com tempo A MENOS.
+            // reactivatePreset guarda os minutos do preset ativo (null quando o admin editou a data
+            // à mão — nesse caso respeitamos o horário absoluto digitado).
+            const computeUtcEndTime = () => {
+                if (reactivatePreset != null) {
+                    return new Date(Date.now() + reactivatePreset * 60000).toISOString();
+                }
+                const [datePart, timePart] = reactivateTime.split('T');
+                const [year, month, day] = datePart.split('-');
+                const [hour, minute] = timePart.split(':');
+                // Cria data em Brasília (UTC-3)
+                return new Date(`${year}-${month}-${day}T${hour}:${minute}:00-03:00`).toISOString();
+            };
+
+            console.log(`⏰ Input BRT: ${reactivateTime}${reactivatePreset != null ? ` (preset +${reactivatePreset}min, recalculado na gravação)` : ' (horário fixo)'}`);
 
             // 🔧 BUSCA E DELETA MENSAGENS DE ENCERRAMENTO
             console.log(`🧹 Buscando mensagens de encerramento...`);
@@ -443,6 +450,11 @@ export default function EditAuction() {
             console.log(`✅ ${deletedCount} mensagens deletadas`);
 
             // 🔧 ATUALIZA O LEILÃO
+            // Calcula o end_time AGORA (após deletar mensagens) para que os presets relâmpago
+            // deem exatamente os minutos prometidos a partir deste instante.
+            const utcEndTimeString = computeUtcEndTime();
+            console.log(`⏰ end_time definitivo (UTC): ${utcEndTimeString}`);
+            console.log(`⏰ Verificação BRT: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
             console.log(`✅ Atualizando leilão para ATIVO...`);
             await Auction.update(auctionId, {
                 status: 'active',
