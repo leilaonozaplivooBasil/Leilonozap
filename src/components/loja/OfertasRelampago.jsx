@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Zap, ChevronRight } from 'lucide-react';
+import foguinho from '@/assets/foguinho.webp';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -129,7 +130,7 @@ export default function OfertasRelampago({ products = [] }) {
       {/* cabeçalho responsivo: título + timer + "Ver Tudo" que se ajustam sem quebrar feio no mobile */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4 px-3 sm:px-4">
         <span className="text-base sm:text-xl font-black flex items-center gap-1.5 whitespace-nowrap" style={{ color: '#f5c451' }}>
-          <Zap className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 text-yellow-400 shrink-0" /> OFERTAS RELÂMPAGO
+          <img src={foguinho} alt="" aria-hidden className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 -my-1 object-contain" /> OFERTAS RELÂMPAGO
         </span>
         <span className="flex items-center gap-1 shrink-0"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
         <button onClick={() => navigate(createPageUrl('Catalog'))} className="ml-auto text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0">

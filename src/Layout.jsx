@@ -928,7 +928,7 @@ export default function Layout({ children, currentPageName }) {
                 <img
                   src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
                   alt="Leilão NoZap"
-                  className="h-10 w-auto cursor-pointer hover:scale-105 transition-transform"
+                  className="h-12 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
