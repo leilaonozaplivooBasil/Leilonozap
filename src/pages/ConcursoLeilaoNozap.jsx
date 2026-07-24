@@ -3,6 +3,7 @@ import logoNozap from '@/assets/leilao-nozap-logo.png';
 import {
   Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
+  Maximize2, Minimize2, Save, Settings2,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -67,6 +68,17 @@ export default function ConcursoLeilaoNozap() {
   const [premiosEdit, setPremiosEdit] = useState({});
   const [savingCfg, setSavingCfg] = useState(false);
   const [rankExpanded, setRankExpanded] = useState(false);
+  const [adminExpanded, setAdminExpanded] = useState(false);
+
+  // Trava o scroll do fundo enquanto o painel admin está em tela cheia + fecha no ESC.
+  useEffect(() => {
+    if (!adminExpanded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') setAdminExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+  }, [adminExpanded]);
 
   // Convidado (?ref): manda DIRETO pro grupo (registra o clique, sem página/cadastro)
   useEffect(() => {
@@ -298,6 +310,106 @@ export default function ConcursoLeilaoNozap() {
     </div>
   );
 
+  // ---- estilos compartilhados do painel admin (consistência visual) ----
+  const inp = 'w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-purple-400/70 focus:bg-black/40 placeholder:text-white/35';
+  const SecHead = ({ icon: Ic, children, tint = 'text-purple-200', dot = 'rgba(139,92,246,.9)' }) => (
+    <p className={`text-xs font-bold uppercase tracking-wide flex items-center gap-2 mb-3 ${tint}`}>
+      <span className="w-6 h-6 rounded-lg grid place-items-center shrink-0" style={{ background: `${dot.replace('.9)', '.16)')}`, color: dot }}><Ic className="w-3.5 h-3.5" /></span>
+      {children}
+    </p>
+  );
+
+  // Conteúdo do painel admin — reaproveitado inline e no modo tela cheia.
+  const AdminInner = (
+    <>
+      {/* Cards de configuração */}
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
+        {/* Destaque */}
+        <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
+          <SecHead icon={Gift}>Destaque / Sorteio do dia</SecHead>
+          <div className="space-y-2.5">
+            <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className={inp} />
+            <input value={cfg.produto_foto || ''} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder="URL da foto do produto" className={inp} />
+            <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className={inp} />
+            <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={3} className={`${inp} resize-none`} />
+          </div>
+        </div>
+
+        {/* Live */}
+        <div className="rounded-2xl p-4 border" style={{ background: 'rgba(233,30,131,.06)', borderColor: 'rgba(233,30,131,.3)' }}>
+          <SecHead icon={Radio} tint="" dot="rgba(233,30,131,.9)"><span style={{ color: '#f5a3cf' }}>Live (Livoo)</span></SecHead>
+          <div className="space-y-2.5">
+            <label className="flex items-center gap-2 text-sm rounded-lg px-3 py-2.5 bg-black/25 border border-white/10 cursor-pointer hover:border-pink-400/40 transition-colors"><input type="checkbox" checked={!!cfg.live_ativa} onChange={(e) => setCfg({ ...cfg, live_ativa: e.target.checked })} className="w-5 h-5 accent-pink-500" /> <b>Live AO VIVO agora</b></label>
+            <input value={cfg.live_url || ''} onChange={(e) => setCfg({ ...cfg, live_url: e.target.value })} placeholder="Link da live (padrão: vendedor/leilaonozap)" className={inp} />
+            <input value={cfg.live_horario || ''} onChange={(e) => setCfg({ ...cfg, live_horario: e.target.value })} placeholder="Horário da próxima live (ex: hoje 20h)" className={inp} />
+            <input value={cfg.live_produto || ''} onChange={(e) => setCfg({ ...cfg, live_produto: e.target.value })} placeholder="Produto que será leiloado na live" className={inp} />
+            <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className={inp} />
+          </div>
+        </div>
+
+        {/* Prêmios dos sorteios */}
+        <div className="rounded-2xl p-4 bg-black/25 border border-white/10 md:col-span-2 xl:col-span-1">
+          <SecHead icon={Award}>Prêmios dos sorteios</SecHead>
+          <div className="space-y-2.5">
+            <input value={cfg.premio_dia || ''} onChange={(e) => setCfg({ ...cfg, premio_dia: e.target.value })} placeholder="Prêmio do sorteio DIÁRIO" className={inp} />
+            <input value={cfg.premio_semana || ''} onChange={(e) => setCfg({ ...cfg, premio_semana: e.target.value })} placeholder="Prêmio do sorteio SEMANAL" className={inp} />
+            <input value={cfg.premio_mes || ''} onChange={(e) => setCfg({ ...cfg, premio_mes: e.target.value })} placeholder="Prêmio do sorteio MENSAL" className={inp} />
+          </div>
+        </div>
+      </div>
+
+      <button onClick={saveConfig} disabled={savingCfg} className="mt-4 w-full py-3.5 rounded-xl font-black text-white shadow-lg shadow-purple-900/30 disabled:opacity-60 flex items-center justify-center gap-2 transition-transform active:scale-[.99]" style={{ background: 'linear-gradient(90deg,#8b5cf6,#7c3aed)' }}>
+        <Save className="w-4 h-4" /> {savingCfg ? 'Salvando...' : <>Salvar configuração <span className="text-purple-200/90 text-xs font-medium">(destaque + live + prêmios)</span></>}
+      </button>
+
+      {/* Ações: sorteio + pódio */}
+      <div className="grid lg:grid-cols-2 gap-3 mt-4 items-start">
+        <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
+          <SecHead icon={Gavel}>Realizar sorteio (coroa o 1º do período)</SecHead>
+          <div className="grid grid-cols-3 gap-2">
+            {[['dia', 'Dia'], ['semana', 'Semana'], ['mes', 'Mês']].map(([id, l]) => (
+              <button key={id} onClick={() => realizarSorteio(id)} className="py-3 rounded-xl font-bold text-sm text-[#1a1205] shadow-md transition-transform active:scale-[.97]" style={{ background: 'linear-gradient(90deg,#f5c451,#e0a920)' }}>{l}</button>
+            ))}
+          </div>
+          <p className="text-[11px] text-purple-200/60 mt-3">Escolha o período para coroar quem trouxe mais gente. Registra o vencedor no histórico.</p>
+        </div>
+
+        <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
+          <SecHead icon={Crown}>Prêmios do pódio (top 10)</SecHead>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
+              <div key={pos} className="flex items-center gap-2">
+                <PosBadge pos={pos} size={22} />
+                <input value={premiosEdit[pos] ?? ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: e.target.value })} placeholder={`Prêmio do ${pos}º`} className={`flex-1 min-w-0 ${inp}`} />
+              </div>
+            ))}
+          </div>
+          <button onClick={savePremios} className="mt-3 w-full py-3 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-700 text-sm flex items-center justify-center gap-2 transition-colors"><Save className="w-4 h-4" /> Salvar prêmios do pódio</button>
+        </div>
+      </div>
+    </>
+  );
+
+  // Cabeçalho do painel admin (chip + badge + botão expandir/recolher)
+  const AdminHeader = (full) => (
+    <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center gap-2.5">
+        <span className="w-9 h-9 rounded-xl grid place-items-center text-white shadow-lg shadow-purple-900/40" style={{ background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' }}><Settings2 className="w-5 h-5" /></span>
+        <div className="leading-tight">
+          <p className="font-black text-lg flex items-center gap-2">Painel Admin do Concurso</p>
+          <span className="text-[11px] font-bold inline-flex items-center gap-1.5 text-purple-200/90"><Lock className="w-3 h-3" /> Só você vê isto</span>
+        </div>
+      </div>
+      <button
+        onClick={() => setAdminExpanded(!full)}
+        className="text-xs font-bold px-3.5 py-2 rounded-xl inline-flex items-center gap-2 text-purple-100 transition-colors"
+        style={{ background: 'rgba(139,92,246,.2)', border: '1px solid rgba(139,92,246,.5)' }}
+      >
+        {full ? <><Minimize2 className="w-4 h-4" /> Recolher</> : <><Maximize2 className="w-4 h-4" /> Expandir na tela</>}
+      </button>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white w-full overflow-x-hidden">
       <div className="max-w-5xl w-full mx-auto px-4 py-6 pb-24">
@@ -332,70 +444,26 @@ export default function ConcursoLeilaoNozap() {
           </div>
         </div>
 
-        {/* ADMIN — organizado em cards, aproveitando a largura */}
-        {isAdmin && (
-          <div className="mt-6 rounded-2xl p-4 sm:p-5" style={{ background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.4)' }}>
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-              <p className="font-black text-lg flex items-center gap-2"><Crown className="w-5 h-5 text-purple-300" /> Painel Admin do Concurso</p>
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 text-purple-200" style={{ background: 'rgba(139,92,246,.18)', border: '1px solid rgba(139,92,246,.4)' }}><Lock className="w-3 h-3" /> Só você vê isto</span>
-            </div>
+        {/* ADMIN — card inline com botão pra expandir em tela cheia */}
+        {isAdmin && !adminExpanded && (
+          <div className="mt-6 rounded-2xl p-4 sm:p-5" style={{ background: 'linear-gradient(180deg,rgba(139,92,246,.12),rgba(139,92,246,.05))', border: '1px solid rgba(139,92,246,.4)' }}>
+            {AdminHeader(false)}
+            <div className="mt-4">{AdminInner}</div>
+          </div>
+        )}
 
-            {/* 3 cards de configuração lado a lado */}
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
-              {/* Destaque */}
-              <div className="rounded-xl p-4 bg-black/25 border border-white/10 space-y-2">
-                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-1"><Gift className="w-3.5 h-3.5" /> Destaque / Sorteio do dia</p>
-                <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.produto_foto || ''} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder="URL da foto do produto" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={3} className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
+        {/* ADMIN — modo tela cheia (overlay) */}
+        {isAdmin && adminExpanded && (
+          <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(3,10,7,.72)', backdropFilter: 'blur(6px)' }} onClick={() => setAdminExpanded(false)}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-6xl mx-auto my-3 sm:my-6 flex flex-col rounded-2xl overflow-hidden shadow-2xl"
+              style={{ maxHeight: 'calc(100dvh - 24px)', background: 'linear-gradient(180deg,#1a1030,#120a24)', border: '1px solid rgba(139,92,246,.5)' }}
+            >
+              <div className="sticky top-0 z-10 px-4 sm:px-6 py-3.5 border-b" style={{ background: 'rgba(26,16,48,.95)', borderColor: 'rgba(139,92,246,.3)' }}>
+                {AdminHeader(true)}
               </div>
-
-              {/* Live */}
-              <div className="rounded-xl p-4 border space-y-2" style={{ background: 'rgba(233,30,131,.06)', borderColor: 'rgba(233,30,131,.3)' }}>
-                <p className="text-xs font-bold uppercase tracking-wide flex items-center gap-2 mb-1" style={{ color: '#f5a3cf' }}><Radio className="w-3.5 h-3.5" /> Live (Livoo)</p>
-                <label className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 bg-black/25 border border-white/10 cursor-pointer"><input type="checkbox" checked={!!cfg.live_ativa} onChange={(e) => setCfg({ ...cfg, live_ativa: e.target.checked })} className="w-5 h-5 accent-pink-500" /> <b>Live AO VIVO agora</b></label>
-                <input value={cfg.live_url || ''} onChange={(e) => setCfg({ ...cfg, live_url: e.target.value })} placeholder="Link da live (padrão: vendedor/leilaonozap)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.live_horario || ''} onChange={(e) => setCfg({ ...cfg, live_horario: e.target.value })} placeholder="Horário da próxima live (ex: hoje 20h)" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.live_produto || ''} onChange={(e) => setCfg({ ...cfg, live_produto: e.target.value })} placeholder="Produto que será leiloado na live" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              </div>
-
-              {/* Prêmios dos sorteios */}
-              <div className="rounded-xl p-4 bg-black/25 border border-white/10 space-y-2 md:col-span-2 xl:col-span-1">
-                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-1"><Award className="w-3.5 h-3.5" /> Prêmios dos sorteios</p>
-                <input value={cfg.premio_dia || ''} onChange={(e) => setCfg({ ...cfg, premio_dia: e.target.value })} placeholder="Prêmio do sorteio DIÁRIO" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.premio_semana || ''} onChange={(e) => setCfg({ ...cfg, premio_semana: e.target.value })} placeholder="Prêmio do sorteio SEMANAL" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-                <input value={cfg.premio_mes || ''} onChange={(e) => setCfg({ ...cfg, premio_mes: e.target.value })} placeholder="Prêmio do sorteio MENSAL" className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm" />
-              </div>
-            </div>
-
-            <button onClick={saveConfig} disabled={savingCfg} className="mt-3 w-full py-3 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2">{savingCfg ? 'Salvando...' : <>Salvar configuração <span className="text-purple-200 text-xs font-medium">(destaque + live + prêmios)</span></>}</button>
-
-            {/* Ações: sorteio + pódio lado a lado no desktop */}
-            <div className="grid lg:grid-cols-2 gap-3 mt-3 items-start">
-              <div className="rounded-xl p-4 bg-black/25 border border-white/10">
-                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-3"><Gavel className="w-3.5 h-3.5" /> Realizar sorteio (coroa o 1º do período)</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => realizarSorteio('dia')} className="py-2.5 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Dia</button>
-                  <button onClick={() => realizarSorteio('semana')} className="py-2.5 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Semana</button>
-                  <button onClick={() => realizarSorteio('mes')} className="py-2.5 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-700 text-sm">Mês</button>
-                </div>
-                <p className="text-[11px] text-purple-200/60 mt-3">Escolha o período para coroar quem trouxe mais gente. Registra o vencedor no histórico.</p>
-              </div>
-
-              <div className="rounded-xl p-4 bg-black/25 border border-white/10">
-                <p className="text-xs font-bold text-purple-200 uppercase tracking-wide flex items-center gap-2 mb-3"><Crown className="w-3.5 h-3.5" /> Prêmios do pódio (top 10)</p>
-                <div className="grid sm:grid-cols-2 gap-2">
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
-                    <div key={pos} className="flex items-center gap-2">
-                      <PosBadge pos={pos} size={22} />
-                      <input value={premiosEdit[pos] ?? ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: e.target.value })} placeholder={`Prêmio do ${pos}º`} className="flex-1 min-w-0 bg-black/30 border border-white/15 rounded-lg px-3 py-1.5 text-sm" />
-                    </div>
-                  ))}
-                </div>
-                <button onClick={savePremios} className="mt-3 w-full py-2.5 rounded-lg font-bold bg-purple-600 hover:bg-purple-700 text-sm">Salvar prêmios do pódio</button>
-              </div>
+              <div className="overflow-y-auto px-4 sm:px-6 py-5">{AdminInner}</div>
             </div>
           </div>
         )}
