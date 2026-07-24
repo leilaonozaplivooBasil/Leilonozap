@@ -86,6 +86,21 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
     return () => window.removeEventListener('cartUpdated', read);
   }, []);
 
+  // Login: se já logado, não mostra o botão "Entrar" (a conta já aparece na navbar de cima)
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => {
+      try {
+        const u = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        setIsLoggedIn(!!(u && u.email) || sessionStorage.getItem('isLoggedIn') === 'true');
+      } catch { setIsLoggedIn(false); }
+    };
+    check();
+    window.addEventListener('storage', check);
+    window.addEventListener('authChanged', check);
+    return () => { window.removeEventListener('storage', check); window.removeEventListener('authChanged', check); };
+  }, []);
+
   // avaliação da loja (resolve o lojista pelo ref e busca a média)
   const [rating, setRating] = React.useState(null);
   React.useEffect(() => {
@@ -153,10 +168,14 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
                 <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[10px] font-black rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1">{cartCount}</span>
               )}
             </button>
-            <span className="hidden sm:block w-px h-6 bg-white/10" />
-            <button onClick={() => window.dispatchEvent(new CustomEvent('openLoginModal'))} className="inline-flex items-center gap-2 text-sm font-bold text-white px-4 py-2 rounded-lg shadow" style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
-              <User className="w-4 h-4" /> Entrar
-            </button>
+            {!isLoggedIn && (
+              <>
+                <span className="hidden sm:block w-px h-6 bg-white/10" />
+                <button onClick={() => window.dispatchEvent(new CustomEvent('openLoginModal'))} className="inline-flex items-center gap-2 text-sm font-bold text-white px-4 py-2 rounded-lg shadow" style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
+                  <User className="w-4 h-4" /> Entrar
+                </button>
+              </>
+            )}
           </div>
         </div>
         {/* nav mobile (deslizante) */}
