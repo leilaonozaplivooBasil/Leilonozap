@@ -53,7 +53,7 @@ export default function DevLogoutButton({ currentUser }) {
       type="button"
       onClick={handleClick}
       title="Deslogar e voltar como visitante (modo de teste)"
-      className="fixed bottom-4 left-4 z-[9999] flex items-center gap-2 px-3 h-9 min-w-[140px] rounded-lg bg-red-600/80 hover:bg-red-700 active:bg-red-800 text-white text-xs font-semibold shadow-lg shadow-red-900/40 backdrop-blur-sm border border-red-400/20 transition-colors"
+      className="fixed bottom-28 left-4 z-[9999] flex items-center gap-2 px-3 h-9 min-w-[140px] rounded-lg bg-red-600/80 hover:bg-red-700 active:bg-red-800 text-white text-xs font-semibold shadow-lg shadow-red-900/40 backdrop-blur-sm border border-red-400/20 transition-colors"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <LogOut className="w-4 h-4" />
