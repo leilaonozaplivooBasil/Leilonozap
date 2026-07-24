@@ -1,7 +1,7 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
-import LivooMark from '@/components/livoo/LivooMark';
 import ComparaiIcon from '@/assets/comparai-icon.png';
+import leilaSuporte from '@/assets/leila-suporte.webp';
 
 const SUPORTE_PHONE = '5521984072064';
 // 🔗 Por ora o botão "Ao vivo" leva direto ao feed da Livoo Live.
@@ -30,14 +30,27 @@ export default function LojaFloatActions() {
         <Label>Compare</Label>
       </div>
 
-      {/* Suporte — canto DIREITO inferior (o 'Ao vivo' flutuante foi removido; a live fica no
-          botão 'AO VIVO AGORA' pulsante do topo) */}
+      {/* Suporte com a Leila (avatar 3D) — canto DIREITO inferior. Animado pra chamar clique.
+          O 'Ao vivo' flutuante foi removido; a live fica no botão 'AO VIVO AGORA' do topo. */}
+      <style>{`
+        @keyframes leilaBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        .leila-bob { animation: leilaBob 2.6s ease-in-out infinite; }
+        @media (prefers-reduced-motion:reduce){ .leila-bob{animation:none} }
+      `}</style>
       <div className="fixed right-4 bottom-5 z-50 flex flex-col items-center gap-3">
-        <a href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`} target="_blank" rel="noreferrer" title="Suporte pelo WhatsApp" className="flex flex-col items-center">
-          <span className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-2xl flex items-center justify-center transition-transform hover:scale-110" style={{ boxShadow: '0 8px 24px rgba(34,197,94,.45)' }}>
-            <MessageCircle className="w-7 h-7 text-white" />
+        <a href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`} target="_blank" rel="noreferrer" title="Fale com a Leila — Suporte no WhatsApp" className="group flex flex-col items-center">
+          <span className="leila-bob relative block">
+            {/* anel pulsante verde pra sinalizar que é clicável */}
+            <span aria-hidden className="absolute inset-0 rounded-full animate-ping opacity-30 bg-green-400" />
+            <span className="relative block w-16 h-16 rounded-full overflow-hidden border-2 border-green-400 shadow-2xl transition-transform group-hover:scale-110" style={{ boxShadow: '0 10px 28px rgba(34,197,94,.5)', background: 'radial-gradient(circle at 50% 30%, #14324a, #0b1018)' }}>
+              <img src={leilaSuporte} alt="Leila — Suporte" className="w-full h-full object-cover object-top" loading="lazy" />
+            </span>
+            {/* selo WhatsApp */}
+            <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-green-500 border-2 grid place-items-center" style={{ borderColor: '#0b1018' }}>
+              <MessageCircle className="w-3.5 h-3.5 text-white" />
+            </span>
           </span>
-          <Label>Suporte</Label>
+          <Label>Fale com a Leila</Label>
         </a>
       </div>
     </>

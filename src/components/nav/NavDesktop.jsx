@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ShoppingCart as CartIcon, ChevronDown } from "lucide-react";
+import { ShoppingCart as CartIcon, ChevronDown, Trophy } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
 import AoVivoAgora from "@/components/livoo/AoVivoAgora";
 import { SECTORS } from "@/lib/sectors";
@@ -125,9 +125,10 @@ export default function NavDesktop({
       <Link
         to="/concursoleilaonozap"
         className="ml-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold text-yellow-300 hover:text-yellow-200 hover:bg-yellow-400/10 transition-all"
-        aria-label="Concurso Leilão NoZap"
+        aria-label="Rank Premiado Leilão NoZap"
       >
-        🏆 Concurso
+        <Trophy className="w-4 h-4 shrink-0" aria-hidden="true" />
+        <span>Rank Premiado</span>
       </Link>
 
       {/* === AO VIVO AGORA · LIVOO LIVE === */}

@@ -16,6 +16,7 @@ import {
   Shield,
   Crown,
   ChevronDown,
+  Trophy,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import { SECTORS } from "@/lib/sectors";
@@ -231,7 +232,8 @@ export default function NavMobile({
               onClick={onClose}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-bold text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
             >
-              🏆 Concurso
+              <Trophy className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <span>Rank Premiado</span>
             </Link>
 
             {/* === CARRINHO === */}
