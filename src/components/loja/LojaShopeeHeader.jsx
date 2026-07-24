@@ -147,47 +147,10 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 mb-6">
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
 
-      {/* 1) TOP NAV escuro (padrão Base44) */}
-      <div className="bg-[#0e1522] border-b border-white/5">
-        <div className="max-w-[1280px] mx-auto px-4 h-16 flex items-center gap-6">
-          <button onClick={() => navigate(createPageUrl('Catalog'))} className="shrink-0">
-            <img src={LOGO} alt="Leilão NoZap" className="h-9 w-auto" />
-          </button>
-          <nav className="hidden md:flex items-center gap-6 ml-2 flex-1">
-            <button onClick={() => navigate(createPageUrl('Catalog'))} className="flex items-center gap-1 text-sm font-semibold text-gray-200 hover:text-white transition-colors">Comprar <ChevronDown className="w-4 h-4 opacity-60" /></button>
-            <button onClick={() => navigate(createPageUrl('Home'))} className="flex items-center gap-1 text-sm font-semibold text-gray-200 hover:text-white transition-colors">Leilões <ChevronDown className="w-4 h-4 opacity-60" /></button>
-            <button onClick={() => navigate(createPageUrl('Licensing'))} className="flex items-center gap-1 text-sm font-semibold text-gray-200 hover:text-white transition-colors">Ganhe Dinheiro <ChevronDown className="w-4 h-4 opacity-60" /></button>
-            <a href={LIVOO_FEED} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-2 text-white text-sm font-extrabold px-4 py-2 rounded-full shadow-lg" style={{ background: 'linear-gradient(90deg,#ec4899,#f97316)' }}>
-              <Play className="w-4 h-4 fill-white" /> AO VIVO AGORA
-            </a>
-          </nav>
-          <div className="flex items-center gap-3 sm:gap-4 ml-auto">
-            <button onClick={() => navigate(createPageUrl('Cart'))} className="relative text-gray-200 hover:text-white">
-              <ShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[10px] font-black rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1">{cartCount}</span>
-              )}
-            </button>
-            {!isLoggedIn && (
-              <>
-                <span className="hidden sm:block w-px h-6 bg-white/10" />
-                <button onClick={() => window.dispatchEvent(new CustomEvent('openLoginModal'))} className="inline-flex items-center gap-2 text-sm font-bold text-white px-4 py-2 rounded-lg shadow" style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
-                  <User className="w-4 h-4" /> Entrar
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        {/* nav mobile (deslizante) */}
-        <div className="md:hidden max-w-[1280px] mx-auto px-4 pb-2.5 flex items-center gap-5 overflow-x-auto no-scrollbar text-sm font-semibold text-gray-200">
-          <button onClick={() => navigate(createPageUrl('Catalog'))} className="whitespace-nowrap">Comprar</button>
-          <button onClick={() => navigate(createPageUrl('Home'))} className="whitespace-nowrap">Leilões</button>
-          <button onClick={() => navigate(createPageUrl('Licensing'))} className="whitespace-nowrap">Ganhe Dinheiro</button>
-          <a href={LIVOO_FEED} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-white font-extrabold px-3 py-1 rounded-full whitespace-nowrap" style={{ background: 'linear-gradient(90deg,#ec4899,#f97316)' }}><Play className="w-3.5 h-3.5 fill-white" /> AO VIVO</a>
-        </div>
-      </div>
+      {/* Barra de navegação removida: era duplicata da navbar principal do Layout (topo).
+          A loja mantém só a sub-barra de status + o banner. */}
 
-      {/* 2) SUB-BARRA: Enviar para / status */}
+      {/* SUB-BARRA: Enviar para / status */}
       <div className="bg-[#0b1018] border-b border-white/5 text-[12px]">
         <div className="max-w-[1280px] mx-auto px-4 py-2 flex items-center justify-between text-gray-400">
           <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-gray-500" /> Enviar para: <b className="text-gray-200">Brasil</b></span>
@@ -195,12 +158,11 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
         </div>
       </div>
 
-      {/* 3) HERO: banner full-bleed (borda a borda, estilo Mercado Livre) */}
+      {/* HERO: banner full-bleed (borda a borda). fit=contain garante que NADA do texto do
+          banner seja cortado — o banner é 16:5 e o container também, então preenche sem barras. */}
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
         <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a]">
-          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="cover" />
-          {/* base do banner desbota no fundo escuro pra faixa de ofertas sobrepor sem cortar o texto de cima */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
+          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
         </div>
       </div>
     </div>

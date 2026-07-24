@@ -122,7 +122,7 @@ export default function OfertasRelampago({ products = [] }) {
   // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="relative z-10 -mt-10 sm:-mt-16 bg-gray-900/60 backdrop-blur-md border border-gray-700 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden shadow-2xl shadow-black/40">
+    <div className="bg-gray-800/40 border border-gray-700 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden">
       {/* cabeçalho com respiro lateral normal */}
       <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
