@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2, Truck, ShieldCheck, RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Gavel, Lock } from "lucide-react";
 import { toast } from "sonner";
 import ComparaiButton from "../components/comparai/ComparaiButton";
 import { createPageUrl } from "@/utils";
@@ -343,176 +343,197 @@ export default function CatalogProductDetails() {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  // ---- valores derivados (dados reais) ----
+  const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const price = Number(product.price_catalog) || 0;
+  const market = Number(product.market_value) || 0;
+  const hasDiscount = market > price && price > 0;
+  const discountPct = hasDiscount ? Math.round((1 - price / market) * 100) : 0;
+  const parcela12 = price / 12;
+  const stock = Number(product.quantity) || 0;
+  const inStock = stock > 0;
+  const specs = [
+    product.peso ? { label: 'Peso', value: `${product.peso} kg` } : null,
+    product.altura ? { label: 'Altura', value: `${product.altura} cm` } : null,
+    product.largura ? { label: 'Largura', value: `${product.largura} cm` } : null,
+    product.comprimento ? { label: 'Profundidade', value: `${product.comprimento} cm` } : null,
+  ].filter(Boolean);
+
+  const BuyButtons = (
+    <div className="space-y-2.5">
+      {inStock ? (
+        <>
+          <button onClick={handleBuyNow} className="w-full h-12 rounded-xl font-black text-[#052e16] text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[.99]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>
+            <Zap className="w-5 h-5 fill-current" /> COMPRAR AGORA
+          </button>
+          <button onClick={handleAddToCart} className="w-full h-12 rounded-xl font-bold text-white text-base bg-white/10 hover:bg-white/15 border border-white/15 flex items-center justify-center gap-2 transition-colors">
+            <ShoppingCart className="w-5 h-5" /> Adicionar ao carrinho
+          </button>
+        </>
+      ) : (
+        <button disabled className="w-full h-12 rounded-xl font-bold text-white bg-yellow-600/80 cursor-not-allowed opacity-90">Esgotado</button>
+      )}
+      <button onClick={handleWhatsAppOrder} className="w-full h-12 rounded-xl font-bold text-emerald-300 border-2 border-emerald-500/60 hover:bg-emerald-500/10 flex items-center justify-center gap-2 transition-colors">
+        <MessageCircle className="w-5 h-5" /> Pedir pelo WhatsApp
+      </button>
+    </div>
+  );
+
+  const CARD = 'bg-white/[0.04] border border-white/10 rounded-2xl';
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(createPageUrl("Catalog"))}
-          className="text-white hover:bg-gray-800"
-        >
+        <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("Catalog"))} className="text-white hover:bg-gray-800">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-
-        <div className="flex-1 text-center">
-          <span className="text-lg font-bold text-green-400">LeilãoNoZap</span>
+        <div className="flex-1 flex items-center justify-center gap-2 text-green-400">
+          <Gavel className="w-5 h-5" /><span className="text-lg font-black">Leilão <span className="text-yellow-400">NoZap</span></span>
         </div>
-
-        <div className="w-10"></div>
+        <button onClick={handleShare} title="Compartilhar" className="w-10 h-10 grid place-items-center rounded-lg text-gray-300 hover:bg-gray-800"><Share2 className="w-5 h-5" /></button>
       </header>
 
-      {/* MAIN CONTENT - DESKTOP LAYOUT */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* MAIN */}
+      <main className="max-w-6xl mx-auto px-4 py-5">
+        {/* breadcrumb */}
+        <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-4 flex-wrap">
+          <button onClick={() => navigate(createPageUrl("Catalog"))} className="hover:text-emerald-300">Loja Virtual</button>
+          <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+          <span className="text-gray-300 truncate max-w-[60vw]">{product.description}</span>
+        </nav>
 
-          {/* COLUNA ESQUERDA - IMAGENS */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
+
+          {/* GALERIA */}
+          <div className={`${CARD} p-3 sm:p-4 lg:sticky lg:top-20`}>
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              {/* thumbnails verticais no desktop */}
+              {images.length > 1 && (
+                <div className="flex sm:flex-col gap-2 overflow-auto no-scrollbar sm:max-h-[460px]">
+                  {images.map((img, idx) => (
+                    <button key={idx} onClick={() => setCurrentImageIndex(idx)}
+                      className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all bg-white ${idx === currentImageIndex ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}>
+                      <img src={img} alt="" className="w-full h-full object-contain" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* imagem principal */}
+              <div className="relative flex-1 bg-white rounded-xl overflow-hidden aspect-square">
+                {currentImage ? (
+                  <img src={currentImage} alt={product.description} className="w-full h-full object-contain" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center bg-gray-100"><span className="text-gray-400">Sem imagem</span></div>
+                )}
+                {hasDiscount && (
+                  <span className="absolute top-3 right-3 text-xs font-black text-white px-2.5 py-1 rounded-lg inline-flex items-center gap-1" style={{ background: 'linear-gradient(135deg,#e0a92e,#d4880b)' }}>
+                    <Tag className="w-3.5 h-3.5" /> -{discountPct}%
+                  </span>
+                )}
+                {images.length > 1 && (
+                  <>
+                    <button onClick={handlePrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white p-2 rounded-full shadow-md z-10"><ChevronLeft className="w-5 h-5 text-gray-700" /></button>
+                    <button onClick={handleNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white p-2 rounded-full shadow-md z-10"><ChevronRight className="w-5 h-5 text-gray-700" /></button>
+                  </>
+                )}
+                <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
+              </div>
+            </div>
+          </div>
+
+          {/* BUY BOX */}
           <div className="space-y-4">
-            {/* IMAGEM PRINCIPAL */}
-            <div className="relative bg-white rounded-lg overflow-hidden aspect-square">
-              {currentImage ? (
-                <img
-                  src={currentImage}
-                  alt={product.description}
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                  <span className="text-gray-400">Sem imagem</span>
+            <div className={`${CARD} p-4 sm:p-5 space-y-4`}>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-emerald-300 font-semibold inline-flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> Novo</span>
+                {inStock && <><span className="text-gray-600">·</span><span className="text-gray-400">{stock} disponíve{stock > 1 ? 'is' : 'l'}</span></>}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl font-bold leading-snug">{product.description}</h1>
+
+              {storeRating && storeRating.total > 0 && (
+                <RatingBadge media={storeRating.media} total={storeRating.total} size={15} />
+              )}
+
+              <div>
+                {hasDiscount && <p className="text-gray-500 line-through text-sm">{money(market)}</p>}
+                <div className="flex items-end gap-2 flex-wrap">
+                  <span className="text-3xl sm:text-4xl font-black text-green-400">{money(price)}</span>
+                  {hasDiscount && <span className="mb-1 text-xs font-black text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded">{discountPct}% OFF</span>}
+                </div>
+                <p className="text-sm text-gray-400 mt-1">em até <b className="text-gray-200">12x {money(parcela12)}</b> · ou no <b className="text-emerald-300">PIX</b></p>
+              </div>
+
+              {/* quantidade */}
+              {inStock && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-400">Quantidade:</span>
+                  <div className="inline-flex items-center rounded-lg border border-white/15 overflow-hidden">
+                    <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-9 h-9 grid place-items-center hover:bg-white/10 disabled:opacity-40" disabled={quantity <= 1}><Minus className="w-4 h-4" /></button>
+                    <span className="w-10 text-center font-bold tabular-nums">{quantity}</span>
+                    <button onClick={() => setQuantity((q) => Math.min(stock, q + 1))} className="w-9 h-9 grid place-items-center hover:bg-white/10 disabled:opacity-40" disabled={quantity >= stock}><Plus className="w-4 h-4" /></button>
+                  </div>
                 </div>
               )}
 
-              {/* NAVEGAÇÃO DE IMAGENS */}
-              {images.length > 1 && (
-                <>
-                  <button
-                    onClick={handlePrevImage}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all z-10"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-700" />
-                  </button>
-                  <button
-                    onClick={handleNextImage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all z-10"
-                  >
-                    <ChevronRight className="w-5 h-5 text-gray-700" />
-                  </button>
-                </>
-              )}
+              {BuyButtons}
 
-              {/* BOTÃO COMPARTILHAR */}
-              <button
-                onClick={handleShare}
-                className="absolute top-3 left-3 bg-black/40 hover:bg-emerald-600/80 text-white p-2 rounded-full shadow-md transition-all z-10 backdrop-blur-sm border border-white/10"
-                title="Compartilhar produto"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-
-              {/* BOTÃO FULLSCREEN */}
-              <button
-                onClick={() => setShowFullscreen(true)}
-                className="absolute bottom-3 left-3 bg-white/80 hover:bg-white p-2 rounded-md shadow-md transition-all z-10"
-              >
-                <Maximize2 className="w-4 h-4 text-gray-700" />
-              </button>
+              {/* benefícios */}
+              <div className="pt-2 space-y-2.5 text-sm">
+                <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — combine o frete no WhatsApp.</span></div>
+                <div className="flex items-start gap-2.5"><RotateCcw className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Devolução em até 7 dias</b> após o recebimento.</span></div>
+                <div className="flex items-start gap-2.5"><ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Compra garantida</b> — receba o produto ou seu dinheiro de volta.</span></div>
+                <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX, cartão em até 12x ou boleto.</span></div>
+              </div>
             </div>
 
-            {/* THUMBNAILS */}
-            {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-green-500' : 'border-gray-600 hover:border-gray-400'
-                      }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+            {/* card da loja/vendedor */}
+            <div className={`${CARD} p-4 flex items-center gap-3`}>
+              <span className="w-11 h-11 rounded-xl grid place-items-center shrink-0" style={{ background: 'conic-gradient(from 200deg,#0e4d38,#0a2c22)', border: '1px solid rgba(245,196,81,.35)' }}><Store className="w-5 h-5 text-yellow-300" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold truncate">Loja Virtual Leilão NoZap</p>
+                <p className="text-xs text-gray-400">Vendedor oficial · Descontos de verdade</p>
               </div>
-            )}
+              <button onClick={handleWhatsAppOrder} className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg text-[#052e16]" style={{ background: '#25D366' }}>Falar</button>
+            </div>
           </div>
+        </div>
 
-          {/* COLUNA DIREITA - INFORMAÇÕES */}
-          <div className="space-y-6">
-            {/* TÍTULO */}
-            <h1 className="text-2xl lg:text-3xl font-bold text-white leading-tight">
-              {product.description}
-            </h1>
-
-            {/* AVALIAÇÃO DA LOJA */}
-            {storeRating && storeRating.total > 0 && (
-              <div className="flex items-center gap-2">
-                <RatingBadge media={storeRating.media} total={storeRating.total} size={16} />
-                <span className="text-xs text-gray-500">· avaliações da loja</span>
+        {/* SEÇÕES INFERIORES (largura da galeria) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 mt-6 items-start">
+          <div className="space-y-6 min-w-0">
+            {/* características */}
+            {specs.length > 0 && (
+              <div className={`${CARD} p-5`}>
+                <h3 className="text-lg font-black mb-4 flex items-center gap-2"><BadgeCheck className="w-5 h-5 text-emerald-400" /> Características do produto</h3>
+                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                  {specs.map((sp) => (
+                    <div key={sp.label} className="flex items-center gap-2.5 text-sm border-b border-white/5 pb-2.5">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-gray-400">{sp.label}:</span> <span className="text-white font-semibold">{sp.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* PREÇO */}
-            <div className="text-3xl lg:text-4xl font-black text-green-400">
-              R$ {product.price_catalog ? product.price_catalog.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"}
-            </div>
-
-            {/* BOTÕES DE AÇÃO */}
-            <div className="space-y-3">
-              {/* ADICIONAR AO CARRINHO */}
-              {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
-                <Button
-                  disabled
-                  className="w-full h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
-                >
-                  ESGOTADO
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleAddToCart}
-                  className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
-                >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  ADICIONAR AO CARRINHO
-                </Button>
-              )}
-
-              {/* PEDIR PELO WHATSAPP — conversa direta */}
-              <Button
-                onClick={handleWhatsAppOrder}
-                variant="outline"
-                className="w-full h-12 border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                PEDIR PELO WHATSAPP
-              </Button>
-            </div>
-
-            {/* ESTOQUE */}
-            {product.quantity && (
-              <p className="text-gray-400 text-sm">
-                Estoque disponível: {product.quantity}
-              </p>
-            )}
-
-            {/* DESCRIÇÃO */}
-            <div className="border-t border-gray-700 pt-6">
-              <h3 className="text-lg font-bold text-white mb-4">Descrição</h3>
+            {/* descrição */}
+            <div className={`${CARD} p-5`}>
+              <h3 className="text-lg font-black mb-4">Descrição</h3>
               {product.notes ? (
-                <div
-                  className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none
-                    prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.notes) }}
-                />
+                <div className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.notes) }} />
               ) : (
-                <p className="text-gray-400 text-sm">{product.description}</p>
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{product.description}</p>
               )}
             </div>
 
-            {/* AVALIAÇÕES DA LOJA */}
+            {/* avaliações da loja (reais) */}
             {storeRating && storeRating.total > 0 && (
-              <div className="border-t border-gray-700 pt-6">
+              <div className={`${CARD} p-5`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Avaliações da loja</h3>
+                  <h3 className="text-lg font-black">Avaliações da loja</h3>
                   <RatingBadge media={storeRating.media} total={storeRating.total} size={15} />
                 </div>
                 {reviews.length === 0 ? (
@@ -520,7 +541,7 @@ export default function CatalogProductDetails() {
                 ) : (
                   <div className="space-y-3">
                     {reviews.map((r, i) => (
-                      <div key={i} className="bg-gray-800/50 border border-gray-700 rounded-xl p-3">
+                      <div key={i} className="bg-black/20 border border-white/10 rounded-xl p-3">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-semibold text-white">{r.buyer_name || 'Cliente'}</span>
                           <Stars value={r.stars} size={13} />
@@ -532,19 +553,24 @@ export default function CatalogProductDetails() {
                 )}
               </div>
             )}
+          </div>
 
-            {/* CARACTERÍSTICAS (se houver) */}
-            {(product.peso || product.comprimento || product.altura || product.largura) && (
-              <div className="border-t border-gray-700 pt-6">
-                <h3 className="text-lg font-bold text-white mb-4">Principais características</h3>
-                <div className="space-y-2 text-sm text-gray-300">
-                  {product.peso && <p>Peso: {product.peso} kg</p>}
-                  {(product.comprimento || product.altura || product.largura) && (
-                    <p>Dimensões aproximadas: {product.altura && `${product.altura} cm altura`}{product.largura && ` × ${product.largura} cm largura`}{product.comprimento && ` × ${product.comprimento} cm profundidade`}</p>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* meios de pagamento (coluna direita) */}
+          <div className={`${CARD} p-5 space-y-4`}>
+            <h3 className="font-black flex items-center gap-2"><CreditCard className="w-5 h-5 text-emerald-400" /> Meios de pagamento</h3>
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">PIX</p>
+              <p className="text-sm text-emerald-300 font-bold">Aprovação na hora · à vista</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">Cartão de crédito</p>
+              <p className="text-sm text-gray-200">Em até <b>12x {money(parcela12)}</b></p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">Boleto bancário</p>
+              <p className="text-sm text-gray-200">Compensação em 1–2 dias úteis</p>
+            </div>
+            <div className="pt-1 flex items-center gap-2 text-xs text-gray-400"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Ambiente 100% seguro</div>
           </div>
         </div>
       </main>
