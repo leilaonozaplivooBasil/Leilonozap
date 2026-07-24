@@ -134,6 +134,7 @@ export default function Recepcao() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 16 }}>
             {HOME_SECTOR_CARDS.map((s) => {
               const c = ACCENT[s.accent] || '#34d399';
+              const Icon = s.icon;
               return (
                 <button
                   key={s.title}
@@ -145,7 +146,15 @@ export default function Recepcao() {
                     color: '#e9f5ef', fontFamily: 'Manrope', display: 'flex', flexDirection: 'column', gap: 6,
                   }}
                 >
-                  <span style={{ fontSize: 30 }}>{s.emoji}</span>
+                  <span
+                    style={{
+                      width: 44, height: 44, borderRadius: 12, marginBottom: 4,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      background: `${c}1f`, border: `1px solid ${c}40`,
+                    }}
+                  >
+                    <Icon size={22} color={c} strokeWidth={2} />
+                  </span>
                   <span style={{ fontSize: 18, fontWeight: 800, color: c }}>{s.title}</span>
                   <span style={{ fontSize: 13.5, color: '#9fb3aa', lineHeight: 1.45 }}>{s.desc}</span>
                   <span style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: c }}>

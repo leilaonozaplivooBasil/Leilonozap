@@ -3,7 +3,7 @@
 // Antes, cada vertical do negócio vivia escondida (botão solto na Home, filtro interno ou
 // página órfã sem link nenhum) e o cliente se perdia. Um setor novo entra só aqui.
 
-import { ShoppingBag, Gavel, DollarSign, Sparkles, Flame, Crown } from 'lucide-react';
+import { ShoppingBag, Gavel, DollarSign, Sparkles, Flame, Crown, Radio, Factory } from 'lucide-react';
 
 // 📺 Live é SEMPRE na Livoo Live (única plataforma de live do grupo).
 export const LIVOO_FEED = 'https://livoolive.com.br/app';
@@ -54,11 +54,12 @@ export const SECTORS = [
 ];
 
 // Cards de setor da página de abertura (o "organizado por setores" que o cliente pediu).
+// Ícones lucide — os emojis saíram daqui no rebranding visual de 24/07.
 export const HOME_SECTOR_CARDS = [
-  { title: 'Leilões', desc: 'Dê seu lance e arremate', emoji: '🔨', page: 'Home', accent: 'emerald' },
-  { title: 'Loja Virtual', desc: 'Compre agora, entrega no Brasil', emoji: '🛍️', page: 'Catalog', accent: 'green' },
-  { title: 'Ao Vivo na Livoo', desc: 'Compre com o vendedor na tela', emoji: '🔴', external: LIVOO_FEED, accent: 'red' },
-  { title: 'Direto de Fábrica', desc: 'Novos, direto do fabricante', emoji: '✨', page: 'DiretoDeFabrica', accent: 'blue' },
-  { title: 'Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', emoji: '🔥', page: 'ArremateDevolucoes', accent: 'orange' },
-  { title: 'Ganhe Dinheiro', desc: 'Seja licenciado ou parceiro', emoji: '💰', page: 'Licensing', accent: 'amber' },
+  { title: 'Leilões', desc: 'Dê seu lance e arremate', icon: Gavel, page: 'Home', accent: 'emerald' },
+  { title: 'Loja Virtual', desc: 'Compre agora, entrega no Brasil', icon: ShoppingBag, page: 'Catalog', accent: 'green' },
+  { title: 'Ao Vivo na Livoo', desc: 'Compre com o vendedor na tela', icon: Radio, external: LIVOO_FEED, accent: 'red' },
+  { title: 'Direto de Fábrica', desc: 'Novos, direto do fabricante', icon: Factory, page: 'DiretoDeFabrica', accent: 'blue' },
+  { title: 'Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', icon: Flame, page: 'ArremateDevolucoes', accent: 'orange' },
+  { title: 'Ganhe Dinheiro', desc: 'Seja licenciado ou parceiro', icon: DollarSign, page: 'Licensing', accent: 'amber' },
 ];
