@@ -6,7 +6,7 @@ const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Filter, MessageCircle, SlidersHorizontal } from "lucide-react";
+import { Filter, MessageCircle, SlidersHorizontal, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 
@@ -677,6 +677,25 @@ export default function Catalog() {
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago products={products} />
 
+        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) */}
+        <div className="mb-6 flex items-center gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
+          {licenseeData?.photo ? (
+            <img src={licenseeData.photo} alt={licenseeData.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-green-500/40 shrink-0" />
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-black shrink-0">
+              {(licenseeData?.name || 'Loja Virtual Especial').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h3 className="text-white font-bold text-lg truncate">{licenseeData?.name || 'Loja Virtual Especial'}</h3>
+            <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+              <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-green-400" /> {products.length} produtos</span>
+              <span className="text-gray-600">·</span>
+              <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-green-400" /> Envio para todo Brasil</span>
+            </div>
+          </div>
+        </div>
+
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
           {/* Produtos em Destaque */}
@@ -704,7 +723,7 @@ export default function Catalog() {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Buscar produtos..."
+                placeholder="O que você procura hoje?"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
@@ -810,6 +829,25 @@ export default function Catalog() {
               </div>
             )}
           </div>
+
+          {/* ABAS DE CATEGORIA horizontais (padrão Base44) */}
+          {categories.length > 0 && (
+            <div className="mb-6 flex items-center gap-6 overflow-x-auto category-scroller border-b border-gray-800">
+              {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
+                const active = selectedCategory === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedCategory(c.id)}
+                    className={`relative pb-3 pt-1 text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                  >
+                    {c.name}
+                    {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-green-500 rounded-full" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {loadError && retryCount >= 3 &&
           <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">

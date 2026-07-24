@@ -32,8 +32,12 @@ async function mostrarCupons() {
 }
 import {
   Search, ShoppingCart, Store, Smartphone, Instagram, MessageCircle, Music2,
-  HelpCircle, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt
+  HelpCircle, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt,
+  ChevronDown, MapPin, Play, User
 } from 'lucide-react';
+
+// Botão "AO VIVO AGORA" abre o feed da Livoo Live (mesma URL do FAB da loja)
+const LIVOO_FEED = 'https://livoolive.com.br/app';
 
 const LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
 
@@ -127,95 +131,55 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
   return (
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 mb-6">
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
-      {/* 1) Barra utilitária */}
-      <div className="text-[12px] text-green-50/90" style={{ background: 'linear-gradient(90deg,#15803d,#16a34a)' }}>
-        <div className="max-w-[1280px] mx-auto px-4 py-1.5 flex items-center justify-between">
-          <div className="hidden md:flex items-center gap-4">
-            <button onClick={() => navigate(createPageUrl('LojistaDashboard'))} className="flex items-center gap-1 hover:underline"><Store className="w-3.5 h-3.5" /> Central do Vendedor</button>
-            <span className="opacity-40">|</span>
-            <button onClick={() => navigate(createPageUrl('Cadastro'))} className="hover:underline">Vender na Loja</button>
-            <span className="opacity-40">|</span>
-            <span className="flex items-center gap-1"><Smartphone className="w-3.5 h-3.5" /> Baixe o App</span>
-            <span className="opacity-40">|</span>
-            <span className="flex items-center gap-1.5">Siga-nos
-              <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="hover:opacity-80" title="Instagram"><Instagram className="w-4 h-4" /></a>
-              <a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="hover:opacity-80" title="WhatsApp"><MessageCircle className="w-4 h-4" /></a>
-              <a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="hover:opacity-80" title="TikTok"><Music2 className="w-4 h-4" /></a>
-            </span>
-          </div>
-          <div className="flex items-center gap-4 ml-auto">
-            <span className="flex items-center gap-1"><HelpCircle className="w-3.5 h-3.5" /> Ajuda</span>
-            <span className="opacity-40">|</span>
-            <button onClick={() => window.dispatchEvent(new CustomEvent('openLoginModal'))} className="font-bold hover:underline">Entrar</button>
-          </div>
-        </div>
-      </div>
 
-      {/* 2) Header de busca */}
-      <div style={{ background: 'linear-gradient(90deg,#16a34a,#15803d)' }}>
-        <div className="max-w-[1280px] mx-auto px-4 py-4 flex items-center gap-4">
+      {/* 1) TOP NAV escuro (padrão Base44) */}
+      <div className="bg-[#0e1522] border-b border-white/5">
+        <div className="max-w-[1280px] mx-auto px-4 h-16 flex items-center gap-6">
           <button onClick={() => navigate(createPageUrl('Catalog'))} className="shrink-0">
-            <img src={LOGO} alt="Leilão NoZap" className="h-10 w-auto drop-shadow" />
+            <img src={LOGO} alt="Leilão NoZap" className="h-9 w-auto" />
           </button>
-          <div className="flex-1">
-            <div className="flex bg-white rounded-md overflow-hidden shadow-md">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-                placeholder="Buscar na loja…"
-                className="flex-1 px-4 py-2.5 text-sm text-gray-800 outline-none"
-              />
-              <button onClick={doSearch} className="px-6 flex items-center justify-center text-white"
-                style={{ background: 'linear-gradient(135deg,#22c55e,#15803d)' }}>
-                <Search className="w-5 h-5" />
-              </button>
-            </div>
-            {/* buscas em alta + avaliação da loja */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[12px] text-green-50/90">
-              {trending.map((c) => (
-                <button key={c.id} onClick={() => onSelectCategory?.(c.id)} className="hover:underline">{c.name}</button>
-              ))}
-              {rating && (
-                <span className="ml-auto bg-black/15 rounded-full px-2.5 py-0.5"><RatingBadge media={rating.media} total={rating.total} size={13} /></span>
+          <nav className="hidden md:flex items-center gap-6 ml-2 flex-1">
+            <button onClick={() => navigate(createPageUrl('Catalog'))} className="flex items-center gap-1 text-sm font-semibold text-gray-200 hover:text-white transition-colors">Comprar <ChevronDown className="w-4 h-4 opacity-60" /></button>
+            <button onClick={() => navigate(createPageUrl('Home'))} className="flex items-center gap-1 text-sm font-semibold text-gray-200 hover:text-white transition-colors">Leilões <ChevronDown className="w-4 h-4 opacity-60" /></button>
+            <button onClick={() => navigate(createPageUrl('Licensing'))} className="flex items-center gap-1 text-sm font-semibold text-gray-200 hover:text-white transition-colors">Ganhe Dinheiro <ChevronDown className="w-4 h-4 opacity-60" /></button>
+            <a href={LIVOO_FEED} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-2 text-white text-sm font-extrabold px-4 py-2 rounded-full shadow-lg" style={{ background: 'linear-gradient(90deg,#ec4899,#f97316)' }}>
+              <Play className="w-4 h-4 fill-white" /> AO VIVO AGORA
+            </a>
+          </nav>
+          <div className="flex items-center gap-3 sm:gap-4 ml-auto">
+            <button onClick={() => navigate(createPageUrl('Cart'))} className="relative text-gray-200 hover:text-white">
+              <ShoppingCart className="w-6 h-6" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[10px] font-black rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1">{cartCount}</span>
               )}
-            </div>
-          </div>
-          <button onClick={() => navigate(createPageUrl('Cart'))} className="relative shrink-0 text-white p-2">
-            <ShoppingCart className="w-7 h-7" />
-            {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-yellow-400 text-green-900 text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{cartCount}</span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* 3) Hero: banner + 2 cards promo */}
-      <div className="max-w-[1280px] mx-auto px-4 pt-5">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {/* Carrossel de banners oficiais da loja — rotativo, 16:5, sem cortar (fit=contain) */}
-          <div className="lg:col-span-2 relative rounded-xl overflow-hidden aspect-[16/5] bg-[#0f172a]">
-            <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
-          </div>
-          <div className="grid grid-rows-2 gap-3">
-            <div className="rounded-xl p-5 text-white flex flex-col justify-center" style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}>
-              <Ticket className="w-7 h-7 text-yellow-300 mb-2" />
-              <p className="font-black leading-tight">APROVEITE CUPONS DE DESCONTO E FRETE GRÁTIS</p>
-            </div>
-            <button onClick={() => window.dispatchEvent(new Event('openComparai'))}
-              className="rounded-xl p-5 text-left text-white flex flex-col justify-center"
-              style={{ background: 'linear-gradient(135deg,#e0a92e,#b8860b)' }}>
-              <ScanSearch className="w-7 h-7 text-white mb-2" />
-              <p className="font-black leading-tight">COMPARE</p>
-              <p className="text-[12px] text-yellow-50">Compare o preço antes de comprar — só aqui.</p>
+            </button>
+            <span className="hidden sm:block w-px h-6 bg-white/10" />
+            <button onClick={() => window.dispatchEvent(new CustomEvent('openLoginModal'))} className="inline-flex items-center gap-2 text-sm font-bold text-white px-4 py-2 rounded-lg shadow" style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
+              <User className="w-4 h-4" /> Entrar
             </button>
           </div>
         </div>
+        {/* nav mobile (deslizante) */}
+        <div className="md:hidden max-w-[1280px] mx-auto px-4 pb-2.5 flex items-center gap-5 overflow-x-auto no-scrollbar text-sm font-semibold text-gray-200">
+          <button onClick={() => navigate(createPageUrl('Catalog'))} className="whitespace-nowrap">Comprar</button>
+          <button onClick={() => navigate(createPageUrl('Home'))} className="whitespace-nowrap">Leilões</button>
+          <button onClick={() => navigate(createPageUrl('Licensing'))} className="whitespace-nowrap">Ganhe Dinheiro</button>
+          <a href={LIVOO_FEED} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-white font-extrabold px-3 py-1 rounded-full whitespace-nowrap" style={{ background: 'linear-gradient(90deg,#ec4899,#f97316)' }}><Play className="w-3.5 h-3.5 fill-white" /> AO VIVO</a>
+        </div>
+      </div>
 
-        {/* 4) Rail de ícones redondos */}
-        <div className="flex gap-1 overflow-x-auto py-5 no-scrollbar">
-          {railFixed.map((r, i) => <RailIcon key={'f' + i} {...r} />)}
-          {railCats.map((r, i) => <RailIcon key={'c' + i} {...r} />)}
+      {/* 2) SUB-BARRA: Enviar para / status */}
+      <div className="bg-[#0b1018] border-b border-white/5 text-[12px]">
+        <div className="max-w-[1280px] mx-auto px-4 py-2 flex items-center justify-between text-gray-400">
+          <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-gray-500" /> Enviar para: <b className="text-gray-200">Brasil</b></span>
+          <span className="flex items-center gap-2">Loja Virtual <span className="inline-flex items-center gap-1 text-green-400 font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Online</span></span>
+        </div>
+      </div>
+
+      {/* 3) HERO: banner full-width rotativo */}
+      <div className="max-w-[1280px] mx-auto px-4 pt-4">
+        <div className="relative rounded-2xl overflow-hidden aspect-[16/5] bg-[#0f172a]">
+          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
         </div>
       </div>
     </div>
