@@ -693,16 +693,9 @@ export default function Catalog() {
             </div>
           )}
 
-          {/* Busca e Filtros */}
+          {/* Filtros (o buscador agora fica no topo, no cabeçalho da loja) */}
           <div className="mb-8 space-y-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="O que você procura hoje?"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
-              />
+            <div className="flex justify-end">
               <Button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-6 h-[46px] ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base shadow-lg transition-all`}

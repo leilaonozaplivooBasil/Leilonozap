@@ -147,8 +147,21 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 mb-6">
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
 
-      {/* Barra de navegação removida: era duplicata da navbar principal do Layout (topo).
-          A loja mantém só a sub-barra de status + o banner. */}
+      {/* BUSCA no topo da loja (estilo Mercado Livre) — foi movida do corpo da página pra cá */}
+      <div className="bg-[#0e1522] border-b border-white/5">
+        <div className="max-w-[1280px] mx-auto px-4 py-2.5">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm?.(e.target.value)}
+              placeholder="O que você procura hoje?"
+              className="w-full bg-gray-800/80 border border-gray-700 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none transition-colors"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* SUB-BARRA: Enviar para / status */}
       <div className="bg-[#0b1018] border-b border-white/5 text-[12px]">
