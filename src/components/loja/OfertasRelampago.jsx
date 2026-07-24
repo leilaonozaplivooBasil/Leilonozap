@@ -122,7 +122,10 @@ export default function OfertasRelampago({ products = [] }) {
   // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="relative z-10 -mt-10 sm:-mt-16 bg-gray-900/55 backdrop-blur-md border border-gray-700/80 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden shadow-2xl shadow-black/50">
+    <div className="relative z-10 -mt-10 sm:-mt-16 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.06] backdrop-blur-2xl backdrop-saturate-150">
+      {/* liquid glass: brilho superior + borda interna sutil pra dar o efeito de vidro (deixa o banner aparecer atrás) */}
+      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/12 to-transparent" aria-hidden />
       {/* cabeçalho responsivo: título + timer + "Ver Tudo" que se ajustam sem quebrar feio no mobile */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4 px-3 sm:px-4">
         <span className="text-base sm:text-xl font-black flex items-center gap-1.5 whitespace-nowrap" style={{ color: '#f5c451' }}>
