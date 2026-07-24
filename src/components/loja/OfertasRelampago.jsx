@@ -25,7 +25,7 @@ function FlashCard({ p }) {
   return (
     <button
       onClick={() => navigate(createPageUrl('CatalogProductDetails') + `?id=${p.id}`)}
-      className="w-[150px] shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
+      className="w-[42vw] max-w-[168px] sm:w-[150px] shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
     >
       <div className="relative aspect-square bg-white">
         {img ? <img src={img} alt={p.description} loading="lazy" className="w-full h-full object-contain" />
@@ -123,15 +123,13 @@ export default function OfertasRelampago({ products = [] }) {
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
     <div className="bg-gray-800/40 border border-gray-700 rounded-2xl pt-4 pb-4 mb-8 overflow-hidden">
-      {/* cabeçalho com respiro lateral normal */}
-      <div className="flex items-center justify-between mb-4 px-4">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-black flex items-center gap-1.5" style={{ color: '#f5c451' }}>
-            <Zap className="w-6 h-6 fill-yellow-400 text-yellow-400" /> OFERTAS RELÂMPAGO
-          </span>
-          <span className="flex items-center gap-1"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
-        </div>
-        <button onClick={() => navigate(createPageUrl('Catalog'))} className="text-green-400 text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
+      {/* cabeçalho responsivo: título + timer + "Ver Tudo" que se ajustam sem quebrar feio no mobile */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4 px-3 sm:px-4">
+        <span className="text-base sm:text-xl font-black flex items-center gap-1.5 whitespace-nowrap" style={{ color: '#f5c451' }}>
+          <Zap className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 text-yellow-400 shrink-0" /> OFERTAS RELÂMPAGO
+        </span>
+        <span className="flex items-center gap-1 shrink-0"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
+        <button onClick={() => navigate(createPageUrl('Catalog'))} className="ml-auto text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
