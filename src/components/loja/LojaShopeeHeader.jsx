@@ -163,6 +163,9 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
         <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a]">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
+          {/* degradê suave (estilo Mercado Livre): a base funde no fundo escuro da loja, sem
+              esconder o texto — leve e curto, só o últimos ~40px do banner. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 sm:h-10 bg-gradient-to-t from-gray-900/85 to-transparent" aria-hidden />
         </div>
       </div>
     </div>

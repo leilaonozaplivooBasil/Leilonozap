@@ -627,43 +627,7 @@ export default function Catalog() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* BANNER PERSONALIZADO DO LICENCIADO */}
-        {licenseeData && (
-          <div className="mb-6 bg-gradient-to-r from-green-900/40 via-teal-900/40 to-green-900/40 border border-green-500/30 rounded-xl p-4 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              {licenseeData.photo ? (
-                <img 
-                  src={licenseeData.photo} 
-                  alt={licenseeData.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-green-400/50 shadow-lg"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white text-xl font-bold border-2 border-green-400/50 shadow-lg">
-                  {licenseeData.name?.charAt(0)}
-                </div>
-              )}
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-white">
-                  Loja Virtual de {licenseeData.name}
-                </h2>
-                <p className="text-green-200 text-xs">
-                  ✨ Produtos exclusivos selecionados especialmente para você
-                </p>
-              </div>
-              {licenseeData.phone && (
-                <a
-                  href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-xl"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">Falar Comigo</span>
-                </a>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Nome/identidade da loja fica só no card de perfil ABAIXO das ofertas (evita duplicar). */}
 
         {/* Header estilo Shopee (identidade Leila) — barra utilitária + busca + hero + rail */}
         <LojaShopeeHeader
@@ -677,7 +641,7 @@ export default function Catalog() {
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago products={products} />
 
-        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) */}
+        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja */}
         <div className="mb-6 flex items-center gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
           {licenseeData?.photo ? (
             <img src={licenseeData.photo} alt={licenseeData.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-green-500/40 shrink-0" />
@@ -686,14 +650,25 @@ export default function Catalog() {
               {(licenseeData?.name || 'Loja Virtual Especial').charAt(0).toUpperCase()}
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="text-white font-bold text-lg truncate">{licenseeData?.name || 'Loja Virtual Especial'}</h3>
-            <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mt-1">
               <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-green-400" /> {products.length} produtos</span>
               <span className="text-gray-600">·</span>
               <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-green-400" /> Envio para todo Brasil</span>
             </div>
           </div>
+          {licenseeData?.phone && (
+            <a
+              href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Falar Comigo</span>
+            </a>
+          )}
         </div>
 
         {/* CONTEÚDO PRINCIPAL */}
