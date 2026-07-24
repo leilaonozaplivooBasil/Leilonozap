@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sparkles, X } from 'lucide-react';
@@ -57,13 +58,12 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home', hideBu
 
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-2xl pr-12">
-                <img
-                  src={CompareAquiIcon}
-                  alt="CompareAQUI"
-                  className="w-16 h-16 rounded-full shadow-lg"
-                />
                 <div>
-                  <div className="text-blue-400 font-bold text-2xl">CompareAQUI</div>
+                  <img
+                    src={CompareAquiLogo}
+                    alt="CompareAQUI"
+                    className="h-20 w-auto mb-1"
+                  />
                   <div className="text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
                 </div>
               </DialogTitle>

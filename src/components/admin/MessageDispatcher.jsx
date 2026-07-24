@@ -101,8 +101,7 @@ const MESSAGE_TEMPLATES = {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://leilaonozap.net/compareaqui-icon.png" alt="CompareAQUI" style="width: 150px;">
-      <h1 style="color: white; margin: 10px 0;">🔍 CompareAQUI</h1>
+      <img src="https://leilaonozap.net/compareaqui-logo.png" alt="CompareAQUI" style="width: 260px; max-width: 80%;">
       <p style="color: #dbeafe;">Comparação Inteligente de Preços</p>
     </div>
     
