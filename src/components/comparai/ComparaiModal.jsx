@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { X, Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw } from 'lucide-react';
+import { X, Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, AlertTriangle, Factory, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 
@@ -47,8 +48,10 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
             <DialogTitle>Erro</DialogTitle>
           </DialogHeader>
           <div className="text-center py-8">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h3 className="text-xl font-bold mb-2 text-yellow-400">Leilão Inválido</h3>
+            <div className="w-14 h-14 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7 text-amber-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-2 text-amber-400">Leilão Inválido</h3>
             <p className="text-gray-300 mb-6">Não foi possível carregar os dados do leilão.</p>
             <Button onClick={onClose} className="bg-gray-700 hover:bg-gray-600">Fechar</Button>
           </div>
@@ -323,8 +326,10 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
           </DialogHeader>
           
           <div className="text-center py-8">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h3 className="text-xl font-bold mb-2 text-yellow-400">Comparação Indisponível</h3>
+            <div className="w-14 h-14 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7 text-amber-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-2 text-amber-400">Comparação Indisponível</h3>
             <p className="text-gray-300 mb-6">{error}</p>
             <Button onClick={onClose} className="bg-gray-700 hover:bg-gray-600">Fechar</Button>
           </div>
@@ -343,7 +348,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
           </button>
 
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-2xl pr-12">
+            <DialogTitle className="text-2xl pr-12">
               <img 
                 src={CompareAquiIcon}
                 alt="CompareAQUI"
@@ -362,7 +367,9 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
             {!isProduct && isSupplierWithoutUrl && !comparisonData && !isLoading && !error && (
               <div className="space-y-6 py-4">
                 <div className="text-center">
-                  <div className="text-5xl mb-4">🏭</div>
+                  <div className="w-14 h-14 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center mx-auto mb-4">
+                    <Factory className="w-7 h-7 text-blue-400" />
+                  </div>
                   <h3 className="text-xl font-bold text-white mb-2">Produto Direto do Fabricante</h3>
                   <p className="text-gray-400 mb-6">
                     Nenhuma URL do fabricante foi informada. Escolha como comparar:
@@ -377,7 +384,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                   >
                     <ExternalLink className="w-5 h-5 mr-3" />
                     <div className="text-left">
-                      <div className="font-bold">🏭 Site do Fabricante (preço exato)</div>
+                      <div className="font-bold">Site do Fabricante (preço exato)</div>
                       <div className="text-xs opacity-70">Requer URL do fornecedor</div>
                     </div>
                   </Button>
@@ -389,14 +396,14 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                   >
                     <Sparkles className="w-5 h-5 mr-3" />
                     <div className="text-left">
-                      <div className="font-bold">🔍 Usar CompareAQUI (página de arremate)</div>
+                      <div className="font-bold">Usar CompareAQUI (página de arremate)</div>
                       <div className="text-xs opacity-90">Mesma comparação dos produtos de arremate</div>
                     </div>
                   </Button>
                 </div>
 
                 <p className="text-xs text-gray-500 text-center">
-                  💡 A busca no Google Shopping usa o título do produto para encontrar preços de referência
+                  A busca no Google Shopping usa o título do produto para encontrar preços de referência
                 </p>
               </div>
             )}
@@ -405,7 +412,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
               <div className="text-center py-12">
                 <div className="inline-block animate-spin w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
                 <p className="text-blue-300 font-medium">
-                  {isFactoryProduct ? '🏭 Consultando fabricante...' : '🔍 Analisando preços...'}
+                  {isFactoryProduct ? 'Consultando fabricante...' : 'Analisando preços...'}
                 </p>
               </div>
             )}
@@ -441,7 +448,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                   {/* CARD 2: FABRICANTE/MERCADO */}
                   {comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 ? (
                     <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-2 border-blue-500 rounded-xl p-6 text-center">
-                      <div className="text-blue-300 text-xs font-medium mb-4 uppercase">🏭 PREÇO NO FABRICANTE</div>
+                      <div className="text-blue-300 text-xs font-medium mb-4 uppercase">Preço no Fabricante</div>
                       
                       {localAuction.supplier_logo_url && (
                         <img 
@@ -467,7 +474,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                           alt="CompareAQUI"
                           className="w-10 h-10"
                         />
-                        <div className="text-orange-300 text-sm font-bold uppercase">📊 {comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>
+                        <div className="text-orange-300 text-sm font-bold uppercase">{comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>
                       </div>
                       
                       <div className="text-5xl font-black text-orange-400 mb-2">
@@ -476,8 +483,8 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                       
                       <div className="text-orange-300 text-sm">
                         {comparisonData.isManualPrice 
-                          ? '✏️ Preço inserido manualmente' 
-                          : `✅ Preço médio entre ${comparisonData.totalStoresAnalyzed || 'várias'} lojas`}
+                          ? 'Preço inserido manualmente' 
+                          : `Preço médio entre ${comparisonData.totalStoresAnalyzed || 'várias'} lojas`}
                       </div>
                     </div>
                   )}
@@ -491,7 +498,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                           alt="NoZap"
                           className="w-10 h-10"
                         />
-                        <div className="text-green-300 text-sm font-bold uppercase">🔥 Você Economiza</div>
+                        <div className="text-green-300 text-sm font-bold uppercase">Você Economiza</div>
                       </div>
                       
                       <div className="text-6xl font-black text-green-400 mb-2">
@@ -507,7 +514,10 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                   {/* CARD 4: VENCEDOR */}
                   {comparisonData.savings > 0 && (
                     <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500 rounded-xl p-6 text-center">
-                      <h3 className="text-2xl font-bold text-white mb-2">🏆 LEILÃO NOZAP VENCEU!</h3>
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
+                        <Trophy className="w-6 h-6 text-emerald-400" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-white mb-2">LEILÃO NOZAP VENCEU</h3>
                       
                       <p className="text-green-300 text-lg">
                         O preço do Leilão NoZap é <span className="font-bold text-yellow-300">
@@ -533,7 +543,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                   ) : (
                     <>
                       <Share2 className="w-5 h-5 mr-2" />
-                      📲 Compartilhar Essa Economia!
+                      Compartilhar essa economia
                     </>
                   )}
                 </Button>
