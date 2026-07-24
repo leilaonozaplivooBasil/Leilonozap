@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
-import ComparaiIcon from '@/assets/comparai-icon.png';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import leilaSuporte from '@/assets/leila-suporte.webp';
 
 const SUPORTE_PHONE = '5521984072064';
@@ -16,18 +16,18 @@ export default function LojaFloatActions() {
 
   return (
     <>
-      {/* Comparai — canto ESQUERDO inferior (padrão definitivo Heloim / Base44) */}
+      {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07) */}
       <div className="fixed left-4 bottom-5 z-50 flex flex-col items-center">
         <button
           onClick={() => window.dispatchEvent(new Event('openComparai'))}
-          title="Compare — compare o preço antes de comprar"
+          title="CompareAQUI — compare o preço antes de comprar"
           className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 relative"
-          style={{ boxShadow: '0 8px 24px rgba(37,99,235,.45)' }}
+          style={{ boxShadow: '0 8px 24px rgba(37,99,255,.45)' }}
         >
-          <img src={ComparaiIcon} alt="Comparai" className="w-full h-full object-cover rounded-full" />
+          <img src={CompareAquiIcon} alt="CompareAQUI" className="w-full h-full object-cover rounded-full" />
           <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20" />
         </button>
-        <Label>Compare</Label>
+        <Label>CompareAQUI</Label>
       </div>
 
       {/* Suporte com a Leila (avatar 3D) — canto DIREITO inferior. Animado pra chamar clique.

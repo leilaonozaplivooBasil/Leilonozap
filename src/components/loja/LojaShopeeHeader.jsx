@@ -124,7 +124,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
 
   // ícones fixos do rail (diferenciais + atalhos). Categorias reais entram depois.
   const railFixed = [
-    { icon: ScanSearch, label: 'Compare', accent: 'gold', onClick: () => window.dispatchEvent(new Event('openComparai')) },
+    { icon: ScanSearch, label: 'CompareAQUI', accent: 'gold', onClick: () => window.dispatchEvent(new Event('openComparai')) },
     { icon: Gavel, label: 'Leilões ao vivo', onClick: () => navigate(createPageUrl('Home')) },
     { icon: Ticket, label: 'Cupons', accent: 'gold', onClick: mostrarCupons },
     { icon: Truck, label: 'Frete Grátis', onClick: () => toast('🚚 Frete combinado direto no WhatsApp da loja.') },

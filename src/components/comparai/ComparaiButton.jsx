@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ComparaiModal from './ComparaiModal';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 
 export default function ComparaiButton({ auction, mode }) {
   const [showModal, setShowModal] = useState(false);
@@ -11,11 +12,11 @@ export default function ComparaiButton({ auction, mode }) {
       <button
         onClick={() => setShowModal(true)}
         className="comparai-button-position z-50 w-16 h-16 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 p-0 border-0 bg-transparent cursor-pointer animate-float"
-        title="Compare preços"
+        title="CompareAQUI — compare preços"
       >
-        <img 
-          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-          alt="Comparai"
+        <img
+          src={CompareAquiIcon}
+          alt="CompareAQUI"
           className="w-full h-full object-cover rounded-full"
         />
         

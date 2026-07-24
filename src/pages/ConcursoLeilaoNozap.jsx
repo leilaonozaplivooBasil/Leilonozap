@@ -109,7 +109,7 @@ export default function ConcursoLeilaoNozap() {
 
   useEffect(() => { if (!ref) { load(periodo); loadMe(); const t = setInterval(() => { load(periodo); loadMe(); }, 15000); return () => clearInterval(t); } }, [load, loadMe, periodo, ref]);
 
-  const myLink = myCode ? `${window.location.origin}/concursoleilaonozap?ref=${myCode}` : '';
+  const myLink = myCode ? `${window.location.origin}/rankpremiado?ref=${myCode}` : '';
   const config = data.config || {};
   const liveOn = !!config.live_ativa;
   const liveLink = config.live_url || LIVOO_VENDEDOR;
@@ -131,7 +131,7 @@ export default function ConcursoLeilaoNozap() {
   const handleProdutoFoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setCfg((s) => ({ ...s, produto_foto: url })); } catch { /* */ } };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
   const copyLink = () => { navigator.clipboard?.writeText(myLink); setMsg('Link copiado!'); setTimeout(() => setMsg(''), 3500); };
-  const shareZap = () => { const t = encodeURIComponent(`Tô no Concurso Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
+  const shareZap = () => { const t = encodeURIComponent(`Tô no Rank Premiado Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
 
   const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
   const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, premio]) => ({ posicao: Number(posicao), premio })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
@@ -415,7 +415,7 @@ export default function ConcursoLeilaoNozap() {
       <div className="flex items-center gap-2.5">
         <span className="w-9 h-9 rounded-xl grid place-items-center text-white shadow-lg shadow-purple-900/40" style={{ background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' }}><Settings2 className="w-5 h-5" /></span>
         <div className="leading-tight">
-          <p className="font-black text-lg flex items-center gap-2">Painel Admin do Concurso</p>
+          <p className="font-black text-lg flex items-center gap-2">Painel Admin do Rank Premiado</p>
           <span className="text-[11px] font-bold inline-flex items-center gap-1.5 text-purple-200/90"><Lock className="w-3 h-3" /> Só você vê isto</span>
         </div>
       </div>
@@ -438,7 +438,7 @@ export default function ConcursoLeilaoNozap() {
           <div className="flex items-center gap-3">
             <span className="w-14 h-14 rounded-2xl grid place-items-center" style={{ background: 'conic-gradient(from 200deg,#0e4d38,#0a2c22)', border: '1px solid rgba(245,196,81,.35)' }}><Trophy className="w-7 h-7 text-yellow-300" /></span>
             <div>
-              <h1 className="font-black leading-none" style={{ fontSize: 'clamp(1.5rem,6vw,2rem)', background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CONCURSO</h1>
+              <h1 className="font-black leading-none" style={{ fontSize: 'clamp(1.5rem,6vw,2rem)', background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>RANK PREMIADO</h1>
               <p className="text-green-200/85 mt-1 font-semibold text-sm">Encha o grupo e ganhe prêmio todo dia</p>
             </div>
           </div>
