@@ -602,7 +602,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
           </div>
 
-          {!isActive && (
+          {!isActive && auction.status !== 'paused' && auction.status !== 'scheduled' && (
             <div className="rounded-xl p-3 mb-4 text-center" style={{
               background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
               border: '1px solid rgba(16,185,129,0.15)',

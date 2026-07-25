@@ -113,8 +113,9 @@ export default function EditAuction() {
     const [isReactivating, setIsReactivating] = useState(false);
     const [reactivateTime, setReactivateTime] = useState("");
     const [reactivatePreset, setReactivatePreset] = useState(720); // qual botão rápido está ativo (default +12h)
-    // Modal de confirmação personalizado da página: { title, lines, confirmLabel, danger, onConfirm }
+    // Modal de confirmação personalizado da página: { title, lines, confirmLabel, danger, typeToConfirm?, onConfirm }
     const [confirmAction, setConfirmAction] = useState(null);
+    const [confirmTyped, setConfirmTyped] = useState('');
     // Editor de texto sobre a foto: { index, text }
     const [captionEdit, setCaptionEdit] = useState(null);
 
@@ -754,14 +755,17 @@ export default function EditAuction() {
     };
 
     const handleDeleteAuction = () => {
+        setConfirmTyped('');
         setConfirmAction({
             title: "Deletar este leilão definitivamente?",
             lines: [
                 "Esta ação é IRREVERSÍVEL",
                 "Todos os dados associados serão removidos",
+                "Prefere algo reversível? Use o Arquivar",
             ],
-            confirmLabel: "Sim, deletar",
+            confirmLabel: "Deletar definitivamente",
             danger: true,
+            typeToConfirm: "deletar",
             onConfirm: doDeleteAuction,
         });
     };
@@ -1602,7 +1606,7 @@ export default function EditAuction() {
             </Dialog>
 
             {/* MODAL DE CONFIRMAÇÃO PERSONALIZADO — substitui o confirm() nativo do navegador */}
-            <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+            <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setConfirmTyped(''); } }}>
                 <DialogContent className="bg-[#161b22] border-[#30363d] text-white max-w-md">
                     {confirmAction && (
                         <>
@@ -1624,6 +1628,20 @@ export default function EditAuction() {
                                     </li>
                                 ))}
                             </ul>
+                            {confirmAction.typeToConfirm && (
+                                <div className="pt-1">
+                                    <p className="text-xs text-slate-400 mb-2">
+                                        Para confirmar, escreva <strong className="text-rose-400 uppercase">{confirmAction.typeToConfirm}</strong> abaixo:
+                                    </p>
+                                    <Input
+                                        value={confirmTyped}
+                                        onChange={(e) => setConfirmTyped(e.target.value)}
+                                        placeholder={confirmAction.typeToConfirm}
+                                        className={INPUT_CLS}
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
                             <div className="flex gap-3 pt-2">
                                 <Button
                                     variant="outline"
@@ -1633,7 +1651,8 @@ export default function EditAuction() {
                                     Cancelar
                                 </Button>
                                 <Button
-                                    className={`flex-1 font-bold text-white ${confirmAction.danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-orange-600 hover:bg-orange-500'}`}
+                                    className={`flex-1 font-bold text-white ${confirmAction.danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-orange-600 hover:bg-orange-500'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                                    disabled={!!confirmAction.typeToConfirm && confirmTyped.trim().toLowerCase() !== confirmAction.typeToConfirm.toLowerCase()}
                                     onClick={() => {
                                         const fn = confirmAction.onConfirm;
                                         setConfirmAction(null);
