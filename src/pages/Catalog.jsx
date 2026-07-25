@@ -13,11 +13,9 @@ import { Button } from "@/components/ui/button";
 
 import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
-import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import { supabase } from '@/api/supabaseClient';
 import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';
-import LojaFloatActions from '../components/loja/LojaFloatActions';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
@@ -625,7 +623,8 @@ export default function Catalog() {
         }
       `}</style>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* 📱 pb maior no mobile: respiro pros botões flutuantes não cobrirem o fim da página */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-28 sm:py-6">
         
         {/* Nome/identidade da loja fica só no card de perfil ABAIXO das ofertas (evita duplicar). */}
 
@@ -642,16 +641,16 @@ export default function Catalog() {
         <OfertasRelampago products={products} />
 
         {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja */}
-        <div className="mb-6 flex items-center gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
+        <div className="mb-6 flex items-center gap-3 sm:gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-3 sm:p-4">
           {licenseeData?.photo ? (
-            <img src={licenseeData.photo} alt={licenseeData.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-green-500/40 shrink-0" />
+            <img src={licenseeData.photo} alt={licenseeData.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-green-500/40 shrink-0" />
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-black shrink-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-black shrink-0">
               {(licenseeData?.name || 'Loja Virtual Especial').charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="text-white font-bold text-lg truncate">{licenseeData?.name || 'Loja Virtual Especial'}</h3>
+            <h3 className="text-white font-bold text-base sm:text-lg truncate">{licenseeData?.name || 'Loja Virtual Especial'}</h3>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mt-1">
               <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-green-400" /> {products.length} produtos</span>
               <span className="text-gray-600">·</span>
@@ -676,7 +675,7 @@ export default function Catalog() {
           {/* Produtos em Destaque */}
            {featuredProducts.length > 0 && (
              <div className="mb-8">
-               <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2 justify-center">
+               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2 justify-center">
                  ⭐ Produtos em Destaque
                </h2>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -698,9 +697,9 @@ export default function Catalog() {
             <div className="flex justify-end">
               <Button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`px-6 h-[46px] ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base shadow-lg transition-all`}
+                className={`px-4 h-10 text-sm sm:px-6 sm:h-[46px] sm:text-base ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold shadow-lg transition-all`}
               >
-                <SlidersHorizontal className="w-5 h-5 mr-2" />
+                <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 <span>Filtros</span>
               </Button>
             </div>
@@ -800,7 +799,7 @@ export default function Catalog() {
 
           {/* ABAS DE CATEGORIA horizontais (padrão Base44) */}
           {categories.length > 0 && (
-            <div className="mb-6 flex items-center gap-6 overflow-x-auto category-scroller border-b border-gray-800">
+            <div className="mb-6 flex items-center gap-4 sm:gap-6 overflow-x-auto category-scroller border-b border-gray-800">
               {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
                 const active = selectedCategory === c.id;
                 return (
@@ -889,7 +888,7 @@ export default function Catalog() {
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="px-8 py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-60 transition-colors"
+                className="px-6 py-2.5 text-sm sm:px-8 sm:py-3 sm:text-base rounded-xl font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-60 transition-colors"
               >
                 {loadingMore ? "Carregando..." : "Carregar mais produtos"}
               </button>
@@ -898,8 +897,7 @@ export default function Catalog() {
         </div>
       </div>
 
-      <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" hideButton />
-      <LojaFloatActions />
+      {/* Flutuantes (CompareAQUI + Fale com a Leila) agora são globais, renderizados no Layout */}
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
     </div>
   );

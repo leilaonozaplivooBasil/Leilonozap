@@ -10,6 +10,7 @@ import GuestRegistrationModal from "@/components/common/GuestRegistrationModal";
 
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
+import BackToTopButton from "@/components/common/BackToTopButton";
 import NavDesktop from "@/components/nav/NavDesktop";
 import logoIcon from "@/assets/logo-icon.webp";
 import NavMobile from "@/components/nav/NavMobile";
@@ -23,6 +24,11 @@ import RoleSidebar from "@/components/layout/RoleSidebar";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
+
+// Flutuantes globais: CompareAQUI (esquerda) + Fale com a Leila (direita) em todas as páginas.
+// ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
+const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
+const ComparaiFloatingButton = React.lazy(() => import("@/components/comparai/ComparaiFloatingButton"));
 import { Menu, MessageCircle, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
 
 
@@ -907,7 +913,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="min-h-screen bg-gray-900">
         {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: 'rgba(10, 15, 28, 0.8)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: '1px solid rgba(16, 185, 129, 0.08)', boxShadow: '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 justify-between items-center">
+            <div className="flex h-14 sm:h-16 justify-between items-center">
 
               {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
               <div className="flex items-center gap-2 md:gap-4">
@@ -929,7 +935,7 @@ export default function Layout({ children, currentPageName }) {
                 <img
                   src={logoIcon}
                   alt="Leilão NoZap"
-                  className="h-12 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
+                  className="h-10 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
@@ -1034,7 +1040,7 @@ export default function Layout({ children, currentPageName }) {
           className={
             isLandingPage
               ? ""
-              : `pt-16 ${
+              : `pt-14 sm:pt-16 ${
                   getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems).showSidebar
                     ? "md:pl-60"
                     : ""
@@ -1045,6 +1051,8 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </main>
         <Footer />
+        {/* 📱 Voltar ao topo — global, só mobile (liquid glass, centro inferior) */}
+        <BackToTopButton />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
         {currentUser && (isLicensee || isAdmin) && currentPageName === "AuctionRoom" && (
@@ -1127,6 +1135,12 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
+
+        {/* 🌐 Flutuantes globais — CompareAQUI à esquerda e Fale com a Leila à direita */}
+        <React.Suspense fallback={null}>
+          <ComparaiFloatingButton hideButton />
+          <LojaFloatActions />
+        </React.Suspense>
 
         {/* 🧪 DEV — "Sair (teste)" agora fica inline na navbar (NavDesktop), ao lado do nome do usuário */}
 

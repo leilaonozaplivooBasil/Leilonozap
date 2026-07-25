@@ -157,7 +157,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
               value={searchTerm}
               onChange={(e) => setSearchTerm?.(e.target.value)}
               placeholder="O que você procura hoje?"
-              className="w-full bg-gray-800/80 border border-gray-700 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none transition-colors"
+              className="w-full bg-gray-800/80 border border-gray-700 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -171,14 +171,17 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
         </div>
       </div>
 
-      {/* HERO: banner full-bleed (borda a borda). fit=contain garante que NADA do texto do
-          banner seja cortado — o banner é 16:5 e o container também, então preenche sem barras. */}
-      <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
-        <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a]">
+      {/* HERO: banner full-bleed (borda a borda) no desktop. fit=contain garante que NADA do
+          texto do banner seja cortado — o banner é 16:5 e o container também, então preenche
+          sem barras. No MOBILE ele vira um card com margem e canto arredondado (padrão
+          Shopee/ML app): o banner inteiro aparece, pequeno e legível, sem sobreposição. */}
+      <div className="px-3 sm:px-0 sm:ml-[calc(50%-50vw)] sm:mr-[calc(50%-50vw)] sm:w-screen">
+        <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a] rounded-xl sm:rounded-none">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
-              de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
+              de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML.
+              Só no desktop — no mobile a caixa de ofertas NÃO sobrepõe o banner. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden sm:block h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
         </div>
       </div>
     </div>
