@@ -735,11 +735,11 @@ export default function Catalog() {
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-[15px] text-white focus:border-green-500 focus:outline-none"
                     >
-                      <option value="all">Todas</option>
+                      <option value="all" className="text-[15px]">Todas</option>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        <option key={cat.id} value={cat.id} className="text-[15px]">{cat.name}</option>
                       ))}
                     </select>
                   </div>
