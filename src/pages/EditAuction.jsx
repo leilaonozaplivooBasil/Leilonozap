@@ -18,8 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer } from 'lucide-react';
 import { capOf, withCap } from '@/lib/fotoLegenda';
+import { supabase } from '@/api/supabaseClient';
 
 // 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
 // (o Brave/Chrome pode bloquear diálogos nativos e o clique "não faz nada").
@@ -130,6 +131,98 @@ export default function EditAuction() {
         if (!captionEdit) return;
         setImageUrls((prev) => prev.map((u, i) => (i === captionEdit.index ? withCap(u, captionEdit.text) : u)));
         setCaptionEdit(null);
+    };
+
+    // ── Controles do leilão ativo: novo tempo, pausar/retomar e encerrar ──
+    // O instante da pausa fica em raw_base44.pause_meta (coluna JSONB livre — sem mudança de schema).
+    const lerRaw = async () => {
+        const { data: row } = await supabase.from('auctions').select('raw_base44').eq('id', auctionId).maybeSingle();
+        return row?.raw_base44 && typeof row.raw_base44 === 'object' ? row.raw_base44 : {};
+    };
+
+    const definirTempo = async (min) => {
+        try {
+            const end = new Date(Date.now() + min * 60000).toISOString();
+            await Auction.update(auctionId, { status: 'active', end_time: end });
+            setAuction((prev) => ({ ...prev, status: 'active', end_time: end }));
+            notify.ok('Tempo do leilão atualizado', `Termina: ${new Date(end).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+        } catch (e) {
+            console.error('Erro ao definir tempo:', e);
+            notify.erro('Erro ao atualizar o tempo', 'Tente novamente.');
+        }
+    };
+
+    const pausarLeilao = () => setConfirmAction({
+        title: 'Pausar este leilão?',
+        lines: [
+            'O cronômetro congela com o tempo restante atual',
+            'Os lances ficam bloqueados enquanto pausado',
+            'Você pode retomar quando quiser',
+        ],
+        confirmLabel: 'Pausar leilão',
+        danger: false,
+        onConfirm: doPausar,
+    });
+
+    const doPausar = async () => {
+        try {
+            const raw = await lerRaw();
+            await Auction.update(auctionId, {
+                status: 'paused',
+                raw_base44: { ...raw, pause_meta: { paused_at: new Date().toISOString(), end_time: auction.end_time } },
+            });
+            setAuction((prev) => ({ ...prev, status: 'paused' }));
+            notify.ok('Leilão pausado', 'O tempo restante ficou congelado.');
+        } catch (e) {
+            console.error('Erro ao pausar:', e);
+            notify.erro('Erro ao pausar o leilão', 'Tente novamente.');
+        }
+    };
+
+    const retomarLeilao = async () => {
+        try {
+            const raw = await lerRaw();
+            const meta = raw.pause_meta;
+            let novoEnd;
+            if (meta?.paused_at && meta?.end_time) {
+                const restanteMs = Math.max(60000, new Date(meta.end_time).getTime() - new Date(meta.paused_at).getTime());
+                novoEnd = new Date(Date.now() + restanteMs).toISOString();
+            } else {
+                novoEnd = new Date(Date.now() + 720 * 60000).toISOString();
+            }
+            delete raw.pause_meta;
+            await Auction.update(auctionId, { status: 'active', end_time: novoEnd, raw_base44: raw });
+            setAuction((prev) => ({ ...prev, status: 'active', end_time: novoEnd }));
+            notify.ok('Leilão retomado', `Termina: ${new Date(novoEnd).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+        } catch (e) {
+            console.error('Erro ao retomar:', e);
+            notify.erro('Erro ao retomar o leilão', 'Tente novamente.');
+        }
+    };
+
+    const encerrarLeilao = () => setConfirmAction({
+        title: 'Encerrar este leilão agora?',
+        lines: [
+            'O leilão sai do ar imediatamente',
+            'Poderá ser reativado depois pelo card Reativar Leilão',
+        ],
+        confirmLabel: 'Encerrar agora',
+        danger: true,
+        onConfirm: doEncerrar,
+    });
+
+    const doEncerrar = async () => {
+        try {
+            const agora = new Date().toISOString();
+            await Auction.update(auctionId, { status: 'ended', end_time: agora });
+            setAuction((prev) => ({ ...prev, status: 'ended', end_time: agora }));
+            setReactivateTime(toBrtLocal(new Date(Date.now() + 720 * 60000)));
+            setReactivatePreset(720);
+            notify.ok('Leilão encerrado', 'Use o card Reativar Leilão para colocar de volta no ar.');
+        } catch (e) {
+            console.error('Erro ao encerrar:', e);
+            notify.erro('Erro ao encerrar o leilão', 'Tente novamente.');
+        }
     };
 
     // ⏱️ Tick de 1s para o countdown do card de resumo (só roda com leilão ativo)
@@ -555,9 +648,11 @@ export default function EditAuction() {
     // 🎨 Badge de status + countdown do resumo lateral
     const statusInfo = auction?.status === 'active'
         ? { label: 'ATIVO', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400 animate-pulse' }
-        : auction?.status === 'sold'
-            ? { label: 'VENDIDO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400' }
-            : { label: 'ENCERRADO', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/30', dot: 'bg-slate-400' };
+        : auction?.status === 'paused'
+            ? { label: 'PAUSADO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400 animate-pulse' }
+            : auction?.status === 'sold'
+                ? { label: 'VENDIDO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400' }
+                : { label: 'ENCERRADO', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/30', dot: 'bg-slate-400' };
 
     const tempoRestante = (() => {
         if (auction?.status !== 'active') return null;
@@ -571,6 +666,10 @@ export default function EditAuction() {
 
     return (
         <div className="min-h-screen bg-[#0d1117] text-slate-200 pb-20">
+            {/* Ícone do seletor de data em branco (o nativo vem preto e some no fundo escuro) */}
+            <style>{`
+                input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .85; cursor: pointer; }
+            `}</style>
             {/* 🎯 HEADER FIXO — Voltar, título, status e Salvar sempre à mão (desktop e mobile) */}
             <div className="sticky top-16 z-30 border-b border-white/5" style={{ background: 'rgba(13,17,23,0.88)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
@@ -659,7 +758,7 @@ export default function EditAuction() {
                                                             </div>
                                                         )}
 
-                                                        <div className="absolute top-1.5 right-1.5 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className={`absolute top-1.5 right-1.5 flex flex-col gap-1.5 transition-opacity ${snapshot.isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}>
                                                             {index !== 0 && (
                                                                 <button type="button" title="Tornar capa" onClick={() => tornarCapa(index)} className="w-7 h-7 rounded-lg bg-black/75 border border-white/15 grid place-items-center text-amber-400 hover:bg-amber-500 hover:text-black transition-colors">
                                                                     <Star className="w-3.5 h-3.5" />
@@ -673,7 +772,7 @@ export default function EditAuction() {
                                                             </button>
                                                         </div>
 
-                                                        <div {...provided.dragHandleProps} className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing bg-black/75 border border-white/15 p-1.5 rounded-lg">
+                                                        <div {...provided.dragHandleProps} className={`absolute bottom-1.5 right-1.5 transition-opacity cursor-grab active:cursor-grabbing bg-black/75 border border-white/15 p-1.5 rounded-lg ${snapshot.isDragging ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}>
                                                             <GripVertical className="w-3.5 h-3.5 text-white" />
                                                         </div>
                                                     </div>
@@ -984,6 +1083,59 @@ export default function EditAuction() {
                             <div className="mt-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5 text-center">
                                 <p className="text-[10px] uppercase tracking-widest text-emerald-300/80 font-bold">Termina em</p>
                                 <p className="text-xl font-black text-emerald-400 tabular-nums leading-tight">{tempoRestante}</p>
+                            </div>
+                        )}
+                        {auction?.status === 'paused' && (
+                            <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5 text-center">
+                                <p className="text-[10px] uppercase tracking-widest text-amber-300/80 font-bold">Leilão pausado</p>
+                                <p className="text-sm font-bold text-amber-400 leading-tight">Tempo restante congelado</p>
+                            </div>
+                        )}
+
+                        {(auction?.status === 'active' || auction?.status === 'paused') && (
+                            <div className="border-t border-white/[0.06] pt-4 mt-3 space-y-3">
+                                <p className={`${LABEL_CLS} flex items-center gap-1.5`}>
+                                    <Timer className="w-3.5 h-3.5 text-emerald-400" /> Controles do leilão
+                                </p>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {REACTIVATE_PRESETS.map((p) => (
+                                        <button
+                                            key={p.min}
+                                            type="button"
+                                            title={`Novo tempo: agora + ${p.label.replace('+', '')}`}
+                                            onClick={() => definirTempo(p.min)}
+                                            className="py-2 px-1 rounded-lg text-xs font-bold bg-[#0d1117]/80 border border-white/10 text-slate-300 hover:border-emerald-500/60 hover:text-white hover:bg-emerald-500/5 transition-all"
+                                        >
+                                            {p.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-500 -mt-1">O tempo escolhido conta a partir de agora e coloca o leilão no ar.</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {auction?.status === 'active' ? (
+                                        <Button
+                                            variant="outline"
+                                            onClick={pausarLeilao}
+                                            className="h-10 rounded-xl bg-transparent border-amber-500/40 text-amber-400 hover:bg-amber-500 hover:text-black font-bold transition-all"
+                                        >
+                                            <Pause className="w-4 h-4 mr-1.5" /> Pausar
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={retomarLeilao}
+                                            className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all"
+                                        >
+                                            <Play className="w-4 h-4 mr-1.5" /> Retomar
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        onClick={encerrarLeilao}
+                                        className="h-10 rounded-xl bg-transparent border-rose-500/40 text-rose-400 hover:bg-rose-600 hover:text-white font-bold transition-all"
+                                    >
+                                        <Square className="w-4 h-4 mr-1.5" /> Encerrar
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </CardContent>

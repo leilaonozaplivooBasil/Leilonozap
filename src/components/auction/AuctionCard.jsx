@@ -548,8 +548,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <p className={`text-xs sm:text-sm ${secondaryTextColor}`}>
-                  {isActive ? 'Lance atual' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+                <p className={`text-xs sm:text-sm ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
+                  {isActive ? 'Lance atual' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
