@@ -104,10 +104,8 @@ const CONTEXT_BY_PAGE = {
   // loja igual a um cliente comum. A navegação admin da loja fica nos painéis de
   // gestão (CatalogManagement etc.), não sobreposta na vitrine.
 
-  // Arrematante (AuctionRoom é sala de leilão). Home NÃO tem sidebar: admin vê a
-  // vitrine igual ao usuário comum (pedido Gabriel 25/07).
-  AuctionRoom: "arrematante",
-  AuctionDetails: "arrematante",
+  // Arrematante — Home, AuctionRoom e AuctionDetails NÃO têm sidebar: são vitrines
+  // públicas e o admin as vê igual ao usuário comum (pedido Gabriel 25/07).
   MyWinnings: "arrematante",
   AddFunds: "arrematante",
   WalletHistory: "arrematante",
