@@ -16,7 +16,6 @@ import {
   Shield,
   Crown,
   ChevronDown,
-  Trophy,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import { SECTORS } from "@/lib/sectors";
@@ -185,6 +184,20 @@ export default function NavMobile({
 
           {/* ===== Content ===== */}
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
+            {/* === RANK PREMIADO (destaque — primeiro item) === */}
+            <Link
+              to="/rankpremiado"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
+              style={{
+                background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(217,119,6,0.08))",
+                border: "1px solid rgba(250,204,21,0.30)",
+              }}
+            >
+              <img src="/icons/trophy-3d.png" alt="" className="w-7 h-7 shrink-0 drop-shadow-[0_2px_6px_rgba(250,204,21,0.45)]" aria-hidden="true" />
+              <span>Rank Premiado</span>
+            </Link>
+
             {/* === SETORES (acordeão — mesma fonte do desktop) === */}
             {SECTORS.map((s) => {
               const open = openSector === s.key;
@@ -192,7 +205,7 @@ export default function NavMobile({
                 <div key={s.key}>
                   <button
                     onClick={() => setOpenSector(open ? null : s.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold transition-all duration-200 ${
                       open ? "text-emerald-300" : "text-gray-300 hover:text-white"
                     }`}
                     style={open ? { background: "rgba(16,185,129,0.1)", borderLeft: "3px solid rgba(16,185,129,0.5)" } : {}}
@@ -225,16 +238,6 @@ export default function NavMobile({
                 </div>
               );
             })}
-
-            {/* === CONCURSO LEILÃO NOZAP === */}
-            <Link
-              to="/rankpremiado"
-              onClick={onClose}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-bold text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
-            >
-              <Trophy className="w-5 h-5 shrink-0" aria-hidden="true" />
-              <span>Rank Premiado</span>
-            </Link>
 
             {/* === CARRINHO === */}
             <Link

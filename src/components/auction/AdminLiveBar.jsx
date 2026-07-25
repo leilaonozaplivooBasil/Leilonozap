@@ -16,11 +16,13 @@ const Auction = base44.entities.Auction;
 export default function AdminLiveBar({ auction, setAuction }) {
   const [busy, setBusy] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  // Recolhida por padrão: só um escudo discreto no canto — os controles abrem ao tocar
+  const [open, setOpen] = useState(false);
 
   if (!auction || (auction.status !== 'active' && auction.status !== 'paused')) return null;
 
-  const notifyOk = (title, description) => toast({ title, description, duration: 3500 });
-  const notifyErr = (title) => toast({ title, variant: 'destructive', duration: 5000 });
+  const notifyOk = (title, description) => toast({ title, description, duration: 1000 });
+  const notifyErr = (title) => toast({ title, variant: 'destructive', duration: 2500 });
 
   const run = async (fn) => {
     if (busy) return;
@@ -83,21 +85,47 @@ export default function AdminLiveBar({ auction, setAuction }) {
     notifyOk('Leilão encerrado');
   });
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Controles do leilão (admin)"
+        className="fixed z-[60] w-9 h-9 rounded-full border border-white/10 grid place-items-center text-emerald-400/80 hover:text-emerald-300 hover:border-emerald-500/40 transition-colors"
+        style={{
+          top: 'calc(env(safe-area-inset-top) + 76px)',
+          right: '12px',
+          background: 'rgba(10,14,20,0.6)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+        }}
+      >
+        <ShieldCheck className="w-4 h-4" />
+      </button>
+    );
+  }
+
   return (
     <>
       <div
-        className="fixed left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-2 py-1.5 rounded-2xl border border-white/10"
+        className="fixed z-[60] flex items-center gap-1.5 px-2 py-1.5 rounded-2xl border border-white/10"
         style={{
           top: 'calc(env(safe-area-inset-top) + 72px)',
+          right: '12px',
           background: 'rgba(10,14,20,0.85)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
           boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
         }}
       >
-        <span className="hidden sm:flex items-center gap-1 text-[9px] uppercase tracking-widest text-slate-500 font-bold px-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Admin
-        </span>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          title="Recolher controles"
+          className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-slate-500 font-bold px-1.5 hover:text-white transition-colors"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> <span className="hidden sm:inline">Admin</span>
+        </button>
         {auction.status === 'active' ? (
           <button onClick={pausar} disabled={busy} title="Pausar leilão" className="h-9 px-3 rounded-xl text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition-colors flex items-center gap-1.5">
             <Pause className="w-3.5 h-3.5" /> Pausar

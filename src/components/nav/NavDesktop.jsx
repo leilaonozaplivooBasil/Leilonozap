@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ShoppingCart as CartIcon, ChevronDown, Trophy } from "lucide-react";
+import { ShoppingCart as CartIcon, ChevronDown } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
 import AoVivoAgora from "@/components/livoo/AoVivoAgora";
 import { SECTORS } from "@/lib/sectors";
@@ -62,6 +62,21 @@ export default function NavDesktop({
 
   return (
     <div className="hidden md:flex md:gap-x-1 items-center">
+      {/* === RANK PREMIADO (destaque — primeiro item da navbar) === */}
+      <Link
+        to="/rankpremiado"
+        className="mr-2 flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full font-slab text-sm font-bold text-yellow-300 hover:text-yellow-200 transition-all hover:scale-105"
+        style={{
+          background: "linear-gradient(135deg, rgba(250,204,21,0.14), rgba(217,119,6,0.10))",
+          border: "1px solid rgba(250,204,21,0.35)",
+          boxShadow: "0 0 18px rgba(250,204,21,0.15)",
+        }}
+        aria-label="Rank Premiado Leilão NoZap"
+      >
+        <img src="/icons/trophy-3d.png" alt="" className="w-6 h-6 shrink-0 drop-shadow-[0_2px_6px_rgba(250,204,21,0.45)]" aria-hidden="true" />
+        <span>Rank Premiado</span>
+      </Link>
+
       {/* === SETORES (hover abre o painel) === */}
       {SECTORS.map((s) => (
         <div
@@ -72,7 +87,7 @@ export default function NavDesktop({
         >
           <SectorLink
             target={s.external ? { external: s.external } : s.href}
-            className={`flex items-center gap-1.5 text-sm font-semibold transition-all duration-200 px-3 py-1.5 rounded-lg ${
+            className={`flex items-center gap-1.5 font-slab text-sm font-bold transition-all duration-200 px-3 py-1.5 rounded-lg ${
               sectorActive(s) || openSector === s.key ? "text-emerald-300 bg-emerald-500/10" : "text-gray-300 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -120,16 +135,6 @@ export default function NavDesktop({
           )}
         </div>
       ))}
-
-      {/* === CONCURSO LEILÃO NOZAP === */}
-      <Link
-        to="/rankpremiado"
-        className="ml-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold text-yellow-300 hover:text-yellow-200 hover:bg-yellow-400/10 transition-all"
-        aria-label="Rank Premiado Leilão NoZap"
-      >
-        <Trophy className="w-4 h-4 shrink-0" aria-hidden="true" />
-        <span>Rank Premiado</span>
-      </Link>
 
       {/* === AO VIVO AGORA · LIVOO LIVE === */}
       <div className="ml-2"><AoVivoAgora /></div>

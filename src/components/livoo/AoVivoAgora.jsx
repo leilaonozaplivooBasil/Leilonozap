@@ -14,7 +14,7 @@ export default function AoVivoAgora({ compact = false }) {
       {/* anel expandindo (ping) + glow rosa pulsante (padrão Livoo) */}
       <span aria-hidden className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: 'rgba(233,30,131,.55)' }} />
       <span aria-hidden className="absolute -inset-1 rounded-full blur-md animate-pulse" style={{ background: 'rgba(233,30,131,.5)' }} />
-      <span className="aovivo-pill relative inline-flex items-center gap-2 rounded-full pl-1.5 pr-4 py-1.5 font-black uppercase tracking-wide text-white text-[13px]"
+      <span className="aovivo-pill relative inline-flex items-center gap-2 rounded-full pl-1.5 pr-4 py-1.5 font-slab font-bold uppercase tracking-wide text-white text-[13px]"
         style={{ background: 'linear-gradient(135deg,#E91E83,#ff6b35)', boxShadow: '0 6px 20px rgba(233,30,131,.5)', animation: 'aovivoPulse 1.6s ease-in-out infinite' }}>
         <LivooMark size={26} />
         <span>{compact ? 'Ao vivo' : 'Ao vivo agora'}</span>

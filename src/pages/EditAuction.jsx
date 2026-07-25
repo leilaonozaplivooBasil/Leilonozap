@@ -25,9 +25,9 @@ import { supabase } from '@/api/supabaseClient';
 // 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
 // (o Brave/Chrome pode bloquear diálogos nativos e o clique "não faz nada").
 const notify = {
-    ok: (title, description) => toast({ title, description, duration: 4000 }),
-    erro: (title, description) => toast({ title, description, variant: 'destructive', duration: 6000 }),
-    aviso: (title, description) => toast({ title, description, duration: 5000 }),
+    ok: (title, description) => toast({ title, description, duration: 1000 }),
+    erro: (title, description) => toast({ title, description, variant: 'destructive', duration: 2500 }),
+    aviso: (title, description) => toast({ title, description, duration: 1500 }),
 };
 
 // 🎨 Tokens visuais da página (dark premium)

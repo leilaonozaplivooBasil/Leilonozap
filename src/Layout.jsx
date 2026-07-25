@@ -21,6 +21,7 @@ import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
+import { fastTap } from "@/lib/fastTap";
 import RoleSidebar from "@/components/layout/RoleSidebar";
 
 const AppUser = base44.entities.AppUser;
@@ -925,7 +926,7 @@ export default function Layout({ children, currentPageName }) {
                   return (
                     <button
                       type="button"
-                      onClick={() => setSidebarMobileOpen(true)}
+                      {...fastTap(() => setSidebarMobileOpen(true))}
                       className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-300 hover:text-emerald-300 hover:bg-white/5"
                       aria-label="Abrir painel"
                     >
@@ -981,8 +982,10 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex md:hidden items-center gap-2">
                   {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
                   {isCatalogPage && (
-                    <Link
-                      to={createPageUrl("Cart")}
+                    <button
+                      type="button"
+                      aria-label="Carrinho"
+                      {...fastTap(() => navigate(createPageUrl("Cart")))}
                       className="relative p-2 text-gray-300 hover:text-white transition-colors"
                     >
                       <CartIcon className="h-6 w-6" />
@@ -991,11 +994,12 @@ export default function Layout({ children, currentPageName }) {
                           {cartCount > 99 ? '99+' : cartCount}
                         </span>
                       )}
-                    </Link>
+                    </button>
                   )}
                   <button
                     type="button"
-                    onClick={() => setMobileMenuOpen(true)}
+                    aria-label="Abrir menu"
+                    {...fastTap(() => setMobileMenuOpen(true))}
                     className="inline-flex items-center justify-center rounded-md p-2.5 text-gray-400 hover:text-white"
                   >
                     <Menu className="h-6 w-6" />

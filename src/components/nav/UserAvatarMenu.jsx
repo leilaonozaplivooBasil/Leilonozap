@@ -153,7 +153,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             )}
           </div>
           {/* Nome (truncado, só desktop largo) */}
-          <span className="hidden lg:inline text-sm font-semibold text-white max-w-[120px] truncate">
+          <span className="hidden lg:inline font-slab text-sm font-normal text-white max-w-[120px] truncate">
             {fullName.split(" ")[0]} {fullName.split(" ")[1] || ""}
           </span>
           <ChevronDown className="w-4 h-4 text-gray-400" />
