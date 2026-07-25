@@ -159,6 +159,7 @@ export default function EditAuction() {
     const definirTempo = async (min) => {
         try {
             await aplicarNovoTermino(new Date(Date.now() + min * 60000).toISOString());
+            presetAtivoRef.current = min;
         } catch (e) {
             console.error('Erro ao definir tempo:', e);
             notify.erro('Erro ao atualizar o tempo', 'Tente novamente.');
@@ -167,6 +168,8 @@ export default function EditAuction() {
 
     // Tempo específico digitado nos controles (BRT)
     const [controleTime, setControleTime] = useState('');
+    // Preset relativo (+Xmin) aplicado por último: o Salvar reconta a partir do momento do save
+    const presetAtivoRef = useRef(null);
     const aplicarTempoEspecifico = async () => {
         if (!controleTime) {
             notify.aviso('Escolha a data e hora');
@@ -182,6 +185,7 @@ export default function EditAuction() {
         }
         try {
             await aplicarNovoTermino(endISO);
+            presetAtivoRef.current = null;
         } catch (e) {
             console.error('Erro ao aplicar tempo específico:', e);
             notify.erro('Erro ao atualizar o tempo', 'Tente novamente.');
@@ -619,9 +623,14 @@ export default function EditAuction() {
             }
 
             // 🔧 CONVERTE HORÁRIO PARA UTC
-            const brtDateTimeString = formData.end_time;
-            const localDate = new Date(brtDateTimeString);
-            const utcEndTimeString = localDate.toISOString();
+            // Preset relativo (+Xmin) aplicado por último → o tempo conta a partir do
+            // MOMENTO DO SAVE (pedido Gabriel: salvar reinicia a contagem escolhida).
+            let utcEndTimeString;
+            if (presetAtivoRef.current != null) {
+                utcEndTimeString = new Date(Date.now() + presetAtivoRef.current * 60000).toISOString();
+            } else {
+                utcEndTimeString = new Date(formData.end_time).toISOString();
+            }
 
             console.log(`📅 [SAVE] BRT Input: ${brtDateTimeString}`);
             console.log(`📅 [SAVE] UTC Output: ${utcEndTimeString}`);
@@ -684,7 +693,8 @@ export default function EditAuction() {
             
             console.log(`💾 [SAVE] Salvando com payload:`, updatePayload);
             await Auction.update(auctionId, updatePayload);
-            
+            presetAtivoRef.current = null;
+
             setIsSaving(false);
             
             if (isReactivating) {
@@ -1263,7 +1273,7 @@ export default function EditAuction() {
                         id="end_time"
                         type="datetime-local"
                         value={formData.end_time}
-                        onChange={(e) => handleInputChange('end_time', e.target.value)}
+                        onChange={(e) => { presetAtivoRef.current = null; handleInputChange('end_time', e.target.value); }}
                         onClick={abrirSeletorNativo}
                         onFocus={abrirSeletorNativo}
                         className={`cursor-pointer ${INPUT_CLS}`}
