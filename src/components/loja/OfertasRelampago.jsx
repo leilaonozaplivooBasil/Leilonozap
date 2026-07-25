@@ -26,7 +26,7 @@ function FlashCard({ p }) {
   return (
     <button
       onClick={() => navigate(createPageUrl('CatalogProductDetails') + `?id=${p.id}`)}
-      className="w-[33vw] max-w-[130px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
+      className="w-[28vw] max-w-[112px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
     >
       <div className="relative aspect-square bg-white">
         {img ? <img src={img} alt={p.description} loading="lazy" className="w-full h-full object-contain" />
@@ -83,7 +83,7 @@ export default function OfertasRelampago({ products = [] }) {
   // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="relative z-10 mt-3 sm:-mt-16 rounded-2xl pt-3 pb-3 sm:pt-4 sm:pb-4 mb-6 sm:mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150">
+    <div className="relative z-10 -mt-8 sm:-mt-16 rounded-2xl pt-3 pb-3 sm:pt-4 sm:pb-4 mb-6 sm:mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150">
       {/* liquid glass mais transparente: brilho superior + borda interna sutil (banner aparece mais nítido atrás) */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" aria-hidden />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/10 to-transparent" aria-hidden />

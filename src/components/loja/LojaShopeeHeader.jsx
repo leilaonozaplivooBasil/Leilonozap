@@ -75,6 +75,16 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
   const [q, setQ] = React.useState(searchTerm || '');
   React.useEffect(() => { setQ(searchTerm || ''); }, [searchTerm]);
 
+  // 📱 No mobile o hero usa fit=cover (banner GRANDE, sangrando levemente nas laterais);
+  // no desktop segue contain (nada do texto cortado). Só muda o mobile.
+  const [isMobileHero, setIsMobileHero] = React.useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches);
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const on = (e) => setIsMobileHero(e.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+
   const [cartCount, setCartCount] = React.useState(0);
   React.useEffect(() => {
     const read = () => {
@@ -171,17 +181,16 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
         </div>
       </div>
 
-      {/* HERO: banner full-bleed (borda a borda) no desktop. fit=contain garante que NADA do
-          texto do banner seja cortado — o banner é 16:5 e o container também, então preenche
-          sem barras. No MOBILE ele vira um card com margem e canto arredondado (padrão
-          Shopee/ML app): o banner inteiro aparece, pequeno e legível, sem sobreposição. */}
-      <div className="px-3 sm:px-0 sm:ml-[calc(50%-50vw)] sm:mr-[calc(50%-50vw)] sm:w-screen">
-        <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a] rounded-xl sm:rounded-none">
-          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
+      {/* HERO: banner full-bleed (borda a borda) nos dois mundos. Desktop: 16:5 com
+          fit=contain (nada do texto cortado). MOBILE: hero mais ALTO (16:6) com fit=cover —
+          o banner fica grande, sangrando de leve nas laterais, e a caixa de ofertas sobrepõe
+          a base com o degradê, replicando as camadas do desktop (pedido Gabriel 25/07). */}
+      <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
+        <div className="relative overflow-hidden aspect-[16/6] sm:aspect-[16/5] bg-[#0f172a]">
+          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit={isMobileHero ? 'cover' : 'contain'} />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
-              de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML.
-              Só no desktop — no mobile a caixa de ofertas NÃO sobrepõe o banner. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden sm:block h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
+              de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
         </div>
       </div>
     </div>
