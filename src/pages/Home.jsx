@@ -26,6 +26,7 @@ import AuctionCard from "../components/auction/AuctionCard";
 const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const ComparaiFloatingButton = lazy(() => import('../components/comparai/ComparaiFloatingButton'));
+const LojaFloatActions = lazy(() => import('../components/loja/LojaFloatActions'));
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
@@ -917,8 +918,11 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Flutuantes iguais aos da loja: CompareAQUI à esquerda, Fale com a Leila à direita.
+          ComparaiFloatingButton fica com hideButton só pra servir o modal via evento openComparai. */}
       <Suspense fallback={null}>
-        <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
+        <ComparaiFloatingButton auctions={filteredAuctions} mode="home" hideButton />
+        <LojaFloatActions />
       </Suspense>
       <Suspense fallback={null}>
         {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
