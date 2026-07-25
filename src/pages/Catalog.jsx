@@ -692,9 +692,12 @@ export default function Catalog() {
             </div>
           )}
 
-          {/* Filtros (o buscador agora fica no topo, no cabeçalho da loja) */}
-          <div className="mb-8 space-y-4">
-            <div className="flex justify-end">
+          {/* Filtros (o buscador agora fica no topo, no cabeçalho da loja).
+              📱 MOBILE: o botão solto ocupava uma faixa inteira à toa — ele foi pra DENTRO
+              da barra de categorias (ícone ancorado à direita, padrão Shopee/ML). A faixa
+              standalone abaixo só existe no desktop (ou no mobile se não houver categorias). */}
+          <div className={`space-y-4 ${showFilters ? 'mb-8' : 'sm:mb-8'}`}>
+            <div className={`${categories.length > 0 ? 'hidden sm:flex' : 'flex'} justify-end`}>
               <Button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-4 h-10 text-sm sm:px-6 sm:h-[46px] sm:text-base ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold shadow-lg transition-all`}
@@ -797,22 +800,33 @@ export default function Catalog() {
             )}
           </div>
 
-          {/* ABAS DE CATEGORIA horizontais (padrão Base44) */}
+          {/* ABAS DE CATEGORIA horizontais (padrão Base44) + botão Filtros ancorado à
+              direita SÓ no mobile (no desktop o Filtros segue na faixa standalone acima) */}
           {categories.length > 0 && (
-            <div className="mb-6 flex items-center gap-4 sm:gap-6 overflow-x-auto category-scroller border-b border-gray-800">
-              {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
-                const active = selectedCategory === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedCategory(c.id)}
-                    className={`relative pb-3 pt-1 text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                  >
-                    {c.name}
-                    {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-green-500 rounded-full" />}
-                  </button>
-                );
-              })}
+            <div className="mb-6 flex items-center border-b border-gray-800">
+              <div className="flex-1 flex items-center gap-4 sm:gap-6 overflow-x-auto category-scroller">
+                {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
+                  const active = selectedCategory === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCategory(c.id)}
+                      className={`relative pb-3 pt-1 text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                    >
+                      {c.name}
+                      {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-green-500 rounded-full" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                aria-label="Filtros"
+                className={`sm:hidden shrink-0 ml-2 mb-1.5 flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-bold transition-colors ${showFilters ? 'bg-green-600 text-white' : 'bg-gray-800 border border-gray-700 text-gray-200'}`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Filtros
+              </button>
             </div>
           )}
 

@@ -14,26 +14,36 @@ import { ChevronUp } from 'lucide-react';
 export default function BackToTopButton() {
   const [visible, setVisible] = React.useState(false);
   const lastY = React.useRef(0);
+  const deepSince = React.useRef(null); // desde quando o usuário está "fundo" na página
 
   React.useEffect(() => {
     let raf = 0;
+    const check = () => {
+      const y = window.scrollY;
+      const vh = window.innerHeight;
+      const doc = document.documentElement.scrollHeight;
+      const scrollingUp = y < lastY.current - 4;
+      const nearBottom = y + vh >= doc - vh * 0.5;
+      const deepEnough = y > vh * 1.5;
+      // ⏱️ "navegou por muito tempo": fundo na página há 3s+ também mostra a seta
+      if (deepEnough && deepSince.current === null) deepSince.current = Date.now();
+      if (!deepEnough) deepSince.current = null;
+      const dwellingDeep = deepSince.current !== null && Date.now() - deepSince.current > 3000;
+      setVisible(deepEnough && (scrollingUp || nearBottom || dwellingDeep));
+      lastY.current = y;
+    };
     const onScroll = () => {
       if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const y = window.scrollY;
-        const vh = window.innerHeight;
-        const doc = document.documentElement.scrollHeight;
-        const scrollingUp = y < lastY.current - 4;
-        const nearBottom = y + vh >= doc - vh * 0.5;
-        const deepEnough = y > vh * 1.5;
-        setVisible(deepEnough && (scrollingUp || nearBottom));
-        lastY.current = y;
-      });
+      raf = requestAnimationFrame(() => { raf = 0; check(); });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+    const dwellTimer = setInterval(check, 1000); // pega o caso "parado lendo" sem novo scroll
+    check();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      clearInterval(dwellTimer);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (
