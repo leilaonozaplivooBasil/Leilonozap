@@ -3,7 +3,7 @@ import logoNozap from '@/assets/leilao-nozap-logo.png';
 import {
   Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
-  Maximize2, Minimize2, Save, Settings2,
+  Maximize2, Minimize2, Save, Settings2, ArrowLeft,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -432,6 +432,15 @@ export default function ConcursoLeilaoNozap() {
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white w-full overflow-x-hidden">
       <div className="max-w-5xl w-full mx-auto px-4 py-6 pb-24">
+
+        {/* VOLTAR PARA A HOME — a página é destino direto de link compartilhado no
+            WhatsApp, então muita gente chega aqui sem ter navegação para sair */}
+        <a
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-green-200/85 hover:text-white transition-colors mb-4 -ml-1 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10"
+        >
+          <ArrowLeft className="w-4 h-4" /> Voltar para a Home
+        </a>
 
         {/* HEADER + STATUS */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
