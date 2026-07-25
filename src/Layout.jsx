@@ -1136,11 +1136,14 @@ export default function Layout({ children, currentPageName }) {
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
 
-        {/* 🌐 Flutuantes globais — CompareAQUI à esquerda e Fale com a Leila à direita */}
-        <React.Suspense fallback={null}>
-          <ComparaiFloatingButton hideButton />
-          <LojaFloatActions />
-        </React.Suspense>
+        {/* 🌐 Flutuantes globais — CompareAQUI à esquerda e Fale com a Leila à direita.
+            Fora da abertura (Portal/Landing): lá eles poluíam o hero (pedido Gabriel 25/07). */}
+        {!isLandingPage && !['Recepcao', 'Portal'].includes(currentPageName) && (
+          <React.Suspense fallback={null}>
+            <ComparaiFloatingButton hideButton />
+            <LojaFloatActions />
+          </React.Suspense>
+        )}
 
         {/* 🧪 DEV — "Sair (teste)" agora fica inline na navbar (NavDesktop), ao lado do nome do usuário */}
 

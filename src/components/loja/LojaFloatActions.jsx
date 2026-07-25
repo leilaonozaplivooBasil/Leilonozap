@@ -17,16 +17,41 @@ export default function LojaFloatActions() {
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
   const Label = ({ children }) => <span className="text-[9px] sm:text-[10px] text-gray-200 font-semibold mt-0.5 drop-shadow text-center leading-none">{children}</span>;
 
+  // 🌊 Flutuação com a rolagem (pedido do Gabriel 25/07, SÓ mobile): página descendo →
+  // os botões SOBEM suavemente de onde estão; página subindo → eles DESCEM; parou de
+  // rolar → assentam de volta na posição base. Transição longa em cubic-bezier dá o
+  // efeito "boiando" sem atrapalhar o toque.
+  const [drift, setDrift] = React.useState('rest'); // 'up' | 'down' | 'rest'
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    let lastY = window.scrollY;
+    let settle = null;
+    const onScroll = () => {
+      if (!mq.matches) return; // desktop permanece 100% intocado
+      const y = window.scrollY;
+      const dy = y - lastY;
+      lastY = y;
+      if (Math.abs(dy) > 2) setDrift(dy > 0 ? 'up' : 'down');
+      clearTimeout(settle);
+      settle = setTimeout(() => setDrift('rest'), 260);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(settle); };
+  }, []);
+  const driftCls = drift === 'up' ? 'loja-float-up' : drift === 'down' ? 'loja-float-down' : '';
+
   return (
     <>
       <style>{`
-        .loja-float { transform: translateZ(0); will-change: transform; }
+        .loja-float { transform: translateZ(0); will-change: transform; transition: transform .5s cubic-bezier(.22,.61,.36,1); }
         @media (max-width: 639px) {
           .loja-float { bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px)); }
+          .loja-float-up { transform: translateY(-14px) translateZ(0); }
+          .loja-float-down { transform: translateY(10px) translateZ(0); }
         }
       `}</style>
       {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07) */}
-      <div className="loja-float fixed left-3 bottom-4 sm:left-4 sm:bottom-5 z-50 flex flex-col items-center">
+      <div className={`loja-float ${driftCls} fixed left-3 bottom-4 sm:left-4 sm:bottom-5 z-50 flex flex-col items-center`}>
         <button
           onClick={() => window.dispatchEvent(new Event('openComparai'))}
           title="CompareAQUI — compare o preço antes de comprar"
@@ -46,7 +71,7 @@ export default function LojaFloatActions() {
         .leila-bob { animation: leilaBob 2.6s ease-in-out infinite; }
         @media (prefers-reduced-motion:reduce){ .leila-bob{animation:none} }
       `}</style>
-      <div className="loja-float fixed right-3 bottom-4 sm:right-4 sm:bottom-5 z-50 flex flex-col items-center gap-3">
+      <div className={`loja-float ${driftCls} fixed right-3 bottom-4 sm:right-4 sm:bottom-5 z-50 flex flex-col items-center gap-3`}>
         <a href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`} target="_blank" rel="noreferrer" title="Fale com a Leila — Suporte no WhatsApp" className="group flex flex-col items-center">
           <span className="leila-bob relative block">
             {/* anel pulsante verde pra sinalizar que é clicável */}
