@@ -650,7 +650,9 @@ export default function Catalog() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="text-white font-bold text-base sm:text-lg truncate">{licenseeData?.name || 'Loja Virtual Especial'}</h3>
+            <h3 className="text-white font-bold text-base sm:text-lg truncate">
+              {licenseeData?.name ? `Loja Virtual ${licenseeData.name}` : 'Loja Virtual Especial'}
+            </h3>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mt-1">
               <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-green-400" /> {products.length} produtos</span>
               <span className="text-gray-600">·</span>

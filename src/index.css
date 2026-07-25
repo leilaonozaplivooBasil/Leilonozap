@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 📱 Fix do "toque duplo" no iOS Safari: sem touch-action, o navegador segura o
+   primeiro toque esperando um possível double-tap-zoom — o usuário acha que não
+   clicou e toca de novo. manipulation mantém scroll/pinch e dispara o clique
+   imediatamente no primeiro toque. Sem efeito visual em desktop. */
+button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
+  touch-action: manipulation;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

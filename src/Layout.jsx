@@ -11,6 +11,7 @@ import GuestRegistrationModal from "@/components/common/GuestRegistrationModal";
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import BackToTopButton from "@/components/common/BackToTopButton";
+import InstallPwaPrompt from "@/components/common/InstallPwaPrompt";
 import NavDesktop from "@/components/nav/NavDesktop";
 import logoIcon from "@/assets/logo-icon.webp";
 import NavMobile from "@/components/nav/NavMobile";
@@ -1053,6 +1054,8 @@ export default function Layout({ children, currentPageName }) {
         <Footer />
         {/* 📱 Voltar ao topo — global, só mobile (liquid glass, centro inferior) */}
         <BackToTopButton />
+        {/* 📱 Convite de instalação do PWA — só mobile, dispensável */}
+        <InstallPwaPrompt />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
         {currentUser && (isLicensee || isAdmin) && currentPageName === "AuctionRoom" && (
