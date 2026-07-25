@@ -26,7 +26,11 @@ import {
   Plus,
   Minus,
   Copy,
-  ShoppingCart
+  ShoppingCart,
+  ShieldCheck,
+  Lock,
+  Check,
+  PackageOpen
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -670,19 +674,64 @@ export default function Cart() {
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(createPageUrl('Catalog'))}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl font-bold text-white">Finalizar Pedido</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <button
+                onClick={() => navigate(createPageUrl('Catalog'))}
+                className="text-gray-400 hover:text-white transition-colors shrink-0"
+                aria-label="Voltar para a loja"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h1 className="text-xl font-bold text-white truncate">Finalizar Pedido</h1>
+            </div>
+
+            {/* Etapas do checkout (desktop) */}
+            <div className="hidden md:flex items-center gap-2 text-xs">
+              {[
+                { label: 'Carrinho', done: true },
+                { label: 'Pagamento', done: !!pixData || saldoOk },
+                { label: 'Confirmação', done: pixConfirmed || saldoOk },
+              ].map((step, i, arr) => (
+                <React.Fragment key={step.label}>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step.done ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 border border-gray-600'}`}>
+                      {step.done ? <Check className="w-3 h-3" /> : i + 1}
+                    </span>
+                    <span className={step.done ? 'text-green-400 font-medium' : 'text-gray-400'}>{step.label}</span>
+                  </div>
+                  {i < arr.length - 1 && <div className="w-8 h-px bg-gray-600" />}
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* Selo de segurança */}
+            <div className="flex items-center gap-1.5 text-green-400 shrink-0">
+              <Lock className="w-4 h-4" />
+              <span className="text-xs font-medium hidden sm:inline">Compra 100% segura</span>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {cartItems.length === 0 && !pixData && !saldoOk ? (
+          /* Carrinho vazio — estado dedicado, sem formulários sem propósito */
+          <div className="max-w-md mx-auto py-16 text-center">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <PackageOpen className="w-12 h-12 text-gray-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Seu carrinho está vazio</h2>
+            <p className="text-gray-400 mb-8">Explore as ofertas da loja virtual e os leilões ao vivo para adicionar produtos.</p>
+            <Button
+              onClick={() => navigate(createPageUrl('Catalog'))}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-full px-10 h-12 text-base shadow-lg shadow-green-600/30"
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Ver produtos da loja
+            </Button>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Coluna Esquerda - Formulários */}
           <div className="space-y-4">
@@ -908,7 +957,20 @@ export default function Cart() {
               </h2>
 
               {(pixData ? checkoutItems : cartItems).length === 0 ? (
-                <p className="text-gray-400 text-center py-8">Seu carrinho está vazio</p>
+                <div className="text-center py-10">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-700/60 border border-gray-600 flex items-center justify-center">
+                    <PackageOpen className="w-10 h-10 text-gray-500" />
+                  </div>
+                  <p className="text-white font-semibold text-lg mb-1">Seu carrinho está vazio</p>
+                  <p className="text-gray-400 text-sm mb-6">Explore as ofertas da loja e adicione produtos ao carrinho.</p>
+                  <Button
+                    onClick={() => navigate(createPageUrl('Catalog'))}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-full px-8 h-11"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Ver produtos da loja
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-4">
@@ -929,7 +991,10 @@ export default function Cart() {
                                 {item.description}
                               </h4>
                               <p className="text-green-400 font-bold text-lg mt-2">
-                                R$ {price.toFixed(2)}
+                                {money(price)}
+                                {(item.quantity || 1) > 1 && (
+                                  <span className="text-gray-400 text-xs font-normal ml-2">× {item.quantity} = {money(price * item.quantity)}</span>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center justify-between">
@@ -963,19 +1028,19 @@ export default function Cart() {
 
                   <div className="border-t border-gray-600 pt-6 mt-6 space-y-3">
                     <div className="flex justify-between text-base">
-                      <span className="text-gray-400">Total de itens ({(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
-                      <span className="text-white font-medium">R$ {calculateSubtotal().toFixed(2)}</span>
+                      <span className="text-gray-400">Subtotal ({(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0)} {(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0) === 1 ? 'item' : 'itens'})</span>
+                      <span className="text-white font-medium">{money(calculateSubtotal())}</span>
                     </div>
                     {appliedCoupon && (
                       <div className="flex justify-between text-base">
                         <span className="text-gray-400">Cupom {appliedCoupon.code}</span>
-                        <span className="text-green-400 font-medium">− R$ {Number(appliedCoupon.desconto).toFixed(2)}</span>
+                        <span className="text-green-400 font-medium">− {money(appliedCoupon.desconto)}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center text-base">
                       <span className="text-gray-400">Valor do frete</span>
                       {freteOpcoes && freteOpcoes.length > 0 ? (
-                        <span className="text-green-400 font-medium">a partir de R$ {Math.min(...freteOpcoes.map(o => o.preco)).toFixed(2)}</span>
+                        <span className="text-green-400 font-medium">a partir de {money(Math.min(...freteOpcoes.map(o => o.preco)))}</span>
                       ) : (
                         <button onClick={calcularFrete} disabled={calculandoFrete} className="text-green-400 font-medium text-sm underline hover:text-green-300 disabled:opacity-60">
                           {calculandoFrete ? 'calculando…' : 'Calcular frete'}
@@ -986,20 +1051,24 @@ export default function Cart() {
                     {freteOpcoes && freteOpcoes.length > 0 && (
                       <div className="text-xs text-gray-400 space-y-0.5 -mt-1">
                         {freteOpcoes.slice(0, 3).map((o) => (
-                          <div key={o.id} className="flex justify-between"><span>{o.nome}{o.prazo ? ` · ${o.prazo} dias` : ''}</span><span className="text-green-400">R$ {o.preco.toFixed(2)}</span></div>
+                          <div key={o.id} className="flex justify-between"><span>{o.nome}{o.prazo ? ` · ${o.prazo} dias` : ''}</span><span className="text-green-400">{money(o.preco)}</span></div>
                         ))}
                       </div>
                     )}
-                    <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-600">
+                    <div className="flex justify-between items-center text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>
-                      <span className="text-green-400">R$ {calcularTotalFinal().toFixed(2)}</span>
+                      <div className="text-right">
+                        <span className="text-green-400">{money(calcularTotalFinal())}</span>
+                        <p className="text-gray-500 text-[11px] font-normal">no PIX ou em até 12x no cartão</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </Card>
 
-            {/* Cupom e Observação lado a lado */}
+            {/* Cupom e Observação lado a lado — só com itens no carrinho */}
+            {!pixData && !saldoOk && cartItems.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Aplicar Cupom */}
               <Card className="bg-gray-800 border-gray-700 p-4">
@@ -1042,6 +1111,7 @@ export default function Cart() {
                 />
               </Card>
             </div>
+            )}
 
             {/* Forma de Pagamento — APENAS PIX */}
             {!pixData && cartItems.length > 0 && (
@@ -1050,24 +1120,39 @@ export default function Cart() {
 
                 {/* PIX (Mercado Pago) */}
                 <button type="button" onClick={() => setPaymentType('PIX')}
-                  className={`w-full text-left p-3 rounded-lg border-2 mb-3 transition-colors ${paymentType === 'PIX' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
-                  <p className="text-white font-semibold">💚 PIX</p>
-                  <p className="text-gray-400 text-xs">Aprovação imediata</p>
+                  className={`w-full text-left p-3 rounded-lg border-2 mb-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'PIX' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
+                  <div>
+                    <p className="text-white font-semibold">💚 PIX <span className="ml-1 text-[10px] font-bold uppercase tracking-wide bg-green-600 text-white px-1.5 py-0.5 rounded">Recomendado</span></p>
+                    <p className="text-gray-400 text-xs mt-0.5">Aprovação imediata</p>
+                  </div>
+                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'PIX' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
+                    {paymentType === 'PIX' && <Check className="w-3 h-3 text-white" />}
+                  </span>
                 </button>
 
                 {/* Cartão de Crédito (Stripe) */}
                 <button type="button" onClick={() => setPaymentType('CREDIT_CARD')}
-                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
-                  <p className="text-white font-semibold">💳 Cartão de Crédito</p>
-                  <p className="text-gray-400 text-xs">Pagamento seguro — até 12x</p>
+                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors flex items-center justify-between gap-3 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
+                  <div>
+                    <p className="text-white font-semibold">💳 Cartão de Crédito</p>
+                    <p className="text-gray-400 text-xs mt-0.5">Pagamento seguro — até 12x</p>
+                  </div>
+                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
+                    {paymentType === 'CREDIT_CARD' && <Check className="w-3 h-3 text-white" />}
+                  </span>
                 </button>
 
                 {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
                 {saldo > 0 && (
                   <button type="button" onClick={() => setPaymentType('SALDO')}
-                    className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
-                    <p className="text-white font-semibold">👛 Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
-                    <p className="text-gray-400 text-xs">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use suas comissões — aprovação na hora'}</p>
+                    className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
+                    <div>
+                      <p className="text-white font-semibold">👛 Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
+                      <p className="text-gray-400 text-xs mt-0.5">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use suas comissões — aprovação na hora'}</p>
+                    </div>
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
+                      {paymentType === 'SALDO' && <Check className="w-3 h-3 text-white" />}
+                    </span>
                   </button>
                 )}
               </Card>
@@ -1207,28 +1292,46 @@ export default function Cart() {
 
             {/* Sucesso Cartão (mantido para compatibilidade caso existam pagamentos antigos) */}
 
-            {/* Botão Pagar */}
-            {!pixData && !saldoOk && (
-              <Button
-                onClick={handleCheckout}
-                disabled={isProcessing || cartItems.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : paymentType === 'SALDO' ? 'PAGAR COM SALDO' : 'GERAR PIX'}
-                  </>
-                )}
-              </Button>
+            {/* Botão Pagar — só aparece com itens no carrinho */}
+            {!pixData && !saldoOk && cartItems.length > 0 && (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleCheckout}
+                  disabled={isProcessing}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5 mr-2" />
+                      {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : paymentType === 'SALDO' ? 'PAGAR COM SALDO' : `PAGAR ${money(calcularTotalFinal())} NO PIX`}
+                    </>
+                  )}
+                </Button>
+
+                {/* Selos de confiança */}
+                <div className="flex items-center justify-center gap-5 text-gray-400 text-xs pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-green-500" />
+                    <span>Pagamento seguro</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-green-500" />
+                    <span>Dados criptografados</span>
+                  </div>
+                </div>
+                <p className="text-center text-gray-500 text-[11px]">
+                  Processado por {paymentType === 'CREDIT_CARD' ? 'Stripe' : 'Mercado Pago'} — não armazenamos seus dados de pagamento.
+                </p>
+              </div>
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
