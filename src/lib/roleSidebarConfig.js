@@ -137,6 +137,11 @@ const CONTEXT_BY_PAGE = {
 export function getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems) {
   const empty = { showSidebar: false, items: [], title: null, context: null };
 
+  // ⛔ DESATIVADA EM TODAS AS PÁGINAS (pedido Gabriel 25/07/2026): nenhuma página
+  // mostra menu lateral admin. Navegação admin fica no dropdown do avatar.
+  // Para reativar, remova este return.
+  return empty;
+
   // ⛔ GATE ABSOLUTO: APENAS admin/super_admin vê sidebar
   if (!currentUser || !currentUser.email) return empty;
   const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
