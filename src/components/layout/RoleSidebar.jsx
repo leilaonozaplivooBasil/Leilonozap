@@ -61,10 +61,6 @@ export default function RoleSidebar({
         style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
       >
         <div className="flex flex-col min-w-0 flex-1">
-          {/* Badge "MODO ADMIN" — sempre presente (sidebar é admin-only) */}
-          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400/90 mb-0.5">
-            🛡️ Modo Admin
-          </span>
           <span className="text-sm font-bold text-emerald-300 truncate" title={title}>
             {title}
           </span>
