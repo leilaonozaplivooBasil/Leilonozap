@@ -65,7 +65,7 @@ export default function NavDesktop({
       {/* === RANK PREMIADO (destaque — primeiro item da navbar) === */}
       <Link
         to="/rankpremiado"
-        className="mr-2 flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full font-slab text-sm font-bold text-yellow-300 hover:text-yellow-200 transition-all hover:scale-105"
+        className="mr-2 flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full font-slab text-sm font-bold uppercase tracking-wide text-yellow-300 hover:text-yellow-200 transition-all hover:scale-105"
         style={{
           background: "linear-gradient(135deg, rgba(250,204,21,0.14), rgba(217,119,6,0.10))",
           border: "1px solid rgba(250,204,21,0.35)",
@@ -87,7 +87,7 @@ export default function NavDesktop({
         >
           <SectorLink
             target={s.external ? { external: s.external } : s.href}
-            className={`flex items-center gap-1.5 font-slab text-sm font-bold transition-all duration-200 px-3 py-1.5 rounded-lg ${
+            className={`flex items-center gap-1.5 font-slab text-sm font-bold uppercase tracking-wide transition-all duration-200 px-3 py-1.5 rounded-lg ${
               sectorActive(s) || openSector === s.key ? "text-emerald-300 bg-emerald-500/10" : "text-gray-300 hover:text-white hover:bg-white/5"
             }`}
           >

@@ -188,7 +188,7 @@ export default function NavMobile({
             <Link
               to="/rankpremiado"
               onClick={onClose}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
               style={{
                 background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(217,119,6,0.08))",
                 border: "1px solid rgba(250,204,21,0.30)",
@@ -205,7 +205,7 @@ export default function NavMobile({
                 <div key={s.key}>
                   <button
                     onClick={() => setOpenSector(open ? null : s.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold transition-all duration-200 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide transition-all duration-200 ${
                       open ? "text-emerald-300" : "text-gray-300 hover:text-white"
                     }`}
                     style={open ? { background: "rgba(16,185,129,0.1)", borderLeft: "3px solid rgba(16,185,129,0.5)" } : {}}
