@@ -20,7 +20,8 @@ export default defineConfig(({ command }) => ({
     // autoUpdate: nova versão publicada assume sozinha, sem usuário preso em cache velho.
     VitePWA({
       registerType: 'autoUpdate',
-      manifestFilename: 'manifest.json', // index.html já aponta pra /manifest.json
+      // manifest.webmanifest (padrão): /manifest.json ficou envenenado no cache do
+      // CDN da Vercel (servia o fallback HTML antes do arquivo existir)
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Leilão NoZap — Loja Virtual & Leilões',
