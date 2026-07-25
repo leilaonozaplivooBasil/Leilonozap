@@ -19,7 +19,7 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share2 } from "lucide-react"; // 🆕 Adicionado Share2
+import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share2, Zap } from "lucide-react";
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
@@ -32,7 +32,7 @@ import { proxyImage } from "@/functions/proxyImage";
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
-function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap" }) {
+function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -312,7 +312,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
   // 🌎 FORMATA DATA EM FUSO HORÁRIO DE SÃO PAULO
   const getTimeRemaining = () => {
-    if (auction.status !== 'active') {
+    if (auction.status !== 'active' && auction.status !== 'scheduled') {
       return null;
     }
 
@@ -354,7 +354,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining());
 
   useEffect(() => {
-    if (auction.status !== 'active') {
+    if (auction.status !== 'active' && auction.status !== 'scheduled') {
       setTimeRemaining(null);
       return;
     }
@@ -549,7 +549,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <p className={`text-xs sm:text-sm ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
-                  {isActive ? 'Lance atual' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+                  {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
@@ -569,19 +569,37 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 </div>
               </div>
             )}
+
+            {auction.status === 'scheduled' && timeRemaining && (
+              <div className="text-right flex-shrink-0">
+                <div className="flex items-center gap-1 text-sky-400 mb-1">
+                  <Clock className="w-3 h-3" />
+                  <span className="text-xs font-bold">Começa em</span>
+                </div>
+                <div className="font-mono text-sm sm:text-lg md:text-xl font-bold text-sky-400">
+                  {timeRemaining.text}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                <span>{stableRandomUsers}</span>
+                <span>{bidStats?.users ?? stableRandomUsers}</span>
               </div>
               <div className="flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" />
-                <span>{stableRandomBids} lances</span>
+                <span>{bidStats?.bids ?? stableRandomBids} lances</span>
               </div>
             </div>
+            {isActive && Number(auction.buy_now_price) > 0 && (
+              <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2 py-1">
+                <Zap className="w-3.5 h-3.5" />
+                Compre já: R$ {Number(auction.buy_now_price).toFixed(2)}
+              </div>
+            )}
           </div>
 
           {!isActive && (

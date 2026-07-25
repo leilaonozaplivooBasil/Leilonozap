@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer, Copy, Archive, ArchiveRestore, CalendarClock, ShoppingBag } from 'lucide-react';
 import { capOf, withCap } from '@/lib/fotoLegenda';
 import { supabase } from '@/api/supabaseClient';
 
@@ -102,7 +102,8 @@ export default function EditAuction() {
       supplier_url: "", // 🆕 NOVO: URL do fornecedor
       supplier_logo_url: "", // 🆕 ADICIONA LOGO
       comparai_mode: "google_shopping", // 🆕 Modo padrão: Google Shopping
-      manual_market_price: "" // 🆕 Preço manual quando o CompareAQUI não acha
+      manual_market_price: "", // 🆕 Preço manual quando o CompareAQUI não acha
+      buy_now_price: "" // Arremate imediato — aparece como Compre Já na sala
     });
     const [imageUrls, setImageUrls] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -225,10 +226,161 @@ export default function EditAuction() {
         }
     };
 
+    // ── Duplicar leilão: cria uma cópia encerrada, pronta para agendar/reativar ──
+    const [isDuplicating, setIsDuplicating] = useState(false);
+    const handleDuplicate = async () => {
+        setIsDuplicating(true);
+        try {
+            const novo = await Auction.create({
+                title: formData.title,
+                description: formData.description,
+                category: formData.category,
+                starting_price: parseFloat(formData.starting_price) || 0,
+                current_price: parseFloat(formData.starting_price) || 0,
+                increment: parseFloat(formData.increment) || 0,
+                end_time: new Date().toISOString(),
+                status: 'ended',
+                image_urls: imageUrls,
+                product_source: formData.product_source,
+                source_url: formData.supplier_url || null,
+                supplier_logo_url: formData.supplier_logo_url || null,
+                comparai_mode: formData.comparai_mode || 'google_shopping',
+                manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null,
+                buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null,
+            });
+            notify.ok('Leilão duplicado', 'Você está na cópia — agende ou reative quando quiser.');
+            navigate(createPageUrl('EditAuction') + `?id=${novo.id}`, { replace: false });
+        } catch (e) {
+            console.error('Erro ao duplicar:', e);
+            notify.erro('Erro ao duplicar o leilão', 'Tente novamente.');
+        } finally {
+            setIsDuplicating(false);
+        }
+    };
+
+    // ── Arquivar (lixeira reversível) / Restaurar ──
+    const arquivarLeilao = () => setConfirmAction({
+        title: 'Arquivar este leilão?',
+        lines: [
+            'Ele sai da vitrine imediatamente',
+            'Nada é apagado — restaure quando quiser por esta mesma página',
+        ],
+        confirmLabel: 'Arquivar',
+        danger: false,
+        onConfirm: async () => {
+            try {
+                await Auction.update(auctionId, { status: 'archived' });
+                setAuction((prev) => ({ ...prev, status: 'archived' }));
+                notify.ok('Leilão arquivado', 'Fora da vitrine. Restaure quando quiser.');
+            } catch (e) {
+                console.error('Erro ao arquivar:', e);
+                notify.erro('Erro ao arquivar', 'Tente novamente.');
+            }
+        },
+    });
+
+    const restaurarLeilao = async () => {
+        try {
+            await Auction.update(auctionId, { status: 'ended' });
+            setAuction((prev) => ({ ...prev, status: 'ended' }));
+            setReactivateTime(toBrtLocal(new Date(Date.now() + 720 * 60000)));
+            setReactivatePreset(720);
+            notify.ok('Leilão restaurado', 'Está como encerrado — reative ou agende o início.');
+        } catch (e) {
+            console.error('Erro ao restaurar:', e);
+            notify.erro('Erro ao restaurar', 'Tente novamente.');
+        }
+    };
+
+    // ── Agendamento de início: status 'scheduled', end_time = início programado ──
+    const [scheduleStart, setScheduleStart] = useState('');
+    const [scheduleDur, setScheduleDur] = useState(720);
+    const SCHEDULE_DURATIONS = [
+        { label: '30 minutos', min: 30 },
+        { label: '1 hora', min: 60 },
+        { label: '2 horas', min: 120 },
+        { label: '6 horas', min: 360 },
+        { label: '12 horas', min: 720 },
+        { label: '24 horas', min: 1440 },
+        { label: '3 dias', min: 4320 },
+    ];
+
+    const agendarInicio = () => {
+        if (!scheduleStart) {
+            notify.aviso('Defina o horário de início');
+            return;
+        }
+        const [d, t] = scheduleStart.split('T');
+        const [y, m, dd] = d.split('-');
+        const [hh, mm] = t.split(':');
+        const startISO = new Date(`${y}-${m}-${dd}T${hh}:${mm}:00-03:00`).toISOString();
+        if (new Date(startISO).getTime() <= Date.now()) {
+            notify.aviso('Escolha um horário no futuro');
+            return;
+        }
+        const durLabel = SCHEDULE_DURATIONS.find((x) => x.min === scheduleDur)?.label || `${scheduleDur} min`;
+        setConfirmAction({
+            title: 'Agendar o início deste leilão?',
+            lines: [
+                `Começa automaticamente em ${formatBrtLabel(scheduleStart)} (Brasília)`,
+                `Duração do leilão: ${durLabel}`,
+                'Até lá o card aparece na vitrine como EM BREVE, sem aceitar lances',
+            ],
+            confirmLabel: 'Agendar',
+            danger: false,
+            onConfirm: async () => {
+                try {
+                    const raw = await lerRaw();
+                    await Auction.update(auctionId, {
+                        status: 'scheduled',
+                        end_time: startISO,
+                        winner_id: null,
+                        winner_name: null,
+                        order_status: null,
+                        raw_base44: { ...raw, schedule_meta: { start_at: startISO, duration_min: scheduleDur } },
+                    });
+                    setAuction((prev) => ({ ...prev, status: 'scheduled', end_time: startISO }));
+                    notify.ok('Leilão agendado', `Começa: ${formatBrtLabel(scheduleStart)} · duração ${durLabel}`);
+                } catch (e) {
+                    console.error('Erro ao agendar:', e);
+                    notify.erro('Erro ao agendar', 'Tente novamente.');
+                }
+            },
+        });
+    };
+
+    const cancelarAgendamento = async () => {
+        try {
+            const raw = await lerRaw();
+            delete raw.schedule_meta;
+            await Auction.update(auctionId, { status: 'ended', end_time: new Date().toISOString(), raw_base44: raw });
+            setAuction((prev) => ({ ...prev, status: 'ended' }));
+            notify.ok('Agendamento cancelado', 'O leilão voltou para encerrado.');
+        } catch (e) {
+            console.error('Erro ao cancelar agendamento:', e);
+            notify.erro('Erro ao cancelar agendamento', 'Tente novamente.');
+        }
+    };
+
+    const comecarAgora = async () => {
+        try {
+            const raw = await lerRaw();
+            const durMin = Number(raw?.schedule_meta?.duration_min) || 720;
+            delete raw.schedule_meta;
+            const novoEnd = new Date(Date.now() + durMin * 60000).toISOString();
+            await Auction.update(auctionId, { status: 'active', end_time: novoEnd, raw_base44: raw });
+            setAuction((prev) => ({ ...prev, status: 'active', end_time: novoEnd }));
+            notify.ok('Leilão no ar!', `Termina: ${new Date(novoEnd).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+        } catch (e) {
+            console.error('Erro ao começar agora:', e);
+            notify.erro('Erro ao iniciar', 'Tente novamente.');
+        }
+    };
+
     // ⏱️ Tick de 1s para o countdown do card de resumo (só roda com leilão ativo)
     const [nowTick, setNowTick] = useState(Date.now());
     useEffect(() => {
-        if (auction?.status !== 'active') return;
+        if (auction?.status !== 'active' && auction?.status !== 'scheduled') return;
         const i = setInterval(() => setNowTick(Date.now()), 1000);
         return () => clearInterval(i);
     }, [auction?.status]);
@@ -284,6 +436,7 @@ export default function EditAuction() {
             // pra o campo NUNCA nascer vazio (era a causa do "defina uma nova data" no Safari).
             if (currentAuction.status === 'ended' || currentAuction.status === 'sold') {
                 setReactivateTime(toBrtLocal(new Date(Date.now() + 720 * 60000)));
+                setScheduleStart(toBrtLocal(new Date(Date.now() + 60 * 60000)));
             }
 
             const utcDate = new Date(currentAuction.end_time);
@@ -315,7 +468,8 @@ export default function EditAuction() {
               supplier_url: currentAuction.source_url || "", // 🆕 CARREGA source_url
               supplier_logo_url: currentAuction.supplier_logo_url || "", // 🆕 CARREGA LOGO
               comparai_mode: currentAuction.comparai_mode || "google_shopping", // 🆕 CARREGA MODO
-              manual_market_price: currentAuction.manual_market_price || "" // 🆕 CARREGA PREÇO MANUAL
+              manual_market_price: currentAuction.manual_market_price || "", // 🆕 CARREGA PREÇO MANUAL
+              buy_now_price: currentAuction.buy_now_price || "" // CARREGA COMPRE JÁ
             });
             
             setSupplierLogoPreview(currentAuction.supplier_logo_url || ""); // 🆕 PREVIEW
@@ -469,7 +623,8 @@ export default function EditAuction() {
                 source_url: formData.supplier_url || null, // 🆕 SALVA supplier_url como source_url
                 supplier_logo_url: formData.supplier_logo_url || null, // 🆕 SALVA LOGO
                 comparai_mode: formData.comparai_mode || "google_shopping", // 🆕 SALVA MODO
-                manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null // 🆕 SALVA PREÇO MANUAL
+                manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null, // 🆕 SALVA PREÇO MANUAL
+                buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null // SALVA COMPRE JÁ
             };
 
             // 🎯 SE REATIVOU, LIMPA VENCEDOR E MENSAGENS
@@ -650,9 +805,23 @@ export default function EditAuction() {
         ? { label: 'ATIVO', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400 animate-pulse' }
         : auction?.status === 'paused'
             ? { label: 'PAUSADO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400 animate-pulse' }
-            : auction?.status === 'sold'
-                ? { label: 'VENDIDO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400' }
-                : { label: 'ENCERRADO', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/30', dot: 'bg-slate-400' };
+            : auction?.status === 'scheduled'
+                ? { label: 'AGENDADO', cls: 'bg-sky-500/10 text-sky-400 border-sky-500/30', dot: 'bg-sky-400 animate-pulse' }
+                : auction?.status === 'archived'
+                    ? { label: 'ARQUIVADO', cls: 'bg-slate-500/10 text-slate-500 border-slate-500/30', dot: 'bg-slate-500' }
+                    : auction?.status === 'sold'
+                        ? { label: 'VENDIDO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400' }
+                        : { label: 'ENCERRADO', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/30', dot: 'bg-slate-400' };
+
+    const tempoParaComecar = (() => {
+        if (auction?.status !== 'scheduled') return null;
+        const diff = new Date(auction.end_time).getTime() - nowTick;
+        if (diff <= 0) return 'Começando…';
+        const sgs = Math.floor(diff / 1000);
+        const dias = Math.floor(sgs / 86400);
+        if (dias > 0) return `${dias} dia${dias > 1 ? 's' : ''} e ${Math.floor((sgs % 86400) / 3600)}h`;
+        return `${String(Math.floor(sgs / 3600)).padStart(2, '0')}:${String(Math.floor((sgs % 3600) / 60)).padStart(2, '0')}:${String(sgs % 60).padStart(2, '0')}`;
+    })();
 
     const tempoRestante = (() => {
         if (auction?.status !== 'active') return null;
@@ -694,6 +863,16 @@ export default function EditAuction() {
                         <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
                         {statusInfo.label}
                     </span>
+                    <Button
+                        variant="outline"
+                        onClick={handleDuplicate}
+                        disabled={isDuplicating || isSaving || isDeleting}
+                        title="Duplicar leilão"
+                        className="shrink-0 bg-[#161b22] border-[#30363d] text-slate-300 hover:bg-[#30363d] hover:text-white"
+                    >
+                        {isDuplicating ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Copy className="w-4 h-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">Duplicar</span>
+                    </Button>
                     <Button
                         onClick={handleSaveChanges}
                         disabled={isSaving || isUploading || isDeleting}
@@ -1023,6 +1202,17 @@ export default function EditAuction() {
                       </div>
                     </div>
                     
+                    <div className="rounded-xl bg-emerald-500/[0.04] border border-emerald-500/20 p-4">
+                      <Label htmlFor="buy_now_price" className={`${LABEL_CLS} flex items-center gap-1.5 mb-2 text-emerald-400`}>
+                        <ShoppingBag className="w-3.5 h-3.5" /> Compre Já — arremate imediato (opcional)
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500/70 pointer-events-none">R$</span>
+                        <Input id="buy_now_price" type="number" step="0.01" value={formData.buy_now_price} onChange={(e) => handleInputChange('buy_now_price', e.target.value)} placeholder="Deixe vazio para desativar" className={`pl-10 ${INPUT_CLS}`} />
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-2">Com um valor definido, a sala do leilão mostra o botão Compre Já — quem pagar esse preço leva na hora.</p>
+                    </div>
+
                     <div className="pt-1">
                       <Label htmlFor="end_time" className={`${LABEL_CLS} flex items-center gap-1.5 mb-2`}>
                         <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -1085,6 +1275,12 @@ export default function EditAuction() {
                                 <p className="text-xl font-black text-emerald-400 tabular-nums leading-tight">{tempoRestante}</p>
                             </div>
                         )}
+                        {tempoParaComecar && (
+                            <div className="mt-2 rounded-xl bg-sky-500/10 border border-sky-500/25 px-3 py-2.5 text-center">
+                                <p className="text-[10px] uppercase tracking-widest text-sky-300/80 font-bold">Começa em</p>
+                                <p className="text-xl font-black text-sky-400 tabular-nums leading-tight">{tempoParaComecar}</p>
+                            </div>
+                        )}
                         {auction?.status === 'paused' && (
                             <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5 text-center">
                                 <p className="text-[10px] uppercase tracking-widest text-amber-300/80 font-bold">Leilão pausado</p>
@@ -1140,6 +1336,102 @@ export default function EditAuction() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* CARD DE AGENDAMENTO DE INÍCIO */}
+                {auction && (auction.status === 'ended' || auction.status === 'sold') && (
+                    <Card className="border-sky-500/40 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.08) 0%, rgba(22,27,34,1) 45%)' }}>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 grid place-items-center shrink-0">
+                                    <CalendarClock className="w-5 h-5 text-sky-400" />
+                                </div>
+                                <div className="min-w-0">
+                                    <CardTitle className="text-sky-400 text-base">Agendar Início</CardTitle>
+                                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                                        O leilão começa sozinho no horário marcado. Até lá, aparece na vitrine como EM BREVE com contagem regressiva.
+                                    </p>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Label htmlFor="schedule_start" className={`${LABEL_CLS} flex items-center gap-1.5 mb-2`}>
+                                    <CalendarDays className="w-3.5 h-3.5 text-sky-400" /> Início (Brasília)
+                                </Label>
+                                <Input
+                                    id="schedule_start"
+                                    type="datetime-local"
+                                    value={scheduleStart}
+                                    onChange={(e) => setScheduleStart(e.target.value)}
+                                    onClick={abrirSeletorNativo}
+                                    onFocus={abrirSeletorNativo}
+                                    className={`cursor-pointer ${INPUT_CLS}`}
+                                />
+                            </div>
+                            <div>
+                                <Label className={`${LABEL_CLS} flex items-center gap-1.5 mb-2`}>
+                                    <Timer className="w-3.5 h-3.5 text-sky-400" /> Duração do leilão
+                                </Label>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {SCHEDULE_DURATIONS.map((d) => (
+                                        <button
+                                            key={d.min}
+                                            type="button"
+                                            onClick={() => setScheduleDur(d.min)}
+                                            className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${
+                                                scheduleDur === d.min
+                                                    ? 'bg-gradient-to-b from-sky-500 to-sky-600 border-sky-400 text-white shadow-lg shadow-sky-600/30'
+                                                    : 'bg-[#0d1117]/80 border-white/10 text-slate-300 hover:border-sky-500/60 hover:text-white'
+                                            }`}
+                                        >
+                                            {d.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <Button
+                                className="w-full h-11 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 text-white font-black shadow-lg shadow-sky-600/25 transition-all"
+                                onClick={agendarInicio}
+                            >
+                                <CalendarClock className="w-4 h-4 mr-2" /> Agendar Início
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* CARD DO LEILÃO AGENDADO */}
+                {auction?.status === 'scheduled' && (
+                    <Card className="border-sky-500/40 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.08) 0%, rgba(22,27,34,1) 45%)' }}>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 grid place-items-center shrink-0">
+                                    <CalendarClock className="w-5 h-5 text-sky-400" />
+                                </div>
+                                <div className="min-w-0">
+                                    <CardTitle className="text-sky-400 text-base">Início Agendado</CardTitle>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        Começa automaticamente em <strong className="text-sky-300">{new Date(auction.end_time).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-2">
+                            <Button
+                                onClick={comecarAgora}
+                                className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all"
+                            >
+                                <Play className="w-4 h-4 mr-1.5" /> Começar agora
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={cancelarAgendamento}
+                                className="h-10 rounded-xl bg-transparent border-white/15 text-slate-300 hover:bg-[#30363d] hover:text-white font-bold transition-all"
+                            >
+                                Cancelar
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* 🆕 CARD DE REATIVAR LEILÃO */}
                 {auction && (auction.status === 'ended' || auction.status === 'sold') && (
@@ -1246,7 +1538,24 @@ export default function EditAuction() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-2.5">
+                    {auction?.status === 'archived' ? (
+                        <Button
+                            onClick={restaurarLeilao}
+                            className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all"
+                        >
+                            <ArchiveRestore className="w-4 h-4 mr-2" /> Restaurar Leilão
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            className="w-full h-11 rounded-xl bg-transparent border-white/15 text-slate-300 hover:bg-[#30363d] hover:text-white font-bold transition-all"
+                            onClick={arquivarLeilao}
+                            disabled={isSaving || isUploading || isDeleting}
+                        >
+                            <Archive className="w-4 h-4 mr-2" /> Arquivar (sai da vitrine, reversível)
+                        </Button>
+                    )}
                     <Button
                         variant="destructive"
                         className="w-full h-11 rounded-xl bg-transparent border border-rose-500/40 text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 font-bold transition-all"

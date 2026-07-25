@@ -12,14 +12,8 @@ import { base44 } from "@/api/base44Client";
 const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
-import { Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger } from
-"@/components/ui/tooltip";
 import { checkLocation } from "@/functions/checkLocation";
 
 import AuctionCard from "../components/auction/AuctionCard";
@@ -119,6 +113,64 @@ export default function Home() {
     priority: 'normal'
   });
 
+  // ⚡ REALTIME: qualquer UPDATE em auctions (pausa, encerramento, reativação, novo tempo)
+  // atualiza o card na hora, sem esperar o polling. Se a publication do Supabase não
+  // incluir a tabela, o canal fica mudo e o polling continua como fallback.
+  useEffect(() => {
+    const unsubscribe = base44.entities.Auction.subscribe((payload) => {
+      const row = payload?.new;
+      if (!row?.id) return;
+      setAuctions((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        const idx = prev.findIndex((a) => a?.id === row.id);
+        if (idx === -1) return prev;
+        const merged = [...prev];
+        merged[idx] = { ...merged[idx], ...row };
+        return merged;
+      });
+    });
+    return unsubscribe;
+  }, []);
+
+  // ⏰ Ativa leilões agendados cujo horário chegou (fire-and-forget, service role no servidor)
+  useEffect(() => {
+    fetch('/api/functions/activateScheduledAuctions').catch(() => {});
+  }, []);
+
+  // 📊 Lances e participantes REAIS dos leilões ativos (uma query única, leve).
+  // Cards sem dado real seguem com o número estável de sempre.
+  const [bidStatsMap, setBidStatsMap] = useState({});
+  useEffect(() => {
+    const ids = (Array.isArray(auctions) ? auctions : [])
+      .filter((a) => a?.status === 'active' || a?.status === 'scheduled')
+      .map((a) => a.id)
+      .slice(0, 40);
+    if (ids.length === 0) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { supabase } = await import('@/api/supabaseClient');
+        const { data } = await supabase
+          .from('auction_messages')
+          .select('auction_id, sender_id')
+          .eq('message_type', 'bid')
+          .in('auction_id', ids)
+          .limit(3000);
+        if (!alive || !Array.isArray(data)) return;
+        const map = {};
+        for (const m of data) {
+          if (!map[m.auction_id]) map[m.auction_id] = { bids: 0, senders: new Set() };
+          map[m.auction_id].bids++;
+          if (m.sender_id) map[m.auction_id].senders.add(m.sender_id);
+        }
+        const out = {};
+        for (const [id, v] of Object.entries(map)) out[id] = { bids: v.bids, users: v.senders.size };
+        setBidStatsMap(out);
+      } catch { /* mantém números estáveis */ }
+    })();
+    return () => { alive = false; };
+  }, [auctions]);
+
   useEffect(() => {
     const slider = scrollerRef.current;
     if (!slider) return;
@@ -189,6 +241,7 @@ export default function Home() {
     // NOZAP - FILTRO BASE + ESTOQUE + DATA
     filtered = deduped.filter((a) => {
       if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
+      if (a?.status === 'archived') return false;
 
       // 🔒 FILTRO DE DATA: Leilões com end_time expirado saem da listagem pública
       // O status no banco pode não ser atualizado automaticamente pelo backend
@@ -562,7 +615,17 @@ export default function Home() {
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/80">Ao vivo agora</span>
               </div>
               <h1 className="text-3xl lg:text-5xl font-black mb-3 tracking-tight flex items-center gap-3">
-                <Flame className="w-9 h-9 lg:w-11 lg:h-11 text-orange-400 animate-fire flex-shrink-0" />
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  aria-hidden="true"
+                  className="w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0 pointer-events-none object-contain">
+                  <source src="/videos/foguinho-animado.mov" type='video/quicktime; codecs="hvc1"' />
+                  <source src="/videos/foguinho-animado.webm" type="video/webm" />
+                  <Flame className="w-9 h-9 lg:w-11 lg:h-11 text-orange-400 animate-fire" />
+                </video>
                 <span>Leilões <span className="text-gradient-green">Ativos</span></span>
               </h1>
               <p className="text-gray-400 mb-5 text-base lg:text-lg font-light">
@@ -653,97 +716,6 @@ export default function Home() {
         {/* Glow Separator */}
         <div className="glow-line mb-8 mx-8" />
 
-        {/* Action Buttons - Glass */}
-        <TooltipProvider>
-          <div className="mb-8 flex flex-col sm:flex-row flex-wrap items-stretch justify-center gap-4 px-2">
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Link to={createPageUrl("LiveShopNoZap")} className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px]">
-                  <button className="w-full rounded-xl px-5 py-3 text-sm font-bold flex items-center justify-center gap-2.5 text-white transition-all duration-300 hover:shadow-lg hover:shadow-red-500/40 hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', border: '2px solid #ef4444', boxShadow: '0 4px 20px rgba(239, 68, 68, 0.3)' }}>
-                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-300 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span></span>
-                    Live Shop
-                  </button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs text-left p-4 rounded-xl" style={{ background: '#111827', border: '1px solid rgba(16, 185, 129, 0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-                <div className="space-y-2">
-                  <p className="font-bold text-green-400 text-base">🔴 LIVE AO VIVO EM TEMPO REAL!</p>
-                  <ul className="space-y-1 text-sm text-gray-200">
-                    <li>📺 Assista leilões ao vivo com leiloeiro</li>
-                    <li>⚡ Dê lances em tempo real</li>
-                    <li>🎯 Interaja e arremate produtos exclusivos</li>
-                    <li>🔥 Emoção de leilão tradicional online</li>
-                  </ul>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {setActiveSourceFilter(activeSourceFilter === "factory" ? "todos" : "factory");setShowFavoritesOnly(false);}}
-                  className={`w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] text-white`}
-                  style={activeSourceFilter === "factory" && !showFavoritesOnly ? {
-                    background: 'linear-gradient(135deg, #059669, #065f46)',
-                    border: '2px solid #10b981',
-                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)'
-                  } : {
-                    background: 'linear-gradient(135deg, #059669, #065f46)',
-                    border: '2px solid #10b981',
-                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
-                  }}
-                  aria-label="Direto de Fábrica">
-                  <CheckCircle className="w-4 h-4" />
-                  ✨ Direto de Fábrica
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs text-left p-4 rounded-xl" style={{ background: '#111827', border: '1px solid rgba(16, 185, 129, 0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-                <div className="space-y-2">
-                  <p className="font-bold text-green-400 text-base">✨ PRODUTOS ZEROS DE FÁBRICA!</p>
-                  <ul className="space-y-1 text-sm text-gray-200">
-                    <li>✅ Novos, lacrados, com garantia</li>
-                    <li>✅ Arremate direto com fabricantes</li>
-                    <li>✅ Compramos grandes lotes → Preço especial</li>
-                  </ul>
-                  <p className="text-sm text-yellow-300 font-semibold">💰 Sistema de venda imediata</p>
-                  <p className="text-sm text-green-300 font-semibold">🏆 Você lucra MUITO mais!</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-
-
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {setActiveSourceFilter(activeSourceFilter === "returns" ? "todos" : "returns");setShowFavoritesOnly(false);}}
-                  className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm text-white transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.02]"
-                  style={activeSourceFilter === "returns" && !showFavoritesOnly ? {
-                    background: 'linear-gradient(135deg, #ea580c, #9a3412)', border: '2px solid #fb923c', boxShadow: '0 4px 24px rgba(249, 115, 22, 0.55)'
-                  } : { background: 'linear-gradient(135deg, #ea580c, #9a3412)', border: '2px solid #f97316', boxShadow: '0 4px 20px rgba(249, 115, 22, 0.3)' }}
-                  aria-label="Arremate & Devoluções">
-                  <Percent className="w-4 h-4" />
-                  🔥 Arremate & Devoluções
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs text-left p-4 rounded-xl" style={{ background: '#111827', border: '1px solid rgba(249, 115, 22, 0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-                <div className="space-y-2">
-                  <p className="font-bold text-orange-400 text-base">🔥 PRODUTOS PRATICAMENTE NOVOS!</p>
-                  <ul className="space-y-1 text-sm text-gray-200">
-                    <li>✅ Nunca usados ou usados por poucas horas</li>
-                    <li>✅ Devolvidos em até 7 dias (lei do arrependimento)</li>
-                    <li>✅ Motivos: desistência, arrependimento, mostruário</li>
-                  </ul>
-                  <p className="text-sm text-yellow-300 font-semibold">💰 Por isso o preço é IMBATÍVEL!</p>
-                  <p className="text-sm text-green-300 font-semibold">🛡️ A garantia é o próprio produto: testado e funcional!</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-
-          </div>
-        </TooltipProvider>
 
         {/* BANNER ROTATIVO */}
         {banners.length > 0 &&
@@ -847,7 +819,8 @@ export default function Home() {
                     isAdmin={currentUser?.role === 'admin'}
                     showFavoriteButton={true}
                     userId={currentUser?.id}
-                    favoriteContext="nozap" />
+                    favoriteContext="nozap"
+                    bidStats={bidStatsMap[auction.id] || null} />
                 );
               })}
             </div>

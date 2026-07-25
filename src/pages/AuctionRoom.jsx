@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 
 import AIMessage from "../components/chat/AIMessage";
 import BidInput from "../components/auction/BidInput";
+import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
 import FloatingBalance from '../components/auction/FloatingBalance';
@@ -976,6 +977,10 @@ export default function AuctionRoom() {
           currentUser={currentUser}
           onManualSync={syncAuctionDataOnly}
         />
+      )}
+
+      {(currentUser?.role === 'admin' || currentUser?.role === 'super_admin') && auction && (
+        <AdminLiveBar auction={auction} setAuction={setAuction} />
       )}
 
       {currentUser?.role === 'admin' && auction && auction.status === 'ended' && timeRemaining !== null && timeRemaining > 0 && (
