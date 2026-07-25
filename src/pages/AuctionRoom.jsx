@@ -66,7 +66,6 @@ export default function AuctionRoom() {
   const abortControllerRef = useRef(null);
 
   const isEndingRef = useRef(false);
-  const isCreatingVictoryMessageRef = useRef(false);
 
   const hasInitializedRef = useRef(false);
 
@@ -201,11 +200,12 @@ export default function AuctionRoom() {
     playSound,
   });
 
+  // 🔨 ARREMATE REAL — o SERVIDOR é a autoridade (pedido Gabriel 25/07: "não pode
+  // ser simulação"). O cliente só detecta o fim do relógio e chama finalizeAuction:
+  // vencedor, preço final, status, mensagem de vitória e comissão são apurados e
+  // gravados no backend (api/functions/finalizeAuction.js). Aqui a gente exibe.
   const endAuction = useCallback(async () => {
-    if (!auction) {
-      console.log("⏸️ [END] Auction não existe.");
-      return;
-    }
+    if (!auction) return;
 
     if (auction.status !== 'active') {
       console.log("⏸️ [END] Leilão não está ativo.");
@@ -219,21 +219,13 @@ export default function AuctionRoom() {
     }
 
     const endTime = new Date(auction.end_time).getTime();
-    const timeRemainingEndCheck = Math.floor((endTime - serverNow) / 1000);
+    if (Math.floor((endTime - serverNow) / 1000) > 0) return;
 
-    if (timeRemainingEndCheck > 0) {
-      console.log(`⚠️ [END] Ainda ${timeRemainingEndCheck}s restantes.`);
-      return;
-    }
-
-    if (isEndingRef.current) {
-      console.log("⏸️ [END] Já em andamento.");
-      return;
-    }
+    if (isEndingRef.current) return;
 
     try {
       isEndingRef.current = true;
-      console.log("🔨 [END] FINALIZANDO...");
+      console.log("🔨 [END] Solicitando arremate ao servidor...");
 
       clearSyncIntervals();
       clearCountdown();
@@ -241,283 +233,84 @@ export default function AuctionRoom() {
         abortControllerRef.current.abort();
       }
 
-      // 🔐 SEGURANÇA: Atualização de status para 'processing' via backend (Edge Function)
-      // Não chamamos Auction.update() diretamente para evitar manipulação de dados via DevTools
-      try {
-        const base44Client = (await import('@/api/base44Client')).base44;
-        await base44Client.functions.invoke('finalizeAuction', { auction_id: auction.id });
-      } catch (secureErr) {
-        // Fallback para garantir que o fluxo visual não quebre
-        console.warn('⚠️ [END] Edge Function não disponível, usando fallback local:', secureErr.message);
-        await Auction.update(auction.id, { status: "processing" });
+      // Chama o backend com retentativas curtas — SEM fallback de escrita local.
+      let result = null;
+      for (let attempt = 0; attempt < 3 && !result; attempt++) {
+        try {
+          const resp = await base44.functions.invoke('finalizeAuction', { auction_id: auction.id });
+          const data = resp?.data || resp;
+          if (data?.success && data.result) {
+            result = data.result;
+            break;
+          }
+          // Servidor diz que ainda falta tempo → nosso relógio derrapou. Re-calibra e volta.
+          if (data?.seconds_remaining > 0) {
+            console.warn(`⏱️ [END] Servidor: faltam ${data.seconds_remaining}s. Re-calibrando.`);
+            await calibrateServerOffset();
+            await syncAuctionDataOnly();
+            return;
+          }
+          console.warn("⚠️ [END] finalizeAuction sem sucesso:", data?.error);
+        } catch (err) {
+          console.warn(`⚠️ [END] Tentativa ${attempt + 1} falhou:`, err.message);
+        }
+        await new Promise(r => setTimeout(r, 1200));
       }
 
-      setAuction(prev => ({ ...prev, status: "processing" }));
+      if (!result) {
+        // Backend indisponível: NÃO inventa resultado no cliente. Re-sincroniza e
+        // deixa o próximo ciclo de sync tentar de novo.
+        console.error("❌ [END] Servidor não confirmou o arremate. Aguardando novo ciclo.");
+        await syncAuctionDataOnly();
+        return;
+      }
 
-      // 🔨 3 MARTELADAS
+      console.log(`🏆 [END/SERVIDOR] Vencedor: ${result.winner_name || 'sem lances'} — R$ ${Number(result.final_price).toFixed(2)}`);
+
+      // Estado local reflete o que o SERVIDOR gravou
+      setAuction(prev => ({
+        ...prev,
+        status: result.status || "ended",
+        winner_id: result.winner_id,
+        winner_name: result.winner_name,
+        current_price: result.final_price,
+        order_status: result.order_status,
+      }));
+
+      // 🔨 3 MARTELADAS + leiloeiro "VENDIDO!" — só DEPOIS da confirmação real
       playSound('hammer');
       setTimeout(() => playSound('hammer'), 300);
       setTimeout(() => playSound('hammer'), 600);
 
-      // 🎉 LEILOEIRO COM "VENDIDO!" (FASE 4)
       setTimeout(() => {
         setAuctioneerPhase(4);
-        setAuctioneerMessage("🎉 VENDIDO! 🎉");
+        setAuctioneerMessage(result.winner_name ? `🎉 VENDIDO para ${result.winner_name}! 🎉` : "🔨 Leilão encerrado!");
         setShowAuctioneer(true);
-      }, 1000); // 1 segundo após as marteladas
+      }, 900);
 
-      // ⏰ AGUARDA 5 SEGUNDOS ANTES DE CRIAR A MENSAGEM NO CHAT
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      if (result.winner_id) playSound('winner');
 
-      // 🆕 PROTEÇÃO CONTRA CRIAÇÃO SIMULTÂNEA
-      if (isCreatingVictoryMessageRef.current) {
-        console.log("⏸️ [END] Mensagem de vitória já está sendo criada!");
-        return;
-      }
-
-      isCreatingVictoryMessageRef.current = true;
-
-      // 🆕 VERIFICA SE JÁ EXISTE MENSAGEM DE VITÓRIA
-      const existingMessages = await AuctionMessage.filter({
-        auction_id: auction.id,
-        message_type: 'winner_announcement'
-      });
-
-      if (existingMessages.length > 0) {
-        console.log("⚠️ [END] Mensagem de vitória JÁ EXISTE no banco! Pulando criação.");
-        isCreatingVictoryMessageRef.current = false;
-
-        // Atualiza só o status do leilão
-        await Auction.update(auction.id, {
-          status: "ended",
-          order_status: "awaiting_payment"
-        });
-
-        setAuction(prev => ({
-          ...prev,
-          status: "ended",
-          order_status: "awaiting_payment"
-        }));
-
-        // Re-sync messages to ensure the existing winner message is displayed
-        try {
-          const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
-          setMessages(freshMessages);
-          lastMessageCountRef.current = freshMessages.length;
-        } catch (error) {
-          console.error("❌ [END] Erro ao atualizar mensagens após detectar duplicata:", error);
-        }
-
-        // 🎉 AINDA MOSTRA O MODAL APÓS 5 SEGUNDOS
-        setTimeout(() => {
-          console.log("🎉 [WINNER MODAL] Mostrando modal de arrematado!");
-          setShowWinnerModal(true);
-        }, 5000);
-
-        return;
-      }
-
-      const latestMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
-      const bidMessages = latestMessages.filter(m => m.message_type === 'bid');
-      const highestBid = bidMessages.sort((a, b) => b.bid_amount - a.bid_amount)[0];
-
-      const winnerId = highestBid?.sender_id || null;
-      const winnerName = highestBid?.sender_name || null;
-      const finalPrice = highestBid?.bid_amount || auction.starting_price;
-
-      let winnerData = null;
-      if (winnerId) {
-        try {
-          const winners = await AppUser.filter({ id: winnerId });
-          if (winners && winners.length > 0) {
-            winnerData = winners[0];
-            console.log(`✅ [END] Vencedor encontrado: ${winnerData.full_name}`);
-          } else {
-            console.warn(`⚠️ [END] Vencedor ID ${winnerId} não encontrado na entidade AppUser`);
-            // Cria dados básicos do vencedor a partir do que temos
-            winnerData = {
-              id: winnerId,
-              full_name: winnerName || 'Vencedor',
-              nickname: winnerName || 'Vencedor',
-              email: '',
-              avatar_url: null
-            };
-          }
-        } catch (error) {
-          console.warn(`⚠️ [END] Erro ao buscar vencedor (${winnerId}):`, error.message);
-          // Fallback: usa dados básicos
-          winnerData = {
-            id: winnerId,
-            full_name: winnerName || 'Vencedor',
-            nickname: winnerName || 'Vencedor',
-            email: '',
-            avatar_url: null
-          };
-        }
-      }
-
-      // 🆕 ATUALIZAR LICENCIADO SE O VENCEDOR FOI INDICADO
-      if (winnerData && winnerData.referred_by_id && !auction.is_investment_plan) {
-        try {
-          console.log(`💰 [COMMISSION] Vencedor foi indicado! Buscando licenciado...`);
-
-          const licensees = await AppUser.filter({ id: winnerData.referred_by_id });
-
-          if (licensees && licensees.length > 0) {
-            const licensee = licensees[0];
-            const commission = finalPrice * 0.03;
-
-            // 🆕 VERIFICAR SE É LEILÃO DE TESTE
-            const isTestAuction = auction.is_test_auction === true;
-
-            console.log(`✅ [COMMISSION] Licenciado: ${licensee.full_name}`);
-            console.log(`💵 [COMMISSION] Comissão: R$ ${commission.toFixed(2)}`);
-            console.log(`🧪 [COMMISSION] É teste? ${isTestAuction ? 'SIM' : 'NÃO'}`);
-            console.log(`📊 [COMMISSION] É plano? ${auction.is_investment_plan ? 'SIM' : 'NÃO'}`);
-
-            if (isTestAuction) {
-              // LEILÃO DE TESTE - atualiza saldo de teste
-              await AppUser.update(licensee.id, {
-                network_bids_count: (licensee.network_bids_count || 0) + 1,
-                commission_balance: (licensee.commission_balance || 0) + commission,
-                test_valora_balance: (licensee.test_valora_balance || 0) + commission,
-              });
-              console.log(`🧪 [COMMISSION] Atualizado SALDO DE TESTE!`);
-            } else {
-              // LEILÃO REAL - atualiza saldo real
-              await AppUser.update(licensee.id, {
-                network_bids_count: (licensee.network_bids_count || 0) + 1,
-                commission_balance: (licensee.commission_balance || 0) + commission,
-                valora_pay_balance: (licensee.valora_pay_balance || 0) + commission,
-              });
-              console.log(`💰 [COMMISSION] Atualizado SALDO REAL!`);
-            }
-
-            console.log(`🎉 [COMMISSION] Licenciado atualizado com sucesso!`);
-          } else {
-            console.warn(`⚠️ [COMMISSION] Licenciado não encontrado: ${winnerData.referred_by_id}`);
-          }
-        } catch (commissionError) {
-          console.error(`❌ [COMMISSION] Erro ao atualizar licenciado:`, commissionError);
-        }
-      } else {
-        if (auction.is_investment_plan) {
-          console.log(`ℹ️ [COMMISSION] Plano de investimento - SEM comissão`);
-        } else {
-          console.log(`ℹ️ [COMMISSION] Vencedor não tem licenciado associado.`);
-        }
-      }
-
-      // 🆕 GARANTIR QUE A IMAGEM SEMPRE EXISTA
-      const productImage = (auction.image_urls && auction.image_urls.length > 0)
-        ? auction.image_urls[0]
-        : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
-
-      // 🆕 CRIAR OBJETO LIMPO
-      const victoryData = {
-        winner: winnerData ? {
-          id: winnerData.id,
-          full_name: winnerData.full_name || '',
-          nickname: winnerData.nickname || '',
-          email: winnerData.email || '',
-          avatar_url: winnerData.avatar_url || null
-        } : null,
-        auction: {
-          id: auction.id,
-          title: auction.title || 'Produto',
-          image_urls: [productImage], // 🆕 SEMPRE TEM PELO MENOS 1 IMAGEM
-          current_price: finalPrice,
-          starting_price: auction.starting_price || 0
-        }
-      };
-
-      const victoryJSON = JSON.stringify(victoryData);
-
-      console.log('📦 [END] JSON que será salvo:', victoryJSON);
-
-      await AuctionMessage.create({
-        auction_id: auction.id,
-        message_type: "winner_announcement",
-        content: victoryJSON,
-        sender_name: "LanceIA",
-        is_system_message: true,
-      });
-
-      console.log(`🏆 [END] Vencedor: ${winnerName} - R$ ${finalPrice.toFixed(2)}`);
-
-      // Libera flag após criar
-      isCreatingVictoryMessageRef.current = false;
-
-      // Força atualização imediata das mensagens
-      console.log("🔄 [END] Forçando atualização das mensagens...");
-      await new Promise(resolve => setTimeout(resolve, 800));
-
+      // Recarrega o chat — a mensagem de vitória foi criada pelo servidor
+      await new Promise(resolve => setTimeout(resolve, 1200));
       try {
         const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
-        console.log(`✅ [END] ${freshMessages.length} mensagens carregadas!`);
         setMessages(freshMessages);
         lastMessageCountRef.current = freshMessages.length;
       } catch (error) {
         console.error("❌ [END] Erro ao atualizar mensagens:", error);
       }
 
-      // 🎉 MODAL DE ARREMATADO APARECE 5 SEGUNDOS APÓS A MENSAGEM NO CHAT
-      setTimeout(() => {
-        console.log("🎉 [WINNER MODAL] Mostrando modal de arrematado!");
-        setShowWinnerModal(true);
-      }, 5000);
-
-      // 🔐 SEGURANÇA: Encerramento via Edge Function no backend
-      // Toda a lógica crítica (Auction.update status=ended, AppUser stats, order_status)
-      // roda no servidor com ServiceRole — não pode ser manipulada via DevTools
-      try {
-        const base44Client = (await import('@/api/base44Client')).base44;
-        await base44Client.functions.invoke('finalizeAuction', { auction_id: auction.id });
-        console.log(`🔐 [END] Encerramento seguro via Edge Function executado!`);
-      } catch (secureErr) {
-        console.warn('⚠️ [END] Edge Function não disponível, usando fallback local:', secureErr.message);
-        // Fallback para garantir que o fluxo do leilão não quebre
-        await Auction.update(auction.id, {
-          status: "ended",
-          winner_id: winnerId,
-          winner_name: winnerName,
-          current_price: finalPrice,
-          order_status: "awaiting_payment"
-        });
-      }
-
-      // Atualiza o estado local do React para refletir o encerramento
-      setAuction(prev => ({
-        ...prev,
-        status: "ended",
-        winner_id: winnerId,
-        winner_name: winnerName,
-        current_price: finalPrice,
-        order_status: "awaiting_payment"
-      }));
-
-      if (winnerId && winnerData && winnerData.email) {
-
-        playSound('winner');
-      }
-
-      console.log("🎉 [END] FINALIZADO!");
+      // 🎉 Modal de arrematado alguns segundos depois do card no chat
+      setTimeout(() => setShowWinnerModal(true), 4000);
 
     } catch (error) {
       console.error("❌ [END] Erro:", error);
-      isCreatingVictoryMessageRef.current = false; // Libera em caso de erro
-
-      try {
-        await Auction.update(auction.id, { status: "ended" });
-        setAuction(prev => ({ ...prev, status: "ended" }));
-      } catch (recoveryError) {
-        console.error("❌ [END] Recuperação falhou:", recoveryError);
-      }
-
     } finally {
       isEndingRef.current = false;
     }
-  }, [auction, playSound, getServerSyncedTime]);
+    // syncAuctionDataOnly/clearSyncIntervals vêm do useAuctionSync declarado DEPOIS —
+    // são acessados só em tempo de execução (mesmo padrão que o código já usava).
+  }, [auction, playSound, getServerSyncedTime, calibrateServerOffset]);
 
   // Wire up the ref so the timer hook can call endAuction without circular deps
   endAuctionRef.current = endAuction;
@@ -1349,7 +1142,9 @@ export default function AuctionRoom() {
         </div>
       )}
 
-      <ComparaiButton auction={auction} />
+      {/* Um único CompareAQUI na sala: o botão visível é o de baixo (LojaFloatActions);
+          aqui só o modal com a comparação real do produto deste leilão. */}
+      <ComparaiButton auction={auction} trigger="event" />
 
       {/* 🆕 Modal de Saldo Baixo */}
       <LowBalanceModal

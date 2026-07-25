@@ -1,19 +1,24 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Button } from "@/components/ui/button";
-import { Trophy, Sparkles } from "lucide-react";
+import { Trophy, Sparkles, X } from "lucide-react";
 
+// 🏆 Modal de ARREMATADO — repaginado no padrão liquid glass verde do site
+// (25/07). Os dados exibidos são os REAIS gravados pelo servidor em
+// finalizeAuction: winner_name e current_price vêm do banco, não de estimativa
+// do cliente. Sem "Vencedor: Participante" genérico.
 export default function WinnerModal({ isOpen, auction, finalPrice, onClose, currentUser }) {
   const navigate = useNavigate();
 
   if (!isOpen || !auction) return null;
 
-  const productImage = (auction.image_urls && auction.image_urls.length > 0) 
-    ? auction.image_urls[0] 
+  const productImage = (auction.image_urls && auction.image_urls.length > 0)
+    ? auction.image_urls[0]
     : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
 
   const isWinner = currentUser && auction.winner_id === currentUser.id;
+  const winnerLabel = auction.winner_name || null;
+  const price = Number(auction.current_price ?? finalPrice) || 0;
 
   const handleGoToWinnings = () => {
     onClose();
@@ -21,114 +26,109 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 animate-fadeIn overflow-y-auto">
-      <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl max-w-xs w-full p-3 text-center shadow-2xl animate-scaleIn border-2 border-yellow-400 my-2">
-        {/* Confetes animados */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(10)].map((_, i) => (
+    <div
+      className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-3 animate-fadeIn overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="winner-glass relative max-w-sm w-full p-5 text-center animate-scaleIn my-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Fechar */}
+        <button
+          onClick={onClose}
+          aria-label="Fechar"
+          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-white/10 text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white z-10"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Confetes */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[inherit]">
+          {[...Array(12)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1.5 h-1.5 bg-yellow-300 rounded-full animate-confetti"
+              className="absolute w-1.5 h-1.5 rounded-full animate-confetti"
               style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: `${2 + Math.random() * 2}s`
+                background: i % 2 ? '#fbbf24' : '#34d399',
+                left: `${(i * 83) % 100}%`,
+                animationDelay: `${(i * 0.37) % 2}s`,
+                animationDuration: `${2 + ((i * 0.53) % 2)}s`
               }}
             />
           ))}
         </div>
 
-        {/* Ícone de troféu */}
-        <div className="relative mb-2">
-          <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center mx-auto shadow-lg">
-            <Trophy className="w-6 h-6 text-yellow-900 animate-bounce" />
+        {/* Troféu */}
+        <div className="relative mb-3">
+          <div className="w-14 h-14 rounded-full grid place-items-center mx-auto shadow-lg"
+            style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', boxShadow: '0 8px 24px rgba(251,191,36,.45)' }}>
+            <Trophy className="w-7 h-7 text-yellow-900 animate-bounce" />
           </div>
           <Sparkles className="absolute top-0 right-1/3 w-4 h-4 text-yellow-300 animate-pulse" />
-          <Sparkles className="absolute top-0 left-1/3 w-4 h-4 text-yellow-300 animate-pulse" style={{ animationDelay: '0.5s' }} />
+          <Sparkles className="absolute top-0 left-1/3 w-4 h-4 text-emerald-300 animate-pulse" style={{ animationDelay: '0.5s' }} />
         </div>
 
-        {/* Título */}
-        <h2 className="text-lg font-bold text-white mb-1">
-          🎉 ARREMATADO! 🎉
-        </h2>
-        <p className="text-yellow-200 text-xs font-semibold mb-2">
-          {isWinner ? 'Você venceu!' : `Vencedor: ${auction.winner_name || 'Participante'}`}
+        <h2 className="text-xl font-black text-white mb-1 tracking-wide">🎉 ARREMATADO! 🎉</h2>
+        <p className="text-emerald-200 text-sm font-semibold mb-3">
+          {isWinner
+            ? 'Você venceu este leilão!'
+            : winnerLabel
+              ? <>Vencedor: <span className="text-white">{winnerLabel}</span></>
+              : 'Leilão encerrado'}
         </p>
 
-        {/* Card do Produto */}
-        <div className="bg-white rounded-lg p-2 mb-2 shadow-xl">
-          <img 
-            src={productImage} 
+        {/* Card do produto — vidro claro por cima do vidro verde */}
+        <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl p-3 mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
+          <img
+            src={productImage}
             alt={auction.title}
-            className="w-full h-24 object-cover rounded-md mb-2"
+            className="w-full h-28 object-cover rounded-xl mb-2"
           />
-          <h3 className="text-gray-900 font-bold text-sm mb-1 line-clamp-1">
-            {auction.title}
-          </h3>
-          <div className="bg-green-100 rounded-md p-2">
-            <p className="text-[10px] text-green-700 mb-0.5">
-              {isWinner ? '🏆 Parabéns!' : '🎯 Leilão Encerrado'}
+          <h3 className="text-white font-bold text-sm mb-2 line-clamp-1">{auction.title}</h3>
+          <div className="rounded-xl border border-emerald-300/25 bg-emerald-400/15 p-2.5">
+            <p className="text-[11px] text-emerald-200 mb-0.5">
+              {isWinner ? '🏆 Parabéns!' : winnerLabel ? `${winnerLabel} arrematou por` : 'Encerrado em'}
             </p>
-            <p className="text-xs text-green-600 mb-1">
-              {auction.winner_name} arrematou por
-            </p>
-            <p className="text-xl font-bold text-green-700">
-              R$ {finalPrice.toFixed(2)}
-            </p>
+            <p className="text-2xl font-black text-emerald-300 drop-shadow">R$ {price.toFixed(2)}</p>
           </div>
         </div>
 
-        {/* Botão de ação - sempre mostra Meus Arremates se for o vencedor */}
-        <Button
+        {/* CTA */}
+        <button
           onClick={handleGoToWinnings}
-          className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 rounded-lg text-sm shadow-lg transform hover:scale-105 transition-all"
+          className="w-full rounded-xl py-2.5 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
+          style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}
         >
-          {isWinner ? '💳 Meus Arremates' : '📦 Ver Meus Arremates'}
-        </Button>
-        <p className="text-white/80 text-[10px] mt-2">
-          {isWinner ? 'Realize o pagamento para garantir!' : 'Confira seus produtos arrematados'}
+          {isWinner ? '💳 Pagar e garantir meu arremate' : '📦 Ver Meus Arremates'}
+        </button>
+        <p className="text-white/70 text-[11px] mt-2">
+          {isWinner ? 'Realize o pagamento para garantir o produto!' : 'Confira os produtos arrematados'}
         </p>
       </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+        .winner-glass {
+          border-radius: 24px;
+          border: 1px solid rgba(52, 211, 153, 0.35);
+          background: linear-gradient(155deg, rgba(16,185,129,0.28) 0%, rgba(6,78,59,0.55) 45%, rgba(2,44,34,0.75) 100%);
+          backdrop-filter: blur(24px) saturate(1.4);
+          -webkit-backdrop-filter: blur(24px) saturate(1.4);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(16,185,129,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
         }
-        
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes scaleIn {
-          from { 
-            opacity: 0; 
-            transform: scale(0.8);
-          }
-          to { 
-            opacity: 1; 
-            transform: scale(1);
-          }
+          from { opacity: 0; transform: scale(0.85); }
+          to { opacity: 1; transform: scale(1); }
         }
-        
         @keyframes confetti {
-          0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(400px) rotate(720deg);
-            opacity: 0;
-          }
+          0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
         }
-        
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        
-        .animate-scaleIn {
-          animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        
-        .animate-confetti {
-          animation: confetti linear forwards;
-        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-scaleIn { animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .animate-confetti { animation: confetti linear forwards; }
       `}</style>
     </div>
   );

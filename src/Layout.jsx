@@ -1147,7 +1147,10 @@ export default function Layout({ children, currentPageName }) {
             Fora da abertura (Portal/Landing): lá eles poluíam o hero (pedido Gabriel 25/07). */}
         {!isLandingPage && !['Recepcao', 'Portal'].includes(currentPageName) && (
           <React.Suspense fallback={null}>
-            <ComparaiFloatingButton hideButton />
+            {/* Na sala/detalhe do leilão quem atende o evento 'openComparai' é o
+                ComparaiButton da própria página (comparação REAL do produto do leilão).
+                Montar o listener global aqui abriria DOIS modais no mesmo clique. */}
+            {!['AuctionRoom', 'AuctionDetails'].includes(currentPageName) && <ComparaiFloatingButton hideButton />}
             <LojaFloatActions />
           </React.Suspense>
         )}

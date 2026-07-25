@@ -161,9 +161,9 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
       )}
       
       <style>{`
-        /* 📱 MOBILE - Posiciona ACIMA do CompareAQUI */
+        /* 📱 MOBILE - Acima do CompareAQUI de baixo (o botão de cima foi removido 25/07) */
         .auctioneer-position {
-          bottom: 200px;
+          bottom: 150px;
           left: 6px;
         }
         
@@ -185,7 +185,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
         /* 💻 DESKTOP - Posiciona ACIMA da área de lances, entre o card e o input */
         @media (min-width: 1024px) {
           .auctioneer-position {
-            bottom: 140px;
+            bottom: 110px;
             left: 24px;
           }
           

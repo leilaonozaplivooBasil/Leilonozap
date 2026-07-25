@@ -390,7 +390,8 @@ export default function AuctionDetails() {
       {isActive && <FixedAuctionPanel auction={auction} />}
 
       {/* BOTÃO COMPARAI */}
-      <ComparaiButton auction={auction} />
+      {/* Botão visível é o CompareAQUI global de baixo (LojaFloatActions); aqui só o modal. */}
+      <ComparaiButton auction={auction} trigger="event" />
     </div>
   );
 }

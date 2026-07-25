@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ComparaiModal from './ComparaiModal';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 
-export default function ComparaiButton({ auction, mode }) {
+export default function ComparaiButton({ auction, mode, trigger }) {
   const [showModal, setShowModal] = useState(false);
 
+  // trigger="event": NÃO renderiza botão próprio — a sala de leilão usa o botão
+  // CompareAQUI de baixo (LojaFloatActions) e este componente só serve o modal
+  // com a comparação REAL do produto do leilão (pedido Gabriel 25/07: um botão só).
+  const isEventTriggered = trigger === 'event';
+  useEffect(() => {
+    if (!isEventTriggered) return undefined;
+    const open = () => setShowModal(true);
+    window.addEventListener('openComparai', open);
+    return () => window.removeEventListener('openComparai', open);
+  }, [isEventTriggered]);
+
   if (!auction) return null;
+
+  if (isEventTriggered) {
+    return showModal ? (
+      <ComparaiModal
+        auction={auction}
+        isProduct={mode === 'catalog'}
+        onClose={() => setShowModal(false)}
+      />
+    ) : null;
+  }
 
   return (
     <>
