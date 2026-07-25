@@ -18,15 +18,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type } from 'lucide-react';
+import { capOf, withCap } from '@/lib/fotoLegenda';
 
 // 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
 // (o Brave/Chrome pode bloquear diálogos nativos e o clique "não faz nada").
 const notify = {
-    ok: (title, description) => toast({ title: `✅ ${title}`, description, duration: 4000 }),
-    erro: (title, description) => toast({ title: `❌ ${title}`, description, variant: 'destructive', duration: 6000 }),
-    aviso: (title, description) => toast({ title: `⚠️ ${title}`, description, duration: 5000 }),
+    ok: (title, description) => toast({ title, description, duration: 4000 }),
+    erro: (title, description) => toast({ title, description, variant: 'destructive', duration: 6000 }),
+    aviso: (title, description) => toast({ title, description, duration: 5000 }),
 };
+
+// 🎨 Tokens visuais da página (dark premium)
+const CARD_STYLE = { background: 'linear-gradient(160deg, rgba(26,34,48,0.92) 0%, rgba(16,21,30,0.97) 60%)', boxShadow: '0 10px 36px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)' };
+const INPUT_CLS = "bg-[#0d1117]/80 border-white/10 text-white h-11 rounded-xl focus:border-amber-500/60 focus-visible:ring-1 focus-visible:ring-amber-500/30 transition-colors";
+const LABEL_CLS = "text-[10px] uppercase tracking-widest text-slate-500 font-bold";
 
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -107,6 +113,24 @@ export default function EditAuction() {
     const [reactivatePreset, setReactivatePreset] = useState(720); // qual botão rápido está ativo (default +12h)
     // Modal de confirmação personalizado da página: { title, lines, confirmLabel, danger, onConfirm }
     const [confirmAction, setConfirmAction] = useState(null);
+    // Editor de texto sobre a foto: { index, text }
+    const [captionEdit, setCaptionEdit] = useState(null);
+
+    // Promove uma foto a capa (posição 0)
+    const tornarCapa = (index) => {
+        setImageUrls((prev) => {
+            const arr = [...prev];
+            const [foto] = arr.splice(index, 1);
+            arr.unshift(foto);
+            return arr;
+        });
+    };
+
+    const salvarLegenda = () => {
+        if (!captionEdit) return;
+        setImageUrls((prev) => prev.map((u, i) => (i === captionEdit.index ? withCap(u, captionEdit.text) : u)));
+        setCaptionEdit(null);
+    };
 
     // ⏱️ Tick de 1s para o countdown do card de resumo (só roda com leilão ativo)
     const [nowTick, setNowTick] = useState(Date.now());
@@ -588,13 +612,17 @@ export default function EditAuction() {
                 {/* 📄 COLUNA PRINCIPAL — fotos + detalhes */}
                 <div className="lg:col-span-2 space-y-6">
 
-                <Card className="bg-[#161b22] border-[#30363d]">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-white">
-                           <Image className="w-5 h-5 text-amber-400" />
-                           Fotos do Leilão
-                        </CardTitle>
-                        <p className="text-sm text-slate-400">Arraste as fotos para reordenar. A primeira foto será a capa.</p>
+                <Card className="rounded-2xl border-white/[0.06]" style={CARD_STYLE}>
+                    <CardHeader className="pb-4">
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 grid place-items-center shrink-0">
+                                <Image className="w-5 h-5 text-amber-400" />
+                            </div>
+                            <div className="min-w-0">
+                                <CardTitle className="text-white text-base">Fotos do Leilão</CardTitle>
+                                <p className="text-xs text-slate-400 mt-1">Arraste para reordenar — a primeira foto é a capa.</p>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <DragDropContext onDragEnd={onDragEnd}>
@@ -611,19 +639,42 @@ export default function EditAuction() {
                                                     <div
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
-                                                        className={`relative group border-2 rounded-lg aspect-square overflow-hidden shadow-sm ${snapshot.isDragging ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-[#30363d]'}`}
+                                                        className={`relative group border rounded-xl aspect-square overflow-hidden transition-shadow ${snapshot.isDragging ? 'border-amber-500 ring-2 ring-amber-500/30 shadow-2xl' : 'border-white/10 hover:border-white/25'}`}
                                                     >
                                                         <img src={url} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
-                                                        <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                                            {index === 0 ? 'Capa' : index + 1}
+
+                                                        {index === 0 ? (
+                                                            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-lg">
+                                                                <Star className="w-3 h-3 fill-black" /> Capa
+                                                            </div>
+                                                        ) : (
+                                                            <div className="absolute top-1.5 left-1.5 bg-black/70 text-white text-[10px] font-bold w-5 h-5 grid place-items-center rounded-full">
+                                                                {index + 1}
+                                                            </div>
+                                                        )}
+
+                                                        {capOf(url) && (
+                                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-7 pb-1.5 px-2 pointer-events-none">
+                                                                <p className="text-[11px] font-bold text-white truncate text-center drop-shadow">{capOf(url)}</p>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="absolute top-1.5 right-1.5 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {index !== 0 && (
+                                                                <button type="button" title="Tornar capa" onClick={() => tornarCapa(index)} className="w-7 h-7 rounded-lg bg-black/75 border border-white/15 grid place-items-center text-amber-400 hover:bg-amber-500 hover:text-black transition-colors">
+                                                                    <Star className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                            <button type="button" title="Escrever na foto" onClick={() => setCaptionEdit({ index, text: capOf(url) })} className="w-7 h-7 rounded-lg bg-black/75 border border-white/15 grid place-items-center text-sky-400 hover:bg-sky-500 hover:text-white transition-colors">
+                                                                <Type className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button type="button" title="Remover foto" onClick={() => handleRemoveImage(index)} className="w-7 h-7 rounded-lg bg-black/75 border border-white/15 grid place-items-center text-rose-400 hover:bg-rose-600 hover:text-white transition-colors">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
                                                         </div>
-                                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Button variant="destructive" size="icon" className="w-7 h-7" onClick={() => handleRemoveImage(index)}>
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                        <div {...provided.dragHandleProps} className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-move bg-black/50 p-1 rounded">
-                                                            <GripVertical className="w-4 h-4 text-white" />
+
+                                                        <div {...provided.dragHandleProps} className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing bg-black/75 border border-white/15 p-1.5 rounded-lg">
+                                                            <GripVertical className="w-3.5 h-3.5 text-white" />
                                                         </div>
                                                     </div>
                                                 )}
@@ -644,9 +695,9 @@ export default function EditAuction() {
                                 onChange={handleAddImages}
                                 className="hidden"
                             />
-                            <Button 
-                                variant="outline" 
-                                className="w-full md:w-auto bg-transparent border-[#30363d] text-slate-300 hover:text-white"
+                            <Button
+                                variant="outline"
+                                className="w-full h-12 rounded-xl border-dashed border-white/15 bg-white/[0.02] text-slate-300 font-semibold hover:text-white hover:border-amber-500/50 hover:bg-amber-500/5 transition-all"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading || isSaving || isDeleting}
                             >
@@ -660,62 +711,66 @@ export default function EditAuction() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-[#161b22] border-[#30363d]">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-white">
-                      <Edit className="w-5 h-5 text-amber-400" />
-                      Detalhes do Leilão
-                    </CardTitle>
-                    <p className="text-sm text-slate-400">Ajuste as informações e valores do leilão.</p>
+                <Card className="rounded-2xl border-white/[0.06]" style={CARD_STYLE}>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 grid place-items-center shrink-0">
+                        <Edit className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-white text-base">Detalhes do Leilão</CardTitle>
+                        <p className="text-xs text-slate-400 mt-1">Ajuste as informações e valores do leilão.</p>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div>
-                      <Label htmlFor="title" className="text-slate-300">Título do Produto</Label>
-                      <Input 
-                        id="title" 
-                        value={formData.title} 
-                        onChange={(e) => handleInputChange('title', e.target.value)} 
-                        className="mt-1 bg-[#0d1117] border-[#30363d] text-white focus:border-amber-500/50" 
+                      <Label htmlFor="title" className={LABEL_CLS}>Título do Produto</Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => handleInputChange('title', e.target.value)}
+                        className={`mt-2 ${INPUT_CLS}`}
                       />
                     </div>
                     
                     <div>
-                      <Label htmlFor="description" className="text-slate-300">Descrição</Label>
-                      <Textarea 
-                        id="description" 
-                        value={formData.description} 
-                        onChange={(e) => handleInputChange('description', e.target.value)} 
-                        className="mt-1 min-h-[120px] bg-[#0d1117] border-[#30363d] text-white focus:border-amber-500/50" 
+                      <Label htmlFor="description" className={LABEL_CLS}>Descrição</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                        className="mt-2 min-h-[120px] bg-[#0d1117]/80 border-white/10 text-white rounded-xl focus:border-amber-500/60 focus-visible:ring-1 focus-visible:ring-amber-500/30 transition-colors"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <Label htmlFor="category" className="text-slate-300">Categoria</Label>
+                            <Label htmlFor="category" className={LABEL_CLS}>Categoria</Label>
                              <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                              <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
+                              <SelectTrigger className={`mt-2 ${INPUT_CLS}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
-                                <SelectItem value="eletronicos">📱 Eletrônicos & Celulares</SelectItem>
-                                <SelectItem value="eletrodomesticos">🔌 Eletrodomésticos</SelectItem>
-                                <SelectItem value="moveis_decoracao">🛋️ Móveis & Decoração</SelectItem>
-                                <SelectItem value="casa_jardim">🏡 Casa & Jardim</SelectItem>
-                                <SelectItem value="ferramentas">🛠️ Ferramentas</SelectItem>
-                                <SelectItem value="roupas_acessorios">👕 Roupas & Acessórios</SelectItem>
-                                <SelectItem value="esportes_lazer">⚽ Esportes & Lazer</SelectItem>
-                                <SelectItem value="brinquedos_hobbies">🧸 Brinquedos & Hobbies</SelectItem>
-                                <SelectItem value="livros_midia">📚 Livros & Mídia</SelectItem>
-                                <SelectItem value="veiculos_pecas">🚗 Veículos & Peças</SelectItem>
-                                <SelectItem value="instrumentos_musicais">🎸 Instrumentos Musicais</SelectItem>
-                                <SelectItem value="beleza_cuidado_pessoal">💅 Beleza & Cuidado Pessoal</SelectItem>
-                                <SelectItem value="outros">🎯 Outros</SelectItem>
+                                <SelectItem value="eletronicos">Eletrônicos & Celulares</SelectItem>
+                                <SelectItem value="eletrodomesticos">Eletrodomésticos</SelectItem>
+                                <SelectItem value="moveis_decoracao">Móveis & Decoração</SelectItem>
+                                <SelectItem value="casa_jardim">Casa & Jardim</SelectItem>
+                                <SelectItem value="ferramentas">Ferramentas</SelectItem>
+                                <SelectItem value="roupas_acessorios">Roupas & Acessórios</SelectItem>
+                                <SelectItem value="esportes_lazer">Esportes & Lazer</SelectItem>
+                                <SelectItem value="brinquedos_hobbies">Brinquedos & Hobbies</SelectItem>
+                                <SelectItem value="livros_midia">Livros & Mídia</SelectItem>
+                                <SelectItem value="veiculos_pecas">Veículos & Peças</SelectItem>
+                                <SelectItem value="instrumentos_musicais">Instrumentos Musicais</SelectItem>
+                                <SelectItem value="beleza_cuidado_pessoal">Beleza & Cuidado Pessoal</SelectItem>
+                                <SelectItem value="outros">Outros</SelectItem>
                               </SelectContent>
                             </Select>
                         </div>
 
                         <div>
-                            <Label htmlFor="product_source" className="text-slate-300">Origem do Produto</Label>
+                            <Label htmlFor="product_source" className={LABEL_CLS}>Origem do Produto</Label>
                             <Select value={formData.product_source} onValueChange={(value) => {
                               handleInputChange("product_source", value);
                               if (value === 'return_resale') {
@@ -723,44 +778,44 @@ export default function EditAuction() {
                                 setSupplierLogoPreview("");
                               }
                             }}>
-                              <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
+                              <SelectTrigger className={`mt-2 ${INPUT_CLS}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
                                 <SelectItem value="factory_new">
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                                    <span>✨ Novo de Fábrica</span>
+                                    <span>Novo de Fábrica</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="return_resale">
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]"></div>
-                                    <span>🔥 Arremate/Devolução</span>
+                                    <span>Arremate/Devolução</span>
                                   </div>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
                             <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">
-                              {formData.product_source === 'factory_new' 
-                                ? '✨ Produto novo com garantia' 
-                                : '📦 Item de arremate, sem garantia'}
+                              {formData.product_source === 'factory_new'
+                                ? 'Produto novo com garantia'
+                                : 'Item de arremate, sem garantia'}
                             </p>
                         </div>
                     </div>
 
                     <div className="mt-4">
-                        <Label htmlFor="comparai_mode" className="text-slate-300">🔍 Onde o CompareAQUI vai buscar o preço?</Label>
+                        <Label htmlFor="comparai_mode" className={LABEL_CLS}>Onde o CompareAQUI vai buscar o preço?</Label>
                         <Select value={formData.comparai_mode} onValueChange={(value) => handleInputChange("comparai_mode", value)}>
-                          <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
+                          <SelectTrigger className={`mt-2 ${INPUT_CLS}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
                             <SelectItem value="supplier">
-                                <span>🏭 Site do Fornecedor (exato)</span>
+                                <span>Site do Fornecedor (exato)</span>
                             </SelectItem>
                             <SelectItem value="google_shopping">
-                                <span>🔎 Usar CompareAQUI (padrão)</span>
+                                <span>Usar CompareAQUI (padrão)</span>
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -831,7 +886,7 @@ export default function EditAuction() {
 
                             <div className="border-t border-[#30363d] pt-4 mt-4">
                                 <Label htmlFor="manual_market_price" className="text-xs font-bold text-orange-400 flex items-center gap-2 mb-2 uppercase tracking-widest">
-                                    ✏️ Preço Manual (Backup)
+                                    Preço Manual (Backup)
                                 </Label>
                                 <Input
                                     id="manual_market_price"
@@ -847,22 +902,31 @@ export default function EditAuction() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
-                        <Label htmlFor="starting_price" className="text-slate-300">Preço Inicial (R$)</Label>
-                        <Input id="starting_price" type="number" step="0.01" value={formData.starting_price} onChange={(e) => handleInputChange('starting_price', e.target.value)} className="mt-1 bg-[#0d1117] border-[#30363d] text-white" />
+                        <Label htmlFor="starting_price" className={LABEL_CLS}>Preço Inicial</Label>
+                        <div className="relative mt-2">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 pointer-events-none">R$</span>
+                          <Input id="starting_price" type="number" step="0.01" value={formData.starting_price} onChange={(e) => handleInputChange('starting_price', e.target.value)} className={`pl-10 ${INPUT_CLS}`} />
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="current_price" className="text-slate-300">Preço Atual (R$)</Label>
-                        <Input id="current_price" type="number" step="0.01" value={formData.current_price} onChange={(e) => handleInputChange('current_price', e.target.value)} className="mt-1 bg-[#0d1117] border-[#30363d] text-white font-bold text-emerald-400" />
+                        <Label htmlFor="current_price" className={LABEL_CLS}>Preço Atual</Label>
+                        <div className="relative mt-2">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500/70 pointer-events-none">R$</span>
+                          <Input id="current_price" type="number" step="0.01" value={formData.current_price} onChange={(e) => handleInputChange('current_price', e.target.value)} className={`pl-10 font-bold text-emerald-400 ${INPUT_CLS}`} />
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="increment" className="text-slate-300">Incremento (R$)</Label>
-                        <Input id="increment" type="number" step="0.01" value={formData.increment} onChange={(e) => handleInputChange('increment', e.target.value)} className="mt-1 bg-[#0d1117] border-[#30363d] text-white" />
+                        <Label htmlFor="increment" className={LABEL_CLS}>Incremento</Label>
+                        <div className="relative mt-2">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 pointer-events-none">R$</span>
+                          <Input id="increment" type="number" step="0.01" value={formData.increment} onChange={(e) => handleInputChange('increment', e.target.value)} className={`pl-10 ${INPUT_CLS}`} />
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="pt-4">
-                      <Label htmlFor="end_time" className="flex items-center gap-2 text-slate-300">
-                        <Clock className="w-4 h-4 text-amber-500" />
+                    <div className="pt-1">
+                      <Label htmlFor="end_time" className={`${LABEL_CLS} flex items-center gap-1.5 mb-2`}>
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
                         Data e Hora de Término (Brasília)
                       </Label>
                       <Input
@@ -872,12 +936,18 @@ export default function EditAuction() {
                         onChange={(e) => handleInputChange('end_time', e.target.value)}
                         onClick={abrirSeletorNativo}
                         onFocus={abrirSeletorNativo}
-                        className="mt-1 bg-[#0d1117] border-[#30363d] text-white cursor-pointer"
+                        className={`cursor-pointer ${INPUT_CLS}`}
                       />
                       {formData.end_time && (
-                        <p className="text-xs text-amber-300 mt-1.5 flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 shrink-0" /> O leilão será encerrado em: <strong>{formatBrtLabel(formData.end_time)}</strong>
-                        </p>
+                        <div className="mt-3 rounded-xl bg-[#0d1117]/80 border border-amber-500/25 px-4 py-3 flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/25 grid place-items-center shrink-0">
+                            <Clock className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className={LABEL_CLS}>Encerramento</p>
+                            <p className="text-sm font-bold text-amber-300 truncate">{formatBrtLabel(formData.end_time)}</p>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </CardContent>
@@ -888,8 +958,8 @@ export default function EditAuction() {
                 {/* 📌 COLUNA LATERAL — resumo do leilão + ações */}
                 <div className="space-y-6">
 
-                <Card className="bg-[#161b22] border-[#30363d] overflow-hidden">
-                    <div className="flex items-center gap-3 p-4 border-b border-[#30363d]">
+                <Card className="rounded-2xl border-white/[0.06] overflow-hidden" style={CARD_STYLE}>
+                    <div className="flex items-center gap-3 p-4 border-b border-white/[0.06]">
                         {imageUrls[0] ? (
                             <img src={imageUrls[0]} alt="Capa" className="w-14 h-14 rounded-lg object-cover border border-[#30363d] shrink-0" />
                         ) : (
@@ -1012,18 +1082,22 @@ export default function EditAuction() {
                     </Card>
                 )}
 
-                <Card className="border-rose-500/30 bg-rose-500/5">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-rose-500">
-                      <Trash2 className="w-5 h-5" />
-                      Zona de Perigo
-                    </CardTitle>
-                    <p className="text-sm text-slate-400">Ações irreversíveis.</p>
+                <Card className="rounded-2xl border-rose-500/25" style={{ background: 'linear-gradient(180deg, rgba(244,63,94,0.07) 0%, rgba(16,21,30,0.97) 55%)', boxShadow: '0 10px 36px rgba(0,0,0,0.35)' }}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 grid place-items-center shrink-0">
+                        <Trash2 className="w-5 h-5 text-rose-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-rose-400 text-base">Zona de Perigo</CardTitle>
+                        <p className="text-xs text-slate-400 mt-1">Ações irreversíveis — use com cuidado.</p>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Button
                         variant="destructive"
-                        className="w-full bg-rose-600 hover:bg-rose-700"
+                        className="w-full h-11 rounded-xl bg-transparent border border-rose-500/40 text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 font-bold transition-all"
                         onClick={handleDeleteAuction}
                         disabled={isSaving || isUploading || isDeleting}
                     >
@@ -1037,7 +1111,36 @@ export default function EditAuction() {
               </div>
             </div>
 
-            {/* 🔔 MODAL DE CONFIRMAÇÃO PERSONALIZADO — substitui o confirm() nativo do navegador */}
+            {/* Editor de texto sobre a foto */}
+            <Dialog open={!!captionEdit} onOpenChange={(open) => { if (!open) setCaptionEdit(null); }}>
+                <DialogContent className="bg-[#161b22] border-[#30363d] text-white max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-white">
+                            <Type className="w-5 h-5 text-sky-400" /> Escrever na foto
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-xs text-slate-400 -mt-1">O texto aparece sobre a parte de baixo da foto. Deixe vazio e aplique para remover.</p>
+                    <Input
+                        value={captionEdit?.text || ''}
+                        onChange={(e) => setCaptionEdit((prev) => ({ ...prev, text: e.target.value }))}
+                        maxLength={60}
+                        placeholder="Ex.: Novo na caixa, 220V, ultima unidade..."
+                        className={INPUT_CLS}
+                        onKeyDown={(e) => { if (e.key === 'Enter') salvarLegenda(); }}
+                        autoFocus
+                    />
+                    <div className="flex gap-3 pt-1">
+                        <Button variant="outline" className="flex-1 bg-transparent border-[#30363d] text-slate-300 hover:bg-[#30363d] hover:text-white" onClick={() => setCaptionEdit(null)}>
+                            Cancelar
+                        </Button>
+                        <Button className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold" onClick={salvarLegenda}>
+                            Aplicar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL DE CONFIRMAÇÃO PERSONALIZADO — substitui o confirm() nativo do navegador */}
             <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
                 <DialogContent className="bg-[#161b22] border-[#30363d] text-white max-w-md">
                     {confirmAction && (

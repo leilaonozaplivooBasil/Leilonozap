@@ -11,6 +11,7 @@
  * ========================================================================
  */
 import React, { useState, useEffect, useRef, memo, useMemo } from "react";
+import { capOf } from '@/lib/fotoLegenda';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -437,6 +438,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 }}
               />
             ))}
+
+            {capOf(images[currentImageIndex]) && (
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-8 pb-2 px-3 pointer-events-none z-10">
+                <p className="text-xs font-bold text-white truncate text-center drop-shadow">{capOf(images[currentImageIndex])}</p>
+              </div>
+            )}
 
             <div
               className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${images.length > 0 ? 'opacity-0' : 'opacity-100'
