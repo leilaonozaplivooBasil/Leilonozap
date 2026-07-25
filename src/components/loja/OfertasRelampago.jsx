@@ -15,7 +15,7 @@ function desconto(p) {
 }
 
 function Box({ v }) {
-  return <span className="bg-gray-900 text-white text-[11px] sm:text-[13px] font-black rounded px-1 sm:px-1.5 py-0.5 tabular-nums">{String(v).padStart(2, '0')}</span>;
+  return <span className="bg-gray-900 text-white text-[10px] sm:text-[13px] font-black rounded px-1 sm:px-1.5 py-0.5 tabular-nums">{String(v).padStart(2, '0')}</span>;
 }
 
 function FlashCard({ p }) {
@@ -26,7 +26,7 @@ function FlashCard({ p }) {
   return (
     <button
       onClick={() => navigate(createPageUrl('CatalogProductDetails') + `?id=${p.id}`)}
-      className="w-[28vw] max-w-[112px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
+      className="w-[24vw] max-w-[98px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
     >
       <div className="relative aspect-square bg-white">
         {img ? <img src={img} alt={p.description} loading="lazy" className="w-full h-full object-contain" />
@@ -38,10 +38,10 @@ function FlashCard({ p }) {
           </span>
         )}
       </div>
-      <div className="p-2">
-        <p className="text-green-400 font-black text-sm sm:text-base leading-none">{money(p.price_catalog)}</p>
-        {desconto(p) > 0 && <p className="text-gray-500 text-[10px] sm:text-[11px] line-through">{money(p.market_value)}</p>}
-        <div className="mt-1.5 relative h-3.5 sm:h-4 rounded-full bg-green-900/40 overflow-hidden">
+      <div className="p-1.5 sm:p-2">
+        <p className="text-green-400 font-black text-[13px] sm:text-base leading-none">{money(p.price_catalog)}</p>
+        {desconto(p) > 0 && <p className="text-gray-500 text-[9px] sm:text-[11px] line-through">{money(p.market_value)}</p>}
+        <div className="mt-1 sm:mt-1.5 relative h-3 sm:h-4 rounded-full bg-green-900/40 overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-green-100 z-10">
             {vendidos > 0 ? `${vendidos} vendidos` : 'POPULAR'}
           </div>
@@ -83,14 +83,14 @@ export default function OfertasRelampago({ products = [] }) {
   // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="relative z-10 -mt-8 sm:-mt-16 rounded-2xl pt-3 pb-3 sm:pt-4 sm:pb-4 mb-6 sm:mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150">
+    <div className="relative z-10 -mt-4 sm:-mt-16 rounded-2xl pt-2.5 pb-2.5 sm:pt-4 sm:pb-4 mb-6 sm:mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150">
       {/* liquid glass mais transparente: brilho superior + borda interna sutil (banner aparece mais nítido atrás) */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" aria-hidden />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/10 to-transparent" aria-hidden />
       {/* cabeçalho responsivo: título + timer + "Ver Tudo" que se ajustam sem quebrar feio no mobile */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4 px-3 sm:px-4">
-        <span className="text-sm sm:text-xl font-black flex items-center gap-1.5 whitespace-nowrap" style={{ color: '#f5c451' }}>
-          <img src={foguinho} alt="" aria-hidden className="w-6 h-6 sm:w-9 sm:h-9 shrink-0 -my-1 object-contain" /> OFERTAS RELÂMPAGO
+      <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5 sm:gap-y-2 mb-2.5 sm:mb-4 px-3 sm:px-4">
+        <span className="text-xs sm:text-xl font-black flex items-center gap-1 sm:gap-1.5 whitespace-nowrap" style={{ color: '#f5c451' }}>
+          <img src={foguinho} alt="" aria-hidden className="w-5 h-5 sm:w-9 sm:h-9 shrink-0 -my-1 object-contain" /> OFERTAS RELÂMPAGO
         </span>
         <span className="flex items-center gap-1 shrink-0"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
         <button onClick={() => navigate(createPageUrl('Catalog'))} className="ml-auto text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
