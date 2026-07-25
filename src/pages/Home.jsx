@@ -137,6 +137,52 @@ export default function Home() {
     fetch('/api/functions/activateScheduledAuctions').catch(() => {});
   }, []);
 
+  // 🔄 Sincronização leve (15s): status/tempo/preço dos leilões em tela direto do banco.
+  // Garante que definir novo tempo, pausar, encerrar ou reativar reflita nos cards em
+  // segundos mesmo sem a publication de realtime — a query é mínima (6 colunas por id).
+  const auctionsRef = useRef(auctions);
+  useEffect(() => { auctionsRef.current = auctions; }, [auctions]);
+  useEffect(() => {
+    let alive = true;
+    const syncLeve = async () => {
+      try {
+        const atuais = Array.isArray(auctionsRef.current) ? auctionsRef.current : [];
+        const ids = atuais.map((a) => a?.id).filter(Boolean).slice(0, 100);
+        if (ids.length === 0) return;
+        const { supabase } = await import('@/api/supabaseClient');
+        const { data } = await supabase
+          .from('auctions')
+          .select('id,status,end_time,current_price,winner_name,buy_now_price')
+          .in('id', ids);
+        if (!alive || !Array.isArray(data) || data.length === 0) return;
+        const byId = Object.fromEntries(data.map((r) => [r.id, r]));
+        setAuctions((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) return prev;
+          let changed = false;
+          const next = prev.map((a) => {
+            const r = a?.id ? byId[a.id] : null;
+            if (!r) return a;
+            if (
+              a.status !== r.status ||
+              a.end_time !== r.end_time ||
+              a.current_price !== r.current_price ||
+              a.winner_name !== r.winner_name ||
+              a.buy_now_price !== r.buy_now_price
+            ) {
+              changed = true;
+              return { ...a, ...r };
+            }
+            return a;
+          });
+          return changed ? next : prev;
+        });
+      } catch { /* silencioso — o polling normal segue como fallback */ }
+    };
+    syncLeve();
+    const i = setInterval(syncLeve, 15000);
+    return () => { alive = false; clearInterval(i); };
+  }, []);
+
   // 📊 Lances e participantes REAIS dos leilões ativos (uma query única, leve).
   // Cards sem dado real seguem com o número estável de sempre.
   const [bidStatsMap, setBidStatsMap] = useState({});
