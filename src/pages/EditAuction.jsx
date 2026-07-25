@@ -142,14 +142,48 @@ export default function EditAuction() {
         return row?.raw_base44 && typeof row.raw_base44 === 'object' ? row.raw_base44 : {};
     };
 
+    // ⚠️ SEMPRE que mudar o término por fora do formulário, o campo "Data e Hora de
+    // Término" precisa acompanhar — senão um "Salvar Alterações" depois grava a data
+    // VELHA por cima e desfaz o novo tempo (bug do +3min que virava 2 dias).
+    const sincronizarFormEndTime = (endISO) => {
+        setFormData((prev) => ({ ...prev, end_time: toBrtLocal(new Date(endISO)) }));
+    };
+
+    const aplicarNovoTermino = async (endISO, msg) => {
+        await Auction.update(auctionId, { status: 'active', end_time: endISO });
+        setAuction((prev) => ({ ...prev, status: 'active', end_time: endISO }));
+        sincronizarFormEndTime(endISO);
+        notify.ok(msg || 'Tempo do leilão atualizado', `Termina: ${new Date(endISO).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+    };
+
     const definirTempo = async (min) => {
         try {
-            const end = new Date(Date.now() + min * 60000).toISOString();
-            await Auction.update(auctionId, { status: 'active', end_time: end });
-            setAuction((prev) => ({ ...prev, status: 'active', end_time: end }));
-            notify.ok('Tempo do leilão atualizado', `Termina: ${new Date(end).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+            await aplicarNovoTermino(new Date(Date.now() + min * 60000).toISOString());
         } catch (e) {
             console.error('Erro ao definir tempo:', e);
+            notify.erro('Erro ao atualizar o tempo', 'Tente novamente.');
+        }
+    };
+
+    // Tempo específico digitado nos controles (BRT)
+    const [controleTime, setControleTime] = useState('');
+    const aplicarTempoEspecifico = async () => {
+        if (!controleTime) {
+            notify.aviso('Escolha a data e hora');
+            return;
+        }
+        const [d, t] = controleTime.split('T');
+        const [y, m, dd] = d.split('-');
+        const [hh, mm] = t.split(':');
+        const endISO = new Date(`${y}-${m}-${dd}T${hh}:${mm}:00-03:00`).toISOString();
+        if (new Date(endISO).getTime() <= Date.now()) {
+            notify.aviso('Escolha um horário no futuro');
+            return;
+        }
+        try {
+            await aplicarNovoTermino(endISO);
+        } catch (e) {
+            console.error('Erro ao aplicar tempo específico:', e);
             notify.erro('Erro ao atualizar o tempo', 'Tente novamente.');
         }
     };
@@ -195,6 +229,7 @@ export default function EditAuction() {
             delete raw.pause_meta;
             await Auction.update(auctionId, { status: 'active', end_time: novoEnd, raw_base44: raw });
             setAuction((prev) => ({ ...prev, status: 'active', end_time: novoEnd }));
+            sincronizarFormEndTime(novoEnd);
             notify.ok('Leilão retomado', `Termina: ${new Date(novoEnd).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
         } catch (e) {
             console.error('Erro ao retomar:', e);
@@ -218,6 +253,7 @@ export default function EditAuction() {
             const agora = new Date().toISOString();
             await Auction.update(auctionId, { status: 'ended', end_time: agora });
             setAuction((prev) => ({ ...prev, status: 'ended', end_time: agora }));
+            sincronizarFormEndTime(agora);
             setReactivateTime(toBrtLocal(new Date(Date.now() + 720 * 60000)));
             setReactivatePreset(720);
             notify.ok('Leilão encerrado', 'Use o card Reativar Leilão para colocar de volta no ar.');
@@ -371,6 +407,7 @@ export default function EditAuction() {
             const novoEnd = new Date(Date.now() + durMin * 60000).toISOString();
             await Auction.update(auctionId, { status: 'active', end_time: novoEnd, raw_base44: raw });
             setAuction((prev) => ({ ...prev, status: 'active', end_time: novoEnd }));
+            sincronizarFormEndTime(novoEnd);
             notify.ok('Leilão no ar!', `Termina: ${new Date(novoEnd).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
         } catch (e) {
             console.error('Erro ao começar agora:', e);
@@ -1272,7 +1309,7 @@ export default function EditAuction() {
                         <div className="flex justify-between gap-3"><span className="text-slate-400">Preço atual</span><span className="font-bold text-emerald-400">R$ {(parseFloat(formData.current_price) || 0).toFixed(2)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-slate-400">Lance inicial</span><span className="text-slate-200">R$ {(parseFloat(formData.starting_price) || 0).toFixed(2)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-slate-400">Incremento</span><span className="text-slate-200">R$ {(parseFloat(formData.increment) || 0).toFixed(2)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-slate-400">Término</span><span className="text-slate-200 text-right">{formatBrtLabel(formData.end_time) || '—'}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Término</span><span className="text-slate-200 text-right">{auction?.end_time ? new Date(auction.end_time).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span></div>
                         {tempoRestante && (
                             <div className="mt-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5 text-center">
                                 <p className="text-[10px] uppercase tracking-widest text-emerald-300/80 font-bold">Termina em</p>
@@ -1311,6 +1348,23 @@ export default function EditAuction() {
                                     ))}
                                 </div>
                                 <p className="text-[10px] text-slate-500 -mt-1">O tempo escolhido conta a partir de agora e coloca o leilão no ar.</p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="datetime-local"
+                                        value={controleTime}
+                                        onChange={(e) => setControleTime(e.target.value)}
+                                        onClick={abrirSeletorNativo}
+                                        onFocus={abrirSeletorNativo}
+                                        className={`cursor-pointer flex-1 ${INPUT_CLS}`}
+                                    />
+                                    <Button
+                                        onClick={aplicarTempoEspecifico}
+                                        className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shrink-0"
+                                    >
+                                        Aplicar
+                                    </Button>
+                                </div>
+                                <p className="text-[10px] text-slate-500 -mt-1">Ou defina a data e hora exatas do término (Brasília).</p>
                                 <div className="grid grid-cols-2 gap-2">
                                     {auction?.status === 'active' ? (
                                         <Button
