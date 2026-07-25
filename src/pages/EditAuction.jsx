@@ -16,7 +16,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from '@/components/ui/use-toast';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle } from 'lucide-react';
+
+// 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
+// (o Brave/Chrome pode bloquear diálogos nativos e o clique "não faz nada").
+const notify = {
+    ok: (title, description) => toast({ title: `✅ ${title}`, description, duration: 4000 }),
+    erro: (title, description) => toast({ title: `❌ ${title}`, description, variant: 'destructive', duration: 6000 }),
+    aviso: (title, description) => toast({ title: `⚠️ ${title}`, description, duration: 5000 }),
+};
 
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -95,6 +105,8 @@ export default function EditAuction() {
     const [isReactivating, setIsReactivating] = useState(false);
     const [reactivateTime, setReactivateTime] = useState("");
     const [reactivatePreset, setReactivatePreset] = useState(720); // qual botão rápido está ativo (default +12h)
+    // Modal de confirmação personalizado da página: { title, lines, confirmLabel, danger, onConfirm }
+    const [confirmAction, setConfirmAction] = useState(null);
 
     // aplica um preset rápido: agora + X minutos, no formato BRT do input
     const aplicarPresetReativacao = (min) => {
@@ -125,7 +137,7 @@ export default function EditAuction() {
             }
 
             if (userFound?.role !== 'admin' && userFound?.role !== 'super_admin') {
-                 alert("Acesso negado. Apenas administradores podem editar leilões.");
+                 notify.erro("Acesso negado", "Apenas administradores podem editar leilões.");
                  navigate(createPageUrl("Home"), { replace: true });
                  return;
             }
@@ -135,7 +147,7 @@ export default function EditAuction() {
             }
             const auctionData = await Auction.filter({ id: auctionId });
             if (auctionData.length === 0) {
-                alert("Leilão não encontrado.");
+                notify.erro("Leilão não encontrado");
                 navigate(createPageUrl("Home"), { replace: true });
                 return;
             }
@@ -185,7 +197,7 @@ export default function EditAuction() {
 
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
-            alert("Erro ao carregar dados. Verifique o console.");
+            notify.erro("Erro ao carregar dados", "Verifique o console.");
             navigate(createPageUrl("Home"), { replace: true });
         } finally {
             setIsLoading(false);
@@ -227,7 +239,7 @@ export default function EditAuction() {
                 }
             } catch (error) {
                 console.error("Falha no upload do arquivo:", file.name, error);
-                alert(`Falha ao enviar a imagem: ${file.name}`);
+                notify.erro("Falha ao enviar a imagem", file.name);
             }
         }
         
@@ -260,11 +272,11 @@ export default function EditAuction() {
             if (result?.file_url) {
                 setFormData(prev => ({ ...prev, supplier_logo_url: result.file_url }));
                 setSupplierLogoPreview(result.file_url);
-                alert("✅ Logo enviada com sucesso!");
+                notify.ok("Logo enviada com sucesso!");
             }
         } catch (error) {
             console.error("Erro ao enviar logo:", error);
-            alert("❌ Erro ao enviar logo. Tente novamente.");
+            notify.erro("Erro ao enviar logo", "Tente novamente.");
         } finally {
             setIsUploading(false);
         }
@@ -275,7 +287,7 @@ export default function EditAuction() {
         try {
             // 🆕 VALIDAÇÃO PARA supplier_url
             if (formData.comparai_mode === 'supplier' && !formData.supplier_url.trim()) {
-            alert("⚠️ Para buscar preço no site do fornecedor, você DEVE inserir a URL!");
+            notify.aviso("URL obrigatória", "Para buscar preço no site do fornecedor, você DEVE inserir a URL!");
             setIsSaving(false);
             return;
             }
@@ -283,7 +295,7 @@ export default function EditAuction() {
             if (isTestMode) {
                 console.log("TEST MODE: Simulando salvamento de alterações.");
                 await new Promise(resolve => setTimeout(resolve, 500));
-                alert("✅ Alterações salvas!");
+                notify.ok("Alterações salvas!");
                 setIsSaving(false);
                 navigate(createPageUrl("Home"), { replace: true });
                 return;
@@ -343,23 +355,12 @@ export default function EditAuction() {
                 updatePayload.order_status = null;
                 updatePayload.last_processed_bid_time = null;
 
-                // Remove mensagens de "ARREMATADO"
-                const allMessages = await AuctionMessage.filter({ auction_id: auctionId });
-                for (const msg of allMessages) {
-                    if (
-                        msg.message_type === 'winner_announcement' ||
-                        (msg.is_system_message && (
-                            msg.content.includes('ARREMATADO') ||
-                            msg.content.includes('VENDIDO') ||
-                            msg.content.includes('Parabéns') ||
-                            msg.content.includes('vencedor') ||
-                            msg.content.includes('arrematou')
-                        ))
-                    ) {
-                        console.log(`   ❌ Removendo: "${msg.content}"`);
-                        await AuctionMessage.delete(msg.id);
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
+                // Remove mensagens de "ARREMATADO" (em paralelo, content null-safe)
+                try {
+                    const allMessages = await AuctionMessage.filter({ auction_id: auctionId });
+                    await Promise.allSettled(allMessages.filter(isWinnerMessage).map((msg) => AuctionMessage.delete(msg.id)));
+                } catch (msgError) {
+                    console.warn("⚠️ Falha ao limpar mensagens de encerramento:", msgError);
                 }
             }
             
@@ -369,11 +370,11 @@ export default function EditAuction() {
             setIsSaving(false);
             
             if (isReactivating) {
-                alert("✅ Leilão REATIVADO com sucesso! Status: ATIVO. (Você será redirecionado para a sala do leilão)");
+                notify.ok("Leilão REATIVADO com sucesso!", "Status: ATIVO. Redirecionando para a sala do leilão…");
                 sessionStorage.removeItem('editAuctionFrom');
                 navigate(createPageUrl("AuctionRoom") + `?id=${auctionId}`, { replace: true });
             } else {
-                alert("✅ Leilão atualizado com sucesso!");
+                notify.ok("Leilão atualizado com sucesso!");
                 sessionStorage.removeItem('editAuctionFrom');
                 // 🔧 FIX: Usar navigate(-1) garante que voltamos para a página anterior 
                 // sem sujar o histórico com duplicatas, resolvendo o loop de navegação.
@@ -382,33 +383,45 @@ export default function EditAuction() {
             
         } catch (error) {
             console.error("Erro ao salvar alterações:", error);
-            alert("❌ Erro ao salvar alterações. Tente novamente.");
+            notify.erro("Erro ao salvar alterações", "Tente novamente.");
             setIsSaving(false);
         }
     };
 
-    // 🆕 FUNÇÃO REATIVAR COM BOTÃO DEDICADO
-    const handleReactivate = async () => {
+    // Identifica mensagens de encerramento (ARREMATADO etc.) — content pode vir nulo do banco
+    const isWinnerMessage = (msg) => {
+        if (msg.message_type === 'winner_announcement') return true;
+        if (!msg.is_system_message) return false;
+        const content = msg.content || '';
+        return ['ARREMATADO', 'VENDIDO', 'Parabéns', 'vencedor', 'arrematou'].some((t) => content.includes(t));
+    };
+
+    // 🆕 REATIVAR — o botão abre o modal personalizado; a execução fica em doReactivate.
+    const handleReactivate = () => {
         if (!reactivateTime) {
-            alert("⚠️ Por favor, defina uma nova data e hora para reativar o leilão.");
+            notify.aviso("Defina a nova data", "Escolha uma data e hora para reativar o leilão.");
             return;
         }
-        
-        if (!confirm("⚠️ ATENÇÃO:\n\n- O histórico de LANCES será mantido\n- Mensagens de ARREMATADO serão removidas\n- Vencedor será limpo\n- Status mudará para ATIVO\n\nContinuar?")) {
-            return;
-        }
-        
+        setConfirmAction({
+            title: "Reativar este leilão?",
+            lines: [
+                "O histórico de LANCES será mantido",
+                "Mensagens de ARREMATADO serão removidas",
+                "O vencedor anterior será limpo",
+                "Status mudará para ATIVO",
+            ],
+            confirmLabel: "Sim, reativar",
+            danger: false,
+            onConfirm: doReactivate,
+        });
+    };
+
+    const doReactivate = async () => {
         setIsReactivating(true);
         try {
-            console.log(`🔄 INICIANDO REATIVAÇÃO...`);
-
-            // 🔧 CALCULA NOVO HORÁRIO (UTC)
-            // ⚠️ Para presets relâmpago (+3min/+5min/etc.) o tempo tem que ser contado a partir
-            // do INSTANTE em que o leilão volta a ficar ativo — não do clique no botão. O clique
-            // congela um horário absoluto, mas entre o clique e a gravação passam-se o confirm e a
-            // deleção das mensagens (200ms cada), o que fazia o relógio voltar com tempo A MENOS.
-            // reactivatePreset guarda os minutos do preset ativo (null quando o admin editou a data
-            // à mão — nesse caso respeitamos o horário absoluto digitado).
+            // ⚠️ Para presets relâmpago (+3min/+5min/etc.) o tempo é contado a partir do INSTANTE
+            // da gravação — não do clique no botão. reactivatePreset guarda os minutos do preset
+            // ativo (null quando o admin editou a data à mão — aí vale o horário absoluto digitado).
             const computeUtcEndTime = () => {
                 if (reactivatePreset != null) {
                     return new Date(Date.now() + reactivatePreset * 60000).toISOString();
@@ -420,42 +433,10 @@ export default function EditAuction() {
                 return new Date(`${year}-${month}-${day}T${hour}:${minute}:00-03:00`).toISOString();
             };
 
-            console.log(`⏰ Input BRT: ${reactivateTime}${reactivatePreset != null ? ` (preset +${reactivatePreset}min, recalculado na gravação)` : ' (horário fixo)'}`);
-
-            // 🔧 BUSCA E DELETA MENSAGENS DE ENCERRAMENTO
-            console.log(`🧹 Buscando mensagens de encerramento...`);
-            const allMessages = await AuctionMessage.filter({ auction_id: auctionId });
-            
-            let deletedCount = 0;
-            
-            for (const msg of allMessages) {
-                const shouldDelete = 
-                    msg.message_type === 'winner_announcement' ||
-                    (msg.is_system_message && (
-                        msg.content.includes('ARREMATADO') ||
-                        msg.content.includes('VENDIDO') ||
-                        msg.content.includes('Parabéns') ||
-                        msg.content.includes('vencedor') ||
-                        msg.content.includes('arrematou')
-                    ));
-                
-                if (shouldDelete) {
-                    console.log(`   ❌ Deletando: "${msg.content}"`);
-                    await AuctionMessage.delete(msg.id);
-                    deletedCount++;
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-            }
-            
-            console.log(`✅ ${deletedCount} mensagens deletadas`);
-
-            // 🔧 ATUALIZA O LEILÃO
-            // Calcula o end_time AGORA (após deletar mensagens) para que os presets relâmpago
-            // deem exatamente os minutos prometidos a partir deste instante.
+            // 1️⃣ REATIVA PRIMEIRO — é a operação que importa; a limpeza de mensagens vem depois
+            // (antes a limpeza rodava primeiro com 200ms por mensagem e, se falhasse, o leilão
+            // nem chegava a reativar — era o "travou e não funcionou").
             const utcEndTimeString = computeUtcEndTime();
-            console.log(`⏰ end_time definitivo (UTC): ${utcEndTimeString}`);
-            console.log(`⏰ Verificação BRT: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
-            console.log(`✅ Atualizando leilão para ATIVO...`);
             await Auction.update(auctionId, {
                 status: 'active',
                 end_time: utcEndTimeString,
@@ -464,33 +445,54 @@ export default function EditAuction() {
                 order_status: null,
                 last_processed_bid_time: null,
             });
-            
-            console.log(`✅ Leilão reativado com sucesso!`);
-            
+
+            // 2️⃣ LIMPA MENSAGENS DE ENCERRAMENTO em paralelo; falha aqui não desfaz a reativação
+            let deletedCount = 0;
+            try {
+                const allMessages = await AuctionMessage.filter({ auction_id: auctionId });
+                const toDelete = allMessages.filter(isWinnerMessage);
+                const results = await Promise.allSettled(toDelete.map((msg) => AuctionMessage.delete(msg.id)));
+                deletedCount = results.filter((r) => r.status === 'fulfilled').length;
+            } catch (msgError) {
+                console.warn("⚠️ Reativado, mas falhou a limpeza de mensagens:", msgError);
+            }
+
             setIsReactivating(false);
-            alert(`✅ Leilão reativado!\n\n- ${deletedCount} mensagens removidas\n- Status: ATIVO\n- Histórico de lances mantido\n- Termina: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
-            
+            notify.ok(
+                "Leilão reativado!",
+                `Termina: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · ${deletedCount} mensagens removidas · lances mantidos`
+            );
+
             // Redireciona para a sala do leilão
             navigate(createPageUrl("AuctionRoom") + `?id=${auctionId}`, { replace: true });
-            
+
         } catch (error) {
             console.error("❌ Erro ao reativar:", error);
-            alert("❌ Erro ao reativar o leilão. Tente novamente.");
+            notify.erro("Erro ao reativar o leilão", "Tente novamente.");
             setIsReactivating(false);
         }
     };
 
-    const handleDeleteAuction = async () => {
-        if (!window.confirm("Tem certeza que deseja DELETAR este leilão? Esta ação é irreversível e removerá todos os dados associados.")) {
-            return;
-        }
+    const handleDeleteAuction = () => {
+        setConfirmAction({
+            title: "Deletar este leilão definitivamente?",
+            lines: [
+                "Esta ação é IRREVERSÍVEL",
+                "Todos os dados associados serão removidos",
+            ],
+            confirmLabel: "Sim, deletar",
+            danger: true,
+            onConfirm: doDeleteAuction,
+        });
+    };
 
+    const doDeleteAuction = async () => {
         setIsDeleting(true);
         try {
             if (isTestMode) {
                 console.log("TEST MODE: Simulando exclusão de leilão.");
                 await new Promise(resolve => setTimeout(resolve, 500));
-                alert("✅ Leilão excluído!");
+                notify.ok("Leilão excluído!");
                 setIsDeleting(false);
                 navigate(createPageUrl("Home"), { replace: true });
                 return;
@@ -499,13 +501,13 @@ export default function EditAuction() {
             await Auction.delete(auctionId);
             
             setIsDeleting(false);
-            alert("✅ Leilão excluído com sucesso!");
+            notify.ok("Leilão excluído com sucesso!");
             
             navigate(createPageUrl("Home"), { replace: true });
             
         } catch (error) {
             console.error("Erro ao deletar leilão:", error);
-            alert("❌ Erro ao deletar o leilão. Tente novamente.");
+            notify.erro("Erro ao deletar o leilão", "Tente novamente.");
             setIsDeleting(false);
         }
     };
@@ -917,8 +919,8 @@ export default function EditAuction() {
                     <p className="text-sm text-slate-400">Ações irreversíveis.</p>
                   </CardHeader>
                   <CardContent>
-                    <Button 
-                        variant="destructive" 
+                    <Button
+                        variant="destructive"
                         className="w-full bg-rose-600 hover:bg-rose-700"
                         onClick={handleDeleteAuction}
                         disabled={isSaving || isUploading || isDeleting}
@@ -929,6 +931,53 @@ export default function EditAuction() {
                   </CardContent>
                 </Card>
             </div>
+
+            {/* 🔔 MODAL DE CONFIRMAÇÃO PERSONALIZADO — substitui o confirm() nativo do navegador */}
+            <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+                <DialogContent className="bg-[#161b22] border-[#30363d] text-white max-w-md">
+                    {confirmAction && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className={`flex items-center gap-2 ${confirmAction.danger ? 'text-rose-400' : 'text-orange-400'}`}>
+                                    {confirmAction.danger
+                                        ? <Trash2 className="w-5 h-5 shrink-0" />
+                                        : <RefreshCw className="w-5 h-5 shrink-0" />}
+                                    {confirmAction.title}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <ul className="space-y-2 py-1">
+                                {confirmAction.lines.map((line) => (
+                                    <li key={line} className="flex items-start gap-2 text-sm text-slate-300">
+                                        {confirmAction.danger
+                                            ? <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
+                                            : <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />}
+                                        {line}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="flex gap-3 pt-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 bg-transparent border-[#30363d] text-slate-300 hover:bg-[#30363d] hover:text-white"
+                                    onClick={() => setConfirmAction(null)}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    className={`flex-1 font-bold text-white ${confirmAction.danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-orange-600 hover:bg-orange-500'}`}
+                                    onClick={() => {
+                                        const fn = confirmAction.onConfirm;
+                                        setConfirmAction(null);
+                                        fn();
+                                    }}
+                                >
+                                    {confirmAction.confirmLabel}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

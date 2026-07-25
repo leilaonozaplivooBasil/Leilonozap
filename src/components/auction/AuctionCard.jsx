@@ -358,14 +358,19 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       return;
     }
 
-    // Atualiza imediatamente
-    setTimeRemaining(getTimeRemaining());
+    // ⏱️ Countdown EM TEMPO REAL: tick de 1s até o fim do leilão. Barato mesmo com muitos
+    // cards — quando o texto não muda ("5 dias"), devolvemos o mesmo objeto e o React
+    // pula o re-render; só a janela HH:MM:SS re-renderiza de fato a cada segundo.
+    const tick = () => {
+      setTimeRemaining((prev) => {
+        const next = getTimeRemaining();
+        if (prev && next && prev.text === next.text && prev.isUrgent === next.isUrgent) return prev;
+        return next;
+      });
+    };
 
-    // PERF: Update every 10s on card grid (precise countdown only needed inside AuctionRoom)
-    const interval = setInterval(() => {
-      const newTime = getTimeRemaining();
-      setTimeRemaining(newTime);
-    }, 10000);
+    tick(); // Atualiza imediatamente (ex.: leilão recém-reativado já nasce com o timer)
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
   }, [auction.status, auction.end_time]);
