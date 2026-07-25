@@ -18,14 +18,14 @@ function Box({ v }) {
   return <span className="bg-gray-900 text-white text-[10px] sm:text-[13px] font-black rounded px-1 sm:px-1.5 py-0.5 tabular-nums">{String(v).padStart(2, '0')}</span>;
 }
 
-function FlashCard({ p }) {
+function FlashCard({ p, onOpenDetails }) {
   const navigate = useNavigate();
   const d = desconto(p);
   const img = (p.image_urls && p.image_urls[0]) || null;
   const vendidos = Number(p.quantity_sold || 0);
   return (
     <button
-      onClick={() => navigate(createPageUrl('CatalogProductDetails') + `?id=${p.id}`)}
+      onClick={() => onOpenDetails ? onOpenDetails(p) : navigate(createPageUrl('CatalogProductDetails') + `?id=${p.id}`)}
       className="w-[24vw] max-w-[98px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
     >
       <div className="relative aspect-square bg-white">
@@ -53,7 +53,8 @@ function FlashCard({ p }) {
 }
 
 // Faixa "Ofertas Relâmpago" estilo Shopee, identidade Leila (verde+dourado).
-export default function OfertasRelampago({ products = [] }) {
+// onOpenDetails: abre o produto expandido na própria página (modal) em vez de navegar.
+export default function OfertasRelampago({ products = [], onOpenDetails }) {
   const navigate = useNavigate();
   const [left, setLeft] = React.useState(0);
 
@@ -107,7 +108,7 @@ export default function OfertasRelampago({ products = [] }) {
       `}</style>
       <div className="relative overflow-hidden">
         <div className="ofr-marquee flex w-max px-2">
-          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} /></div>)}
+          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} onOpenDetails={onOpenDetails} /></div>)}
         </div>
         {/* fades nas bordas */}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-gray-900/70 to-transparent" aria-hidden />

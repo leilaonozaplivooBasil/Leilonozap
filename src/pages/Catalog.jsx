@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 
 import CatalogProductCard from "../components/catalog/CatalogProductCard";
+import ProductDetailsModal from "../components/catalog/ProductDetailsModal";
 import WelcomeModal from "../components/common/WelcomeModal";
 import { supabase } from '@/api/supabaseClient';
 import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
@@ -45,6 +46,9 @@ export default function Catalog() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [storeRating, setStoreRating] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  // 🔍 produto aberto EXPANDIDO na própria página (modal) — sem navegar (pedido Gabriel 25/07)
+  const [detailsProduct, setDetailsProduct] = useState(null);
+  const openDetails = useCallback((product) => setDetailsProduct(product), []);
 
   // média da loja (resolve o lojista pelo ref) — passada pros cards
   useEffect(() => {
@@ -638,7 +642,7 @@ export default function Catalog() {
         />
 
         {/* OFERTAS RELÂMPAGO */}
-        <OfertasRelampago products={products} />
+        <OfertasRelampago products={products} onOpenDetails={openDetails} />
 
         {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja */}
         <div className="mb-6 flex items-center gap-3 sm:gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-3 sm:p-4">
@@ -688,6 +692,7 @@ export default function Catalog() {
                     currentUser={currentUser}
                     licenseePhone={licenseePhone}
                     storeRating={storeRating}
+                    onOpenDetails={openDetails}
                   />
                 ))}
               </div>
@@ -891,7 +896,9 @@ export default function Catalog() {
                     key={product.id}
                     product={product}
                     currentUser={currentUser}
+                    licenseePhone={licenseePhone}
                     storeRating={storeRating}
+                    onOpenDetails={openDetails}
                   />
                 );
               })}
@@ -915,6 +922,17 @@ export default function Catalog() {
 
       {/* Flutuantes (CompareAQUI + Fale com a Leila) agora são globais, renderizados no Layout */}
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
+
+      {/* Produto expandido na própria página — todas as informações sem sair da loja */}
+      {detailsProduct && (
+        <ProductDetailsModal
+          product={detailsProduct}
+          currentUser={currentUser}
+          licenseePhone={licenseePhone}
+          storeRating={storeRating}
+          onClose={() => setDetailsProduct(null)}
+        />
+      )}
     </div>
   );
 }

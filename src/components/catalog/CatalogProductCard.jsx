@@ -12,7 +12,9 @@ import { Stars } from '../loja/StarRating';
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
-function CatalogProductCard({ product, currentUser, licenseePhone, storeRating }) {
+// onOpenDetails: quando presente (Loja Virtual), o clique abre o produto EXPANDIDO na
+// própria página (ProductDetailsModal) em vez de navegar — pedido Gabriel 25/07.
+function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, onOpenDetails }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
@@ -142,7 +144,11 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating }
       alert("Erro: Produto inválido");
       return;
     }
-    
+
+    if (onOpenDetails) {
+      onOpenDetails(product);
+      return;
+    }
     navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
   };
 
@@ -436,6 +442,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating }
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (onOpenDetails) { onOpenDetails(product); return; }
                   navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
                 }}
                 className="w-full text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-1 underline underline-offset-2"

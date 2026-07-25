@@ -612,19 +612,19 @@ export default function CatalogProductDetails() {
         </div>
       )}
 
-      {/* COMPARAI BUTTON FLUTUANTE */}
+      {/* CompareAQUI: botão visível é o global de baixo (LojaFloatActions);
+          aqui só o modal com a comparação real DESTE produto (um botão só, 25/07). */}
       {product && (
-        <div className="fixed bottom-4 right-4 z-40">
-          <ComparaiButton
-            auction={{
-              id: product.id,
-              title: product.description,
-              current_price: product.price_catalog,
-              image_urls: images
-            }}
-            mode="catalog"
-          />
-        </div>
+        <ComparaiButton
+          auction={{
+            id: product.id,
+            title: product.description,
+            current_price: product.price_catalog,
+            image_urls: images
+          }}
+          mode="catalog"
+          trigger="event"
+        />
       )}
     </div>
   );
