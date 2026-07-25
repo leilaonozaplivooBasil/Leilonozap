@@ -108,6 +108,14 @@ export default function EditAuction() {
     // Modal de confirmação personalizado da página: { title, lines, confirmLabel, danger, onConfirm }
     const [confirmAction, setConfirmAction] = useState(null);
 
+    // ⏱️ Tick de 1s para o countdown do card de resumo (só roda com leilão ativo)
+    const [nowTick, setNowTick] = useState(Date.now());
+    useEffect(() => {
+        if (auction?.status !== 'active') return;
+        const i = setInterval(() => setNowTick(Date.now()), 1000);
+        return () => clearInterval(i);
+    }, [auction?.status]);
+
     // aplica um preset rápido: agora + X minutos, no formato BRT do input
     const aplicarPresetReativacao = (min) => {
         setReactivatePreset(min);
@@ -520,31 +528,65 @@ export default function EditAuction() {
         );
     }
 
+    // 🎨 Badge de status + countdown do resumo lateral
+    const statusInfo = auction?.status === 'active'
+        ? { label: 'ATIVO', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400 animate-pulse' }
+        : auction?.status === 'sold'
+            ? { label: 'VENDIDO', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400' }
+            : { label: 'ENCERRADO', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/30', dot: 'bg-slate-400' };
+
+    const tempoRestante = (() => {
+        if (auction?.status !== 'active') return null;
+        const diff = new Date(auction.end_time).getTime() - nowTick;
+        if (diff <= 0) return 'Encerrando…';
+        const s = Math.floor(diff / 1000);
+        const d = Math.floor(s / 86400);
+        if (d > 0) return `${d} dia${d > 1 ? 's' : ''} e ${Math.floor((s % 86400) / 3600)}h`;
+        return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    })();
+
     return (
-        <div className="min-h-screen bg-[#0d1117] p-4 sm:p-6 lg:p-8 text-slate-200">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <Button 
-                        variant="outline" 
+        <div className="min-h-screen bg-[#0d1117] text-slate-200 pb-20">
+            {/* 🎯 HEADER FIXO — Voltar, título, status e Salvar sempre à mão (desktop e mobile) */}
+            <div className="sticky top-16 z-30 border-b border-white/5" style={{ background: 'rgba(13,17,23,0.88)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        size="icon"
                         onClick={() => navigate(-1)}
-                        className="bg-[#161b22] border-[#30363d] text-slate-300 hover:bg-[#30363d] hover:text-white"
+                        className="shrink-0 bg-[#161b22] border-[#30363d] text-slate-300 hover:bg-[#30363d] hover:text-white"
+                        title="Voltar"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Voltar
+                        <ArrowLeft className="w-4 h-4" />
                     </Button>
-                    <h1 className="text-2xl font-bold text-white hidden sm:block">
-                        {isTestMode && <span className="text-orange-500">[MODO TESTE] </span>}
-                        Editar Leilão
-                    </h1>
-                     <Button 
-                        onClick={handleSaveChanges} 
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold leading-none">
+                            {isTestMode ? '[MODO TESTE] · ' : ''}Editar Leilão
+                        </p>
+                        <h1 className="text-sm sm:text-lg font-bold text-white truncate mt-0.5">
+                            {formData.title || 'Sem título'}
+                        </h1>
+                    </div>
+                    <span className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusInfo.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+                        {statusInfo.label}
+                    </span>
+                    <Button
+                        onClick={handleSaveChanges}
                         disabled={isSaving || isUploading || isDeleting}
-                        className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                        className="shrink-0 bg-amber-600 hover:bg-amber-500 text-white font-bold"
                     >
-                        {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                        Salvar Alterações
+                        {isSaving ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Save className="w-4 h-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">Salvar Alterações</span>
+                        <span className="sm:hidden ml-1.5">Salvar</span>
                     </Button>
                 </div>
+            </div>
+
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                {/* 📄 COLUNA PRINCIPAL — fotos + detalhes */}
+                <div className="lg:col-span-2 space-y-6">
 
                 <Card className="bg-[#161b22] border-[#30363d]">
                     <CardHeader>
@@ -841,6 +883,42 @@ export default function EditAuction() {
                   </CardContent>
                 </Card>
 
+                </div>
+
+                {/* 📌 COLUNA LATERAL — resumo do leilão + ações */}
+                <div className="space-y-6">
+
+                <Card className="bg-[#161b22] border-[#30363d] overflow-hidden">
+                    <div className="flex items-center gap-3 p-4 border-b border-[#30363d]">
+                        {imageUrls[0] ? (
+                            <img src={imageUrls[0]} alt="Capa" className="w-14 h-14 rounded-lg object-cover border border-[#30363d] shrink-0" />
+                        ) : (
+                            <div className="w-14 h-14 rounded-lg bg-[#0d1117] border border-[#30363d] grid place-items-center shrink-0">
+                                <Image className="w-5 h-5 text-slate-600" />
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-white truncate">{formData.title || 'Sem título'}</p>
+                            <span className={`mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusInfo.cls}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+                                {statusInfo.label}
+                            </span>
+                        </div>
+                    </div>
+                    <CardContent className="p-4 space-y-2.5 text-sm">
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Preço atual</span><span className="font-bold text-emerald-400">R$ {(parseFloat(formData.current_price) || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Lance inicial</span><span className="text-slate-200">R$ {(parseFloat(formData.starting_price) || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Incremento</span><span className="text-slate-200">R$ {(parseFloat(formData.increment) || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Término</span><span className="text-slate-200 text-right">{formatBrtLabel(formData.end_time) || '—'}</span></div>
+                        {tempoRestante && (
+                            <div className="mt-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5 text-center">
+                                <p className="text-[10px] uppercase tracking-widest text-emerald-300/80 font-bold">Termina em</p>
+                                <p className="text-xl font-black text-emerald-400 tabular-nums leading-tight">{tempoRestante}</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
                 {/* 🆕 CARD DE REATIVAR LEILÃO */}
                 {auction && (auction.status === 'ended' || auction.status === 'sold') && (
                     <Card className="border-orange-500/50 bg-orange-500/5">
@@ -930,6 +1008,9 @@ export default function EditAuction() {
                     </Button>
                   </CardContent>
                 </Card>
+
+                </div>
+              </div>
             </div>
 
             {/* 🔔 MODAL DE CONFIRMAÇÃO PERSONALIZADO — substitui o confirm() nativo do navegador */}
