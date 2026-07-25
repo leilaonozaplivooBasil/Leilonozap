@@ -921,43 +921,59 @@ export default function EditAuction() {
 
                 {/* 🆕 CARD DE REATIVAR LEILÃO */}
                 {auction && (auction.status === 'ended' || auction.status === 'sold') && (
-                    <Card className="border-orange-500/50 bg-orange-500/5">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-orange-400">
-                                <RefreshCw className="w-5 h-5 text-orange-500" />
-                                Reativar Leilão
-                            </CardTitle>
-                            <p className="text-sm text-slate-400">
-                                Este leilão já terminou. Escolha uma data rápida abaixo e clique em Reativar — o vencedor anterior será removido.
-                            </p>
+                    <Card className="border-orange-500/40 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(249,115,22,0.08) 0%, rgba(22,27,34,1) 45%)' }}>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 grid place-items-center shrink-0">
+                                    <RefreshCw className="w-5 h-5 text-orange-400" />
+                                </div>
+                                <div className="min-w-0">
+                                    <CardTitle className="text-orange-400 text-base">Reativar Leilão</CardTitle>
+                                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                                        Este leilão terminou. Escolha o novo tempo e reative — o vencedor anterior será removido e os lances mantidos.
+                                    </p>
+                                </div>
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-5">
                             {/* ⚡ REATIVAÇÃO RÁPIDA — botões que setam a data direto (não depende do seletor nativo do Safari) */}
                             <div>
-                                <Label className="text-slate-300 flex items-center gap-1.5"><Zap className="w-4 h-4 text-orange-500" /> Reativação Rápida</Label>
-                                <div className="mt-2 grid grid-cols-3 gap-2">
+                                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2 flex items-center gap-1.5">
+                                    <Zap className="w-3.5 h-3.5 text-orange-400" /> Reativação rápida
+                                </p>
+                                <div className="grid grid-cols-3 gap-2">
                                     {REACTIVATE_PRESETS.map((p) => {
                                         const Icon = p.icon;
+                                        const ativo = reactivatePreset === p.min;
                                         return (
                                         <button
                                             key={p.min}
                                             type="button"
                                             onClick={() => aplicarPresetReativacao(p.min)}
-                                            className={`py-2.5 px-2 rounded-lg text-sm font-semibold border transition-colors flex items-center justify-center gap-1.5 ${
-                                                reactivatePreset === p.min
-                                                    ? 'bg-orange-600 border-orange-500 text-white'
-                                                    : 'bg-[#0d1117] border-[#30363d] text-slate-300 hover:border-orange-500/60'
+                                            className={`py-2.5 px-2 rounded-xl text-[13px] font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                                                ativo
+                                                    ? 'bg-gradient-to-b from-orange-500 to-orange-600 border-orange-400 text-white shadow-lg shadow-orange-600/30'
+                                                    : 'bg-[#0d1117] border-[#30363d] text-slate-300 hover:border-orange-500/60 hover:text-white hover:bg-orange-500/5'
                                             }`}
                                         >
-                                            <Icon className="w-3.5 h-3.5 shrink-0" />
+                                            <Icon className={`w-3.5 h-3.5 shrink-0 ${ativo ? 'text-white' : 'text-orange-400/70'}`} />
                                             {p.label}
                                         </button>
                                         );
                                     })}
                                 </div>
                             </div>
+
+                            <div className="flex items-center gap-3">
+                                <div className="h-px flex-1 bg-[#30363d]" />
+                                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">ou data específica</span>
+                                <div className="h-px flex-1 bg-[#30363d]" />
+                            </div>
+
                             <div>
-                                <Label htmlFor="reactivate_time" className="text-slate-300 flex items-center gap-1.5"><CalendarDays className="w-4 h-4 text-orange-400" /> Nova Data de Término (Brasília)</Label>
+                                <Label htmlFor="reactivate_time" className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-1.5 mb-2">
+                                    <CalendarDays className="w-3.5 h-3.5 text-orange-400" /> Nova data de término (Brasília)
+                                </Label>
                                 <Input
                                     id="reactivate_time"
                                     type="datetime-local"
@@ -965,23 +981,31 @@ export default function EditAuction() {
                                     onChange={(e) => { setReactivateTime(e.target.value); setReactivatePreset(null); }}
                                     onClick={abrirSeletorNativo}
                                     onFocus={abrirSeletorNativo}
-                                    className="mt-1 bg-[#0d1117] border-[#30363d] text-white cursor-pointer"
+                                    className="bg-[#0d1117] border-[#30363d] text-white cursor-pointer rounded-xl h-11"
                                 />
-                                {reactivateTime && (
-                                    <p className="text-xs text-orange-300 mt-1.5 flex items-center gap-1.5">
-                                        <Clock className="w-3.5 h-3.5 shrink-0" /> O leilão será encerrado em: <strong>{formatBrtLabel(reactivateTime)}</strong>
-                                    </p>
-                                )}
                             </div>
+
+                            {reactivateTime && (
+                                <div className="rounded-xl bg-[#0d1117] border border-orange-500/25 px-4 py-3 flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/25 grid place-items-center shrink-0">
+                                        <Clock className="w-4 h-4 text-orange-400" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Novo término</p>
+                                        <p className="text-sm font-bold text-orange-300 truncate">{formatBrtLabel(reactivateTime)}</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <Button
-                                className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold"
+                                className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black text-base shadow-lg shadow-orange-600/25 transition-all"
                                 onClick={handleReactivate}
                                 disabled={isReactivating || isSaving || isUploading || isDeleting}
                             >
                                 {isReactivating ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reativando...</>
+                                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Reativando...</>
                                 ) : (
-                                    <><RefreshCw className="w-4 h-4 mr-2" /> Reativar Agora</>
+                                    <><RefreshCw className="w-5 h-5 mr-2" /> Reativar Agora</>
                                 )}
                             </Button>
                         </CardContent>
