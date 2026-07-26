@@ -330,6 +330,9 @@ export default function TreeHierarchy({
       const dy = e.clientY - dragState.current.startY;
       if (Math.hypot(dx, dy) < 5) return;
       dragState.current.moved = true;
+      try {
+        viewportRef.current?.setPointerCapture?.(dragState.current.pointerId);
+      } catch { /* ponteiro já liberado */ }
     }
 
     setDrag({ id: dragState.current.id, x: px, y: py });
@@ -651,8 +654,16 @@ export default function TreeHierarchy({
               onPointerDown: (e) => {
                 if (e.button === 2) return; // botão direito abre o menu, não arrasta
                 e.stopPropagation();
-                dragState.current = { id: n.id, moved: false, startX: e.clientX, startY: e.clientY };
-                viewportRef.current?.setPointerCapture?.(e.pointerId);
+                // NÃO capturar o ponteiro aqui: com pointer capture no viewport o
+                // clique simples não chegava no nó e só o duplo clique abria o card.
+                // A captura passa a acontecer quando o arraste realmente começa.
+                dragState.current = {
+                  id: n.id,
+                  moved: false,
+                  startX: e.clientX,
+                  startY: e.clientY,
+                  pointerId: e.pointerId,
+                };
               },
               onClick: (e) => {
                 e.stopPropagation();
@@ -922,26 +933,26 @@ export default function TreeHierarchy({
               max-h-[88vh] md:aspect-video md:max-h-[86vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* capa */}
+            {/* faixa de identidade do cargo — fina, sem cobrir a foto */}
             <div className="relative flex-shrink-0">
-              <div className={`h-20 md:h-24 ${getCareerColor(selected.primary_career_level || 'usuario')} opacity-25`} />
+              <div className={`h-1.5 ${getCareerColor(selected.primary_career_level || 'usuario')}`} />
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
-                className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/50 text-gray-300 hover:text-white hover:bg-black/70"
+                className="absolute top-3 right-3 z-10 p-1.5 rounded-lg bg-black/50 text-gray-300 hover:text-white hover:bg-black/70"
                 aria-label="Fechar perfil"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="px-6 pb-6 -mt-12 overflow-y-auto flex-1 min-h-0">
+            <div className="px-6 pb-6 pt-5 overflow-y-auto flex-1 min-h-0">
               {/* identidade + ações */}
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                 <div
                   className={`w-24 h-24 rounded-2xl ${getCareerColor(
                     selected.primary_career_level || 'usuario'
-                  )} flex items-center justify-center text-white text-2xl font-bold overflow-hidden border-4 border-gray-900 flex-shrink-0`}
+                  )} flex items-center justify-center text-white text-2xl font-bold overflow-hidden ring-1 ring-white/10 flex-shrink-0`}
                 >
                   {selected.avatar_url ? (
                     <img src={selected.avatar_url} alt={selected.full_name} className="w-full h-full object-cover" />
