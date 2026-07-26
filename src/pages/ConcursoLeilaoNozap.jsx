@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
+import CountdownTimer from '@/components/concurso/CountdownTimer';
 import {
   Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -474,6 +475,9 @@ export default function ConcursoLeilaoNozap() {
 
         {/* FEATURE 7 — prêmio do dia em destaque ANTES do cadastro */}
         <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
+
+        {/* FEATURE 1 — contador regressivo do sorteio (FOMO) */}
+        <CountdownTimer config={config} />
 
         {/* DASHBOARD GRID */}
         <div className="grid lg:grid-cols-[1.5fr_1fr] gap-4 mt-6 items-start">
