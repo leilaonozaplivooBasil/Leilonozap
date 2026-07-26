@@ -81,9 +81,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
               )}
             </>
           ) : (
-            <div className="w-16 h-16 rounded-full grid place-items-center mx-auto border border-amber-400/40 bg-amber-500/15">
-              <img src="/martelo-3d.png" alt="Martelo do leiloeiro" className="w-11 h-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" />
-            </div>
+            <img src="/martelo-3d.png" alt="Martelo do leiloeiro" className="w-16 h-16 object-contain mx-auto drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
           )}
         </div>
 

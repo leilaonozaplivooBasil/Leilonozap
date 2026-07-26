@@ -33,9 +33,7 @@ export default function VictoryCard({ winner, auction, currentUser }) {
     return (
       <div className="flex justify-center mb-4 md:mb-6 px-2 md:px-4 vc-entrance">
         <div className="vc-glass vc-glass--amber relative max-w-xl w-full p-5 md:p-7 text-center">
-          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full border border-amber-400/30 bg-amber-400/10">
-            <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="h-10 w-10 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" />
-          </div>
+          <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="mx-auto mb-3 h-16 w-16 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
           <h3 className="text-lg md:text-xl font-bold text-white mb-1">Leilão encerrado</h3>
           <p className="text-amber-200/80 text-sm mb-4">Este lote terminou sem lances.</p>
           <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3 text-left backdrop-blur-xl">
@@ -89,8 +87,8 @@ export default function VictoryCard({ winner, auction, currentUser }) {
             <span className="vc-ring" style={{ animationDelay: '0.25s' }}></span>
             <span className="vc-ring" style={{ animationDelay: '0.65s' }}></span>
             <span className="vc-ring vc-ring--gold" style={{ animationDelay: '1.05s' }}></span>
-            <div className="vc-hammer-badge grid h-full w-full place-items-center rounded-full">
-              <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="vc-hammer h-11 w-11 md:h-14 md:w-14 object-contain drop-shadow-[0_5px_12px_rgba(0,0,0,0.55)]" />
+            <div className="grid h-full w-full place-items-center">
+              <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="vc-hammer h-16 w-16 md:h-20 md:w-20 object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)]" />
             </div>
           </div>
 
@@ -178,13 +176,6 @@ function VictoryStyles() {
         100% { opacity: 1; transform: scale(1) translateY(0); }
       }
       .vc-entrance { animation: vc-entrance 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-      .vc-hammer-badge {
-        border: 1px solid rgba(251, 191, 36, 0.3);
-        background: rgba(251, 191, 36, 0.08);
-        backdrop-filter: blur(8px);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-      }
 
       /* Martelo: 3 batidas secas (sincronizadas com o som) */
       @keyframes vc-hammer-strike {
