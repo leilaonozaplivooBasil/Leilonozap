@@ -149,13 +149,14 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
             onClick={onClose}
             className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
           />
-          {/* Painel */}
+          {/* Painel central — modal liquid glass no meio da tela (desktop e mobile) */}
+          <div className="fixed inset-0 z-[95] grid place-items-center p-3 sm:p-6 pointer-events-none">
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="fixed right-0 top-0 z-[95] h-full w-full sm:w-[420px] flex flex-col bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 border-l border-white/10 shadow-2xl"
+            initial={{ opacity: 0, scale: 0.92, y: 18 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+            className="wallet-modal pointer-events-auto w-full max-w-md max-h-[88vh] flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
@@ -181,36 +182,38 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
             <div className="flex-1 overflow-y-auto">
               {view === 'wallet' && (
                 <div className="p-5 space-y-5">
-                  {/* Card de saldo */}
-                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 via-emerald-600 to-emerald-800 p-5 shadow-lg shadow-green-900/40">
-                    <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/10" />
-                    <div className="absolute -right-2 bottom-2 w-16 h-16 rounded-full bg-white/5" />
+                  {/* Card de saldo — glass escuro com fio verde, no padrão do site */}
+                  <div className="relative overflow-hidden rounded-2xl border border-emerald-400/25 bg-gradient-to-b from-emerald-500/10 to-emerald-900/10 p-5">
                     <div className="flex items-center justify-between">
-                      <p className="text-green-100 text-sm font-medium">Saldo disponível</p>
-                      <button onClick={loadWallet} className="p-1.5 rounded-lg hover:bg-white/15 text-green-100" title="Atualizar">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Saldo disponível</p>
+                      <button onClick={loadWallet} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-gray-200" title="Atualizar">
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                       </button>
                     </div>
-                    <p className="text-4xl font-extrabold text-white mt-1 tracking-tight">
+                    <p className="text-[2.4rem] leading-tight font-extrabold text-white mt-1 tracking-tight tabular-nums">
                       R$ {balance.toFixed(2).replace('.', ',')}
                     </p>
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      {hasAllocated && (
-                        <span className="text-xs font-semibold bg-black/25 text-green-100 rounded-full px-2.5 py-1">
-                          Alocado em lances: R$ {(wallet.saldo_alocado).toFixed(2).replace('.', ',')}
-                        </span>
-                      )}
-                      {hasCommission && (
-                        <span className="text-xs font-semibold bg-black/25 text-amber-200 rounded-full px-2.5 py-1">
-                          Comissões: R$ {(wallet.commission_balance).toFixed(2).replace('.', ',')}
-                        </span>
-                      )}
-                    </div>
+                    {(hasAllocated || hasCommission) && (
+                      <div className="flex gap-4 mt-3 flex-wrap border-t border-white/8 pt-3">
+                        {hasAllocated && (
+                          <div>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-gray-500">Alocado em lances</p>
+                            <p className="text-sm font-bold text-gray-200 tabular-nums">R$ {(wallet.saldo_alocado).toFixed(2).replace('.', ',')}</p>
+                          </div>
+                        )}
+                        {hasCommission && (
+                          <div>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-gray-500">Comissões</p>
+                            <p className="text-sm font-bold text-amber-300 tabular-nums">R$ {(wallet.commission_balance).toFixed(2).replace('.', ',')}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <Button
                       onClick={() => { setRechargeAmount(null); setCustomAmount(''); setView('recharge'); }}
-                      className="w-full mt-4 h-11 bg-white text-emerald-700 hover:bg-green-50 font-bold shadow"
+                      className="w-full mt-4 h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
                     >
-                      <Plus className="w-5 h-5 mr-1" />
+                      <Plus className="w-4 h-4 mr-1.5" />
                       Adicionar Saldo
                     </Button>
                   </div>
@@ -336,7 +339,18 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                 </div>
               )}
             </div>
+            <style>{`
+              .wallet-modal {
+                border-radius: 24px;
+                border: 1px solid rgba(52, 211, 153, 0.28);
+                background: linear-gradient(160deg, rgba(16, 185, 129, 0.14) 0%, rgba(9, 32, 24, 0.92) 40%, rgba(5, 18, 14, 0.96) 100%);
+                backdrop-filter: blur(28px) saturate(1.35);
+                -webkit-backdrop-filter: blur(28px) saturate(1.35);
+                box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 44px rgba(16, 185, 129, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+              }
+            `}</style>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

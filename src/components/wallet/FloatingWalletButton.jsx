@@ -1,79 +1,68 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Wallet, Plus } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 
 /**
  * Botão flutuante da carteira — mostra o saldo REAL (saldo_disponivel via backend)
- * e abre o WalletDrawer sem sair da página.
+ * e abre o WalletDrawer sem sair da página. Visual integrado ao header do site:
+ * glass escuro, fio sutil, ícone 3D da navbar.
  */
 export default function FloatingWalletButton({ balance, onClick }) {
+  const hasBalance = typeof balance === 'number' && balance < 999999;
   return (
-    <motion.button
-      initial={{ opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4, type: 'spring', damping: 20 }}
-      onClick={onClick}
-      className="floating-wallet-btn group"
-      title="Minha Carteira"
-    >
-      <span className="fw-icon">
-        <Wallet className="w-4 h-4 text-white" />
+    <button onClick={onClick} className="fwb" title="Minha Carteira">
+      <img
+        src="/icons/money-3d.png"
+        alt=""
+        className="fwb-icon"
+        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+      />
+      <span className="fwb-icon-fallback" style={{ display: 'none' }}>
+        <Wallet size={15} strokeWidth={2.2} />
       </span>
-      <span className="fw-balance">
-        {typeof balance === 'number' && balance < 999999
-          ? `R$ ${balance.toFixed(2).replace('.', ',')}`
-          : 'Carteira'}
-      </span>
-      <span className="fw-plus">
-        <Plus className="w-3.5 h-3.5" />
+      <span className="fwb-text">
+        <span className="fwb-label">Carteira</span>
+        <span className="fwb-value">{hasBalance ? `R$ ${balance.toFixed(2).replace('.', ',')}` : '· · ·'}</span>
       </span>
       <style>{`
-        .floating-wallet-btn {
+        .fwb {
           position: fixed;
           z-index: 60;
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 10px 8px 8px;
-          border-radius: 9999px;
-          background: linear-gradient(135deg, rgba(16, 90, 50, 0.92), rgba(6, 60, 35, 0.92));
-          border: 1px solid rgba(74, 222, 128, 0.35);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.04) inset;
-          backdrop-filter: blur(10px);
+          gap: 9px;
+          padding: 7px 14px 7px 9px;
+          border-radius: 12px;
+          background: rgba(13, 17, 15, 0.78);
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          backdrop-filter: blur(14px) saturate(1.2);
+          -webkit-backdrop-filter: blur(14px) saturate(1.2);
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
           cursor: pointer;
-          transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+          transition: border-color 0.18s ease, background 0.18s ease;
         }
-        .floating-wallet-btn:hover {
-          transform: translateY(-1px) scale(1.02);
-          border-color: rgba(74, 222, 128, 0.7);
-          box-shadow: 0 10px 28px rgba(16, 185, 129, 0.25);
+        .fwb:hover {
+          border-color: rgba(52, 211, 153, 0.4);
+          background: rgba(16, 22, 19, 0.88);
         }
-        @media (max-width: 1023px) {
-          .floating-wallet-btn { top: 80px; right: 12px; }
+        @media (max-width: 1023px) { .fwb { top: 80px; right: 12px; } }
+        @media (min-width: 1024px) { .fwb { top: 84px; left: 20px; } }
+        .fwb-icon { width: 26px; height: 26px; object-fit: contain; }
+        .fwb-icon-fallback {
+          width: 26px; height: 26px; border-radius: 8px;
+          align-items: center; justify-content: center;
+          background: rgba(52, 211, 153, 0.12);
+          color: #34d399;
         }
-        @media (min-width: 1024px) {
-          .floating-wallet-btn { top: 84px; left: 20px; }
+        .fwb-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+        .fwb-label {
+          font-size: 9px; font-weight: 600; letter-spacing: 0.14em;
+          text-transform: uppercase; color: rgba(255, 255, 255, 0.45);
         }
-        .fw-icon {
-          display: flex; align-items: center; justify-content: center;
-          width: 30px; height: 30px; border-radius: 9999px;
-          background: linear-gradient(135deg, #16a34a, #059669);
-          box-shadow: 0 2px 8px rgba(5, 150, 105, 0.5);
+        .fwb-value {
+          font-size: 13.5px; font-weight: 700; color: #f4f7f5;
+          font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
         }
-        .fw-balance {
-          color: #ecfdf5; font-weight: 800; font-size: 14px; letter-spacing: 0.01em;
-          font-variant-numeric: tabular-nums;
-        }
-        .fw-plus {
-          display: flex; align-items: center; justify-content: center;
-          width: 22px; height: 22px; border-radius: 9999px;
-          background: rgba(74, 222, 128, 0.18);
-          color: #4ade80;
-          border: 1px solid rgba(74, 222, 128, 0.4);
-          transition: background 0.15s ease;
-        }
-        .floating-wallet-btn:hover .fw-plus { background: rgba(74, 222, 128, 0.35); }
       `}</style>
-    </motion.button>
+    </button>
   );
 }
