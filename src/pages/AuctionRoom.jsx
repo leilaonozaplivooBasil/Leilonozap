@@ -6,7 +6,7 @@ const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;
 const AppUser = base44.entities.AppUser;
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
 import { format } from 'date-fns';
 
 import AIMessage from "../components/chat/AIMessage";
@@ -61,6 +61,39 @@ export default function AuctionRoom() {
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   const chatRef = useRef(null);
+
+  // 📜 Overflow do chat: botão de scroll quando o usuário está longe do fim
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const wasNearBottomRef = useRef(true);
+
+  const isChatNearBottom = useCallback(() => {
+    const el = chatRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+  }, []);
+
+  const handleChatScroll = useCallback(() => {
+    const near = isChatNearBottom();
+    wasNearBottomRef.current = near;
+    setShowScrollDown(!near);
+  }, [isChatNearBottom]);
+
+  const scrollChatToBottom = useCallback((smooth = true) => {
+    const el = chatRef.current;
+    if (!el) return;
+    wasNearBottomRef.current = true;
+    setShowScrollDown(false);
+    // scrollTo depois do re-render (rAF): o setState acima re-renderiza e o
+    // Chrome cancela animações smooth em andamento. Fallback 500ms garante o
+    // fim mesmo se a animação for interrompida por qualquer outro motivo.
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    });
+    setTimeout(() => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (dist > 40) el.scrollTop = el.scrollHeight;
+    }, 500);
+  }, []);
 
   const audioContextRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -430,10 +463,36 @@ export default function AuctionRoom() {
   // Unified sync loop is now in useAuctionSync hook
 
   useEffect(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    // Auto-scroll só quando o usuário JÁ estava no fim do chat — se ele rolou
+    // pra cima lendo mensagens, não rouba a posição: mostra o botão de descer.
+    // Depende de isLoading porque durante o load o chat nem está no DOM
+    // (chatRef null) — sem isso a sala abria presa no TOPO do chat.
+    // Re-tenta em 300/900ms: as imagens do card de vitória carregam DEPOIS e
+    // aumentam o scrollHeight — uma rolagem única ficava no meio do caminho.
+    if (isLoading || !chatRef.current) return;
+    if (!wasNearBottomRef.current) {
+      setShowScrollDown(true);
+      return;
     }
-  }, [messages]);
+    const toBottom = () => {
+      if (chatRef.current && wasNearBottomRef.current) {
+        chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      }
+    };
+    toBottom();
+    const t1 = setTimeout(toBottom, 300);
+    const t2 = setTimeout(toBottom, 900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [messages, isLoading]);
+
+  useEffect(() => {
+    // 🔒 Overflow bem definido: na sala, a PÁGINA não rola — só o chat.
+    // (o Layout tem header fixo + footer; sem isso o body rolava e o card
+    // de vitória ficava cortado no meio, sem jeito de ver o restante)
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, []);
 
   // Countdown effect is now in useAuctionTimer hook
 
@@ -892,7 +951,8 @@ export default function AuctionRoom() {
           </div>
         </aside>
 
-        <div ref={chatRef} className="auction-messages">
+        <div className="chat-wrapper">
+        <div ref={chatRef} className="auction-messages" onScroll={handleChatScroll}>
           {messages.length === 0 ? (
             <div className="empty-chat">
               <div className="empty-chat__icon">💬</div>
@@ -999,6 +1059,18 @@ export default function AuctionRoom() {
               })}
             </>
           )}
+        </div>
+
+        {/* 📜 Botão de scroll — aparece quando há overflow e o usuário não está no fim */}
+        {showScrollDown && (
+          <button
+            className="chat-scroll-btn"
+            onClick={() => scrollChatToBottom(true)}
+            aria-label="Descer para as últimas mensagens"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </button>
+        )}
         </div>
       </main>
 
@@ -1163,19 +1235,54 @@ export default function AuctionRoom() {
       />
 
       <style>{`
-        .auction-page-container { display: flex; flex-direction: column; height: 100vh; background-color: #111827; overflow: hidden; }
+        /* Altura EXATA da viewport menos o header fixo do Layout (pt-14 = 56px,
+           sm:pt-16 = 64px) — o chat rola por dentro e a página fica travada. */
+        .auction-page-container { display: flex; flex-direction: column; height: calc(100dvh - 56px); background-color: #111827; overflow: hidden; }
+        @media (min-width: 640px) { .auction-page-container { height: calc(100dvh - 64px); } }
         
-        @media (max-width: 1023px) { 
-          .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; } 
-          .auction-sidebar { display: none; } 
+        @media (max-width: 1023px) {
+          .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+          .auction-sidebar { display: none; }
+          .chat-wrapper { flex-grow: 1; }
         }
-        
+
         @media (min-width: 1024px) {
           .mobile-header { display: none; }
-          .main-content { display: grid; grid-template-columns: 360px 1fr; gap: 16px; max-width: 1280px; margin: 16px auto; width: 100%; flex: 1; overflow: hidden; }
-          .auction-sidebar { grid-column: 1; height: fit-content; position: sticky; top: 80px; }
-          .auction-messages { grid-column: 2; }
+          /* grid-template-rows minmax(0,1fr): sem isso a row implícita cresce com o
+             conteúdo do chat e o overflow-y interno NUNCA ativa (chat cortado sem scroll) */
+          .main-content { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: minmax(0, 1fr); gap: 16px; max-width: 1280px; margin: 16px auto; width: 100%; flex: 1; overflow: hidden; min-height: 0; }
+          .auction-sidebar { grid-column: 1; height: fit-content; position: sticky; top: 80px; overflow-y: auto; max-height: 100%; }
+          .chat-wrapper { grid-column: 2; height: 100%; }
           .bid-input-container { padding: 16px; background: rgba(31, 41, 55, 0.5); backdrop-filter: blur(8px); border-top: 1px solid rgba(55, 65, 81, 0.8); }
+        }
+
+        .chat-wrapper { position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+        /* Botão liquid glass de descer o chat */
+        .chat-scroll-btn {
+          position: absolute;
+          right: 16px;
+          bottom: 16px;
+          z-index: 30;
+          display: grid;
+          place-items: center;
+          width: 42px;
+          height: 42px;
+          border-radius: 999px;
+          color: #34d399;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(17, 24, 39, 0.6);
+          backdrop-filter: blur(16px) saturate(1.3);
+          -webkit-backdrop-filter: blur(16px) saturate(1.3);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+          cursor: pointer;
+          animation: chat-scroll-in 0.25s ease-out;
+          transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .chat-scroll-btn:hover { transform: translateY(-2px); background: rgba(17, 24, 39, 0.8); }
+        @keyframes chat-scroll-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
         .auction-messages { 
@@ -1184,9 +1291,11 @@ export default function AuctionRoom() {
           overflow-x: hidden;
           padding: 16px; 
           background-image: linear-gradient(to bottom, transparent, rgba(0,0,0,0.4)), url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23374151' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/svg%3E"); 
-          display: flex; 
+          display: flex;
           flex-direction: column;
-          scroll-behavior: smooth;
+          /* scroll-behavior: smooth REMOVIDO — transformava cada scrollTop
+             programático numa animação; sets sucessivos se atropelavam e o
+             chat ficava preso no topo. O botão de descer usa scrollTo smooth. */
         }
         
         /* Scrollbar moderno minimalista - fundo 100% transparente */
