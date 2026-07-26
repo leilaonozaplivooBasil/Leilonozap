@@ -52,6 +52,55 @@ function HeroAction({ icon: Icon, label, sublabel, accent = "green" }) {
   );
 }
 
+// Carrossel contínuo dos botões do hero — mesmo ritmo do category-scroller (liquid glass)
+function HeroActionsCarousel({ currentUser }) {
+  const items = [
+    { key: 'licenciado', icon: Zap, label: 'Seja um Licenciado', sublabel: 'Sua própria sala', to: createPageUrl('Licensing') },
+    { key: 'lucre', icon: DollarSign, label: 'Lucre Conosco', sublabel: 'Indique e ganhe', to: createPageUrl('Partners') },
+    { key: 'collection', icon: Crown, label: 'Leilões Collection', sublabel: 'Itens exclusivos', accent: 'purple', to: createPageUrl('LuxuryCollection') }
+  ];
+  if (currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin')) {
+    items.push({ key: 'vip', icon: MessageCircle, label: 'Grupo VIP', sublabel: 'Acesso exclusivo', href: 'https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl' });
+  }
+
+  // 4 cópias do set = duas metades idênticas; o keyframe translateX(-50%) fecha o loop sem salto
+  const loop = [0, 1, 2, 3].flatMap((copy) => items.map((item) => ({ ...item, copy })));
+
+  return (
+    <div className="hero-actions-scroller mt-6 -mx-2 px-2">
+      <div className="hero-actions-scroller__inner">
+        {loop.map((item) => {
+          const content = <HeroAction icon={item.icon} label={item.label} sublabel={item.sublabel} accent={item.accent} />;
+          const dupe = item.copy > 0;
+          return item.href ? (
+            <a
+              key={`${item.copy}-${item.key}`}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-60 sm:w-64 shrink-0"
+              aria-hidden={dupe}
+              tabIndex={dupe ? -1 : undefined}
+            >
+              {content}
+            </a>
+          ) : (
+            <Link
+              key={`${item.copy}-${item.key}`}
+              to={item.to}
+              className="block w-60 sm:w-64 shrink-0"
+              aria-hidden={dupe}
+              tabIndex={dupe ? -1 : undefined}
+            >
+              {content}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   // 🔥 TODOS OS HOOKS NO TOPO - NUNCA APÓS CONDICIONAIS OU RETURNS
   const navigate = useNavigate();
@@ -679,7 +728,7 @@ export default function Home() {
             <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full orb-1" style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.15) 0%, transparent 70%)' }} />
             <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full orb-2" style={{ background: 'radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 70%)' }} />
 
-            <div className="relative lg:pr-[19rem] xl:pr-[31rem]">
+            <div className="relative">
               {/* Selo AO VIVO */}
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-3 py-1.5">
                 <span className="relative flex h-2 w-2">
@@ -713,47 +762,8 @@ export default function Home() {
 
               <LiveStats />
 
-              {/* AÇÕES - MOBILE */}
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
-                <Link to={createPageUrl("Licensing")}>
-                  <HeroAction icon={Zap} label="Seja um Licenciado" sublabel="Sua própria sala" />
-                </Link>
-
-                <Link to={createPageUrl("Partners")}>
-                  <HeroAction icon={DollarSign} label="Lucre Conosco" sublabel="Indique e ganhe" />
-                </Link>
-
-                <Link to={createPageUrl("LuxuryCollection")}>
-                  <HeroAction icon={Crown} label="Leilões Collection" sublabel="Itens exclusivos" accent="purple" />
-                </Link>
-
-                {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
-                <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer" className="block">
-                  <HeroAction icon={MessageCircle} label="Grupo VIP" sublabel="Acesso exclusivo" />
-                </a>
-                }
-              </div>
-
-              {/* AÇÕES - DESKTOP */}
-              <div className="hidden lg:grid absolute top-0 right-0 w-[17rem] grid-cols-1 gap-3 content-start xl:w-[29rem] xl:grid-cols-2">
-                <Link to={createPageUrl("Licensing")}>
-                  <HeroAction icon={Zap} label="Seja um Licenciado" sublabel="Sua própria sala" />
-                </Link>
-
-                <Link to={createPageUrl("Partners")}>
-                  <HeroAction icon={DollarSign} label="Lucre Conosco" sublabel="Indique e ganhe" />
-                </Link>
-
-                <Link to={createPageUrl("LuxuryCollection")}>
-                  <HeroAction icon={Crown} label="Leilões Collection" sublabel="Itens exclusivos" accent="purple" />
-                </Link>
-
-                {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
-                <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer">
-                  <HeroAction icon={MessageCircle} label="Grupo VIP" sublabel="Acesso exclusivo" />
-                </a>
-                }
-              </div>
+              {/* AÇÕES - CARROSSEL CONTÍNUO (mobile e desktop) */}
+              <HeroActionsCarousel currentUser={currentUser} />
             </div>
           </div>
         </div>

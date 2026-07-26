@@ -153,6 +153,26 @@ export default function LiquidGlassStyles() {
         100% { transform: translateX(-50%); }
       }
 
+      /* Hero Actions Carousel — botões do hero correndo em loop contínuo */
+      .hero-actions-scroller {
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+      }
+      .hero-actions-scroller__inner {
+        display: flex;
+        gap: 12px;
+        width: fit-content;
+        animation: scroll 35s linear infinite;
+        will-change: transform;
+      }
+      .hero-actions-scroller:hover .hero-actions-scroller__inner {
+        animation-play-state: paused;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-actions-scroller__inner { animation: none; }
+      }
+
       /* Fire Animation */
       @keyframes fire {
         0% { transform: scale(1) rotate(0deg); opacity: 1; }
