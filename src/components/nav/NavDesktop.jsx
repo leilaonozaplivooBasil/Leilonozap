@@ -63,7 +63,7 @@ export default function NavDesktop({
       {/* === SETORES CENTRAIS — centralizados no meio da navbar (absolute no header).
           items-center + tile 38px + label colado: o conjunto (~54px) fica centrado
           no h-16 do header, no MESMO eixo do carrinho/avatar/rank. === */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-8">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-5">
         {SECTORS.map((s) => {
           const active = sectorActive(s) || openSector === s.key;
           return (
@@ -148,8 +148,9 @@ export default function NavDesktop({
       </div>
 
       {/* === CLUSTER DIREITO: carrinho · Entrar/avatar · Rank Premiado ===
-          Tudo em items-center no mesmo eixo vertical dos setores centrais. */}
-      <div className="flex items-center gap-x-2">
+          Tudo em items-center no mesmo eixo vertical dos setores centrais,
+          com respiro entre carrinho, perfil e rank (pedido Gabriel 26/07). */}
+      <div className="flex items-center gap-x-5">
         {/* 🛒 Carrinho — liquid glass verde da paleta, com contador vivo:
             todo produto adicionado dispara 'cartUpdated' no Layout → cartCount
             muda → badge pop + balanço do ícone (keys reiniciam as animações). */}
@@ -222,7 +223,7 @@ export default function NavDesktop({
           `}</style>
         </Link>
 
-        <div className="ml-1">
+        <div>
           <UserAvatarMenu
             currentUser={currentUser}
             onLoginClick={onLoginClick}
@@ -233,7 +234,7 @@ export default function NavDesktop({
         {/* === RANK PREMIADO — afastado, no canto direito (essência dourada → bege da paleta) === */}
         <Link
           to="/rankpremiado"
-          className="ml-5 flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-xl transition-all hover:scale-[1.04]"
+          className="ml-4 flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-xl transition-all hover:scale-[1.04]"
           style={{
             background: `linear-gradient(140deg, #2c2d38 0%, ${P.navy} 55%, #191a21 100%)`,
             border: "1px solid rgba(218,187,152,0.55)",
