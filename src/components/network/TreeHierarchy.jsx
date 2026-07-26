@@ -801,20 +801,6 @@ export default function TreeHierarchy({
 
                 {expandButton}
 
-                <button
-                  type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit?.(n.data);
-                  }}
-                  className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-gray-900 border border-blue-500/50 text-blue-400
-                    flex items-center justify-center opacity-0 hover:opacity-100 focus:opacity-100 group-hover/node:opacity-100 transition-opacity"
-                  title="Editar dados desta pessoa"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
-
                 <div className="absolute top-full mt-3.5 left-1/2 -translate-x-1/2 w-[128px] text-center pointer-events-none">
                   <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">
                     {firstAndLast(n.data.full_name)}
