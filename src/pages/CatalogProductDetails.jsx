@@ -39,7 +39,7 @@ export default function CatalogProductDetails() {
         if (!u?.id) return;
         const [{ data: resumo }, { data: revs }] = await Promise.all([
           supabase.rpc('avaliacao_loja', { _seller: u.id }),
-          supabase.from('seller_ratings').select('stars,comment,buyer_name,created_at').eq('seller_id', u.id).not('comment', 'is', null).order('created_at', { ascending: false }).limit(8),
+          supabase.from('seller_ratings').select('stars,comment,buyer_name,created_at,sale_id').eq('seller_id', u.id).not('comment', 'is', null).order('created_at', { ascending: false }).limit(8),
         ]);
         if (alive) { if (resumo) setStoreRating(resumo); setReviews(Array.isArray(revs) ? revs : []); }
       } catch (_) { /* sem avaliação */ }
@@ -547,6 +547,16 @@ export default function CatalogProductDetails() {
                           <Stars value={r.stars} size={13} />
                         </div>
                         {r.comment && <p className="text-gray-300 text-sm">{r.comment}</p>}
+                        {/* Foto do produto enviada na avaliação (URL derivada do sale_id; some se não existir) */}
+                        {r.sale_id && (
+                          <img
+                            src={`https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/produtos/avaliacoes/${r.sale_id}.jpg`}
+                            alt="Foto do cliente"
+                            loading="lazy"
+                            className="mt-2 h-24 w-24 object-cover rounded-lg border border-white/10"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>

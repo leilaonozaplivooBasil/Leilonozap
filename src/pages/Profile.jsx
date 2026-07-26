@@ -43,6 +43,7 @@ import {
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
 import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import AvaliarLojistaModal from '@/components/loja/AvaliarLojistaModal';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from '@/components/ui/use-toast';
@@ -151,9 +152,14 @@ export default function Profile() {
     navigate(createPageUrl('CatalogOrderTracking') + `?sale_id=${order.id}`);
   };
 
-  const handleConfirmReceipt = async (order) => {
+  // Confirmações DA PLATAFORMA (ConfirmModal) — nada de window.confirm do navegador
+  const [confirmAction, setConfirmAction] = useState(null); // { kind: 'receipt' | 'delete', order }
+
+  const handleConfirmReceipt = (order) => setConfirmAction({ kind: 'receipt', order });
+  const handleDeleteOrder = (order) => setConfirmAction({ kind: 'delete', order });
+
+  const doConfirmReceipt = async (order) => {
     if (confirmingId) return;
-    if (!window.confirm(`Confirmar que você recebeu "${order.product_title}"?\n\nIsso libera o pagamento pro vendedor.`)) return;
     setConfirmingId(order.id);
     try {
       const uid = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
@@ -169,11 +175,11 @@ export default function Profile() {
       toast({ title: 'Erro ao confirmar recebimento', variant: 'destructive' });
     } finally {
       setConfirmingId(null);
+      setConfirmAction(null);
     }
   };
 
-  const handleDeleteOrder = async (order) => {
-    if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
+  const doDeleteOrder = async (order) => {
     try {
       await base44.entities.CatalogSale.delete(order.id);
       setCatalogOrders(prev => prev.filter(o => o.id !== order.id));
@@ -181,6 +187,8 @@ export default function Profile() {
     } catch (err) {
       console.error('Erro ao excluir:', err);
       toast({ title: 'Erro ao excluir pedido', variant: 'destructive' });
+    } finally {
+      setConfirmAction(null);
     }
   };
 
@@ -1238,6 +1246,26 @@ export default function Profile() {
                 )}
               </>
             )}
+
+            {/* Confirmações da plataforma (sem diálogo do navegador) */}
+            <ConfirmModal
+              open={confirmAction?.kind === 'receipt'}
+              title="Confirmar recebimento?"
+              message={<>Você confirma que recebeu <b className="text-white">{confirmAction?.order?.product_title}</b>?<br />Isso libera o pagamento pro vendedor.</>}
+              confirmLabel="✅ Sim, recebi"
+              loading={!!confirmingId}
+              onConfirm={() => doConfirmReceipt(confirmAction.order)}
+              onClose={() => setConfirmAction(null)}
+            />
+            <ConfirmModal
+              open={confirmAction?.kind === 'delete'}
+              danger
+              title="Excluir pedido?"
+              message={<>O pedido <b className="text-white">{confirmAction?.order?.product_title}</b> será removido permanentemente.</>}
+              confirmLabel="🗑️ Excluir"
+              onConfirm={() => doDeleteOrder(confirmAction.order)}
+              onClose={() => setConfirmAction(null)}
+            />
 
             {/* Modal de avaliação do vendedor */}
             {ratingOrder && (

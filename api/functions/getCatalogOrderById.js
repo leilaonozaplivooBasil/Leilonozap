@@ -24,7 +24,8 @@ export default async function handler(req, res) {
     const rows = await (await sb(
       `catalog_sales?select=id,product_title,product_image,sale_price,total_amount,quantity,status,` +
       `tracking_code,payment_method,buyer_name,buyer_phone,buyer_address,fulfillment_status,` +
-      `created_date,created_at,shipped_at,delivered_at,carrier,coupon_code,discount_amount,items_json` +
+      `created_date,created_at,shipped_at,delivered_at,carrier,coupon_code,discount_amount,items_json,` +
+      `seller_id,buyer_id` +
       `&or=(id.eq.${encodeURIComponent(saleId)},tracking_code.eq.${encodeURIComponent(saleId)})&limit=1`
     )).json();
     const order = Array.isArray(rows) ? rows[0] : null;

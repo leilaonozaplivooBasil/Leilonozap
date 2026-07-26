@@ -13,6 +13,7 @@ const CatalogSale = base44.entities.CatalogSale;
 // Card + configs de status agora são COMPARTILHADOS com a aba "Meus Pedidos" do
 // Profile (extraídos pra components/catalog/CatalogOrderCard.jsx em 25/07).
 import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function MyCatalogOrders() {
   const [orders, setOrders] = useState([]);
@@ -130,10 +131,16 @@ export default function MyCatalogOrders() {
   const [confirmedIds, setConfirmedIds] = useState(new Set());
   const [confirmingId, setConfirmingId] = useState(null);
 
+  // Confirmações DA PLATAFORMA (ConfirmModal) — nada de window.confirm do navegador
+  const [confirmAction, setConfirmAction] = useState(null); // { kind: 'receipt'|'delete'|'deleteAll', order? }
+
+  const handleConfirmReceipt = (order) => setConfirmAction({ kind: 'receipt', order });
+  const handleDeleteOrder = (order) => setConfirmAction({ kind: 'delete', order });
+  const handleDeleteAll = () => { if (deletableOrders.length > 0) setConfirmAction({ kind: 'deleteAll' }); };
+
   // 🟢 comprador confirma recebimento → libera o saldo a liberar do vendedor na hora
-  const handleConfirmReceipt = async (order) => {
+  const doConfirmReceipt = async (order) => {
     if (confirmingId) return;
-    if (!window.confirm(`Confirmar que você recebeu "${order.product_title}"?\n\nIsso libera o pagamento pro vendedor.`)) return;
     setConfirmingId(order.id);
     try {
       const uid = currentUser?.id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
@@ -149,11 +156,11 @@ export default function MyCatalogOrders() {
       toast.error('Erro ao confirmar recebimento.');
     } finally {
       setConfirmingId(null);
+      setConfirmAction(null);
     }
   };
 
-  const handleDeleteOrder = async (order) => {
-    if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
+  const doDeleteOrder = async (order) => {
     setCancelingId(order.id);
     try {
       await CatalogSale.delete(order.id);
@@ -164,15 +171,15 @@ export default function MyCatalogOrders() {
       toast.error('Erro ao excluir pedido');
     } finally {
       setCancelingId(null);
+      setConfirmAction(null);
     }
   };
 
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const deletableOrders = orders.filter(o => o.status === 'pending_payment' || o.status === 'canceled');
 
-  const handleDeleteAll = async () => {
-    if (deletableOrders.length === 0) return;
-    if (!window.confirm(`Excluir ${deletableOrders.length} pedido(s) pendentes/cancelados?\n\nEssa ação não pode ser desfeita.`)) return;
+  const doDeleteAll = async () => {
+    if (deletableOrders.length === 0) { setConfirmAction(null); return; }
     setIsDeletingAll(true);
     let deleted = 0;
     for (const order of deletableOrders) {
@@ -186,6 +193,7 @@ export default function MyCatalogOrders() {
     setOrders(prev => prev.filter(o => o.status !== 'pending_payment' && o.status !== 'canceled'));
     toast.success(`${deleted} pedido(s) excluído(s)`);
     setIsDeletingAll(false);
+    setConfirmAction(null);
   };
 
   const handleTrackClick = (order) => {
@@ -320,6 +328,37 @@ export default function MyCatalogOrders() {
           </>
         )}
       </div>
+
+      {/* Confirmações da plataforma (sem diálogo do navegador) */}
+      <ConfirmModal
+        open={confirmAction?.kind === 'receipt'}
+        title="Confirmar recebimento?"
+        message={<>Você confirma que recebeu <b className="text-white">{confirmAction?.order?.product_title}</b>?<br />Isso libera o pagamento pro vendedor.</>}
+        confirmLabel="✅ Sim, recebi"
+        loading={!!confirmingId}
+        onConfirm={() => doConfirmReceipt(confirmAction.order)}
+        onClose={() => setConfirmAction(null)}
+      />
+      <ConfirmModal
+        open={confirmAction?.kind === 'delete'}
+        danger
+        title="Excluir pedido?"
+        message={<>O pedido <b className="text-white">{confirmAction?.order?.product_title}</b> será removido permanentemente.</>}
+        confirmLabel="🗑️ Excluir"
+        loading={!!cancelingId}
+        onConfirm={() => doDeleteOrder(confirmAction.order)}
+        onClose={() => setConfirmAction(null)}
+      />
+      <ConfirmModal
+        open={confirmAction?.kind === 'deleteAll'}
+        danger
+        title={`Excluir ${deletableOrders.length} pedido(s)?`}
+        message="Somente pendentes/cancelados serão removidos. Essa ação não pode ser desfeita."
+        confirmLabel="🗑️ Excluir todos"
+        loading={isDeletingAll}
+        onConfirm={doDeleteAll}
+        onClose={() => setConfirmAction(null)}
+      />
 
       {ratingOrder && (
         <AvaliarLojistaModal
