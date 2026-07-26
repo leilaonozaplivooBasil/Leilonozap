@@ -32,7 +32,6 @@ import {
   ShoppingBag,
   CheckCircle,
   Clock,
-  Truck,
   ArrowLeft,
   Mail,
   Phone,
@@ -43,6 +42,11 @@ import {
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
+import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
+import AvaliarLojistaModal from '@/components/loja/AvaliarLojistaModal';
+import { supabase } from '@/api/supabaseClient';
+import { toast } from '@/components/ui/use-toast';
+import { Wallet, Filter } from 'lucide-react';
 import DigitalWalletBalance from '../components/wallet/DigitalWalletBalance';
 
 export default function Profile() {
@@ -81,6 +85,10 @@ export default function Profile() {
   });
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' ou 'orders'
   const [catalogOrders, setCatalogOrders] = useState([]);
+  const [orderFilter, setOrderFilter] = useState('todos');
+  const [ratingOrder, setRatingOrder] = useState(null);
+  const [confirmedIds, setConfirmedIds] = useState(new Set());
+  const [confirmingId, setConfirmingId] = useState(null);
 
   useEffect(() => {
     loadUserData();
@@ -91,20 +99,87 @@ export default function Profile() {
     try {
       const savedUser = localStorage.getItem('currentUser');
       if (!savedUser) return;
-      
+
       const user = JSON.parse(savedUser);
-      console.log('🔍 [Profile] Buscando pedidos para:', { id: user.id, email: user.email });
-      
-      const allOrders = await base44.entities.CatalogSale.list('-created_date', 500);
-      const userOrders = allOrders.filter(order => 
-        order.buyer_id === user.id || order.buyer_email === user.email
-      );
-      
-      console.log('✅ [Profile] Pedidos encontrados:', userOrders.length, userOrders);
-      setCatalogOrders(userOrders || []);
+
+      // Busca DIRETO no servidor por buyer_id e buyer_email (antes baixava 500
+      // pedidos de TODO MUNDO e filtrava no cliente).
+      const [byId, byEmail] = await Promise.all([
+        user.id ? base44.entities.CatalogSale.filter({ buyer_id: user.id }, '-created_date', 500).catch(() => []) : [],
+        user.email ? base44.entities.CatalogSale.filter({ buyer_email: user.email }, '-created_date', 500).catch(() => []) : [],
+      ]);
+      const seen = new Set();
+      const merged = [...(byId || []), ...(byEmail || [])].filter(o => {
+        if (!o?.id || seen.has(o.id)) return false;
+        seen.add(o.id);
+        return true;
+      });
+      merged.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+
+      // Anexa avaliações já feitas (pra mostrar "Você avaliou" nos cards)
+      try {
+        const { data: ratings } = await supabase.from('seller_ratings').select('sale_id,stars,comment').eq('buyer_id', user.id);
+        const byS = {};
+        (ratings || []).forEach((r) => { if (r.sale_id) byS[r.sale_id] = r; });
+        merged.forEach((o) => { o.minha_avaliacao = byS[o.id] || null; });
+      } catch (_) { /* sem avaliação ainda */ }
+
+      setCatalogOrders(merged);
     } catch (error) {
       console.error('❌ Erro ao carregar pedidos:', error);
       setCatalogOrders([]);
+    }
+  };
+
+  // Depósitos na carteira são transações, não pedidos de produto — cada um tem sua área.
+  const isWalletDeposit = (o) => /dep[óo]sito na carteira/i.test(o?.product_title || '');
+  const walletDeposits = catalogOrders.filter(isWalletDeposit);
+  const purchaseOrders = catalogOrders.filter(o => !isWalletDeposit(o));
+
+  const ORDER_FILTERS = [
+    { id: 'todos', label: 'Todos', match: () => true },
+    { id: 'andamento', label: 'Em andamento', match: (s) => ['pending_payment', 'paid', 'processing', 'preparando', 'shipped', 'saiu_entrega'].includes(s) },
+    { id: 'entregues', label: 'Entregues', match: (s) => ['entregue', 'delivered'].includes(s) },
+    { id: 'cancelados', label: 'Cancelados', match: (s) => ['canceled', 'cancelado'].includes(s) },
+  ];
+  const activeOrderFilter = ORDER_FILTERS.find(f => f.id === orderFilter) || ORDER_FILTERS[0];
+  const filteredPurchases = purchaseOrders.filter(o => activeOrderFilter.match(o.status));
+
+  // Mesmo fluxo do MyCatalogOrders: acompanhar usa sale_id (order_id NÃO abria nada)
+  const handleTrackOrder = (order) => {
+    navigate(createPageUrl('CatalogOrderTracking') + `?sale_id=${order.id}`);
+  };
+
+  const handleConfirmReceipt = async (order) => {
+    if (confirmingId) return;
+    if (!window.confirm(`Confirmar que você recebeu "${order.product_title}"?\n\nIsso libera o pagamento pro vendedor.`)) return;
+    setConfirmingId(order.id);
+    try {
+      const uid = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
+      const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
+      if (r?.success) {
+        setConfirmedIds(prev => new Set(prev).add(order.id));
+        toast({ title: '✅ Recebimento confirmado!', description: 'Pagamento liberado pro vendedor.' });
+      } else {
+        toast({ title: 'Não foi possível confirmar agora', description: r?.error || 'Tente novamente.', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('confirmarRecebimento falhou:', err);
+      toast({ title: 'Erro ao confirmar recebimento', variant: 'destructive' });
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  const handleDeleteOrder = async (order) => {
+    if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
+    try {
+      await base44.entities.CatalogSale.delete(order.id);
+      setCatalogOrders(prev => prev.filter(o => o.id !== order.id));
+      toast({ title: '🗑️ Pedido excluído' });
+    } catch (err) {
+      console.error('Erro ao excluir:', err);
+      toast({ title: 'Erro ao excluir pedido', variant: 'destructive' });
     }
   };
 
@@ -528,7 +603,7 @@ export default function Profile() {
               <Package className="w-4 h-4" />
               Meus Pedidos
               <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${isSaiDeBaixo ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-gray-300'}`}>
-                {catalogOrders.filter(o => o.status !== 'canceled').length}
+                {purchaseOrders.filter(o => !['canceled', 'cancelado'].includes(o.status)).length}
               </span>
             </button>
           </div>
@@ -994,74 +1069,163 @@ export default function Profile() {
         </>
         )}
 
-        {/* Tab Meus Pedidos */}
+        {/* Tab Meus Pedidos — repaginada 25/07: mesmo card rico do MyCatalogOrders
+            (avaliar, confirmar recebimento, rastreio), filtros por status e
+            depósitos na carteira separados das compras */}
         {activeTab === 'orders' && (
-          <div className="space-y-6">
-            {catalogOrders.length === 0 ? (
-              <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
-                <CardContent className="py-12 text-center">
-                  <ShoppingBag className={`w-16 h-16 mx-auto mb-4 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'}`} />
-                  <h3 className={`text-xl font-semibold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                    Nenhum pedido ainda
-                  </h3>
-                  <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                    Seus pedidos do catálogo aparecerão aqui
-                  </p>
+          <div className="space-y-8">
+            {purchaseOrders.length === 0 && walletDeposits.length === 0 ? (
+              <Card className="bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20">
+                <CardContent className="py-14 text-center">
+                  <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                  <h3 className="text-xl font-semibold mb-2 text-white">Nenhum pedido ainda</h3>
+                  <p className="text-gray-400 mb-6">Explore a Loja Virtual e faça sua primeira compra!</p>
+                  <Button
+                    onClick={() => navigate(createPageUrl('Catalog'))}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 font-bold"
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" />
+                    Ver Loja Virtual
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {catalogOrders.map(order => {
-                  const statusConfig = {
-                    pending_payment: { text: 'Aguardando Pagamento', icon: Clock, color: 'text-yellow-400' },
-                    paid: { text: 'Pago', icon: CheckCircle, color: 'text-green-400' },
-                    shipped: { text: 'Enviado', icon: Truck, color: 'text-blue-400' },
-                    delivered: { text: 'Entregue', icon: Package, color: 'text-purple-400' },
-                    canceled: { text: 'Cancelado', icon: X, color: 'text-red-400' }
-                  };
-                  const config = statusConfig[order.status] || statusConfig.pending_payment;
-                  
-                  return (
-                    <Card key={order.id} className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 hover:border-green-500/30 transition-all'}>
-                      <CardContent className="p-4">
-                        <div className="flex gap-4 mb-3">
-                          {order.product_image && (
-                            <img 
-                              src={order.product_image} 
-                              alt={order.product_title}
-                              className="w-20 h-20 object-cover rounded-lg"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h4 className={`font-semibold line-clamp-2 mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                              {order.product_title}
-                            </h4>
-                            <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                              {new Date(order.created_date).toLocaleDateString('pt-BR')}
-                            </p>
-                            <p className={`font-bold text-lg ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
-                              R$ {(order.total_amount || 0).toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mb-3">
-                          <config.icon className={`w-4 h-4 ${config.color}`} />
-                          <span className={`text-sm ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>{config.text}</span>
-                        </div>
+              <>
+                {/* 🛍️ COMPRAS DA LOJA */}
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">
+                        <ShoppingBag className="w-5 h-5 text-green-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-white leading-tight">Compras da Loja</h3>
+                        <p className="text-xs text-gray-400">{purchaseOrders.length} pedido{purchaseOrders.length !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                      className="border-green-500/30 bg-green-500/10 text-green-300 hover:bg-green-500/20 hover:text-green-200"
+                    >
+                      Ver página completa
+                    </Button>
+                  </div>
 
-                        <Button
-                          onClick={() => navigate(createPageUrl('CatalogOrderTracking') + `?order_id=${order.id}`)}
-                          variant="outline"
-                          className={`w-full ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 hover:bg-gray-100' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                  {/* Filtros por status */}
+                  <div className="mb-5 flex flex-wrap gap-2 items-center">
+                    <span className="flex items-center gap-1.5 text-gray-400 text-xs font-semibold mr-1">
+                      <Filter className="w-3.5 h-3.5" /> Filtrar:
+                    </span>
+                    {ORDER_FILTERS.map(f => {
+                      const count = f.id === 'todos' ? purchaseOrders.length : purchaseOrders.filter(o => f.match(o.status)).length;
+                      return (
+                        <button
+                          key={f.id}
+                          onClick={() => setOrderFilter(f.id)}
+                          className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-300 flex items-center gap-1.5 ${orderFilter === f.id
+                            ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+                            : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700'
+                            }`}
                         >
-                          Acompanhar Pedido
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                          {f.label}
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${orderFilter === f.id ? 'bg-white/20' : 'bg-gray-700'}`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {filteredPurchases.length === 0 ? (
+                    <div className="text-center py-10 bg-gray-800/20 rounded-xl border border-white/5">
+                      <Package className="w-10 h-10 mx-auto text-gray-600 mb-2" />
+                      <p className="text-gray-400 text-sm">Nenhum pedido nesta categoria</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                      {filteredPurchases.map(order => (
+                        <CatalogOrderCard
+                          key={order.id}
+                          order={order}
+                          onTrackClick={handleTrackOrder}
+                          onDeleteClick={handleDeleteOrder}
+                          onRateClick={setRatingOrder}
+                          onConfirmReceipt={handleConfirmReceipt}
+                          confirmado={confirmedIds.has(order.id)}
+                          confirmando={confirmingId === order.id}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 💰 DEPÓSITOS NA CARTEIRA — transações, não pedidos */}
+                {walletDeposits.length > 0 && (
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-500/30">
+                          <Wallet className="w-5 h-5 text-yellow-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-white leading-tight">Depósitos na Carteira</h3>
+                          <p className="text-xs text-gray-400">{walletDeposits.length} depósito{walletDeposits.length !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(createPageUrl('WalletHistory'))}
+                        className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300 hover:bg-yellow-500/20 hover:text-yellow-200"
+                      >
+                        Ver extrato completo
+                      </Button>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-gray-800/30 backdrop-blur-xl overflow-hidden divide-y divide-white/5">
+                      {walletDeposits.map(dep => {
+                        const pago = ['paid', 'entregue', 'delivered'].includes(dep.status);
+                        return (
+                          <div key={dep.id} className="flex items-center gap-3 px-4 py-3">
+                            <div className="w-9 h-9 rounded-full grid place-items-center bg-green-500/15 border border-green-500/25 shrink-0">
+                              <Wallet className="w-4 h-4 text-green-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-white truncate">Depósito na Carteira Digital</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(dep.created_date).toLocaleDateString('pt-BR')} às {new Date(dep.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-black text-green-400">+ R$ {(dep.total_amount || dep.sale_price || 0).toFixed(2)}</p>
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${pago ? 'text-green-400' : 'text-yellow-400'}`}>
+                                {pago ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                {pago ? 'Confirmado' : 'Aguardando'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Modal de avaliação do vendedor */}
+            {ratingOrder && (
+              <AvaliarLojistaModal
+                order={ratingOrder}
+                buyer={currentUser}
+                onClose={() => setRatingOrder(null)}
+                onDone={({ saleId, stars, comment }) => {
+                  setCatalogOrders(prev => prev.map(o => o.id === saleId ? { ...o, minha_avaliacao: { stars, comment } } : o));
+                  setRatingOrder(null);
+                  toast({ title: '⭐ Avaliação enviada!', description: 'Obrigado pelo feedback.' });
+                }}
+              />
             )}
           </div>
         )}
