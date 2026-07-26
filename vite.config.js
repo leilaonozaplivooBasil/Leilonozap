@@ -67,6 +67,19 @@ export default defineConfig(({ command }) => ({
       },
     }),
   ],
+  // 🔌 DEV: /api/* só existe como serverless na Vercel. Sem este proxy, qualquer
+  // gravação feita em localhost (editar usuário, mover na rede, promover) caía no
+  // fallback SPA e não salvava nada. Agora o dev fala com a API de produção —
+  // ⚠️ as alterações feitas em localhost VALEM em produção, porque os dados são os mesmos.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://leilaonozap.net',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   build: {
     target: 'es2020',
     cssCodeSplit: true,

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -534,8 +534,15 @@ export default function NetworkOverview() {
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   // Faixa de estatísticas recolhível + árvore em tela cheia (mais espaço de trabalho)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
+
+  // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
+  const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);
+  const trashedUsers = useMemo(() => allUsers.filter(u => u.active === false), [allUsers]);
 
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
@@ -595,6 +602,7 @@ export default function NetworkOverview() {
       toast.error("Erro ao carregar dados do Sistema de Alavancagem."); // Changed here
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
   }, []);
 
@@ -1066,35 +1074,120 @@ export default function NetworkOverview() {
     toast.success("Usuário atualizado com sucesso!");
   };
 
-  const handleDeleteUser = async (user) => {
-    const confirmDelete = window.confirm(
-      `ATENÇÃO: Deletar usuário e TODOS os seus dados?\n\n` +
-      `Usuário: ${user.full_name}\n` +
-      `Email: ${user.email}\n\n` +
-      `Esta ação é IRREVERSÍVEL!\n\n` +
-      `Tem certeza que deseja continuar?`
-    );
-    if (!confirmDelete) return;
+  /* ------------------------------------------------------------------ */
+  /* LIXEIRA — exclusão que não quebra a estrutura de negócio            */
+  /*                                                                     */
+  /* Excluir NÃO apaga nada do banco: marca o usuário como inativo       */
+  /* (active=false) e religa os indicados dele a quem indicava ele, para */
+  /* a rede não ficar com gente órfã. Dá para restaurar depois.          */
+  /* ------------------------------------------------------------------ */
+  const actorId = (() => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { return null; }
+  })();
 
-    setDeletingUserId(user.id);
+  // Quantas pessoas existem abaixo de alguém (equipe inteira)
+  const countDescendants = useCallback((userId) => {
+    const stack = [userId];
+    const seen = new Set();
+    while (stack.length) {
+      const cur = stack.pop();
+      for (const u of allUsers) {
+        if (u.referred_by_id === cur && !seen.has(u.id)) {
+          seen.add(u.id);
+          stack.push(u.id);
+        }
+      }
+    }
+    return seen.size;
+  }, [allUsers]);
+
+  // Abre o diálogo (a árvore e a tabela chamam isto no lugar de deletar direto)
+  const handleDeleteUser = (user) => {
+    if (user.active === false) {
+      handleRestoreUser(user);
+      return;
+    }
+    setDeleteTarget(user);
+    setDeleteConfirmText('');
+  };
+
+  const handleMoveToTrash = async () => {
+    const user = deleteTarget;
+    if (!user) return;
     setIsDeleting(true);
-    toast.info("Deletando usuário...");
-
+    setDeletingUserId(user.id);
     try {
-      // Chamar função backend para deletar usuário e todos os dados associados
-      await base44.functions.invoke('deleteUserAndData', { user_id: user.id });
-      toast.success(`${user.full_name} e todos os seus dados foram deletados!`);
+      // 1) Preserva a estrutura: os indicados diretos sobem para o indicador dele
+      const directChildren = allUsers.filter(u => u.referred_by_id === user.id);
+      const newParent = user.referred_by_id || null;
+      for (const child of directChildren) {
+        await base44.functions.invoke('updateUserNetwork', {
+          target_user_id: child.id,
+          update_data: { referred_by_id: newParent }
+        });
+      }
+
+      // 2) Manda para a lixeira (nada é apagado)
+      const result = await base44.functions.invoke('adminUpdateUser', {
+        userId: user.id,
+        updates: { active: false },
+        actorId,
+      });
+      if (!result || result.success !== true) {
+        throw new Error(result?.error || 'não foi possível concluir');
+      }
+
+      toast.success(
+        directChildren.length
+          ? `${user.full_name} foi para a lixeira. ${directChildren.length} indicado(s) passaram para ${newParent ? 'o indicador acima' : 'a raiz'}.`
+          : `${user.full_name} foi para a lixeira.`
+      );
+      setDeleteTarget(null);
+      setDeleteConfirmText('');
       await fetchData();
     } catch (error) {
-      console.error("Erro ao deletar usuário:", error);
-      toast.error(`Erro ao deletar usuário: ${error.message}`);
+      toast.error('Erro ao excluir: ' + (error?.message || 'falha'));
     } finally {
-      setDeletingUserId(null);
       setIsDeleting(false);
+      setDeletingUserId(null);
     }
   };
 
-  if (isLoading) {
+  const handleRestoreUser = async (user) => {
+    try {
+      const result = await base44.functions.invoke('adminUpdateUser', {
+        userId: user.id,
+        updates: { active: true },
+        actorId,
+      });
+      if (!result || result.success !== true) {
+        throw new Error(result?.error || 'não foi possível restaurar');
+      }
+      toast.success(`${user.full_name} foi restaurado.`);
+      await fetchData();
+    } catch (error) {
+      toast.error('Erro ao restaurar: ' + (error?.message || 'falha'));
+    }
+  };
+
+  // Soltar da rede: vira raiz, sem indicador
+  const handleDetachUser = async (user) => {
+    try {
+      await base44.functions.invoke('updateUserNetwork', {
+        target_user_id: user.id,
+        update_data: { referred_by_id: null }
+      });
+      toast.success(`${user.full_name} agora é raiz da rede.`);
+      await fetchData();
+    } catch (error) {
+      toast.error('Erro ao soltar da rede: ' + (error?.message || 'falha'));
+    }
+  };
+
+  // ⚠️ O spinner de tela cheia só aparece no PRIMEIRO carregamento. Antes ele
+  // voltava a cada refresh (editar, promover, mover) e remontava a página inteira —
+  // a árvore perdia modo, zoom e o que estava expandido ("voltava pro modo lista").
+  if (isLoading && !hasLoadedOnce) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-green-500" />
@@ -1298,14 +1391,18 @@ export default function NetworkOverview() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="licensees" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-700/50">
+              <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
                 <TabsTrigger value="licensees">
                   <Network className="w-4 h-4 mr-2" />
                   Árvore da Rede
                 </TabsTrigger>
                 <TabsTrigger value="users">
                   <Users className="w-4 h-4 mr-2" />
-                  Usuários Gerais ({allUsers.length})
+                  Usuários Gerais ({activeUsers.length})
+                </TabsTrigger>
+                <TabsTrigger value="trash">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Lixeira ({trashedUsers.length})
                 </TabsTrigger>
               </TabsList>
 
@@ -1352,12 +1449,13 @@ export default function NetworkOverview() {
                   <div className={treeFullscreen ? "flex-1 min-h-0 overflow-hidden" : ""}>
                     {allUsers.length > 0 ? (
                       <TreeHierarchy
-                        users={allUsers}
+                        users={activeUsers}
                         fullHeight={treeFullscreen}
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
                         onPromote={handlePromote}
                         onRelink={handleRelink}
+                        onDetach={handleDetachUser}
                       />
                     ) : (
                       <div className="text-center py-12 text-gray-500">
@@ -1503,6 +1601,53 @@ export default function NetworkOverview() {
                   </CardContent>
                 </Card>
               </TabsContent>
+              {/* ABA 3: LIXEIRA — nada foi apagado, dá para restaurar */}
+              <TabsContent value="trash" className="mt-4">
+                <div className="rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <Trash2 className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-red-300">Lixeira</span>
+                    <span className="text-[11px] text-gray-500">
+                      ninguém é apagado do banco — quem está aqui sai da árvore e perde o acesso, e pode voltar quando você quiser
+                    </span>
+                  </div>
+
+                  {trashedUsers.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Trash2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                      <p className="text-sm">A lixeira está vazia.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60">
+                      {trashedUsers.map((u) => {
+                        const lv = CAREER_LEVELS.find(l => l.id === (u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                        return (
+                          <div key={u.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-700/20">
+                            <div className={`w-9 h-9 rounded-full ${lv.color} flex items-center justify-center text-white text-[11px] font-bold overflow-hidden flex-shrink-0 opacity-70`}>
+                              {u.avatar_url
+                                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : (u.full_name || '??').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] text-gray-300 truncate">{u.full_name}</p>
+                              <p className="text-[11px] text-gray-500 truncate">{u.email} · {lv.name}</p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRestoreUser(u)}
+                              className="h-8 text-[12px] border-emerald-700 text-emerald-400 hover:bg-emerald-600/15"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                              Restaurar
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
@@ -1613,6 +1758,89 @@ export default function NetworkOverview() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* CONFIRMAÇÃO DE EXCLUSÃO — precisa digitar "deletar" */}
+      {deleteTarget && (() => {
+        const diretos = allUsers.filter(u => u.referred_by_id === deleteTarget.id).length;
+        const equipe = countDescendants(deleteTarget.id);
+        const indicador = deleteTarget.referred_by_id
+          ? allUsers.find(u => u.id === deleteTarget.referred_by_id)
+          : null;
+        const podeExcluir = deleteConfirmText.trim().toLowerCase() === 'deletar';
+        return (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-gray-900 shadow-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
+                <TriangleAlert className="w-4 h-4 text-red-400" />
+                <span className="text-[14px] font-semibold text-white">Excluir usuário da rede</span>
+              </div>
+
+              <div className="px-4 py-4 space-y-3 text-[13px] text-gray-300">
+                <p>
+                  <strong className="text-white">{deleteTarget.full_name}</strong>
+                  <span className="text-gray-500"> · {deleteTarget.email}</span>
+                </p>
+
+                <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-3 space-y-1.5 text-[12px]">
+                  <p className="flex items-center gap-2 text-gray-300">
+                    <Users className="w-3.5 h-3.5 text-gray-500" />
+                    {diretos} indicado(s) direto(s) · {equipe} pessoa(s) na equipe abaixo
+                  </p>
+                  {diretos > 0 && (
+                    <p className="text-emerald-400/90">
+                      A estrutura é preservada: os indicados diretos passam para{' '}
+                      <strong>{indicador ? indicador.full_name : 'a raiz da rede'}</strong>.
+                    </p>
+                  )}
+                  <p className="text-gray-500">
+                    Nada é apagado do banco — o cadastro vai para a Lixeira e pode ser restaurado.
+                  </p>
+                  {diretos > 0 && (
+                    <p className="text-emerald-400/80">
+                      No plano de alavancagem, o rebate dessa perna passa a subir direto por{' '}
+                      <strong>{indicador ? indicador.full_name : 'a raiz'}</strong>.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-gray-400 text-[12px]">
+                    Para confirmar, escreva <strong className="text-red-400">deletar</strong>
+                  </Label>
+                  <Input
+                    autoFocus
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && podeExcluir) handleMoveToTrash(); }}
+                    placeholder="deletar"
+                    className="mt-1 bg-gray-800 border-gray-600 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isDeleting}
+                  onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}
+                  className="h-8 text-[12px] border-gray-700 text-gray-300 hover:bg-gray-800"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!podeExcluir || isDeleting}
+                  onClick={handleMoveToTrash}
+                  className="h-8 text-[12px] bg-red-600 hover:bg-red-500 disabled:opacity-40"
+                >
+                  {isDeleting ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Excluindo…</> : <><Trash2 className="w-3.5 h-3.5 mr-1.5" />Excluir</>}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {editingUserFull && (
         <UserEditModal

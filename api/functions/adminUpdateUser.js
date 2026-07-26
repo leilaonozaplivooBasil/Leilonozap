@@ -24,7 +24,10 @@ function sb(path, opts = {}) {
 const ALLOWED = [
   'full_name', 'nickname', 'email', 'phone', 'role', 'referred_by_id',
   'career_levels', 'primary_career_level', 'display_first_name',
-  'display_last_name', 'avatar_url', 'enabled_panels', 'is_seller', 'store_name',
+  'display_last_name', 'avatar_url', 'profile_photo_url', 'enabled_panels',
+  'is_seller', 'store_name',
+  // 'active' = arquivar/reativar usuário sem apagar histórico (painel da rede)
+  'active',
 ];
 
 export default async function handler(req, res) {

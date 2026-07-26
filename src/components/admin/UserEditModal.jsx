@@ -25,6 +25,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
     const [displayFirstName, setDisplayFirstName] = useState('');
     const [displayLastName, setDisplayLastName] = useState('');
     const [referrerId, setReferrerId] = useState('');
+    const [avatarUrlInput, setAvatarUrlInput] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -68,14 +69,29 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
         setIsUploadingAvatar(true);
         try {
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            if (!file_url) throw new Error('o servidor não devolveu a URL do arquivo');
             setUserData(prev => ({ ...prev, avatar_url: file_url }));
-            toast.success('Foto de perfil atualizada!');
+            toast.success('Foto anexada — salve para confirmar.');
         } catch (error) {
             console.error("Erro ao fazer upload:", error);
-            toast.error('Erro ao fazer upload da foto.');
+            toast.error('Erro ao enviar o arquivo: ' + (error?.message || 'falha'));
         } finally {
             setIsUploadingAvatar(false);
+            e.target.value = '';
         }
+    };
+
+    // Foto por URL: cola o link e aplica direto no perfil
+    const applyAvatarUrl = () => {
+        const url = (avatarUrlInput || '').trim();
+        if (!url) return;
+        if (!/^https?:\/\//i.test(url)) {
+            toast.error('A URL precisa começar com http:// ou https://');
+            return;
+        }
+        setUserData(prev => ({ ...prev, avatar_url: url }));
+        setAvatarUrlInput('');
+        toast.success('Foto por URL aplicada — salve para confirmar.');
     };
 
     const toggleLevel = (levelId) => {
@@ -193,28 +209,58 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                                     <span className="text-gray-400 text-xs text-center px-1">Sem foto</span>
                                 )}
                             </div>
-                            <div className="flex-1">
-                                <Label htmlFor="avatar-upload" className="text-xs text-gray-400 mb-2 block">
-                                    Foto de Perfil
+                            <div className="flex-1 space-y-2">
+                                <Label htmlFor="avatar-upload" className="text-xs text-gray-400 block">
+                                    Foto de Perfil — envie um arquivo ou cole uma URL
                                 </Label>
                                 <input
                                     id="avatar-upload"
                                     type="file"
-                                    accept="image/*"
                                     onChange={handleAvatarUpload}
                                     disabled={isUploadingAvatar}
                                     className="hidden"
                                 />
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700"
-                                    onClick={() => document.getElementById('avatar-upload')?.click()}
-                                    disabled={isUploadingAvatar}
-                                >
-                                    <Upload className="w-3 h-3 mr-2" />
-                                    {isUploadingAvatar ? 'Enviando...' : 'Escolher Foto'}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700"
+                                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                                        disabled={isUploadingAvatar}
+                                    >
+                                        {isUploadingAvatar
+                                            ? <><Loader2 className="w-3 h-3 mr-2 animate-spin" />Enviando…</>
+                                            : <><Upload className="w-3 h-3 mr-2" />Escolher arquivo</>}
+                                    </Button>
+                                    {userData.avatar_url && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-red-400 hover:bg-red-500/15"
+                                            onClick={() => setUserData(prev => ({ ...prev, avatar_url: null }))}
+                                        >
+                                            Remover foto
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        value={avatarUrlInput}
+                                        onChange={(e) => setAvatarUrlInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyAvatarUrl(); } }}
+                                        placeholder="https://… cole o link da imagem"
+                                        className="bg-gray-700 border-gray-600 text-white h-8 text-xs"
+                                    />
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 border-gray-600 text-gray-300 hover:bg-gray-700 flex-shrink-0"
+                                        onClick={applyAvatarUrl}
+                                        disabled={!avatarUrlInput.trim()}
+                                    >
+                                        Aplicar
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                         
@@ -308,29 +354,6 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                             <p className="col-span-2 text-xs text-gray-400 italic">
                                 Como aparecerá: "<strong className="text-white">{displayFirstName} {displayLastName}</strong>"
                             </p>
-                        </div>
-                    </div>
-
-                    {/* HIERARQUIA / INDICADOR */}
-                    <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Hierarquia (Sistema de Alavancagem)</h3>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Indicador</Label>
-                            <div className="col-span-3">
-                                <Select value={referrerId} onValueChange={setReferrerId}>
-                                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                                        <SelectValue placeholder="Selecione o indicador (opcional)" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
-                                        <SelectItem value={null}>Sem indicação</SelectItem>
-                                        {(Array.isArray(allUsers) ? allUsers.filter(u => u.id !== user.id) : []).map(u => (
-                                            <SelectItem key={u.id} value={u.id}>
-                                                {u.full_name} — {u.email}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
                         </div>
                     </div>
 

@@ -18,6 +18,14 @@ import {
   TriangleAlert,
   Rows3,
   Network as NetworkIcon,
+  ImagePlus,
+  Unlink,
+  RotateCcw,
+  Phone,
+  AtSign,
+  Wallet,
+  CalendarDays,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -69,9 +77,19 @@ export default function TreeHierarchy({
   onDelete,
   onPromote,
   onRelink,
+  onDetach,
   fullHeight = false,
 }) {
-  const [mode, setMode] = useState('list'); // 'list' | 'chart'
+  // Modo fica salvo: recarregar dados (editar, promover, mover) não pode
+  // jogar o admin de volta para a Lista sem ele pedir.
+  const [mode, setMode] = useState(() => {
+    try {
+      return localStorage.getItem('treeViewMode') === 'chart' ? 'chart' : 'list';
+    } catch {
+      return 'list';
+    }
+  });
+  const [menu, setMenu] = useState(null); // menu do botão direito: { id, x, y }
   const [expanded, setExpanded] = useState(() => new Set());
   const [selectedId, setSelectedId] = useState(null);
   const [zoom, setZoom] = useState(1);
@@ -93,6 +111,9 @@ export default function TreeHierarchy({
   const zoomRef = useRef(zoom);
   const dropRef = useRef(null);
 
+  useEffect(() => {
+    try { localStorage.setItem('treeViewMode', mode); } catch { /* storage indisponível */ }
+  }, [mode]);
   useEffect(() => { panRef.current = pan; }, [pan]);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { dropRef.current = dropTarget; }, [dropTarget]);
@@ -283,6 +304,7 @@ export default function TreeHierarchy({
   }, [zoomBy]);
 
   const onBackgroundPointerDown = (e) => {
+    setMenu(null);
     if (e.button !== 0) return;
     panState.current = { startX: e.clientX, startY: e.clientY, origin: { ...panRef.current } };
     setIsPanning(true);
@@ -596,6 +618,7 @@ export default function TreeHierarchy({
           backgroundSize: '26px 26px',
         }}
         onPointerDown={onBackgroundPointerDown}
+        onContextMenu={(e) => e.preventDefault()}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
@@ -626,6 +649,7 @@ export default function TreeHierarchy({
 
             const pointerProps = {
               onPointerDown: (e) => {
+                if (e.button === 2) return; // botão direito abre o menu, não arrasta
                 e.stopPropagation();
                 dragState.current = { id: n.id, moved: false, startX: e.clientX, startY: e.clientY };
                 viewportRef.current?.setPointerCapture?.(e.pointerId);
@@ -637,6 +661,14 @@ export default function TreeHierarchy({
               onDoubleClick: (e) => {
                 e.stopPropagation();
                 if (n.childCount) toggle(n.id);
+              },
+              // Botão direito: menu de ações direto no nó
+              onContextMenu: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = viewportRef.current.getBoundingClientRect();
+                setSelectedId(n.id);
+                setMenu({ id: n.id, x: e.clientX - rect.left, y: e.clientY - rect.top });
               },
             };
 
@@ -678,7 +710,7 @@ export default function TreeHierarchy({
                     role="button"
                     tabIndex={0}
                     title={n.data.email}
-                    className={`flex items-center gap-2.5 rounded-xl border px-2.5 h-[54px] cursor-grab active:cursor-grabbing
+                    className={`group flex items-center gap-2 rounded-xl border pl-2.5 pr-1.5 h-[54px] cursor-grab active:cursor-grabbing
                       transition-colors bg-gray-900
                       ${
                         isTarget
@@ -714,6 +746,18 @@ export default function TreeHierarchy({
                         {level.name}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit?.(n.data);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 p-1 rounded-md text-blue-400 hover:bg-blue-500/15"
+                      title="Editar dados desta pessoa"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     {expandButton}
                   </div>
                 </div>
@@ -722,7 +766,7 @@ export default function TreeHierarchy({
 
             /* ---------- modo ORGANOGRAMA ---------- */
             return (
-              <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, width: V.node }}>
+              <div key={n.id} className="absolute group/node" style={{ left: n.x, top: n.y, width: V.node }}>
                 <div
                   {...pointerProps}
                   role="button"
@@ -757,6 +801,20 @@ export default function TreeHierarchy({
 
                 {expandButton}
 
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(n.data);
+                  }}
+                  className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-gray-900 border border-blue-500/50 text-blue-400
+                    flex items-center justify-center opacity-0 hover:opacity-100 focus:opacity-100 group-hover/node:opacity-100 transition-opacity"
+                  title="Editar dados desta pessoa"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+
                 <div className="absolute top-full mt-3.5 left-1/2 -translate-x-1/2 w-[128px] text-center pointer-events-none">
                   <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">
                     {firstAndLast(n.data.full_name)}
@@ -786,67 +844,228 @@ export default function TreeHierarchy({
         )}
       </div>
 
-      {/* -------- Painel de detalhes -------- */}
-      {selected && (
-        <div className="absolute top-14 right-3 z-20 w-64 rounded-xl border border-gray-700 bg-gray-900/97 shadow-2xl overflow-hidden">
-          <div className="flex items-start gap-3 p-3 border-b border-gray-800">
+      {/* -------- Menu do botão direito -------- */}
+      {menu && (() => {
+        const target = byId.get(menu.id);
+        if (!target) return null;
+        const isTrashed = target.active === false;
+        const item = 'w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-left transition-colors';
+        return (
+          <>
+            <div className="absolute inset-0 z-40" onPointerDown={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }} />
             <div
-              className={`w-10 h-10 rounded-full ${getCareerColor(
-                selected.primary_career_level || 'usuario'
-              )} flex items-center justify-center text-white text-xs font-bold overflow-hidden flex-shrink-0`}
+              className="absolute z-50 w-56 rounded-xl border border-gray-700 bg-gray-900 shadow-2xl overflow-hidden py-1"
+              style={{ left: Math.min(menu.x, (viewportRef.current?.clientWidth || 600) - 240), top: Math.min(menu.y, (viewportRef.current?.clientHeight || 400) - 260) }}
             >
-              {selected.avatar_url ? (
-                <img src={selected.avatar_url} alt={selected.full_name} className="w-full h-full object-cover" />
-              ) : (
-                getInitials(selected.full_name)
+              <div className="px-3 py-1.5 border-b border-gray-800 mb-1">
+                <p className="text-[12px] font-semibold text-white truncate">{target.full_name}</p>
+                <p className="text-[10.5px] text-gray-500 truncate">{target.email}</p>
+              </div>
+
+              <button type="button" className={`${item} text-blue-300 hover:bg-blue-500/15`}
+                onClick={() => { setMenu(null); onEdit?.(target); }}>
+                <Pencil className="w-3.5 h-3.5" />
+                Editar dados
+              </button>
+              <button type="button" className={`${item} text-blue-300 hover:bg-blue-500/15`}
+                onClick={() => { setMenu(null); onEdit?.(target); }}>
+                <ImagePlus className="w-3.5 h-3.5" />
+                Anexar foto (arquivo ou URL)
+              </button>
+              <button type="button" className={`${item} text-emerald-300 hover:bg-emerald-500/15`}
+                onClick={() => { setMenu(null); onPromote?.(target); }}>
+                <Star className="w-3.5 h-3.5" />
+                Promover / mudar cargo
+              </button>
+
+              {target.children.length > 0 && (
+                <button type="button" className={`${item} text-gray-300 hover:bg-white/5`}
+                  onClick={() => { setMenu(null); toggle(target.id); }}>
+                  {expanded.has(target.id) ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  {expanded.has(target.id) ? 'Recolher indicados' : `Ver ${target.children.length} indicados`}
+                </button>
               )}
+
+              {target.referred_by_id && onDetach && (
+                <button type="button" className={`${item} text-amber-300 hover:bg-amber-500/15`}
+                  onClick={() => { setMenu(null); onDetach(target); }}>
+                  <Unlink className="w-3.5 h-3.5" />
+                  Soltar da rede (virar raiz)
+                </button>
+              )}
+
+              <div className="my-1 border-t border-gray-800" />
+
+              <button type="button" className={`${item} ${isTrashed ? 'text-emerald-300 hover:bg-emerald-500/15' : 'text-red-400 hover:bg-red-500/15'}`}
+                onClick={() => { setMenu(null); onDelete?.(target); }}>
+                {isTrashed ? <RotateCcw className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {isTrashed ? 'Restaurar da lixeira' : 'Excluir (vai para a lixeira)'}
+              </button>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-white text-[13px] font-semibold truncate">{selected.full_name}</p>
-              <p className={`text-[11px] ${selectedLevel.textColor}`}>{selectedLevel.name}</p>
-            </div>
+          </>
+        );
+      })()}
+
+      {/* -------- Perfil expandido (clique simples no nó) -------- */}
+      {selected && (
+        <div className="absolute top-[46px] right-0 bottom-0 z-30 w-[330px] max-w-[92%] border-l border-gray-700 bg-gray-900/98 shadow-2xl overflow-y-auto">
+          {/* capa + identidade */}
+          <div className="relative">
+            <div className={`h-16 ${getCareerColor(selected.primary_career_level || 'usuario')} opacity-30`} />
             <button
               type="button"
               onClick={() => setSelectedId(null)}
-              className="text-gray-500 hover:text-white p-0.5"
-              aria-label="Fechar detalhes"
+              className="absolute top-2 right-2 p-1 rounded-md bg-black/40 text-gray-300 hover:text-white hover:bg-black/60"
+              aria-label="Fechar perfil"
             >
               <X className="w-4 h-4" />
             </button>
+            <div className="px-4 -mt-8 pb-3">
+              <div
+                className={`w-16 h-16 rounded-full ${getCareerColor(
+                  selected.primary_career_level || 'usuario'
+                )} flex items-center justify-center text-white text-lg font-bold overflow-hidden border-4 border-gray-900`}
+              >
+                {selected.avatar_url ? (
+                  <img src={selected.avatar_url} alt={selected.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  getInitials(selected.full_name)
+                )}
+              </div>
+              <p className="mt-2 text-[15px] font-bold text-white leading-tight">{selected.full_name}</p>
+              <p className={`text-[12px] font-semibold ${selectedLevel.textColor}`}>{selectedLevel.name}</p>
+              {selected.active === false && (
+                <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
+                  na lixeira
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="px-3 py-2 space-y-1.5 text-[11.5px]">
-            <p className="flex items-center gap-1.5 text-gray-400 truncate">
-              <Mail className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-              {selected.email}
-            </p>
-            <p className="flex items-center gap-1.5 text-gray-400">
-              <Users className="w-3.5 h-3.5 text-gray-500" />
-              {selected.children.length} indicado(s) diretos
-            </p>
-            <p className="flex items-center gap-1.5 text-gray-400 truncate">
-              <GitBranch className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-              {selectedParent ? `Indicado por ${selectedParent.full_name}` : 'Raiz da rede'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1 p-2 border-t border-gray-800">
+          {/* ações */}
+          <div className="grid grid-cols-4 gap-1 px-3 pb-3 border-b border-gray-800">
             <Button size="sm" variant="ghost" onClick={() => onEdit?.(selected)}
-              className="h-auto py-1.5 text-[10.5px] text-blue-400 hover:bg-blue-500/15 flex-col gap-0.5">
-              <Pencil className="w-3.5 h-3.5" />
+              className="h-auto py-2 text-[10px] text-blue-400 hover:bg-blue-500/15 flex-col gap-1">
+              <Pencil className="w-4 h-4" />
               Editar
             </Button>
+            <Button size="sm" variant="ghost" onClick={() => onEdit?.(selected)}
+              className="h-auto py-2 text-[10px] text-sky-400 hover:bg-sky-500/15 flex-col gap-1">
+              <ImagePlus className="w-4 h-4" />
+              Foto
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => onPromote?.(selected)}
-              className="h-auto py-1.5 text-[10.5px] text-emerald-400 hover:bg-emerald-500/15 flex-col gap-0.5">
-              <Star className="w-3.5 h-3.5" />
+              className="h-auto py-2 text-[10px] text-emerald-400 hover:bg-emerald-500/15 flex-col gap-1">
+              <Star className="w-4 h-4" />
               Promover
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onDelete?.(selected)}
-              className="h-auto py-1.5 text-[10.5px] text-red-400 hover:bg-red-500/15 flex-col gap-0.5">
-              <Trash2 className="w-3.5 h-3.5" />
-              Excluir
+              className={`h-auto py-2 text-[10px] flex-col gap-1 ${
+                selected.active === false
+                  ? 'text-emerald-400 hover:bg-emerald-500/15'
+                  : 'text-red-400 hover:bg-red-500/15'
+              }`}>
+              {selected.active === false ? <RotateCcw className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+              {selected.active === false ? 'Restaurar' : 'Excluir'}
             </Button>
           </div>
+
+          {/* dados */}
+          <div className="px-4 py-3 space-y-2.5 text-[12px]">
+            <Field icon={Mail} label="E-mail" value={selected.email} />
+            {selected.phone && <Field icon={Phone} label="Telefone" value={selected.phone} />}
+            {selected.nickname && <Field icon={AtSign} label="Apelido nos lances" value={selected.nickname} />}
+            <Field
+              icon={Users}
+              label="Indicados diretos"
+              value={`${selected.children.length} pessoa(s)`}
+            />
+            <Field
+              icon={GitBranch}
+              label="Indicado por"
+              value={selectedParent ? selectedParent.full_name : 'Raiz da rede — sem indicador'}
+            />
+            {selected.referral_code && (
+              <Field icon={LinkIcon} label="Código de indicação" value={selected.referral_code} />
+            )}
+            <Field
+              icon={Wallet}
+              label="Saldo"
+              value={`R$ ${Number(selected.valora_pay_balance || selected.saldo_disponivel || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+            />
+            {selected.created_date && (
+              <Field
+                icon={CalendarDays}
+                label="Cadastro"
+                value={new Date(selected.created_date).toLocaleDateString('pt-BR')}
+              />
+            )}
+            {/* O que essa posição significa no plano de alavancagem */}
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-900/12 p-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
+                No plano de alavancagem
+              </p>
+              <p className="text-[11.5px] text-gray-300 leading-relaxed">
+                <strong className={selectedLevel.textColor}>{selectedLevel.name}</strong>
+                {selectedLevel.venda_direta_pct > 0 && (
+                  <> — {selectedLevel.venda_direta_pct}% de venda direta</>
+                )}
+              </p>
+              {selectedLevel.regra && (
+                <p className="text-[10.5px] text-gray-500 leading-snug mt-1">{selectedLevel.regra}</p>
+              )}
+              <p className="text-[10.5px] text-gray-500 leading-snug mt-1.5">
+                A posição na árvore define a cadeia de rebate: mover esta pessoa muda quem
+                recebe sobre a equipe dela.
+              </p>
+            </div>
+
+            {Array.isArray(selected.career_levels) && selected.career_levels.length > 1 && (
+              <div>
+                <p className="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1">Todos os cargos</p>
+                <div className="flex flex-wrap gap-1">
+                  {selected.career_levels.map((id) => {
+                    const l = getLevel(id);
+                    return (
+                      <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded ${l.color} text-white`}>
+                        {l.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* indicados diretos, clicáveis */}
+          {selected.children.length > 0 && (
+            <div className="px-4 pb-4">
+              <p className="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1.5">
+                Equipe direta ({selected.children.length})
+              </p>
+              <div className="space-y-1">
+                {selected.children.map((c) => {
+                  const l = getLevel(c.primary_career_level || 'usuario');
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => focusUser(c.id)}
+                      className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 text-left"
+                    >
+                      <span className={`w-6 h-6 rounded-full ${l.color} flex items-center justify-center text-white text-[9px] font-bold overflow-hidden flex-shrink-0`}>
+                        {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(c.full_name)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11.5px] text-gray-200 truncate">{c.full_name}</span>
+                        <span className={`block text-[10px] ${l.textColor} truncate`}>{l.name}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -866,6 +1085,10 @@ export default function TreeHierarchy({
               <p className="text-[11.5px] text-gray-500">
                 Toda a equipe abaixo dessa pessoa vai junto. Você pode desfazer arrastando de volta.
               </p>
+              <p className="text-[11.5px] text-emerald-400/90">
+                No plano de alavancagem, a partir de agora o rebate dessa perna passa a subir por{' '}
+                <strong>{pendingMove.parent.full_name}</strong>.
+              </p>
             </div>
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
               <Button size="sm" variant="outline" disabled={isMoving}
@@ -881,6 +1104,19 @@ export default function TreeHierarchy({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* Linha de informação do perfil expandido */
+function Field({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="w-3.5 h-3.5 text-gray-600 mt-0.5 flex-shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider text-gray-500 leading-tight">{label}</p>
+        <p className="text-[12px] text-gray-200 break-words">{value}</p>
+      </div>
     </div>
   );
 }
