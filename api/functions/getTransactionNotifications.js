@@ -22,10 +22,12 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente', events: [] });
 
     const uid = encodeURIComponent(userId);
-    const saleSelect = 'id,product_title,product_image,total_amount,sale_price,buyer_id,buyer_name,seller_id,created_date';
+    // depósitos de carteira NÃO são compra — ficam fora das notificações de transação
+    const notDeposit = 'kind=not.in.(wallet_deposit,passaporte,commission_deposit)';
+    const saleSelect = 'id,kind,product_title,product_image,total_amount,sale_price,buyer_id,buyer_name,seller_id,created_date';
     const [buysR, sellsR, commsR] = await Promise.all([
-      sb(`catalog_sales?select=${saleSelect}&buyer_id=eq.${uid}&status=eq.paid&order=created_date.desc&limit=10`),
-      sb(`catalog_sales?select=${saleSelect}&seller_id=eq.${uid}&status=eq.paid&order=created_date.desc&limit=10`),
+      sb(`catalog_sales?select=${saleSelect}&buyer_id=eq.${uid}&status=eq.paid&${notDeposit}&order=created_date.desc&limit=10`),
+      sb(`catalog_sales?select=${saleSelect}&seller_id=eq.${uid}&status=eq.paid&${notDeposit}&order=created_date.desc&limit=10`),
       sb(`commission_ledger?select=created_at,amount,pct,role_in_sale&beneficiary_id=eq.${uid}&order=created_at.desc&limit=10`),
     ]);
     const buys = await buysR.json();
