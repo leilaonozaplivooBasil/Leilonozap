@@ -39,7 +39,7 @@ export const SECTORS = [
   // segue pelo botão rosa "AO VIVO AGORA" e pelo FAB da loja.
   {
     key: 'ganhar',
-    title: 'Ganhe Dinheiro',
+    title: 'Lucre',
     icon: DollarSign,
     href: { page: 'Licensing' },
     blurb: 'Trabalhe com a gente e lucre junto',
@@ -69,5 +69,5 @@ export const HOME_SECTOR_CARDS = [
   { title: 'Ao Vivo na Livoo', desc: 'Compre com o vendedor na tela', icon: Radio, icon3d: icoAoVivo, external: LIVOO_FEED, accent: 'red' },
   { title: 'Direto de Fábrica', desc: 'Novos, direto do fabricante', icon: Factory, icon3d: icoFabrica, page: 'DiretoDeFabrica', accent: 'blue' },
   { title: 'Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', icon: Flame, icon3d: icoFoguinho, page: 'ArremateDevolucoes', accent: 'orange' },
-  { title: 'Ganhe Dinheiro', desc: 'Seja licenciado ou parceiro', icon: DollarSign, icon3d: icoDinheiro, page: 'Licensing', accent: 'amber' },
+  { title: 'Lucre', desc: 'Seja licenciado ou parceiro', icon: DollarSign, icon3d: icoDinheiro, page: 'Licensing', accent: 'amber' },
 ];

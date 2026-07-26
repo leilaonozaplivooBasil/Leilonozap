@@ -9,7 +9,7 @@ const LOGO = '/brand/icon-3d.webp';
 const ATALHOS = [
   { icon: Gavel, label: 'Leilões', to: '/leiloes' },
   { icon: ShoppingBag, label: 'Loja Virtual', to: '/Loja-Virtual' },
-  { icon: DollarSign, label: 'Ganhe Dinheiro', to: '/Licensing' },
+  { icon: DollarSign, label: 'Lucre', to: '/Licensing' },
 ];
 
 export default function PageNotFound() {

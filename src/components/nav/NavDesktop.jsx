@@ -12,7 +12,7 @@ import SectorLink from "@/components/nav/SectorLink";
  *
  * Estrutura (pedido Gabriel 26/07 — tudo na paleta oficial da logo
  * #4d724b/#99c198/#dabb98/#21222b/#9da7b5):
- *   [logo]        [COMPRAR · LEILÕES · GANHE DINHEIRO]        [AO VIVO | 🛒 | Entrar]   [🏆 RANK PREMIADO]
+ *   [logo]        [COMPRAR · LEILÕES · LUCRE]        [AO VIVO | 🛒 | Entrar]   [🏆 RANK PREMIADO]
  *                  ↑ centralizados no MEIO da navbar                                     ↑ afastado, no canto
  *
  * • Setores centrais: tile 3D (gradiente sálvia→verde floresta) + label UPPERCASE,
