@@ -164,7 +164,8 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
         <div className="p-4 sm:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
 
-            {/* GALERIA */}
+            {/* COLUNA ESQUERDA — galeria + título/descrição/avaliações logo abaixo da foto (estilo ML) */}
+            <div className="space-y-5 min-w-0">
             <div className={`${CARD} p-3 sm:p-4`}>
               <div className="flex flex-col-reverse sm:flex-row gap-3">
                 {images.length > 1 && (
@@ -197,6 +198,62 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                   <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
                 </div>
               </div>
+            </div>
+
+            {/* DESCRIÇÃO — logo abaixo da foto */}
+            <div className={`${CARD} p-5`}>
+              <h3 className="text-lg font-black mb-1.5">{product.description}</h3>
+              {storeRating && storeRating.total > 0 && (
+                <div className="mb-3"><RatingBadge media={storeRating.media} total={storeRating.total} size={14} /></div>
+              )}
+              <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wide mt-3 mb-2">Descrição</h4>
+              {product.notes ? (
+                <div className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.notes) }} />
+              ) : (
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{product.description}</p>
+              )}
+            </div>
+
+            {/* CARACTERÍSTICAS */}
+            {specs.length > 0 && (
+              <div className={`${CARD} p-5`}>
+                <h3 className="text-lg font-black mb-4 flex items-center gap-2"><BadgeCheck className="w-5 h-5 text-emerald-400" /> Características do produto</h3>
+                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                  {specs.map((sp) => (
+                    <div key={sp.label} className="flex items-center gap-2.5 text-sm border-b border-white/5 pb-2.5">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-gray-400">{sp.label}:</span> <span className="text-white font-semibold">{sp.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AVALIAÇÕES — sempre visível, estilo ML */}
+            <div className={`${CARD} p-5`}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black">Avaliações</h3>
+                {storeRating && storeRating.total > 0 && (
+                  <RatingBadge media={storeRating.media} total={storeRating.total} size={15} />
+                )}
+              </div>
+              {reviews.length === 0 ? (
+                <p className="text-gray-500 text-sm">Este produto ainda não tem avaliações com comentário. Compre e seja o primeiro a avaliar.</p>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((r, i) => (
+                    <div key={i} className="bg-black/20 border border-white/10 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-white">{r.buyer_name || 'Cliente'}</span>
+                        <Stars value={r.stars} size={13} />
+                      </div>
+                      {r.comment && <p className="text-gray-300 text-sm">{r.comment}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             </div>
 
             {/* BUY BOX */}
@@ -291,54 +348,6 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
 
           {/* SEÇÕES INFERIORES */}
           <div className="space-y-5 mt-5">
-            {specs.length > 0 && (
-              <div className={`${CARD} p-5`}>
-                <h3 className="text-lg font-black mb-4 flex items-center gap-2"><BadgeCheck className="w-5 h-5 text-emerald-400" /> Características do produto</h3>
-                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
-                  {specs.map((sp) => (
-                    <div key={sp.label} className="flex items-center gap-2.5 text-sm border-b border-white/5 pb-2.5">
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-gray-400">{sp.label}:</span> <span className="text-white font-semibold">{sp.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className={`${CARD} p-5`}>
-              <h3 className="text-lg font-black mb-4">Descrição</h3>
-              {product.notes ? (
-                <div className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.notes) }} />
-              ) : (
-                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{product.description}</p>
-              )}
-            </div>
-
-            {storeRating && storeRating.total > 0 && (
-              <div className={`${CARD} p-5`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-black">Avaliações da loja</h3>
-                  <RatingBadge media={storeRating.media} total={storeRating.total} size={15} />
-                </div>
-                {reviews.length === 0 ? (
-                  <p className="text-gray-500 text-sm">As avaliações com comentário aparecem aqui.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {reviews.map((r, i) => (
-                      <div key={i} className="bg-black/20 border border-white/10 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-semibold text-white">{r.buyer_name || 'Cliente'}</span>
-                          <Stars value={r.stars} size={13} />
-                        </div>
-                        {r.comment && <p className="text-gray-300 text-sm">{r.comment}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* link para a página completa (compartilhável) */}
             <div className="flex justify-center pb-2">
               <a
