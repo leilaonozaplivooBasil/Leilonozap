@@ -69,10 +69,17 @@ export default function AdminInsights({ userId }) {
             <Stat icon={Users} label="Divulgadores ativos 7d" value={t.ativos_7d} tint="#e9d5ff" />
           </div>
 
-          <div className="rounded-xl px-3.5 py-2.5 mb-4 flex items-start gap-2.5 text-[12px] leading-relaxed" style={{ background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.35)', color: '#ddd6fe' }}>
-            <Lock className="w-4 h-4 shrink-0 mt-0.5" />
-            <span><b>Funil completo bloqueado:</b> entrou no grupo · saiu · converteu na plataforma · gasto por indicado · rede 2º nível. Ativa com a migração <code className="text-purple-200">db/rank-premiado-tracking.sql</code> + acesso ao Supabase do projeto (pendente com o Gabriel).</span>
-          </div>
+          {data.rastreamento_completo ? (
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              <Stat icon={Users} label="Entraram no grupo" value={t.entraram ?? 0} tint="#4ade80" />
+              <Stat icon={Users} label="Saíram (ponto perdido)" value={t.sairam ?? 0} tint="#f87171" />
+            </div>
+          ) : (
+            <div className="rounded-xl px-3.5 py-2.5 mb-4 flex items-start gap-2.5 text-[12px] leading-relaxed" style={{ background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.35)', color: '#ddd6fe' }}>
+              <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+              <span><b>Funil completo bloqueado:</b> entrou no grupo · saiu · converteu na plataforma · gasto por indicado · rede 2º nível. Ativa com a migração <code className="text-purple-200">db/rank-premiado-tracking.sql</code> + acesso ao Supabase do projeto (pendente com o Gabriel).</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 mb-2">
             <div className="relative flex-1 max-w-xs">
@@ -93,6 +100,8 @@ export default function AdminInsights({ userId }) {
                   <th className="px-3 py-2.5 font-bold text-right">Semana</th>
                   <th className="px-3 py-2.5 font-bold text-right">Mês</th>
                   <th className="px-3 py-2.5 font-bold text-right">Total</th>
+                  {data.rastreamento_completo && <th className="px-3 py-2.5 font-bold text-right text-emerald-300">Entrou</th>}
+                  {data.rastreamento_completo && <th className="px-3 py-2.5 font-bold text-right text-red-300">Saiu</th>}
                   <th className="px-3 py-2.5 font-bold">Último clique</th>
                   <th className="px-3 py-2.5 font-bold">Cadastro</th>
                 </tr>
@@ -112,6 +121,8 @@ export default function AdminInsights({ userId }) {
                     <td className="px-3 py-2 text-right font-bold text-white/80">{p.semana || '·'}</td>
                     <td className="px-3 py-2 text-right font-bold text-white/70">{p.mes || '·'}</td>
                     <td className="px-3 py-2 text-right font-black text-emerald-300">{p.cliques}</td>
+                    {data.rastreamento_completo && <td className="px-3 py-2 text-right font-black text-emerald-400">{p.entrou || '·'}</td>}
+                    {data.rastreamento_completo && <td className="px-3 py-2 text-right font-black text-red-400">{p.saiu || '·'}</td>}
                     <td className="px-3 py-2 text-xs text-white/55 whitespace-nowrap">{fmtDT(p.ultimo_clique)}</td>
                     <td className="px-3 py-2 text-xs text-white/45 whitespace-nowrap">{fmtD(p.cadastro)}</td>
                   </tr>

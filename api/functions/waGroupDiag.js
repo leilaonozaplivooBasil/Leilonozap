@@ -31,9 +31,9 @@ export default async function handler(req, res) {
     if (!EVO || !KEY) return res.status(500).json({ error: 'evolution env ausente', tem_url: !!EVO, tem_key: !!KEY, instancia: INST });
     const op = String(body.op || 'status');
 
-    // metadados seguros da URL (sem expor host completo nem credencial)
+    // host completo é seguro atrás da DIAG_KEY (a credencial apikey continua oculta)
     let urlInfo = {};
-    try { const u = new URL(EVO); urlInfo = { protocolo: u.protocol, host_mascarado: u.hostname.replace(/^(.{4}).*(\..+)$/, '$1…$2'), porta: u.port || null }; } catch { urlInfo = { invalida: true }; }
+    try { const u = new URL(EVO); urlInfo = { protocolo: u.protocol, host: u.hostname, porta: u.port || null }; } catch { urlInfo = { invalida: true, bruto_len: EVO.length }; }
 
     if (op === 'status') {
       const [state, webhook, groups] = await Promise.all([
@@ -59,6 +59,24 @@ export default async function handler(req, res) {
         r = await evo(`/webhook/set/${INST}`, { method: 'POST', body: JSON.stringify({ enabled: true, url, webhook_by_events: conf.webhook_by_events ?? false, events }) });
       }
       return res.status(200).json({ set: r.json ?? r, eventos_final: events });
+    }
+
+    // Discovery do schema do concurso via OpenAPI do PostgREST (service role só em runtime;
+    // nada de credencial na resposta) — insumo pro db/rank-premiado-tracking.sql.
+    if (op === 'db_schema') {
+      const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!SUPABASE_URL || !SR) return res.status(500).json({ error: 'supabase env ausente' });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/`, { headers: { apikey: SR, Authorization: `Bearer ${SR}` } });
+      const spec = await r.json().catch(() => ({}));
+      const defs = spec.definitions || {};
+      const tabelas = {};
+      for (const [nome, def] of Object.entries(defs)) {
+        if (!nome.startsWith('concurso')) continue;
+        tabelas[nome] = Object.fromEntries(Object.entries(def.properties || {}).map(([c, v]) => [c, v.format || v.type]));
+      }
+      const rpcs = Object.keys(spec.paths || {}).filter((p) => p.startsWith('/rpc/') && p.includes('concurso'));
+      return res.status(200).json({ tabelas, rpcs });
     }
 
     return res.status(400).json({ error: 'op desconhecida' });

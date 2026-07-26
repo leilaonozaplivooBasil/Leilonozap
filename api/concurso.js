@@ -53,9 +53,12 @@ async function uploadFoto(code, dataUrl) {
   } catch { return null; }
 }
 
-// ranking do período via RPC (dia | semana | mes | geral) — timezone Brasília
+// ranking do período via RPC (dia | semana | mes | geral) — timezone Brasília.
+// v2 ("só conta quem entrou no grupo") assume automaticamente quando a migração
+// db/rank-premiado-tracking.sql rodar; até lá cai na v1 (cliques).
 async function rankingPeriodo(periodo) {
-  const r = await sb('rpc/concurso_ranking_periodo', { method: 'POST', body: JSON.stringify({ p_periodo: periodo }) });
+  let r = await sb('rpc/concurso_ranking_periodo_v2', { method: 'POST', body: JSON.stringify({ p_periodo: periodo }) });
+  if (!r.ok) r = await sb('rpc/concurso_ranking_periodo', { method: 'POST', body: JSON.stringify({ p_periodo: periodo }) });
   const rows = await r.json().catch(() => []);
   if (!Array.isArray(rows)) return [];
   return rows.map((x, i) => ({ posicao: i + 1, code: x.code, nome: x.nome, pontos: Number(x.pontos) || 0, foto_url: x.foto_url || null }));
@@ -229,11 +232,24 @@ export default async function handler(req, res) {
         if (t >= m0) a.mes++;
         if (!a.ultimo || c.created_at > a.ultimo) a.ultimo = c.created_at;
       }
+      // Funil por telefone (quando a migração já rodou): clicou / entrou / saiu
+      const funil = {};
+      let rastreado = false;
+      const ir = await sb('concurso_indicados?select=referrer_code,status&limit=10000');
+      if (ir.ok) {
+        rastreado = true;
+        const rows = await ir.json().catch(() => []);
+        for (const x of Array.isArray(rows) ? rows : []) {
+          const f = funil[x.referrer_code] || (funil[x.referrer_code] = { clicou: 0, entrou: 0, saiu: 0 });
+          f[x.status] = (f[x.status] || 0) + 1;
+        }
+      }
       const participantes = (Array.isArray(parts) ? parts : [])
         .map((p) => ({
           code: p.code, nome: p.nome, whatsapp: p.whatsapp || null, foto_url: p.foto_url || null, cadastro: p.created_at || null,
           cliques: agg[p.code]?.total || 0, dia: agg[p.code]?.dia || 0, semana: agg[p.code]?.semana || 0, mes: agg[p.code]?.mes || 0,
           ultimo_clique: agg[p.code]?.ultimo || null,
+          ...(rastreado ? { entrou: funil[p.code]?.entrou || 0, saiu: funil[p.code]?.saiu || 0, aguardando: funil[p.code]?.clicou || 0 } : {}),
         }))
         .sort((a, b) => b.cliques - a.cliques || (b.ultimo_clique || '').localeCompare(a.ultimo_clique || ''));
       return jset(res, 200, {
@@ -244,9 +260,13 @@ export default async function handler(req, res) {
           cliques_semana: participantes.reduce((s, p) => s + p.semana, 0),
           cliques_mes: participantes.reduce((s, p) => s + p.mes, 0),
           ativos_7d: participantes.filter((p) => p.ultimo_clique && (spNow - toSP(p.ultimo_clique)) < 7 * 864e5).length,
+          ...(rastreado ? {
+            entraram: participantes.reduce((s, p) => s + (p.entrou || 0), 0),
+            sairam: participantes.reduce((s, p) => s + (p.saiu || 0), 0),
+          } : {}),
         },
         participantes,
-        rastreamento_completo: false,
+        rastreamento_completo: rastreado,
       });
     }
 
