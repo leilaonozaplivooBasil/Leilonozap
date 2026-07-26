@@ -26,6 +26,7 @@ import {
   Truck,
   MapPin,
   Target,
+  Image as ImageIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -273,6 +274,15 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             >
               <Target className="w-4 h-4" />
               Metas (CEO)
+            </DropdownMenuItem>
+          )}
+          {["admin", "super_admin"].includes(roleKey) && (
+            <DropdownMenuItem
+              onClick={() => navigate(createPageUrl("PainelMidia"))}
+              className="cursor-pointer text-cyan-300 hover:bg-cyan-500/10 focus:bg-cyan-500/10 hover:text-cyan-200 rounded-md gap-3 px-3 py-2"
+            >
+              <ImageIcon className="w-4 h-4" />
+              Painel de Mídia
             </DropdownMenuItem>
           )}
           <DropdownMenuItem

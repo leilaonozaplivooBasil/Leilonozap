@@ -24,6 +24,7 @@ const AuctionDetails = React.lazy(() => import('./pages/AuctionDetails'));
 const AuctionRoom = React.lazy(() => import('./pages/AuctionRoom'));
 const AuditSnapshot = React.lazy(() => import('./pages/AuditSnapshot'));
 const BannerManagement = React.lazy(() => import('./pages/BannerManagement'));
+const PainelMidia = React.lazy(() => import('./pages/PainelMidia'));
 const CadastroInvestidor = React.lazy(() => import('./pages/CadastroInvestidor'));
 const CadastroLeiloeiro = React.lazy(() => import('./pages/CadastroLeiloeiro'));
 const CarteiraInvestidor = React.lazy(() => import('./pages/CarteiraInvestidor'));
@@ -124,6 +125,12 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "AuditSnapshot": AuditSnapshot,
     "BannerManagement": BannerManagement,
+    // 🖼️ Painel de Mídia — banners por página, logo e favicon. Só admin.
+    "PainelMidia": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <PainelMidia />
+        </RequireRole>
+    ),
     "CadastroInvestidor": CadastroInvestidor,
     "CadastroLeiloeiro": CadastroLeiloeiro,
     "CarteiraInvestidor": () => (

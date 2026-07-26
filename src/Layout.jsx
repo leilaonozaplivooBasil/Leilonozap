@@ -22,6 +22,7 @@ import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { fastTap } from "@/lib/fastTap";
 import RoleSidebar from "@/components/layout/RoleSidebar";
+import useSiteMedia from "@/hooks/useSiteMedia";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -37,6 +38,8 @@ import { Menu, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
+  // Logo/favicon gerenciados pelo Painel de Mídia (fallback: assets estáticos)
+  const { logoUrl } = useSiteMedia();
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('currentUser');
@@ -934,7 +937,7 @@ export default function Layout({ children, currentPageName }) {
                   );
                 })()}
                 <img
-                  src="/brand/logo-horizontal-dark.webp"
+                  src={logoUrl}
                   alt="Leilão NoZap"
                   className="h-11 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
