@@ -33,7 +33,9 @@ export const CAREER_LEVELS = [
   // ── Bloco DIRETOR (TOPO 10% — governança e gestão) ─────────────
   mk('trainee_diretor',    'Trainee',            'diretor', 101, 30000, 10, 'bg-violet-500',  'text-violet-400',  'border-violet-500',  'Em formação para a diretoria.'),
   mk('executivo_conta',    'Sócio Executivo',    'diretor', 102,     0, 20, 'bg-purple-500',  'text-purple-400',  'border-purple-500',  '1% sobre a PRÓPRIA estrutura de negócio (não é pool — cada executivo monta a sua). Também recebe como licenciado no plano dele.'),
-  mk('diretor_operacional','Diretor Operacional','diretor', 103,     0,  0, 'bg-fuchsia-500', 'text-fuchsia-400', 'border-fuchsia-500', '0,5% POOL da Diretoria Operacional (logística, comercial, operações, administrativo) sobre todas as vendas.'),
+  // id 'diretoria_operacao' = o MESMO que o motor de pagamento procura no pool
+  // (antes o painel usava 'diretor_operacional' e quem fosse marcado NÃO recebia).
+  mk('diretoria_operacao', 'Diretor Operacional','diretor', 103,     0,  0, 'bg-fuchsia-500', 'text-fuchsia-400', 'border-fuchsia-500', '0,5% POOL da Diretoria Operacional (logística, comercial, operações, administrativo) sobre todas as vendas.'),
   mk('diretoria_executiva','Diretoria Executiva','diretor', 104,     0,  0, 'bg-pink-500',    'text-pink-400',    'border-pink-500',    '0,5% POOL da Diretoria Executiva (convidados pelo CEO) sobre todas as vendas.'),
   mk('ceo',                'CEO',                'diretor', 105,     0, 20, 'bg-rose-500',    'text-rose-400',    'border-rose-500',    '3% individual sobre TODAS as vendas do ecossistema.'),
   mk('livoo_live',         'Livoo Live',         'diretor', 106,     0,  0, 'bg-orange-500',  'text-orange-400',  'border-orange-500',  '2% individual sobre TODAS as vendas do ecossistema.'),
