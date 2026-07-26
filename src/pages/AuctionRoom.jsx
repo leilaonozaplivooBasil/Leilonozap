@@ -300,8 +300,11 @@ export default function AuctionRoom() {
         console.error("❌ [END] Erro ao atualizar mensagens:", error);
       }
 
-      // 🎉 Modal de arrematado alguns segundos depois do card no chat
-      setTimeout(() => setShowWinnerModal(true), 4000);
+      // 🎉 Modal de arrematado alguns segundos depois do card no chat —
+      // SÓ quando houve vencedor de verdade (sem lances = sem festa)
+      if (result.winner_id) {
+        setTimeout(() => setShowWinnerModal(true), 4000);
+      }
 
     } catch (error) {
       console.error("❌ [END] Erro:", error);
@@ -955,6 +958,7 @@ export default function AuctionRoom() {
                       message={message}
                       winner={winner}
                       auction={auctionData}
+                      currentUser={currentUser}
                     />
                   );
                 }

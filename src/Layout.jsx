@@ -30,7 +30,7 @@ const User = { me: () => base44.auth.me() };
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
 const ComparaiFloatingButton = React.lazy(() => import("@/components/comparai/ComparaiFloatingButton"));
-import { Menu, MessageCircle, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
+import { Menu, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
 
 
 
@@ -1050,26 +1050,61 @@ export default function Layout({ children, currentPageName }) {
         {/* 📱 Convite de instalação do PWA — só mobile, dispensável */}
         <InstallPwaPrompt />
 
-        {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
-        {currentUser && (isLicensee || isAdmin) && currentPageName === "AuctionRoom" && (
+        {/* 🩷 LIVOO LIVE — logo animada flutuante na sala de leilão (substituiu o botão VIP,
+            pedido Gabriel 26/07). Clique abre livoolive.com.br. Cor oficial da logo: #D91674. */}
+        {currentPageName === "AuctionRoom" && (
           <a
-            href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl"
+            href="https://livoolive.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-36 right-4 z-50 group"
-            title="Entrar no Grupo VIP"
+            className="livoo-live-float fixed bottom-36 right-4 z-50 group"
+            title="Livoo Live — Compre ao Vivo"
+            aria-label="Livoo Live — Compre ao Vivo"
           >
             <div className="relative">
-              {/* Botão Principal - Design Melhorado */}
-              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 rounded-2xl shadow-lg shadow-green-500/30 flex items-center justify-center transition-all duration-300 group-hover:scale-105 border border-green-400/30">
-                <MessageCircle className="w-7 h-7 text-white" />
-              </div>
-
-              {/* Badge VIP - Redesenhado */}
-              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 rounded-md px-1.5 py-0.5 shadow-md">
-                <span className="text-white text-[10px] font-bold">VIP</span>
+              <span className="livoo-live-float__ring" aria-hidden="true"></span>
+              <div className="livoo-live-float__btn w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                {/* Logo Livoo Live: círculo branco + play rosa com a bolinha no vértice */}
+                <svg viewBox="0 0 48 48" className="w-9 h-9" aria-hidden="true">
+                  <circle cx="24" cy="24" r="19" fill="#ffffff" />
+                  <path d="M19 15.5 L34 24 L19 32.5 Z" fill="#D91674" stroke="#D91674" strokeWidth="4" strokeLinejoin="round" />
+                  <circle cx="19" cy="15.5" r="3.4" fill="#D91674" />
+                </svg>
               </div>
             </div>
+            <style>{`
+              .livoo-live-float__btn {
+                background: linear-gradient(135deg, #D91674, #E3559C);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                box-shadow: 0 8px 24px rgba(217, 22, 116, 0.45);
+                animation: livoo-float-beat 2.2s ease-in-out infinite;
+              }
+              .livoo-live-float:hover .livoo-live-float__btn {
+                box-shadow: 0 10px 32px rgba(217, 22, 116, 0.65);
+              }
+              .livoo-live-float__ring {
+                position: absolute;
+                inset: 0;
+                border-radius: 1rem;
+                border: 2px solid rgba(217, 22, 116, 0.7);
+                animation: livoo-float-ring 2.2s ease-out infinite;
+                pointer-events: none;
+              }
+              @keyframes livoo-float-beat {
+                0%, 100% { transform: scale(1); }
+                12% { transform: scale(1.08); }
+                24% { transform: scale(1); }
+                36% { transform: scale(1.05); }
+                48% { transform: scale(1); }
+              }
+              @keyframes livoo-float-ring {
+                0% { transform: scale(1); opacity: 0.8; }
+                100% { transform: scale(1.55); opacity: 0; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .livoo-live-float__btn, .livoo-live-float__ring { animation: none; }
+              }
+            `}</style>
           </a>
         )}
 

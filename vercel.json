@@ -8,6 +8,8 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "crons": [
-    { "path": "/api/functions/syncNexusSheet", "schedule": "0 2 * * *" }
+    { "path": "/api/functions/syncNexusSheet", "schedule": "0 2 * * *" },
+    { "path": "/api/functions/finalizeExpiredAuctions", "schedule": "* * * * *" },
+    { "path": "/api/functions/activateScheduledAuctions", "schedule": "* * * * *" }
   ]
 }

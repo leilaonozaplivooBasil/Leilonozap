@@ -2,7 +2,7 @@ import React from "react";
 import { Bot, Zap, Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
 
-export default function AIMessage({ message, winner, auction }) {
+export default function AIMessage({ message, winner, auction, currentUser }) {
   const formatTime = (timestamp) => {
     return new Date(timestamp || message.created_date).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
@@ -76,34 +76,22 @@ export default function AIMessage({ message, winner, auction }) {
   // 🏆 SE FOR MENSAGEM DE VITÓRIA, SEMPRE RENDERIZA O CARTÃO
   // 🆕 MESMO SE winner OU auction forem null! (usa fallback)
   if (message.message_type === 'winner_announcement') {
-    console.log('🎯 [AIMESSAGE] Renderizando VictoryCard');
-    console.log('🎯 [AIMESSAGE] Winner:', winner);
-    console.log('🎯 [AIMESSAGE] Auction:', auction);
-    
     // 🆕 SE NÃO TEM DADOS, TENTA PARSEAR DO message.content
     let finalWinner = winner;
     let finalAuction = auction;
-    
+
     if (!finalWinner || !finalAuction) {
-      console.log('⚠️ [AIMESSAGE] Dados incompletos, tentando parsear do content...');
       try {
         const parsed = JSON.parse(message.content);
-        if (!finalWinner && parsed.winner) {
-          finalWinner = parsed.winner;
-          console.log('✅ [AIMESSAGE] Winner recuperado do content!');
-        }
-        if (!finalAuction && parsed.auction) {
-          finalAuction = parsed.auction;
-          console.log('✅ [AIMESSAGE] Auction recuperado do content!');
-        }
+        if (!finalWinner && parsed.winner) finalWinner = parsed.winner;
+        if (!finalAuction && parsed.auction) finalAuction = parsed.auction;
       } catch (e) {
-        console.error('❌ [AIMESSAGE] Erro ao parsear content:', e);
+        console.warn('⚠️ [AIMESSAGE] Erro ao parsear content:', e.message);
       }
     }
-    
+
     // 🆕 SE AINDA NÃO TEM AUCTION, USA UM PLACEHOLDER
     if (!finalAuction) {
-      console.warn('⚠️ [AIMESSAGE] Auction ainda null, usando placeholder');
       finalAuction = {
         title: 'Produto Arrematado',
         current_price: 0,
@@ -111,8 +99,8 @@ export default function AIMessage({ message, winner, auction }) {
         image_urls: []
       };
     }
-    
-    return <VictoryCard winner={finalWinner} auction={finalAuction} />;
+
+    return <VictoryCard winner={finalWinner} auction={finalAuction} currentUser={currentUser} />;
   }
 
   const messageStyle = getMessageStyle();
