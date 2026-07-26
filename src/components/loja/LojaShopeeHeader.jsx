@@ -39,7 +39,7 @@ import {
 // Botão "AO VIVO AGORA" abre o feed da Livoo Live (mesma URL do FAB da loja)
 const LIVOO_FEED = 'https://livoolive.com.br/app';
 
-const LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+const LOGO = '/brand/icon-3d.webp';
 
 // Banners oficiais da loja (rotativos). Cada um entra como desktop + mobile para
 // aparecer em qualquer dispositivo. Os de licenciado (4 e 5) linkam para /Licensing.

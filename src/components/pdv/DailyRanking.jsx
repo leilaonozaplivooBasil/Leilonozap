@@ -188,7 +188,7 @@ export default function DailyRanking({ allSales }) {
       let y = 12;
 
       // ===== HEADER: X-EOS (esquerda) | Título (centro) | NoZap (direita) =====
-      const noZapLogoUrl = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      const noZapLogoUrl = '/brand/icon-3d-256.png';
       const xeosLogoUrl = XEosLogo;
 
       let xeosBase64 = null;

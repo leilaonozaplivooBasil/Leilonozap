@@ -22,7 +22,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
   const [endDate, setEndDate] = useState(moment().endOf("month").format("YYYY-MM-DD"));
   const [generating, setGenerating] = useState(false);
 
-  const LOGO_URL = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+  const LOGO_URL = "/brand/icon-3d-256.png";
 
   const loadImage = (url) => new Promise((resolve) => {
     const img = new Image();

@@ -107,4 +107,38 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
   html {
     scrollbar-gutter: stable;
   }
+
+  /* ⚡ CLIQUE ÚNICO EM TODO BOTÃO (pedido Gabriel 25/07): nada de tocar/clicar
+     duas vezes, no celular ou no desktop.
+     1) touch-action: manipulation mata o atraso de ~300ms e o "duplo toque pra
+        zoom" que fazia o 1º toque ser engolido no celular. */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  .cursor-pointer {
+    touch-action: manipulation;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 2) Em telas de toque, controle que só aparece/ativa no hover fica SEMPRE
+        visível — senão o 1º toque vira "hover" e só o 2º executa o clique. */
+  @media (hover: none), (pointer: coarse) {
+    [class*="group-hover:opacity-100"] {
+      opacity: 1 !important;
+    }
+    [class*="hover:opacity-100"] {
+      opacity: 1 !important;
+    }
+    [class*="group-hover:pointer-events-auto"] {
+      pointer-events: auto !important;
+    }
+  }
 }

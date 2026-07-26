@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Gavel, ShoppingBag, DollarSign, Search, Home } from 'lucide-react';
 
-const LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+const LOGO = '/brand/icon-3d.webp';
 
 // Página não encontrada — versão Leilão NoZap. Em vez de um beco em inglês, oferece as
 // portas principais (o cliente nunca fica preso). Os apelidos de rota (/loja, /entrar…) já

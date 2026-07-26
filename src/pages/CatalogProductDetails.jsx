@@ -96,7 +96,7 @@ export default function CatalogProductDetails() {
     const ogDesc = product
       ? `${product.description} por R$ ${product.price_catalog?.toFixed(2)}. Produtos direto de fábrica e devolvidos em até 7 dias. Compre agora!`
       : 'Produtos direto de fábrica e devolvidos em até 7 dias. Eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
-    const ogImage = product?.image_urls?.[0] || 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+    const ogImage = product?.image_urls?.[0] || 'https://leilaonozap.net/brand/logo-horizontal-og.jpg';
 
     document.title = ogTitle;
     setMeta('property', 'og:title', ogTitle);
@@ -111,7 +111,7 @@ export default function CatalogProductDetails() {
       // Restaura padrão ao sair da página
       const defaultTitle = 'NoZap - Loja Virtual e Leilões Online | Até 60% de Desconto';
       const defaultDesc = 'Produtos direto de fábrica e devolvidos em até 7 dias com até 60% de desconto! Loja Virtual e Leilões Online de eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
-      const defaultImg = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      const defaultImg = 'https://leilaonozap.net/brand/logo-horizontal-og.jpg';
       document.title = defaultTitle;
       setMeta('property', 'og:title', defaultTitle);
       setMeta('property', 'og:description', defaultDesc);

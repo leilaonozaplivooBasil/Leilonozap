@@ -13,7 +13,6 @@ import Footer from "@/components/common/Footer";
 import BackToTopButton from "@/components/common/BackToTopButton";
 import InstallPwaPrompt from "@/components/common/InstallPwaPrompt";
 import NavDesktop from "@/components/nav/NavDesktop";
-import logoIcon from "@/assets/logo-icon.webp";
 import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
@@ -247,7 +246,7 @@ export default function Layout({ children, currentPageName }) {
     // Open Graph Tags
     updateOrCreateMeta('property', 'og:title', 'Leilão NoZap - Leilões Online com Lances em Tempo Real');
     updateOrCreateMeta('property', 'og:description', 'Arremate produtos incríveis com até 90% de desconto! Leilões diários de eletrônicos, eletrodomésticos, móveis e muito mais. Entre e dê seu lance agora!');
-    updateOrCreateMeta('property', 'og:image', 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png');
+    updateOrCreateMeta('property', 'og:image', 'https://leilaonozap.net/brand/logo-horizontal-og.jpg');
     updateOrCreateMeta('property', 'og:type', 'website');
     updateOrCreateMeta('property', 'og:url', 'https://leilaonozap.net');
 
@@ -255,7 +254,7 @@ export default function Layout({ children, currentPageName }) {
     updateOrCreateMeta('name', 'twitter:card', 'summary_large_image');
     updateOrCreateMeta('name', 'twitter:title', 'Leilão NoZap - Leilões Online com Lances em Tempo Real');
     updateOrCreateMeta('name', 'twitter:description', 'Arremate produtos com até 90% de desconto! Leilões diários online com sistema seguro e transparente.');
-    updateOrCreateMeta('name', 'twitter:image', 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png');
+    updateOrCreateMeta('name', 'twitter:image', 'https://leilaonozap.net/brand/logo-horizontal-og.jpg');
   }, []);
 
   // Captura erros globais não tratados
@@ -301,7 +300,7 @@ export default function Layout({ children, currentPageName }) {
       theme_color: "#16a34a",
       icons: [
         {
-          src: "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png",
+          src: "https://leilaonozap.net/pwa-192x192.png",
           sizes: "192x192",
           type: "image/png"
         }
@@ -812,7 +811,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[10000]">
         <div className="text-center">
           <img
-            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src="/brand/icon-3d.webp"
             alt="Leilão NoZap"
             className="h-24 w-auto mx-auto mb-8 loading-logo"
             decoding="async"
@@ -935,27 +934,17 @@ export default function Layout({ children, currentPageName }) {
                   );
                 })()}
                 <img
-                  src={logoIcon}
+                  src="/brand/logo-horizontal.webp"
                   alt="Leilão NoZap"
-                  className="h-10 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
+                  className="h-10 sm:h-12 w-auto rounded-lg cursor-pointer hover:scale-105 transition-transform"
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
                   fetchPriority="high"
                   decoding="async"
-                  width={160}
-                  height={40}
+                  width={800}
+                  height={374}
                 />
-                {/* Nome ao lado da logo (estilo Mercado Livre) */}
-                <span
-                  onClick={() => navigate("/")}
-                  className="hidden sm:flex flex-col leading-none cursor-pointer select-none -ml-1"
-                >
-                  <span className="text-lg font-black text-white tracking-tight">
-                    Leilão <span className="text-yellow-400">NoZap</span>
-                  </span>
-                  <span className="text-[10px] font-semibold text-emerald-300/80 tracking-wide">leilão &amp; loja virtual</span>
-                </span>
               </div>
 
               {/* MENU DESKTOP */}

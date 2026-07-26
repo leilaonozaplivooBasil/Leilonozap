@@ -1,6 +1,6 @@
 import React from "react";
 
-const LOGO_URL = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+const LOGO_URL = "/brand/icon-3d.webp";
 
 export default function DiagonalTemplate({ displayTitle, displayImage, displayBadge, displayCta, whatsappNumber, price, marketPrice, discount, accent, template, renderProductImage, logoUrl }) {
   const WhatsAppBadge = () => whatsappNumber ? (

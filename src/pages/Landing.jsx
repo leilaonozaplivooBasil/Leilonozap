@@ -108,9 +108,9 @@ export default function LandingPage() {
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10, 15, 28, 0.55)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(16, 185, 129, 0.08)' }}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <img
-            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src="/brand/logo-horizontal.webp"
             alt="Leilão NoZap"
-            className="h-12 w-auto"
+            className="h-12 w-auto rounded-lg"
             fetchPriority="high"
             decoding="async"
             width={192}

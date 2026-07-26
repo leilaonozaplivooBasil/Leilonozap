@@ -40,7 +40,7 @@ function html({ nome, cargoLabel, pitch, bullets, login, senha }) {
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#0f1614;border:1px solid #1f2d27;border-radius:16px;overflow:hidden">
         <tr><td style="background:linear-gradient(135deg,#052e1e,#064e3b);padding:28px 32px;text-align:center">
-          <img src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png" alt="Leilão NoZap" width="96" style="display:block;margin:0 auto 8px;height:auto;border:0" />
+          <img src="https://leilaonozap.net/brand/icon-3d-256.png" alt="Leilão NoZap" width="96" style="display:block;margin:0 auto 8px;height:auto;border:0" />
           <div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:1px">LEILÃO <span style="color:#34d399">NOZAP</span></div>
           <div style="margin-top:6px;display:inline-block;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#a7f3d0;font-size:12px;font-weight:700;padding:4px 14px;border-radius:999px">${cargoLabel}</div>
         </td></tr>

@@ -1,6 +1,5 @@
 import React from 'react';
 import { X, Share, PlusSquare, Download } from 'lucide-react';
-import logoIcon from '@/assets/logo-icon.webp';
 
 // 📱 Convite de instalação do PWA (só mobile, discreto e dispensável):
 //  - Android/Chrome: captura o beforeinstallprompt e mostra botão "Instalar" nativo.
@@ -57,7 +56,7 @@ export default function InstallPwaPrompt() {
       className="sm:hidden fixed inset-x-3 z-[60] rounded-2xl border border-green-400/25 bg-[#0b1018]/90 backdrop-blur-md backdrop-saturate-150 shadow-2xl shadow-black/60 p-3 flex items-center gap-3"
       style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
-      <img src={logoIcon} alt="Leilão NoZap" className="w-10 h-10 rounded-xl shrink-0" />
+      <img src="/pwa-192x192.png" alt="Leilão NoZap" className="w-10 h-10 rounded-xl shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="text-white text-[13px] font-bold leading-tight">Instale o app Leilão NoZap</p>
         {isIos ? (

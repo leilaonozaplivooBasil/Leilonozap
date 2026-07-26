@@ -11,7 +11,7 @@ const ACCENT = {
   blue: '#60a5fa', orange: '#fb923c', amber: '#fbbf24',
 };
 
-const LOGO = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+const LOGO = '/brand/icon-3d.webp';
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Recepcao() {

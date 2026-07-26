@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import LogoTransparent from '@/assets/logo-transparent.png';
 
 const Auction = base44.entities.Auction;
 const Bid = base44.entities.Bid;
@@ -198,9 +197,9 @@ export default function LiveShopNoZap() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img
-                src={LogoTransparent}
+                src="/brand/logo-horizontal.webp"
                 alt="Leilão NoZap"
-                className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+                className="h-10 w-auto rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => navigate(createPageUrl("Home"))}
               />
               <div>

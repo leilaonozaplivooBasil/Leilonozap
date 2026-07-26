@@ -766,7 +766,7 @@ export default function InvestorDashboard() {
               >
                 <div className="text-center mb-4">
                   <img
-                    src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                    src="/brand/icon-3d.webp"
                     alt="Leilão NoZap"
                     className="h-16 mx-auto mb-4"
                   />
