@@ -48,8 +48,8 @@ const LIVOO_FEED = 'https://livoolive.com.br/app';
 const LOGO = '/brand/icon-3d.webp';
 
 // Banners oficiais da loja (rotativos), na paleta oficial da logo (#4d724b/#99c198/
-// #dabb98/#21222b/#9da7b5). Arte dedicada por dispositivo: desktop 1920×960 (2:1)
-// e mobile 1344×768. Os de licenciado (4 e 5) linkam para /Licensing.
+// #dabb98/#21222b/#9da7b5). Arte dedicada por dispositivo: desktop 1920×600 (16:5,
+// largura total do navegador) e mobile 1344×768. Licenciado (4 e 5) → /Licensing.
 const CATALOG_BANNERS = [
   { desktop: banner1Desk, mobile: banner1Mob, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
   { desktop: banner2Desk, mobile: banner2Mob, title: 'Ferramentas Entrega Full — até 85% de desconto' },
@@ -180,12 +180,12 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
       </div>
 
       {/* HERO: banner full-bleed (borda a borda) nos dois mundos, SEMPRE na proporção
-          nativa das artes — nada cortado, nada esticado.
+          nativa das artes — nada cortado, nada esticado, sem sobras laterais.
           Mobile: arte 1344×768, container na mesma proporção → preenche 100% da largura.
-          Desktop: arte 1920×960 (2:1), altura fixa e a arte centralizada,
-          com a própria arte desfocada preenchendo as laterais (ambient). */}
+          Desktop: arte 1920×600 (16:5), container na mesma proporção → a arte ocupa
+          a largura INTEIRA do navegador, sem blur lateral. */}
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
-        <div className="relative overflow-hidden bg-[#21222b] aspect-[1344/768] md:aspect-auto md:h-[440px] lg:h-[500px] xl:h-[560px]">
+        <div className="relative overflow-hidden bg-[#21222b] aspect-[1344/768] md:aspect-[16/5]">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
