@@ -39,8 +39,12 @@ const roleCadastra = {
 // Bloco DIRETORIA (cargos institucionais TTT) — só aparece pra quem tem algum deles.
 // % = governança do topo (card oficial Heloim 22/07). Aliases cobrem ids antigos.
 const directorSteps = [
-  { id: 'fundador', match: ['fundador'], title: 'Fundador', gov: '1% governança', icon: Gem,
+  { id: 'fundador', match: ['fundador'], title: 'Fundador', gov: '1% pool', icon: Gem,
     desc: 'Topo institucional do ecossistema.' },
+  { id: 'livoo_live', match: ['livoo_live'], title: 'Livoo Live', gov: '2% sobre todas as vendas', icon: Briefcase,
+    desc: 'Braço de live commerce do ecossistema.' },
+  { id: 'embaixador', match: ['embaixador'], title: 'Embaixador', gov: '1% sobre todas as vendas', icon: Award,
+    desc: 'Representação institucional da marca.' },
   { id: 'conselheiro', match: ['conselheiro'], title: 'Conselheiro', gov: '1% governança', icon: Award,
     desc: 'Conselho da holding.' },
   { id: 'ceo', match: ['ceo'], title: 'CEO', gov: '3% governança + 3% faturamento', icon: Briefcase,
@@ -49,8 +53,8 @@ const directorSteps = [
     desc: 'Convidados pelo CEO.' },
   { id: 'diretor_operacional', match: ['diretor_operacional', 'diretor', 'diretoria_operacao'], title: 'Diretor Operacional', gov: '0,5% governança', icon: Building2,
     desc: 'Logística, comercial, operações, administrativo.' },
-  { id: 'socio', match: ['socio', 'socio_executivo'], title: 'Sócio Executivo', gov: 'cadeia + licenciado', icon: Store,
-    desc: 'Executivo que também é licenciado: recebe da cadeia que cadastrou e como licenciado.' },
+  { id: 'executivo_conta', match: ['executivo_conta', 'executivo', 'socio', 'socio_executivo'], title: 'Sócio Executivo', gov: '1% sobre a própria estrutura', icon: Store,
+    desc: 'Executivo que também é licenciado: 1% sobre a estrutura de negócio que montou + recebe como licenciado no plano dele.' },
 ];
 
 const careerSteps = [

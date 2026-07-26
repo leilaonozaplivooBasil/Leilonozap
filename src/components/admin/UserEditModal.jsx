@@ -362,6 +362,14 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         <h3 className="text-sm font-semibold text-purple-400">🏆 Níveis de Carreira</h3>
                         
                         <p className="text-xs text-gray-400">Selecione um ou mais cargos:</p>
+
+                        {/* Regra de negócio do plano — a equipe trabalha entendendo a função */}
+                        <div className="bg-emerald-900/15 border border-emerald-500/25 rounded-lg p-3 text-[11px] leading-relaxed text-gray-300">
+                            <p className="font-bold text-emerald-300 uppercase tracking-wide text-[10px] mb-1">Distribuição do plano — 30% por venda</p>
+                            <p><span className="text-white font-semibold">20% CADEIA</span> (usuário → distribuidor): venda direta + rebate por nível cadastrado.</p>
+                            <p><span className="text-white font-semibold">10% TOPO</span>: CEO 3% · Livoo Live 2% · Embaixador 1% · Sócio Executivo 1% (sobre a própria estrutura, não é pool) · Conselheiros 1% pool · Fundadores 1% pool · Dir. Operacional 0,5% pool · Dir. Executiva 0,5% pool.</p>
+                            <p className="text-gray-500 mt-1">Todo pagamento se origina desta configuração — cargo certo aqui = comissão certa no ato do pagamento.</p>
+                        </div>
                         
                         <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                             {/* P18/19: 2 categorias — Institucional (TTT, topo) × Rede (plano de carreira) */}
@@ -375,29 +383,36 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                                         const isSelected = selectedLevels.includes(level.id);
                                         const isPrimary = primaryLevel === level.id;
                                         return (
-                                            <div key={level.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
-                                                <div className="flex items-center space-x-3">
-                                                    <Checkbox
-                                                        id={`level-${level.id}`}
-                                                        checked={isSelected}
-                                                        onCheckedChange={() => toggleLevel(level.id)}
-                                                        className="border-gray-600"
-                                                    />
-                                                    <label htmlFor={`level-${level.id}`} className="flex items-center gap-2 flex-1 cursor-pointer">
-                                                        <Badge className={`${level.color} text-white text-xs`}>{level.name}</Badge>
-                                                    </label>
-                                                </div>
-                                                {isSelected && (
-                                                    <div className="flex items-center gap-2">
-                                                        <label className="text-xs text-gray-400">Principal</label>
-                                                        <input
-                                                            type="radio"
-                                                            name="primary"
-                                                            checked={isPrimary}
-                                                            onChange={() => setPrimaryLevel(level.id)}
-                                                            className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500"
+                                            <div key={level.id} className="p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center space-x-3">
+                                                        <Checkbox
+                                                            id={`level-${level.id}`}
+                                                            checked={isSelected}
+                                                            onCheckedChange={() => toggleLevel(level.id)}
+                                                            className="border-gray-600"
                                                         />
+                                                        <label htmlFor={`level-${level.id}`} className="flex items-center gap-2 flex-1 cursor-pointer">
+                                                            <Badge className={`${level.color} text-white text-xs`}>{level.name}</Badge>
+                                                        </label>
                                                     </div>
+                                                    {isSelected && (
+                                                        <div className="flex items-center gap-2">
+                                                            <label className="text-xs text-gray-400">Principal</label>
+                                                            <input
+                                                                type="radio"
+                                                                name="primary"
+                                                                checked={isPrimary}
+                                                                onChange={() => setPrimaryLevel(level.id)}
+                                                                className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {level.regra && (
+                                                    <p className="text-[11px] text-gray-400 leading-snug mt-1.5 ml-7">
+                                                        {level.regra}
+                                                    </p>
                                                 )}
                                             </div>
                                         );
