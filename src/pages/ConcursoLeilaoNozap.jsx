@@ -327,9 +327,21 @@ export default function ConcursoLeilaoNozap() {
 
   const RankingBlock = (
     <div className="rounded-2xl p-4" style={CARD}>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="font-black text-lg flex items-center gap-2"><Crown className="w-5 h-5 text-yellow-300" /> Ranking</h2>
-        <span className="text-xs text-green-300/70">{data.total || 0} participando</span>
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="font-black text-lg flex items-center gap-2 shrink-0"><Crown className="w-5 h-5 text-yellow-300" /> Ranking</h2>
+          {data.ranking.length > 5 && (
+            <button
+              onClick={() => setRankExpanded((v) => !v)}
+              className="text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 transition-colors"
+              style={{ border: '1px solid rgba(245,196,81,.5)', background: 'rgba(245,196,81,.08)', color: '#f5c451' }}
+            >
+              {rankExpanded ? 'Ver menos' : 'Ver completo'}
+              <ChevronDown className="w-3.5 h-3.5" style={{ transform: rankExpanded ? 'rotate(180deg)' : 'none', transition: '.2s' }} />
+            </button>
+          )}
+        </div>
+        <span className="text-xs text-green-300/70 shrink-0">{data.total || 0} participando</span>
       </div>
       <div className="flex gap-2 mb-3">
         {PERIODOS.map((p) => (
@@ -355,12 +367,6 @@ export default function ConcursoLeilaoNozap() {
               );
             })}
           </div>
-          {data.ranking.length > 5 && (
-            <button onClick={() => setRankExpanded((v) => !v)} className="mt-3 w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2" style={{ border: '1px dashed rgba(245,196,81,.5)', background: 'rgba(245,196,81,.06)', color: '#f5c451' }}>
-              {rankExpanded ? 'Mostrar menos' : 'Ver ranking completo'}
-              <ChevronDown className="w-4 h-4" style={{ transform: rankExpanded ? 'rotate(180deg)' : 'none', transition: '.2s' }} />
-            </button>
-          )}
         </>
       )}
     </div>
