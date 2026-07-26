@@ -455,7 +455,7 @@ export default function TreeHierarchy({
       path.forEach((p) => next.add(p));
       return next;
     });
-    setSelectedId(id);
+    setSelectedId(null); // fecha o perfil aberto para a árvore ficar visível
     setTimeout(() => {
       const node = nodesRef.current.find((n) => n.id === id);
       const vp = viewportRef.current;
@@ -906,166 +906,187 @@ export default function TreeHierarchy({
         );
       })()}
 
-      {/* -------- Perfil expandido (clique simples no nó) -------- */}
+      {/* -------- Perfil expandido: modal no centro da tela (clique no nó) -------- */}
       {selected && (
-        <div className="absolute top-[46px] right-0 bottom-0 z-30 w-[330px] max-w-[92%] border-l border-gray-700 bg-gray-900/98 shadow-2xl overflow-y-auto">
-          {/* capa + identidade */}
-          <div className="relative">
-            <div className={`h-16 ${getCareerColor(selected.primary_career_level || 'usuario')} opacity-30`} />
-            <button
-              type="button"
-              onClick={() => setSelectedId(null)}
-              className="absolute top-2 right-2 p-1 rounded-md bg-black/40 text-gray-300 hover:text-white hover:bg-black/60"
-              aria-label="Fechar perfil"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="px-4 -mt-8 pb-3">
-              <div
-                className={`w-16 h-16 rounded-full ${getCareerColor(
-                  selected.primary_career_level || 'usuario'
-                )} flex items-center justify-center text-white text-lg font-bold overflow-hidden border-4 border-gray-900`}
+        <div
+          className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+          onClick={() => setSelectedId(null)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* capa */}
+            <div className="relative">
+              <div className={`h-24 ${getCareerColor(selected.primary_career_level || 'usuario')} opacity-25`} />
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/50 text-gray-300 hover:text-white hover:bg-black/70"
+                aria-label="Fechar perfil"
               >
-                {selected.avatar_url ? (
-                  <img src={selected.avatar_url} alt={selected.full_name} className="w-full h-full object-cover" />
-                ) : (
-                  getInitials(selected.full_name)
-                )}
-              </div>
-              <p className="mt-2 text-[15px] font-bold text-white leading-tight">{selected.full_name}</p>
-              <p className={`text-[12px] font-semibold ${selectedLevel.textColor}`}>{selectedLevel.name}</p>
-              {selected.active === false && (
-                <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
-                  na lixeira
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* ações */}
-          <div className="grid grid-cols-4 gap-1 px-3 pb-3 border-b border-gray-800">
-            <Button size="sm" variant="ghost" onClick={() => onEdit?.(selected)}
-              className="h-auto py-2 text-[10px] text-blue-400 hover:bg-blue-500/15 flex-col gap-1">
-              <Pencil className="w-4 h-4" />
-              Editar
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onEdit?.(selected)}
-              className="h-auto py-2 text-[10px] text-sky-400 hover:bg-sky-500/15 flex-col gap-1">
-              <ImagePlus className="w-4 h-4" />
-              Foto
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onPromote?.(selected)}
-              className="h-auto py-2 text-[10px] text-emerald-400 hover:bg-emerald-500/15 flex-col gap-1">
-              <Star className="w-4 h-4" />
-              Promover
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onDelete?.(selected)}
-              className={`h-auto py-2 text-[10px] flex-col gap-1 ${
-                selected.active === false
-                  ? 'text-emerald-400 hover:bg-emerald-500/15'
-                  : 'text-red-400 hover:bg-red-500/15'
-              }`}>
-              {selected.active === false ? <RotateCcw className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
-              {selected.active === false ? 'Restaurar' : 'Excluir'}
-            </Button>
-          </div>
-
-          {/* dados */}
-          <div className="px-4 py-3 space-y-2.5 text-[12px]">
-            <Field icon={Mail} label="E-mail" value={selected.email} />
-            {selected.phone && <Field icon={Phone} label="Telefone" value={selected.phone} />}
-            {selected.nickname && <Field icon={AtSign} label="Apelido nos lances" value={selected.nickname} />}
-            <Field
-              icon={Users}
-              label="Indicados diretos"
-              value={`${selected.children.length} pessoa(s)`}
-            />
-            <Field
-              icon={GitBranch}
-              label="Indicado por"
-              value={selectedParent ? selectedParent.full_name : 'Raiz da rede — sem indicador'}
-            />
-            {selected.referral_code && (
-              <Field icon={LinkIcon} label="Código de indicação" value={selected.referral_code} />
-            )}
-            <Field
-              icon={Wallet}
-              label="Saldo"
-              value={`R$ ${Number(selected.valora_pay_balance || selected.saldo_disponivel || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-            />
-            {selected.created_date && (
-              <Field
-                icon={CalendarDays}
-                label="Cadastro"
-                value={new Date(selected.created_date).toLocaleDateString('pt-BR')}
-              />
-            )}
-            {/* O que essa posição significa no plano de alavancagem */}
-            <div className="rounded-lg border border-emerald-500/25 bg-emerald-900/12 p-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
-                No plano de alavancagem
-              </p>
-              <p className="text-[11.5px] text-gray-300 leading-relaxed">
-                <strong className={selectedLevel.textColor}>{selectedLevel.name}</strong>
-                {selectedLevel.venda_direta_pct > 0 && (
-                  <> — {selectedLevel.venda_direta_pct}% de venda direta</>
-                )}
-              </p>
-              {selectedLevel.regra && (
-                <p className="text-[10.5px] text-gray-500 leading-snug mt-1">{selectedLevel.regra}</p>
-              )}
-              <p className="text-[10.5px] text-gray-500 leading-snug mt-1.5">
-                A posição na árvore define a cadeia de rebate: mover esta pessoa muda quem
-                recebe sobre a equipe dela.
-              </p>
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {Array.isArray(selected.career_levels) && selected.career_levels.length > 1 && (
-              <div>
-                <p className="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1">Todos os cargos</p>
-                <div className="flex flex-wrap gap-1">
-                  {selected.career_levels.map((id) => {
-                    const l = getLevel(id);
-                    return (
-                      <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded ${l.color} text-white`}>
-                        {l.name}
-                      </span>
-                    );
-                  })}
+            <div className="px-6 pb-6 -mt-12">
+              {/* identidade + ações */}
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                <div
+                  className={`w-24 h-24 rounded-2xl ${getCareerColor(
+                    selected.primary_career_level || 'usuario'
+                  )} flex items-center justify-center text-white text-2xl font-bold overflow-hidden border-4 border-gray-900 flex-shrink-0`}
+                >
+                  {selected.avatar_url ? (
+                    <img src={selected.avatar_url} alt={selected.full_name} className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(selected.full_name)
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-bold text-white leading-tight truncate">{selected.full_name}</h2>
+                  <p className={`text-[13px] font-semibold ${selectedLevel.textColor}`}>{selectedLevel.name}</p>
+                  {selected.active === false && (
+                    <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
+                      na lixeira
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
+                    className="h-9 text-[12px] border-blue-600/50 text-blue-300 hover:bg-blue-500/15">
+                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                    Editar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
+                    className="h-9 text-[12px] border-sky-600/50 text-sky-300 hover:bg-sky-500/15">
+                    <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                    Foto
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => onPromote?.(selected)}
+                    className="h-9 text-[12px] border-emerald-600/50 text-emerald-300 hover:bg-emerald-500/15">
+                    <Star className="w-3.5 h-3.5 mr-1.5" />
+                    Promover
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => onDelete?.(selected)}
+                    className={`h-9 text-[12px] ${
+                      selected.active === false
+                        ? 'border-emerald-600/50 text-emerald-300 hover:bg-emerald-500/15'
+                        : 'border-red-600/50 text-red-300 hover:bg-red-500/15'
+                    }`}>
+                    {selected.active === false
+                      ? <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Restaurar</>
+                      : <><Trash2 className="w-3.5 h-3.5 mr-1.5" />Excluir</>}
+                  </Button>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* indicados diretos, clicáveis */}
-          {selected.children.length > 0 && (
-            <div className="px-4 pb-4">
-              <p className="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1.5">
-                Equipe direta ({selected.children.length})
-              </p>
-              <div className="space-y-1">
-                {selected.children.map((c) => {
-                  const l = getLevel(c.primary_career_level || 'usuario');
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => focusUser(c.id)}
-                      className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 text-left"
-                    >
-                      <span className={`w-6 h-6 rounded-full ${l.color} flex items-center justify-center text-white text-[9px] font-bold overflow-hidden flex-shrink-0`}>
-                        {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(c.full_name)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[11.5px] text-gray-200 truncate">{c.full_name}</span>
-                        <span className={`block text-[10px] ${l.textColor} truncate`}>{l.name}</span>
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* conteúdo em duas colunas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+                {/* coluna 1 — dados */}
+                <div className="space-y-3">
+                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold">Dados do cadastro</p>
+                  <Field icon={Mail} label="E-mail" value={selected.email} />
+                  {selected.phone && <Field icon={Phone} label="Telefone" value={selected.phone} />}
+                  {selected.nickname && <Field icon={AtSign} label="Apelido nos lances" value={selected.nickname} />}
+                  {selected.referral_code && (
+                    <Field icon={LinkIcon} label="Código de indicação" value={selected.referral_code} />
+                  )}
+                  <Field
+                    icon={Wallet}
+                    label="Saldo"
+                    value={`R$ ${Number(selected.valora_pay_balance || selected.saldo_disponivel || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                  />
+                  {selected.created_date && (
+                    <Field
+                      icon={CalendarDays}
+                      label="Cadastro"
+                      value={new Date(selected.created_date).toLocaleDateString('pt-BR')}
+                    />
+                  )}
+                </div>
+
+                {/* coluna 2 — posição na rede + plano */}
+                <div className="space-y-3">
+                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold">Posição na rede</p>
+                  <Field icon={Users} label="Indicados diretos" value={`${selected.children.length} pessoa(s)`} />
+                  <Field
+                    icon={GitBranch}
+                    label="Indicado por"
+                    value={selectedParent ? selectedParent.full_name : 'Raiz da rede — sem indicador'}
+                  />
+
+                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-900/12 p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
+                      No plano de alavancagem
+                    </p>
+                    <p className="text-[12px] text-gray-200 leading-relaxed">
+                      <strong className={selectedLevel.textColor}>{selectedLevel.name}</strong>
+                      {selectedLevel.venda_direta_pct > 0 && (
+                        <> — {selectedLevel.venda_direta_pct}% de venda direta</>
+                      )}
+                    </p>
+                    {selectedLevel.regra && (
+                      <p className="text-[11px] text-gray-400 leading-snug mt-1">{selectedLevel.regra}</p>
+                    )}
+                    <p className="text-[11px] text-gray-500 leading-snug mt-1.5">
+                      A posição na árvore define a cadeia de rebate: mover esta pessoa muda quem
+                      recebe sobre a equipe dela.
+                    </p>
+                  </div>
+
+                  {Array.isArray(selected.career_levels) && selected.career_levels.length > 1 && (
+                    <div>
+                      <p className="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1.5">Todos os cargos</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selected.career_levels.map((id) => {
+                          const l = getLevel(id);
+                          return (
+                            <span key={id} className={`text-[10.5px] px-2 py-0.5 rounded ${l.color} text-white`}>
+                              {l.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* equipe direta */}
+              {selected.children.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold mb-2">
+                    Equipe direta ({selected.children.length})
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                    {selected.children.map((c) => {
+                      const l = getLevel(c.primary_career_level || 'usuario');
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => focusUser(c.id)}
+                          className="flex items-center gap-2 rounded-lg border border-gray-700/70 px-2 py-1.5 hover:bg-white/5 hover:border-gray-600 text-left"
+                          title="Abrir esta pessoa na árvore"
+                        >
+                          <span className={`w-7 h-7 rounded-full ${l.color} flex items-center justify-center text-white text-[9.5px] font-bold overflow-hidden flex-shrink-0`}>
+                            {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(c.full_name)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[12px] text-gray-200 truncate">{c.full_name}</span>
+                            <span className={`block text-[10px] ${l.textColor} truncate`}>{l.name}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
