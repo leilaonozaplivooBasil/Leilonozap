@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -535,6 +535,7 @@ export default function NetworkOverview() {
   const [isDeleting, setIsDeleting] = useState(false);
   // Faixa de estatísticas recolhível + árvore em tela cheia (mais espaço de trabalho)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [auditLog, setAuditLog] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showStats, setShowStats] = useState(false);
@@ -543,6 +544,34 @@ export default function NetworkOverview() {
   // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
   const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);
   const trashedUsers = useMemo(() => allUsers.filter(u => u.active === false), [allUsers]);
+
+  // Auditoria: quem excluiu/moveu/promoveu quem (gravada pelo servidor em system_logs)
+  const loadAudit = useCallback(async () => {
+    try {
+      const rows = await base44.entities.SystemLog?.list?.('-created_date', 300);
+      const list = (Array.isArray(rows) ? rows : [])
+        .map((r) => ({ ...(r.raw_base44 || {}), created_at: r.created_at || r.created_date }))
+        .filter((r) => r.kind === 'network_audit');
+      setAuditLog(list);
+    } catch {
+      setAuditLog([]);
+    }
+  }, []);
+
+  useEffect(() => { loadAudit(); }, [loadAudit, allUsers.length]);
+
+  // Último registro de exclusão de cada usuário — mostrado na Lixeira
+  const trashInfoByUser = useMemo(() => {
+    const map = {};
+    for (const e of auditLog) {
+      if (e.action !== 'trash' || !e.target_id) continue;
+      const atual = map[e.target_id];
+      if (!atual || new Date(e.at || e.created_at) > new Date(atual.at || atual.created_at)) {
+        map[e.target_id] = e;
+      }
+    }
+    return map;
+  }, [auditLog]);
 
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
@@ -1161,6 +1190,7 @@ export default function NetworkOverview() {
       setDeleteTarget(null);
       setDeleteConfirmText('');
       await fetchData();
+      await loadAudit();
     } catch (error) {
       toast.error('Erro ao excluir: ' + (error?.message || 'falha'));
     } finally {
@@ -1181,6 +1211,7 @@ export default function NetworkOverview() {
       }
       toast.success(`${user.full_name} foi restaurado.`);
       await fetchData();
+      await loadAudit();
     } catch (error) {
       toast.error('Erro ao restaurar: ' + (error?.message || 'falha'));
     }
@@ -1644,6 +1675,24 @@ export default function NetworkOverview() {
                             <div className="min-w-0 flex-1">
                               <p className="text-[13px] text-gray-300 truncate">{u.full_name}</p>
                               <p className="text-[11px] text-gray-500 truncate">{u.email} · {lv.name}</p>
+                              {(() => {
+                                const reg = trashInfoByUser[u.id];
+                                if (!reg) {
+                                  return (
+                                    <p className="text-[10.5px] text-gray-600 truncate">
+                                      excluído antes do registro de auditoria
+                                    </p>
+                                  );
+                                }
+                                const quando = reg.at || reg.created_at;
+                                return (
+                                  <p className="text-[10.5px] text-amber-400/80 truncate flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3 flex-shrink-0" />
+                                    excluído por {reg.actor_name || reg.actor_email || 'admin'}
+                                    {quando && ` · ${new Date(quando).toLocaleString('pt-BR')}`}
+                                  </p>
+                                );
+                              })()}
                             </div>
                             <Button
                               size="sm"
@@ -1654,6 +1703,54 @@ export default function NetworkOverview() {
                               <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                               Restaurar
                             </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Histórico de ações da rede — quem fez o quê */}
+                <div className="mt-4 rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <ShieldCheck className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-amber-300">Registro de ações</span>
+                    <span className="text-[11px] text-gray-500">
+                      toda exclusão, restauração, mudança de indicador e promoção fica registrada com autor e horário
+                    </span>
+                  </div>
+                  {auditLog.length === 0 ? (
+                    <p className="text-center py-8 text-[12px] text-gray-500">
+                      Nenhuma ação registrada ainda.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60 max-h-80 overflow-y-auto">
+                      {auditLog.slice(0, 100).map((e, i) => {
+                        const rotulo = {
+                          trash: 'excluiu',
+                          restore: 'restaurou',
+                          move: 'moveu',
+                          promote: 'promoveu',
+                          update: 'editou',
+                        }[e.action] || e.action;
+                        const cor = {
+                          trash: 'text-red-400',
+                          restore: 'text-emerald-400',
+                          move: 'text-blue-400',
+                          promote: 'text-amber-400',
+                        }[e.action] || 'text-gray-400';
+                        return (
+                          <div key={`${e.target_id}-${e.at}-${i}`} className="px-4 py-2 text-[12px] flex items-center gap-2 flex-wrap">
+                            <span className="text-gray-300 font-medium">{e.actor_name || e.actor_email || 'admin'}</span>
+                            <span className={cor}>{rotulo}</span>
+                            <span className="text-gray-300">{e.target_name || e.target_id}</span>
+                            {e.action === 'move' && e.new_parent_name && (
+                              <span className="text-gray-500">→ para baixo de {e.new_parent_name}</span>
+                            )}
+                            <span className="flex-1" />
+                            <span className="text-[10.5px] text-gray-600">
+                              {(e.at || e.created_at) && new Date(e.at || e.created_at).toLocaleString('pt-BR')}
+                            </span>
                           </div>
                         );
                       })}
@@ -1781,7 +1878,7 @@ export default function NetworkOverview() {
           : null;
         const podeExcluir = deleteConfirmText.trim().toLowerCase() === 'deletar';
         return (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-gray-900 shadow-2xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
                 <TriangleAlert className="w-4 h-4 text-red-400" />

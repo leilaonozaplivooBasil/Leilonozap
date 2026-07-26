@@ -32,6 +32,32 @@ const ALLOWED = [
   'commission_balance',
 ];
 
+// Auditoria: registra QUEM fez O QUÊ com QUEM. Guardado em system_logs
+// (tabela genérica de logs que já existe), no campo jsonb raw_base44.
+// Nunca derruba a operação principal — se o log falhar, só avisa no console.
+function newId() {
+  let out = '';
+  const hex = '0123456789abcdef';
+  for (let i = 0; i < 24; i++) out += hex[Math.floor(Math.random() * 16)];
+  return out;
+}
+
+async function writeAudit(entry) {
+  try {
+    const row = {
+      id: newId(),
+      raw_base44: { kind: 'network_audit', ...entry, at: new Date().toISOString() },
+    };
+    await sb('system_logs', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(row),
+    });
+  } catch (e) {
+    console.warn('[adminUpdateUser] auditoria não gravada:', e?.message || e);
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') {
@@ -97,7 +123,41 @@ export default async function handler(req, res) {
     if (!Array.isArray(rows) || rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
     }
-    return res.status(200).json({ success: true, user: rows[0] });
+
+    // Auditoria da ação (não bloqueia a resposta se falhar)
+    const saved = rows[0];
+    let action = 'update';
+    if ('active' in payload) action = payload.active === false ? 'trash' : 'restore';
+    else if ('referred_by_id' in payload) action = 'move';
+    else if ('primary_career_level' in payload || 'career_levels' in payload) action = 'promote';
+
+    const actorInfo = await (await sb(
+      `app_users?select=id,full_name,email&id=eq.${encodeURIComponent(actorId)}&limit=1`
+    )).json().catch(() => []);
+    const who = Array.isArray(actorInfo) ? actorInfo[0] : null;
+
+    let newParentName = null;
+    if (action === 'move' && payload.referred_by_id) {
+      const p = await (await sb(
+        `app_users?select=full_name&id=eq.${encodeURIComponent(payload.referred_by_id)}&limit=1`
+      )).json().catch(() => []);
+      newParentName = Array.isArray(p) && p[0] ? p[0].full_name : null;
+    }
+
+    await writeAudit({
+      action,
+      actor_id: actorId,
+      actor_name: who?.full_name || null,
+      actor_email: who?.email || null,
+      target_id: saved.id,
+      target_name: saved.full_name || null,
+      target_email: saved.email || null,
+      fields: Object.keys(payload).filter((k) => k !== 'updated_date'),
+      new_parent_id: action === 'move' ? (payload.referred_by_id || null) : undefined,
+      new_parent_name: action === 'move' ? newParentName : undefined,
+    });
+
+    return res.status(200).json({ success: true, user: saved });
   } catch (e) {
     return res.status(500).json({ success: false, error: 'Erro ao salvar', details: String((e && e.message) || e) });
   }

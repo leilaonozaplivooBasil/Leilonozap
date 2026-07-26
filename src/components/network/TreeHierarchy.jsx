@@ -958,25 +958,26 @@ export default function TreeHierarchy({
 
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
-                    className="h-9 text-[12px] border-blue-600/50 text-blue-300 hover:bg-blue-500/15">
+                    className="h-9 text-[12px] bg-blue-100 border-blue-300 text-blue-900 hover:bg-blue-50 hover:text-blue-950 font-semibold">
                     <Pencil className="w-3.5 h-3.5 mr-1.5" />
                     Editar
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
-                    className="h-9 text-[12px] border-sky-600/50 text-sky-300 hover:bg-sky-500/15">
+                    className="h-9 text-[12px] bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-50 hover:text-sky-950 font-semibold">
                     <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
                     Foto
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => onPromote?.(selected)}
-                    className="h-9 text-[12px] border-emerald-600/50 text-emerald-300 hover:bg-emerald-500/15">
+                    className="h-9 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 hover:text-emerald-950 font-semibold">
                     <Star className="w-3.5 h-3.5 mr-1.5" />
                     Promover
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => onDelete?.(selected)}
-                    className={`h-9 text-[12px] ${
+                  <Button size="sm" variant="outline"
+                    onClick={() => { const alvo = selected; setSelectedId(null); onDelete?.(alvo); }}
+                    className={`h-9 text-[12px] font-semibold ${
                       selected.active === false
-                        ? 'border-emerald-600/50 text-emerald-300 hover:bg-emerald-500/15'
-                        : 'border-red-600/50 text-red-300 hover:bg-red-500/15'
+                        ? 'bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50'
+                        : 'bg-red-100 border-red-300 text-red-900 hover:bg-red-50'
                     }`}>
                     {selected.active === false
                       ? <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Restaurar</>
