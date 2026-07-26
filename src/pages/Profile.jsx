@@ -46,7 +46,7 @@ import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
 import AvaliarLojistaModal from '@/components/loja/AvaliarLojistaModal';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from '@/components/ui/use-toast';
-import { Wallet, Filter } from 'lucide-react';
+import { Wallet, Filter, ChevronDown } from 'lucide-react';
 import DigitalWalletBalance from '../components/wallet/DigitalWalletBalance';
 
 export default function Profile() {
@@ -86,6 +86,7 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' ou 'orders'
   const [catalogOrders, setCatalogOrders] = useState([]);
   const [orderFilter, setOrderFilter] = useState('todos');
+  const [showRecentBids, setShowRecentBids] = useState(false); // lances recentes recolhidos por padrão (não ocupar espaço)
   const [ratingOrder, setRatingOrder] = useState(null);
   const [confirmedIds, setConfirmedIds] = useState(new Set());
   const [confirmingId, setConfirmingId] = useState(null);
@@ -955,6 +956,70 @@ export default function Profile() {
                   )}
               </CardContent>
             </Card>
+
+            {/* 🔨 Meus Lances Recentes — recolhível logo abaixo de Informações Pessoais
+                (pedido Gabriel 25/07): abre no clique, expande na própria tela e fecha
+                de novo pra não ocupar espaço. */}
+            <Card className={`mt-6 overflow-hidden ${isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}`}>
+              <button
+                onClick={() => setShowRecentBids(v => !v)}
+                aria-expanded={showRecentBids}
+                className={`w-full flex items-center justify-between gap-3 px-6 py-4 transition-colors ${isSaiDeBaixo ? 'hover:bg-gray-50' : 'hover:bg-white/[0.04]'}`}
+              >
+                <span className={`font-slab font-bold flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
+                  <Gavel className="w-5 h-5" />
+                  Meus Lances Recentes
+                </span>
+                <span className="flex items-center gap-2">
+                  {userBids.length > 0 && (
+                    <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${isSaiDeBaixo ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-gray-300'}`}>
+                      {userBids.length}
+                    </span>
+                  )}
+                  <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${showRecentBids ? 'rotate-180' : ''} ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`} />
+                </span>
+              </button>
+
+              <div className={`grid transition-all duration-300 ease-in-out ${showRecentBids ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="min-h-0 overflow-hidden">
+                  <CardContent className="pt-0">
+                    {userBids.length > 0 ? (
+                      <div className={`rounded-xl border overflow-hidden divide-y ${isSaiDeBaixo ? 'border-gray-200 divide-gray-100' : 'border-white/10 divide-white/5'}`}>
+                        {userBids.slice(0, 10).map((bid) => (
+                          <div key={bid.id} className={`flex items-center gap-3 px-4 py-3 ${isSaiDeBaixo ? 'bg-white' : 'bg-white/[0.02]'}`}>
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSaiDeBaixo ? 'bg-red-50 text-red-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                              <Gavel className="w-[18px] h-[18px]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>R$ {(bid.bid_amount || 0).toFixed(2)}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(bid.created_date).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Registrado</Badge>
+                          </div>
+                        ))}
+                        {userBids.length > 10 && (
+                          <p className={`px-4 py-2.5 text-center text-xs ${isSaiDeBaixo ? 'text-gray-500 bg-gray-50' : 'text-gray-500 bg-white/[0.02]'}`}>
+                            Mostrando os 10 mais recentes de {userBids.length} lances
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Zap className={`w-12 h-12 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'} mx-auto mb-4`} />
+                        <h3 className={`text-lg font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>
+                          Nenhum lance ainda
+                        </h3>
+                        <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                          Quando você participar de leilões, seus lances aparecerão aqui.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </div>
+              </div>
+            </Card>
           </div>
           {/* Stats & Actions */}
           <div className="space-y-6">
@@ -1025,47 +1090,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Recent Bids */}
-        <Card className={`mt-12 ${isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}`}>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className={`font-slab ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>Meus Lances Recentes</CardTitle>
-            {userBids.length > 0 && (
-              <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${isSaiDeBaixo ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-gray-300'}`}>
-                {Math.min(userBids.length, 10)} de {userBids.length}
-              </span>
-            )}
-          </CardHeader>
-          <CardContent>
-            {userBids.length > 0 ? (
-              <div className={`rounded-xl border overflow-hidden divide-y ${isSaiDeBaixo ? 'border-gray-200 divide-gray-100' : 'border-white/10 divide-white/5'}`}>
-                {userBids.slice(0, 10).map((bid) => (
-                  <div key={bid.id} className={`flex items-center gap-3 px-4 py-3 ${isSaiDeBaixo ? 'bg-white' : 'bg-white/[0.02]'}`}>
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSaiDeBaixo ? 'bg-red-50 text-red-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                      <Gavel className="w-[18px] h-[18px]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>R$ {(bid.bid_amount || 0).toFixed(2)}</p>
-                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>
-                        {new Date(bid.created_date).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                    <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Registrado</Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Zap className={`w-12 h-12 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'} mx-auto mb-4`} />
-                <h3 className={`text-lg font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>
-                  Nenhum lance ainda
-                </h3>
-                <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Quando você participar de leilões, seus lances aparecerão aqui.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Lances recentes agora ficam recolhíveis logo abaixo de Informações Pessoais */}
         </>
         )}
 
