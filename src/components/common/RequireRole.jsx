@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { resolveUserPanels } from '@/lib/panelResolver';
 
 /**
  * Protege rotas baseado na role do usuário.
@@ -9,6 +10,8 @@ import { createPageUrl } from '@/utils';
  * Regras:
  *  - super_admin: sempre autorizado (acesso default a todos os painéis pra teste)
  *  - role em allowedRoles: autorizado
+ *  - painel habilitado (enabled_panels) cujo key esteja em allowedRoles: autorizado —
+ *    mantém a guarda coerente com o menu, que mostra o card a partir de resolveUserPanels
  *  - outro: redireciona pra fallbackRoute
  *  - sem login: redireciona pra noAuthRoute
  */
@@ -38,8 +41,14 @@ export default function RequireRole({ children, allowedRoles, fallbackRoute = 'H
     }
 
     const role = user.role || 'user';
+    // Painéis resolvidos (role + enabled_panels) — mesma fonte que monta o menu "Acessar como..."
+    const panelKeys = resolveUserPanels(user).map((p) => p.key);
     // super_admin tem bypass universal — login default de teste
-    if (role === 'super_admin' || allowedRoles.includes(role)) {
+    if (
+      role === 'super_admin' ||
+      allowedRoles.includes(role) ||
+      allowedRoles.some((r) => panelKeys.includes(r))
+    ) {
       setStatus('authorized');
     } else {
       setStatus('unauthorized');
