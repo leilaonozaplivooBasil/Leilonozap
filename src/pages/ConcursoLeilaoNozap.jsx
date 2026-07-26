@@ -5,6 +5,9 @@ import CountdownTimer from '@/components/concurso/CountdownTimer';
 import ShareSection from '@/components/concurso/ShareSection';
 import OnboardingModal from '@/components/concurso/OnboardingModal';
 import AdminInsights from '@/components/concurso/AdminInsights';
+import ChancesCalculator from '@/components/concurso/ChancesCalculator';
+import DailyMission from '@/components/concurso/DailyMission';
+import WinnersFeed from '@/components/concurso/WinnersFeed';
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -481,14 +484,29 @@ export default function ConcursoLeilaoNozap() {
         {/* FEATURE 1 — contador regressivo do sorteio (FOMO) */}
         <CountdownTimer config={config} />
 
-        {/* DASHBOARD GRID */}
+        {/* DASHBOARD GRID — ranking é o conteúdo principal (esquerda no desktop);
+            no celular o cadastro/painel pessoal vem primeiro pra não enterrar a conversão */}
         <div className="grid lg:grid-cols-[1.5fr_1fr] gap-4 mt-6 items-start">
-          <div className="flex flex-col gap-4">
-            {LiveBlock}
+          <div className="flex flex-col gap-4 order-2 lg:order-1 min-w-0">
+            {(liveOn || config.live_horario) && LiveBlock}
+            {RankingBlock}
+            {/* FEATURE 5 — prova social com os sorteios reais */}
+            <WinnersFeed />
             {DestaqueBlock}
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 order-1 lg:order-2 min-w-0">
             {myCode ? MinePanel : FormPanel}
+            {/* FEATURE 4 — chances em tempo real (posição do dia) */}
+            {myCode && (
+              <ChancesCalculator
+                posicao={me?.periodos?.dia?.posicao}
+                pontos={me?.periodos?.dia?.pontos}
+                total={data.total || 0}
+                liderPontos={periodo === 'dia' ? (data.ranking?.[0]?.pontos || 0) : 0}
+              />
+            )}
+            {/* FEATURE 3 — missão do dia (progresso = pontos de hoje) */}
+            {myCode && <DailyMission progresso={me?.periodos?.dia?.pontos || 0} />}
             {/* FEATURE 2 — story 1080x1080 personalizado + compartilhamento */}
             {myCode && (
               <ShareSection
@@ -498,7 +516,6 @@ export default function ConcursoLeilaoNozap() {
                 link={myLink}
               />
             )}
-            {RankingBlock}
           </div>
         </div>
 
