@@ -1,6 +1,7 @@
 import React from "react";
 import { Bot, Zap, Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
+import LeiloeiroAvatar from "@/assets/leiloeiro-avatar.webp";
 
 export default function AIMessage({ message, winner, auction, currentUser }) {
   const formatTime = (timestamp) => {
@@ -53,10 +54,10 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
       const phase = message.countdown_phase || 1;
       return (
         <div className="flex items-center gap-3 py-2">
-          <img 
-            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
+          <img
+            src={LeiloeiroAvatar}
             alt="Leiloeiro"
-            className="w-16 h-16 animate-swing"
+            className="w-16 h-16 object-contain animate-swing"
           />
           <div className="flex-1">
             <div className="text-2xl font-black tracking-wide mb-1">

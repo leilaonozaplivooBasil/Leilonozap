@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import LeiloeiroAvatar from '@/assets/leiloeiro-avatar.webp';
 
 export default function AuctioneerFloat({ phase, message, onComplete }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -88,7 +89,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
               className="relative z-10"
             >
               <img
-                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d97d32ed2_image.png"
+                src={LeiloeiroAvatar}
                 alt="Leiloeiro"
                 className="auctioneer-image object-contain drop-shadow-2xl"
                 style={{

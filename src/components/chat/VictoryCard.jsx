@@ -1,5 +1,7 @@
 import React from 'react';
-import { Crown, Trophy, Gavel } from 'lucide-react';
+import { Crown, Trophy } from 'lucide-react';
+
+const HAMMER_3D = '/martelo-3d.png';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
 
