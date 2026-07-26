@@ -730,7 +730,7 @@ export default function Home() {
         </div>
       }
 
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? 'md:-mt-28' : ''}`}>
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? 'md:-mt-10' : ''}`}>
         {/* Hero Section - Glass */}
         <div className="mb-8">
           <div className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
