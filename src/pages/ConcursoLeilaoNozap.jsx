@@ -14,7 +14,7 @@ import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
   Maximize2, Minimize2, Save, Settings2, ArrowLeft,
-  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2,
+  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2, LogOut,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -588,12 +588,28 @@ export default function ConcursoLeilaoNozap() {
 
         {/* VOLTAR PARA A HOME — a página é destino direto de link compartilhado no
             WhatsApp, então muita gente chega aqui sem ter navegação para sair */}
-        <a
-          href="/"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-green-200/85 hover:text-white transition-colors mb-4 -ml-1 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar para a Home
-        </a>
+        <div className="flex items-center justify-between mb-4">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-green-200/85 hover:text-white transition-colors -ml-1 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10"
+          >
+            <ArrowLeft className="w-4 h-4" /> Voltar para a Home
+          </a>
+          {currentUser && (
+            <button
+              onClick={() => {
+                sessionStorage.setItem('userLoggedOut', 'true');
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('userIsAdmin');
+                sessionStorage.removeItem('isLoggedIn');
+                window.location.reload();
+              }}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-red-300/80 hover:text-red-200 transition-colors px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-red-500/10"
+            >
+              <LogOut className="w-4 h-4" /> Sair
+            </button>
+          )}
+        </div>
 
         {/* HEADER + STATUS */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
