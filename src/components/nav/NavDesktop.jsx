@@ -147,10 +147,18 @@ export default function NavDesktop({
         })}
       </div>
 
-      {/* === CLUSTER DIREITO: carrinho · Entrar/avatar · Rank Premiado ===
-          Tudo em items-center no mesmo eixo vertical dos setores centrais,
-          com respiro entre carrinho, perfil e rank (pedido Gabriel 26/07). */}
+      {/* === CLUSTER DIREITO: perfil · carrinho · Rank Premiado ===
+          Ordem do mockup do Gabriel (26/07): avatar primeiro, carrinho no meio,
+          rank no canto. Tudo em items-center no mesmo eixo dos setores centrais. */}
       <div className="flex items-center gap-x-5">
+        <div>
+          <UserAvatarMenu
+            currentUser={currentUser}
+            onLoginClick={onLoginClick}
+            onLogout={onLogout}
+          />
+        </div>
+
         {/* 🛒 Carrinho — liquid glass verde da paleta, com contador vivo:
             todo produto adicionado dispara 'cartUpdated' no Layout → cartCount
             muda → badge pop + balanço do ícone (keys reiniciam as animações). */}
@@ -222,14 +230,6 @@ export default function NavDesktop({
             }
           `}</style>
         </Link>
-
-        <div>
-          <UserAvatarMenu
-            currentUser={currentUser}
-            onLoginClick={onLoginClick}
-            onLogout={onLogout}
-          />
-        </div>
 
         {/* === RANK PREMIADO — afastado, no canto direito (essência dourada → bege da paleta) === */}
         <Link
