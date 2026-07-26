@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2, Plus } from "lucide-react";
+import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
@@ -98,6 +98,27 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     if (openPopup) {
       window.dispatchEvent(new Event('openCartPopup'));
     }
+  };
+
+  // Diminui uma unidade direto do card (0 unidades → sai do carrinho)
+  const removeUnit = (e) => {
+    e.stopPropagation();
+    const savedCart = localStorage.getItem('catalogCart');
+    let cart = savedCart ? JSON.parse(savedCart) : [];
+    const existingIndex = cart.findIndex(item => item.id === product.id);
+    if (existingIndex < 0) return;
+
+    const currentQty = Number(cart[existingIndex].quantity) || 0;
+    if (currentQty <= 1) {
+      cart.splice(existingIndex, 1);
+      setCartQuantity(0);
+      setIsInCart(false);
+    } else {
+      cart[existingIndex].quantity = currentQty - 1;
+      setCartQuantity(currentQty - 1);
+    }
+    localStorage.setItem('catalogCart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const images = (product.image_urls && product.image_urls.length > 0)
@@ -420,6 +441,15 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
                     </>
                   )}
                 </Button>
+                {isInCart && (
+                  <Button
+                    onClick={removeUnit}
+                    title={cartQuantity <= 1 ? 'Remover do carrinho' : 'Tirar uma unidade'}
+                    className="h-10 sm:h-11 w-10 sm:w-11 flex-shrink-0 rounded-lg bg-gray-700 hover:bg-red-600/80 text-white font-bold border border-white/15 p-0 transition-colors"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </Button>
+                )}
                 <Button
                   onClick={(e) => addUnit(e)}
                   disabled={cartQuantity >= maxStock}
