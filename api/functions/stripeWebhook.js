@@ -1,5 +1,6 @@
 // stripeWebhook — confirma o pagamento de cartão (busca a sessão/PI na API da Stripe, não confia
 // no corpo), marca a venda paga (idempotente) e paga as comissões pela cadeia (telescópio teto 20%).
+import { computeTopPool } from '../_lib/topPool.js';
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
@@ -60,6 +61,27 @@ async function payCommissions(sale) {
       running += amount; total += amount;
     }
   }
+
+  // ---- TOPO DO PLANO (10%) — governança ----
+  // A cadeia acima cobre os 20%. Este bloco paga os cargos institucionais (CEO,
+  // Livoo Live, Embaixador, Conselheiros, Fundadores, Diretorias) e o 1% do Sócio
+  // Executivo sobre a própria estrutura. Antes de 26/07/2026 essa fatia nunca era
+  // distribuída — o dinheiro simplesmente não saía para eles.
+  try {
+    const todos = await (await sb('app_users?select=id,full_name,career_levels,primary_career_level,referred_by_id,commission_balance,licenciado_context,active&limit=5000')).json();
+    const lista = Array.isArray(todos) ? todos : [];
+    const ancora = sale.seller_id || (lista.find((u) => u.id === sale.buyer_id)?.referred_by_id ?? null);
+    const linhasTopo = computeTopPool(value, lista, ancora);
+    for (const l of linhasTopo) {
+      await sb('commission_ledger', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ sale_id: sale.id, ...l }) });
+      const alvo = lista.find((u) => u.id === l.beneficiary_id);
+      await sb(`app_users?id=eq.${l.beneficiary_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: round2((Number(alvo?.commission_balance) || 0) + l.amount) }) });
+      total += l.amount;
+    }
+  } catch (e) {
+    console.error('[comissao] topo do plano falhou:', e?.message || e);
+  }
+
   return round2(total);
 }
 
