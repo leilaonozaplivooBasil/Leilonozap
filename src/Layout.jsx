@@ -47,8 +47,10 @@ export default function Layout({ children, currentPageName }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.id && parsed?.email) {
-          // Sticky admin: se já foi confirmado admin antes, força role admin
-          if (stickyAdmin && parsed.role !== 'admin') {
+          // Sticky admin: se já foi confirmado admin antes, força role admin.
+          // ⚠️ NUNCA rebaixar super_admin — o sticky só protege contra downgrade
+          // pra 'user', não pode sobrescrever um cargo MAIOR que admin.
+          if (stickyAdmin && parsed.role !== 'admin' && parsed.role !== 'super_admin') {
             parsed.role = 'admin';
           }
           sessionStorage.setItem('isLoggedIn', 'true');
@@ -64,10 +66,11 @@ export default function Layout({ children, currentPageName }) {
     if (!newUser) return oldUser;
     const merged = { ...newUser };
     const wasAdmin = oldUser?.role === 'admin' || localStorage.getItem('userIsAdmin') === '1';
-    if (wasAdmin && merged.role !== 'admin') {
+    // ⚠️ super_admin é MAIOR que admin — o anti-downgrade nunca pode rebaixá-lo
+    if (wasAdmin && merged.role !== 'admin' && merged.role !== 'super_admin') {
       merged.role = 'admin';
     }
-    if (merged.role === 'admin') {
+    if (merged.role === 'admin' || merged.role === 'super_admin') {
       try { localStorage.setItem('userIsAdmin', '1'); } catch (e) {}
     }
     return merged;
