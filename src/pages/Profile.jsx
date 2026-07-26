@@ -33,7 +33,13 @@ import {
   CheckCircle,
   Clock,
   Truck,
-  ArrowLeft
+  ArrowLeft,
+  Mail,
+  Phone,
+  BadgeCheck,
+  CalendarDays,
+  Heart,
+  Gavel
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
@@ -396,6 +402,21 @@ export default function Profile() {
   };
   const colors = ["#25D366", "#128C7E", "#34B7F1", "#9C88FF", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FECA57", "#FF9FF3", "#54A0FF", "#5F27CD"];
 
+  // Tile de leitura dos dados do perfil (modo visualização)
+  const InfoTile = ({ icon: Icon, label, value }) => (
+    <div className={`flex items-start gap-3 p-3.5 rounded-xl border ${isSaiDeBaixo ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.03] border-white/10'}`}>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSaiDeBaixo ? 'bg-red-50 text-red-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
+        <Icon className="w-[18px] h-[18px]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">{label}</p>
+        <p className={`text-sm font-medium truncate ${isSaiDeBaixo ? 'text-gray-900' : 'text-gray-100'}`} title={String(value ?? '')}>
+          {value || '—'}
+        </p>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
         <div className={`flex items-center justify-center h-screen ${isSaiDeBaixo ? 'bg-white' : 'bg-gray-900'}`}>
@@ -426,45 +447,89 @@ export default function Profile() {
   return (
     <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'} p-4 sm:p-6 lg:p-8`}>
       <div className="max-w-6xl mx-auto">
-        {/* Header moderno */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className={`text-5xl font-black ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>{new URLSearchParams(window.location.search).get('user_id') ? 'Perfil do Usuário' : 'Meu Perfil'}</h1>
-              <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>Gerencie sua conta e informações</p>
+        {/* Header — cartão de identidade do perfil */}
+        <div className="mb-10">
+          <div
+            className={`relative overflow-hidden rounded-2xl border p-6 sm:p-8 mb-8 ${isSaiDeBaixo ? 'bg-white border-gray-200 shadow-sm' : 'border-white/10 shadow-lg shadow-black/20'}`}
+            style={isSaiDeBaixo ? {} : { background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(17,24,39,0.85) 45%, rgba(17,24,39,0.4)), rgba(31,41,55,0.3)' }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Avatar"
+                  className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-xl ring-2 ${isSaiDeBaixo ? 'ring-red-300' : 'ring-emerald-400/50'}`}
+                />
+              ) : (
+                <div
+                  className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-xl ring-2 ${isSaiDeBaixo ? 'ring-red-300' : 'ring-emerald-400/50'}`}
+                  style={{ backgroundColor: editData.avatar_color }}
+                >
+                  {(currentUser.nickname || currentUser.full_name)?.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0">
+                <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-600' : 'text-emerald-400'}`}>
+                  {new URLSearchParams(window.location.search).get('user_id') ? 'Perfil do Usuário' : 'Meu Perfil'}
+                </p>
+                <h1 className={`font-slab text-3xl sm:text-4xl font-extrabold leading-tight truncate ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                  {currentUser.nickname || currentUser.full_name}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${isSaiDeBaixo ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'}`}>
+                    <BadgeCheck className="w-3.5 h-3.5" />
+                    {getRoleDisplayName(currentUser)}
+                  </span>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${isSaiDeBaixo ? 'bg-gray-50 text-gray-600 border-gray-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>
+                    <Mail className="w-3.5 h-3.5" />
+                    {currentUser.email}
+                  </span>
+                  {currentUser.created_date && (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${isSaiDeBaixo ? 'bg-gray-50 text-gray-600 border-gray-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>
+                      <CalendarDays className="w-3.5 h-3.5" />
+                      Membro desde {new Date(currentUser.created_date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {new URLSearchParams(window.location.search).get('user_id') && (
+                <button
+                  onClick={() => navigate(createPageUrl('CRMInvestidores'))}
+                  className={`self-start flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isSaiDeBaixo ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-800 border border-gray-700 text-slate-300 hover:text-white'}`}
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar
+                </button>
+              )}
             </div>
-            {new URLSearchParams(window.location.search).get('user_id') && (
-              <button
-                onClick={() => navigate(createPageUrl('CRMInvestidores'))}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isSaiDeBaixo ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-800 border border-gray-700 text-slate-300 hover:text-white'}`}
-              >
-                <ArrowLeft className="w-4 h-4" /> Voltar
-              </button>
-            )}
           </div>
-          
-          <div className={`flex gap-2 border-b-2 ${isSaiDeBaixo ? 'border-gray-200' : 'border-gray-800'}`}>
+
+          <div className={`flex gap-1 border-b ${isSaiDeBaixo ? 'border-gray-200' : 'border-white/10'}`}>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`pb-4 px-6 font-bold text-lg transition-all duration-300 ${
+              className={`flex items-center gap-2 pb-3 px-5 font-slab text-sm font-bold uppercase tracking-wide transition-all duration-300 border-b-2 -mb-px ${
                 activeTab === 'profile'
-                  ? `${isSaiDeBaixo ? 'text-gray-900 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
-                  : `${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
+                  ? `${isSaiDeBaixo ? 'text-gray-900 border-red-600' : 'text-emerald-300 border-emerald-400'}`
+                  : `border-transparent ${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
               }`}
             >
-              <UserIcon className="w-5 h-5 inline mr-2" />
+              <UserIcon className="w-4 h-4" />
               Perfil
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`pb-4 px-6 font-bold text-lg transition-all duration-300 ${
+              className={`flex items-center gap-2 pb-3 px-5 font-slab text-sm font-bold uppercase tracking-wide transition-all duration-300 border-b-2 -mb-px ${
                 activeTab === 'orders'
-                  ? `${isSaiDeBaixo ? 'text-gray-900 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
-                  : `${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
+                  ? `${isSaiDeBaixo ? 'text-gray-900 border-red-600' : 'text-emerald-300 border-emerald-400'}`
+                  : `border-transparent ${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
               }`}
             >
-              <Package className="w-5 h-5 inline mr-2" />
-              Meus Pedidos <span className="font-semibold">({catalogOrders.filter(o => o.status !== 'canceled').length})</span>
+              <Package className="w-4 h-4" />
+              Meus Pedidos
+              <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${isSaiDeBaixo ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-gray-300'}`}>
+                {catalogOrders.filter(o => o.status !== 'canceled').length}
+              </span>
             </button>
           </div>
         </div>
@@ -476,7 +541,7 @@ export default function Profile() {
           <div className="lg:col-span-2">
             <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
+                <CardTitle className={`font-slab flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
                   <UserIcon className="w-5 h-5" />
                   Informações Pessoais
                 </CardTitle>
@@ -490,7 +555,8 @@ export default function Profile() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Avatar e Ferramentas de Edição */}
+                {/* Avatar e Ferramentas de Edição — só no modo edição (no modo leitura o avatar já está no cartão do topo) */}
+                {isEditing && (
                 <div className="flex flex-col md:flex-row items-center gap-6">
                   <div className="relative">
                     {avatarPreview ? (
@@ -518,7 +584,10 @@ export default function Profile() {
                     <div className="flex-1 space-y-3 w-full">
                       {/* PASSO 1: IDEIA INICIAL */}
                       <div>
-                        <Label htmlFor="avatar-idea" className={`text-sm font-medium ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>✨ Crie seu avatar com IA</Label>
+                        <Label htmlFor="avatar-idea" className={`flex items-center gap-1.5 text-sm font-medium ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                          <Wand2 className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-emerald-400'}`} />
+                          Crie seu avatar com IA
+                        </Label>
                         <div className="flex gap-2 mt-1">
                           <Input
                             id="avatar-idea"
@@ -569,53 +638,48 @@ export default function Profile() {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {isEditing ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="nickname" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Apelido (Público)</Label>
-                        <Input 
-                          id="nickname"
-                          value={editData.nickname}
-                          onChange={(e) => setEditData({ ...editData, nickname: e.target.value })}
-                          placeholder="Seu nome nos leilões"
-                          className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Nome Completo (Privado)</Label>
-                        <Input value={currentUser.full_name} disabled className={isSaiDeBaixo ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-gray-900 border-gray-700 text-gray-400'} />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-2 md:col-span-2">
-                      <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Apelido</Label>
-                      <Input value={currentUser.nickname || currentUser.full_name} disabled className={isSaiDeBaixo ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-gray-900 border-gray-700 text-gray-400'} />
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="nickname" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Apelido (Público)</Label>
+                      <Input
+                        id="nickname"
+                        value={editData.nickname}
+                        onChange={(e) => setEditData({ ...editData, nickname: e.target.value })}
+                        placeholder="Seu nome nos leilões"
+                        className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                      />
                     </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Email</Label>
-                    <Input value={currentUser.email} disabled className={isSaiDeBaixo ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-gray-900 border-gray-700 text-gray-400'} />
+                    <div className="space-y-2">
+                      <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Nome Completo (Privado)</Label>
+                      <Input value={currentUser.full_name} disabled className={isSaiDeBaixo ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-gray-900 border-gray-700 text-gray-400'} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Email</Label>
+                      <Input value={currentUser.email} disabled className={isSaiDeBaixo ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-gray-900 border-gray-700 text-gray-400'} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Telefone/WhatsApp</Label>
+                      <Input
+                        id="phone"
+                        value={editData.phone}
+                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                        placeholder="(11) 99999-9999"
+                        className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Telefone/WhatsApp</Label>
-                    <Input
-                      id="phone"
-                      value={editData.phone}
-                      onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
-                      placeholder="(11) 99999-9999"
-                      disabled={!isEditing}
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 disabled:bg-gray-50 disabled:text-gray-500' : 'bg-gray-700 border-gray-600 text-white disabled:bg-gray-900 disabled:text-gray-400'}
-                    />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <InfoTile icon={UserIcon} label="Apelido" value={currentUser.nickname || currentUser.full_name} />
+                    <InfoTile icon={Mail} label="Email" value={currentUser.email} />
+                    <InfoTile icon={Phone} label="Telefone/WhatsApp" value={currentUser.phone} />
+                    <InfoTile icon={BadgeCheck} label="Função" value={getRoleDisplayName(currentUser)} />
                   </div>
-                  <div className="space-y-2">
-                   <Label className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Função</Label>
-                   <Input value={getRoleDisplayName(currentUser)} disabled className={isSaiDeBaixo ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-gray-900 border-gray-700 text-gray-400'} />
-                  </div>
-                  </div>
+                )}
                   
                   {/* Seção de Senha */}
                   {isEditing && (
@@ -786,17 +850,19 @@ export default function Profile() {
 
                   {/* Exibir endereço salvo quando não estiver editando */}
                   {!isEditing && currentUser.address_street && (
-                  <div className={`mt-6 p-4 ${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-900/50'} rounded-lg`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-500'}`} />
-                    <h4 className={`text-sm font-semibold ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>Endereço de Entrega</h4>
-                  </div>
-                  <div className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                    <p>{currentUser.address_street}, {currentUser.address_number}</p>
-                    {currentUser.address_complement && <p>{currentUser.address_complement}</p>}
-                    <p>{currentUser.address_neighborhood} - {currentUser.address_city}/{currentUser.address_state}</p>
-                    <p>CEP: {currentUser.address_zip_code}</p>
-                  </div>
+                  <div className={`flex items-start gap-3 p-3.5 rounded-xl border ${isSaiDeBaixo ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.03] border-white/10'}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSaiDeBaixo ? 'bg-red-50 text-red-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                      <MapPin className="w-[18px] h-[18px]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Endereço de Entrega</p>
+                      <div className={`text-sm font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-gray-100'}`}>
+                        <p>{currentUser.address_street}, {currentUser.address_number}{currentUser.address_complement ? ` · ${currentUser.address_complement}` : ''}</p>
+                        <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                          {currentUser.address_neighborhood} — {currentUser.address_city}/{currentUser.address_state} · CEP {currentUser.address_zip_code}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   )}
 
@@ -823,16 +889,16 @@ export default function Profile() {
             {/* Statistics */}
             <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Estatísticas</CardTitle>
+                <CardTitle className={`font-slab ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>Estatísticas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-0 p-0">
+              <CardContent className="space-y-3">
                 {userStats.map((stat) => (
-                  <div key={stat.label} className="flex items-center justify-between px-6 py-2">
-                    <div className="flex items-center gap-3">
+                  <div key={stat.label} className={`flex items-center gap-3 p-3 rounded-xl border ${isSaiDeBaixo ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.03] border-white/10'}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isSaiDeBaixo ? 'bg-red-50' : 'bg-white/5'}`}>
                       <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                      <span className={`text-sm ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>{stat.label}</span>
                     </div>
-                    <span className={`font-semibold text-lg ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>{stat.value}</span>
+                    <span className={`text-sm flex-1 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>{stat.label}</span>
+                    <span className={`font-slab font-bold text-2xl ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>{stat.value}</span>
                   </div>
                 ))}
               </CardContent>
@@ -841,42 +907,42 @@ export default function Profile() {
             {/* Quick Actions */}
             <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações Rápidas</CardTitle>
+                <CardTitle className={`font-slab ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>Ações Rápidas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {!fromCatalog && (
-                  <button 
+                  <button
                     onClick={() => navigate(createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home") + "?favorites=true")}
-                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
-                      isSaiDeBaixo 
-                        ? 'bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 text-red-700 hover:from-red-100 hover:to-rose-100 hover:border-red-400 hover:shadow-md' 
-                        : 'bg-gradient-to-r from-red-500/10 to-rose-500/10 border-2 border-red-500/30 text-red-300 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold border transition-all duration-200 ${
+                      isSaiDeBaixo
+                        ? 'bg-white border-gray-200 text-gray-800 hover:border-rose-300 hover:bg-rose-50'
+                        : 'bg-white/[0.03] border-white/10 text-gray-200 hover:border-rose-400/40 hover:bg-rose-500/10'
                     }`}
                   >
-                    <span className="text-xl">❤️</span>
+                    <Heart className="w-5 h-5 text-rose-400" />
                     <span>Meus Favoritos</span>
                   </button>
                 )}
-                <button 
+                <button
                   onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
-                    isSaiDeBaixo 
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 hover:border-green-400 hover:shadow-md' 
-                      : 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-500/30 text-green-300 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/20'
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold border transition-all duration-200 ${
+                    isSaiDeBaixo
+                      ? 'bg-white border-gray-200 text-gray-800 hover:border-green-300 hover:bg-green-50'
+                      : 'bg-white/[0.03] border-white/10 text-gray-200 hover:border-emerald-400/40 hover:bg-emerald-500/10'
                   }`}
                 >
-                  <Package className="w-5 h-5" />
+                  <Package className="w-5 h-5 text-emerald-400" />
                   <span>Meus Pedidos</span>
                 </button>
-                <button 
+                <button
                   onClick={handleLogout}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
-                    isSaiDeBaixo 
-                      ? 'bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-400 hover:shadow-md' 
-                      : 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-2 border-red-500/30 text-red-300 hover:from-red-500/20 hover:to-orange-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold border transition-all duration-200 ${
+                    isSaiDeBaixo
+                      ? 'bg-white border-gray-200 text-red-700 hover:border-red-300 hover:bg-red-50'
+                      : 'bg-white/[0.03] border-white/10 text-red-300 hover:border-red-400/40 hover:bg-red-500/10'
                   }`}
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-5 h-5 text-red-400" />
                   <span>Sair da Conta</span>
                 </button>
               </CardContent>
@@ -886,21 +952,29 @@ export default function Profile() {
 
         {/* Recent Bids */}
         <Card className={`mt-12 ${isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}`}>
-          <CardHeader>
-            <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Meus Lances Recentes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className={`font-slab ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>Meus Lances Recentes</CardTitle>
+            {userBids.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${isSaiDeBaixo ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-gray-300'}`}>
+                {Math.min(userBids.length, 10)} de {userBids.length}
+              </span>
+            )}
           </CardHeader>
           <CardContent>
             {userBids.length > 0 ? (
-              <div className="space-y-3">
+              <div className={`rounded-xl border overflow-hidden divide-y ${isSaiDeBaixo ? 'border-gray-200 divide-gray-100' : 'border-white/10 divide-white/5'}`}>
                 {userBids.slice(0, 10).map((bid) => (
-                   <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
-                     <div>
-                       <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {(bid.bid_amount || 0).toFixed(2)}</p>
-                      <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        em {new Date(bid.created_date).toLocaleDateString('pt-BR')}
+                  <div key={bid.id} className={`flex items-center gap-3 px-4 py-3 ${isSaiDeBaixo ? 'bg-white' : 'bg-white/[0.02]'}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSaiDeBaixo ? 'bg-red-50 text-red-600' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                      <Gavel className="w-[18px] h-[18px]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>R$ {(bid.bid_amount || 0).toFixed(2)}</p>
+                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>
+                        {new Date(bid.created_date).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Lance Registrado</Badge>
+                    <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Registrado</Badge>
                   </div>
                 ))}
               </div>
