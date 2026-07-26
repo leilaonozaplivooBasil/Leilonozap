@@ -10,6 +10,8 @@ import ChancesCalculator from '@/components/concurso/ChancesCalculator';
 import DailyMission from '@/components/concurso/DailyMission';
 import WinnersFeed from '@/components/concurso/WinnersFeed';
 import InstallPwaPrompt from '@/components/common/InstallPwaPrompt';
+// A página é standalone (fora do Layout), então o modal de login precisa ser dela
+import LoginModal from '@/components/common/LoginModal';
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -69,6 +71,7 @@ export default function ConcursoLeilaoNozap() {
   const [data, setData] = useState({ ranking: [], premios: [], config: {}, group_link: GROUP_LINK, total: 0 });
   const [me, setMe] = useState(null);
   const [myCode, setMyCode] = useState(localStorage.getItem('concurso_code') || '');
+  const [showLogin, setShowLogin] = useState(false);
   // Logado sem participação: formulário já vem com os dados da conta (é a mesma pessoa)
   const [form, setForm] = useState(() => {
     try {
@@ -642,7 +645,7 @@ export default function ConcursoLeilaoNozap() {
             </button>
           ) : (
             <button
-              onClick={() => window.dispatchEvent(new Event('openLoginModal'))}
+              onClick={() => setShowLogin(true)}
               className="inline-flex items-center gap-2 text-sm font-bold text-white transition-transform active:scale-[.97] px-4 py-1.5 rounded-full"
               style={{ background: 'linear-gradient(90deg,#16a34a,#22c55e)', border: '1px solid rgba(34,197,94,.5)', boxShadow: '0 4px 14px rgba(34,197,94,.25)' }}
             >
@@ -743,6 +746,19 @@ export default function ConcursoLeilaoNozap() {
 
         {/* FEATURE 8 — modal de qualificação logo após gerar o link */}
         {showOnboarding && myCode && <OnboardingModal link={myLink} onClose={() => setShowOnboarding(false)} />}
+
+        {/* LOGIN — mesma conta do site (o modal grava currentUser; o reload religa o painel via mycode) */}
+        {showLogin && (
+          <LoginModal
+            onClose={() => setShowLogin(false)}
+            onSuccess={() => {
+              sessionStorage.setItem('isLoggedIn', 'true');
+              sessionStorage.removeItem('userLoggedOut');
+              window.location.reload();
+            }}
+            onSwitchToRegister={() => { window.location.href = '/Cadastro'; }}
+          />
+        )}
 
         {/* ADMIN — modo tela cheia (overlay em abas), aberto pelo botão do topo.
             Mobile: ocupa a tela inteira; desktop: card centralizado. */}
