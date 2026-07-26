@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
 import { RatingBadge } from './StarRating';
 // 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
-// imediata em produção. Formato 16:5 (1920×600) — mostrados com fit=contain, sem cortar.
+// imediata em produção. Artes novas (25/07) em 1376×768 (~16:9) — mostrados com
+// fit=contain + fundo ambiente desfocado, sem cortar nada.
 import bannerCat1 from '@/assets/banners/banner1.webp';
 import bannerCat2 from '@/assets/banners/banner2.webp';
 import bannerCat3 from '@/assets/banners/banner3.webp';
@@ -44,11 +45,11 @@ const LOGO = '/brand/icon-3d.webp';
 // Banners oficiais da loja (rotativos). Cada um entra como desktop + mobile para
 // aparecer em qualquer dispositivo. Os de licenciado (4 e 5) linkam para /Licensing.
 const CATALOG_BANNERS = [
-  { image_url: bannerCat1, title: 'Catálogo Leilão NoZap — até 70% OFF · Entrega Full' },
+  { image_url: bannerCat1, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
   { image_url: bannerCat2, title: 'Ferramentas Entrega Full — até 85% de desconto' },
   { image_url: bannerCat3, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
   { image_url: bannerCat4, title: 'Torne-se um Licenciado — receba até 20% de comissão', link_url: createPageUrl('Licensing') },
-  { image_url: bannerCat5, title: 'Seja um Licenciado — venda no catálogo e ganhe de casa', link_url: createPageUrl('Licensing') },
+  { image_url: bannerCat5, title: 'Seja um Licenciado — venda na Loja Virtual e ganhe de casa', link_url: createPageUrl('Licensing') },
 ].flatMap((b, i) => [
   { ...b, id: `nz-banner-${i}-d`, device_type: 'desktop' },
   { ...b, id: `nz-banner-${i}-m`, device_type: 'mobile' },
@@ -173,12 +174,13 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
       </div>
 
       {/* HERO: banner full-bleed (borda a borda) nos dois mundos, SEMPRE na proporção
-          nativa 16:5 do banner — nada cortado, nada esticado (pedido Gabriel 25/07:
-          "sem perder a proporção"). O mobile segue o mesmo ritmo do desktop: banner
-          grande e a caixa de ofertas sobrepondo só a base, com o degradê. */}
+          nativa das artes (1376×768 ≈ 16:9) — nada cortado, nada esticado.
+          Mobile: o container tem exatamente a proporção da arte, então ela preenche
+          100% da largura sem sobras. Desktop: altura fixa e a arte centralizada,
+          com a própria arte desfocada preenchendo as laterais (ambient). */}
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
-        <div className="relative overflow-hidden aspect-[16/5] bg-[#0f172a]">
-          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" />
+        <div className="relative overflow-hidden bg-[#0f172a] aspect-[1376/768] md:aspect-auto md:h-[440px] lg:h-[500px] xl:h-[560px]">
+          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
