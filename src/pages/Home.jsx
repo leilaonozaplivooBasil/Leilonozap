@@ -12,7 +12,7 @@ import { base44 } from "@/api/base44Client";
 const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
-import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkLocation } from "@/functions/checkLocation";
 
@@ -27,6 +27,30 @@ const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
+
+// Botão de ação do hero — mesmo visual no mobile e no desktop
+function HeroAction({ icon: Icon, label, sublabel, accent = "green" }) {
+  const isPurple = accent === "purple";
+  return (
+    <div
+      className={`group flex h-full items-center gap-2.5 rounded-xl px-3.5 py-3 ${isPurple ? "glass-btn" : "glass-btn-green"}`}
+      style={isPurple ? {
+        borderColor: "rgba(168, 85, 247, 0.5)",
+        background: "linear-gradient(135deg, rgba(168, 85, 247, 0.32) 0%, rgba(88, 28, 135, 0.45) 100%)",
+        boxShadow: "0 4px 20px rgba(168, 85, 247, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)"
+      } : undefined}
+    >
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${isPurple ? "border-purple-300/25 bg-purple-300/10" : "border-emerald-300/25 bg-emerald-300/10"}`}>
+        <Icon className={`h-4 w-4 ${isPurple ? "text-purple-200" : "text-emerald-300"}`} />
+      </div>
+      <div className="min-w-0 flex-1 text-left">
+        <p className="whitespace-nowrap text-[13px] font-semibold leading-tight text-white">{label}</p>
+        {sublabel && <p className={`mt-0.5 truncate text-[11px] leading-tight ${isPurple ? "text-purple-200/70" : "text-emerald-100/60"}`}>{sublabel}</p>}
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-white/30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-white/70" />
+    </div>
+  );
+}
 
 export default function Home() {
   // 🔥 TODOS OS HOOKS NO TOPO - NUNCA APÓS CONDICIONAIS OU RETURNS
@@ -655,11 +679,16 @@ export default function Home() {
             <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full orb-1" style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.15) 0%, transparent 70%)' }} />
             <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full orb-2" style={{ background: 'radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 70%)' }} />
 
-            <div className="relative lg:pr-80">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/80">Ao vivo agora</span>
+            <div className="relative lg:pr-[19rem] xl:pr-[31rem]">
+              {/* Selo AO VIVO */}
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-3 py-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Ao vivo agora</span>
               </div>
+
               <h1 className="text-3xl lg:text-5xl font-black mb-3 tracking-tight flex items-center gap-3">
                 <video
                   autoPlay
@@ -674,86 +703,56 @@ export default function Home() {
                 </video>
                 <span>Leilões <span className="text-gradient-green">Ativos</span></span>
               </h1>
-              <p className="text-gray-400 mb-5 text-base lg:text-lg font-light">
-                <span className="text-white font-semibold">{activeCount}</span> leilões rolando. Entre na sala e dê seu lance!
+
+              <p className="text-gray-400 mb-6 text-base lg:text-lg font-light max-w-xl">
+                {activeCount > 0 ?
+                <><span className="text-white font-semibold">{activeCount}</span> {activeCount === 1 ? 'leilão rolando' : 'leilões rolando'}. Entre na sala e dê seu lance!</> :
+                <>Novos leilões entram no ar em breve. Fique de olho e garanta seu lance!</>
+                }
               </p>
 
-              {/* BOTÕES - MOBILE */}
-              <div className="flex flex-col lg:hidden gap-3 mb-5">
+              <LiveStats />
+
+              {/* AÇÕES - MOBILE */}
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
                 <Link to={createPageUrl("Licensing")}>
-                  <div className="w-full glass-btn-green rounded-xl px-6 py-3.5">
-                    <div className="flex items-center justify-start gap-3">
-                      <Zap className="w-5 h-5 text-emerald-300" />
-                      <span className="text-white font-semibold text-base">Seja um Licenciado</span>
-                    </div>
-                  </div>
+                  <HeroAction icon={Zap} label="Seja um Licenciado" sublabel="Sua própria sala" />
+                </Link>
+
+                <Link to={createPageUrl("Partners")}>
+                  <HeroAction icon={DollarSign} label="Lucre Conosco" sublabel="Indique e ganhe" />
+                </Link>
+
+                <Link to={createPageUrl("LuxuryCollection")}>
+                  <HeroAction icon={Crown} label="Leilões Collection" sublabel="Itens exclusivos" accent="purple" />
                 </Link>
 
                 {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
                 <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer" className="block">
-                  <div className="w-full glass-btn-green rounded-xl px-6 py-3.5">
-                    <div className="flex items-center justify-start gap-3">
-                      <MessageCircle className="w-5 h-5 text-emerald-300" />
-                      <span className="text-white font-semibold text-base">Grupo VIP</span>
-                    </div>
-                  </div>
+                  <HeroAction icon={MessageCircle} label="Grupo VIP" sublabel="Acesso exclusivo" />
                 </a>
                 }
-
-                <Link to={createPageUrl("Partners")}>
-                  <div className="w-full glass-btn-green rounded-xl px-6 py-3.5">
-                    <div className="flex items-center justify-start gap-3">
-                      <DollarSign className="w-5 h-5 text-emerald-300" />
-                      <span className="text-white font-semibold text-base">Lucre Conosco</span>
-                    </div>
-                  </div>
-                </Link>
               </div>
 
-              <LiveStats />
+              {/* AÇÕES - DESKTOP */}
+              <div className="hidden lg:grid absolute top-0 right-0 w-[17rem] grid-cols-1 gap-3 content-start xl:w-[29rem] xl:grid-cols-2">
+                <Link to={createPageUrl("Licensing")}>
+                  <HeroAction icon={Zap} label="Seja um Licenciado" sublabel="Sua própria sala" />
+                </Link>
 
-              {/* BOTÕES DESKTOP */}
-              <div className="hidden lg:flex gap-3 absolute top-0 right-0">
-                <div className="flex flex-col gap-3">
-                  <Link to={createPageUrl("Licensing")}>
-                    <div className="glass-btn-green rounded-xl px-6 py-3.5">
-                      <div className="flex items-center justify-start gap-3">
-                        <Zap className="w-5 h-5 text-emerald-300" />
-                        <span className="text-white font-semibold text-sm">Seja um Licenciado</span>
-                      </div>
-                    </div>
-                  </Link>
+                <Link to={createPageUrl("Partners")}>
+                  <HeroAction icon={DollarSign} label="Lucre Conosco" sublabel="Indique e ganhe" />
+                </Link>
 
-                  <Link to={createPageUrl("LuxuryCollection")}>
-                    <div className="glass-btn rounded-xl px-6 py-3.5" style={{ borderColor: 'rgba(168, 85, 247, 0.55)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(217, 70, 239, 0.18) 100%)', boxShadow: '0 4px 20px rgba(168, 85, 247, 0.2)' }}>
-                      <div className="flex items-center justify-start gap-3">
-                        <span className="text-white font-semibold text-sm">👑 Leilões collection</span>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
+                <Link to={createPageUrl("LuxuryCollection")}>
+                  <HeroAction icon={Crown} label="Leilões Collection" sublabel="Itens exclusivos" accent="purple" />
+                </Link>
 
-                <div className="flex flex-col gap-3">
-                  <Link to={createPageUrl("Partners")}>
-                    <div className="glass-btn-green rounded-xl px-6 py-3.5">
-                      <div className="flex items-center justify-start gap-3">
-                        <DollarSign className="w-5 h-5 text-emerald-300" />
-                        <span className="text-white font-semibold text-sm">Lucre Conosco</span>
-                      </div>
-                    </div>
-                  </Link>
-
-                  {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
-                  <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer">
-                    <div className="glass-btn-green rounded-xl px-6 py-3.5">
-                      <div className="flex items-center justify-start gap-3">
-                        <MessageCircle className="w-5 h-5 text-emerald-300" />
-                        <span className="text-white font-semibold text-sm">Grupo VIP</span>
-                      </div>
-                    </div>
-                  </a>
-                  }
-                </div>
+                {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
+                <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer">
+                  <HeroAction icon={MessageCircle} label="Grupo VIP" sublabel="Acesso exclusivo" />
+                </a>
+                }
               </div>
             </div>
           </div>

@@ -79,14 +79,24 @@ export default function LiveStats() {
   };
 
   return (
-    <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-400">
-      <div className="flex items-center gap-1.5">
-        <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-        <span>{stats.onlineUsers} online</span>
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10">
+          <Eye className="h-4 w-4 text-emerald-300" />
+        </div>
+        <div>
+          <p className="text-sm font-bold leading-tight text-white tabular-nums">{stats.onlineUsers}</p>
+          <p className="text-[11px] leading-tight text-gray-400">participantes online</p>
+        </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-        <span>R$ {stats.totalBidsToday.toLocaleString('pt-BR')} em lances hoje</span>
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10">
+          <TrendingUp className="h-4 w-4 text-emerald-300" />
+        </div>
+        <div>
+          <p className="text-sm font-bold leading-tight text-white tabular-nums">R$ {stats.totalBidsToday.toLocaleString('pt-BR')}</p>
+          <p className="text-[11px] leading-tight text-gray-400">em lances hoje</p>
+        </div>
       </div>
     </div>
   );
