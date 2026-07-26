@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { createPageUrl } from '@/utils';
-import { Gavel, ShoppingBag, Flame, Truck, ShieldCheck, ArrowRight, Zap, Search } from 'lucide-react';
+import { Gavel, ShoppingBag, Flame, Truck, ShieldCheck, ArrowRight, Zap, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { HOME_SECTOR_CARDS } from '@/lib/sectors';
 
 // cores por setor (o card carrega a identidade da vertical)
@@ -31,6 +31,25 @@ export default function Recepcao() {
       } catch (e) { /* silencioso */ }
     })();
   }, []);
+
+  // carrossel EM DESTAQUE (estilo Sympla): autoplay com pausa no hover/toque
+  const [featIdx, setFeatIdx] = useState(0);
+  const featPaused = useRef(false);
+  const touchX = useRef(null);
+  useEffect(() => {
+    if (produtos.length < 2) return;
+    const t = setInterval(() => {
+      if (!featPaused.current) setFeatIdx((i) => (i + 1) % produtos.length);
+    }, 4500);
+    return () => clearInterval(t);
+  }, [produtos.length]);
+  // offset circular do slide i em relação ao ativo → classe de posição
+  const featPos = (i) => {
+    const n = produtos.length;
+    let d = ((i - featIdx) % n + n) % n;
+    if (d > n / 2) d -= n;
+    return Math.abs(d) <= 2 ? `feat-pos-${d}` : 'feat-pos-off';
+  };
 
   const [q, setQ] = useState('');
   const goLeiloes = () => navigate(createPageUrl('leiloes'));
@@ -75,6 +94,58 @@ export default function Recepcao() {
         .sector-fade { position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; }
         .sector-fade-l { left: 0; background: linear-gradient(90deg, #07140d, transparent); }
         .sector-fade-r { right: 0; background: linear-gradient(270deg, #07140d, transparent); }
+
+        /* CARROSSEL EM DESTAQUE — card central grande, vizinhos espiando nas
+           laterais (padrão Sympla). Posições viram classes pra responsividade
+           ficar toda no CSS. */
+        .feat-stage { position: relative; height: 460px; }
+        .feat-slide {
+          position: absolute; top: 50%; left: 50%; width: 380px; cursor: pointer;
+          border-radius: 20px; overflow: hidden; background: #0b1a12;
+          border: 1px solid rgba(255,255,255,.09);
+          transition: transform .55s cubic-bezier(.25,.8,.25,1), opacity .55s, box-shadow .55s;
+          will-change: transform;
+        }
+        .feat-slide .feat-img { position: relative; aspect-ratio: 1; background: #fff; }
+        .feat-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .feat-pos-0  { transform: translate(-50%,-50%) scale(1); z-index: 5; opacity: 1; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+        .feat-pos-1  { transform: translate(calc(-50% + 310px),-50%) scale(.78); z-index: 4; opacity: .55; }
+        .feat-pos--1 { transform: translate(calc(-50% - 310px),-50%) scale(.78); z-index: 4; opacity: .55; }
+        .feat-pos-2  { transform: translate(calc(-50% + 560px),-50%) scale(.6); z-index: 3; opacity: .3; }
+        .feat-pos--2 { transform: translate(calc(-50% - 560px),-50%) scale(.6); z-index: 3; opacity: .3; }
+        .feat-pos-off { transform: translate(-50%,-50%) scale(.5); z-index: 1; opacity: 0; pointer-events: none; }
+        .feat-arrow {
+          position: absolute; top: 50%; transform: translateY(-50%); z-index: 8;
+          width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer;
+          background: #fff; color: #0b1a12; display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 8px 24px rgba(0,0,0,.45); transition: transform .2s;
+        }
+        .feat-arrow:hover { transform: translateY(-50%) scale(1.1); }
+        .feat-arrow-l { left: max(12px, calc(50% - 420px)); }
+        .feat-arrow-r { right: max(12px, calc(50% - 420px)); }
+        .feat-dots { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+        .feat-dot { width: 8px; height: 8px; border-radius: 99px; border: none; cursor: pointer; padding: 0; background: rgba(255,255,255,.22); transition: all .3s; }
+        .feat-dot.on { width: 22px; background: #34d399; }
+        .feat-caption { text-align: center; margin-top: 18px; min-height: 74px; }
+        @media (max-width: 900px) {
+          .feat-stage { height: 380px; }
+          .feat-slide { width: 300px; }
+          .feat-pos-1  { transform: translate(calc(-50% + 235px),-50%) scale(.74); }
+          .feat-pos--1 { transform: translate(calc(-50% - 235px),-50%) scale(.74); }
+          .feat-pos-2, .feat-pos--2 { opacity: 0; pointer-events: none; }
+          .feat-pos-2  { transform: translate(calc(-50% + 420px),-50%) scale(.55); }
+          .feat-pos--2 { transform: translate(calc(-50% - 420px),-50%) scale(.55); }
+        }
+        @media (max-width: 560px) {
+          .feat-stage { height: 330px; }
+          .feat-slide { width: 240px; }
+          .feat-pos-1  { transform: translate(calc(-50% + 165px),-50%) scale(.7); }
+          .feat-pos--1 { transform: translate(calc(-50% - 165px),-50%) scale(.7); }
+          .feat-arrow { width: 40px; height: 40px; }
+          .feat-arrow-l { left: 6px; }
+          .feat-arrow-r { right: 6px; }
+        }
+        @media (prefers-reduced-motion: reduce) { .feat-slide { transition: none; } }
       `}</style>
 
       {/* HERO */}
@@ -200,23 +271,61 @@ export default function Recepcao() {
               <h2 className="display" style={{ fontSize: 'clamp(26px,4vw,40px)', margin: 0 }}>EM DESTAQUE <span className="shine">AGORA</span></h2>
               <button onClick={goLoja} style={{ background: 'none', border: 'none', color: '#34d399', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>Ver tudo <ArrowRight size={16} /></button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16 }}>
-              {produtos.map((p) => {
+            {/* CARROSSEL estilo Sympla: clicar no central abre o produto,
+                clicar num lateral traz ele pro centro */}
+            <div
+              className="feat-stage"
+              onMouseEnter={() => { featPaused.current = true; }}
+              onMouseLeave={() => { featPaused.current = false; }}
+              onTouchStart={(e) => { featPaused.current = true; touchX.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                featPaused.current = false;
+                if (touchX.current == null) return;
+                const dx = e.changedTouches[0].clientX - touchX.current;
+                touchX.current = null;
+                if (Math.abs(dx) > 40) setFeatIdx((i) => (i + (dx < 0 ? 1 : -1) + produtos.length) % produtos.length);
+              }}
+            >
+              {produtos.map((p, i) => {
                 const off = p.market_value > p.price_catalog ? Math.round((1 - p.price_catalog / p.market_value) * 100) : 0;
+                const pos = featPos(i);
                 return (
-                  <div key={p.id} onClick={() => goProduto(p.id)} className="prod-card" style={{ cursor: 'pointer', borderRadius: 16, overflow: 'hidden', background: '#0b1a12', border: '1px solid rgba(255,255,255,.07)' }}>
-                    <div style={{ position: 'relative', aspectRatio: '1', background: '#fff' }}>
-                      <img src={p.image_urls[0]} alt={p.description} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      {off > 0 && <span style={{ position: 'absolute', top: 8, left: 8, background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 8px', borderRadius: 8 }}>-{off}%</span>}
-                    </div>
-                    <div style={{ padding: 12 }}>
-                      <div style={{ fontSize: 13, color: '#cfe0d8', lineHeight: 1.3, height: 34, overflow: 'hidden' }}>{p.description}</div>
-                      <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800, color: '#34d399' }}>{money(p.price_catalog)}</div>
+                  <div
+                    key={p.id}
+                    className={`feat-slide ${pos}`}
+                    onClick={() => (pos === 'feat-pos-0' ? goProduto(p.id) : setFeatIdx(i))}
+                  >
+                    <div className="feat-img">
+                      <img src={p.image_urls[0]} alt={p.description} loading="lazy" />
+                      {off > 0 && <span style={{ position: 'absolute', top: 10, left: 10, background: '#ef4444', color: '#fff', fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>-{off}%</span>}
                     </div>
                   </div>
                 );
               })}
+              {produtos.length > 1 && (
+                <>
+                  <button aria-label="Anterior" className="feat-arrow feat-arrow-l" onClick={() => setFeatIdx((i) => (i - 1 + produtos.length) % produtos.length)}>
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button aria-label="Próximo" className="feat-arrow feat-arrow-r" onClick={() => setFeatIdx((i) => (i + 1) % produtos.length)}>
+                    <ChevronRight size={24} />
+                  </button>
+                </>
+              )}
             </div>
+
+            {/* dots + título/preço do produto ativo (como o Sympla mostra o evento embaixo) */}
+            <div className="feat-dots">
+              {produtos.map((_, i) => (
+                <button key={i} aria-label={`Ir para o item ${i + 1}`} className={`feat-dot${i === featIdx ? ' on' : ''}`} onClick={() => setFeatIdx(i)} />
+              ))}
+            </div>
+            {produtos[featIdx] && (
+              <div className="feat-caption" onClick={() => goProduto(produtos[featIdx].id)} style={{ cursor: 'pointer' }}>
+                <div className="display" style={{ fontSize: 'clamp(18px,3vw,26px)', color: '#e9f5ef', textTransform: 'uppercase' }}>{produtos[featIdx].description}</div>
+                <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, color: '#34d399' }}>{money(produtos[featIdx].price_catalog)}</div>
+              </div>
+            )}
           </div>
         </section>
       )}
