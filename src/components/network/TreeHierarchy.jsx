@@ -658,9 +658,11 @@ export default function TreeHierarchy({
                 e.stopPropagation();
                 setSelectedId(n.id);
               },
+              // Um clique OU dois cliques abrem o perfil — expandir/recolher fica no
+              // badge com o número de indicados, que não disputa o clique do nó.
               onDoubleClick: (e) => {
                 e.stopPropagation();
-                if (n.childCount) toggle(n.id);
+                setSelectedId(n.id);
               },
               // Botão direito: menu de ações direto no nó
               onContextMenu: (e) => {
@@ -800,6 +802,22 @@ export default function TreeHierarchy({
                 </div>
 
                 {expandButton}
+
+                {/* Editar: fica FORA do círculo (à direita) para não roubar o clique do nó */}
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(n.data);
+                  }}
+                  className="absolute top-0 left-full ml-1.5 w-6 h-6 rounded-full bg-gray-900 border border-blue-500/60 text-blue-300
+                    flex items-center justify-center opacity-0 group-hover/node:opacity-100 focus:opacity-100 transition-opacity
+                    hover:bg-blue-500/20 hover:text-blue-200"
+                  title="Editar dados desta pessoa"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
 
                 <div className="absolute top-full mt-3.5 left-1/2 -translate-x-1/2 w-[128px] text-center pointer-events-none">
                   <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">
