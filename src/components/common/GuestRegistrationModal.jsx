@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from "@/components/ui/checkbox";
 import { User as UserIcon, Sparkles, ShieldCheck, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { ensureSiteLicensee } from '@/functions/ensureSiteLicensee'; // New import for the ensureSiteLicensee function
+import { getReferral } from '@/lib/referral';
 
 export default function GuestRegistrationModal({ onClose, onSuccess, referrerName }) {
   const [fullName, setFullName] = useState('');
@@ -126,7 +127,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
 
       // 🏢 LÓGICA DE INDICAÇÃO CORRIGIDA
       let referredById = null;
-      const referralCode = sessionStorage.getItem('referralCode');
+      const referralCode = getReferral();
       
       console.log(`🔍 [CADASTRO] Código de indicação na sessão: ${referralCode || 'NENHUM'}`);
       

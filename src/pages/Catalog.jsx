@@ -18,6 +18,7 @@ import { supabase } from '@/api/supabaseClient';
 import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
+import { getReferral, saveReferral } from '@/lib/referral';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -55,7 +56,7 @@ export default function Catalog() {
     let alive = true;
     (async () => {
       try {
-        const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+        const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
         if (!ref) return;
         const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
         if (!u?.id) return;
@@ -196,13 +197,13 @@ export default function Catalog() {
 
   const loadLicenseePhone = React.useCallback(async () => {
     try {
-      let refCode = sessionStorage.getItem('referralCode');
+      let refCode = getReferral();
       
       // Se não há ref no sessionStorage, tenta pegar da URL diretamente
       if (!refCode) {
         const urlParams = new URLSearchParams(window.location.search);
         refCode = urlParams.get('ref');
-        if (refCode) sessionStorage.setItem('referralCode', refCode);
+        if (refCode) saveReferral(refCode);
       }
       
       // Se ainda não há ref, tenta usar o referral_code do próprio usuário logado (se for vendedor/licenciado)
@@ -215,7 +216,7 @@ export default function Catalog() {
             // Se é vendedor E tem referral_code, força usar o dele
             if (u?.is_seller === true && u?.referral_code) {
               refCode = u.referral_code;
-              sessionStorage.setItem('referralCode', refCode);
+              saveReferral(refCode);
               console.log(`✅ [VENDEDOR] Usando ref do vendedor logado: ${refCode}`);
             } else if (u?.referral_code && u?.role === 'licensee') {
               refCode = u.referral_code;
@@ -308,7 +309,7 @@ export default function Catalog() {
               const newUrl = `/Loja-Virtual?ref=${sellerCode}`;
               window.history.replaceState(null, '', newUrl);
               console.log(`✅ [VENDEDOR] URL forçada SÍNCRONO para: ${newUrl}`);
-              sessionStorage.setItem('referralCode', sellerCode);
+              saveReferral(sellerCode);
               
               // 🔧 Recarrega dados do licenciado COM O NOVO REF
               setTimeout(async () => {

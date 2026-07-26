@@ -23,6 +23,7 @@ import PainelSelector, { triggerPanelSelector } from "@/components/portal/Painel
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { fastTap } from "@/lib/fastTap";
+import { saveReferral, getReferral } from "@/lib/referral";
 import AdminTopNav from "@/components/layout/AdminTopNav";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
@@ -150,7 +151,7 @@ export default function Layout({ children, currentPageName }) {
     if (isLoading) return;
     const isLogged = currentUser && currentUser.email;
     if (isLogged) return;
-    const ref = sessionStorage.getItem('referralCode');
+    const ref = getReferral();
     if (!ref) return;
     if (sessionStorage.getItem('refRegisterDismissed')) return;
     // não abre em cima da própria tela de cadastro/login
@@ -333,8 +334,8 @@ export default function Layout({ children, currentPageName }) {
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
     if (refCode) {
-      if (!sessionStorage.getItem('referralCode')) {
-        sessionStorage.setItem('referralCode', refCode);
+      if (!getReferral()) {
+        saveReferral(refCode);
         console.log(`Código de indicação '${refCode}' capturado.`);
       }
       // Registra visita ao catálogo (uma vez por sessão por ref)
@@ -1028,7 +1029,7 @@ export default function Layout({ children, currentPageName }) {
                 if (currentPath.includes('/Loja-Virtual') || currentPath.includes('/Catalog')) {
                   const newUrl = `/Loja-Virtual?ref=${refCode}`;
                   window.history.replaceState(null, '', newUrl);
-                  sessionStorage.setItem('referralCode', refCode);
+                  saveReferral(refCode);
                   console.log(`✅ [LOGIN] URL reforçada para: ${newUrl}`);
                 }
               }

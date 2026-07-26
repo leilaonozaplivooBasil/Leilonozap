@@ -6,6 +6,7 @@ import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { supabase } from "@/api/supabaseClient";
 import { Stars, RatingBadge } from "@/components/loja/StarRating";
+import { getReferral } from '@/lib/referral';
 import {
   X, ChevronLeft, ChevronRight, ShoppingCart, MessageCircle, Truck, ShieldCheck,
   RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Lock, Maximize2, ExternalLink
@@ -60,7 +61,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
     let alive = true;
     (async () => {
       try {
-        const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+        const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
         if (!ref) return;
         const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
         if (!u?.id) return;
@@ -78,7 +79,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
   const handleNextImage = () => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
 
   const getProductUrl = () => {
-    const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+    const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
     return `https://leilaonozap.net${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
   };
 

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import { getReferral } from '@/lib/referral';
 
 const AppUser = base44.entities.AppUser;
 
@@ -169,7 +170,7 @@ export default function Register() {
       }
 
       // 🆕 VERIFICA CÓDIGO DE INDICAÇÃO
-      const refCode = sessionStorage.getItem('referralCode');
+      const refCode = getReferral();
       let referredById = null;
 
       if (refCode) {
@@ -199,7 +200,7 @@ export default function Register() {
       }
 
       // 🔒 Cadastro via backend service_role (anon não pode inserir em app_users por RLS).
-      const refForBackend = sessionStorage.getItem('referralCode') || sessionStorage.getItem('influencerCode') || '';
+      const refForBackend = getReferral() || sessionStorage.getItem('influencerCode') || '';
       const reg = await base44.functions.invoke('publicRegister', {
         full_name: fullName.trim(),
         display_first_name: firstName || null,

@@ -36,6 +36,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getReferral } from '@/lib/referral';
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -336,7 +337,7 @@ export default function Cart() {
     try {
       // resolve o lojista (pra cupom específico de loja); null = cupom global
       let sellerId = null;
-      const ref = sessionStorage.getItem('referralCode');
+      const ref = getReferral();
       if (ref) {
         const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
         sellerId = u?.id || null;
@@ -552,7 +553,7 @@ export default function Cart() {
           buyer_address: deliveryMethod === 'delivery' ? `${formData.street}, ${formData.number} ${formData.complement || ''} - ${formData.neighborhood}, ${formData.city}/${formData.state}`.trim() : 'Retirada',
           buyer_cep: formData.cep.replace(/\D/g, ''),
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
-          ref_code: sessionStorage.getItem('referralCode') || '',
+          ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
@@ -580,7 +581,7 @@ export default function Cart() {
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
-          ref_code: sessionStorage.getItem('referralCode') || '',
+          ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
@@ -596,7 +597,7 @@ export default function Cart() {
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
-          ref_code: sessionStorage.getItem('referralCode') || '',
+          ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
@@ -645,7 +646,7 @@ export default function Cart() {
       // PASSO 2: PAGAMENTO GERADO COM SUCESSO — agora registra vendas
       // Isso acontece DEPOIS do PIX/pagamento estar garantido
       // ═══════════════════════════════════════════════════════════
-      const referralCode = sessionStorage.getItem('referralCode');
+      const referralCode = getReferral();
       let licenseeId = 'site_official';
       let licenseeData = null;
 

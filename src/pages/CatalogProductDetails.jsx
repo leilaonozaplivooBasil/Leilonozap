@@ -11,6 +11,7 @@ import { createPageUrl } from "@/utils";
 import { proxyImage } from "@/functions/proxyImage";
 import { supabase } from "@/api/supabaseClient";
 import { Stars, RatingBadge } from "@/components/loja/StarRating";
+import { getReferral } from '@/lib/referral';
 
 const Product = base44.entities.Product;
 
@@ -34,7 +35,7 @@ export default function CatalogProductDetails() {
     let alive = true;
     (async () => {
       try {
-        const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+        const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
         if (!ref) return;
         const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
         if (!u?.id) return;
@@ -127,7 +128,7 @@ export default function CatalogProductDetails() {
   // Busca telefone do licenciado âncora a partir do referral (?ref=)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const ref = urlParams.get('ref') || sessionStorage.getItem('referralCode');
+    const ref = urlParams.get('ref') || getReferral();
     if (!ref) return;
     (async () => {
       try {
@@ -176,7 +177,7 @@ export default function CatalogProductDetails() {
 
   const getCanonicalProductUrl = () => {
     const url = new URL(window.location.href);
-    const ref = url.searchParams.get('ref') || sessionStorage.getItem('referralCode');
+    const ref = url.searchParams.get('ref') || getReferral();
     url.protocol = 'https:';
     url.hostname = 'leilaonozap.net';
     if (ref) url.searchParams.set('ref', ref);
@@ -338,7 +339,7 @@ export default function CatalogProductDetails() {
   const handleWhatsAppOrder = (e) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     const phone = licenseePhone ? normalizeToWaNumber(licenseePhone) : DEFAULT_STORE_PHONE;
-    const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
+    const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
     const productUrl = getCanonicalProductUrl();
     const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');

@@ -23,6 +23,7 @@ import { AppUser } from '@/entities/AppUser';
 import { AuctionMessage } from '@/entities/AuctionMessage';
 import { toast } from "sonner";
 import { Toaster } from "sonner";
+import { getReferral, saveReferral } from '@/lib/referral';
 
 // 🛡️ PROTEÇÃO MASTER - LISTA DE ARQUIVOS BLINDADOS
 const PROTECTED_FILES = [
@@ -299,8 +300,8 @@ export default function Layout({ children, currentPageName }) {
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
     if (refCode) {
-      if (!sessionStorage.getItem('referralCode')) {
-        sessionStorage.setItem('referralCode', refCode);
+      if (!getReferral()) {
+        saveReferral(refCode);
         console.log(\`Código de indicação '\${refCode}' capturado.\`);
       }
     }

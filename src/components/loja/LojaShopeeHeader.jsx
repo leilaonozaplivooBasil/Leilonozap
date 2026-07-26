@@ -37,6 +37,7 @@ async function mostrarCupons() {
     toast.success(`🎟️ Cupom ${c.code}: ${off}${min} — use no carrinho!`, { duration: 6000 });
   } catch (_) { toast('Confira os cupons no carrinho.'); }
 }
+import { getReferral } from '@/lib/referral';
 import {
   Search, ShoppingCart, Store, Smartphone, Instagram, MessageCircle, Music2,
   HelpCircle, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt,
@@ -117,7 +118,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
     (async () => {
       try {
         const urlRef = new URLSearchParams(window.location.search).get('ref');
-        const ref = urlRef || sessionStorage.getItem('referralCode');
+        const ref = urlRef || getReferral();
         if (!ref) return;
         const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
         if (!u?.id) return;

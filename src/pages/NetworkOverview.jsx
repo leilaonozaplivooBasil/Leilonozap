@@ -1749,26 +1749,45 @@ export default function NetworkOverview() {
                           </div>
 
                           {membros.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {membros.slice(0, 14).map(({ user: m, source }) => {
+                            <div className="mt-2 rounded-lg border border-gray-700/70 divide-y divide-gray-700/50">
+                              {membros.map(({ user: m, source }) => {
                                 const lv = CAREER_LEVELS.find(l => l.id === (m.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                                const fixado = readExecutiveOwner(m).pinned;
                                 return (
-                                  <span
-                                    key={m.id}
-                                    className={`text-[10.5px] px-2 py-0.5 rounded border ${
-                                      source === 'herdado' || source === 'padrão'
-                                        ? 'border-gray-700 text-gray-400'
-                                        : 'border-purple-500/40 text-purple-200'
-                                    }`}
-                                    title={`${m.full_name} — ${lv.name} (${source})`}
-                                  >
-                                    {m.full_name}
-                                  </span>
+                                  <div key={m.id} className="flex items-center gap-2.5 px-2.5 py-1.5 flex-wrap hover:bg-white/[0.03]">
+                                    <span className={`w-6 h-6 rounded-full ${lv.color} flex items-center justify-center text-white text-[9px] font-bold overflow-hidden flex-shrink-0`}>
+                                      {m.avatar_url
+                                        ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
+                                        : (m.full_name || '??').slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <span className="min-w-0">
+                                      <span className="block text-[12px] text-gray-200 truncate">{m.full_name}</span>
+                                      <span className={`block text-[10px] ${lv.textColor}`}>
+                                        {lv.name}
+                                        <span className="text-gray-600"> · {source}{fixado ? ' · fixado' : ''}</span>
+                                      </span>
+                                    </span>
+                                    <div className="flex-1" />
+                                    {/* trocar o executivo desta pessoa direto na linha */}
+                                    <Select
+                                      value={executive.id}
+                                      onValueChange={(novoExec) => {
+                                        if (novoExec === executive.id) return;
+                                        assignExecutive(m, novoExec, { cascade: true, pinned: true });
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-52 h-7 bg-gray-800 border-gray-600 text-white text-[11.5px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                        {structure.executives.map(e => (
+                                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 );
                               })}
-                              {membros.length > 14 && (
-                                <span className="text-[10.5px] text-gray-500">+{membros.length - 14}</span>
-                              )}
                             </div>
                           )}
                         </div>

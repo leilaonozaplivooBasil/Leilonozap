@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
+import { getReferral } from '@/lib/referral';
 
 const Product = base44.entities.Product;
 const Auction = base44.entities.Auction;
@@ -131,7 +132,7 @@ export default function CatalogCheckout2() {
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
             const savedUser = JSON.parse(savedUserJSON);
-            const referralCode = sessionStorage.getItem('referralCode');
+            const referralCode = getReferral();
 
             const mp = await base44.functions.invoke('createMPPix', {
                 items: [{ product_id: product.id, quantity: 1 }],
@@ -173,7 +174,7 @@ export default function CatalogCheckout2() {
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
             const savedUser = JSON.parse(savedUserJSON);
-            const referralCode = sessionStorage.getItem('referralCode');
+            const referralCode = getReferral();
 
             // 🔒 PASSO 1: Resolver licensee_id (ID real, não string)
             let licenseeId = null;

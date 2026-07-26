@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X, CheckCircle, User as UserIcon, AlertCircle, Sparkles, Star } from 'lucide-react';
+import { getReferral } from '@/lib/referral';
 
 const generateReferralCode = (name) => {
     const namePart = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '').slice(0, 8);
@@ -101,7 +102,7 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
             }
 
             // Indicação: passa o código do link (o servidor resolve o indicador com service_role).
-            const incomingReferralCode = sessionStorage.getItem('referralCode') || '';
+            const incomingReferralCode = getReferral();
 
             // 🔐 Cadastro REAL via rota server-side (service_role). O AppUser.create anon era
             // bloqueado por RLS (42501) e o cadastro nunca finalizava.

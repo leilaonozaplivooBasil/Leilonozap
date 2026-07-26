@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import bcrypt from 'bcryptjs';
+import { getReferral } from '@/lib/referral';
 
 const AppUser = base44.entities.AppUser;
 
@@ -170,7 +171,7 @@ export default function CadastroLeiloeiro() {
       }
 
       // 🆕 VERIFICA CÓDIGO DE INDICAÇÃO
-      const refCode = sessionStorage.getItem('referralCode');
+      const refCode = getReferral();
       let referredById = null;
 
       if (refCode) {
