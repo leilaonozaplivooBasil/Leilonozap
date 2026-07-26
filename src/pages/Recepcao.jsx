@@ -11,7 +11,6 @@ const ACCENT = {
   blue: '#60a5fa', orange: '#fb923c', amber: '#fbbf24',
 };
 
-const LOGO = '/brand/icon-3d.webp';
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Recepcao() {
@@ -84,8 +83,6 @@ export default function Recepcao() {
         <div className="glow" style={{ width: 360, height: 360, background: '#f59e0b', bottom: '-120px', right: '-40px', opacity: .25 }} />
 
         <div style={{ position: 'relative', textAlign: 'center', maxWidth: 920 }}>
-          <img src={LOGO} alt="Leilão NoZap" className="rise" style={{ height: 64, margin: '0 auto 22px', display: 'block', filter: 'drop-shadow(0 4px 20px rgba(16,185,129,.4))' }} />
-
           <div className="rise" style={{ animationDelay: '.05s', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: 99, background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.35)', marginBottom: 26 }}>
             <span className="live-dot" style={{ width: 9, height: 9, borderRadius: 99, background: '#ef4444', boxShadow: '0 0 10px #ef4444' }} />
             <span style={{ fontWeight: 800, fontSize: 13, color: '#fca5a5', letterSpacing: .5 }}>{stats.leiloes > 0 ? `${stats.leiloes} LEILÕES ACONTECENDO AGORA` : 'LEILÕES AO VIVO'}</span>
