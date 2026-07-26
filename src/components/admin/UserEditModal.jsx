@@ -187,15 +187,16 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] bg-gray-800 border-gray-700 text-white max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-5xl bg-gray-800 border-gray-700 text-white max-h-[90vh] md:aspect-video md:max-h-[86vh] p-0 gap-0 flex flex-col overflow-hidden">
+                <DialogHeader className="px-6 pt-5 pb-3 border-b border-gray-700 flex-shrink-0">
                     <DialogTitle className="text-white flex items-center gap-2">
                         <Award className="w-5 h-5 text-green-400" />
-                        Editar Usuário Completo: {user.full_name}
+                        Editar Usuário: {user.full_name}
                     </DialogTitle>
                 </DialogHeader>
-                
-                <div className="grid gap-4 py-4">
+
+                {/* duas colunas no desktop para caber no 16:9 sem virar um corredor */}
+                <div className="grid gap-4 px-6 py-4 overflow-y-auto flex-1 min-h-0 md:grid-cols-2 md:gap-x-8 items-start">
                     {/* DADOS BÁSICOS */}
                     <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-green-400 flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" />Dados Básicos</h3>
@@ -457,7 +458,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                     </div>
                 </div>
                 
-                <DialogFooter>
+                <DialogFooter className="px-6 py-4 border-t border-gray-700 flex-shrink-0 bg-gray-800">
                     <DialogClose asChild>
                         <Button type="button" variant="secondary" className="bg-gray-700 text-white">
                             Cancelar
