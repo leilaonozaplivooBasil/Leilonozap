@@ -24,12 +24,16 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente', transactions: [] });
 
     const uid = encodeURIComponent(userId);
-    const [salesR, commsR, wdR] = await Promise.all([
-      sb(`catalog_sales?select=id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date&buyer_id=eq.${uid}&order=created_date.desc&limit=200`),
+    const saleCols = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name';
+    const [salesR, mySalesR, commsR, wdR] = await Promise.all([
+      sb(`catalog_sales?select=${saleCols}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`),
+      // vendas em que o usuário é o VENDEDOR (admin/lojista): o que vendeu, pra quem e quanto
+      sb(`catalog_sales?select=${saleCols}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`),
       sb(`commission_ledger?select=created_at,role_in_sale,pct,amount,beneficiary_level&beneficiary_id=eq.${uid}&order=created_at.desc&limit=100`),
       sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`),
     ]);
     const sales = await salesR.json();
+    const mySales = await mySalesR.json();
     const comms = await commsR.json();
     const wds = await wdR.json();
 
@@ -52,6 +56,21 @@ export default async function handler(req, res) {
         amount: isDeposit ? amount : -amount,
         quantity: s.quantity || 1,
         status: s.status === 'paid' ? 'paid' : (s.status === 'pending_payment' ? 'pending' : s.status),
+        tracking_code: s.tracking_code || null,
+        date: s.created_date,
+      });
+    }
+
+    for (const s of Array.isArray(mySales) ? mySales : []) {
+      if (s.buyer_id === userId) continue; // compra própria já listada acima
+      transactions.push({
+        id: `sale-${s.id}`,
+        type: 'sale',
+        title: `Venda — ${s.product_title || 'Produto'}`,
+        source: s.buyer_name ? `para ${s.buyer_name}` : (s.kind === 'arremate' ? 'Leilão' : 'Loja'),
+        amount: Number(s.total_amount) || Number(s.sale_price) || 0,
+        quantity: s.quantity || 1,
+        status: 'paid',
         tracking_code: s.tracking_code || null,
         date: s.created_date,
       });

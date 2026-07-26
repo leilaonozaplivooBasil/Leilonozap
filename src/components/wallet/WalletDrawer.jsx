@@ -7,6 +7,7 @@ import {
   Wallet,
   X,
   Plus,
+  TrendingUp,
   ArrowDownCircle,
   ArrowUpCircle,
   Award,
@@ -26,6 +27,7 @@ const QUICK_AMOUNTS = [20, 50, 100, 200];
 const TX_STYLE = {
   deposit: { icon: ArrowDownCircle, color: 'text-green-400', bg: 'bg-green-500/15 border-green-500/30' },
   purchase: { icon: ArrowUpCircle, color: 'text-red-400', bg: 'bg-red-500/15 border-red-500/30' },
+  sale: { icon: TrendingUp, color: 'text-emerald-300', bg: 'bg-emerald-500/15 border-emerald-500/30' },
   commission: { icon: Award, color: 'text-amber-400', bg: 'bg-amber-500/15 border-amber-500/30' },
   withdrawal: { icon: Banknote, color: 'text-blue-400', bg: 'bg-blue-500/15 border-blue-500/30' },
 };
@@ -139,13 +141,14 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
 
   // Resumo financeiro calculado do extrato
   const totals = React.useMemo(() => {
-    let deposited = 0, spent = 0, pendingCount = 0;
+    let deposited = 0, spent = 0, sold = 0, pendingCount = 0;
     for (const t of transactions) {
       if (t.status === 'pending') { pendingCount++; continue; }
       if (t.type === 'deposit') deposited += t.amount;
       else if (t.type === 'purchase') spent += Math.abs(t.amount);
+      else if (t.type === 'sale') sold += t.amount;
     }
-    return { deposited, spent, pendingCount };
+    return { deposited, spent, sold, pendingCount };
   }, [transactions]);
 
   return (
@@ -231,11 +234,12 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                     </div>
                   </div>
 
-                  {/* Resumo financeiro */}
-                  <div className="grid grid-cols-3 gap-2">
+                  {/* Resumo financeiro (vendedor/admin ganham a coluna Vendido) */}
+                  <div className={`grid gap-2 ${totals.sold > 0 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                     {[
                       { label: 'Depositado', value: totals.deposited, color: 'text-emerald-300' },
                       { label: 'Compras', value: totals.spent, color: 'text-red-300' },
+                      ...(totals.sold > 0 ? [{ label: 'Vendido', value: totals.sold, color: 'text-emerald-300' }] : []),
                       { label: 'Comissões', value: (wallet?.commission_balance || 0), color: 'text-amber-300' },
                     ].map((s) => (
                       <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.045] px-2.5 py-2.5 text-center">

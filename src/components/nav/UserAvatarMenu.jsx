@@ -27,6 +27,7 @@ import {
   MapPin,
   Target,
   Image as ImageIcon,
+  Wallet as WalletIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -285,6 +286,13 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
               Painel de Mídia
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem
+            onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
+            className="cursor-pointer text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
+          >
+            <WalletIcon className="w-4 h-4" />
+            Carteira
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate(createPageUrl("Profile"))}
             className="cursor-pointer text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"

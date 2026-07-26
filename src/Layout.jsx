@@ -17,6 +17,7 @@ import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import TransactionToasts from "@/components/notifications/TransactionToasts";
+import GlobalWalletDrawer from "@/components/wallet/GlobalWalletDrawer";
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import { base44 } from '@/api/base44Client';
@@ -917,6 +918,7 @@ export default function Layout({ children, currentPageName }) {
         <PainelSelector />
         <PaymentConfirmationPopup />
         <TransactionToasts />
+        <GlobalWalletDrawer />
       </ErrorBoundary>
     );
   }
@@ -1184,6 +1186,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
         <TransactionToasts />
+        <GlobalWalletDrawer />
 
         {/* 🌐 Flutuantes globais — CompareAQUI à esquerda e Fale com a Leila à direita.
             Fora da abertura (Portal/Landing): lá eles poluíam o hero (pedido Gabriel 25/07). */}

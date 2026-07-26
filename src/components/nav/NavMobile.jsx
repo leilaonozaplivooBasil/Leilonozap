@@ -16,6 +16,7 @@ import {
   Shield,
   Crown,
   ChevronDown,
+  Wallet as WalletIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import { SECTORS } from "@/lib/sectors";
@@ -320,6 +321,13 @@ export default function NavMobile({
                 className="pt-4 mt-3 space-y-1"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
+                <button
+                  onClick={() => { window.dispatchEvent(new CustomEvent('openWallet')); onClose(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-emerald-300 hover:text-emerald-200"
+                >
+                  <WalletIcon className="w-5 h-5" />
+                  Carteira
+                </button>
                 <Link
                   to={createPageUrl("Profile")}
                   onClick={onClose}
