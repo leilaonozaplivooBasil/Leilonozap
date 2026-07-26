@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         if (cr?.valido) { discount_amount = Number(cr.desconto) || 0; total = round2(Number(cr.total_final) || subtotal); coupon_code = cr.code; coupon_id = cr.coupon_id; }
       } catch (_) { /* cupom inválido → ignora, cobra cheio */ }
     }
-    if (total < 5) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 5,00' });
+    if (total < 1) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 1,00' });
 
     // cria a venda pendente (com entrega/endereço)
     const addr = body?.address || {};
