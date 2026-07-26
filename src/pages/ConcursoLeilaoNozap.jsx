@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
+import LivooLiveCard from '@/components/concurso/LivooLiveCard';
 import ShareSection from '@/components/concurso/ShareSection';
 import OnboardingModal from '@/components/concurso/OnboardingModal';
 import AdminInsights from '@/components/concurso/AdminInsights';
@@ -310,7 +311,8 @@ export default function ConcursoLeilaoNozap() {
           <div key={k} className="bg-black/30 rounded-lg p-2 text-center border border-white/10">
             <p className="text-[10px] text-green-300/70 uppercase">{l}</p>
             <div className="my-1 h-6 flex items-center justify-center">{me?.periodos?.[k]?.posicao ? <PosBadge pos={me.periodos[k].posicao} size={24} /> : <span className="text-white/40">—</span>}</div>
-            <p className="text-[10px] text-yellow-300 flex items-center justify-center gap-1"><Users className="w-3 h-3" />{me?.periodos?.[k]?.pontos || 0}</p>
+            {/* Quantas pessoas cada um indicou é parâmetro de conversão: só o admin vê. */}
+            {isAdmin && <p className="text-[10px] text-yellow-300 flex items-center justify-center gap-1"><Users className="w-3 h-3" />{me?.periodos?.[k]?.pontos || 0}</p>}
           </div>
         ))}
       </div>
@@ -621,6 +623,10 @@ export default function ConcursoLeilaoNozap() {
 
         {/* FEATURE 7 — prêmio do dia em destaque ANTES do cadastro */}
         <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
+
+        {/* LIVOO LIVE — janela 16:9 que acende sozinha quando o perfil da Leilão NoZap
+            entra ao vivo na Livoo (o backend lê o status real do perfil, sem admin marcar) */}
+        <LivooLiveCard audiencia={config.live_audiencia || 0} produto={config.live_produto || null} />
 
         {/* FEATURE 1 — contador regressivo do sorteio (FOMO) */}
         <CountdownTimer config={config} />
