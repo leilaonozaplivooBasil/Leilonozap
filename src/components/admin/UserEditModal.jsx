@@ -196,23 +196,26 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 </DialogHeader>
 
                 {/* duas colunas no desktop para caber no 16:9 sem virar um corredor */}
-                <div className="grid gap-4 px-6 py-4 overflow-y-auto flex-1 min-h-0 md:grid-cols-2 md:gap-x-8 items-start">
+                <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[400px_1fr] overflow-hidden">
+                  {/* ---- coluna esquerda: identidade e vínculo (rola sozinha) ---- */}
+                  <div className="overflow-y-auto px-5 py-4 space-y-5 md:border-r border-gray-700">
                     {/* DADOS BÁSICOS */}
                     <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-green-400 flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" />Dados Básicos</h3>
                         
                         {/* AVATAR UPLOAD */}
-                        <div className="flex items-center gap-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
-                            <div className="w-16 h-16 rounded-full border-2 border-gray-600 overflow-hidden flex-shrink-0 bg-gray-700 flex items-center justify-center">
+                        <div className="p-3 bg-gray-700/30 rounded-lg border border-gray-600 space-y-2.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-full border-2 border-gray-600 overflow-hidden flex-shrink-0 bg-gray-700 flex items-center justify-center">
                                 {userData.avatar_url ? (
                                     <img src={userData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="text-gray-400 text-xs text-center px-1">Sem foto</span>
                                 )}
                             </div>
-                            <div className="flex-1 space-y-2">
-                                <Label htmlFor="avatar-upload" className="text-xs text-gray-400 block">
-                                    Foto de Perfil — envie um arquivo ou cole uma URL
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                                <Label htmlFor="avatar-upload" className="text-[11px] text-gray-400 block leading-tight">
+                                    Foto de perfil — arquivo ou URL
                                 </Label>
                                 <input
                                     id="avatar-upload"
@@ -244,6 +247,8 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                                         </Button>
                                     )}
                                 </div>
+                              </div>
+                            </div>
                                 <div className="flex items-center gap-2">
                                     <Input
                                         value={avatarUrlInput}
@@ -262,56 +267,55 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                                         Aplicar
                                     </Button>
                                 </div>
-                            </div>
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right text-gray-300">Nome</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="name" className="text-[12px] text-gray-400">Nome</Label>
                             <Input 
                                 id="name" 
                                 value={userData.full_name} 
                                 onChange={(e) => handleInputChange('full_name', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="nickname" className="text-right text-gray-300">Apelido</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="nickname" className="text-[12px] text-gray-400">Apelido</Label>
                             <Input 
                                 id="nickname" 
                                 value={userData.nickname || ''} 
                                 onChange={(e) => handleInputChange('nickname', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                                 placeholder="Nome usado nos lances"
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email" className="text-right text-gray-300">Email</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email" className="text-[12px] text-gray-400">Email</Label>
                             <Input 
                                 id="email" 
                                 type="email" 
                                 value={userData.email} 
                                 onChange={(e) => handleInputChange('email', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="phone" className="text-right text-gray-300">Telefone</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="phone" className="text-[12px] text-gray-400">Telefone</Label>
                             <Input 
                                 id="phone" 
                                 value={userData.phone || ''} 
                                 onChange={(e) => handleInputChange('phone', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                                 placeholder="(00) 00000-0000"
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="role" className="text-right text-gray-300">Permissão</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="role" className="text-[12px] text-gray-400">Permissão</Label>
                             <Select value={userData.role} onValueChange={(value) => handleInputChange('role', value)}>
-                                <SelectTrigger className="col-span-3 bg-gray-700 border-gray-600 text-white">
+                                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                                     <SelectValue placeholder="Selecione a permissão" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
@@ -361,9 +365,9 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                     {/* HIERARQUIA / INDICADOR */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
                         <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Hierarquia (Sistema de Alavancagem)</h3>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Indicador</Label>
-                            <div className="col-span-3">
+                        <div className="space-y-1.5">
+                            <Label className="text-[12px] text-gray-400">Indicador</Label>
+                            <div>
                                 <Select value={referrerId} onValueChange={setReferrerId}>
                                     <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                                         <SelectValue placeholder="Selecione o indicador (opcional)" />
@@ -381,8 +385,12 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         </div>
                     </div>
 
+                  </div>
+
+                  {/* ---- coluna direita: plano de carreira (rola sozinha) ---- */}
+                  <div className="overflow-y-auto px-5 py-4">
                     {/* NÍVEIS DE CARREIRA */}
-                    <div className="space-y-4 pt-4 border-t border-gray-700">
+                    <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5" />Níveis de Carreira</h3>
                         
                         <p className="text-xs text-gray-400">Selecione um ou mais cargos:</p>
@@ -456,8 +464,9 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                             </div>
                         )}
                     </div>
+                  </div>
                 </div>
-                
+
                 <DialogFooter className="px-6 py-4 border-t border-gray-700 flex-shrink-0 bg-gray-800">
                     <DialogClose asChild>
                         <Button type="button" variant="secondary" className="bg-gray-700 text-white">
