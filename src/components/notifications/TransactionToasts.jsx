@@ -4,9 +4,29 @@ import { base44 } from '@/api/base44Client';
 import { X, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 
 const SEEN_KEY = 'txNotifySeenIds';
-const POLL_MS = 25000;
-const AUTO_HIDE_MS = 10000;
+const POLL_MS = 15000;
+const AUTO_HIDE_MS = 8000; // fica no mínimo 5s na tela e some sozinho (sem sujar); X fecha antes
 const MAX_VISIBLE = 3;
+
+// "ding" curto de notificação (WebAudio — sem asset externo)
+function playNotifySound() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    [[880, 0], [1318.5, 0.12]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t = ctx.currentTime + delay;
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.start(t); osc.stop(t + 0.4);
+    });
+  } catch { /* autoplay bloqueado — segue sem som */ }
+}
 
 const TYPE_STYLE = {
   purchase: { icon: ShoppingBag, accent: '#34d399', label: 'Compra confirmada' },
@@ -53,13 +73,19 @@ export default function TransactionToasts() {
 
         const seen = getSeen();
         const firstRun = seen.size === 0;
-        const fresh = data.events.filter((e) => !seen.has(e.id));
+        let fresh = data.events.filter((e) => !seen.has(e.id));
         fresh.forEach((e) => seen.add(e.id));
         saveSeen(seen);
 
-        // primeira execução: só memoriza o histórico, sem poluir a tela
-        if (firstRun || !alive || fresh.length === 0) return;
+        // primeira execução: memoriza o histórico antigo, mas transações dos
+        // últimos 10 min NOTIFICAM mesmo assim (venda feita agora não pode se perder)
+        if (firstRun) {
+          const cutoff = Date.now() - 10 * 60 * 1000;
+          fresh = fresh.filter((e) => e.date && new Date(e.date).getTime() > cutoff);
+        }
+        if (!alive || fresh.length === 0) return;
 
+        playNotifySound();
         setToasts((prev) => {
           const next = [...fresh.map((e) => ({ ...e, key: e.id })), ...prev].slice(0, MAX_VISIBLE);
           return next;
@@ -78,7 +104,7 @@ export default function TransactionToasts() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-[80] flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-[340px] pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-[360px] pointer-events-none">
       <AnimatePresence>
         {toasts.map((t) => {
           const st = TYPE_STYLE[t.type] || TYPE_STYLE.purchase;
@@ -86,9 +112,9 @@ export default function TransactionToasts() {
           return (
             <motion.div
               key={t.key}
-              initial={{ opacity: 0, x: -24, scale: 0.96 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -16, scale: 0.96 }}
+              initial={{ opacity: 0, y: -24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.96 }}
               transition={{ type: 'spring', damping: 24, stiffness: 320 }}
               className="pointer-events-auto flex items-center gap-3 rounded-2xl p-3 pr-2"
               style={{
