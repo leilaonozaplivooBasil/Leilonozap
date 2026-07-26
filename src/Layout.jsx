@@ -912,9 +912,9 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: 'rgba(10, 15, 28, 0.8)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: '1px solid rgba(16, 185, 129, 0.08)', boxShadow: '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: '1px solid rgba(153, 193, 152, 0.10)', boxShadow: '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-14 sm:h-16 justify-between items-center">
+            <div className="relative flex h-14 sm:h-16 justify-between items-center">
 
               {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
               <div className="flex items-center gap-2 md:gap-4">
@@ -945,6 +945,7 @@ export default function Layout({ children, currentPageName }) {
                   width={440}
                   height={160}
                 />
+                {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
               </div>
 
               {/* MENU DESKTOP */}
@@ -1050,22 +1051,23 @@ export default function Layout({ children, currentPageName }) {
         {/* 📱 Convite de instalação do PWA — só mobile, dispensável */}
         <InstallPwaPrompt />
 
-        {/* 🩷 LIVOO LIVE — logo animada flutuante na sala de leilão (substituiu o botão VIP,
-            pedido Gabriel 26/07). Clique abre livoolive.com.br. Cor oficial da logo: #D91674. */}
-        {currentPageName === "AuctionRoom" && (
+        {/* 🩷 LIVOO LIVE — logo redonda animada, alinhada logo ACIMA da Leila (canto
+            inferior direito). Em TODAS as páginas, menos na raiz "/" (Recepcao).
+            Clique abre livoolive.com.br. Cor oficial da logo: #D91674. Pedido Gabriel 26/07. */}
+        {currentPageName !== "Recepcao" && (
           <a
             href="https://livoolive.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className="livoo-live-float fixed bottom-36 right-4 z-50 group"
+            className="livoo-live-float fixed right-3 bottom-[108px] sm:right-4 sm:bottom-[128px] z-50 group"
             title="Livoo Live — Compre ao Vivo"
             aria-label="Livoo Live — Compre ao Vivo"
           >
             <div className="relative">
               <span className="livoo-live-float__ring" aria-hidden="true"></span>
-              <div className="livoo-live-float__btn w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+              <div className="livoo-live-float__btn w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
                 {/* Logo Livoo Live: círculo branco + play rosa com a bolinha no vértice */}
-                <svg viewBox="0 0 48 48" className="w-9 h-9" aria-hidden="true">
+                <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-11 sm:h-11" aria-hidden="true">
                   <circle cx="24" cy="24" r="19" fill="#ffffff" />
                   <path d="M19 15.5 L34 24 L19 32.5 Z" fill="#D91674" stroke="#D91674" strokeWidth="4" strokeLinejoin="round" />
                   <circle cx="19" cy="15.5" r="3.4" fill="#D91674" />
@@ -1075,7 +1077,7 @@ export default function Layout({ children, currentPageName }) {
             <style>{`
               .livoo-live-float__btn {
                 background: linear-gradient(135deg, #D91674, #E3559C);
-                border: 1px solid rgba(255, 255, 255, 0.25);
+                border: 2px solid rgba(255, 255, 255, 0.3);
                 box-shadow: 0 8px 24px rgba(217, 22, 116, 0.45);
                 animation: livoo-float-beat 2.2s ease-in-out infinite;
               }
@@ -1085,7 +1087,7 @@ export default function Layout({ children, currentPageName }) {
               .livoo-live-float__ring {
                 position: absolute;
                 inset: 0;
-                border-radius: 1rem;
+                border-radius: 999px;
                 border: 2px solid rgba(217, 22, 116, 0.7);
                 animation: livoo-float-ring 2.2s ease-out infinite;
                 pointer-events: none;
