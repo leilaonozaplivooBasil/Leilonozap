@@ -912,13 +912,15 @@ export default function TreeHierarchy({
           className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           onClick={() => setSelectedId(null)}
         >
+          {/* Desktop: card 16:9 (como abrir um produto na loja). Mobile: altura livre. */}
           <div
-            className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl"
+            className="w-full max-w-5xl rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl overflow-hidden
+              max-h-[88vh] md:aspect-video md:max-h-[86vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* capa */}
-            <div className="relative">
-              <div className={`h-24 ${getCareerColor(selected.primary_career_level || 'usuario')} opacity-25`} />
+            <div className="relative flex-shrink-0">
+              <div className={`h-20 md:h-24 ${getCareerColor(selected.primary_career_level || 'usuario')} opacity-25`} />
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
@@ -929,7 +931,7 @@ export default function TreeHierarchy({
               </button>
             </div>
 
-            <div className="px-6 pb-6 -mt-12">
+            <div className="px-6 pb-6 -mt-12 overflow-y-auto flex-1 min-h-0">
               {/* identidade + ações */}
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                 <div

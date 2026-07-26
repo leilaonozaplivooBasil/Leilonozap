@@ -654,6 +654,27 @@ export default function NetworkOverview() {
     return tempUsers;
   }, [allUsers, filterRole, searchTerm]);
 
+  /**
+   * Grava alterações de um usuário na rede.
+   * ⚠️ Antes o painel chamava a função 'updateUserNetwork', que NÃO existe na API
+   * (404). O erro era engolido e a UI dizia "Vínculo atualizado!" sem nada mudar —
+   * era por isso que arrastar/promover não associava. Agora usa adminUpdateUser,
+   * que existe, tem guard de admin e confirma a gravação.
+   */
+  const saveUserFields = useCallback(async (userId, updates) => {
+    let actor = null;
+    try { actor = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { actor = null; }
+    const result = await base44.functions.invoke('adminUpdateUser', {
+      userId,
+      updates,
+      actorId: actor,
+    });
+    if (!result || result.success !== true) {
+      throw new Error(result?.error || 'o servidor não confirmou a gravação');
+    }
+    return result.user;
+  }, []);
+
   const handlePromote = (user) => {
     setPromotingUser(user);
     const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
@@ -695,15 +716,12 @@ export default function NetworkOverview() {
     setIsPromoting(true);
     try {
       const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
-        target_user_id: promotingUser.id,
-        update_data: {
+      await saveUserFields(promotingUser.id, {
           career_levels: selectedLevels,
           primary_career_level: primaryLevel,
           display_first_name: displayFirstName.trim() || null,
           display_last_name: displayLastName.trim() || null
-        }
-      });
+        });
 
       await fetchData();
 
@@ -752,13 +770,10 @@ export default function NetworkOverview() {
       if (!licensee) throw new Error("Licenciado não encontrado.");
 
       const amount = parseFloat(commissionAmount);
-      const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
-        target_user_id: selectedLicenseeId,
-        update_data: {
-          commission_balance: (licensee.commission_balance || 0) + amount,
-          valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
-        }
+      // A tabela app_users tem commission_balance; 'valora_pay_balance' não existe
+      // como coluna — mandar isso fazia o update inteiro falhar.
+      await saveUserFields(selectedLicenseeId, {
+        commission_balance: (licensee.commission_balance || 0) + amount,
       });
 
       toast.success(`R$ ${fmtBR(amount)} creditados!`);
@@ -808,16 +823,10 @@ export default function NetworkOverview() {
 
         // Evita ciclo imediato (quando o licenciado é indicado pelo usuário que será movido)
         if (licensee.referred_by_id === userToLink.id) {
-          await base44Client.functions.invoke('updateUserNetwork', {
-            target_user_id: licensee.id,
-            update_data: { referred_by_id: null }
-          });
+          await saveUserFields(licensee.id, { referred_by_id: null });
         }
 
-        await base44Client.functions.invoke('updateUserNetwork', {
-          target_user_id: userId,
-          update_data: { referred_by_id: licensee.id }
-        });
+        await saveUserFields(userId, { referred_by_id: licensee.id });
       }
 
       toast.info("Recalculando estatísticas...");
@@ -869,18 +878,12 @@ export default function NetworkOverview() {
         if (isDescendant(draggedId, targetId)) {
           // Quebra o ciclo: solta o alvo na raiz antes de mover o arrastado
           const base44Client = (await import('@/api/base44Client')).base44;
-          await base44Client.functions.invoke('updateUserNetwork', {
-            target_user_id: targetId,
-            update_data: { referred_by_id: null }
-          });
+          await saveUserFields(targetId, { referred_by_id: null });
         }
       }
 
       const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
-        target_user_id: draggedId,
-        update_data: { referred_by_id: targetId }
-      });
+      await saveUserFields(draggedId, { referred_by_id: targetId });
       toast.success('Vínculo atualizado!');
       await fetchData();
     } catch (error) {
@@ -1121,10 +1124,7 @@ export default function NetworkOverview() {
       const directChildren = allUsers.filter(u => u.referred_by_id === user.id);
       const newParent = user.referred_by_id || null;
       for (const child of directChildren) {
-        await base44.functions.invoke('updateUserNetwork', {
-          target_user_id: child.id,
-          update_data: { referred_by_id: newParent }
-        });
+        await saveUserFields(child.id, { referred_by_id: newParent });
       }
 
       // 2) Manda para a lixeira (nada é apagado)
@@ -1173,10 +1173,7 @@ export default function NetworkOverview() {
   // Soltar da rede: vira raiz, sem indicador
   const handleDetachUser = async (user) => {
     try {
-      await base44.functions.invoke('updateUserNetwork', {
-        target_user_id: user.id,
-        update_data: { referred_by_id: null }
-      });
+      await saveUserFields(user.id, { referred_by_id: null });
       toast.success(`${user.full_name} agora é raiz da rede.`);
       await fetchData();
     } catch (error) {

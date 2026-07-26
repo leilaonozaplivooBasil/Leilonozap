@@ -28,6 +28,8 @@ const ALLOWED = [
   'is_seller', 'store_name',
   // 'active' = arquivar/reativar usuário sem apagar histórico (painel da rede)
   'active',
+  // crédito manual de comissão pelo Painel de Controle
+  'commission_balance',
 ];
 
 export default async function handler(req, res) {
