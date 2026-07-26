@@ -183,7 +183,9 @@ export default function Layout({ children, currentPageName }) {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userIsAdmin');
     sessionStorage.removeItem('isLoggedIn');
-    
+    // Rank Premiado é a mesma conta: sair da plataforma sai do concurso também
+    localStorage.removeItem('concurso_code');
+
     // 🔧 CRÍTICO: Limpa referralCode do sessionStorage para evitar conflito no próximo login
     sessionStorage.removeItem('referralCode');
 

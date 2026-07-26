@@ -43,8 +43,8 @@ export default function FloatingWalletButton({ balance, onClick }) {
         .fwb:hover {
           border-color: rgba(110, 231, 183, 0.8);
         }
-        @media (max-width: 1023px) { .fwb { top: 80px; right: 12px; } }
-        @media (min-width: 1024px) { .fwb { top: 96px; left: 16px; } }
+        @media (max-width: 1023px) { .fwb { top: 108px; right: 12px; } }
+        @media (min-width: 1024px) { .fwb { top: 170px; left: 16px; } }
 
         /* Halo esmeralda uniforme, respirando devagar */
         @keyframes fwb-halo {

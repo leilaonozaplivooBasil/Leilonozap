@@ -139,6 +139,19 @@ export default async function handler(req, res) {
       return jset(res, 200, { code, nome: pr?.[0]?.nome || null, foto_url: pr?.[0]?.foto_url || null, periodos: out, config: await getConfig(), group_link: GROUP_LINK });
     }
 
+    // ---------- MEU CÓDIGO (conta ↔ concurso são um só: acha o participante pelo CPF da conta) ----------
+    // Permite ao front restaurar o painel pessoal depois do login na plataforma.
+    // O code já é semi-público (aparece no ranking e nos links ?ref=), então não vaza nada novo.
+    if (action === 'mycode') {
+      const userId = (req.query?.user_id || body.user_id || '').toString();
+      if (!userId) return jset(res, 400, { error: 'user_id' });
+      const u = await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+      const cpf = digits(Array.isArray(u) && u[0] ? u[0].cpf : '');
+      if (!cpf) return jset(res, 200, { code: null });
+      const p = await (await sb(`concurso_participantes?select=code&cpf=eq.${cpf}&limit=1`)).json();
+      return jset(res, 200, { code: (Array.isArray(p) && p[0] && p[0].code) || null });
+    }
+
     // ---------- REGISTRO ----------
     if (action === 'register') {
       const nome = (body.nome || '').toString().trim();
@@ -147,6 +160,19 @@ export default async function handler(req, res) {
       if (nome.length < 3) return jset(res, 400, { error: 'Informe seu nome completo.' });
       if (!cpfValido(cpf)) return jset(res, 400, { error: 'CPF inválido.' });
       if (whatsapp.length < 10 || whatsapp.length > 13) return jset(res, 400, { error: 'WhatsApp inválido (com DDD).' });
+
+      // Usuário LOGADO se cadastrando no concurso: vincula o CPF à conta quando ela
+      // ainda não tem (nunca sobrescreve CPF existente — evitaria troca de identidade).
+      // É esse vínculo que faz o action=mycode achar o painel da conta depois.
+      const uid = (body.user_id || '').toString();
+      if (uid) {
+        try {
+          const u = await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(uid)}&limit=1`)).json();
+          if (Array.isArray(u) && u[0] && !digits(u[0].cpf)) {
+            await sb(`app_users?id=eq.${encodeURIComponent(uid)}&cpf=is.null`, { method: 'PATCH', body: JSON.stringify({ cpf }) });
+          }
+        } catch { /* vínculo é best-effort; cadastro do concurso segue normal */ }
+      }
 
       const ex = await (await sb(`concurso_participantes?select=code,nome&cpf=eq.${cpf}&limit=1`)).json();
       if (Array.isArray(ex) && ex[0]) {

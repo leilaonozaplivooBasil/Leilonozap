@@ -12,6 +12,7 @@
  */
 import React, { useState, useEffect, useRef, memo, useMemo } from "react";
 import { capOf } from '@/lib/fotoLegenda';
+import { addMoney, gteMoney } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -159,10 +160,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       const digitalWallet = digitalWallets && digitalWallets.length > 0 ? digitalWallets[0] : null;
 
       const currentBalance = digitalWallet?.balance || 0;
-      const minBid = auction.current_price + auction.increment;
+      const minBid = addMoney(auction.current_price, auction.increment);
 
       // 🐛 FIX: Se saldo insuficiente → Alerta e opção de recarga
-      if (currentBalance < minBid) {
+      if (!gteMoney(currentBalance, minBid)) {
         console.warn(`⚠️ Saldo insuficiente. DigitalWallet: ${currentBalance} < ${minBid}`);
 
         if (confirm(`Saldo insuficiente (R$ ${currentBalance.toFixed(2)}). O lance mínimo é R$ ${minBid.toFixed(2)}.\n\nDeseja adicionar fundos agora?`)) {

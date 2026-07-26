@@ -14,7 +14,7 @@ import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
   Maximize2, Minimize2, Save, Settings2, ArrowLeft,
-  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2, LogOut,
+  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2, LogOut, LogIn,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -69,7 +69,13 @@ export default function ConcursoLeilaoNozap() {
   const [data, setData] = useState({ ranking: [], premios: [], config: {}, group_link: GROUP_LINK, total: 0 });
   const [me, setMe] = useState(null);
   const [myCode, setMyCode] = useState(localStorage.getItem('concurso_code') || '');
-  const [form, setForm] = useState({ nome: '', cpf: '', whatsapp: '', foto: null });
+  // Logado sem participação: formulário já vem com os dados da conta (é a mesma pessoa)
+  const [form, setForm] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('currentUser') || 'null');
+      return { nome: u?.full_name || '', cpf: u?.cpf || '', whatsapp: u?.phone || '', foto: null };
+    } catch { return { nome: '', cpf: '', whatsapp: '', foto: null }; }
+  });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
@@ -147,6 +153,30 @@ export default function ConcursoLeilaoNozap() {
 
   useEffect(() => { if (!ref) { load(periodo); loadMe(); const t = setInterval(() => { load(periodo); loadMe(); }, 15000); return () => clearInterval(t); } }, [load, loadMe, periodo, ref]);
 
+  // 🔗 Conta da plataforma e concurso são UM SÓ (pedido do Gabriel 26/07):
+  // logado → o painel pessoal é SEMPRE o da conta (action=mycode valida pelo CPF).
+  // Se o localStorage tiver code de OUTRA pessoa (aparelho compartilhado), é
+  // substituído/limpo na hora — 1 perfil por conta, nunca confusão de contas.
+  // Deslogado com painel sobrando de um logout → limpa e some o card.
+  useEffect(() => {
+    if (currentUser?.id) {
+      (async () => {
+        try {
+          const r = await fetch(`${API}?action=mycode&user_id=${encodeURIComponent(currentUser.id)}`, { cache: 'no-store' });
+          const j = await r.json();
+          const accountCode = j.code || '';
+          if (accountCode === myCode) return;
+          if (accountCode) { localStorage.setItem('concurso_code', accountCode); setMyCode(accountCode); }
+          else { localStorage.removeItem('concurso_code'); setMyCode(''); }
+        } catch { /* */ }
+      })();
+    } else if (!currentUser && myCode && sessionStorage.getItem('userLoggedOut') === 'true') {
+      localStorage.removeItem('concurso_code');
+      setMyCode('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, myCode]);
+
   const myLink = myCode ? `${window.location.origin}/rankpremiado?ref=${myCode}` : '';
   const copyMyLink = async () => {
     try { await navigator.clipboard.writeText(myLink); } catch { /* */ }
@@ -161,7 +191,7 @@ export default function ConcursoLeilaoNozap() {
   const register = async () => {
     setErr(''); setSaving(true);
     try {
-      const r = await fetch(`${API}?action=register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const r = await fetch(`${API}?action=register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, user_id: currentUser?.id || null }) });
       const j = await r.json();
       if (!r.ok) { setErr(j.error || 'Erro ao salvar.'); return; }
       localStorage.setItem('concurso_code', j.code); setMyCode(j.code);
@@ -595,18 +625,28 @@ export default function ConcursoLeilaoNozap() {
           >
             <ArrowLeft className="w-4 h-4" /> Voltar para a Home
           </a>
-          {currentUser && (
+          {currentUser ? (
             <button
               onClick={() => {
                 sessionStorage.setItem('userLoggedOut', 'true');
                 localStorage.removeItem('currentUser');
                 localStorage.removeItem('userIsAdmin');
                 sessionStorage.removeItem('isLoggedIn');
+                // conta e concurso são um só: sair daqui desloga o painel pessoal também
+                localStorage.removeItem('concurso_code');
                 window.location.reload();
               }}
               className="inline-flex items-center gap-2 text-sm font-semibold text-red-300/80 hover:text-red-200 transition-colors px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-red-500/10"
             >
               <LogOut className="w-4 h-4" /> Sair
+            </button>
+          ) : (
+            <button
+              onClick={() => window.dispatchEvent(new Event('openLoginModal'))}
+              className="inline-flex items-center gap-2 text-sm font-bold text-white transition-transform active:scale-[.97] px-4 py-1.5 rounded-full"
+              style={{ background: 'linear-gradient(90deg,#16a34a,#22c55e)', border: '1px solid rgba(34,197,94,.5)', boxShadow: '0 4px 14px rgba(34,197,94,.25)' }}
+            >
+              <LogIn className="w-4 h-4" /> Entrar
             </button>
           )}
         </div>

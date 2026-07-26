@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
+import { money, addMoney, gtMoney, gteMoney } from "@/lib/money";
 
 const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;
@@ -65,7 +66,7 @@ export default function useBidSubmission({
       return;
     }
 
-    const bidAmount = parseFloat(amount);
+    const bidAmount = money(parseFloat(amount));
     const serverNow = getServerSyncedTime();
 
     if (serverNow === null) {
@@ -93,16 +94,16 @@ export default function useBidSubmission({
       }
 
       const freshAuction = freshAuctionData[0];
-      const currentPrice = freshAuction.current_price || freshAuction.starting_price;
-      const minBid = currentPrice + freshAuction.increment;
+      const currentPrice = money(freshAuction.current_price || freshAuction.starting_price);
+      const minBid = addMoney(currentPrice, freshAuction.increment);
 
-      if (bidAmount <= currentPrice) {
+      if (!gtMoney(bidAmount, currentPrice)) {
         alert(`❌ Lance maior! Atual: R$ ${currentPrice.toFixed(2)}`);
         setAuction(freshAuction);
         return;
       }
 
-      if (bidAmount < minBid) {
+      if (!gteMoney(bidAmount, minBid)) {
         alert(`❌ Mínimo: R$ ${minBid.toFixed(2)}`);
         return;
       }
@@ -169,9 +170,9 @@ export default function useBidSubmission({
       await new Promise(resolve => setTimeout(resolve, 800));
 
       const revalidateAuction = await Auction.filter({ id: auctionId });
-      const revalidatePrice = revalidateAuction[0].current_price || revalidateAuction[0].starting_price;
+      const revalidatePrice = money(revalidateAuction[0].current_price || revalidateAuction[0].starting_price);
 
-      if (revalidatePrice >= bidAmount) {
+      if (gteMoney(revalidatePrice, bidAmount)) {
         alert("Outro lance foi dado!");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;

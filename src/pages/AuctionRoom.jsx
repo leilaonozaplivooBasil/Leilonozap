@@ -15,6 +15,7 @@ import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
+import { money, addMoney, mulMoney } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
 import ComparaiButton from '../components/comparai/ComparaiButton';
@@ -521,7 +522,7 @@ export default function AuctionRoom() {
     }
 
     // Verifica saldo antes de abrir o modal de arremate
-    const buyNowAmount = (auction.current_price || auction.starting_price) * 1.45;
+    const buyNowAmount = mulMoney(auction.current_price || auction.starting_price, 1.45);
     try {
       const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
@@ -546,9 +547,9 @@ export default function AuctionRoom() {
     setIsBuyingNow(true);
 
     try {
-      // 🆕 ARREMATE = LANCE ATUAL + 45%
-      const currentPrice = auction.current_price || auction.starting_price;
-      const buyNowPrice = currentPrice * 1.45;
+      // 🆕 ARREMATE = LANCE ATUAL + 45% (centavos exatos)
+      const currentPrice = money(auction.current_price || auction.starting_price);
+      const buyNowPrice = mulMoney(currentPrice, 1.45);
 
       // VERIFICA E DEBITA SALDO
       const debitResult = await base44.functions.invoke('debitWalletBalance', {
@@ -805,9 +806,9 @@ export default function AuctionRoom() {
 
   const displayTime = getDisplayTime();
   const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
-  const currentPrice = auction.current_price || auction.starting_price;
+  const currentPrice = money(auction.current_price || auction.starting_price);
   // Leilão pode vir sem incremento definido (ex.: reativado/legado) — nunca deixar null quebrar o render nem gerar NaN no lance
-  const safeIncrement = Number(auction.increment) > 0 ? Number(auction.increment) : 1;
+  const safeIncrement = Number(auction.increment) > 0 ? money(auction.increment) : 1;
   const mainImageUrl = auction.image_urls?.[0] || "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400";
 
   const isWarMode = timeRemaining !== null && timeRemaining <= COUNTDOWN_DURATION && isAuctionActive;
@@ -1168,6 +1169,8 @@ export default function AuctionRoom() {
         auction={auction}
         finalPrice={currentPrice}
         currentUser={currentUser}
+        messages={messages}
+        onSettled={refreshWalletBalance}
         onClose={() => setShowWinnerModal(false)}
       />
 
@@ -1187,7 +1190,7 @@ export default function AuctionRoom() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Arremate (+45%):</span>
-                  <span className="text-2xl font-bold text-orange-400">R$ {(currentPrice * 1.45).toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-orange-400">R$ {mulMoney(currentPrice, 1.45).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -1236,7 +1239,7 @@ export default function AuctionRoom() {
       <LowBalanceModal
         isOpen={showLowBalanceModal}
         currentBalance={userWallet?.balance || 0}
-        requiredAmount={currentPrice + safeIncrement}
+        requiredAmount={addMoney(currentPrice, safeIncrement)}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { money, addMoney, mulMoney, gteMoney } from "@/lib/money";
 import { Eye, ShoppingBag, ChevronLeft, ChevronRight, Zap, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,11 +143,11 @@ export default function LiveShop() {
 
     if (!currentProduct) return;
 
-    const finalAmount = amount || parseFloat(bidAmount);
+    const finalAmount = money(amount || parseFloat(bidAmount));
     if (!finalAmount || isNaN(finalAmount)) return;
 
-    const minBid = currentProduct.current_price + currentProduct.increment;
-    if (finalAmount < minBid) {
+    const minBid = addMoney(currentProduct.current_price, currentProduct.increment);
+    if (!gteMoney(finalAmount, minBid)) {
       toast.error(`Lance mínimo é R$ ${minBid.toFixed(2)}`);
       return;
     }
@@ -341,7 +342,7 @@ export default function LiveShop() {
                   {/* Botões Rápidos */}
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {[1, 2, 5].map((mult) => {
-                      const quickAmount = currentProduct.current_price + (currentProduct.increment * mult);
+                      const quickAmount = addMoney(currentProduct.current_price, mulMoney(currentProduct.increment, mult));
                       return (
                         <Button
                           key={mult}
@@ -367,7 +368,7 @@ export default function LiveShop() {
                         placeholder="Valor personalizado"
                         disabled={isSubmitting || !currentUser}
                         className="flex-1"
-                        min={currentProduct.current_price + currentProduct.increment}
+                        min={addMoney(currentProduct.current_price, currentProduct.increment)}
                       />
                       <Button
                         onClick={() => handleSubmitBid()}

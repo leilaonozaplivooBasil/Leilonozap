@@ -1,15 +1,55 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { X } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { X, Check, Loader2, History } from "lucide-react";
 
 // 🏆 Modal de ARREMATADO — liquid glass verde do site, com 3 estados REAIS
 // (dados gravados pelo servidor em finalizeAuction, não estimativa do cliente):
 //   • VOCÊ venceu  → celebração completa + CTA de pagamento
 //   • OUTRO venceu → informativo, mostra quem arrematou
 //   • SEM lances   → encerramento sóbrio, sem festa
-export default function WinnerModal({ isOpen, auction, finalPrice, onClose, currentUser }) {
+export default function WinnerModal({ isOpen, auction, finalPrice, onClose, currentUser, messages, onSettled }) {
   const navigate = useNavigate();
+  // settle: 'idle' | 'processing' | 'paid' | 'insufficient' | 'error'
+  const [settle, setSettle] = useState({ state: 'idle', balance: null, needed: null });
+  const settleTriggered = useRef(false);
+
+  const isWinnerNow = Boolean(isOpen && auction && currentUser && auction.winner_id === currentUser.id);
+
+  // 💳 Liquidação automática: ao abrir como vencedor, o lance é debitado do saldo na hora
+  useEffect(() => {
+    if (!isWinnerNow || settleTriggered.current) return;
+    settleTriggered.current = true;
+    setSettle({ state: 'processing', balance: null, needed: null });
+    (async () => {
+      try {
+        const result = await base44.functions.invoke('settleAuctionWithBalance', {
+          auction_id: auction.id,
+          user_id: currentUser.id,
+        });
+        const data = result?.data || result;
+        if (data?.success) {
+          setSettle({ state: 'paid', balance: data.new_balance ?? null, needed: null });
+          if (onSettled) onSettled();
+        } else if (data?.insufficient) {
+          setSettle({ state: 'insufficient', balance: data.balance ?? 0, needed: data.needed ?? null });
+        } else {
+          setSettle({ state: 'error', balance: null, needed: null });
+        }
+      } catch {
+        setSettle({ state: 'error', balance: null, needed: null });
+      }
+    })();
+  }, [isWinnerNow, auction?.id, currentUser?.id, onSettled]);
+
+  // Histórico de lances (mais recentes primeiro)
+  const bidHistory = React.useMemo(() => {
+    return (messages || [])
+      .filter((m) => m.message_type === 'bid' && Number(m.bid_amount) > 0)
+      .sort((a, b) => (Number(b.bid_amount) || 0) - (Number(a.bid_amount) || 0))
+      .slice(0, 6);
+  }, [messages]);
 
   if (!isOpen || !auction) return null;
 
@@ -95,7 +135,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
         </h2>
         <p className="text-emerald-200 text-sm font-semibold mb-3">
           {isWinner
-            ? 'O lote é seu — garanta seu produto!'
+            ? (settle.state === 'paid' ? 'O lote é seu — pagamento confirmado com saldo!' : 'O lote é seu — garanta seu produto!')
             : hasWinner
               ? <>Vencedor: <span className="text-white">{winnerLabel}</span></>
               : 'Este lote terminou sem lances.'}
@@ -119,18 +159,92 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
           </div>
         </div>
 
+        {/* Histórico de lances da disputa */}
+        {bidHistory.length > 0 && (
+          <div className="rounded-2xl border border-white/12 bg-white/[0.06] p-3 mb-4 text-left">
+            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/60 mb-2">
+              <History className="w-3 h-3" /> Histórico de lances
+            </p>
+            <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+              {bidHistory.map((b, i) => (
+                <div key={b.id || i} className="flex items-center justify-between gap-2">
+                  <span className={`text-[11px] font-semibold truncate ${i === 0 ? 'text-emerald-300' : 'text-white/75'}`}>
+                    {i === 0 ? '● ' : ''}{b.sender_name}
+                  </span>
+                  <span className={`text-[11px] font-bold tabular-nums flex-shrink-0 ${i === 0 ? 'text-emerald-300' : 'text-white/60'}`}>
+                    R$ {(Number(b.bid_amount) || 0).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* CTA */}
         {hasWinner ? (
           <>
-            <button
-              onClick={handleGoToWinnings}
-              className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
-              style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}
-            >
-              {isWinner ? 'Pagar e garantir meu arremate' : 'Ver Meus Arremates'}
-            </button>
+            {isWinner && settle.state === 'processing' && (
+              <div className="w-full rounded-xl py-3 text-sm font-bold text-white border border-white/15 bg-white/10 flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-300" />
+                Debitando do seu saldo...
+              </div>
+            )}
+            {isWinner && settle.state === 'paid' && (
+              <>
+                <div className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}>
+                  <Check className="w-4 h-4" />
+                  Pago automaticamente com seu saldo
+                </div>
+                <button
+                  onClick={handleGoToWinnings}
+                  className="w-full rounded-xl py-2.5 mt-2 text-sm font-bold text-white border border-white/20 bg-white/10 hover:bg-white/15 transition-colors"
+                >
+                  Ver Meus Arremates
+                </button>
+                {settle.balance !== null && (
+                  <p className="text-white/70 text-[11px] mt-2">
+                    Saldo restante: <span className="font-bold text-emerald-300 tabular-nums">R$ {settle.balance.toFixed(2).replace('.', ',')}</span>
+                  </p>
+                )}
+              </>
+            )}
+            {isWinner && settle.state === 'insufficient' && (
+              <>
+                <p className="text-amber-300 text-[11px] font-semibold mb-2">
+                  Saldo insuficiente (R$ {(settle.balance ?? 0).toFixed(2).replace('.', ',')}) — complete o pagamento:
+                </p>
+                <button
+                  onClick={handleGoToWinnings}
+                  className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
+                  style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}
+                >
+                  Pagar e garantir meu arremate
+                </button>
+              </>
+            )}
+            {isWinner && (settle.state === 'idle' || settle.state === 'error') && (
+              <button
+                onClick={handleGoToWinnings}
+                className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
+                style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}
+              >
+                Pagar e garantir meu arremate
+              </button>
+            )}
+            {!isWinner && (
+              <button
+                onClick={handleGoToWinnings}
+                className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
+                style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}
+              >
+                Ver Meus Arremates
+              </button>
+            )}
             <p className="text-white/70 text-[11px] mt-2">
-              {isWinner ? 'Realize o pagamento para garantir o produto!' : 'Confira os produtos arrematados'}
+              {isWinner
+                ? (settle.state === 'paid' ? 'Produto garantido — acompanhe a entrega em Meus Arremates.' : 'Seu arremate fica garantido após o pagamento.')
+                : 'Confira os produtos arrematados'}
             </p>
           </>
         ) : (
