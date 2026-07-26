@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -282,7 +283,7 @@ export default function StockPosition() {
                           </span>
                         )}
                       </td>
-                      <td className="p-3 text-right text-gray-300">R$ {(product.cost_price || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-300">R$ {fmtBR((product.cost_price || 0))}</td>
                       <td className="p-3 text-right text-gray-300">
                         R$ {(() => {
                           const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
@@ -290,11 +291,11 @@ export default function StockPosition() {
                           return unitCost.toFixed(2);
                         })()}
                       </td>
-                      <td className="p-3 text-right text-gray-300">R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-300">R$ {fmtBR((product.selling_price_retail || 0))}</td>
                       <td className="p-3 text-right text-white font-semibold">{(product.quantity || 0).toLocaleString()}</td>
                       <td className="p-3 text-right text-white font-semibold">{(product.quantity_sold || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-blue-400 font-bold">R$ {(product.sold_amount || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-green-400 font-bold">R$ {(product.profit || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-blue-400 font-bold">R$ {fmtBR((product.sold_amount || 0))}</td>
+                      <td className="p-3 text-right text-green-400 font-bold">R$ {fmtBR((product.profit || 0))}</td>
                       <td className="p-3 text-center">
                         <Button
                           size="sm"

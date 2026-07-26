@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -662,7 +663,7 @@ function AnaliseDeLotes() {
                                         }
                                         await Auction.create({
                                             title: loteAtual.nomeLote,
-                                            description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${loteAtual.valorMercadoTotal.toFixed(2)}`,
+                                            description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)}`,
                                             starting_price: calculations.custoTotal,
                                             current_price: calculations.custoTotal,
                                             increment: 100,

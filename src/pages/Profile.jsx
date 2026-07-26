@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const User = { me: () => base44.auth.me(), updateMyUserData: (data) => base44.auth.updateMe(data), logout: () => base44.auth.logout() };
@@ -999,7 +1000,7 @@ export default function Profile() {
                               <Gavel className="w-[18px] h-[18px]" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>R$ {(bid.bid_amount || 0).toFixed(2)}</p>
+                              <p className={`text-sm font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>R$ {fmtBR((bid.bid_amount || 0))}</p>
                               <p className="text-xs text-gray-500">
                                 {new Date(bid.created_date).toLocaleDateString('pt-BR')}
                               </p>
@@ -1232,7 +1233,7 @@ export default function Profile() {
                               </p>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="text-sm font-black text-green-400">+ R$ {(dep.total_amount || dep.sale_price || 0).toFixed(2)}</p>
+                              <p className="text-sm font-black text-green-400">+ R$ {fmtBR((dep.total_amount || dep.sale_price || 0))}</p>
                               <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${pago ? 'text-green-400' : 'text-yellow-400'}`}>
                                 {pago ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                 {pago ? 'Confirmado' : 'Aguardando'}

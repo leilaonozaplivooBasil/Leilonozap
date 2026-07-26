@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,10 +180,10 @@ export default function AmbienteDeTeste() {
         direction: "credit",
         amount: amount,
         status: "confirmed",
-        description: `Teste de carteira - Saldo adicionado: R$ ${amount.toFixed(2)}`
+        description: `Teste de carteira - Saldo adicionado: R$ ${fmtBR(amount)}`
       });
 
-      setWalletMessage(`✅ Saldo de R$ ${amount.toFixed(2)} adicionado para ${selectedUser.full_name}`);
+      setWalletMessage(`✅ Saldo de R$ ${fmtBR(amount)} adicionado para ${selectedUser.full_name}`);
       setWalletUserId("");
       setWalletAmount(100);
       setTimeout(() => setShowWalletTest(false), 2000);

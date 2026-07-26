@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,15 +71,15 @@ export default function PriceSection({ formData, onInputChange }) {
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado real <span className="text-gray-500">(+20%)</span></span>
-                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {mercadoReal.toFixed(2)}</span>
+                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {fmtBR(mercadoReal)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual</span>
-                  <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {lojaPrice.toFixed(2)}</span>
+                  <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {fmtBR(lojaPrice)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−20%)</span></span>
-                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
+                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {fmtBR(leilaoInicio)}</span>
                 </div>
               </div>
             </div>
@@ -101,7 +102,7 @@ export default function PriceSection({ formData, onInputChange }) {
           />
           {incrementSuggestion && (
             <p className="text-xs text-gray-500 mt-1">
-              💡 Auto: {incrementSuggestion.label} para lance de R$ {leilaoInicio.toFixed(2)} — editável
+              💡 Auto: {incrementSuggestion.label} para lance de R$ {fmtBR(leilaoInicio)} — editável
             </p>
           )}
         </div>
@@ -124,7 +125,7 @@ export default function PriceSection({ formData, onInputChange }) {
           {sp > 0 && (
             <div className="mt-1.5 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
               <p className="text-xs text-blue-300">
-                💡 Sugerido: <strong>R$ {lojaPrice.toFixed(2)}</strong> (= preço da Loja Virtual)
+                💡 Sugerido: <strong>R$ {fmtBR(lojaPrice)}</strong> (= preço da Loja Virtual)
               </p>
               <p className="text-xs text-gray-500 mt-0.5">Arrematar agora = comprar direto na loja.</p>
               {!formData.buy_now_price && (

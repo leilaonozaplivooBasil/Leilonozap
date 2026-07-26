@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,7 +114,7 @@ export default function EstoqueLotes() {
       await base44.entities.LoteRecebido.update(arrematarLote.id, {
         status: 'comprado',
         valor_lote: custoTotal,
-        observacoes: `Arremate: R$ ${valorArremate.toFixed(2)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${taxaValor.toFixed(2)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${custoTotal.toFixed(2)}\n${arrematarLote.observacoes || ''}`,
+        observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
       });
       setArrematarLote(null);
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
@@ -148,7 +149,7 @@ export default function EstoqueLotes() {
     const confirmacao = confirm(
       `Gerar produtos no estoque para o lote "${lote.nome_lote}"?\n\n` +
       `• Quantidade total: ${qtd} unidades\n` +
-      `• Custo total do lote: R$ ${(lote.valor_lote || 0).toFixed(2)}\n` +
+      `• Custo total do lote: R$ ${fmtBR((lote.valor_lote || 0))}\n` +
       `• Custo unitário médio: R$ ${qtd > 0 ? ((lote.valor_lote || 0) / qtd).toFixed(2) : '0.00'}\n` +
       `• Depósito destino: ${lote.deposito_destino || 'Bangu'}${msgRetomada}\n\n` +
       `Esta ação cria os produtos na "Posição de Estoque".`
@@ -159,7 +160,7 @@ export default function EstoqueLotes() {
       const data = res?.data || res;
       if (data?.status === 'success' || data?.status === 'partial') {
         const msg = data.mensagem || `${data.produtos_criados} produtos criados.`;
-        alert(`${data.status === 'success' ? '✅' : '⚠️'} ${msg}\n\nCriados agora: ${data.produtos_criados}\nJá existiam: ${data.ja_existentes || 0}\nTotal no lote: ${data.total_acumulado || data.produtos_criados}\nCusto unitário: R$ ${data.custo_unitario_medio?.toFixed(2)}`);
+        alert(`${data.status === 'success' ? '✅' : '⚠️'} ${msg}\n\nCriados agora: ${data.produtos_criados}\nJá existiam: ${data.ja_existentes || 0}\nTotal no lote: ${data.total_acumulado || data.produtos_criados}\nCusto unitário: R$ ${fmtBR(data.custo_unitario_medio)}`);
         await loadLotes();
       } else {
         alert(`❌ Erro: ${data?.error || 'Resposta inesperada'}`);
@@ -277,7 +278,7 @@ export default function EstoqueLotes() {
                           <Badge variant="outline" className="text-gray-300 border-gray-600 text-xs">{lote.marketplace}</Badge>
                         </div>
                         {lote.valor_lote > 0 && (
-                          <p className="text-green-400 text-sm font-semibold">R$ {lote.valor_lote?.toFixed(2)}</p>
+                          <p className="text-green-400 text-sm font-semibold">R$ {fmtBR(lote.valor_lote)}</p>
                         )}
                         {lote.observacoes && (
                           <p className="text-gray-400 text-xs mt-1">{lote.observacoes}</p>
@@ -406,17 +407,17 @@ export default function EstoqueLotes() {
               {arrematarForm.valorArremate && (
                 <div className="bg-amber-900/20 border border-amber-700/40 rounded-lg p-3">
                   <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>Arremate</span><span>R$ {parseFloat(arrematarForm.valorArremate || 0).toFixed(2)}</span>
+                    <span>Arremate</span><span>R$ {fmtBR(parseFloat(arrematarForm.valorArremate || 0))}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>Taxa ({arrematarForm.taxaPct}%)</span><span>R$ {(parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100).toFixed(2)}</span>
+                    <span>Taxa ({arrematarForm.taxaPct}%)</span><span>R$ {fmtBR((parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100))}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>Frete</span><span>R$ {arrematarForm.frete.toFixed(2)}</span>
+                    <span>Frete</span><span>R$ {fmtBR(arrematarForm.frete)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-amber-300 border-t border-amber-700/40 pt-2 mt-1">
                     <span>CUSTO TOTAL</span>
-                    <span>R$ {(parseFloat(arrematarForm.valorArremate || 0) + parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100 + arrematarForm.frete + arrematarForm.outros).toFixed(2)}</span>
+                    <span>R$ {fmtBR((parseFloat(arrematarForm.valorArremate || 0) + parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100 + arrematarForm.frete + arrematarForm.outros))}</span>
                   </div>
                 </div>
               )}

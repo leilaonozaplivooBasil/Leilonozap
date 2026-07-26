@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
             <div>
               <p className={`text-sm font-medium ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>💵 Saldo Disponível para Saque</p>
               <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
-                R$ {(user.commission_balance || 0).toFixed(2)}
+                R$ {fmtBR((user.commission_balance || 0))}
               </p>
             </div>
             <Wallet className={`w-10 h-10 ${isSaiDeBaixo ? 'text-green-500' : 'text-green-400'}`} />
@@ -64,7 +65,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
               </div>
             </div>
             <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
-              R$ {Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)).toFixed(2)}
+              R$ {fmtBR(Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)))}
             </p>
             <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
             <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-green-200' : 'border-green-500/30'}`}>
@@ -85,7 +86,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
               </div>
             </div>
             <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
-              R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
+              R$ {fmtBR((user.catalog_total_commissions_generated || 0))}
             </p>
             <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
             <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-blue-200' : 'border-blue-500/30'}`}>
@@ -134,7 +135,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
                       <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.role}</TableCell>
                       <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.product_title || '-'}</TableCell>
                       <TableCell className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-right text-sm`}>{(rec.percent || 0).toFixed(2)}%</TableCell>
-                      <TableCell className="text-green-400 text-right font-semibold">R$ {(rec.amount || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-green-400 text-right font-semibold">R$ {fmtBR((rec.amount || 0))}</TableCell>
                       <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.status || '-'}</TableCell>
                     </TableRow>
                   ))}

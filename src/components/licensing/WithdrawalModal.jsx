@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +37,7 @@ export default function WithdrawalModal({
           <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
             <p className="text-sm text-gray-300 mb-1">Saldo Disponível para Saque:</p>
             <p className="text-3xl font-bold text-green-400">
-              R$ {totalAvailable.toFixed(2)}
+              R$ {fmtBR(totalAvailable)}
             </p>
           </div>
 

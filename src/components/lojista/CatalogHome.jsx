@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, ShoppingBag } from 'lucide-react';
@@ -48,7 +49,7 @@ export default function CatalogHome({ currentStore, catalogSales = [] }) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Faturamento</p>
-                <p className="text-2xl font-bold text-green-400 mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-400 mt-2">R$ {fmtBR(stats.totalRevenue)}</p>
               </div>
               <TrendingUp className="w-10 h-10 text-green-400" />
             </div>
@@ -70,7 +71,7 @@ export default function CatalogHome({ currentStore, catalogSales = [] }) {
                     <p className="text-white font-medium text-sm">{order.product_title || 'Produto'}</p>
                     <p className="text-gray-400 text-xs mt-1">{new Date(order.created_date).toLocaleDateString('pt-BR')}</p>
                   </div>
-                  <Badge className="bg-green-500/20 text-green-300">R$ {order.total_amount?.toFixed(2)}</Badge>
+                  <Badge className="bg-green-500/20 text-green-300">R$ {fmtBR(order.total_amount)}</Badge>
                 </div>
               ))
             ) : (

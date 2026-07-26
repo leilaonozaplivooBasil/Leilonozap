@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { AnimatePresence, motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { X, ShoppingBag, TrendingUp, Award } from 'lucide-react';
@@ -136,7 +137,7 @@ export default function TransactionToasts() {
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: st.accent }}>{st.label}</p>
                 <p className="text-xs font-semibold text-white truncate">{t.product}</p>
                 <p className="text-sm font-extrabold text-white tabular-nums">
-                  R$ {Number(t.amount || 0).toFixed(2).replace('.', ',')}
+                  R$ {fmtBR(Number(t.amount || 0))}
                 </p>
               </div>
               <button

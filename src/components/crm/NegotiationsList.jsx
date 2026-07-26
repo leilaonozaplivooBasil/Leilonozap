@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -74,7 +75,7 @@ export default function NegotiationsList({ negotiations, onNegotiationClick }) {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-green-600">
-                  R$ {(neg.total_value || 0).toFixed(2)}
+                  R$ {fmtBR((neg.total_value || 0))}
                 </p>
                 <p className="text-xs text-gray-500">{neg.items?.length || 0} produtos</p>
               </div>
@@ -87,7 +88,7 @@ export default function NegotiationsList({ negotiations, onNegotiationClick }) {
                   <Package className="w-3 h-3" />
                   <span className="flex-1 truncate">{item.product_name}</span>
                   <span className="font-medium">
-                    {item.quantity}x R$ {item.negotiated_price?.toFixed(2)}
+                    {item.quantity}x R$ {fmtBR(item.negotiated_price)}
                   </span>
                 </div>
               ))}

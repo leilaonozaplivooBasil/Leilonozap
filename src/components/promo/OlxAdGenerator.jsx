@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
@@ -36,8 +37,8 @@ export default function OlxAdGenerator({ product }) {
       prompt: `Gere uma descrição para anúncio de OLX/Marketplace para o seguinte produto:
 
 Produto: ${product.description}
-Preço: R$ ${price.toFixed(2)}
-${discount > 0 ? `Preço de mercado: R$ ${marketPrice.toFixed(2)} (${discount}% de desconto)` : ""}
+Preço: R$ ${fmtBR(price)}
+${discount > 0 ? `Preço de mercado: R$ ${fmtBR(marketPrice)} (${discount}% de desconto)` : ""}
 Localização: ${bairro ? bairro + ", " : ""}${cidade}
 Telefone formatado: ${formattedPhone}
 
@@ -170,7 +171,7 @@ REGRAS ABSOLUTAS:
             )}
             <div>
               <p className="text-white font-medium text-sm">{product.description}</p>
-              <p className="text-emerald-400 font-bold">R$ {price.toFixed(2)}</p>
+              <p className="text-emerald-400 font-bold">R$ {fmtBR(price)}</p>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
@@ -67,7 +68,7 @@ export default function PromoVideoGenerator({ product }) {
         ctx.font = `900 ${priceFontSize}px sans-serif`;
         ctx.fillStyle = "#25d366";
         ctx.textAlign = "left";
-        const priceText = `R$ ${price.toFixed(2)}`;
+        const priceText = `R$ ${fmtBR(price)}`;
         ctx.fillText(priceText, Math.round(W * 0.04), Math.round(topBarH * 0.75));
 
         // Preço riscado (se tiver desconto)
@@ -76,7 +77,7 @@ export default function PromoVideoGenerator({ product }) {
           ctx.font = `600 ${oldPriceFontSize}px sans-serif`;
           ctx.fillStyle = "rgba(255,255,255,0.4)";
           ctx.textAlign = "left";
-          const oldPriceText = `R$ ${marketPrice.toFixed(2)}`;
+          const oldPriceText = `R$ ${fmtBR(marketPrice)}`;
           const priceWidth = ctx.measureText(priceText).width;
           // Usar font de preço para medir
           ctx.font = `900 ${priceFontSize}px sans-serif`;

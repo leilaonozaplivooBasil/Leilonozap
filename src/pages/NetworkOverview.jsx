@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
@@ -159,7 +160,7 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
             <div className="bg-green-900/30 rounded-lg p-2 text-center">
               <div className="text-gray-400 mb-1">Saldo R$</div>
               <div className="text-green-400 font-bold text-lg">
-                R$ {saldoReais.toFixed(2)}
+                R$ {fmtBR(saldoReais)}
               </div>
             </div>
           </div>
@@ -354,7 +355,7 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
             </div>
             <div className="text-center">
               <div className="text-gray-400">Saldo</div>
-              <div className="text-green-400 font-bold">R$ {(user.valora_pay_balance || 0).toFixed(2)}</div>
+              <div className="text-green-400 font-bold">R$ {fmtBR((user.valora_pay_balance || 0))}</div>
             </div>
           </div>
 
@@ -747,7 +748,7 @@ export default function NetworkOverview() {
         }
       });
 
-      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`R$ ${fmtBR(amount)} creditados!`);
       await fetchData();
       setSelectedLicenseeId('');
       setCommissionAmount('');
@@ -1152,7 +1153,7 @@ export default function NetworkOverview() {
             <CardContent className="p-4">
               <div className="text-sm text-green-400 mb-1">Volume R$</div>
               <div className="text-2xl font-bold text-white">
-                R$ {stats.totalVolume.toFixed(2)}
+                R$ {fmtBR(stats.totalVolume)}
               </div>
             </CardContent>
           </Card>
@@ -1182,7 +1183,7 @@ export default function NetworkOverview() {
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
                           {licensees.map(lic => (
                             <SelectItem key={lic.id} value={lic.id}>
-                              {lic.full_name} - R$ {(lic.valora_pay_balance || 0).toFixed(2)}
+                              {lic.full_name} - R$ {fmtBR((lic.valora_pay_balance || 0))}
                             </SelectItem>
                           ))}
                         </SelectContent>

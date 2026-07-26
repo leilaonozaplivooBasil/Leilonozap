@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -180,10 +181,10 @@ export default function ProductManagement() {
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `P. MERCADO:\n` +
         `  Antes:  ${prevMarket > 0 ? 'R$ ' + prevMarket.toFixed(2) : '—'}\n` +
-        `  Depois: R$ ${newMarket.toFixed(2)}\n\n` +
+        `  Depois: R$ ${fmtBR(newMarket)}\n\n` +
         `P. VENDA (-20%):\n` +
         `  Antes:  ${prevPrice > 0 ? 'R$ ' + prevPrice.toFixed(2) : '—'}\n` +
-        `  Depois: R$ ${newPrice.toFixed(2)}\n` +
+        `  Depois: R$ ${fmtBR(newPrice)}\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +
         `Aplicar nova precificação?`;
 
@@ -961,28 +962,28 @@ export default function ProductManagement() {
                         <span className="text-blue-600 text-xs ml-1">{expandedNotes[product.id] ? '▲' : '▼'}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.cost_price || 0))}</td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       R$ {(() => { const tq = (product.quantity || 0) + (product.quantity_sold || 0); return tq > 0 ? ((product.cost_price || 0) / tq).toFixed(2) : (product.cost_price || 0).toFixed(2); })()}
                     </td>
                     <td className="px-3 py-2.5 text-right text-purple-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       {(product.market_value || 0) > 0
-                        ? <span>R$ {product.market_value.toFixed(2)}</span>
+                        ? <span>R$ {fmtBR(product.market_value)}</span>
                         : <span className="text-gray-600">—</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       {(product.selling_price_retail || 0) > 0
-                        ? <span className="text-gray-300">R$ {product.selling_price_retail.toFixed(2)}</span>
+                        ? <span className="text-gray-300">R$ {fmtBR(product.selling_price_retail)}</span>
                         : <span className="text-yellow-500 text-xs">⚠ S/ preço</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className="font-bold text-white">{(product.quantity || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
-                    <td className="px-3 py-2.5 text-right text-sky-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right text-sky-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.sold_amount || 0))}</td>
                     <td className="px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className={(product.profit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                        R$ {(product.profit || 0).toFixed(2)}
+                        R$ {fmtBR((product.profit || 0))}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-center">
@@ -1323,7 +1324,7 @@ export default function ProductManagement() {
                         value={(() => {
                           const totalQty = (parseInt(formData.quantity) || 0) + (editingProduct?.quantity_sold || 0);
                           const unitCost = totalQty > 0 ? (parseFloat(formData.cost_price) || 0) / totalQty : (parseFloat(formData.cost_price) || 0);
-                          return `R$ ${unitCost.toFixed(2)}`;
+                          return `R$ ${fmtBR(unitCost)}`;
                         })()}
                         className="bg-gray-600 text-white"
                         disabled

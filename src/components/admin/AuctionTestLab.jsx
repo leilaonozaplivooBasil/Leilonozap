@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,7 +194,7 @@ export default function AuctionTestLab() {
                 <SelectContent className="bg-gray-700 border-gray-600">
                   {testAuctions.map((test) => (
                     <SelectItem key={test.id} value={test.id} className="text-white hover:bg-gray-600">
-                      <span>{test.title}</span><span className="text-xs text-gray-400 ml-4">R$ {test.current_price?.toFixed(2)} • {formatTestAuctionTime(test.end_time, test.status)}</span>
+                      <span>{test.title}</span><span className="text-xs text-gray-400 ml-4">R$ {fmtBR(test.current_price)} • {formatTestAuctionTime(test.end_time, test.status)}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>

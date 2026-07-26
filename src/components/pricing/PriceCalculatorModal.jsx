@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -212,7 +213,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                   <div className="text-center">
                     <span className="text-xs font-semibold text-gray-700 block mb-1">💰 Preço de Venda</span>
                     <span className="text-2xl font-bold text-green-600 block">
-                      R$ {calculatedPrice.toFixed(2)}
+                      R$ {fmtBR(calculatedPrice)}
                     </span>
                   </div>
                 </div>
@@ -252,7 +253,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-700">Preço no Mercado:</span>
-                      <span className="font-semibold text-gray-900">R$ {parseFloat(marketValue).toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">R$ {fmtBR(parseFloat(marketValue))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-700">Seu Custo (unidade):</span>
@@ -272,7 +273,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-700">Comissão + Imposto:</span>
-                      <span className="font-semibold text-red-600">- R$ {(calculatedPrice * 0.26).toFixed(2)}</span>
+                      <span className="font-semibold text-red-600">- R$ {fmtBR((calculatedPrice * 0.26))}</span>
                     </div>
                   </div>
                 </div>
@@ -284,7 +285,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                     <div className="flex justify-between items-center bg-green-100 p-2 rounded">
                       <span className="font-bold text-gray-900 text-xs">Preço de Venda:</span>
                       <span className="text-lg font-black text-green-600">
-                        R$ {calculatedPrice.toFixed(2)}
+                        R$ {fmtBR(calculatedPrice)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center bg-blue-100 p-2 rounded">

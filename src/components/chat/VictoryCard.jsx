@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Crown, Trophy } from 'lucide-react';
 
 const HAMMER_3D = '/martelo-3d.png';
@@ -45,7 +46,7 @@ export default function VictoryCard({ winner, auction, currentUser }) {
             />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{productTitle}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Encerrado em <span className="font-semibold text-gray-200">R$ {Number(finalPrice).toFixed(2)}</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">Encerrado em <span className="font-semibold text-gray-200">R$ {fmtBR(Number(finalPrice))}</span></p>
             </div>
           </div>
           <VictoryStyles />
@@ -134,7 +135,7 @@ export default function VictoryCard({ winner, auction, currentUser }) {
                 <h4 className="mb-2 truncate text-sm md:text-base font-semibold text-white">{productTitle}</h4>
                 <div className="vc-price inline-flex flex-col items-start rounded-xl border border-emerald-300/25 bg-emerald-400/15 px-3.5 py-1.5">
                   <span className="text-[10px] uppercase tracking-wider text-emerald-200/90">Lance vencedor</span>
-                  <span className="text-xl md:text-2xl font-black text-emerald-300">R$ {Number(finalPrice).toFixed(2)}</span>
+                  <span className="text-xl md:text-2xl font-black text-emerald-300">R$ {fmtBR(Number(finalPrice))}</span>
                 </div>
               </div>
             </div>

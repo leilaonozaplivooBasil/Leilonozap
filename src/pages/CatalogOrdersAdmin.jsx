@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -196,7 +197,7 @@ export default function CatalogOrdersAdmin() {
                         <p className="font-semibold text-white truncate">{order.product_title}</p>
                         <p className="text-sm text-gray-400">{order.buyer_name} • {order.buyer_email}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-green-400 font-bold text-sm">R$ {(order.total_amount || order.sale_price || 0).toFixed(2)}</span>
+                          <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
                           <span className="text-gray-500 text-xs">{new Date(order.created_date).toLocaleDateString('pt-BR')}</span>
                           {order.tracking_code && (
                             <span className="text-indigo-300 text-xs font-mono">📦 {order.tracking_code}</span>
@@ -242,7 +243,7 @@ export default function CatalogOrdersAdmin() {
                 <p className="text-sm text-gray-400">Produto: <span className="text-white font-medium">{selectedOrder.product_title}</span></p>
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
-                <p className="text-sm text-gray-400">Valor: <span className="text-green-400 font-bold">R$ {(selectedOrder.total_amount || selectedOrder.sale_price || 0).toFixed(2)}</span></p>
+                <p className="text-sm text-gray-400">Valor: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
                 {selectedOrder.buyer_phone && (
                   <p className="text-sm text-gray-400">Telefone: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
                 )}

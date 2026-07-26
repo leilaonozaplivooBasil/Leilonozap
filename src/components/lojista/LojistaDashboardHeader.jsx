@@ -1,9 +1,12 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Store, Package, LogOut, Bell, RefreshCw } from "lucide-react";
+import { Store, Package, LogOut, Bell, RefreshCw, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function LojistaDashboardHeader({ currentStore, auctions, catalogSales, onLogout, onNewAuction, onNewAuctionSDB, onRefresh }) {
+  const navigate = useNavigate();
   const pendingCount = [
     ...auctions.filter(a => (a.status === 'sold' || (a.status === 'ended' && a.winner_id)) && (!a.order_status || a.order_status === 'paid')),
     ...catalogSales.filter(s => s.status === 'paid')
@@ -92,6 +95,15 @@ export default function LojistaDashboardHeader({ currentStore, auctions, catalog
                 Novo Leilão
               </Button>
             )}
+
+            <Button
+              onClick={() => navigate(createPageUrl("Home"))}
+              size="sm"
+              className="bg-white/5 hover:bg-white/10 border border-white/15 text-gray-300 backdrop-blur-sm h-9"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+              Voltar
+            </Button>
 
             <Button
               onClick={onLogout}

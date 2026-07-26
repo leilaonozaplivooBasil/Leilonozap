@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Wallet } from "lucide-react";
 
@@ -25,7 +26,7 @@ export default function WithdrawalsHistoryTab({ isSaiDeBaixo, isLoadingWithdrawa
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="text-2xl font-bold text-green-400">
-                          R$ {withdrawal.amount.toFixed(2)}
+                          R$ {fmtBR(withdrawal.amount)}
                         </div>
                         <div className={`px-3 py-1 rounded-full text-xs font-semibold ${withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
                           withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :

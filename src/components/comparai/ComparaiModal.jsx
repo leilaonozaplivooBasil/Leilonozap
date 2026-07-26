@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Button } from '@/components/ui/button';
@@ -212,10 +213,10 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
 
 📱 ${auction.title}
 
-🏭 Mercado: R$ ${marketPrice.toFixed(2)}
-💚 Leilão NoZap: R$ ${currentPrice.toFixed(2)}
+🏭 Mercado: R$ ${fmtBR(marketPrice)}
+💚 Leilão NoZap: R$ ${fmtBR(currentPrice)}
 
-💰 ECONOMIZE R$ ${savings.toFixed(2)}!
+💰 ECONOMIZE R$ ${fmtBR(savings)}!
 🔥 ${savingsPercent}% MAIS BARATO!
 
 ⚡ Arremate agora: ${productUrl}`;
@@ -438,7 +439,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                       </div>
                       <div className="text-right">
                         <div className="text-4xl md:text-5xl font-bold text-green-400">
-                          R$ {(localAuction.current_price || localAuction.starting_price).toFixed(2)}
+                          R$ {fmtBR((localAuction.current_price || localAuction.starting_price))}
                         </div>
                         <div className="text-green-300 text-sm mt-1">Lance Atual neste Site</div>
                       </div>
@@ -463,7 +464,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                       </div>
                       
                       <div className="text-4xl font-black text-white">
-                        R$ {comparisonData.comparisons[0].price.toFixed(2)}
+                        R$ {fmtBR(comparisonData.comparisons[0].price)}
                       </div>
                     </div>
                   ) : (
@@ -478,7 +479,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                       </div>
                       
                       <div className="text-5xl font-black text-orange-400 mb-2">
-                        R$ {(comparisonData.referencePrice || comparisonData.averageMarketPrice || comparisonData.cheapestMarketPrice).toFixed(2)}
+                        R$ {fmtBR((comparisonData.referencePrice || comparisonData.averageMarketPrice || comparisonData.cheapestMarketPrice))}
                       </div>
                       
                       <div className="text-orange-300 text-sm">
@@ -502,7 +503,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                       </div>
                       
                       <div className="text-6xl font-black text-green-400 mb-2">
-                        R$ {comparisonData.savings.toFixed(2)}
+                        R$ {fmtBR(comparisonData.savings)}
                       </div>
                       
                       <div className="text-2xl font-bold text-green-300">

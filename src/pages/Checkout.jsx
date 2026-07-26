@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -433,7 +434,7 @@ export default function CheckoutPage() {
                                     <div className="flex-1">
                                         <h3 className="text-white font-medium text-sm mb-1 line-clamp-2">{auction.title}</h3>
                                         <p className="text-green-400 text-lg font-bold">
-                                            R$ {auction.current_price.toFixed(2)}
+                                            R$ {fmtBR(auction.current_price)}
                                         </p>
                                     </div>
                                 </div>
@@ -443,7 +444,7 @@ export default function CheckoutPage() {
                             <div className="space-y-3 pt-4 border-t border-gray-700">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Total de itens (1 itens)</span>
-                                    <span className="text-white font-semibold">R$ {auction.current_price.toFixed(2)}</span>
+                                    <span className="text-white font-semibold">R$ {fmtBR(auction.current_price)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Valor do frete</span>
@@ -451,7 +452,7 @@ export default function CheckoutPage() {
                                 </div>
                                 <div className="flex justify-between pt-3 border-t border-gray-700">
                                     <span className="text-white font-bold text-base">Valor total</span>
-                                    <span className="text-green-400 font-bold text-xl">R$ {auction.current_price.toFixed(2)}</span>
+                                    <span className="text-green-400 font-bold text-xl">R$ {fmtBR(auction.current_price)}</span>
                                 </div>
                             </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -1427,7 +1428,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                         <Input
                           type="text"
                           value={formData.price && formData.cost_price 
-                            ? `R$ ${(parseFloat(formData.price) - parseFloat(formData.cost_price)).toFixed(2)}`
+                            ? `R$ ${fmtBR((parseFloat(formData.price) - parseFloat(formData.cost_price)))}`
                             : 'R$ 0,00'
                           }
                           readOnly

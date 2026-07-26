@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { adminDataProxy } from "@/functions/adminDataProxy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -611,7 +612,7 @@ export default function PaymentSettings() {
                               </Badge>
                             </p>
                             <p className="text-gray-400 text-sm">
-                              R$ {pkg.amount.toFixed(2)} • Ordem: {pkg.sort_order}
+                              R$ {fmtBR(pkg.amount)} • Ordem: {pkg.sort_order}
                             </p>
                           </div>
                         </div>
@@ -712,7 +713,7 @@ export default function PaymentSettings() {
                     <p className="text-gray-400 text-sm">Total Depositado</p>
                   </div>
                   <p className="text-2xl font-bold text-green-400">
-                    R$ {walletStats.totalDeposits.toFixed(2)}
+                    R$ {fmtBR(walletStats.totalDeposits)}
                   </p>
                 </div>
 
@@ -722,7 +723,7 @@ export default function PaymentSettings() {
                     <p className="text-gray-400 text-sm">Saldo em Circulação</p>
                   </div>
                   <p className="text-2xl font-bold text-blue-400">
-                    R$ {walletStats.totalBalance.toFixed(2)}
+                    R$ {fmtBR(walletStats.totalBalance)}
                   </p>
                 </div>
 
@@ -732,7 +733,7 @@ export default function PaymentSettings() {
                     <p className="text-gray-400 text-sm">Total de Compras</p>
                   </div>
                   <p className="text-2xl font-bold text-purple-400">
-                    R$ {walletStats.totalPurchases.toFixed(2)}
+                    R$ {fmtBR(walletStats.totalPurchases)}
                   </p>
                 </div>
               </CardContent>

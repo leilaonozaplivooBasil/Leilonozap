@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
@@ -533,7 +534,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             text-shadow: 0 0 20px #1DB24A, 0 2px 8px rgba(0,0,0,0.8);
             letter-spacing: 1px;
           ">
-            R$ ${totalAvailable.toFixed(2)}
+            R$ ${fmtBR(totalAvailable)}
           </span>
         </div>
       `;
@@ -665,7 +666,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         }
       });
 
-      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`R$ ${fmtBR(amount)} creditados!`);
       setSelectedLicenseeId('');
       setCommissionAmount('');
       await delay(2000);
@@ -1022,7 +1023,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               <h3 className={`text-sm font-medium uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-300/80' : 'text-emerald-300/80'}`}>Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
                 <span className={`text-5xl font-black text-white tracking-tight ${isSaiDeBaixo ? 'drop-shadow-[0_2px_8px_rgba(239,68,68,0.3)]' : 'drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'}`}>
-                  R$ {totalAvailable.toFixed(2)}
+                  R$ {fmtBR(totalAvailable)}
                 </span>
               </div>
 
@@ -1030,7 +1031,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 my-3 max-w-[280px]">
                   <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
+                    Saque em Processo: R$ {fmtBR(pendingWithdrawalAmount)}
                   </p>
                   <p className="text-xs text-yellow-300/70 mt-1">Aguardando aprovação</p>
                 </div>
@@ -1092,7 +1093,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={DollarSign}
           label="Saldo Disponível"
-          value={`R$ ${totalAvailable.toFixed(2)}`}
+          value={`R$ ${fmtBR(totalAvailable)}`}
           onClick={() => setIsAuctionSelectionModalOpen(true)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
@@ -1113,7 +1114,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={BarChart}
           label="Comissões Totais (histórico)"
-          value={`R$ ${(user.total_commissions_generated || 0).toFixed(2)}`}
+          value={`R$ ${fmtBR((user.total_commissions_generated || 0))}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
@@ -1217,8 +1218,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                               <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.03).toFixed(2)}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {fmtBR(auction.current_price)}</TableCell>
+                                <TableCell className="text-green-400 font-semibold">R$ {fmtBR((auction.current_price * 0.03))}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
                                   {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
                                 </TableCell>
@@ -1252,8 +1253,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                               <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {fmtBR(sale.sale_price)}</TableCell>
+                                <TableCell className="text-green-400 font-semibold">R$ {fmtBR(sale.commission_licensee_amount)}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
                                   {new Date(sale.created_date).toLocaleDateString('pt-BR')}
                                 </TableCell>
@@ -1284,7 +1285,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                   <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
                   <p>Seu sistema de alavancagem está crescendo!</p>
-                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${fmtBR(user.total_commissions_generated)}` : 'R$ 0.00'}</p>
                 </div>
               </CardContent>
             </Card>
@@ -1476,7 +1477,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                             const licTotal = ((lic.commission_balance || 0) + (lic.catalog_commission_balance || 0));
                             return (
                               <SelectItem key={lic.id} value={lic.id}>
-                                {lic.full_name} - R$ {licTotal.toFixed(2)}
+                                {lic.full_name} - R$ {fmtBR(licTotal)}
                               </SelectItem>
                             );
                           })}

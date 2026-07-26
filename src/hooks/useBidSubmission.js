@@ -98,13 +98,13 @@ export default function useBidSubmission({
       const minBid = addMoney(currentPrice, freshAuction.increment);
 
       if (!gtMoney(bidAmount, currentPrice)) {
-        alert(`❌ Lance maior! Atual: R$ ${currentPrice.toFixed(2)}`);
+        alert(`❌ Lance maior! Atual: R$ ${fmtBR(currentPrice)}`);
         setAuction(freshAuction);
         return;
       }
 
       if (!gteMoney(bidAmount, minBid)) {
-        alert(`❌ Mínimo: R$ ${minBid.toFixed(2)}`);
+        alert(`❌ Mínimo: R$ ${fmtBR(minBid)}`);
         return;
       }
 
@@ -120,7 +120,7 @@ export default function useBidSubmission({
       try {
         const debitResult = await base44.functions.invoke('debitWalletBalance', {
           user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
-          description: `Lance - R$ ${bidAmount.toFixed(2)}`
+          description: `Lance - R$ ${fmtBR(bidAmount)}`
         });
         const debitData = debitResult?.data || debitResult;
         if (!debitData?.success) {
@@ -141,7 +141,7 @@ export default function useBidSubmission({
         auction_id: auctionId,
         message_type: "bid",
         sender_id: currentUser.id,
-        content: `Lance de R$ ${bidAmount.toFixed(2)}`,
+        content: `Lance de R$ ${fmtBR(bidAmount)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: bidAmount,
         is_system_message: false,
@@ -161,7 +161,7 @@ export default function useBidSubmission({
         auction_id: auctionId,
         message_type: "bid",
         sender_id: currentUser.id,
-        content: `Lance de R$ ${bidAmount.toFixed(2)}`,
+        content: `Lance de R$ ${fmtBR(bidAmount)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: bidAmount,
         is_system_message: false

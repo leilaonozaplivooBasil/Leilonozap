@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image, Type, Sparkles, ArrowLeft, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -181,7 +182,7 @@ export default function PromoCreator({ embedded = false }) {
                         <div>
                           <p className="text-white font-medium text-sm">{selectedProduct.description}</p>
                           <p className="text-emerald-400 font-bold">
-                            R$ {(selectedProduct.price_catalog || selectedProduct.selling_price_retail || 0).toFixed(2)}
+                            R$ {fmtBR((selectedProduct.price_catalog || selectedProduct.selling_price_retail || 0))}
                           </p>
                         </div>
                       </div>

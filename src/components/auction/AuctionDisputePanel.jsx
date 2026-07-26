@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Crown, Flame, Users, TrendingUp, Gavel } from 'lucide-react';
 
 /**
@@ -34,11 +35,11 @@ export default function AuctionDisputePanel({ auction, messages, currentUser }) 
       <div className="adp-stats">
         <div className="adp-stat">
           <span className="adp-stat-label">Lance inicial</span>
-          <span className="adp-stat-value">R$ {starting.toFixed(2).replace('.', ',')}</span>
+          <span className="adp-stat-value">R$ {fmtBR(starting)}</span>
         </div>
         <div className="adp-stat">
           <span className="adp-stat-label">Incremento</span>
-          <span className="adp-stat-value">+ R$ {increment.toFixed(2).replace('.', ',')}</span>
+          <span className="adp-stat-value">+ R$ {fmtBR(increment)}</span>
         </div>
         <div className="adp-stat">
           <span className="adp-stat-label">Lances</span>
@@ -68,7 +69,7 @@ export default function AuctionDisputePanel({ auction, messages, currentUser }) 
                 <div className="adp-row-main">
                   <div className="adp-row-top">
                     <span className="adp-name">{b.name}{isMe ? ' (você)' : ''}</span>
-                    <span className="adp-best"><TrendingUp size={10} /> R$ {b.best.toFixed(2).replace('.', ',')}</span>
+                    <span className="adp-best"><TrendingUp size={10} /> R$ {fmtBR(b.best)}</span>
                   </div>
                   <div className="adp-bar">
                     <div className="adp-bar-fill" style={{ width: `${Math.max(12, (b.bids / maxBids) * 100)}%` }} />

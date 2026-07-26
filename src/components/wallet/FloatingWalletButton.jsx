@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Wallet } from 'lucide-react';
 import useScrollDrift from '@/hooks/useScrollDrift';
 
@@ -17,7 +18,7 @@ export default function FloatingWalletButton({ balance, onClick }) {
       </span>
       <span className="fwb-text">
         <span className="fwb-label">Carteira</span>
-        <span className="fwb-value">{hasBalance ? `R$ ${balance.toFixed(2).replace('.', ',')}` : '· · ·'}</span>
+        <span className="fwb-value">{hasBalance ? `R$ ${fmtBR(balance)}` : '· · ·'}</span>
       </span>
       <style>{`
         .fwb {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
@@ -31,8 +32,8 @@ async function mostrarCupons() {
     const { data } = await supabase.from('coupons').select('code,tipo,valor,min_order').eq('active', true).is('seller_id', null).order('created_at', { ascending: false }).limit(3);
     if (!data || !data.length) { toast('Nenhum cupom ativo no momento.'); return; }
     const c = data[0];
-    const off = c.tipo === 'percent' ? `${c.valor}% OFF` : `R$ ${Number(c.valor).toFixed(2)} OFF`;
-    const min = Number(c.min_order) > 0 ? ` (mín. R$ ${Number(c.min_order).toFixed(2)})` : '';
+    const off = c.tipo === 'percent' ? `${c.valor}% OFF` : `R$ ${fmtBR(Number(c.valor))} OFF`;
+    const min = Number(c.min_order) > 0 ? ` (mín. R$ ${fmtBR(Number(c.min_order))})` : '';
     toast.success(`🎟️ Cupom ${c.code}: ${off}${min} — use no carrinho!`, { duration: 6000 });
   } catch (_) { toast('Confira os cupons no carrinho.'); }
 }

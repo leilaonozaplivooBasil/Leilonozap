@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -225,7 +226,7 @@ export default function CustomerDetails() {
                 <div>
                   <p className="text-gray-600 text-sm mb-1">Gasto Total</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    R$ {(customer.total_spent || 0).toFixed(2)}
+                    R$ {fmtBR((customer.total_spent || 0))}
                   </p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-400" />
@@ -460,7 +461,7 @@ export default function CustomerDetails() {
                                 {product.selling_price_retail && (
                                   <>
                                     <span>•</span>
-                                    <span>R$ {product.selling_price_retail.toFixed(2)}</span>
+                                    <span>R$ {fmtBR(product.selling_price_retail)}</span>
                                   </>
                                 )}
                               </div>

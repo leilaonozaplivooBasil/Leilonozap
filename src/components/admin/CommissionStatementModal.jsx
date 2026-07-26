@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const CommissionRecord = base44.entities.CommissionRecord;
@@ -82,11 +83,11 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="font-medium text-white truncate">{productTitle}</p>
-                            <p className="text-sm text-gray-500">Venda: R$ {Number(saleAmount).toFixed(2)}</p>
+                            <p className="text-sm text-gray-500">Venda: R$ {fmtBR(Number(saleAmount))}</p>
                         </div>
                     </div>
                     <div className="text-right ml-3">
-                        <p className="text-xl font-bold text-green-400">+R$ {totalAmount.toFixed(2)}</p>
+                        <p className="text-xl font-bold text-green-400">+R$ {fmtBR(totalAmount)}</p>
                         <p className="text-xs text-gray-500">{records.length} cargo{records.length > 1 ? 's' : ''}</p>
                     </div>
                 </div>
@@ -106,7 +107,7 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                                 <span className="text-sm text-gray-300">{ROLE_LABELS[record.role] || record.role}</span>
                                 <span className="text-xs text-gray-500">({Number(record.percent || 0).toFixed(1)}%)</span>
                             </div>
-                            <span className="text-sm font-semibold text-green-400">+R$ {Number(record.amount || 0).toFixed(2)}</span>
+                            <span className="text-sm font-semibold text-green-400">+R$ {fmtBR(Number(record.amount || 0))}</span>
                         </div>
                     ))}
                 </div>
@@ -228,19 +229,19 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
                         <p className="text-xs text-gray-500 mb-1">Disponível</p>
                         <p className="text-lg font-bold text-green-400">
-                            R$ {(licensee?.commission_balance || 0).toFixed(2)}
+                            R$ {fmtBR((licensee?.commission_balance || 0))}
                         </p>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
                         <p className="text-xs text-gray-500 mb-1">📱 App</p>
                         <p className="text-lg font-bold text-cyan-400">
-                            R$ {totals.app.toFixed(2)}
+                            R$ {fmtBR(totals.app)}
                         </p>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
                         <p className="text-xs text-gray-500 mb-1">🛍️ Catálogo</p>
                         <p className="text-lg font-bold text-blue-400">
-                            R$ {totals.catalog.toFixed(2)}
+                            R$ {fmtBR(totals.catalog)}
                         </p>
                     </div>
                 </div>

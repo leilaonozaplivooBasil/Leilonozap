@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -68,7 +69,7 @@ export default function ConfirmProductDuplicationModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Preço Inicial:</span>
-                <span className="text-green-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
+                <span className="text-green-400 font-bold">R$ {fmtBR(parseFloat(formData.starting_price || 0))}</span>
               </div>
               <div className="flex justify-between items-start">
                 <span className="text-gray-400">Imagens:</span>
@@ -163,19 +164,19 @@ export default function ConfirmProductDuplicationModal({
                     <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Preços que serão aplicados:</p>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">📊 Mercado real (+20%):</span>
-                      <span className="text-white font-bold">R$ {(parseFloat(formData.starting_price || 0) / 0.80).toFixed(2)}</span>
+                      <span className="text-white font-bold">R$ {fmtBR((parseFloat(formData.starting_price || 0) / 0.80))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">🛒 Loja Virtual:</span>
-                      <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-blue-400 font-bold">R$ {fmtBR(parseFloat(catalogPrice || formData.starting_price || 0))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">🔨 Lance inicial (−20% loja):</span>
-                      <span className="text-yellow-400 font-bold">R$ {(parseFloat(formData.starting_price || 0) * 0.80).toFixed(2)}</span>
+                      <span className="text-yellow-400 font-bold">R$ {fmtBR((parseFloat(formData.starting_price || 0) * 0.80))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">⚡ Arremate Agora (= loja):</span>
-                      <span className="text-green-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-green-400 font-bold">R$ {fmtBR(parseFloat(catalogPrice || formData.starting_price || 0))}</span>
                     </div>
                   </div>
                 )}

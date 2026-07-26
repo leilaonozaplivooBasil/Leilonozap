@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -128,7 +129,7 @@ export default function CatalogClients({ catalogSales = [] }) {
                         <Badge className="bg-green-500/20 text-green-300 text-xs">
                           {getClientOrders(client.id)} pedido(s)
                         </Badge>
-                        <span className="text-xs text-gray-500">R$ {getClientTotal(client.id).toFixed(2)}</span>
+                        <span className="text-xs text-gray-500">R$ {fmtBR(getClientTotal(client.id))}</span>
                       </div>
                     </div>
                   </div>

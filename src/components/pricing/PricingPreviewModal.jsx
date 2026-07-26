@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Check, Loader2, TrendingUp } from 'lucide-react';
@@ -94,9 +95,9 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-xs text-gray-400">Mercado</p>
-                      <p className="font-bold text-emerald-400">R$ {Number(product.market_price || 0).toFixed(2)}</p>
+                      <p className="font-bold text-emerald-400">R$ {fmtBR(Number(product.market_price || 0))}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Venda (-20%)</p>
-                      <p className="font-bold text-sky-400">R$ {Number(product.selling_price_retail ?? product.calculated_price ?? 0).toFixed(2)}</p>
+                      <p className="font-bold text-sky-400">R$ {fmtBR(Number(product.selling_price_retail ?? product.calculated_price ?? 0))}</p>
                       {product.source_url && (
                         <a
                           href={product.source_url}

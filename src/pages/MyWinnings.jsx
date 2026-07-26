@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { useLocation } from 'react-router-dom';
 
@@ -61,7 +62,7 @@ const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
                 {/* Valor em Destaque - COMPACTO */}
                 <div className="bg-gradient-to-br from-green-600/10 to-green-700/5 border border-green-500/20 rounded-lg p-3">
                     <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">Valor do Arremate</p>
-                    <p className="text-green-400 text-xl font-black">R$ {auction.current_price.toFixed(2)}</p>
+                    <p className="text-green-400 text-xl font-black">R$ {fmtBR(auction.current_price)}</p>
                 </div>
 
                 {/* Botão de Ação - Apenas Acompanhar */}
@@ -202,7 +203,7 @@ export default function MyWinningsPage() {
                                         <p className="text-gray-400 text-xs uppercase tracking-widest font-medium">Carteira Digital</p>
                                     </div>
                                     <p className="text-green-400 text-4xl font-black tracking-tight mb-1">
-                                        R$ {walletBalance.toFixed(2)}
+                                        R$ {fmtBR(walletBalance)}
                                     </p>
                                     <p className="text-gray-500 text-sm">Saldo disponível para leilões</p>
                                 </div>

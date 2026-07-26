@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -875,7 +876,7 @@ export default function ActivePartners() {
                               </div>
                               
                               <div className="text-base sm:text-2xl font-bold text-white mb-1">
-                                R$ {installment.value.toFixed(2)}
+                                R$ {fmtBR(installment.value)}
                               </div>
                               
                               <div className="text-gray-400 text-xs flex items-center gap-1">
@@ -905,19 +906,19 @@ export default function ActivePartners() {
                       <div>
                         <div className="text-gray-400 text-xs mb-1">Total Pago</div>
                         <div className="text-green-400 font-bold text-lg">
-                          R$ {(installments.filter(i => i.paid).length * installments[0].value).toFixed(2)}
+                          R$ {fmtBR((installments.filter(i => i.paid).length * installments[0].value))}
                         </div>
                       </div>
                       <div>
                         <div className="text-gray-400 text-xs mb-1">A Receber</div>
                         <div className="text-blue-400 font-bold text-lg">
-                          R$ {((12 - installments.filter(i => i.paid).length) * installments[0].value).toFixed(2)}
+                          R$ {fmtBR(((12 - installments.filter(i => i.paid).length) * installments[0].value))}
                         </div>
                       </div>
                       <div>
                         <div className="text-gray-400 text-xs mb-1">Total</div>
                         <div className="text-white font-bold text-lg">
-                          R$ {(12 * installments[0].value).toFixed(2)}
+                          R$ {fmtBR((12 * installments[0].value))}
                         </div>
                       </div>
                     </div>

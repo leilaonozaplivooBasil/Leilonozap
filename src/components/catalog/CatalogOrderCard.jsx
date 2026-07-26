@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star } from 'lucide-react';
@@ -72,7 +73,7 @@ export default function CatalogOrderCard({ order, onTrackClick, onDeleteClick, o
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400 font-medium">Total:</span>
             <span className="font-bold text-green-400 text-base">
-              R$ {(order.total_amount || order.sale_price || 0).toFixed(2)}
+              R$ {fmtBR((order.total_amount || order.sale_price || 0))}
             </span>
           </div>
         </div>

@@ -12,7 +12,7 @@
  */
 import React, { useState, useEffect, useRef, memo, useMemo } from "react";
 import { capOf } from '@/lib/fotoLegenda';
-import { addMoney, gteMoney } from '@/lib/money';
+import { addMoney, gteMoney, fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -166,7 +166,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       if (!gteMoney(currentBalance, minBid)) {
         console.warn(`⚠️ Saldo insuficiente. DigitalWallet: ${currentBalance} < ${minBid}`);
 
-        if (confirm(`Saldo insuficiente (R$ ${currentBalance.toFixed(2)}). O lance mínimo é R$ ${minBid.toFixed(2)}.\n\nDeseja adicionar fundos agora?`)) {
+        if (confirm(`Saldo insuficiente (R$ ${fmtBR(currentBalance)}). O lance mínimo é R$ ${fmtBR(minBid)}.\n\nDeseja adicionar fundos agora?`)) {
           navigate(createPageUrl("AddFunds"), {
             state: { returnTo: window.location.pathname + window.location.search }
           });
@@ -233,7 +233,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const shareMessage = `🔨📦 LEILÃO NO🔥ZAP!
 
 📱 ${displayTitle}
-💰 Lance: R$ ${currentPrice.toFixed(2)}
+💰 Lance: R$ ${fmtBR(currentPrice)}
 
 ⚡ Dê seu lance: ${productUrl}`;
 
@@ -557,7 +557,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
-                R$ {currentPrice.toFixed(2)}
+                R$ {fmtBR(currentPrice)}
               </p>
             </div>
 
@@ -600,7 +600,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             {isActive && Number(auction.buy_now_price) > 0 && (
               <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2 py-1">
                 <Zap className="w-3.5 h-3.5" />
-                Compre já: R$ {Number(auction.buy_now_price).toFixed(2)}
+                Compre já: R$ {fmtBR(Number(auction.buy_now_price))}
               </div>
             )}
           </div>

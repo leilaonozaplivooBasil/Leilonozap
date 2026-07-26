@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
@@ -113,7 +114,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       canvas.toBlob(async (blob) => {
         if (navigator.share && blob) {
           const file = new File([blob], `promo-${product.lot || product.id}.png`, { type: "image/png" });
-          try { await navigator.share({ title: displayTitle, text: `${displayBadge} ${displayTitle} - R$ ${price.toFixed(2)}!`, files: [file] }); }
+          try { await navigator.share({ title: displayTitle, text: `${displayBadge} ${displayTitle} - R$ ${fmtBR(price)}!`, files: [file] }); }
           catch { handleDownload(); }
         } else { handleDownload(); }
         setSharing(false);
@@ -168,7 +169,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       {/* Preço esquerda */}
       <div style={{ position: "absolute", bottom: "20%", left: 24, zIndex: 10, maxWidth: "44%" }}>
         <p style={{ color: "#222", fontSize: 15, fontWeight: 800, lineHeight: 1.2, marginBottom: 8, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
-        {discount > 0 && <p style={{ color: "#aaa", fontSize: 13, textDecoration: "line-through", marginBottom: 2 }}>R$ {marketPrice.toFixed(2)}</p>}
+        {discount > 0 && <p style={{ color: "#aaa", fontSize: 13, textDecoration: "line-through", marginBottom: 2 }}>R$ {fmtBR(marketPrice)}</p>}
         <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
           <span style={{ color: "#666", fontSize: 14, fontWeight: 600 }}>R$</span>
           <span style={{ color: "#111", fontSize: 44, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
@@ -239,9 +240,9 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 15, fontWeight: 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
         <div style={{ background: "rgba(0,0,0,0.8)", borderRadius: 10, padding: "14px 18px", border: "1px solid rgba(34,211,238,0.15)", display: "inline-flex", alignItems: "baseline", gap: 6 }}>
           <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 16, fontWeight: 600 }}>R$</span>
-          <span style={{ color: "#22d3ee", fontSize: 50, fontWeight: 900, fontFamily: "'Courier New', monospace", lineHeight: 1, textShadow: "0 0 25px rgba(34,211,238,0.7), 0 0 60px rgba(34,211,238,0.3)", letterSpacing: "0.04em" }}>{price.toFixed(2).replace(".",",")}</span>
+          <span style={{ color: "#22d3ee", fontSize: 50, fontWeight: 900, fontFamily: "'Courier New', monospace", lineHeight: 1, textShadow: "0 0 25px rgba(34,211,238,0.7), 0 0 60px rgba(34,211,238,0.3)", letterSpacing: "0.04em" }}>{fmtBR(price)}</span>
         </div>
-        {discount > 0 && <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, textDecoration: "line-through", marginTop: 6 }}>De R$ {marketPrice.toFixed(2)}</p>}
+        {discount > 0 && <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, textDecoration: "line-through", marginTop: 6 }}>De R$ {fmtBR(marketPrice)}</p>}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -304,12 +305,12 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       <div style={{ position: "absolute", bottom: "15%", left: 0, right: 0, zIndex: 10, padding: "0 24px" }}>
         <p style={{ color: "white", fontSize: 16, fontWeight: 700, lineHeight: 1.3, marginBottom: 8, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "line-through" }}>R$ {fmtBR(marketPrice)}</span>}
           <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, fontWeight: 600 }}>R$</span>
           <span style={{ color: "white", fontSize: 40, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: accent, fontSize: 22, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, marginBottom: 6 }}>12x de R$ {(price / 12).toFixed(2)}</p>}
+        {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, marginBottom: 6 }}>12x de R$ {fmtBR((price / 12))}</p>}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -364,7 +365,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         <div style={{ position: "absolute", bottom: "14%", left: 0, right: 0, zIndex: 10, padding: "0 24px" }}>
           <p style={{ color: "white", fontSize: 16, fontWeight: 800, lineHeight: 1.2, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.03em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            {discount > 0 && <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 13, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+            {discount > 0 && <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 13, textDecoration: "line-through" }}>R$ {fmtBR(marketPrice)}</span>}
             <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, fontWeight: 600 }}>R$</span>
             <span style={{ color: "white", fontSize: 42, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
             <span style={{ color: g, fontSize: 24, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
@@ -422,12 +423,12 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       <div style={{ position: "absolute", bottom: "16%", left: 0, right: 0, zIndex: 10, padding: "0 24px" }}>
         <p style={{ color: "#1f2937", fontSize: 16, fontWeight: 700, lineHeight: 1.3, marginBottom: 8, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          {discount > 0 && <span style={{ color: "rgba(0,0,0,0.3)", fontSize: 14, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+          {discount > 0 && <span style={{ color: "rgba(0,0,0,0.3)", fontSize: 14, textDecoration: "line-through" }}>R$ {fmtBR(marketPrice)}</span>}
           <span style={{ color: "rgba(0,0,0,0.5)", fontSize: 14, fontWeight: 600 }}>R$</span>
           <span style={{ color: "#1f2937", fontSize: 42, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: "#ef4444", fontSize: 24, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(0,0,0,0.35)", fontSize: 10, marginTop: 4 }}>12x de R$ {(price / 12).toFixed(2)}</p>}
+        {price > 50 && <p style={{ color: "rgba(0,0,0,0.35)", fontSize: 10, marginTop: 4 }}>12x de R$ {fmtBR((price / 12))}</p>}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

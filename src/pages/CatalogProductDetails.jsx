@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { useSearchParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { base44 } from "@/api/base44Client";
@@ -94,7 +95,7 @@ export default function CatalogProductDetails() {
       ? `${product.description} | Loja Virtual NoZap`
       : 'Loja Virtual NoZap - Produtos com até 60% de desconto';
     const ogDesc = product
-      ? `${product.description} por R$ ${product.price_catalog?.toFixed(2)}. Produtos direto de fábrica e devolvidos em até 7 dias. Compre agora!`
+      ? `${product.description} por R$ ${fmtBR(product.price_catalog)}. Produtos direto de fábrica e devolvidos em até 7 dias. Compre agora!`
       : 'Produtos direto de fábrica e devolvidos em até 7 dias. Eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
     const ogImage = product?.image_urls?.[0] || 'https://leilaonozap.net/brand/logo-horizontal-og.jpg';
 
@@ -339,7 +340,7 @@ export default function CatalogProductDetails() {
     const phone = licenseePhone ? normalizeToWaNumber(licenseePhone) : DEFAULT_STORE_PHONE;
     const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
     const productUrl = getCanonicalProductUrl();
-    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 

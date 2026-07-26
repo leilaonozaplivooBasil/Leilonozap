@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
@@ -1316,9 +1317,9 @@ export default function EditAuction() {
                         </div>
                     </div>
                     <CardContent className="p-4 space-y-2.5 text-sm">
-                        <div className="flex justify-between gap-3"><span className="text-slate-400">Preço atual</span><span className="font-bold text-emerald-400">R$ {(parseFloat(formData.current_price) || 0).toFixed(2)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-slate-400">Lance inicial</span><span className="text-slate-200">R$ {(parseFloat(formData.starting_price) || 0).toFixed(2)}</span></div>
-                        <div className="flex justify-between gap-3"><span className="text-slate-400">Incremento</span><span className="text-slate-200">R$ {(parseFloat(formData.increment) || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Preço atual</span><span className="font-bold text-emerald-400">R$ {fmtBR((parseFloat(formData.current_price) || 0))}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Lance inicial</span><span className="text-slate-200">R$ {fmtBR((parseFloat(formData.starting_price) || 0))}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-slate-400">Incremento</span><span className="text-slate-200">R$ {fmtBR((parseFloat(formData.increment) || 0))}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-slate-400">Término</span><span className="text-slate-200 text-right">{auction?.end_time ? new Date(auction.end_time).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span></div>
                         {tempoRestante && (
                             <div className="mt-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5 text-center">

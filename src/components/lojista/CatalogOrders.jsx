@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -109,7 +110,7 @@ export default function CatalogOrders({ catalogSales = [] }) {
                           </Badge>
                         </td>
                         <td className="px-4 py-4 text-right font-semibold text-green-400">
-                          R$ {(order.total_amount || 0).toFixed(2)}
+                          R$ {fmtBR((order.total_amount || 0))}
                         </td>
                         <td className="px-4 py-4 text-center">
                           <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white">

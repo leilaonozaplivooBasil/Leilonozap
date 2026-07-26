@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -332,9 +333,9 @@ function HistoryRow({ record }) {
           {/* Coluna direita: antes → depois + variação */}
           <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 line-through">R$ {(record.old_price || 0).toFixed(2)}</span>
+              <span className="text-gray-500 line-through">R$ {fmtBR((record.old_price || 0))}</span>
               <span className="text-gray-600">→</span>
-              <span className="text-white font-bold text-sm">R$ {(record.new_price || 0).toFixed(2)}</span>
+              <span className="text-white font-bold text-sm">R$ {fmtBR((record.new_price || 0))}</span>
             </div>
             <div className={`text-xs font-bold px-2 py-0.5 rounded-md border ${variationBg} ${variationColor}`}>
               {isUp ? '+' : ''}{variation.toFixed(2)}%
@@ -350,11 +351,11 @@ function HistoryRow({ record }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Antes</p>
-              <p className="text-sm text-gray-400 line-through">R$ {(record.old_price || 0).toFixed(2)}</p>
+              <p className="text-sm text-gray-400 line-through">R$ {fmtBR((record.old_price || 0))}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Depois</p>
-              <p className="text-sm text-white font-bold">R$ {(record.new_price || 0).toFixed(2)}</p>
+              <p className="text-sm text-white font-bold">R$ {fmtBR((record.new_price || 0))}</p>
             </div>
           </div>
 
@@ -369,7 +370,7 @@ function HistoryRow({ record }) {
           {record.new_market > 0 && (
             <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-gray-800">
               <span className="text-gray-500">Mercado (mediana Google)</span>
-              <span className="text-purple-300 font-semibold">R$ {record.new_market.toFixed(2)}</span>
+              <span className="text-purple-300 font-semibold">R$ {fmtBR(record.new_market)}</span>
             </div>
           )}
 

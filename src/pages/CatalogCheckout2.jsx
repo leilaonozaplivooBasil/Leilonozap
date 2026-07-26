@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -747,7 +748,7 @@ export default function CatalogCheckout2() {
                                     <div className="flex-1">
                                         <h3 className="text-white font-medium text-sm mb-1 line-clamp-2">{product.description}</h3>
                                         <p className="text-green-400 text-lg font-bold">
-                                            R$ {product.price_catalog?.toFixed(2)}
+                                            R$ {fmtBR(product.price_catalog)}
                                         </p>
                                     </div>
                                 </div>
@@ -757,7 +758,7 @@ export default function CatalogCheckout2() {
                             <div className="space-y-3 pt-4 border-t border-gray-700">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Total de itens (1 itens)</span>
-                                    <span className="text-white font-semibold">R$ {product.price_catalog?.toFixed(2)}</span>
+                                    <span className="text-white font-semibold">R$ {fmtBR(product.price_catalog)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Valor do frete</span>
@@ -765,7 +766,7 @@ export default function CatalogCheckout2() {
                                 </div>
                                 <div className="flex justify-between pt-3 border-t border-gray-700">
                                     <span className="text-white font-bold text-base">Valor total</span>
-                                    <span className="text-green-400 font-bold text-xl">R$ {product.price_catalog?.toFixed(2)}</span>
+                                    <span className="text-green-400 font-bold text-xl">R$ {fmtBR(product.price_catalog)}</span>
                                 </div>
                             </div>
 
@@ -871,7 +872,7 @@ export default function CatalogCheckout2() {
                                             </p>
                                             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                                                 <p className="text-green-300 text-sm font-semibold">🎉 Compra concluída!</p>
-                                                <p className="text-gray-400 text-xs mt-1">Valor: R$ {product?.price_catalog?.toFixed(2)}</p>
+                                                <p className="text-gray-400 text-xs mt-1">Valor: R$ {fmtBR(product?.price_catalog)}</p>
                                             </div>
                                             <button
                                                 onClick={() => navigate(createPageUrl('MyCatalogOrders'))}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ function AuctionRow({ item, onView, onDetails, onUpdateStatus, onPrint, isSold }
         </div>
 
         <div className="text-right flex-shrink-0 mr-3">
-          <p className="text-green-400 font-bold text-lg">R$ {price.toFixed(2)}</p>
+          <p className="text-green-400 font-bold text-lg">R$ {fmtBR(price)}</p>
           {item.tracking_code && (
             <p className="text-[10px] text-gray-500 mt-0.5 font-mono">{item.tracking_code}</p>
           )}

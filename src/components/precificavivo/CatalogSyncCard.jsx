@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -175,9 +176,9 @@ export default function CatalogSyncCard() {
                         <p className="text-[10px] text-gray-600 mt-0.5">ID: {p.id}</p>
                       </div>
                       <div className="flex items-center gap-2 text-xs whitespace-nowrap">
-                        <span className="text-gray-500 line-through">R$ {p.price_catalog.toFixed(2)}</span>
+                        <span className="text-gray-500 line-through">R$ {fmtBR(p.price_catalog)}</span>
                         <ArrowRight className="w-3 h-3 text-amber-400" />
-                        <span className="text-emerald-400 font-bold">R$ {p.selling_price_retail.toFixed(2)}</span>
+                        <span className="text-emerald-400 font-bold">R$ {fmtBR(p.selling_price_retail)}</span>
                       </div>
                     </div>
                   ))}

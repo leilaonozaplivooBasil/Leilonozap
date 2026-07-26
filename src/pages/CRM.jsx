@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Button } from '@/components/ui/button';
@@ -435,7 +436,7 @@ CEP: ${customer.address_zip_code || 'Não informado'}
 
 ━━━━━━━━━━━━━━━━━━━━
 
-*Gasto Total:* R$ ${(customer.total_spent || 0).toFixed(2)}
+*Gasto Total:* R$ ${fmtBR((customer.total_spent || 0))}
 
 ${customer.notes ? `━━━━━━━━━━━━━━━━━━━━
 
@@ -894,7 +895,7 @@ _Enviado via CRM Leilão NoZap_`;
                         {customer.last_contact ? new Date(customer.last_contact).toLocaleDateString('pt-BR') : '-'}
                       </td>
                       <td className="p-3 text-right text-green-400 font-bold">
-                        R$ {(customer.total_spent || 0).toFixed(2)}
+                        R$ {fmtBR((customer.total_spent || 0))}
                       </td>
                       <td className="p-3">
                         <div className="flex items-center justify-center gap-2">

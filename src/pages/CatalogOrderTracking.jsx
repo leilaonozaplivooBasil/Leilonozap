@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -294,7 +295,7 @@ export default function CatalogOrderTracking() {
               <p className="text-xs text-gray-500 mb-2">Quantidade: {qty}</p>
               <div className="space-y-1 text-sm">
                 {discount > 0 && (
-                  <p className="text-gray-400 flex justify-between"><span>Desconto{order.coupon_code ? ` (${order.coupon_code})` : ''}:</span> <span className="text-yellow-400">− R$ {discount.toFixed(2)}</span></p>
+                  <p className="text-gray-400 flex justify-between"><span>Desconto{order.coupon_code ? ` (${order.coupon_code})` : ''}:</span> <span className="text-yellow-400">− R$ {fmtBR(discount)}</span></p>
                 )}
                 <p className="flex justify-between items-center">
                   <span className="text-gray-400">Total:</span>

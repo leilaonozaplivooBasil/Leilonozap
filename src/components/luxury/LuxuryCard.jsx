@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Gem } from "lucide-react";
@@ -24,7 +25,7 @@ export default function LuxuryCard({ item }) {
           <p className="text-gray-400 text-sm line-clamp-3">{item.description}</p>
         )}
         <div className="flex items-center justify-between pt-2">
-          <div className="text-green-400 font-bold">R$ {price.toFixed(2)}</div>
+          <div className="text-green-400 font-bold">R$ {fmtBR(price)}</div>
           <Button disabled variant="outline" className="border-gray-600 text-gray-300" title="Somente exibição">
             Em breve
           </Button>

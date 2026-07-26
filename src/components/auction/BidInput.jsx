@@ -25,12 +25,12 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
 
     const minBid = addMoney(currentPrice, increment);
     if (!gtMoney(finalAmount, currentPrice)) {
-      alert(`❌ Seu lance deve ser MAIOR que R$ ${money(currentPrice).toFixed(2)}`);
+      alert(`❌ Seu lance deve ser MAIOR que R$ ${fmtBR(money(currentPrice))}`);
       return;
     }
 
     if (!gteMoney(finalAmount, minBid)) {
-      alert(`❌ Lance mínimo é R$ ${minBid.toFixed(2)}`);
+      alert(`❌ Lance mínimo é R$ ${fmtBR(minBid)}`);
       return;
     }
 
@@ -58,7 +58,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             className="items-center gap-1 bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500 min-h-[44px] px-3 sm:px-4"
           >
             <Zap className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">R$ {amount.toFixed(2)}</span>
+            <span className="text-xs sm:text-sm">R$ {fmtBR(amount)}</span>
           </Button>
         ))}
         
@@ -81,7 +81,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             value={bidAmount}
             onChange={(e) => setBidAmount(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={`Mín: R$ ${addMoney(currentPrice, increment).toFixed(2)}`}
+            placeholder={`Mín: R$ ${fmtBR(addMoney(currentPrice, increment))}`}
             className="bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-400 pr-12 sm:pr-16 rounded-full focus:border-green-500 h-12 sm:h-14 text-base sm:text-lg"
             min={addMoney(currentPrice, increment)}
             disabled={isLoading}
@@ -104,7 +104,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
       </div>
 
       <p className="text-xs sm:text-sm text-center text-gray-500 mt-2">
-        Incremento mínimo: + R$ {increment.toFixed(2)}
+        Incremento mínimo: + R$ {fmtBR(increment)}
       </p>
       
       <style>{`

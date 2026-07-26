@@ -15,7 +15,7 @@ import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
-import { money, addMoney, mulMoney } from '@/lib/money';
+import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
 import ComparaiButton from '../components/comparai/ComparaiButton';
@@ -186,7 +186,7 @@ export default function AuctionRoom() {
           const walletData = result?.data || result;
           const balance = walletData?.balance || 0;
           setUserWallet({ balance });
-          console.log(`💰 Saldo digital do usuário: R$ ${balance.toFixed(2)}`);
+          console.log(`💰 Saldo digital do usuário: R$ ${fmtBR(balance)}`);
         } catch (error) {
           console.warn("Erro ao carregar saldo da carteira digital:", error.message);
           // Não bloqueia o lance se não conseguir verificar saldo
@@ -304,7 +304,7 @@ export default function AuctionRoom() {
         return;
       }
 
-      console.log(`🏆 [END/SERVIDOR] Vencedor: ${result.winner_name || 'sem lances'} — R$ ${Number(result.final_price).toFixed(2)}`);
+      console.log(`🏆 [END/SERVIDOR] Vencedor: ${result.winner_name || 'sem lances'} — R$ ${fmtBR(Number(result.final_price))}`);
 
       // Estado local reflete o que o SERVIDOR gravou
       setAuction(prev => ({
@@ -530,7 +530,7 @@ export default function AuctionRoom() {
       setUserWallet({ balance: freshBalance });
 
       if (freshBalance < buyNowAmount) {
-        console.warn(`⚠️ Saldo insuficiente para arremate: R$ ${freshBalance.toFixed(2)} < R$ ${buyNowAmount.toFixed(2)}`);
+        console.warn(`⚠️ Saldo insuficiente para arremate: R$ ${fmtBR(freshBalance)} < R$ ${fmtBR(buyNowAmount)}`);
         setShowLowBalanceModal(true);
         return;
       }
@@ -554,11 +554,11 @@ export default function AuctionRoom() {
       // VERIFICA E DEBITA SALDO
       const debitResult = await base44.functions.invoke('debitWalletBalance', {
         user_id: currentUser.id, amount: buyNowPrice, auction_id: auction.id,
-        description: `Arremate - ${auction.title} - R$ ${buyNowPrice.toFixed(2)}`
+        description: `Arremate - ${auction.title} - R$ ${fmtBR(buyNowPrice)}`
       });
       const debitData = debitResult?.data || debitResult;
       if (!debitData?.success) {
-        alert(`❌ Saldo insuficiente! Seu saldo: R$ ${(debitData?.balance || 0).toFixed(2)}`);
+        alert(`❌ Saldo insuficiente! Seu saldo: R$ ${fmtBR((debitData?.balance || 0))}`);
         setUserWallet({ balance: debitData?.balance || 0 });
         setIsBuyingNow(false);
         setShowBuyNowModal(false);
@@ -572,7 +572,7 @@ export default function AuctionRoom() {
         auction_id: auction.id,
         message_type: "bid",
         sender_id: currentUser.id,
-        content: `🔥 ARREMATE RÁPIDO! R$ ${buyNowPrice.toFixed(2)}`,
+        content: `🔥 ARREMATE RÁPIDO! R$ ${fmtBR(buyNowPrice)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: buyNowPrice,
         is_system_message: false
@@ -708,7 +708,7 @@ export default function AuctionRoom() {
     const shareText = `🔥 LEILÃO NOZAP!
 
 📱 ${auction.title}
-💰 Lance: R$ ${currentPrice.toFixed(2)}
+💰 Lance: R$ ${fmtBR(currentPrice)}
 
 ⚡ Dê seu lance: ${productUrl}`;
 
@@ -909,7 +909,7 @@ export default function AuctionRoom() {
 
         <div className="mobile-header__info">
           <div className="mobile-header__price-row">
-            <span className="mobile-header__price">R$ {currentPrice.toFixed(2)}</span>
+            <span className="mobile-header__price">R$ {fmtBR(currentPrice)}</span>
             <button className="mobile-header__info-btn" onClick={() => setShowMobilePanel(true)}>
               <Info className="w-4 h-4 text-green-400" />
             </button>
@@ -949,7 +949,7 @@ export default function AuctionRoom() {
             <div className="product-panel__body">
               <h2 className="product-panel__title">{auction.title}</h2>
               <div className="product-panel__meta">
-                <span className="product-panel__price">Lance atual: R$ {currentPrice.toFixed(2)}</span>
+                <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
                 <span className="product-panel__timer">{displayTime}</span>
               </div>
               <p className="product-panel__desc">{auction.description}</p>
@@ -1129,11 +1129,11 @@ export default function AuctionRoom() {
             <div className="mobile-bottom-sheet__stats">
               <div className="stat">
                 <span className="stat__label">Lance atual</span>
-                <span className="stat__value">R$ {currentPrice.toFixed(2)}</span>
+                <span className="stat__value">R$ {fmtBR(currentPrice)}</span>
               </div>
               <div className="stat">
                 <span className="stat__label">Incremento</span>
-                <span className="stat__value">R$ {safeIncrement.toFixed(2)}</span>
+                <span className="stat__value">R$ {fmtBR(safeIncrement)}</span>
               </div>
             </div>
           </div>
@@ -1186,11 +1186,11 @@ export default function AuctionRoom() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-400">Lance Atual:</span>
-                  <span className="font-semibold text-white">R$ {currentPrice.toFixed(2)}</span>
+                  <span className="font-semibold text-white">R$ {fmtBR(currentPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Arremate (+45%):</span>
-                  <span className="text-2xl font-bold text-orange-400">R$ {mulMoney(currentPrice, 1.45).toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-orange-400">R$ {fmtBR(mulMoney(currentPrice, 1.45))}</span>
                 </div>
               </div>
             </div>

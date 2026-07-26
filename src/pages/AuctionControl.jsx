@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { adminDataProxy } from "@/functions/adminDataProxy";
 import { useNavigate } from "react-router-dom";
@@ -378,7 +379,7 @@ export default function AuctionControl() {
                           <div>
                             <p className="text-gray-400 text-sm">Preço Atual</p>
                             <p className="text-green-400 font-bold text-lg">
-                              R$ {auction.current_price?.toFixed(2) || auction.starting_price?.toFixed(2)}
+                              R$ {fmtBR(auction.current_price || auction.starting_price)}
                             </p>
                           </div>
                           

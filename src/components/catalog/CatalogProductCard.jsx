@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from "react";
+import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -176,7 +177,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     const ref = sessionStorage.getItem('referralCode');
     const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
     const phone = licenseePhone ? `55${licenseePhone.replace(/\D/g, '')}` : DEFAULT_STORE_PHONE;
-    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -187,7 +188,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
 
     const ref = sessionStorage.getItem('referralCode');
     const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
-    const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     const imageUrl = product.image_urls?.[0];
 
     // NÍVEL 1: Share com imagem via Web Share API

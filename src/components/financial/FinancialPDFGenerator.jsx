@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,7 +135,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
       doc.setFont(undefined, "bold");
       doc.text(card.label, cx + cardW / 2, y + 4, { align: "center" });
       doc.setFontSize(9);
-      doc.text(`R$ ${card.value.toFixed(2)}`, cx + cardW / 2, y + 10, { align: "center" });
+      doc.text(`R$ ${fmtBR(card.value)}`, cx + cardW / 2, y + 10, { align: "center" });
     });
 
     y += 18;
@@ -144,7 +145,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
     doc.text(`${filtered.length} conta(s) no período`, 16, y);
     if (totalJuros > 0) {
       doc.setTextColor(239, 68, 68);
-      doc.text(`Juros acumulados: R$ ${totalJuros.toFixed(2)}`, pw / 2, y);
+      doc.text(`Juros acumulados: R$ ${fmtBR(totalJuros)}`, pw / 2, y);
     }
 
     y += 14;
@@ -200,7 +201,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
 
       // Valor com destaque
       doc.setFont(undefined, "bold");
-      doc.text(`R$ ${total.toFixed(2)}`, cols[3], y);
+      doc.text(`R$ ${fmtBR(total)}`, cols[3], y);
       doc.setFont(undefined, "normal");
 
       doc.text(moment(exp.due_date).format("DD/MM/YYYY"), cols[4], y);
@@ -224,7 +225,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
         doc.setFontSize(6);
         doc.setTextColor(239, 68, 68);
         doc.setFont(undefined, "italic");
-        doc.text(`    ↳ Juros: R$ ${exp.interest_amount.toFixed(2)}`, cols[0], y);
+        doc.text(`    ↳ Juros: R$ ${fmtBR(exp.interest_amount)}`, cols[0], y);
       }
 
       // Se pago parcial, mostrar valor pago
@@ -233,7 +234,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
         doc.setFontSize(6);
         doc.setTextColor(59, 130, 246);
         doc.setFont(undefined, "italic");
-        doc.text(`    ↳ Pago: R$ ${exp.amount_paid.toFixed(2)} | Restante: R$ ${(total - exp.amount_paid).toFixed(2)}`, cols[0], y);
+        doc.text(`    ↳ Pago: R$ ${fmtBR(exp.amount_paid)} | Restante: R$ ${fmtBR((total - exp.amount_paid))}`, cols[0], y);
       }
 
       y += 6;

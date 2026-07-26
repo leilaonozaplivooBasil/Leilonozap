@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
@@ -1324,7 +1325,7 @@ export default function CreateAuction() {
                             <h4 className="font-bold text-white mb-2 line-clamp-2">{foundMlAd.title}</h4>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-400">Preço:</span>
-                              <span className="text-green-400 font-bold">R$ {foundMlAd.price?.toFixed(2)}</span>
+                              <span className="text-green-400 font-bold">R$ {fmtBR(foundMlAd.price)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm mt-1">
                               <span className="text-gray-400">Loja:</span>
@@ -1407,7 +1408,7 @@ export default function CreateAuction() {
                             {productPreview.price && (
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                <span className="text-green-400 font-bold">R$ {productPreview.price.toFixed(2)}</span>
+                                <span className="text-green-400 font-bold">R$ {fmtBR(productPreview.price)}</span>
                               </div>
                             )}
 
@@ -1469,7 +1470,7 @@ export default function CreateAuction() {
                           <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
                             <div><span className="text-green-400 font-semibold">Título:</span> {importedData?.title || extractedData?.title || formData.title}</div>
                             {importedData?.price && (
-                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {importedData.price.toFixed(2)}</div>
+                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {fmtBR(importedData.price)}</div>
                             )}
                           </div>
                         </div>

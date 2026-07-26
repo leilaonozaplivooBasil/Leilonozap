@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -243,14 +244,14 @@ export default function AdminCatalogSales() {
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-4">
               <div className="text-sm text-gray-400 mb-1">Receita Total</div>
-              <div className="text-2xl font-bold text-green-400">R$ {stats.totalRevenue.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-green-400">R$ {fmtBR(stats.totalRevenue)}</div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-4">
               <div className="text-sm text-gray-400 mb-1">Suas Comissões</div>
-              <div className="text-2xl font-bold text-blue-400">R$ {stats.totalCommissions.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-blue-400">R$ {fmtBR(stats.totalCommissions)}</div>
             </CardContent>
           </Card>
 
@@ -336,8 +337,8 @@ export default function AdminCatalogSales() {
                         <TableRow key={auction.id} className="border-gray-700 hover:bg-gray-700/50">
                           <TableCell className="text-gray-300 text-sm">{auction.title}</TableCell>
                           <TableCell className="text-gray-300 text-sm">{auction.winner_name}</TableCell>
-                          <TableCell className="text-white font-semibold">R$ {auction.current_price?.toFixed(2)}</TableCell>
-                          <TableCell className="text-green-400">R$ {(auction.current_price * 0.10).toFixed(2)}</TableCell>
+                          <TableCell className="text-white font-semibold">R$ {fmtBR(auction.current_price)}</TableCell>
+                          <TableCell className="text-green-400">R$ {fmtBR((auction.current_price * 0.10))}</TableCell>
                           <TableCell>
                             <Badge className={`${getStatusColor(auction.order_status || 'paid')} text-xs`}>
                               {getStatusLabel(auction.order_status || 'paid')}
@@ -376,8 +377,8 @@ export default function AdminCatalogSales() {
                         <TableRow key={sale.id} className="border-gray-700 hover:bg-gray-700/50">
                           <TableCell className="text-gray-300 text-sm">{sale.product_title}</TableCell>
                           <TableCell className="text-gray-300 text-sm">{sale.buyer_name}</TableCell>
-                          <TableCell className="text-white font-semibold">R$ {sale.sale_price?.toFixed(2)}</TableCell>
-                          <TableCell className="text-green-400">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                          <TableCell className="text-white font-semibold">R$ {fmtBR(sale.sale_price)}</TableCell>
+                          <TableCell className="text-green-400">R$ {fmtBR(sale.commission_licensee_amount)}</TableCell>
                           <TableCell>
                             <Badge className={`${getStatusColor(sale.status)} text-xs`}>
                               {getStatusLabel(sale.status)}
@@ -413,7 +414,7 @@ export default function AdminCatalogSales() {
                       <div className="bg-gray-700/50 p-4 rounded-lg">
                         <p className="text-sm text-gray-400">Produto: <span className="text-white">{sale.product_title}</span></p>
                         <p className="text-sm text-gray-400">Comprador: <span className="text-white">{sale.buyer_name}</span></p>
-                        <p className="text-sm text-gray-400">Valor: <span className="text-green-400">R$ {sale.sale_price?.toFixed(2)}</span></p>
+                        <p className="text-sm text-gray-400">Valor: <span className="text-green-400">R$ {fmtBR(sale.sale_price)}</span></p>
                       </div>
 
                       <div>

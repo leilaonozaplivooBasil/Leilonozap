@@ -144,7 +144,7 @@ export default function LiveShopNoZap() {
 
     const minBid = addMoney(currentProduct.current_price, currentProduct.increment);
     if (!gteMoney(finalAmount, minBid)) {
-      toast.error(`Lance mínimo é R$ ${minBid.toFixed(2)}`);
+      toast.error(`Lance mínimo é R$ ${fmtBR(minBid)}`);
       return;
     }
 
@@ -170,7 +170,7 @@ export default function LiveShopNoZap() {
       });
 
       setBidAmount("");
-      toast.success(`Lance de R$ ${finalAmount.toFixed(2)} enviado! 🎯`);
+      toast.success(`Lance de R$ ${fmtBR(finalAmount)} enviado! 🎯`);
     } catch (error) {
       console.error("Erro ao enviar lance:", error);
       toast.error("Erro ao enviar lance. Tente novamente.");
@@ -317,10 +317,10 @@ export default function LiveShopNoZap() {
                   <div className="text-center mb-4">
                     <p className="text-sm text-gray-400 mb-1">Lance Atual</p>
                     <p className="text-4xl font-bold text-green-400">
-                      R$ {currentProduct.current_price?.toFixed(2)}
+                      R$ {fmtBR(currentProduct.current_price)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Incremento mínimo: + R$ {currentProduct.increment?.toFixed(2)}
+                      Incremento mínimo: + R$ {fmtBR(currentProduct.increment)}
                     </p>
                   </div>
 
@@ -335,7 +335,7 @@ export default function LiveShopNoZap() {
                           className="bg-green-600 hover:bg-green-700 text-white flex flex-col items-center py-3 h-auto"
                         >
                           <Zap className="w-4 h-4 mb-1" />
-                          <span className="text-xs">R$ {quickAmount.toFixed(2)}</span>
+                          <span className="text-xs">R$ {fmtBR(quickAmount)}</span>
                         </Button>
                       );
                     })}
@@ -391,7 +391,7 @@ export default function LiveShopNoZap() {
                               </span>
                             </div>
                             <span className="text-sm font-bold text-green-400">
-                              R$ {bid.amount.toFixed(2)}
+                              R$ {fmtBR(bid.amount)}
                             </span>
                           </div>
                         </div>
@@ -438,7 +438,7 @@ export default function LiveShopNoZap() {
                       <div>
                         <p className="text-xs text-gray-400">Lance atual</p>
                         <p className="text-lg font-bold text-green-400">
-                          R$ {currentProduct.current_price?.toFixed(2)}
+                          R$ {fmtBR(currentProduct.current_price)}
                         </p>
                       </div>
                       <Button

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -215,7 +216,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                         <div>
                           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-200/70 mb-0.5">Saldo disponível</p>
                           <p className="text-[1.9rem] sm:text-[2.1rem] leading-none font-extrabold text-white tracking-tight tabular-nums drop-shadow">
-                            R$ {balance.toFixed(2).replace('.', ',')}
+                            R$ {fmtBR(balance)}
                           </p>
                         </div>
                         <div className="nz-chip" />
@@ -245,7 +246,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.045] px-2.5 py-2.5 text-center">
                         <p className="text-[8.5px] font-semibold uppercase tracking-[0.14em] text-gray-500 mb-0.5">{s.label}</p>
                         <p className={`text-[13px] font-bold tabular-nums ${s.color}`}>
-                          R$ {s.value.toFixed(2).replace('.', ',')}
+                          R$ {fmtBR(s.value)}
                         </p>
                       </div>
                     ))}
@@ -254,7 +255,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                     <div className="flex gap-4 flex-wrap -mt-1 px-1">
                       {hasAllocated && (
                         <p className="text-[11px] text-gray-400">
-                          Alocado em lances: <span className="font-bold text-gray-200 tabular-nums">R$ {(wallet.saldo_alocado).toFixed(2).replace('.', ',')}</span>
+                          Alocado em lances: <span className="font-bold text-gray-200 tabular-nums">R$ {fmtBR((wallet.saldo_alocado))}</span>
                         </p>
                       )}
                       {totals.pendingCount > 0 && (
@@ -296,7 +297,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className={`text-sm font-bold ${tx.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                  {tx.amount >= 0 ? '+' : '−'} R$ {Math.abs(tx.amount).toFixed(2).replace('.', ',')}
+                                  {tx.amount >= 0 ? '+' : '−'} R$ {fmtBR(Math.abs(tx.amount))}
                                 </p>
                                 {tx.status === 'pending' && (
                                   <span className="inline-flex items-center gap-1 text-[10px] text-amber-400">
@@ -346,7 +347,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                     className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                   >
                     {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
-                    {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 5 ? ` de R$ ${effectiveAmount.toFixed(2).replace('.', ',')}` : ''}`}
+                    {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 5 ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
                   </Button>
                   <p className="text-xs text-gray-500 text-center">Valor mínimo R$ 5,00 · Pagamento seguro</p>
                 </div>
@@ -355,7 +356,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
               {view === 'pix' && pixData && (
                 <div className="p-5 space-y-4 text-center">
                   <p className="text-gray-300 text-sm">
-                    Escaneie o QR Code ou copie o código para pagar <span className="text-green-400 font-bold">R$ {(pixData.amount || effectiveAmount).toFixed(2).replace('.', ',')}</span>
+                    Escaneie o QR Code ou copie o código para pagar <span className="text-green-400 font-bold">R$ {fmtBR((pixData.amount || effectiveAmount))}</span>
                   </p>
                   {pixData.pix_qr_code && (
                     <div className="bg-white rounded-xl p-4 inline-block">

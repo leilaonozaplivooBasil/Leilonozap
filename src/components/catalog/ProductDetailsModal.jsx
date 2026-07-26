@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { createPageUrl } from "@/utils";
@@ -117,7 +118,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
 
   const handleWhatsAppOrder = () => {
     const phone = licenseePhone ? `55${licenseePhone.replace(/\D/g, '')}` : DEFAULT_STORE_PHONE;
-    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${getProductUrl()}`;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${getProductUrl()}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Loader2 } from 'lucide-react';
 
 export default function VendedoresDoDia({ daySales, date, allCommissions = [] }) {
@@ -136,7 +137,7 @@ export default function VendedoresDoDia({ daySales, date, allCommissions = [] })
                 <span>👤 {seller.seller_name}</span>
                 <span className="text-xs text-gray-400">({seller.sales_count})</span>
               </div>
-              <span className="text-green-400">R$ {sellerTotal.toFixed(2)}</span>
+              <span className="text-green-400">R$ {fmtBR(sellerTotal)}</span>
             </summary>
             <div className="mt-3 ml-3 space-y-2 border-l-2 border-gray-700 pl-3 max-h-48 overflow-y-auto">
               <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
@@ -146,11 +147,11 @@ export default function VendedoresDoDia({ daySales, date, allCommissions = [] })
                 </div>
                 <div className="bg-gray-700 rounded p-2">
                   <p className="text-gray-400">Total</p>
-                  <p className="text-green-400 font-bold">R$ {sellerTotal.toFixed(2)}</p>
+                  <p className="text-green-400 font-bold">R$ {fmtBR(sellerTotal)}</p>
                 </div>
                 <div className="bg-gray-700 rounded p-2">
                   <p className="text-gray-400">Comissão Total</p>
-                  <p className="text-orange-400 font-bold">R$ {seller.total_commission.toFixed(2)}</p>
+                  <p className="text-orange-400 font-bold">R$ {fmtBR(seller.total_commission)}</p>
                 </div>
               </div>
               <table className="w-full text-xs">
@@ -176,7 +177,7 @@ export default function VendedoresDoDia({ daySales, date, allCommissions = [] })
                         </td>
                         <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
                         <td className="text-right pr-4 p-1 text-green-400 font-bold">
-                          R$ {sale.total_amount.toFixed(2)}
+                          R$ {fmtBR(sale.total_amount)}
                         </td>
                         <td className="pl-4 p-1 text-xs text-purple-300 w-24">
                           {hasLicenciante?.seller_name || '-'}
@@ -187,7 +188,7 @@ export default function VendedoresDoDia({ daySales, date, allCommissions = [] })
                           </span>
                         </td>
                         <td className="text-right p-1 w-20">
-                          <span className="text-orange-400 font-bold">R$ {(sale.seller_commission || 0).toFixed(2)}</span>
+                          <span className="text-orange-400 font-bold">R$ {fmtBR((sale.seller_commission || 0))}</span>
                         </td>
                       </tr>
                     );

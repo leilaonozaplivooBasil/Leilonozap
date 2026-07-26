@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Play, Square, Tv, Plus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -610,7 +611,7 @@ export default function LiveShopControlNoZap() {
                     />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm text-white truncate">{product.title}</h3>
-                      <p className="text-green-400 text-sm font-bold">R$ {product.current_price?.toFixed(2)}</p>
+                      <p className="text-green-400 text-sm font-bold">R$ {fmtBR(product.current_price)}</p>
                       <Button
                         onClick={() => startAuction(product.id)}
                         disabled={selectedProduct === product.id}

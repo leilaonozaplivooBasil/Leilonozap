@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { fmtBR } from '@/lib/money';
 import { useLocation, Link } from "react-router-dom";
 import { base44 } from '@/api/base44Client';
 
@@ -320,7 +321,7 @@ export default function AuctionDetails() {
                     {isActive ? 'Lance atual' : 'Valor final'}
                   </p>
                   <p className="text-3xl sm:text-4xl font-black text-gradient-green">
-                    R$ {currentPrice.toFixed(2)}
+                    R$ {fmtBR(currentPrice)}
                   </p>
                 </div>
                 <div className="text-right">

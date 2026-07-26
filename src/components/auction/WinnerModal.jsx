@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
@@ -154,7 +155,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
               {isWinner ? 'Seu lance vencedor' : hasWinner ? `${winnerLabel} arrematou por` : 'Encerrado em'}
             </p>
             <p className={`text-2xl font-black drop-shadow ${hasWinner ? 'text-emerald-300 wm-price' : 'text-gray-200'}`}>
-              R$ {price.toFixed(2)}
+              R$ {fmtBR(price)}
             </p>
           </div>
         </div>
@@ -172,7 +173,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
                     {i === 0 ? '● ' : ''}{b.sender_name}
                   </span>
                   <span className={`text-[11px] font-bold tabular-nums flex-shrink-0 ${i === 0 ? 'text-emerald-300' : 'text-white/60'}`}>
-                    R$ {(Number(b.bid_amount) || 0).toFixed(2).replace('.', ',')}
+                    R$ {fmtBR((Number(b.bid_amount) || 0))}
                   </span>
                 </div>
               ))}
@@ -204,7 +205,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
                 </button>
                 {settle.balance !== null && (
                   <p className="text-white/70 text-[11px] mt-2">
-                    Saldo restante: <span className="font-bold text-emerald-300 tabular-nums">R$ {settle.balance.toFixed(2).replace('.', ',')}</span>
+                    Saldo restante: <span className="font-bold text-emerald-300 tabular-nums">R$ {fmtBR(settle.balance)}</span>
                   </p>
                 )}
               </>
@@ -212,7 +213,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
             {isWinner && settle.state === 'insufficient' && (
               <>
                 <p className="text-amber-300 text-[11px] font-semibold mb-2">
-                  Saldo insuficiente (R$ {(settle.balance ?? 0).toFixed(2).replace('.', ',')}) — complete o pagamento:
+                  Saldo insuficiente (R$ {fmtBR((settle.balance ?? 0))}) — complete o pagamento:
                 </p>
                 <button
                   onClick={handleGoToWinnings}

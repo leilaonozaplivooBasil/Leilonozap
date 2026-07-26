@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse, ShoppingBag, MapPin } from 'lucide-react';
 import GradeItemsModal from './GradeItemsModal';
@@ -274,7 +275,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             else { endTime = new Date(); endTime.setDate(endTime.getDate() + 30); }
             await base44.entities.Auction.create({
                 title: loteAtual.nomeLote,
-                description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${loteAtual.valorMercadoTotal.toFixed(2)}`,
+                description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)}`,
                 starting_price: calculations.custoTotal, current_price: calculations.custoTotal, increment: 100,
                 end_time: endTime.toISOString(), status: 'active', is_investment_plan: true,
                 market_price: loteAtual.valorMercadoTotal, manual_market_price: loteAtual.valorMercadoTotal,
@@ -322,7 +323,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                 nome_lote: loteAtual.nomeLote,
                 marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
                 valor_lote: calculations?.custoTotal || 0,
-                observacoes: `Origem: ${loteAtual.origem} | Valor Mercado: R$ ${loteAtual.valorMercadoTotal?.toFixed(2)} | Qtd: ${loteAtual.quantidadeTotal} | Arremate: R$ ${calculations?.valorArrematado?.toFixed(2)} | Taxa: ${taxaPct}% | Frete: R$ ${frete} | Local: ${loteAtual.localColeta}`,
+                observacoes: `Origem: ${loteAtual.origem} | Valor Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)} | Qtd: ${loteAtual.quantidadeTotal} | Arremate: R$ ${fmtBR(calculations?.valorArrematado)} | Taxa: ${taxaPct}% | Frete: R$ ${frete} | Local: ${loteAtual.localColeta}`,
                 data_recebimento: new Date().toISOString(),
                 status: 'recebido',
                 itens_json: JSON.stringify(itensAgrupados),

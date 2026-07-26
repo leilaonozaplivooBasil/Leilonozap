@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -257,12 +258,12 @@ export default function AuctionCheckoutModern() {
         billing_type: paymentType,
         description: isWalletDeposit
           ? (isInvestorCapital
-            ? `Depósito de Capital — Lote de Investimento - R$ ${amount.toFixed(2)}`
+            ? `Depósito de Capital — Lote de Investimento - R$ ${fmtBR(amount)}`
             : depositType === 'passaporte'
-              ? `Passaporte de Lances NoZap - R$ ${amount.toFixed(2)}`
+              ? `Passaporte de Lances NoZap - R$ ${fmtBR(amount)}`
               : depositType === 'digital_wallet'
-                ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
-                : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
+                ? `Depósito na Carteira Digital - R$ ${fmtBR(amount)}`
+                : `Depósito na Carteira de Comissões - R$ ${fmtBR(amount)}`)
           : `Arremate - ${auction.title}`,
         card_data: cardData,
         deposit_type: depositType,
@@ -925,7 +926,7 @@ export default function AuctionCheckoutModern() {
                         </div>
                         <h3 className="text-2xl font-bold text-white">Pagamento Recebido!</h3>
                         <p className="text-gray-300">
-                          O valor de <span className="text-green-400 font-bold">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span> foi adicionado à sua conta no Leilão NoZap.
+                          O valor de <span className="text-green-400 font-bold">R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}</span> foi adicionado à sua conta no Leilão NoZap.
                         </p>
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 space-y-2">
                           <p className="text-green-300 font-semibold">🎉 Saldo creditado com sucesso!</p>
@@ -1021,7 +1022,7 @@ export default function AuctionCheckoutModern() {
                 <div className="space-y-3 py-4 border-y border-white/10">
                   <div className="flex justify-between text-sm">
                     <span className="text-white">Valor</span>
-                    <span className="text-white">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span>
+                    <span className="text-white">R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}</span>
                   </div>
                   {!isWalletDeposit && (
                     <div className="flex justify-between text-sm">
@@ -1032,7 +1033,7 @@ export default function AuctionCheckoutModern() {
                   <div className="flex justify-between text-base font-bold pt-2">
                     <span className="text-white">Total</span>
                     <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
-                      R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}
+                      R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}
                     </span>
                   </div>
                 </div>
