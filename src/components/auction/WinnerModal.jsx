@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Trophy, Sparkles, X, Gavel, Crown } from "lucide-react";
+import { Trophy, Sparkles, X, Crown } from "lucide-react";
 
 // 🏆 Modal de ARREMATADO — liquid glass verde do site, com 3 estados REAIS
 // (dados gravados pelo servidor em finalizeAuction, não estimativa do cliente):
@@ -82,7 +82,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
             </>
           ) : (
             <div className="w-16 h-16 rounded-full grid place-items-center mx-auto border border-amber-400/40 bg-amber-500/15">
-              <Gavel className="w-8 h-8 text-amber-400" />
+              <img src="/martelo-3d.png" alt="Martelo do leiloeiro" className="w-11 h-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" />
             </div>
           )}
         </div>

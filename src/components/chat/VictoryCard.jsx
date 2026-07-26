@@ -33,8 +33,8 @@ export default function VictoryCard({ winner, auction, currentUser }) {
     return (
       <div className="flex justify-center mb-4 md:mb-6 px-2 md:px-4 vc-entrance">
         <div className="vc-glass vc-glass--amber relative max-w-xl w-full p-5 md:p-7 text-center">
-          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full border border-amber-400/30 bg-amber-400/10">
-            <Gavel className="h-6 w-6 text-amber-300/90" />
+          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full border border-amber-400/30 bg-amber-400/10">
+            <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="h-10 w-10 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]" />
           </div>
           <h3 className="text-lg md:text-xl font-bold text-white mb-1">Leilão encerrado</h3>
           <p className="text-amber-200/80 text-sm mb-4">Este lote terminou sem lances.</p>
@@ -90,7 +90,7 @@ export default function VictoryCard({ winner, auction, currentUser }) {
             <span className="vc-ring" style={{ animationDelay: '0.65s' }}></span>
             <span className="vc-ring vc-ring--gold" style={{ animationDelay: '1.05s' }}></span>
             <div className="vc-hammer-badge grid h-full w-full place-items-center rounded-full">
-              <Gavel className="vc-hammer h-8 w-8 md:h-10 md:w-10 text-amber-300" />
+              <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="vc-hammer h-11 w-11 md:h-14 md:w-14 object-contain drop-shadow-[0_5px_12px_rgba(0,0,0,0.55)]" />
             </div>
           </div>
 
