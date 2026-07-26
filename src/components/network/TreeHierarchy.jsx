@@ -223,11 +223,13 @@ export default function TreeHierarchy({
             : fitsX
             ? (vp.clientWidth - size.width * z) / 2
             : vp.clientWidth / 2 - rootCx * z,
-        y: fitsY
-          ? (vp.clientHeight - size.height * z) / 2
-          : mode === 'chart'
-          ? 40
-          : vp.clientHeight / 2 - rootCy * z,
+        // organograma lê de cima para baixo: raiz sempre encostada no topo
+        y:
+          mode === 'chart'
+            ? 40
+            : fitsY
+            ? (vp.clientHeight - size.height * z) / 2
+            : vp.clientHeight / 2 - rootCy * z,
       });
     },
     [size.width, size.height, mode]
