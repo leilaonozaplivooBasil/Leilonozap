@@ -6,55 +6,59 @@ import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config.jsx'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import CRMInvestidores from '@/pages/CRMInvestidores';
-import CarteiraInvestidor from '@/pages/CarteiraInvestidor';
-import CadastroInvestidor from '@/pages/CadastroInvestidor';
-import CadastroLeiloeiro from '@/pages/CadastroLeiloeiro';
-import MarketplaceLotes from '@/pages/MarketplaceLotes';
-import AnaliseDeLotes from '@/pages/AnaliseDeLotes';
-import GestaoLotes from '@/pages/GestaoLotes';
-import SistemaDeArremate from '@/pages/SistemaDeArremate';
-import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
-import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
-import CatalogOrdersAdmin from '@/pages/CatalogOrdersAdmin';
-import CuponsAdmin from '@/pages/CuponsAdmin';
-import AnaliseLoteEstoque from '@/pages/AnaliseLoteEstoque';
-import EstoqueLotes from '@/pages/EstoqueLotes';
-import Evoluir from '@/pages/Evoluir';
-import Carteira from '@/pages/Carteira';
-import AdminFinanceiro from '@/pages/AdminFinanceiro';
-import Recepcao from '@/pages/Recepcao';
-import PainelDistribuidor from '@/pages/PainelDistribuidor';
-import Cadastro from '@/pages/Cadastro';
-import ConcursoLeilaoNozap from '@/pages/ConcursoLeilaoNozap';
-import PassaporteLances from '@/pages/PassaporteLances';
-import LojaVitrine from '@/pages/LojaVitrine';
-import PedidosDistribuidor from '@/pages/PedidosDistribuidor';
-import TirarPedido from '@/pages/TirarPedido';
-import GestaoMetas from '@/pages/GestaoMetas';
-import MeuEstoque from '@/pages/MeuEstoque';
-import ImageOptimizer from '@/pages/ImageOptimizer';
-import VisualizarLote from '@/pages/VisualizarLote';
-import SentinelNoZap from '@/pages/SentinelNoZap';
-import PrecificaVivoPainel from '@/pages/PrecificaVivoPainel';
-import ParceiroLotes from '@/pages/ParceiroLotes';
-import AcessoArrematante from '@/pages/AcessoArrematante';
-import AcessoVendedor from '@/pages/AcessoVendedor';
-import SellerPanel from '@/pages/SellerPanel';
+// ⚡ Páginas em lazy: só Recepcao ("/") e Catalog ("/Loja-Virtual" — porta de
+// entrada do PWA) ficam no bundle inicial. O resto baixa sob demanda, senão o
+// primeiro carregamento arrasta dezenas de painéis admin que o cliente nunca abre.
 import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
-import Portal from '@/pages/Portal';
-import SuperAdminPanels from '@/pages/SuperAdminPanels';
-import PortalArrematante from '@/pages/portal/PortalArrematante';
-import PortalLojaVirtual from '@/pages/portal/PortalLojaVirtual';
-import PortalLicenciado from '@/pages/portal/PortalLicenciado';
-import PortalLojista from '@/pages/portal/PortalLojista';
-import PortalVendedor from '@/pages/portal/PortalVendedor';
-import PortalInvestidor from '@/pages/portal/PortalInvestidor';
-import PortalLeiloeiro from '@/pages/portal/PortalLeiloeiro';
-import PrivacyPolicy from '@/pages/PrivacyPolicy';
-import TermsOfUse from '@/pages/TermsOfUse';
+import Recepcao from '@/pages/Recepcao';
 import PageNotFound from './lib/PageNotFound';
+import ChunkErrorBoundary from './lib/ChunkErrorBoundary.jsx';
+const CRMInvestidores = React.lazy(() => import('@/pages/CRMInvestidores'));
+const CarteiraInvestidor = React.lazy(() => import('@/pages/CarteiraInvestidor'));
+const CadastroInvestidor = React.lazy(() => import('@/pages/CadastroInvestidor'));
+const CadastroLeiloeiro = React.lazy(() => import('@/pages/CadastroLeiloeiro'));
+const MarketplaceLotes = React.lazy(() => import('@/pages/MarketplaceLotes'));
+const AnaliseDeLotes = React.lazy(() => import('@/pages/AnaliseDeLotes'));
+const GestaoLotes = React.lazy(() => import('@/pages/GestaoLotes'));
+const SistemaDeArremate = React.lazy(() => import('@/pages/SistemaDeArremate'));
+const AdminDepositosConfirmados = React.lazy(() => import('@/pages/AdminDepositosConfirmados'));
+const AdminLancesAutorizados = React.lazy(() => import('@/pages/AdminLancesAutorizados'));
+const CatalogOrdersAdmin = React.lazy(() => import('@/pages/CatalogOrdersAdmin'));
+const CuponsAdmin = React.lazy(() => import('@/pages/CuponsAdmin'));
+const AnaliseLoteEstoque = React.lazy(() => import('@/pages/AnaliseLoteEstoque'));
+const EstoqueLotes = React.lazy(() => import('@/pages/EstoqueLotes'));
+const Evoluir = React.lazy(() => import('@/pages/Evoluir'));
+const Carteira = React.lazy(() => import('@/pages/Carteira'));
+const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
+const PainelDistribuidor = React.lazy(() => import('@/pages/PainelDistribuidor'));
+const Cadastro = React.lazy(() => import('@/pages/Cadastro'));
+const ConcursoLeilaoNozap = React.lazy(() => import('@/pages/ConcursoLeilaoNozap'));
+const PassaporteLances = React.lazy(() => import('@/pages/PassaporteLances'));
+const LojaVitrine = React.lazy(() => import('@/pages/LojaVitrine'));
+const PedidosDistribuidor = React.lazy(() => import('@/pages/PedidosDistribuidor'));
+const TirarPedido = React.lazy(() => import('@/pages/TirarPedido'));
+const GestaoMetas = React.lazy(() => import('@/pages/GestaoMetas'));
+const MeuEstoque = React.lazy(() => import('@/pages/MeuEstoque'));
+const ImageOptimizer = React.lazy(() => import('@/pages/ImageOptimizer'));
+const VisualizarLote = React.lazy(() => import('@/pages/VisualizarLote'));
+const SentinelNoZap = React.lazy(() => import('@/pages/SentinelNoZap'));
+const PrecificaVivoPainel = React.lazy(() => import('@/pages/PrecificaVivoPainel'));
+const ParceiroLotes = React.lazy(() => import('@/pages/ParceiroLotes'));
+const AcessoArrematante = React.lazy(() => import('@/pages/AcessoArrematante'));
+const AcessoVendedor = React.lazy(() => import('@/pages/AcessoVendedor'));
+const SellerPanel = React.lazy(() => import('@/pages/SellerPanel'));
+const Portal = React.lazy(() => import('@/pages/Portal'));
+const SuperAdminPanels = React.lazy(() => import('@/pages/SuperAdminPanels'));
+const PortalArrematante = React.lazy(() => import('@/pages/portal/PortalArrematante'));
+const PortalLojaVirtual = React.lazy(() => import('@/pages/portal/PortalLojaVirtual'));
+const PortalLicenciado = React.lazy(() => import('@/pages/portal/PortalLicenciado'));
+const PortalLojista = React.lazy(() => import('@/pages/portal/PortalLojista'));
+const PortalVendedor = React.lazy(() => import('@/pages/portal/PortalVendedor'));
+const PortalInvestidor = React.lazy(() => import('@/pages/portal/PortalInvestidor'));
+const PortalLeiloeiro = React.lazy(() => import('@/pages/portal/PortalLeiloeiro'));
+const PrivacyPolicy = React.lazy(() => import('@/pages/PrivacyPolicy'));
+const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -143,6 +147,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <ChunkErrorBoundary>
     <Suspense fallback={
       <div className="fixed inset-0 flex items-center justify-center bg-gray-900">
         <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -353,6 +358,7 @@ const AuthenticatedApp = () => {
       <Route path="*" element={<AliasOrNotFound />} />
     </Routes>
     </Suspense>
+    </ChunkErrorBoundary>
   );
 };
 
