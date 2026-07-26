@@ -19,7 +19,6 @@ import WalletDrawer from '../components/wallet/WalletDrawer';
 import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
 import ComparaiButton from '../components/comparai/ComparaiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
-import AuctionTimeDebugger from "../components/system/AuctionTimeDebugger";
 import ViewTracker from "../components/recommendations/ViewTracker";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
 import WinnerModal from "../components/auction/WinnerModal";
@@ -52,7 +51,6 @@ export default function AuctionRoom() {
   const [userMap, setUserMap] = useState({});
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  const [showDebugger, setShowDebugger] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
@@ -214,13 +212,6 @@ export default function AuctionRoom() {
     } catch { /* silencioso */ }
   }, []);
 
-  useEffect(() => {
-    if (currentUser && currentUser.role === 'admin') {
-      setShowDebugger(true);
-    } else {
-      setShowDebugger(false);
-    }
-  }, [currentUser]);
 
   // ── HOOKS ─────────────────────────────────────────────────────────────
   // Timer hook (provides calibrateServerOffset, getServerSyncedTime, timeRemaining, auctioneer state)
@@ -845,17 +836,6 @@ export default function AuctionRoom() {
           auctionId={auction.id}
           userId={currentUser.id}
           category={auction.category}
-        />
-      )}
-
-      {showDebugger && auction && (
-        <AuctionTimeDebugger
-          auction={auction}
-          serverTimeOffset={serverOffsetRef.current || 0}
-          timeRemaining={timeRemaining}
-          getServerSyncedTime={getServerSyncedTime}
-          currentUser={currentUser}
-          onManualSync={syncAuctionDataOnly}
         />
       )}
 

@@ -2,22 +2,20 @@ import React from 'react';
 import { Wallet } from 'lucide-react';
 
 /**
- * Botão flutuante da carteira — canto lateral esquerdo, liquid glass na paleta
- * da logo (verde NoZap) com pulso verde constante. Abre o WalletDrawer.
+ * Botão flutuante da carteira — lateral esquerda, liquid glass em paleta
+ * esmeralda uniforme (verde da logo NoZap) com halo pulsante suave.
  */
 export default function FloatingWalletButton({ balance, onClick }) {
   const hasBalance = typeof balance === 'number' && balance < 999999;
   return (
     <button onClick={onClick} className="fwb" title="Minha Carteira">
-      <span className="fwb-pulse" aria-hidden="true" />
       <span className="fwb-icon">
-        <Wallet size={15} strokeWidth={2.4} />
+        <Wallet size={16} strokeWidth={2.3} />
       </span>
       <span className="fwb-text">
         <span className="fwb-label">Carteira</span>
         <span className="fwb-value">{hasBalance ? `R$ ${balance.toFixed(2).replace('.', ',')}` : '· · ·'}</span>
       </span>
-      <span className="fwb-dot" aria-hidden="true" />
       <style>{`
         .fwb {
           position: fixed;
@@ -25,57 +23,60 @@ export default function FloatingWalletButton({ balance, onClick }) {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 8px 16px 8px 9px;
+          padding: 8px 18px 8px 8px;
           border-radius: 9999px;
-          background: linear-gradient(112deg, rgba(34, 197, 94, 0.16), rgba(10, 46, 30, 0.62) 55%, rgba(5, 26, 17, 0.72));
-          border: 1px solid rgba(74, 222, 128, 0.38);
-          backdrop-filter: blur(16px) saturate(1.3);
-          -webkit-backdrop-filter: blur(16px) saturate(1.3);
-          box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+          background: linear-gradient(112deg, rgba(16, 185, 129, 0.14), rgba(6, 40, 27, 0.82) 50%, rgba(4, 28, 19, 0.88));
+          border: 1px solid rgba(52, 211, 153, 0.4);
+          backdrop-filter: blur(18px) saturate(1.35);
+          -webkit-backdrop-filter: blur(18px) saturate(1.35);
+          box-shadow:
+            0 6px 24px rgba(0, 0, 0, 0.45),
+            inset 0 1px 0 rgba(255, 255, 255, 0.14);
           cursor: pointer;
-          transition: border-color 0.18s ease, transform 0.18s ease;
+          animation: fwb-halo 3s ease-in-out infinite;
+          transition: border-color 0.2s ease, transform 0.2s ease;
         }
-        .fwb:hover { border-color: rgba(74, 222, 128, 0.75); transform: translateY(-1px); }
+        .fwb:hover {
+          border-color: rgba(110, 231, 183, 0.8);
+          transform: translateY(-1px) scale(1.02);
+        }
         @media (max-width: 1023px) { .fwb { top: 80px; right: 12px; } }
         @media (min-width: 1024px) { .fwb { top: 96px; left: 16px; } }
 
-        /* Pulso verde — anel que respira atrás do botão */
-        .fwb-pulse {
-          position: absolute; inset: -1px;
-          border-radius: 9999px;
-          pointer-events: none;
-          animation: fwb-breathe 2.6s ease-in-out infinite;
-        }
-        @keyframes fwb-breathe {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45), 0 0 12px rgba(74, 222, 128, 0.15); }
-          50%      { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0.0), 0 0 26px rgba(74, 222, 128, 0.35); }
+        /* Halo esmeralda uniforme, respirando devagar */
+        @keyframes fwb-halo {
+          0%, 100% {
+            box-shadow:
+              0 6px 24px rgba(0, 0, 0, 0.45),
+              0 0 0 0 rgba(52, 211, 153, 0.32),
+              inset 0 1px 0 rgba(255, 255, 255, 0.14);
+          }
+          50% {
+            box-shadow:
+              0 6px 24px rgba(0, 0, 0, 0.45),
+              0 0 0 8px rgba(52, 211, 153, 0),
+              0 0 30px rgba(52, 211, 153, 0.30),
+              inset 0 1px 0 rgba(255, 255, 255, 0.14);
+          }
         }
 
         .fwb-icon {
           display: flex; align-items: center; justify-content: center;
-          width: 30px; height: 30px; border-radius: 9999px;
-          background: linear-gradient(135deg, #22c55e, #059669);
-          color: #eafff3;
-          box-shadow: 0 2px 10px rgba(16, 185, 129, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          width: 34px; height: 34px; border-radius: 9999px;
+          background: linear-gradient(140deg, #34d399, #10b981 55%, #059669);
+          color: #04281a;
+          box-shadow:
+            0 3px 12px rgba(16, 185, 129, 0.5),
+            inset 0 1px 1px rgba(255, 255, 255, 0.5);
         }
-        .fwb-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.12; }
+        .fwb-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
         .fwb-label {
-          font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em;
-          text-transform: uppercase; color: rgba(167, 243, 208, 0.75);
+          font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em;
+          text-transform: uppercase; color: rgba(110, 231, 183, 0.85);
         }
         .fwb-value {
-          font-size: 14px; font-weight: 800; color: #f6fef9;
+          font-size: 14.5px; font-weight: 800; color: #f2fdf8;
           font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
-        }
-        .fwb-dot {
-          width: 7px; height: 7px; border-radius: 9999px;
-          background: #4ade80;
-          box-shadow: 0 0 8px rgba(74, 222, 128, 0.9);
-          animation: fwb-dot-blink 2.6s ease-in-out infinite;
-        }
-        @keyframes fwb-dot-blink {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.55; transform: scale(0.8); }
         }
       `}</style>
     </button>
