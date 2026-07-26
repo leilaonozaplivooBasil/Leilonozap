@@ -576,18 +576,18 @@ export default function TreeHierarchy({
 
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={() => zoomBy(1 / 1.2)}
-            className="h-7 w-7 p-0 border-gray-700 text-gray-300 hover:bg-gray-800" title="Diminuir zoom">
+            className="h-7 w-7 p-0 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black" title="Diminuir zoom">
             <ZoomOut className="w-3.5 h-3.5" />
           </Button>
           <span className="text-[11px] text-gray-500 w-10 text-center tabular-nums">
             {Math.round(zoom * 100)}%
           </span>
           <Button size="sm" variant="outline" onClick={() => zoomBy(1.2)}
-            className="h-7 w-7 p-0 border-gray-700 text-gray-300 hover:bg-gray-800" title="Aumentar zoom">
+            className="h-7 w-7 p-0 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black" title="Aumentar zoom">
             <ZoomIn className="w-3.5 h-3.5" />
           </Button>
           <Button size="sm" variant="outline" onClick={() => fitToView({ allowTiny: true })}
-            className="h-7 px-2 border-gray-700 text-gray-300 hover:bg-gray-800 text-[11px]" title="Ver a rede inteira">
+            className="h-7 px-2 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black text-[11px]" title="Ver a rede inteira">
             <Maximize className="w-3.5 h-3.5 mr-1" />
             Ver tudo
           </Button>
@@ -595,11 +595,11 @@ export default function TreeHierarchy({
 
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={expandAll}
-            className="h-7 px-2 text-[11px] border-emerald-700 text-emerald-400 hover:bg-emerald-600/15">
+            className="h-7 px-2 text-[11px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 hover:text-emerald-950 font-semibold">
             Expandir todos
           </Button>
           <Button size="sm" variant="outline" onClick={collapseAll}
-            className="h-7 px-2 text-[11px] border-gray-700 text-gray-400 hover:bg-gray-800">
+            className="h-7 px-2 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black">
             Recolher
           </Button>
         </div>
@@ -1116,7 +1116,7 @@ export default function TreeHierarchy({
             <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
               <Button size="sm" variant="outline" disabled={isMoving}
                 onClick={() => setPendingMove(null)}
-                className="h-8 text-[12px] border-gray-700 text-gray-300 hover:bg-gray-800">
+                className="h-8 text-[12px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black">
                 Cancelar
               </Button>
               <Button size="sm" disabled={isMoving} onClick={confirmMove}

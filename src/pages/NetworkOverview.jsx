@@ -664,6 +664,9 @@ export default function NetworkOverview() {
   const saveUserFields = useCallback(async (userId, updates) => {
     let actor = null;
     try { actor = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { actor = null; }
+    if (!actor) {
+      throw new Error('faça login como admin para alterar a rede');
+    }
     const result = await base44.functions.invoke('adminUpdateUser', {
       userId,
       updates,
@@ -672,7 +675,20 @@ export default function NetworkOverview() {
     if (!result || result.success !== true) {
       throw new Error(result?.error || 'o servidor não confirmou a gravação');
     }
-    return result.user;
+    // Confere campo a campo se o banco gravou mesmo o que foi pedido — sem isso,
+    // um update ignorado silenciosamente voltaria como "sucesso".
+    const saved = result.user || {};
+    const divergente = Object.keys(updates).find((k) => {
+      const pedido = updates[k];
+      const gravado = saved[k];
+      if (pedido === null || pedido === undefined) return !(gravado === null || gravado === undefined);
+      if (Array.isArray(pedido)) return JSON.stringify(pedido) !== JSON.stringify(gravado);
+      return String(pedido) !== String(gravado);
+    });
+    if (divergente) {
+      throw new Error(`o servidor não gravou o campo "${divergente}" (permissão ou regra do banco)`);
+    }
+    return saved;
   }, []);
 
   const handlePromote = (user) => {
@@ -1425,7 +1441,7 @@ export default function NetworkOverview() {
                       size="sm"
                       variant="outline"
                       onClick={() => setTreeFullscreen((v) => !v)}
-                      className="h-7 text-[11px] border-gray-600 text-gray-300 hover:bg-gray-700"
+                      className="h-7 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black"
                       title={treeFullscreen ? "Sair da tela cheia" : "Abrir em tela cheia"}
                     >
                       {treeFullscreen ? (
@@ -1633,7 +1649,7 @@ export default function NetworkOverview() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleRestoreUser(u)}
-                              className="h-8 text-[12px] border-emerald-700 text-emerald-400 hover:bg-emerald-600/15"
+                              className="h-8 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 font-semibold"
                             >
                               <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                               Restaurar
@@ -1821,7 +1837,7 @@ export default function NetworkOverview() {
                   variant="outline"
                   disabled={isDeleting}
                   onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}
-                  className="h-8 text-[12px] border-gray-700 text-gray-300 hover:bg-gray-800"
+                  className="h-8 text-[12px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black"
                 >
                   Cancelar
                 </Button>
