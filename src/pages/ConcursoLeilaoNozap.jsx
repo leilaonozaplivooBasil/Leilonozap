@@ -8,6 +8,7 @@ import AdminInsights from '@/components/concurso/AdminInsights';
 import ChancesCalculator from '@/components/concurso/ChancesCalculator';
 import DailyMission from '@/components/concurso/DailyMission';
 import WinnersFeed from '@/components/concurso/WinnersFeed';
+import InstallPwaPrompt from '@/components/common/InstallPwaPrompt';
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -89,17 +90,40 @@ export default function ConcursoLeilaoNozap() {
     return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
   }, [adminExpanded]);
 
-  // Convidado (?ref): manda DIRETO pro grupo (registra o clique, sem página/cadastro)
-  useEffect(() => {
-    if (!ref) return;
+  // Convidado (?ref) — Etapa 9: com o rastreamento ativo (tabela concurso_indicados),
+  // pede o WhatsApp antes do grupo (é o que liga clique → pessoa → entrada → conversão).
+  // Sem rastreamento (ou API fora), cai no fluxo antigo: registra o clique e redireciona.
+  const [refMode, setRefMode] = useState('checking'); // checking | form | redirect
+  const [refZap, setRefZap] = useState('');
+  const [refErr, setRefErr] = useState('');
+
+  const joinAndGo = useCallback((phone) => {
+    setRefMode('redirect');
     let done = false;
     const go = (link) => { if (done) return; done = true; window.location.replace(link || GROUP_LINK); };
-    fetch(`${API}?action=join`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, visitor_id: getVisitorId() }) })
+    fetch(`${API}?action=join`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, visitor_id: getVisitorId(), phone: phone || undefined }) })
       .then((r) => r.json()).then((j) => go(j.group_link)).catch(() => go(GROUP_LINK));
-    const t = setTimeout(() => go(GROUP_LINK), 2500);
-    return () => clearTimeout(t);
+    setTimeout(() => go(GROUP_LINK), 3000);
+  }, [ref]);
+
+  useEffect(() => {
+    if (!ref) return;
+    let alive = true;
+    const legacy = () => { if (alive) joinAndGo(null); };
+    const t = setTimeout(legacy, 2500); // API demorou → não perde o convidado
+    fetch(`${API}?action=track_status`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => { if (!alive) return; clearTimeout(t); if (j?.enabled) setRefMode('form'); else legacy(); })
+      .catch(() => { clearTimeout(t); legacy(); });
+    return () => { alive = false; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const submitRefZap = () => {
+    const d = refZap.replace(/\D/g, '');
+    if (d.length < 10 || d.length > 11) { setRefErr('Coloque seu WhatsApp com DDD, ex: (21) 99999-9999.'); return; }
+    setRefErr(''); joinAndGo(d);
+  };
 
   const load = useCallback(async (per) => {
     try {
@@ -150,14 +174,37 @@ export default function ConcursoLeilaoNozap() {
 
   const premioPeriodo = periodo === 'dia' ? config.premio_dia : periodo === 'semana' ? config.premio_semana : periodo === 'mes' ? config.premio_mes : null;
 
-  // Tela mínima do convidado enquanto redireciona
+  // Tela do convidado: form do WhatsApp (rastreamento ativo) ou redirect direto
   if (ref) {
     return (
       <div style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #0f3d2e 0%, #071b14 45%, #05100c 100%)' }} className="text-white flex items-center justify-center p-6 text-center">
-        <div>
+        <div className="w-full max-w-sm">
           <img src={logoNozap} alt="Leilão NoZap" className="w-28 h-28 mx-auto object-contain drop-shadow-xl" />
-          <p className="mt-4 text-xl font-black">Entrando no grupo do WhatsApp...</p>
-          <p className="text-green-300/70 text-sm mt-2">Se não abrir sozinho, <a href={GROUP_LINK} className="underline text-green-300 font-semibold">toque aqui</a>.</p>
+          {refMode === 'form' ? (
+            <>
+              <p className="mt-4 text-xl font-black">Você foi convidado(a) pro <span style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rank Premiado</span>!</p>
+              <p className="text-green-300/80 text-sm mt-2">Sorteio de prêmio todo dia no grupo. Confirme seu WhatsApp pra entrar:</p>
+              <input
+                value={refZap}
+                onChange={(e) => setRefZap(maskZap(e.target.value))}
+                inputMode="numeric"
+                autoFocus
+                placeholder="(21) 99999-9999"
+                className="mt-4 w-full bg-black/30 border border-white/20 rounded-xl px-4 py-3.5 text-center text-lg font-bold outline-none focus:border-yellow-400"
+                onKeyDown={(e) => { if (e.key === 'Enter') submitRefZap(); }}
+              />
+              {refErr && <p className="text-red-300 text-xs mt-2">{refErr}</p>}
+              <button onClick={submitRefZap} className="mt-3 w-full py-4 rounded-xl font-black text-lg text-[#052e16]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>
+                ENTRAR NO GRUPO →
+              </button>
+              <p className="text-[11px] text-green-300/50 mt-3">Seu número serve só pra validar sua entrada no grupo — sem spam.</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 text-xl font-black">{refMode === 'checking' ? 'Preparando seu convite...' : 'Entrando no grupo do WhatsApp...'}</p>
+              <p className="text-green-300/70 text-sm mt-2">Se não abrir sozinho, <a href={GROUP_LINK} className="underline text-green-300 font-semibold">toque aqui</a>.</p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -540,6 +587,9 @@ export default function ConcursoLeilaoNozap() {
 
         <p className="text-center text-[11px] text-green-300/40 mt-10 flex items-center justify-center gap-1.5"><Users className="w-3 h-3" /> A contagem é por pessoas que entram no grupo pelo seu link.</p>
       </div>
+
+      {/* FEATURE 6 — convite de instalação do PWA (Android nativo / dica iOS) */}
+      <InstallPwaPrompt />
     </div>
   );
 }

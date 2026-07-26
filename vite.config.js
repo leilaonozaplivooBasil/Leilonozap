@@ -39,6 +39,16 @@ export default defineConfig(({ command }) => ({
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // atalho de app instalado (pressionar o ícone) direto pro Rank Premiado
+        shortcuts: [
+          {
+            name: 'Rank Premiado',
+            short_name: 'Rank',
+            description: 'Indique amigos e ganhe prêmios todo dia',
+            url: '/rankpremiado',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],

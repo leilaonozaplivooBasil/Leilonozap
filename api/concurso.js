@@ -115,6 +115,13 @@ export default async function handler(req, res) {
       return jset(res, 200, { ranking, premios, config, group_link: GROUP_LINK, total: ranking.length, periodo });
     }
 
+    // ---------- RASTREAMENTO: status (a migração db/rank-premiado-tracking.sql já rodou?) ----------
+    // O fluxo do convidado só pede o WhatsApp quando a tabela concurso_indicados existe.
+    if (action === 'track_status') {
+      const r = await sb('concurso_indicados?select=id&limit=1');
+      return jset(res, 200, { enabled: r.ok });
+    }
+
     // ---------- PAINEL PESSOAL (posições nos 3 períodos) ----------
     if (action === 'me') {
       const code = (req.query?.code || body.code || '').toString();
@@ -171,6 +178,18 @@ export default async function handler(req, res) {
       if (!ref || !visitor) return jset(res, 400, { error: 'dados' });
       const pr = await (await sb(`concurso_participantes?select=code,nome&code=eq.${encodeURIComponent(ref)}&limit=1`)).json();
       if (!Array.isArray(pr) || !pr[0]) return jset(res, 200, { ok: false, group_link: GROUP_LINK });
+      // Rastreamento por telefone (Etapa 9): grava o indicado como "clicou" — vira "entrou"
+      // quando o webhook da Evolution confirmar a entrada no grupo. Primeiro indicador a
+      // trazer o número fica com ele (unique em phone). Silencioso se a migração não rodou.
+      let phone = digits(body.phone);
+      if ((phone.length === 12 || phone.length === 13) && phone.startsWith('55')) phone = phone.slice(2);
+      if (phone.length >= 10 && phone.length <= 11) {
+        await sb('concurso_indicados', {
+          method: 'POST',
+          headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+          body: JSON.stringify({ referrer_code: ref, phone, visitor_id: visitor, status: 'clicou' }),
+        });
+      }
       await sb('concurso_referrals', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify({ referrer_code: ref, visitor_id: visitor }) });
       const cnt = await sb(`concurso_referrals?select=id&referrer_code=eq.${encodeURIComponent(ref)}`, { headers: { Prefer: 'count=exact' } });
       const range = cnt.headers.get('content-range') || '*/0';

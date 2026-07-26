@@ -47,6 +47,36 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // RANK PREMIADO — entrada/saída de membros do grupo (GROUP_PARTICIPANTS_UPDATE).
+    // Ponto do indicador nasce quando o indicado ENTRA e morre quando SAI (Etapa 9).
+    // Silencioso enquanto a migração concurso_indicados não rodar.
+    if (event.includes('group') && event.includes('participant')) {
+      try {
+        const gid = data?.id || data?.groupJid || data?.remoteJid || '';
+        const wanted = process.env.CONCURSO_GROUP_JID || ''; // opcional: restringe ao grupo do concurso
+        if (wanted && gid && gid !== wanted) return res.status(200).json({ ok: true });
+        const act = String(data?.action || '').toLowerCase();
+        const participants = Array.isArray(data?.participants) ? data.participants : [];
+        if (participants.length && ['add', 'remove', 'leave'].includes(act)) {
+          const now = new Date().toISOString();
+          const patch = act === 'add' ? { status: 'entrou', joined_at: now } : { status: 'saiu', left_at: now };
+          for (const pj of participants) {
+            let d = String(pj || '').split('@')[0].replace(/\D/g, '');
+            if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
+            if (d.length < 10) continue;
+            // WhatsApp ora traz ora omite o 9 dos celulares BR — casa as duas formas
+            const cands = new Set([d]);
+            if (d.length === 11) cands.add(d.slice(0, 2) + d.slice(3));
+            if (d.length === 10) cands.add(d.slice(0, 2) + '9' + d.slice(2));
+            await sb(`concurso_indicados?phone=in.(${[...cands].map((x) => `"${x}"`).join(',')})`, {
+              method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch),
+            });
+          }
+        }
+      } catch { /* rastreamento ainda não ativado */ }
+      return res.status(200).json({ ok: true });
+    }
+
     if (event.includes('messages.upsert') || event.includes('messages_upsert')) {
       const m = Array.isArray(data) ? data[0] : data;
       const key = m?.key || {};
