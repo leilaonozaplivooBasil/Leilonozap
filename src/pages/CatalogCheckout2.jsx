@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ShoppingCart, Copy, CheckCircle } from 'lucide-react';
+import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 
@@ -125,6 +125,49 @@ export default function CatalogCheckout2() {
         setIsProcessing(true);
         toast.loading('Processando compra...', { id: 'checkout-loading' });
 
+        // 🚀 FLUXO MODERNO (igual ao Cart): createMPPix cria a venda + PIX no servidor
+        // (valor validado no banco, anti-fraude; webhook confirma, credita comissão e baixa estoque)
+        try {
+            const savedUserJSON = localStorage.getItem('currentUser');
+            const savedUser = JSON.parse(savedUserJSON);
+            const referralCode = sessionStorage.getItem('referralCode');
+
+            const mp = await base44.functions.invoke('createMPPix', {
+                items: [{ product_id: product.id, quantity: 1 }],
+                buyer: { id: savedUser.id, name: firstName.trim(), email: email.trim(), cpf: cpf.replace(/\D/g, '') },
+                delivery_type: deliveryType,
+                address: { street: addressStreet, number: addressNumber, complement: addressComplement, neighborhood: addressNeighborhood, city: addressCity, state: addressState, zip: addressZip },
+                ref_code: referralCode || '',
+            });
+            const mpData = mp?.data || mp;
+            setIsProcessing(false);
+            toast.dismiss('checkout-loading');
+
+            if (!mpData?.success) {
+                toast.error('Erro ao gerar PIX: ' + (mpData?.error || 'tente novamente'));
+                return;
+            }
+
+            setCurrentSaleId(mpData.sale_id);
+            setPixData({
+                billing_type: 'PIX',
+                payment_id: mpData.payment_id,
+                pix_qr_code: mpData.qr_code_base64 ? `data:image/png;base64,${mpData.qr_code_base64}` : null,
+                pix_payload: mpData.pix_code,
+                sale_id: mpData.sale_id,
+                ticket_url: mpData.ticket_url,
+            });
+            toast.success('✅ PIX gerado!');
+            return;
+        } catch (error) {
+            console.error('❌ Erro ao gerar PIX (createMPPix):', error);
+            setIsProcessing(false);
+            toast.dismiss('checkout-loading');
+            toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
+            return;
+        }
+
+        // eslint-disable-next-line no-unreachable
         let sale = null;
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
@@ -538,7 +581,7 @@ export default function CatalogCheckout2() {
                                         onChange={(e) => setDeliveryType(e.target.value)}
                                         className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
                                     >
-                                        <option value="delivery">🏠 Entrega em domicílio</option>
+                                        <option value="delivery">Entrega em domicílio</option>
                                         <option value="pickup">🏪 Retirada na Loja</option>
                                     </select>
                                 </div>
@@ -763,7 +806,7 @@ export default function CatalogCheckout2() {
                                     
                                     {/* PIX selecionado */}
                                     <div className="p-3 rounded-lg border-2 border-green-500 bg-green-500/10 mb-4">
-                                        <p className="text-white font-semibold">💚 PIX</p>
+                                        <p className="text-white font-semibold flex items-center gap-2"><QrCode className="w-4 h-4 text-green-400" /> PIX</p>
                                         <p className="text-gray-400 text-xs">Aprovação imediata</p>
                                     </div>
 
@@ -798,7 +841,7 @@ export default function CatalogCheckout2() {
                                     {/* Mensagem cartão de crédito → WhatsApp */}
                                     <div className="mt-4 bg-gray-700/40 border border-gray-600 rounded-lg p-4 text-center">
                                         <p className="text-gray-300 text-sm mb-3">
-                                            💳 Quer pagar no <strong className="text-white">cartão de crédito</strong>?
+                                            Quer pagar no <strong className="text-white">cartão de crédito</strong>?
                                         </p>
                                         <a
                                             href="https://wa.me/5521984072064?text=Ol%C3%A1!%20Quero%20pagar%20com%20cart%C3%A3o%20de%20cr%C3%A9dito.%20Pode%20me%20ajudar%3F"
@@ -840,7 +883,7 @@ export default function CatalogCheckout2() {
                                     ) : (
                                         // QR CODE PIX (aguardando pagamento)
                                         <>
-                                            <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                            <h3 className="text-lg font-bold text-green-400 text-center flex items-center justify-center gap-2"><QrCode className="w-5 h-5" /> Pague com PIX</h3>
                                             <div className="bg-white rounded-lg p-4">
                                                 <img
                                                     src={pixData.pix_qr_code}

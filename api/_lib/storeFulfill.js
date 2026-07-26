@@ -77,17 +77,30 @@ export async function fulfillStoreOrder(sale) {
   let items = sale.items_json;
   if (typeof items === 'string') { try { items = JSON.parse(items); } catch { items = []; } }
   items = Array.isArray(items) ? items : [];
+  // venda de item único (checkout direto / arremate) não tem items_json — usa o product_id da venda
+  if (!items.length && sale.product_id) items = [{ product_id: sale.product_id, qty: Number(sale.quantity) || 1 }];
   let baixados = 0;
   for (const it of items) {
     const pid = String(it.product_id || '');
-    const qty = Math.max(1, Number(it.qty) || 1);
+    const qty = Math.max(1, Number(it.qty) || Number(it.quantity) || 1);
     if (!pid) continue;
+    // estoque da loja do vendedor (se ele tiver inventário próprio)
     const siArr = await (await sb(`store_inventory?select=id,quantity&owner_id=eq.${encodeURIComponent(sale.seller_id)}&product_id=eq.${encodeURIComponent(pid)}&limit=1`)).json();
     const si = Array.isArray(siArr) ? siArr[0] : null;
-    if (!si) continue;
-    const newQty = Math.max(0, (Number(si.quantity) || 0) - qty);
-    await sb(`store_inventory?id=eq.${encodeURIComponent(si.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, active: newQty > 0, updated_at: now }) });
-    baixados++;
+    if (si) {
+      const newQty = Math.max(0, (Number(si.quantity) || 0) - qty);
+      await sb(`store_inventory?id=eq.${encodeURIComponent(si.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, active: newQty > 0, updated_at: now }) });
+      baixados++;
+    }
+    // estoque GERAL do catálogo (admin/dono da plataforma) — baixa junto quando o pagamento confirma
+    try {
+      const pArr = await (await sb(`products?select=id,quantity&id=eq.${encodeURIComponent(pid)}&limit=1`)).json();
+      const p = Array.isArray(pArr) ? pArr[0] : null;
+      if (p && p.quantity !== null && p.quantity !== undefined) {
+        const newPQty = Math.max(0, (Number(p.quantity) || 0) - qty);
+        await sb(`products?id=eq.${encodeURIComponent(pid)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newPQty }) });
+      }
+    } catch (_) { /* estoque geral indisponível — não bloqueia a venda */ }
   }
   const commission = await payStoreCommissions(sale);
   await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission, fulfillment_status: 'a_enviar' }) });

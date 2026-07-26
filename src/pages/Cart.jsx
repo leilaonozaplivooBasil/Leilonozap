@@ -223,6 +223,9 @@ export default function Cart() {
       const timer = setTimeout(() => {
         setCountdown(0);
         setPixConfirmed(true);
+        // pagamento realizado → zera o carrinho de vez
+        localStorage.setItem('catalogCart', '[]');
+        setCartItems([]);
         toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
       }, 1000);
       return () => clearTimeout(timer);
@@ -598,6 +601,7 @@ export default function Cart() {
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
+        setCheckoutItems([...cartItems]); // snapshot para o resumo enquanto o PIX está pendente
         setCreatedSales([{ id: mp.sale_id }]);
         setPixData({
           billing_type: 'PIX',
@@ -810,9 +814,9 @@ export default function Cart() {
             </Button>
           </div>
         ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Coluna Esquerda - Formulários */}
-          <div className="space-y-4">
+        <div className={`grid grid-cols-1 gap-6 ${(pixData || saldoOk) ? 'max-w-xl mx-auto' : 'lg:grid-cols-2'}`}>
+          {/* Coluna Esquerda - Formulários (some após gerar o pagamento) */}
+          <div className={`space-y-4 ${(pixData || saldoOk) ? 'hidden' : ''}`}>
 
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-5">
@@ -1375,17 +1379,18 @@ export default function Cart() {
 
             {/* Sucesso PIX (igual ao cartão) */}
             {pixData && pixData.billing_type === 'PIX' && pixConfirmed && (
-              <Card className="bg-gray-800 border-gray-700 p-5">
-                <h3 className="text-lg font-bold text-green-400 text-center mb-4">✅ Pagamento Confirmado</h3>
-                <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 mb-4">
-                  <p className="text-green-400 text-center">Pagamento PIX confirmado com sucesso!</p>
-                  <p className="text-gray-400 text-sm text-center mt-2">Seu pedido está sendo processado.</p>
+              <Card className="bg-gray-800 border-gray-700 p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/15 border-2 border-green-500/50 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-400" />
                 </div>
+                <h3 className="text-xl font-bold text-white mb-1">Pagamento Confirmado</h3>
+                <p className="text-gray-400 text-sm mb-6">Seu pedido foi registrado e já está sendo preparado.</p>
                 <Button
                   onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
-                  className="w-full bg-gray-700 hover:bg-gray-600 text-white"
+                  className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
                 >
-                  Ver Meus Pedidos
+                  <Truck className="w-4 h-4 mr-2" />
+                  Acompanhar meu pedido
                 </Button>
               </Card>
             )}
