@@ -2,6 +2,7 @@ import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import leilaSuporte from '@/assets/leila-suporte.webp';
+import useScrollDrift from '@/hooks/useScrollDrift';
 
 const SUPORTE_PHONE = '5521984072064';
 // 🔗 Por ora o botão "Ao vivo" leva direto ao feed da Livoo Live.
@@ -17,37 +18,16 @@ export default function LojaFloatActions() {
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
   const Label = ({ children }) => <span className="text-[9px] sm:text-[10px] text-gray-200 font-semibold mt-0.5 drop-shadow text-center leading-none">{children}</span>;
 
-  // 🌊 Flutuação com a rolagem (pedido do Gabriel 25/07, SÓ mobile): página descendo →
-  // os botões SOBEM suavemente de onde estão; página subindo → eles DESCEM; parou de
-  // rolar → assentam de volta na posição base. Transição longa em cubic-bezier dá o
-  // efeito "boiando" sem atrapalhar o toque.
-  const [drift, setDrift] = React.useState('rest'); // 'up' | 'down' | 'rest'
-  React.useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)');
-    let lastY = window.scrollY;
-    let settle = null;
-    const onScroll = () => {
-      if (!mq.matches) return; // desktop permanece 100% intocado
-      const y = window.scrollY;
-      const dy = y - lastY;
-      lastY = y;
-      if (Math.abs(dy) > 2) setDrift(dy > 0 ? 'up' : 'down');
-      clearTimeout(settle);
-      settle = setTimeout(() => setDrift('rest'), 260);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(settle); };
-  }, []);
-  const driftCls = drift === 'up' ? 'loja-float-up' : drift === 'down' ? 'loja-float-down' : '';
+  // 🌊 Flutuação magnética com a rolagem (pedido do Gabriel 26/07, TODAS as telas):
+  // página descendo → os botões SOBEM; página subindo → eles DESCEM; parou de rolar
+  // → assentam de volta. Lógica compartilhada em useScrollDrift.
+  const driftCls = useScrollDrift();
 
   return (
     <>
       <style>{`
-        .loja-float { transform: translateZ(0); will-change: transform; transition: transform .5s cubic-bezier(.22,.61,.36,1); }
         @media (max-width: 639px) {
           .loja-float { bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px)); }
-          .loja-float-up { transform: translateY(-14px) translateZ(0); }
-          .loja-float-down { transform: translateY(10px) translateZ(0); }
         }
       `}</style>
       {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07) */}

@@ -23,6 +23,7 @@ import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { fastTap } from "@/lib/fastTap";
 import RoleSidebar from "@/components/layout/RoleSidebar";
 import useSiteMedia from "@/hooks/useSiteMedia";
+import useScrollDrift from "@/hooks/useScrollDrift";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -40,6 +41,8 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   // Logo/favicon gerenciados pelo Painel de Mídia (fallback: assets estáticos)
   const { logoUrl } = useSiteMedia();
+  // 🌊 Drift magnético dos flutuantes: contra-movimento suave conforme o scroll
+  const driftCls = useScrollDrift();
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('currentUser');
@@ -1067,7 +1070,7 @@ export default function Layout({ children, currentPageName }) {
             href="https://livoolive.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className="livoo-live-float fixed right-3 bottom-[108px] sm:right-4 sm:bottom-[128px] z-50 group"
+            className={`livoo-live-float ${driftCls} fixed right-3 bottom-[108px] sm:right-4 sm:bottom-[128px] z-50 group`}
             title="Livoo Live — Compre ao Vivo"
             aria-label="Livoo Live — Compre ao Vivo"
           >

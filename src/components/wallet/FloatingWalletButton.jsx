@@ -1,5 +1,6 @@
 import React from 'react';
 import { Wallet } from 'lucide-react';
+import useScrollDrift from '@/hooks/useScrollDrift';
 
 /**
  * Botão flutuante da carteira — lateral esquerda, liquid glass em paleta
@@ -7,8 +8,10 @@ import { Wallet } from 'lucide-react';
  */
 export default function FloatingWalletButton({ balance, onClick }) {
   const hasBalance = typeof balance === 'number' && balance < 999999;
+  // 🌊 Drift magnético: contra-movimento suave conforme a página rola
+  const driftCls = useScrollDrift();
   return (
-    <button onClick={onClick} className="fwb" title="Minha Carteira">
+    <button onClick={onClick} className={`fwb ${driftCls}`} title="Minha Carteira">
       <span className="fwb-icon">
         <Wallet size={16} strokeWidth={2.3} />
       </span>
@@ -34,11 +37,11 @@ export default function FloatingWalletButton({ balance, onClick }) {
             inset 0 1px 0 rgba(255, 255, 255, 0.14);
           cursor: pointer;
           animation: fwb-halo 3s ease-in-out infinite;
-          transition: border-color 0.2s ease, transform 0.2s ease;
+          /* transform fica por conta do drift magnético (useScrollDrift) */
+          transition: border-color 0.2s ease, transform .5s cubic-bezier(.22,.61,.36,1);
         }
         .fwb:hover {
           border-color: rgba(110, 231, 183, 0.8);
-          transform: translateY(-1px) scale(1.02);
         }
         @media (max-width: 1023px) { .fwb { top: 80px; right: 12px; } }
         @media (min-width: 1024px) { .fwb { top: 96px; left: 16px; } }
