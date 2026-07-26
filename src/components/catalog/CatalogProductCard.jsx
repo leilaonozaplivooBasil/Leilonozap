@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2 } from "lucide-react";
+import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2, Plus } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
@@ -46,22 +47,35 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
       return () => window.removeEventListener('cartUpdated', checkCart);
     }, [product.id]);
 
-  const addToCart = (e) => {
+  // Limite real de unidades: o estoque do produto (quantity). Sem estoque definido → sem limite prático.
+  const maxStock = Number(product.quantity) > 0 ? Number(product.quantity) : 999;
+
+  // Soma unidades no carrinho SEM sair da página, respeitando o estoque.
+  // openPopup: o ADICIONAR principal abre o popup do carrinho; o botão "+" só soma
+  // (permite cliques rápidos em sequência pra levar várias unidades).
+  const addUnit = (e, { openPopup = false } = {}) => {
     e.stopPropagation();
-    
-    // Pegar carrinho atual
+
     const savedCart = localStorage.getItem('catalogCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
-    
-    // Verificar se já existe no carrinho
+
     const existingIndex = cart.findIndex(item => item.id === product.id);
-    
+    const currentQty = existingIndex >= 0 ? (Number(cart[existingIndex].quantity) || 0) : 0;
+
+    if (currentQty >= maxStock) {
+      toast({
+        title: '🚫 Limite do estoque',
+        description: `Este produto tem apenas ${maxStock} unidade${maxStock > 1 ? 's' : ''} disponíve${maxStock > 1 ? 'is' : 'l'} — todas já estão no seu carrinho.`,
+        duration: 2500,
+      });
+      return;
+    }
+
     if (existingIndex >= 0) {
-      // Incrementar quantidade
-      cart[existingIndex].quantity += 1;
-      setCartQuantity(cart[existingIndex].quantity);
+      cart[existingIndex].quantity = currentQty + 1;
+      cart[existingIndex].availableStock = maxStock;
+      setCartQuantity(currentQty + 1);
     } else {
-      // Adicionar novo item
       cart.push({
         id: product.id,
         description: product.description,
@@ -69,22 +83,20 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
         selling_price_wholesale: product.selling_price_wholesale,
         image_urls: product.image_urls,
         quantity: 1,
-        availableStock: product.quantity || 999
+        availableStock: maxStock
       });
       setCartQuantity(1);
     }
-    
-    // Salvar no localStorage
+
     localStorage.setItem('catalogCart', JSON.stringify(cart));
-    
-    // Atualiza estado local
     setIsInCart(true);
-    
-    // Dispara evento para atualizar contador no header
+
+    // Atualiza contador no header
     window.dispatchEvent(new Event('cartUpdated'));
-    
-    // Abre popup do carrinho
-    window.dispatchEvent(new Event('openCartPopup'));
+
+    if (openPopup) {
+      window.dispatchEvent(new Event('openCartPopup'));
+    }
   };
 
   const images = (product.image_urls && product.image_urls.length > 0)
@@ -388,26 +400,39 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
             </div>
           ) : (
             <>
-              <Button
-                onClick={addToCart}
-                className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
-                  isInCart 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                } text-white rounded-lg`}
-              >
-                {isInCart ? (
-                  <>
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    <span>NO CARRINHO</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    <span>ADICIONAR</span>
-                  </>
-                )}
-              </Button>
+              {/* ADICIONAR + botão "+" ao lado: soma unidades sem sair da página,
+                  respeitando o estoque (pedido Gabriel 25/07) */}
+              <div className="flex gap-1.5 sm:gap-2">
+                <Button
+                  onClick={(e) => addUnit(e, { openPopup: true })}
+                  className="flex-1 min-w-0 h-10 sm:h-11 text-sm sm:text-base font-bold transition-all bg-green-600 hover:bg-green-700 text-white rounded-lg px-2"
+                >
+                  {isInCart ? (
+                    <>
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">NO CARRINHO{cartQuantity > 1 ? ` · ${cartQuantity}` : ''}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">ADICIONAR</span>
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={(e) => addUnit(e)}
+                  disabled={cartQuantity >= maxStock}
+                  title={cartQuantity >= maxStock ? `Estoque máximo (${maxStock}) já no carrinho` : 'Adicionar mais uma unidade'}
+                  className="relative h-10 sm:h-11 w-10 sm:w-11 flex-shrink-0 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold border border-green-400/40 disabled:opacity-40 disabled:cursor-not-allowed p-0"
+                >
+                  <Plus className="w-5 h-5" />
+                  {cartQuantity > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-yellow-400 text-green-950 text-[10px] font-black grid place-items-center shadow">
+                      {cartQuantity}
+                    </span>
+                  )}
+                </Button>
+              </div>
 
               {/* COMPARAR PREÇOS */}
               <Button
