@@ -934,16 +934,16 @@ export default function Layout({ children, currentPageName }) {
                   );
                 })()}
                 <img
-                  src="/brand/logo-horizontal.webp"
+                  src="/brand/logo-horizontal-dark.webp"
                   alt="Leilão NoZap"
-                  className="h-10 sm:h-12 w-auto rounded-lg cursor-pointer hover:scale-105 transition-transform"
+                  className="h-11 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
                   fetchPriority="high"
                   decoding="async"
-                  width={800}
-                  height={374}
+                  width={440}
+                  height={160}
                 />
               </div>
 

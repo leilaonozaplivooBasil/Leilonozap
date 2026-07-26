@@ -197,9 +197,9 @@ export default function LiveShopNoZap() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img
-                src="/brand/logo-horizontal.webp"
+                src="/brand/logo-horizontal-dark.webp"
                 alt="Leilão NoZap"
-                className="h-10 w-auto rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => navigate(createPageUrl("Home"))}
               />
               <div>
