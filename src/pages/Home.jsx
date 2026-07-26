@@ -722,6 +722,13 @@ export default function Home() {
       }} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
+        {/* BANNER ROTATIVO — antes do card AO VIVO AGORA */}
+        {banners.length > 0 &&
+        <div className="mb-8 glass-card rounded-2xl p-1 overflow-hidden">
+            <RotatingBanner banners={banners} />
+          </div>
+        }
+
         {/* Hero Section - Glass */}
         <div className="mb-8">
           <div className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
@@ -770,14 +777,6 @@ export default function Home() {
 
         {/* Glow Separator */}
         <div className="glow-line mb-8 mx-8" />
-
-
-        {/* BANNER ROTATIVO */}
-        {banners.length > 0 &&
-        <div className="mb-8 glass-card rounded-2xl p-1 overflow-hidden">
-            <RotatingBanner banners={banners} />
-          </div>
-        }
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
