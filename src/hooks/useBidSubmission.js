@@ -259,7 +259,17 @@ export default function useBidSubmission({
         if (timeSinceLastAI > 20000 || bidAmount % 50 === 0) {
           lastAICommentTime.current = serverTimeStamp;
           const name = currentUser.nickname || currentUser.full_name;
-          const comments = [`🔥 UHULLLL! ${name} MANDOU R$ ${bidAmount.toFixed(2)}!`, `💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`, `⚡ ${name} ON FIRE!`, `🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`, `💥 POW! ${name} não brinca!`, `🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`, `⭐ SHOWWW! ${name}!`, `🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`];
+          const v = bidAmount.toFixed(2).replace('.', ',');
+          const comments = [
+            `${name} ASSUME A LIDERANÇA! R$ ${v} na mesa. Quem cobre?`,
+            `VIRADA! ${name} cobre o lance e crava R$ ${v}!`,
+            `${name} não deixa barato: R$ ${v}! A disputa está pegando fogo.`,
+            `R$ ${v}! ${name} atropela e toma a frente do lote!`,
+            `GOLPE DE MESTRE! ${name} sobe para R$ ${v} sem piscar.`,
+            `${name} ataca de novo — R$ ${v}! A liderança tem dono novo.`,
+            `NINGUÉM SEGURA ${name}! Já são R$ ${v} neste lote.`,
+            `PRESSÃO TOTAL! ${name} manda R$ ${v} e desafia a sala!`,
+          ];
           setTimeout(async () => {
             await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
           }, 1500);

@@ -14,6 +14,7 @@ import BidInput from "../components/auction/BidInput";
 import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
+import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
 import ComparaiButton from '../components/comparai/ComparaiButton';
@@ -971,6 +972,11 @@ export default function AuctionRoom() {
                 <span className="product-panel__timer">{displayTime}</span>
               </div>
               <p className="product-panel__desc">{auction.description}</p>
+              <AuctionDisputePanel
+                auction={auction}
+                messages={messages}
+                currentUser={currentUser}
+              />
             </div>
           </div>
         </aside>

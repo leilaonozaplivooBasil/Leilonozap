@@ -137,6 +137,17 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const hasCommission = (wallet?.commission_balance || 0) > 0;
   const hasAllocated = (wallet?.saldo_alocado || 0) > 0;
 
+  // Resumo financeiro calculado do extrato
+  const totals = React.useMemo(() => {
+    let deposited = 0, spent = 0, pendingCount = 0;
+    for (const t of transactions) {
+      if (t.status === 'pending') { pendingCount++; continue; }
+      if (t.type === 'deposit') deposited += t.amount;
+      else if (t.type === 'purchase') spent += Math.abs(t.amount);
+    }
+    return { deposited, spent, pendingCount };
+  }, [transactions]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -182,41 +193,79 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
             <div className="flex-1 overflow-y-auto">
               {view === 'wallet' && (
                 <div className="p-5 space-y-5">
-                  {/* Card de saldo — glass escuro com fio verde, no padrão do site */}
-                  <div className="relative overflow-hidden rounded-2xl border border-emerald-400/25 bg-gradient-to-b from-emerald-500/10 to-emerald-900/10 p-5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Saldo disponível</p>
-                      <button onClick={loadWallet} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-gray-200" title="Atualizar">
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                      </button>
-                    </div>
-                    <p className="text-[2.4rem] leading-tight font-extrabold text-white mt-1 tracking-tight tabular-nums">
-                      R$ {balance.toFixed(2).replace('.', ',')}
-                    </p>
-                    {(hasAllocated || hasCommission) && (
-                      <div className="flex gap-4 mt-3 flex-wrap border-t border-white/8 pt-3">
-                        {hasAllocated && (
-                          <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-gray-500">Alocado em lances</p>
-                            <p className="text-sm font-bold text-gray-200 tabular-nums">R$ {(wallet.saldo_alocado).toFixed(2).replace('.', ',')}</p>
-                          </div>
-                        )}
-                        {hasCommission && (
-                          <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-gray-500">Comissões</p>
-                            <p className="text-sm font-bold text-amber-300 tabular-nums">R$ {(wallet.commission_balance).toFixed(2).replace('.', ',')}</p>
-                          </div>
-                        )}
+                  {/* Cartão Leilão NoZap — estilo cartão de crédito com nome do usuário */}
+                  <div className="nz-card relative w-full aspect-[1.62/1] rounded-2xl overflow-hidden select-none">
+                    <div className="nz-card-sheen" />
+                    <img
+                      src="/martelo-3d.png"
+                      alt=""
+                      className="absolute -right-5 -bottom-6 w-32 h-32 object-contain opacity-[0.14] rotate-[-18deg] pointer-events-none"
+                    />
+                    <div className="relative h-full flex flex-col justify-between p-4 sm:p-5">
+                      <div className="flex items-start justify-between">
+                        <img src="/brand/logo-horizontal-dark.webp" alt="Leilão NoZap" className="h-7 object-contain" />
+                        <button onClick={loadWallet} className="p-1.5 rounded-lg hover:bg-white/10 text-emerald-100/70 hover:text-white" title="Atualizar">
+                          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
                       </div>
-                    )}
-                    <Button
-                      onClick={() => { setRechargeAmount(null); setCustomAmount(''); setView('recharge'); }}
-                      className="w-full mt-4 h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
-                    >
-                      <Plus className="w-4 h-4 mr-1.5" />
-                      Adicionar Saldo
-                    </Button>
+                      <div className="flex items-end justify-between gap-2">
+                        <div>
+                          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-200/70 mb-0.5">Saldo disponível</p>
+                          <p className="text-[1.9rem] sm:text-[2.1rem] leading-none font-extrabold text-white tracking-tight tabular-nums drop-shadow">
+                            R$ {balance.toFixed(2).replace('.', ',')}
+                          </p>
+                        </div>
+                        <div className="nz-chip" />
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-emerald-200/60">Titular</p>
+                          <p className="text-xs sm:text-sm font-bold text-white uppercase tracking-[0.12em]">
+                            {(currentUser?.full_name || 'Cliente NoZap').slice(0, 26)}
+                          </p>
+                        </div>
+                        <p className="text-xs font-bold text-emerald-100/80 tracking-[0.25em] tabular-nums">
+                          •••• {String(currentUser?.id || '0000').slice(-4).toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Resumo financeiro */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Depositado', value: totals.deposited, color: 'text-emerald-300' },
+                      { label: 'Compras', value: totals.spent, color: 'text-red-300' },
+                      { label: 'Comissões', value: (wallet?.commission_balance || 0), color: 'text-amber-300' },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.045] px-2.5 py-2.5 text-center">
+                        <p className="text-[8.5px] font-semibold uppercase tracking-[0.14em] text-gray-500 mb-0.5">{s.label}</p>
+                        <p className={`text-[13px] font-bold tabular-nums ${s.color}`}>
+                          R$ {s.value.toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {(hasAllocated || totals.pendingCount > 0) && (
+                    <div className="flex gap-4 flex-wrap -mt-1 px-1">
+                      {hasAllocated && (
+                        <p className="text-[11px] text-gray-400">
+                          Alocado em lances: <span className="font-bold text-gray-200 tabular-nums">R$ {(wallet.saldo_alocado).toFixed(2).replace('.', ',')}</span>
+                        </p>
+                      )}
+                      {totals.pendingCount > 0 && (
+                        <p className="text-[11px] text-amber-400/90">{totals.pendingCount} pagamento{totals.pendingCount > 1 ? 's' : ''} aguardando confirmação</p>
+                      )}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={() => { setRechargeAmount(null); setCustomAmount(''); setView('recharge'); }}
+                    className="w-full h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Adicionar Saldo
+                  </Button>
 
                   {/* Extrato */}
                   <div>
@@ -340,6 +389,28 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
               )}
             </div>
             <style>{`
+              .nz-card {
+                background:
+                  radial-gradient(ellipse at 20% -10%, rgba(74, 222, 128, 0.22), transparent 55%),
+                  radial-gradient(ellipse at 105% 110%, rgba(245, 158, 11, 0.10), transparent 45%),
+                  linear-gradient(135deg, #0d4d2e 0%, #0a3d24 45%, #052818 100%);
+                border: 1px solid rgba(74, 222, 128, 0.35);
+                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+              }
+              .nz-card-sheen {
+                position: absolute; inset: 0; pointer-events: none;
+                background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.09) 45%, rgba(255, 255, 255, 0.02) 55%, transparent 70%);
+              }
+              .nz-chip {
+                width: 38px; height: 28px; border-radius: 6px;
+                background: linear-gradient(135deg, #f5d178, #d9a13c 55%, #b57e22);
+                box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.35);
+                position: relative;
+              }
+              .nz-chip::before {
+                content: ''; position: absolute; inset: 5px 7px;
+                border: 1px solid rgba(90, 60, 10, 0.5); border-radius: 3px;
+              }
               .wallet-modal {
                 border-radius: 24px;
                 border: 1px solid rgba(52, 211, 153, 0.28);

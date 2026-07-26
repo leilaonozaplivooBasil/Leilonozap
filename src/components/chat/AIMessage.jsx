@@ -42,7 +42,7 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
     }
     
     if (message.message_type === 'ai_narration') {
-      return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg';
+      return 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-900/40 border border-white/15';
     }
     
     return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
