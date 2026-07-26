@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store, Palette, ChartColumn, FileText, CheckCircle, Ban, Pencil, Ruler } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
@@ -62,7 +62,7 @@ export default function CatalogManagement() {
         setCatalogSettings(settings[0]);
       } else {
         const _r = await _ew('CatalogSettings', 'create', null, {
-          featured_section_title: '⭐ Produtos em Destaque',
+          featured_section_title: 'Produtos em Destaque',
           featured_section_description: 'Veja nossos destaques selecionados'
         });
         setCatalogSettings(_r?.row || null);
@@ -236,35 +236,35 @@ export default function CatalogManagement() {
             variant={activeTab === 'banners' ? 'default' : 'outline'}
             className={activeTab === 'banners' ? 'bg-green-600 hover:bg-green-700' : ''}
           >
-            🎨 Banners
+            <Palette className="w-4 h-4 mr-2" />Banners
           </Button>
           <Button
             onClick={() => setActiveTab('catalog-products')}
             variant={activeTab === 'catalog-products' ? 'default' : 'outline'}
             className={activeTab === 'catalog-products' ? 'bg-blue-600 hover:bg-blue-700' : ''}
           >
-            📦 Produtos da Loja Virtual
+            <Package className="w-4 h-4 mr-2" />Produtos da Loja Virtual
           </Button>
           <Button
             onClick={() => setActiveTab('importar')}
             variant={activeTab === 'importar' ? 'default' : 'outline'}
             className={activeTab === 'importar' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
           >
-            📊 Importar Planilha
+            <ChartColumn className="w-4 h-4 mr-2" />Importar Planilha
           </Button>
           <Button
             onClick={() => setActiveTab('produtos')}
             variant={activeTab === 'produtos' ? 'default' : 'outline'}
             className={activeTab === 'produtos' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
           >
-            ⭐ Produtos em Destaque
+            <Star className="w-4 h-4 mr-2" />Produtos em Destaque
           </Button>
           <Button
             onClick={() => setActiveTab('rodape')}
             variant={activeTab === 'rodape' ? 'default' : 'outline'}
             className={activeTab === 'rodape' ? 'bg-purple-600 hover:bg-purple-700' : ''}
           >
-            📄 Rodapé
+            <FileText className="w-4 h-4 mr-2" />Rodapé
           </Button>
         </div>
 
@@ -312,7 +312,8 @@ export default function CatalogManagement() {
                 {products.filter(p => p.catalog_active).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
-                      ✅ Ativos na Loja Virtual ({products.filter(p => p.catalog_active).length})
+                      <CheckCircle className="w-5 h-5" />
+                      Ativos na Loja Virtual ({products.filter(p => p.catalog_active).length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {products.filter(p => p.catalog_active).map((product) => (
@@ -360,7 +361,8 @@ export default function CatalogManagement() {
                 {products.filter(p => !p.catalog_active).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-400 mb-4 flex items-center gap-2">
-                      ⛔ Inativos ({products.filter(p => !p.catalog_active).length})
+                      <Ban className="w-5 h-5" />
+                      Inativos ({products.filter(p => !p.catalog_active).length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {products.filter(p => !p.catalog_active).map((product) => (
@@ -581,7 +583,7 @@ export default function CatalogManagement() {
                 onClick={() => setEditingSettings(true)}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
-                ✏️ Editar Título da Seção
+                <Pencil className="w-4 h-4 mr-2" />Editar Título da Seção
               </Button>
             </div>
 
@@ -594,7 +596,8 @@ export default function CatalogManagement() {
                 {products.filter(p => p.catalog_active && p.is_featured).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-yellow-400 mb-4 flex items-center gap-2">
-                      ⭐ Em Destaque ({products.filter(p => p.is_featured).length}/4)
+                      <Star className="w-5 h-5" />
+                      Em Destaque ({products.filter(p => p.is_featured).length}/4)
                     </h3>
                     <div className="space-y-3">
                       {products.filter(p => p.is_featured).map((product) => (
@@ -743,7 +746,7 @@ export default function CatalogManagement() {
                           type="text"
                           name="title"
                           defaultValue={catalogSettings.featured_section_title || ''}
-                          placeholder="⭐ Produtos em Destaque"
+                          placeholder="Produtos em Destaque"
                           className="bg-gray-700 text-white border-gray-600"
                         />
                       </div>
@@ -812,7 +815,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
       toast.error('É necessário fazer upload de uma imagem');
       return;
     }
-    console.log('📤 Salvando banner com ajustes:', formData.image_adjustments);
+    console.log('Salvando banner com ajustes:', formData.image_adjustments);
     onSave(formData);
   };
 
@@ -824,10 +827,10 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
           deviceType={formData.device_type}
           initialAdjustments={formData.image_adjustments}
           onSave={(adjustments) => {
-            console.log('💾 Salvando ajustes:', adjustments);
+            console.log('Salvando ajustes:', adjustments);
             setFormData(prev => ({ ...prev, image_adjustments: adjustments }));
             setShowPositionEditor(false);
-            toast.success('✅ Posição ajustada! Clique em "Salvar Banner" para aplicar.');
+            toast.success('Posição ajustada! Clique em "Salvar Banner"para aplicar.');
           }}
           onCancel={() => setShowPositionEditor(false)}
         />
@@ -900,7 +903,10 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
                 </Button>
               </div>
               <p className="text-gray-400 text-xs mt-1">
-                {formData.device_type === 'desktop' ? '📐 Recomendado: 1920x600px' : '📱 Recomendado: 800x600px'}
+                <span className="inline-flex items-center gap-1.5">
+                  <Ruler className="w-3 h-3" />
+                  {formData.device_type === 'desktop' ? 'Recomendado: 1920x600px' : 'Recomendado: 800x600px'}
+                </span>
               </p>
             </div>
 

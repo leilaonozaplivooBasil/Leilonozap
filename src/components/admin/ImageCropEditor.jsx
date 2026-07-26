@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Crop, ZoomIn, ZoomOut, Check, X } from 'lucide-react';
+import { Crop, ZoomIn, ZoomOut, Check, X, Lightbulb } from 'lucide-react';
 
 export default function ImageCropEditor({ imageFile, targetWidth = 1200, targetHeight = 600, onSave, onCancel }) {
   const canvasRef = useRef(null);
@@ -205,7 +205,7 @@ export default function ImageCropEditor({ imageFile, targetWidth = 1200, targetH
 
           <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3">
             <p className="text-blue-400 text-sm">
-              💡 <strong>Dica:</strong> Posicione a parte mais importante da imagem no centro. 
+              <Lightbulb className="w-3 h-3 inline mr-1" /><strong>Dica:</strong> Posicione a parte mais importante da imagem no centro. 
               A qualidade será mantida em alta resolução.
             </p>
           </div>

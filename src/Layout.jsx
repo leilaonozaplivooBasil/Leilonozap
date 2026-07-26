@@ -612,7 +612,6 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     setMobileMenuOpen(false);
-    setSidebarMobileOpen(false);
   }, [location]);
 
   // 🔓 Pages que renderizam SEM layout (auth/onboarding puro)

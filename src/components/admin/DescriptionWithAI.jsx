@@ -94,7 +94,7 @@ Retorne apenas a descrição, sem introdução ou explicação.`,
 
       if (result && typeof result === 'string' && result.trim()) {
         onChange(result.trim());
-        toast.success("✅ Descrição gerada com IA!");
+        toast.success("Descrição gerada com IA!");
       } else {
         toast.error("IA não retornou descrição. Tente novamente.");
       }

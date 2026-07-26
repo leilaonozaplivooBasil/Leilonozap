@@ -207,9 +207,8 @@ export default function AdminTopNav({ config, currentPageName }) {
           <div
             className="absolute left-0 right-0 top-full border-t border-emerald-500/10 animate-in fade-in slide-in-from-top-1 duration-150"
             style={{
-              background: "rgba(8, 12, 24, 0.97)",
-              backdropFilter: "blur(28px) saturate(1.6)",
-              WebkitBackdropFilter: "blur(28px) saturate(1.6)",
+              // Fundo sólido: painel flutua sobre o conteúdo e precisa cobrir por completo
+              background: "#0a0f1c",
               boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
             }}
           >
@@ -220,7 +219,9 @@ export default function AdminTopNav({ config, currentPageName }) {
                   {openedSection.title}
                 </span>
                 <span className="text-[11px] text-gray-600">
-                  {(openedSection.items || []).length} painéis
+                  {(openedSection.items || []).length === 1
+                    ? "1 painel"
+                    : `${(openedSection.items || []).length} painéis`}
                 </span>
                 <div className="flex-1" />
                 <button
@@ -251,9 +252,8 @@ export default function AdminTopNav({ config, currentPageName }) {
           <div
             className="absolute left-0 right-0 top-full border-t border-emerald-500/10 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150"
             style={{
-              background: "rgba(8, 12, 24, 0.97)",
-              backdropFilter: "blur(28px) saturate(1.6)",
-              WebkitBackdropFilter: "blur(28px) saturate(1.6)",
+              // Fundo sólido: painel flutua sobre o conteúdo e precisa cobrir por completo
+              background: "#0a0f1c",
               boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
             }}
           >
@@ -398,7 +398,7 @@ function CommandPalette({ items, onClose, onSelect }) {
       <div
         className="w-full max-w-xl rounded-2xl overflow-hidden border border-white/10 animate-in zoom-in-95 duration-150"
         style={{
-          background: "rgba(12, 17, 30, 0.98)",
+          background: "#0c111e",
           boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
         }}
         onClick={(e) => e.stopPropagation()}
@@ -480,7 +480,7 @@ function CommandPalette({ items, onClose, onSelect }) {
           </span>
           <span className="flex items-center gap-1">esc fechar</span>
           <div className="flex-1" />
-          <span>{results.length} painéis</span>
+          <span>{results.length === 1 ? "1 painel" : `${results.length} painéis`}</span>
         </div>
       </div>
     </div>

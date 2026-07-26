@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
-import { Play, Square, Tv, Plus, Zap } from "lucide-react";
+import { Play, Square, Tv, Plus, Zap, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,7 +125,7 @@ export default function LiveShopControlNoZap() {
       });
 
       setSession({ ...session, is_live: true });
-      toast.success("Live iniciada! 🔴");
+      toast.success("Live iniciada! ");
     } catch (error) {
       console.error("Erro ao iniciar live:", error);
       toast.error("Erro ao iniciar live");
@@ -341,7 +341,7 @@ export default function LiveShopControlNoZap() {
 
                     {frameType !== "none" && (
                       <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg z-10">
-                        <p className="text-white font-bold">NoZap Live 🔴</p>
+                        <p className="text-white font-bold flex items-center gap-1.5">NoZap Live <Radio className="w-3.5 h-3.5 text-red-500" /></p>
                       </div>
                     )}
                   </>

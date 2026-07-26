@@ -7,7 +7,7 @@ const CatalogSale = base44.entities.CatalogSale;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 
 const ROLE_LABELS = {
   influencer_app: "Influencer",
@@ -65,7 +65,10 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         <span>{dateStr}</span>
                         <span className="mx-1">•</span>
                         <span className={saleType === 'auction' ? 'text-cyan-400' : 'text-blue-400'}>
-                            {saleType === 'auction' ? '📱 App' : '🛍️ Catálogo'}
+                            <span className="inline-flex items-center gap-1">
+                  {saleType === 'auction' ? <Smartphone className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
+                  {saleType === 'auction' ? 'App' : 'Catálogo'}
+                </span>
                         </span>
                     </div>
                     {isExpanded ? (
@@ -233,13 +236,13 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                         </p>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1">📱 App</p>
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Smartphone className="w-3 h-3" />App</p>
                         <p className="text-lg font-bold text-cyan-400">
                             R$ {fmtBR(totals.app)}
                         </p>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1">🛍️ Catálogo</p>
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><ShoppingBag className="w-3 h-3" />Catálogo</p>
                         <p className="text-lg font-bold text-blue-400">
                             R$ {fmtBR(totals.catalog)}
                         </p>

@@ -25,10 +25,10 @@ export default function ManualImageUpload({ onApply }) {
       if (uploadedUrls.length > 0) {
         setImages(uploadedUrls);
         setCoverIndex(0);
-        toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
+        toast.success(` ${uploadedUrls.length} imagem(ns) enviada!`);
       }
     } catch (error) {
-      toast.error("❌ Erro ao enviar imagens: " + error.message);
+      toast.error("Erro ao enviar imagens: " + error.message);
     } finally {
       setIsUploading(false);
     }
@@ -42,7 +42,7 @@ export default function ManualImageUpload({ onApply }) {
     setImages([]);
     setCoverIndex(0);
     setShow(false);
-    toast.success("✅ Imagens aplicadas!");
+    toast.success("Imagens aplicadas!");
   };
 
   return (
@@ -81,7 +81,7 @@ export default function ManualImageUpload({ onApply }) {
                   : <UploadCloud className={`w-12 h-12 mx-auto mb-4 transition-all ${isDragging ? 'text-purple-300 scale-110' : 'text-purple-400'}`} />
                 }
                 <h4 className="text-lg font-semibold text-purple-300 mb-2">
-                  {isUploading ? "Enviando imagens..." : isDragging ? "✨ Solte as imagens aqui" : "📸 Clique ou arraste imagens"}
+                  {isUploading ? "Enviando imagens..." : isDragging ? "Solte as imagens aqui" : "Clique ou arraste imagens"}
                 </h4>
                 <p className="text-sm text-gray-400">
                   {isDragging ? "Solte para fazer upload" : "Selecione até 6 imagens do seu computador"}
@@ -113,7 +113,7 @@ export default function ManualImageUpload({ onApply }) {
                     >
                       <div className="w-full h-24 bg-gray-900 flex items-center justify-center">
                         <img src={img} alt={`Imagem ${index + 1}`} className="max-w-full max-h-full object-contain" crossOrigin="anonymous" loading="eager"
-                          onError={(e) => { e.target.style.display = 'none'; if (e.target.parentElement) e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌ Erro</div>'; }} />
+                          onError={(e) => { e.target.style.display = 'none'; if (e.target.parentElement) e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">Erro</div>'; }} />
                       </div>
                       <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => {
@@ -139,7 +139,7 @@ export default function ManualImageUpload({ onApply }) {
                   <Trash2 className="w-4 h-4 mr-2" /> Limpar Tudo
                 </Button>
                 <Button type="button" onClick={handleApply} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
-                  <Upload className="w-4 h-4 mr-2" /> 🚀 Aplicar no Formulário
+                  <Upload className="w-4 h-4 mr-2" /> Aplicar no Formulário
                 </Button>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calculator } from 'lucide-react';
+import { Calculator, ChartColumn, DollarSign, Tag, Gem, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PriceCalculatorModal({ isOpen, onClose, product, onSave }) {
@@ -195,7 +195,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
 
           {/* Info da Fórmula Automática - COMPACTA */}
           <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-3">
-            <h3 className="font-semibold text-blue-900 mb-1 text-sm">📊 Sistema Automático</h3>
+            <h3 className="font-semibold text-blue-900 mb-1 text-sm flex items-center gap-1.5"><ChartColumn className="w-3.5 h-3.5" />Sistema Automático</h3>
             <div className="text-xs text-gray-700 grid grid-cols-3 gap-2">
               <p>• <strong>26% fixo:</strong> 20% comissão + 6% imposto</p>
               <p>• <strong>Margem:</strong> 50% até 700%</p>
@@ -211,7 +211,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                 {/* Preço Sugerido */}
                 <div className="bg-green-50 border-2 border-green-500 rounded-lg p-3">
                   <div className="text-center">
-                    <span className="text-xs font-semibold text-gray-700 block mb-1">💰 Preço de Venda</span>
+                    <span className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1"><DollarSign className="w-3 h-3" />Preço de Venda</span>
                     <span className="text-2xl font-bold text-green-600 block">
                       R$ {fmtBR(calculatedPrice)}
                     </span>
@@ -221,7 +221,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                 {/* Desconto */}
                 <div className="bg-orange-50 border-2 border-orange-500 rounded-lg p-3">
                   <div className="text-center">
-                    <span className="text-xs font-semibold text-gray-700 block mb-1">🏷️ Desconto Cliente</span>
+                    <span className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1"><Tag className="w-3 h-3" />Desconto Cliente</span>
                     <span className="text-2xl font-bold text-orange-600 block">
                       {discountPercentage.toFixed(2)}%
                     </span>
@@ -231,7 +231,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                 {/* LUCRO LÍQUIDO */}
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-500 rounded-lg p-3">
                   <div className="text-center">
-                    <span className="text-xs font-semibold text-blue-900 block mb-1">💎 SEU LUCRO</span>
+                    <span className="text-xs font-semibold text-blue-900 mb-1 flex items-center gap-1"><Gem className="w-3 h-3" />SEU LUCRO</span>
                     <span className="text-2xl font-black text-blue-600 block">
                       R$ {(() => {
                         const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
@@ -249,7 +249,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
               <div className="grid grid-cols-2 gap-3">
                 {/* Coluna Esquerda - Valores Base */}
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">📊 Valores Base</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm flex items-center gap-1.5"><ChartColumn className="w-3.5 h-3.5" />Valores Base</h4>
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-700">Preço no Mercado:</span>
@@ -280,7 +280,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
 
                 {/* Coluna Direita - Resultado Final */}
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">✅ Resultado Final</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" />Resultado Final</h4>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center bg-green-100 p-2 rounded">
                       <span className="font-bold text-gray-900 text-xs">Preço de Venda:</span>

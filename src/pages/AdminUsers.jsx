@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, EyeOff, Mail, Key, Loader2, Pencil, Save, X, User, Shield, ChevronRight, ChevronDown, Users } from 'lucide-react';
+import { Search, Eye, EyeOff, Mail, Key, Loader2, Pencil, Save, X, User, Shield, ChevronRight, ChevronDown, Users, ChartColumn } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,7 +38,7 @@ export default function AdminUsers() {
         setCurrentUser(user);
         
         if (user.role !== 'admin' && user.role !== 'super_admin') {
-          alert("❌ Acesso negado! Apenas administradores.");
+          alert("Acesso negado! Apenas administradores.");
           navigate(createPageUrl('Home'));
           return;
         }
@@ -189,28 +189,28 @@ export default function AdminUsers() {
       
       await SendEmail({
         to: user.email,
-        subject: "🔐 Senha Resetada - Leilão NoZap",
+        subject: "Senha Resetada - Leilão NoZap",
         body: `
 Olá ${user.full_name},
 
 Sua senha foi resetada pelo administrador.
 
-📧 **Nova Senha:** ${newPassword}
+**Nova Senha:** ${newPassword}
 
-⚠️ **Faça login e troque sua senha.**
+**Faça login e troque sua senha.**
 
 ---
-Equipe Leilão NoZap 🎯
+Equipe Leilão NoZap
         `
       });
       
-      alert(`✅ Senha resetada!\nNova senha: ${newPassword}\nE-mail enviado para ${user.email}`);
+      alert(`Senha resetada!\nNova senha: ${newPassword}\nE-mail enviado para ${user.email}`);
       
       await loadData();
       
     } catch (error) {
       console.error("Erro:", error);
-      alert("❌ Erro ao resetar senha.");
+      alert("Erro ao resetar senha.");
     }
   };
 
@@ -241,15 +241,15 @@ Equipe Leilão NoZap 🎯
 
   const handleSaveUser = async () => {
     if (!editFormData.full_name?.trim()) {
-      alert("❌ Nome é obrigatório");
+      alert("Nome é obrigatório");
       return;
     }
     if (!editFormData.email?.trim() || !editFormData.email.includes('@')) {
-      alert("❌ Email inválido");
+      alert("Email inválido");
       return;
     }
     if (editFormData.password && editFormData.password.length < 6) {
-      alert("❌ Senha deve ter pelo menos 6 caracteres");
+      alert("Senha deve ter pelo menos 6 caracteres");
       return;
     }
 
@@ -274,13 +274,13 @@ Equipe Leilão NoZap 🎯
         }
       });
 
-      alert("✅ Usuário atualizado com sucesso!");
+      alert("Usuário atualizado com sucesso!");
       closeEditModal();
       await loadData();
 
     } catch (error) {
       console.error("Erro ao atualizar usuário:", error);
-      alert("❌ Erro ao atualizar: " + error.message);
+      alert("Erro ao atualizar: " + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -334,7 +334,8 @@ Equipe Leilão NoZap 🎯
 
             <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
               <p className="text-gray-300 text-sm">
-                📊 Total de usuários: <span className="font-bold text-green-400">{users.length}</span>
+                <ChartColumn className="w-3.5 h-3.5 inline mr-1.5" />
+                Total de usuários: <span className="font-bold text-green-400">{users.length}</span>
                 {searchTerm && ` • Filtrados: ${filteredUsers.length}`}
               </p>
             </div>

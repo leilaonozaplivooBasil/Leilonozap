@@ -115,7 +115,7 @@ export default function AuctionControl() {
         tracking_code: null
       });
 
-      toast.success(`✅ Leilão reiniciado! Duração: ${hours}h`);
+      toast.success(`Leilão reiniciado! Duração: ${hours}h`);
       setShowResumeModal(false);
       setSelectedAuction(null);
       loadData();
@@ -126,7 +126,7 @@ export default function AuctionControl() {
   };
 
   const handleDeleteAuction = async (auction) => {
-    if (!confirm(`⚠️ Tem certeza que deseja EXCLUIR o leilão "${auction.title}"?\n\nEsta ação é irreversível e removerá:\n• O leilão\n• Todos os lances\n• Todas as mensagens\n• Histórico de pagamentos`)) {
+    if (!confirm(`Tem certeza que deseja EXCLUIR o leilão "${auction.title}"?\n\nEsta ação é irreversível e removerá:\n• O leilão\n• Todos os lances\n• Todas as mensagens\n• Histórico de pagamentos`)) {
       return;
     }
 
@@ -154,10 +154,10 @@ export default function AuctionControl() {
       
       try {
         await Auction.delete(auction.id);
-        toast.success(`✅ Leilão "${auction.title}" excluído com sucesso!`);
+        toast.success(`Leilão "${auction.title}"excluído com sucesso!`);
       } catch (error) {
         if (error.message?.includes('not found')) {
-          toast.success(`✅ Leilão já foi excluído anteriormente`);
+          toast.success(`Leilão já foi excluído anteriormente`);
         } else {
           throw error;
         }
@@ -180,7 +180,7 @@ export default function AuctionControl() {
       toast.info("Nenhum leilão expirado para excluir.");
       return;
     }
-    if (!confirm(`⚠️ Excluir ${expiredActiveAuctions.length} leilão(ões) com data expirada?\n\nEsta ação é irreversível.`)) return;
+    if (!confirm(`Excluir ${expiredActiveAuctions.length} leilão(ões) com data expirada?\n\nEsta ação é irreversível.`)) return;
 
     setIsBulkDeleting(true);
     let deleted = 0;
@@ -197,7 +197,7 @@ export default function AuctionControl() {
       }
     }
     setIsBulkDeleting(false);
-    toast.success(`✅ ${deleted} leilão(ões) expirado(s) excluído(s)!`);
+    toast.success(`${deleted} leilão(ões) expirado(s) excluído(s)!`);
     loadData();
   };
 
@@ -232,7 +232,7 @@ export default function AuctionControl() {
     }
     setIsBulkResuming(false);
     setShowBulkResumeModal(false);
-    toast.success(`✅ ${reactivated} leilão(ões) reativado(s) por ${hours}h!`);
+    toast.success(`${reactivated} leilão(ões) reativado(s) por ${hours}h!`);
     loadData();
   };
 

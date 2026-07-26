@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Store, Upload, CheckCircle, Share2, Edit2, Trash2, Lock, Unlock } from "lucide-react";
+import { Store, Upload, CheckCircle, Share2, Edit2, Trash2, Lock, Unlock, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -154,7 +154,7 @@ export default function StoreRegistration() {
             updateData.store_password = hashResult.hashed_password;
           }
         } catch (hashErr) {
-          console.warn('⚠️ Erro ao hashear senha na edição:', hashErr);
+          console.warn('Erro ao hashear senha na edição:', hashErr);
         }
       }
 
@@ -233,7 +233,7 @@ export default function StoreRegistration() {
           storeData.store_password = hashResult.hashed_password;
         }
       } catch (hashErr) {
-        console.warn('⚠️ Erro ao hashear senha, salvando como texto puro (fallback):', hashErr);
+        console.warn('Erro ao hashear senha, salvando como texto puro (fallback):', hashErr);
       }
 
       await StoreEntity.create(storeData);
@@ -406,7 +406,7 @@ export default function StoreRegistration() {
             <CardContent className="space-y-4">
               <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-4 mb-4">
                 <p className="text-green-400 text-sm">
-                  🔐 <strong>Configuração de Acesso:</strong> Defina o login e senha que o lojista usará para acessar o portal.
+                  <KeyRound className="w-3.5 h-3.5 inline mr-1.5" /><strong>Configuração de Acesso:</strong> Defina o login e senha que o lojista usará para acessar o portal.
                 </p>
               </div>
 

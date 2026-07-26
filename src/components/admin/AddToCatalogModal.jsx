@@ -51,7 +51,7 @@ export default function AddToCatalogModal({ isOpen, onClose, auction }) {
         status: "ESTOQUE"
       });
 
-      toast.success("✅ Anúncio replicado no catálogo!");
+      toast.success("Anúncio replicado no catálogo!");
       setPrice("");
       onClose();
     } catch (error) {

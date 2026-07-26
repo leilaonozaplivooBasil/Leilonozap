@@ -24,7 +24,9 @@ import {
   Settings as SettingsIcon,
   TrendingUp,
   ArrowUpCircle,
-  ShoppingBag
+  ShoppingBag,
+  Radio,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -184,10 +186,10 @@ export default function PaymentSettings() {
     try {
       if (gatewaySettings) {
         await base44.entities.PaymentSettings.update(gatewaySettings.id, gatewayForm);
-        toast.success("✅ Configurações atualizadas!");
+        toast.success("Configurações atualizadas!");
       } else {
         await base44.entities.PaymentSettings.create(gatewayForm);
-        toast.success("✅ Configurações salvas!");
+        toast.success("Configurações salvas!");
       }
       await loadGatewaySettings();
     } catch (error) {
@@ -211,11 +213,11 @@ export default function PaymentSettings() {
       
       if (editingPackageId) {
         await base44.entities.DepositPackage.update(editingPackageId, data);
-        toast.success("✅ Pacote atualizado!");
+        toast.success("Pacote atualizado!");
         setEditingPackageId(null);
       } else {
         await base44.entities.DepositPackage.create(data);
-        toast.success("✅ Pacote criado!");
+        toast.success("Pacote criado!");
       }
       
       setPackageForm({
@@ -246,7 +248,7 @@ export default function PaymentSettings() {
     
     try {
       await base44.entities.DepositPackage.delete(pkgId);
-      toast.success("🗑️ Pacote excluído!");
+      toast.success("Pacote excluído!");
       await loadDepositPackages();
       
       if (editingPackageId === pkgId) {
@@ -277,7 +279,7 @@ export default function PaymentSettings() {
     const webhookUrl = `${window.location.origin}/api/functions/walletWebhookHandler`;
     navigator.clipboard.writeText(webhookUrl);
     setCopiedWebhook(true);
-    toast.success("✅ URL copiada!");
+    toast.success("URL copiada!");
     setTimeout(() => setCopiedWebhook(false), 2000);
   };
 
@@ -479,7 +481,7 @@ export default function PaymentSettings() {
                 </div>
 
                 <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-                  <p className="text-blue-300 font-semibold mb-2">📡 URL do Webhook (Configure no Gateway)</p>
+                  <p className="text-blue-300 font-semibold mb-2 flex items-center gap-2"><Radio className="w-4 h-4" />URL do Webhook (Configure no Gateway)</p>
                   <div className="flex gap-2">
                     <Input
                       value={webhookUrl}
@@ -498,7 +500,7 @@ export default function PaymentSettings() {
                 </div>
 
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                  <p className="text-gray-400 font-semibold mb-2">📄 Exemplo de Payload Enviado ao Gateway</p>
+                  <p className="text-gray-400 font-semibold mb-2 flex items-center gap-2"><FileText className="w-4 h-4" />Exemplo de Payload Enviado ao Gateway</p>
                   <pre className="text-xs text-green-400 bg-black/50 p-3 rounded overflow-x-auto">
                     {JSON.stringify(examplePayload, null, 2)}
                   </pre>

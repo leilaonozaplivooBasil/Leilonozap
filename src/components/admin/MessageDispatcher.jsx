@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Mail, MessageCircle, Eye, CheckCircle } from 'lucide-react';
+import { Loader2, Send, Mail, MessageCircle, Eye, CheckCircle, Users, Target, FileText, Smartphone, Lightbulb, Link2 } from 'lucide-react';
 import { toast } from "sonner";
 import { sendBulkMessages } from "@/functions/sendBulkMessages";
 
@@ -765,17 +765,17 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
 
   const handleSend = async () => {
     if (!customSubject || !customBody) {
-      toast.error("❌ Preencha assunto e mensagem!");
+      toast.error("Preencha assunto e mensagem!");
       return;
     }
 
     if (!sendEmail && !sendSMS) {
-      toast.error("❌ Selecione pelo menos um canal!");
+      toast.error("Selecione pelo menos um canal!");
       return;
     }
 
     if (targetUsers.length === 0) {
-      toast.error("❌ Nenhum usuário neste nível!");
+      toast.error("Nenhum usuário neste nível!");
       return;
     }
 
@@ -783,10 +783,10 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
     const smsToSend = sendSMS ? smsCount : 0;
 
     const confirmSend = window.confirm(
-      `📨 CONFIRMAR ENVIO?\n\n` +
-      `👥 Total de destinatários: ${targetUsers.length}\n` +
-      `📧 Emails a enviar: ${emailsToSend}\n` +
-      `📱 SMS a enviar: ${smsToSend}\n\n` +
+      `CONFIRMAR ENVIO?\n\n` +
+      `Total de destinatários: ${targetUsers.length}\n` +
+      `Emails a enviar: ${emailsToSend}\n` +
+      `SMS a enviar: ${smsToSend}\n\n` +
       `Nível: ${CAREER_LEVELS.find(l => l.id === selectedLevel)?.name}\n\n` +
       `Deseja continuar?`
     );
@@ -820,12 +820,12 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
       });
 
       if (response.status === 200) {
-        toast.success(`✅ Enviado! ${emailsToSend} emails + ${smsToSend} SMS`);
+        toast.success(`Enviado! ${emailsToSend} emails + ${smsToSend} SMS`);
         onClose();
       }
     } catch (error) {
       console.error("❌ Erro:", error);
-      toast.error("❌ Erro ao enviar: " + error.message);
+      toast.error("Erro ao enviar: " + error.message);
     } finally {
       setIsSending(false);
     }
@@ -837,14 +837,14 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <Send className="w-5 h-5 mr-2 text-blue-400" />
-            📨 Disparador de Mensagens em Massa
+            <Send className="w-5 h-5 inline mr-2" />Disparador de Mensagens em Massa
           </DialogTitle>
         </DialogHeader>
 
         <div className="grid md:grid-cols-2 gap-6 py-4">
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-300">🎯 Público-Alvo</Label>
+              <Label className="text-gray-300 flex items-center gap-1.5"><Target className="w-3.5 h-3.5" />Público-Alvo</Label>
               <Select value={selectedLevel} onValueChange={setSelectedLevel}>
                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-2">
                   <SelectValue />
@@ -871,15 +871,15 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
                   <h4 className="font-semibold text-blue-400 text-sm">Destinatários Selecionados</h4>
                 </div>
                 <ul className="space-y-1 text-sm text-gray-300">
-                  <li>👥 Total: <strong className="text-white">{targetUsers.length}</strong> pessoas</li>
-                  <li>📧 Com email: <strong className="text-white">{emailCount}</strong></li>
-                  <li>📱 Com telefone: <strong className="text-white">{smsCount}</strong></li>
+                  <li className="flex items-center gap-1.5"><Users className="w-3 h-3" />Total: <strong className="text-white">{targetUsers.length}</strong> pessoas</li>
+                  <li className="flex items-center gap-1.5"><Mail className="w-3 h-3" />Com email: <strong className="text-white">{emailCount}</strong></li>
+                  <li className="flex items-center gap-1.5"><Smartphone className="w-3 h-3" />Com telefone: <strong className="text-white">{smsCount}</strong></li>
                 </ul>
               </div>
             </div>
 
             <div>
-              <Label className="text-gray-300">📝 Template Pronto</Label>
+              <Label className="text-gray-300 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />Template Pronto</Label>
               <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-2">
                   <SelectValue placeholder="Escolha um template..." />
@@ -895,7 +895,7 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             </div>
 
             <div>
-              <Label className="text-gray-300">✉️ Assunto do Email</Label>
+              <Label className="text-gray-300 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Assunto do Email</Label>
               <Textarea
                 value={customSubject}
                 onChange={(e) => setCustomSubject(e.target.value)}
@@ -905,7 +905,7 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             </div>
 
             <div>
-              <Label className="text-gray-300">📧 Corpo do Email (HTML)</Label>
+              <Label className="text-gray-300 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Corpo do Email (HTML)</Label>
               <Textarea
                 value={customBody}
                 onChange={(e) => setCustomBody(e.target.value)}
@@ -913,14 +913,14 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
                 placeholder="Cole o HTML do template..."
               />
               <p className="text-xs text-gray-400 mt-1">
-                💡 Use: <code className="bg-gray-700 px-1 rounded">{`{{name}}`}</code>, 
+                <Lightbulb className="w-3 h-3 inline mr-1" />Use: <code className="bg-gray-700 px-1 rounded">{`{{name}}`}</code>, 
                 <code className="bg-gray-700 px-1 rounded mx-1">{`{{valora_balance}}`}</code>, 
                 <code className="bg-gray-700 px-1 rounded">{`{{referral_link}}`}</code>
               </p>
             </div>
 
             <div>
-              <Label className="text-gray-300">📱 Mensagem SMS</Label>
+              <Label className="text-gray-300 flex items-center gap-1.5"><Smartphone className="w-3.5 h-3.5" />Mensagem SMS</Label>
               <Textarea
                 value={customSMS}
                 onChange={(e) => setCustomSMS(e.target.value)}
@@ -957,7 +957,7 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Eye className="w-4 h-4 text-blue-400" />
-                <h3 className="font-semibold text-white">📧 Preview Email</h3>
+                <h3 className="font-semibold text-white flex items-center gap-1.5"><Mail className="w-4 h-4" />Preview Email</h3>
               </div>
               
               <Card className="bg-white text-gray-900">
@@ -977,7 +977,7 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <MessageCircle className="w-4 h-4 text-green-400" />
-                <h3 className="font-semibold text-white">📱 Preview SMS</h3>
+                <h3 className="font-semibold text-white flex items-center gap-1.5"><Smartphone className="w-4 h-4" />Preview SMS</h3>
               </div>
               
               <div className="bg-green-100 rounded-2xl p-3 text-gray-900 text-sm">
@@ -988,14 +988,14 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle className="w-4 h-4 text-green-400" />
-                <h4 className="font-semibold text-green-400">✅ Pronto para Enviar</h4>
+                <h4 className="font-semibold text-green-400 flex items-center gap-1.5"><CheckCircle className="w-4 h-4" />Pronto para Enviar</h4>
               </div>
               <ul className="space-y-1 text-sm text-gray-300">
-                <li>👥 {targetUsers.length} destinatários</li>
-                <li>📧 {sendEmail ? `${emailCount} emails` : 'Email desativado'}</li>
-                <li>📱 {sendSMS ? `${smsCount} SMS` : 'SMS desativado'}</li>
+                <li className="flex items-center gap-1.5"><Users className="w-3 h-3" />{targetUsers.length} destinatários</li>
+                <li className="flex items-center gap-1.5"><Mail className="w-3 h-3" />{sendEmail ? `${emailCount} emails` : 'Email desativado'}</li>
+                <li className="flex items-center gap-1.5"><Smartphone className="w-3 h-3" />{sendSMS ? `${smsCount} SMS` : 'SMS desativado'}</li>
                 <li className="text-blue-400 font-bold mt-2">
-                  🔗 Links personalizados por licenciado
+                  <Link2 className="w-3 h-3 inline mr-1" />Links personalizados por licenciado
                 </li>
               </ul>
             </div>
@@ -1019,7 +1019,7 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Enviar {sendEmail ? `${emailCount}📧` : ''} {sendSMS ? `${smsCount}📱` : ''}
+                Enviar {sendEmail ? `${emailCount} emails` : ''}{sendEmail && sendSMS ? ' + ' : ''}{sendSMS ? `${smsCount} SMS` : ''}
               </>
             )}
           </Button>

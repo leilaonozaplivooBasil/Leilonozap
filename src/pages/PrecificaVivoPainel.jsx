@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Zap, Users, TrendingUp, Shield, Play, RefreshCw, Activity,
-  ArrowUpCircle, ArrowDownCircle, CheckCircle2, HelpCircle
+  ArrowUpCircle, ArrowDownCircle, CheckCircle2, HelpCircle,
+  FlaskConical, MousePointerClick, Package, Clock
 } from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
@@ -44,34 +45,34 @@ export default function PrecificaVivoPainel() {
   }, [loadData]);
 
   const handleRunNow = async () => {
-    if (!confirm('⚠️ Executar o PrecificaVivo AGORA?\n\nIsso vai consumir créditos do SerpAPI se houver tráfego ≥ 10 sessões ativas.')) return;
+    if (!confirm('Executar o PrecificaVivo AGORA?\n\nIsso vai consumir créditos do SerpAPI se houver tráfego ≥ 10 sessões ativas.')) return;
 
     setIsRunning(true);
     setLastRunResult(null);
     try {
       const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_now' });
       setLastRunResult(res?.data?.result || res?.data);
-      alert('✅ Execução concluída! Veja o resultado no painel.');
+      alert('Execução concluída! Veja o resultado no painel.');
       await loadData();
     } catch (err) {
-      alert('❌ Erro: ' + err.message);
+      alert('Erro: ' + err.message);
     } finally {
       setIsRunning(false);
     }
   };
 
   const handleRunTest = async () => {
-    if (!confirm('🧪 MODO TESTE\n\nIgnora o limite de sessões e processa APENAS 1 produto (consumo mínimo SerpAPI).\n\nContinuar?')) return;
+    if (!confirm('MODO TESTE\n\nIgnora o limite de sessões e processa APENAS 1 produto (consumo mínimo SerpAPI).\n\nContinuar?')) return;
 
     setIsTestRunning(true);
     setLastRunResult(null);
     try {
       const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_test' });
       setLastRunResult(res?.data?.result || res?.data);
-      alert('✅ Teste concluído! Veja o resultado no painel.');
+      alert('Teste concluído! Veja o resultado no painel.');
       await loadData();
     } catch (err) {
-      alert('❌ Erro: ' + err.message);
+      alert('Erro: ' + err.message);
     } finally {
       setIsTestRunning(false);
     }
@@ -113,7 +114,7 @@ export default function PrecificaVivoPainel() {
               {isTestRunning ? (
                 <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Testando...</>
               ) : (
-                <>🧪 Rodar em Modo Teste</>
+                <><FlaskConical className="w-3.5 h-3.5 mr-1.5" />Rodar em Modo Teste</>
               )}
             </Button>
             <Button
@@ -141,7 +142,7 @@ export default function PrecificaVivoPainel() {
             <div className="text-sm text-blue-200">
               <p className="font-semibold mb-1">Automação agendada a cada 5 min</p>
               <p className="text-blue-300/80 text-xs">
-                A ativação/pausa é feita no <strong>Dashboard Base44 → Automations → "⚡ PrecificaVivo Tick (5min)"</strong>.
+                A ativação/pausa é feita no <strong>Dashboard Base44 → Automations → "PrecificaVivo Tick (5min)"</strong>.
                 Use "Rodar Agora" para testar manualmente a qualquer momento.
               </p>
             </div>
@@ -287,10 +288,10 @@ function HistoryRow({ record }) {
   const ArrowIcon = isUp ? ArrowUpCircle : ArrowDownCircle;
 
   const triggerLabels = {
-    auto_traffic: { label: 'Auto', icon: '⚡', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-    manual_single: { label: 'Manual', icon: '👆', color: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
-    manual_batch: { label: 'Lote', icon: '📦', color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
-    scheduled: { label: 'Agendado', icon: '⏰', color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' }
+    auto_traffic: { label: 'Auto', icon: Zap, color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+    manual_single: { label: 'Manual', icon: MousePointerClick, color: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+    manual_batch: { label: 'Lote', icon: Package, color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+    scheduled: { label: 'Agendado', icon: Clock, color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' }
   };
   const trig = triggerLabels[record.trigger_type] || triggerLabels.auto_traffic;
 
@@ -314,7 +315,7 @@ function HistoryRow({ record }) {
             </p>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <Badge className={`text-[10px] px-2 py-0.5 ${trig.color} border font-medium gap-1`}>
-                <span>{trig.icon}</span> {trig.label}
+                <trig.icon className="w-3 h-3" /> {trig.label}
               </Badge>
               {record.floor_applied && (
                 <Badge className="text-[10px] px-2 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium gap-1">

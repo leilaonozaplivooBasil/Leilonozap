@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign } from "lucide-react";
+import { DollarSign, CheckCircle, ChartColumn, Store, Gavel, Lightbulb, Zap } from "lucide-react";
 
 // Sugere incremento proporcional ao lance inicial do leilão
 function suggestIncrement(lanceInicio) {
@@ -67,18 +67,18 @@ export default function PriceSection({ formData, onInputChange }) {
           {/* Sinalização da fórmula */}
           {sp > 0 && (
             <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-600/40 rounded-lg">
-              <p className="text-xs text-emerald-400 font-semibold mb-1.5">✅ Fórmula automática:</p>
+              <p className="text-xs text-emerald-400 font-semibold mb-1.5 flex items-center gap-1.5"><CheckCircle className="w-3 h-3" />Fórmula automática:</p>
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado real <span className="text-gray-500">(+20%)</span></span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap inline-flex items-center gap-1"><ChartColumn className="w-3 h-3" />Mercado real <span className="text-gray-500">(+20%)</span></span>
                   <span className="text-xs text-white font-bold whitespace-nowrap">R$ {fmtBR(mercadoReal)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap inline-flex items-center gap-1"><Store className="w-3 h-3" />Loja Virtual</span>
                   <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {fmtBR(lojaPrice)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−20%)</span></span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap inline-flex items-center gap-1"><Gavel className="w-3 h-3" />Lance inicial <span className="text-gray-500">(−20%)</span></span>
                   <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {fmtBR(leilaoInicio)}</span>
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default function PriceSection({ formData, onInputChange }) {
           />
           {incrementSuggestion && (
             <p className="text-xs text-gray-500 mt-1">
-              💡 Auto: {incrementSuggestion.label} para lance de R$ {fmtBR(leilaoInicio)} — editável
+              <Lightbulb className="w-3 h-3 inline mr-1" />Auto: {incrementSuggestion.label} para lance de R$ {fmtBR(leilaoInicio)} — editável
             </p>
           )}
         </div>
@@ -125,7 +125,7 @@ export default function PriceSection({ formData, onInputChange }) {
           {sp > 0 && (
             <div className="mt-1.5 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
               <p className="text-xs text-blue-300">
-                💡 Sugerido: <strong>R$ {fmtBR(lojaPrice)}</strong> (= preço da Loja Virtual)
+                <Lightbulb className="w-3 h-3 inline mr-1" />Sugerido: <strong>R$ {fmtBR(lojaPrice)}</strong> (= preço da Loja Virtual)
               </p>
               <p className="text-xs text-gray-500 mt-0.5">Arrematar agora = comprar direto na loja.</p>
               {!formData.buy_now_price && (
@@ -151,9 +151,9 @@ export default function PriceSection({ formData, onInputChange }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-              <SelectItem value="60">⚡ 1 Minuto (Teste)</SelectItem>
-              <SelectItem value="300">⚡ 5 Minutos (Teste)</SelectItem>
-              <SelectItem value="900">⚡ 15 Minutos (Teste)</SelectItem>
+              <SelectItem value="60">1 Minuto (Teste)</SelectItem>
+              <SelectItem value="300">5 Minutos (Teste)</SelectItem>
+              <SelectItem value="900">15 Minutos (Teste)</SelectItem>
               <SelectItem value="3600">1 hora</SelectItem>
               <SelectItem value="21600">6 horas</SelectItem>
               <SelectItem value="43200">12 horas</SelectItem>

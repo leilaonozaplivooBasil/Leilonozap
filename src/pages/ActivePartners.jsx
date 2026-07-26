@@ -20,7 +20,11 @@ import {
   XCircle,
   Flag,
   FileText,
-  Handshake
+  Handshake,
+  Wrench,
+  ClipboardList,
+  Lightbulb,
+  CalendarDays
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
@@ -191,7 +195,7 @@ export default function ActivePartners() {
           activation_source: 'legacy'
         }));
 
-      console.log('📊 Planos sistema novo:', purchases.length, '| Legacy:', legacyActivations.length);
+      console.log('Planos sistema novo:', purchases.length, '| Legacy:', legacyActivations.length);
 
       const allActivations = [...purchases, ...legacyActivations];
       setPartnerPurchases(allActivations);
@@ -280,7 +284,7 @@ export default function ActivePartners() {
         }
       }).catch(() => {});
 
-      toast.success('✅ Ativação atualizada com sucesso!');
+      toast.success('Ativação atualizada com sucesso!');
       setEditingPurchase(null);
       loadPartners();
     } catch (error) {
@@ -322,7 +326,7 @@ export default function ActivePartners() {
         }
       }).catch(() => {});
 
-      toast.success('✅ Compra desativada!');
+      toast.success('Compra desativada!');
       loadPartners();
     } catch (error) {
       console.error('Erro ao desativar:', error);
@@ -476,7 +480,7 @@ export default function ActivePartners() {
                           <Flag className="w-6 h-6 text-white" />
                         </div>
                         <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 border border-red-500/50 rounded-lg p-3 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity shadow-xl">
-                          <p className="text-xs text-red-400 font-semibold mb-1">🚩 Observação Registrada</p>
+                          <p className="text-xs text-red-400 font-semibold mb-1 flex items-center gap-1.5"><Flag className="w-3 h-3" />Observação Registrada</p>
                           <p className="text-xs text-gray-300">{purchase.notes}</p>
                         </div>
                       </div>
@@ -492,11 +496,15 @@ export default function ActivePartners() {
                             <h3 className="text-base sm:text-xl font-bold text-white">{purchase.user_name}</h3>
                             <p className="text-gray-400 text-sm">{purchase.user_email}</p>
                             <Badge className="mt-2 bg-green-600 text-white text-xs">
-                              {purchase.activation_source === 'manual' 
-                                ? '🔧 Ativação Manual' 
-                                : purchase.activation_source === 'legacy'
-                                ? '📋 Sistema Anterior'
-                                : '💰 Lucre Conosco'}
+                              <span className="inline-flex items-center gap-1">
+                                {purchase.activation_source === 'manual' ? (
+                                  <><Wrench className="w-3 h-3" />Ativação Manual</>
+                                ) : purchase.activation_source === 'legacy' ? (
+                                  <><ClipboardList className="w-3 h-3" />Sistema Anterior</>
+                                ) : (
+                                  <><DollarSign className="w-3 h-3" />Lucre Conosco</>
+                                )}
+                              </span>
                             </Badge>
                           </div>
                           <div className="flex gap-1 sm:gap-2 flex-wrap">
@@ -505,7 +513,7 @@ export default function ActivePartners() {
                               onClick={() => loadInstallments(purchase)}
                               className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                             >
-                              💰 Parcelas
+                              <DollarSign className="w-3.5 h-3.5 mr-1" />Parcelas
                             </Button>
                             <Button
                               size="sm"
@@ -555,7 +563,7 @@ export default function ActivePartners() {
                             <div className="flex items-start gap-2">
                               <FileText className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
                               <div>
-                                <p className="text-red-400 text-xs font-semibold mb-1">📝 Observação:</p>
+                                <p className="text-red-400 text-xs font-semibold mb-1">Observação:</p>
                                 <p className="text-gray-300 text-xs leading-relaxed">{purchase.notes}</p>
                               </div>
                             </div>
@@ -681,7 +689,7 @@ export default function ActivePartners() {
 
                 {/* Observações */}
                 <div>
-                  <Label className="text-gray-300 mb-2 block">📝 Observações / Lembretes</Label>
+                  <Label className="text-gray-300 mb-2 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />Observações / Lembretes</Label>
                   <textarea
                     value={editFormData.notes}
                     onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})}
@@ -690,7 +698,7 @@ export default function ActivePartners() {
                     className="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    💡 Use para lembretes sobre condições especiais
+                    <span className="inline-flex items-center gap-1"><Lightbulb className="w-3 h-3" />Use para lembretes sobre condições especiais</span>
                   </p>
                 </div>
 
@@ -705,7 +713,7 @@ export default function ActivePartners() {
                       className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-600 focus:ring-green-500"
                     />
                     <Label htmlFor="is_investment" className="text-gray-300 cursor-pointer">
-                      💰 Modalidade Investimento (com rendimento)
+                      <span className="inline-flex items-center gap-1.5"><DollarSign className="w-4 h-4" />Modalidade Investimento (com rendimento)</span>
                     </Label>
                   </div>
 
@@ -751,7 +759,8 @@ export default function ActivePartners() {
                         </ul>
                         {editFormData.activated_at && (
                           <p className="text-green-400 text-xs mt-2 font-semibold">
-                            📅 Retirada disponível em: {new Date(new Date(editFormData.activated_at).setMonth(new Date(editFormData.activated_at).getMonth() + 12)).toLocaleDateString('pt-BR')}
+                            <CalendarDays className="w-3 h-3 inline mr-1" />
+                            Retirada disponível em: {new Date(new Date(editFormData.activated_at).setMonth(new Date(editFormData.activated_at).getMonth() + 12)).toLocaleDateString('pt-BR')}
                           </p>
                         )}
                       </div>
@@ -789,7 +798,7 @@ export default function ActivePartners() {
             <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg sm:text-2xl font-bold text-white">💰 Parcelas</CardTitle>
+                  <CardTitle className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2"><DollarSign className="w-5 h-5" />Parcelas</CardTitle>
                   <p className="text-green-100 text-xs sm:text-sm mt-1">
                     {selectedPurchaseForInstallments.user_name} - {selectedPurchaseForInstallments.plan_name}
                   </p>
@@ -894,7 +903,9 @@ export default function ActivePartners() {
                                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
                               }`}
                             >
-                              {installment.paid ? '✓ Pago' : 'Marcar como Pago'}
+                              {installment.paid ? (
+                                <span className="inline-flex items-center gap-1"><CheckCircle className="w-3 h-3" />Pago</span>
+                              ) : 'Marcar como Pago'}
                             </button>
                           </div>
                         );

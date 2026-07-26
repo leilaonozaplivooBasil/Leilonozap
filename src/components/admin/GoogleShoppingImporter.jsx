@@ -33,7 +33,7 @@ export default function GoogleShoppingImporter({ onApply }) {
         setResults(data);
         // Pre-seleciona todas as imagens disponíveis (máx 5)
         setSelectedImages(data.products.slice(0, 5).map((p, i) => i));
-        toast.success(`✅ ${data.imageCount} imagens encontradas!`);
+        toast.success(` ${data.imageCount} imagens encontradas!`);
       } else {
         toast.error("Nenhuma imagem encontrada para este produto.");
       }
@@ -79,7 +79,7 @@ export default function GoogleShoppingImporter({ onApply }) {
       source_url: results.products[0]?.productUrl || "",
     });
 
-    toast.success(`✅ ${selectedImages.length} imagens aplicadas do Google Shopping!`);
+    toast.success(` ${selectedImages.length} imagens aplicadas do Google Shopping!`);
     setResults(null);
     setProductName("");
     setSelectedImages([]);
@@ -176,7 +176,7 @@ export default function GoogleShoppingImporter({ onApply }) {
                     </div>
                     {isSelected && (
                       <div className="absolute top-1 right-1 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[10px] font-bold">
-                        {selOrder === 0 ? "★" : selOrder + 1}
+                        {selOrder === 0 ? <Star className="w-3 h-3" /> : selOrder + 1}
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">

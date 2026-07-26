@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, Play, Zap, Stethoscope } from 'lucide-react';
+import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, Play, Zap, Stethoscope, Smartphone } from 'lucide-react';
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PortalPageHeader from '@/components/common/PortalPageHeader';
@@ -139,7 +139,7 @@ export default function SystemDiagnostics() {
           </div>
           <div className="flex items-center gap-2">
             {getStatusBadge(log.status)}
-            {log.is_mobile && <Badge className="bg-purple-900/30 text-purple-300 border-purple-700">📱 Mobile</Badge>}
+            {log.is_mobile && <Badge className="bg-purple-900/30 text-purple-300 border-purple-700 inline-flex items-center gap-1"><Smartphone className="w-3 h-3" />Mobile</Badge>}
           </div>
         </div>
         

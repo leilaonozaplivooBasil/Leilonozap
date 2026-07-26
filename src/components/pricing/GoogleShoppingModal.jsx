@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Loader2, Store, Zap } from 'lucide-react';
+import { ExternalLink, Loader2, Store, Zap, ShoppingCart, ChartColumn } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -47,7 +47,7 @@ export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="flex items-center gap-2 text-2xl">
-                🛒 Google Shopping
+                <ShoppingCart className="w-4 h-4 inline mr-2" />Google Shopping
               </DialogTitle>
               <p className="text-gray-600 text-sm mt-2">
                 Pesquisando: <span className="font-semibold">{productName}</span>
@@ -116,7 +116,7 @@ export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
                                onClick={() => navigate(createPageUrl('CreateAuction') + `?ml_url=${encodeURIComponent(product.mercadolivre_url)}`)}
                                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                              >
-                               🚀 Importar ML
+                               <Zap className="w-4 h-4 inline mr-2" />Importar ML
                                <Zap className="w-4 h-4" />
                              </Button>
                            )}
@@ -138,7 +138,7 @@ export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
 
               {/* Resumo dos Preços */}
               <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-xl p-6">
-                <h4 className="font-bold text-blue-900 mb-4 text-lg">📊 Análise de Preços</h4>
+                <h4 className="font-bold text-blue-900 mb-4 text-lg flex items-center gap-2"><ChartColumn className="w-4 h-4" />Análise de Preços</h4>
                 <div className="grid grid-cols-3 gap-6">
                   <div className="text-center">
                     <p className="text-sm text-blue-700 mb-1">Menor Preço</p>

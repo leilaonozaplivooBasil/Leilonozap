@@ -1324,7 +1324,7 @@ export default function NetworkOverview() {
                       Sistema Multinível — Visualização em Árvore
                     </span>
                     <span className="text-[11px] text-gray-500 hidden sm:inline">
-                      arraste um nó para reposicionar na rede
+                      arraste uma pessoa sobre outra para mudar o indicador (pede confirmação)
                     </span>
                     <div className="flex-1" />
                     <Button
@@ -1348,7 +1348,8 @@ export default function NetworkOverview() {
                     </Button>
                   </div>
 
-                  <div className={treeFullscreen ? "flex-1 overflow-auto" : ""}>
+                  {/* A árvore controla o próprio zoom/pan — sem scroll externo */}
+                  <div className={treeFullscreen ? "flex-1 min-h-0 overflow-hidden" : ""}>
                     {allUsers.length > 0 ? (
                       <TreeHierarchy
                         users={allUsers}

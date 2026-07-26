@@ -4,7 +4,7 @@ import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Calculator, AlertTriangle } from 'lucide-react';
+import { Search, Calculator, AlertTriangle, Cloud, FolderOpen } from 'lucide-react';
 import { base44 as base44Client } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { calculateExpectedCommission } from '@/utils/CommissionAuditRules';
@@ -241,14 +241,14 @@ export default function CommissionPilot() {
                                         onClick={() => setAuditMode('api')}
                                         className={auditMode === 'api' ? "bg-blue-600" : "text-gray-400 border-gray-600"}
                                     >
-                                        ☁️ Online (API)
+                                        <Cloud className="w-4 h-4 mr-2" />Online (API)
                                     </Button>
                                     <Button
                                         variant={auditMode === 'file' ? "default" : "outline"}
                                         onClick={() => setAuditMode('file')}
                                         className={auditMode === 'file' ? "bg-green-600" : "text-gray-400 border-gray-600"}
                                     >
-                                        📂 Offline (Snapshot)
+                                        <FolderOpen className="w-4 h-4 mr-2" />Offline (Snapshot)
                                     </Button>
                                 </div>
 

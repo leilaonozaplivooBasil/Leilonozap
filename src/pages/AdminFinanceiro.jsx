@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ShieldCheck, ArrowDownToLine, Loader2, Check, X, ExternalLink } from 'lucide-react';
+import { ShieldCheck, ArrowDownToLine, Loader2, Check, X, ExternalLink, Settings } from 'lucide-react';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 const cpfMask = (c) => { const d = String(c || '').replace(/\D/g, ''); return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}` : c; };
@@ -48,7 +48,7 @@ export default function AdminFinanceiro() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-2xl font-black">⚙️ Financeiro — Revisão</h1>
+        <h1 className="text-2xl font-black flex items-center gap-2"><Settings className="w-6 h-6" />Financeiro — Revisão</h1>
 
         {/* KYC */}
         <section>

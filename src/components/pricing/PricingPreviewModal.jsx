@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { fmtBR } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Check, Loader2, TrendingUp } from 'lucide-react';
+import { X, Check, Loader2, TrendingUp, TriangleAlert, DollarSign, ExternalLink } from 'lucide-react';
 
 export default function PricingPreviewModal({ isOpen, onClose, products, onConfirm, isLoading }) {
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -54,15 +54,15 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
           {/* RESUMO */}
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-3">
-              <p className="text-xs text-emerald-400 mb-1">✅ Sucesso</p>
+              <p className="text-xs text-emerald-400 mb-1 flex items-center gap-1"><Check className="w-3 h-3" />Sucesso</p>
               <p className="text-2xl font-bold text-emerald-300">{successProducts.length}</p>
             </div>
             <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3">
-              <p className="text-xs text-yellow-400 mb-1">⚠️ Falhados</p>
+              <p className="text-xs text-yellow-400 mb-1 flex items-center gap-1"><TriangleAlert className="w-3 h-3" />Falhados</p>
               <p className="text-2xl font-bold text-yellow-300">{failedProducts.length}</p>
             </div>
             <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
-              <p className="text-xs text-blue-400 mb-1">💰 Total</p>
+              <p className="text-xs text-blue-400 mb-1 flex items-center gap-1"><DollarSign className="w-3 h-3" />Total</p>
               <p className="text-2xl font-bold text-blue-300">{products.length}</p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
                           className="text-xs text-yellow-400 hover:text-yellow-300 mt-1 flex items-center gap-1 justify-end"
                           onClick={e => e.stopPropagation()}
                         >
-                          🛒 Ver no ML
+                          <ExternalLink className="w-3 h-3 inline mr-1" />Ver no ML
                         </a>
                       )}
                     </div>
@@ -119,7 +119,7 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
           {/* PRODUTOS COM FALHA */}
           {failedProducts.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-sm font-bold text-yellow-300 uppercase">⚠️ Sem Preço de Mercado</h3>
+              <h3 className="text-sm font-bold text-yellow-300 uppercase flex items-center gap-1.5"><TriangleAlert className="w-3.5 h-3.5" />Sem Preço de Mercado</h3>
               <div className="bg-yellow-900/10 border border-yellow-700/30 rounded-lg p-3 space-y-2 max-h-[150px] overflow-y-auto">
                 {failedProducts.map(product => (
                   <div key={product.id} className="text-xs text-yellow-200">

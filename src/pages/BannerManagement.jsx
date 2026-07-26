@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Sparkles, Palette, Star, FileText, DollarSign, CheckCircle, Ruler, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageCropEditor from '../components/admin/ImageCropEditor';
@@ -249,7 +249,7 @@ export default function BannerManagement() {
       }
 
       if (allItemsToOptimize.length === 0) {
-        setOptimizationProgress({ current: 100, total: 100, statusText: '✨ Sistema 100% Otimizado! Nenhuma imagem JPG/PNG encontrada.' });
+        setOptimizationProgress({ current: 100, total: 100, statusText: 'Sistema 100% Otimizado! Nenhuma imagem JPG/PNG encontrada.' });
         toast.success("Todas as imagens do sistema já estão no formato WebP!");
         setTimeout(() => {
           setIsOptimizing(false);
@@ -304,7 +304,7 @@ export default function BannerManagement() {
       setOptimizationProgress({ 
         current: allItemsToOptimize.length, 
         total: allItemsToOptimize.length, 
-        statusText: `✨ Concluído! ${count} imagens foram convertidas para WebP.` 
+        statusText: `Concluído! ${count} imagens foram convertidas para WebP.` 
       });
       toast.success(`Otimização global concluída com sucesso!`);
       loadBanners();
@@ -317,7 +317,7 @@ export default function BannerManagement() {
     } catch (error) {
       console.error('Erro na otimização:', error);
       toast.error('O sistema detectou um erro ou negação de permissão ao varrer tabelas.');
-      setOptimizationProgress({ current: 100, total: 100, statusText: '❌ Erro de conexão ou permissão ao buscar os dados.' });
+      setOptimizationProgress({ current: 100, total: 100, statusText: 'Erro de conexão ou permissão ao buscar os dados.' });
       
       setTimeout(() => {
          setIsOptimizing(false);
@@ -390,7 +390,14 @@ export default function BannerManagement() {
             disabled={isOptimizing}
             className="bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-900/40"
           >
-            {isOptimizing ? 'Carregando Otimização...' : '🌟 Converter Todas as Imagens do Sistema (WebP)'}
+            {isOptimizing ? (
+              'Carregando Otimização...'
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Converter Todas as Imagens do Sistema (WebP)
+              </span>
+            )}
           </Button>
         </div>
 
@@ -423,21 +430,21 @@ export default function BannerManagement() {
             variant={activeTab === 'banners' ? 'default' : 'outline'}
             className={activeTab === 'banners' ? 'bg-green-600 hover:bg-green-700' : ''}
           >
-            🎨 Banners
+            <Palette className="w-4 h-4 mr-2" />Banners
           </Button>
           <Button
             onClick={() => setActiveTab('products')}
             variant={activeTab === 'products' ? 'default' : 'outline'}
             className={activeTab === 'products' ? 'bg-green-600 hover:bg-green-700' : ''}
           >
-            ⭐ Produtos em Destaque
+            <Star className="w-4 h-4 mr-2" />Produtos em Destaque
           </Button>
           <Button
             onClick={() => setActiveTab('footer')}
             variant={activeTab === 'footer' ? 'default' : 'outline'}
             className={activeTab === 'footer' ? 'bg-green-600 hover:bg-green-700' : ''}
           >
-            📄 Rodapé
+            <FileText className="w-4 h-4 mr-2" />Rodapé
           </Button>
         </div>
 
@@ -641,8 +648,8 @@ export default function BannerManagement() {
                           <div className="text-xs text-green-400 mb-1">{product.category}</div>
                           <h4 className="text-white font-bold mb-2">{product.name}</h4>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">💰 {product.investment}</span>
-                            <span className="text-green-400">✅ {product.expected_return}</span>
+                            <span className="text-gray-400 inline-flex items-center gap-1"><DollarSign className="w-3 h-3" />{product.investment}</span>
+                            <span className="text-green-400 inline-flex items-center gap-1"><CheckCircle className="w-3 h-3" />{product.expected_return}</span>
                           </div>
                         </div>
                       </div>
@@ -685,8 +692,8 @@ export default function BannerManagement() {
                                   <h3 className="text-white font-semibold">{product.name}</h3>
                                   <p className="text-gray-400 text-sm">{product.category}</p>
                                   <div className="flex gap-4 mt-1">
-                                    <span className="text-xs text-gray-500">💰 {product.investment}</span>
-                                    <span className="text-xs text-green-400">✅ {product.expected_return}</span>
+                                    <span className="text-xs text-gray-500 inline-flex items-center gap-1"><DollarSign className="w-3 h-3" />{product.investment}</span>
+                                    <span className="text-xs text-green-400 inline-flex items-center gap-1"><CheckCircle className="w-3 h-3" />{product.expected_return}</span>
                                   </div>
                                 </div>
 
@@ -870,7 +877,7 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
               
               {/* Informações sobre dimensões */}
               <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-3">
-                <p className="text-blue-400 text-sm font-semibold mb-1">📐 Dimensões Recomendadas</p>
+                <p className="text-blue-400 text-sm font-semibold mb-1 flex items-center gap-1.5"><Ruler className="w-3.5 h-3.5" />Dimensões Recomendadas</p>
                 <p className="text-gray-300 text-xs leading-relaxed">
                   • <strong>Formato:</strong> Horizontal (paisagem)<br/>
                   • <strong>Dimensões:</strong> 1200 x 600 pixels (proporção 2:1)<br/>
@@ -997,7 +1004,7 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
                   className="bg-gray-700 text-white border-gray-600"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">💡 Calculado automaticamente ao digitar o investimento</p>
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1"><Lightbulb className="w-3 h-3" />Calculado automaticamente ao digitar o investimento</p>
               </div>
             </div>
 
@@ -1099,7 +1106,10 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
                 </Button>
               </div>
               <p className="text-gray-400 text-xs mt-1">
-                {formData.device_type === 'desktop' ? '📐 Recomendado: 1920x600px' : '📱 Recomendado: 800x600px'}
+                <span className="inline-flex items-center gap-1.5">
+                  <Ruler className="w-3 h-3" />
+                  {formData.device_type === 'desktop' ? 'Recomendado: 1920x600px' : 'Recomendado: 800x600px'}
+                </span>
               </p>
             </div>
 

@@ -33,7 +33,7 @@ export default function CuponsAdmin() {
     });
     setSaving(false);
     if (!r?.success) { toast.error(r?.error || 'Falha ao criar'); return; }
-    toast.success('🎟️ Cupom criado!');
+    toast.success('Cupom criado!');
     setForm({ code: '', tipo: 'percent', valor: '', min_order: '', uso_max: '', validade: '', descricao: '' });
     load();
   };

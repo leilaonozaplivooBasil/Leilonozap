@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award, Upload } from 'lucide-react';
+import { Loader2, Award, Upload, ClipboardList, UserRound, TrendingUp, Trophy, Landmark, Network, Star } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from "sonner";
 // P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
@@ -158,12 +158,12 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
 
-            toast.success(`✅ Usuário atualizado!\nCargos: ${levelNames}\n⭐ Principal: ${primaryName}`);
+            toast.success(`Usuário atualizado!\nCargos: ${levelNames}\nPrincipal: ${primaryName}`);
             onSuccess(result.user);
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);
-            toast.error(`❌ Não foi salvo: ${error.message || 'erro desconhecido'}`);
+            toast.error(`Não foi salvo: ${error.message || 'erro desconhecido'}`);
         } finally {
             setIsSaving(false);
         }
@@ -182,7 +182,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 <div className="grid gap-4 py-4">
                     {/* DADOS BÁSICOS */}
                     <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-green-400">📋 Dados Básicos</h3>
+                        <h3 className="text-sm font-semibold text-green-400 flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" />Dados Básicos</h3>
                         
                         {/* AVATAR UPLOAD */}
                         <div className="flex items-center gap-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
@@ -278,7 +278,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
                     {/* NOMES PARA PAINEL */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-blue-400">👤 Nomes para Exibição no Painel</h3>
+                        <h3 className="text-sm font-semibold text-blue-400 flex items-center gap-1.5"><UserRound className="w-3.5 h-3.5" />Nomes para Exibição no Painel</h3>
                         
                         <div className="grid grid-cols-2 gap-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
                             <div>
@@ -313,7 +313,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
                     {/* HIERARQUIA / INDICADOR */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
+                        <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Hierarquia (Sistema de Alavancagem)</h3>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right text-gray-300">Indicador</Label>
                             <div className="col-span-3">
@@ -336,7 +336,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
                     {/* HIERARQUIA / INDICADOR */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
+                        <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Hierarquia (Sistema de Alavancagem)</h3>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right text-gray-300">Indicador</Label>
                             <div className="col-span-3">
@@ -359,7 +359,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
                     {/* NÍVEIS DE CARREIRA */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-purple-400">🏆 Níveis de Carreira</h3>
+                        <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5" />Níveis de Carreira</h3>
                         
                         <p className="text-xs text-gray-400">Selecione um ou mais cargos:</p>
 
@@ -374,8 +374,8 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                             {/* P18/19: 2 categorias — Institucional (TTT, topo) × Rede (plano de carreira) */}
                             {[
-                                { bloco: 'diretor', label: '🏛️ Cargos Institucionais (Diretoria / TTT)' },
-                                { bloco: 'rede', label: '🌐 Cargos de Rede (Plano de Carreira)' },
+                                { bloco: 'diretor', label: 'Cargos Institucionais (Diretoria / TTT)', icon: Landmark },
+                                { bloco: 'rede', label: 'Cargos de Rede (Plano de Carreira)', icon: Network },
                             ].map((grp) => (
                                 <div key={grp.bloco} className="space-y-2">
                                     <p className="text-[11px] font-bold uppercase tracking-wide text-gray-300">{grp.label}</p>
@@ -424,7 +424,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         {selectedLevels.length > 0 && (
                             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
                                 <p className="text-sm text-green-400">
-                                    ⭐ Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
+                                    <Star className="w-3.5 h-3.5 inline mr-1" />Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     Esta será a função exibida no Plano de Carreira

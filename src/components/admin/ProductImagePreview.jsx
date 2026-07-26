@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, ExternalLink, CheckCircle } from 'lucide-react';
+import { Copy, ExternalLink, CheckCircle, Images, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function ProductImagePreview({ imageUrls }) {
@@ -7,19 +7,19 @@ export default function ProductImagePreview({ imageUrls }) {
   
   const copyToClipboard = (url) => {
     navigator.clipboard.writeText(url);
-    alert('✅ URL copiada!');
+    alert('URL copiada!');
   };
 
   const copyAll = () => {
     const allUrls = validImages.join('\n');
     navigator.clipboard.writeText(allUrls);
-    alert(`✅ ${validImages.length} URLs copiadas!`);
+    alert(` ${validImages.length} URLs copiadas!`);
   };
 
   if (validImages.length === 0) {
     return (
       <div className="bg-gray-900/50 rounded-lg p-6 text-center text-gray-500 border border-gray-700">
-        <p>📸 As imagens aparecerão aqui após importação</p>
+        <p className="flex items-center justify-center gap-1.5"><Images className="w-4 h-4" />As imagens aparecerão aqui após importação</p>
       </div>
     );
   }
@@ -50,7 +50,10 @@ export default function ProductImagePreview({ imageUrls }) {
             {/* HEADER */}
             <div className="flex items-center justify-between mb-3">
               <span className="text-white font-bold">
-                {index === 0 ? '🏆 IMAGEM DE CAPA' : `📸 Imagem #${index + 1}`}
+                <span className="inline-flex items-center gap-1">
+                    {index === 0 ? <Trophy className="w-3 h-3" /> : <Images className="w-3 h-3" />}
+                    {index === 0 ? 'IMAGEM DE CAPA' : `Imagem #${index + 1}`}
+                  </span>
               </span>
               <div className="flex gap-2">
                 <Button
@@ -97,11 +100,11 @@ export default function ProductImagePreview({ imageUrls }) {
                   display: 'block'
                 }}
                 onLoad={(e) => {
-                  console.log(`✅ RENDERIZADA #${index + 1}:`, e.target.naturalWidth, 'x', e.target.naturalHeight);
+                  console.log(`RENDERIZADA #${index + 1}:`, e.target.naturalWidth, 'x', e.target.naturalHeight);
                 }}
                 onError={(e) => {
-                  console.error(`❌ FALHA #${index + 1}:`, url);
-                  e.target.outerHTML = '<div style="color: #ef4444; padding: 20px; text-align: center;">❌ Erro ao carregar imagem</div>';
+                  console.error(`FALHA #${index + 1}:`, url);
+                  e.target.outerHTML = '<div style="color: #ef4444; padding: 20px; text-align: center;">Erro ao carregar imagem</div>';
                 }}
               />
             </div>

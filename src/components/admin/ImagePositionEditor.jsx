@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, RotateCw, Check, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCw, Check, X, Lightbulb } from 'lucide-react';
 
 export default function ImagePositionEditor({ imageUrl, onSave, onCancel, deviceType = 'desktop', initialAdjustments = null }) {
   // Dimensões reais do banner
@@ -236,7 +236,7 @@ export default function ImagePositionEditor({ imageUrl, onSave, onCancel, device
       <div className="bg-gray-900 border-t border-gray-700 p-4">
         <div className="max-w-7xl mx-auto">
           <p className="text-gray-400 text-sm text-center">
-            💡 Arraste a imagem para posicionar • Use os botões de zoom para ajustar o tamanho • A imagem não pode sair do campo
+            <Lightbulb className="w-3 h-3 inline mr-1" />Arraste a imagem para posicionar • Use os botões de zoom para ajustar o tamanho • A imagem não pode sair do campo
           </p>
         </div>
       </div>

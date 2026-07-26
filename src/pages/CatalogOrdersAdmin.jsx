@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw } from 'lucide-react';
+import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CatalogSale = base44.entities.CatalogSale;
@@ -136,9 +136,9 @@ export default function CatalogOrdersAdmin() {
           {[
             { label: 'Total', value: stats.total, color: 'text-white', filter: 'all' },
             { label: 'Aguardando Pgto', value: stats.pending, color: 'text-yellow-400', filter: 'pending_payment' },
-            { label: '✅ Pagos (Enviar)', value: stats.paid, color: 'text-blue-400', filter: 'paid' },
-            { label: '📦 Enviados', value: stats.shipped, color: 'text-indigo-400', filter: 'shipped' },
-            { label: '🎉 Entregues', value: stats.delivered, color: 'text-green-400', filter: 'delivered' },
+            { label: 'Pagos (Enviar)', value: stats.paid, color: 'text-blue-400', filter: 'paid' },
+            { label: 'Enviados', value: stats.shipped, color: 'text-indigo-400', filter: 'shipped' },
+            { label: 'Entregues', value: stats.delivered, color: 'text-green-400', filter: 'delivered' },
           ].map(card => (
             <Card
               key={card.filter}
@@ -200,7 +200,7 @@ export default function CatalogOrdersAdmin() {
                           <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
                           <span className="text-gray-500 text-xs">{new Date(order.created_date).toLocaleDateString('pt-BR')}</span>
                           {order.tracking_code && (
-                            <span className="text-indigo-300 text-xs font-mono">📦 {order.tracking_code}</span>
+                            <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
                         </div>
                       </div>
@@ -257,10 +257,10 @@ export default function CatalogOrdersAdmin() {
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700">
                     <SelectItem value="pending_payment">⏳ Aguardando Pagamento</SelectItem>
-                    <SelectItem value="paid">✅ Pago</SelectItem>
-                    <SelectItem value="shipped">📦 Enviado</SelectItem>
-                    <SelectItem value="delivered">🎉 Entregue</SelectItem>
-                    <SelectItem value="canceled">❌ Cancelado</SelectItem>
+                    <SelectItem value="paid"><span className="inline-flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5" />Pago</span></SelectItem>
+                    <SelectItem value="shipped"><span className="inline-flex items-center gap-2"><Truck className="w-3.5 h-3.5" />Enviado</span></SelectItem>
+                    <SelectItem value="delivered"><span className="inline-flex items-center gap-2"><PartyPopper className="w-3.5 h-3.5" />Entregue</span></SelectItem>
+                    <SelectItem value="canceled"><span className="inline-flex items-center gap-2"><XCircle className="w-3.5 h-3.5" />Cancelado</span></SelectItem>
                   </SelectContent>
                 </Select>
               </div>

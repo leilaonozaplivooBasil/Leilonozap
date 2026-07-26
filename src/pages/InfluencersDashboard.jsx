@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, DollarSign, Search, ChevronDown, ChevronUp, Wallet, CheckCircle, XCircle, Megaphone } from "lucide-react";
+import { Users, TrendingUp, DollarSign, Search, ChevronDown, ChevronUp, Wallet, CheckCircle, XCircle, Megaphone, SearchX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
@@ -292,9 +292,9 @@ export default function InfluencersDashboard() {
                               ? 'bg-blue-500/20 text-blue-400'
                               : 'bg-gray-500/20 text-gray-400'
                           }`}>
-                            {lead.status === 'active_buyer' ? '✅ Comprador' : 
-                             lead.status === 'registered' ? '📝 Cadastrado' : 
-                             '⏳ Pendente'}
+                            {lead.status === 'active_buyer' ? 'Comprador' :
+                             lead.status === 'registered' ? 'Cadastrado' :
+                             'Pendente'}
                           </div>
                         </div>
                         <div className="flex gap-4 text-sm">
@@ -338,7 +338,7 @@ export default function InfluencersDashboard() {
         {filteredInfluencers.length === 0 && (
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">🔍</div>
+              <SearchX className="w-14 h-14 mx-auto mb-4 text-gray-600" />
               <h3 className="text-2xl font-bold text-white mb-3">
                 Nenhum influenciador encontrado
               </h3>
@@ -395,9 +395,9 @@ export default function InfluencersDashboard() {
                                 request.status === 'completed' || request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
                                 'bg-red-500/20 text-red-400'
                               }`}>
-                                {request.status === 'pending' ? '⏳ Pendente' :
-                                 request.status === 'completed' || request.status === 'approved' ? '✅ Aprovado' :
-                                 '❌ Rejeitado'}
+                                {request.status === 'pending' ? 'Pendente' :
+                                 request.status === 'completed' || request.status === 'approved' ? 'Aprovado' :
+                                 'Rejeitado'}
                               </div>
                             </div>
                             {request.status === 'pending' && (
