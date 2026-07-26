@@ -8,11 +8,16 @@ import { RatingBadge } from './StarRating';
 // 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
 // imediata em produção. Artes novas (25/07) em 1376×768 (~16:9) — mostrados com
 // fit=contain + fundo ambiente desfocado, sem cortar nada.
-import bannerCat1 from '@/assets/banners/banner1.webp';
-import bannerCat2 from '@/assets/banners/banner2.webp';
-import bannerCat3 from '@/assets/banners/banner3.webp';
-import bannerCat4 from '@/assets/banners/banner4.webp';
-import bannerCat5 from '@/assets/banners/banner5.webp';
+import banner1Desk from '@/assets/banners/banner1-desktop.webp';
+import banner1Mob from '@/assets/banners/banner1-mobile.webp';
+import banner2Desk from '@/assets/banners/banner2-desktop.webp';
+import banner2Mob from '@/assets/banners/banner2-mobile.webp';
+import banner3Desk from '@/assets/banners/banner3-desktop.webp';
+import banner3Mob from '@/assets/banners/banner3-mobile.webp';
+import banner4Desk from '@/assets/banners/banner4-desktop.webp';
+import banner4Mob from '@/assets/banners/banner4-mobile.webp';
+import banner5Desk from '@/assets/banners/banner5-desktop.webp';
+import banner5Mob from '@/assets/banners/banner5-mobile.webp';
 
 const WHATSAPP = '5521984072064';
 const SOCIAL = {
@@ -42,17 +47,18 @@ const LIVOO_FEED = 'https://livoolive.com.br/app';
 
 const LOGO = '/brand/icon-3d.webp';
 
-// Banners oficiais da loja (rotativos). Cada um entra como desktop + mobile para
-// aparecer em qualquer dispositivo. Os de licenciado (4 e 5) linkam para /Licensing.
+// Banners oficiais da loja (rotativos), na paleta oficial da logo (#4d724b/#99c198/
+// #dabb98/#21222b/#9da7b5). Arte dedicada por dispositivo: desktop 1920×960 (2:1)
+// e mobile 1344×768. Os de licenciado (4 e 5) linkam para /Licensing.
 const CATALOG_BANNERS = [
-  { image_url: bannerCat1, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
-  { image_url: bannerCat2, title: 'Ferramentas Entrega Full — até 85% de desconto' },
-  { image_url: bannerCat3, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
-  { image_url: bannerCat4, title: 'Torne-se um Licenciado — receba até 20% de comissão', link_url: createPageUrl('Licensing') },
-  { image_url: bannerCat5, title: 'Seja um Licenciado — venda na Loja Virtual e ganhe de casa', link_url: createPageUrl('Licensing') },
-].flatMap((b, i) => [
-  { ...b, id: `nz-banner-${i}-d`, device_type: 'desktop' },
-  { ...b, id: `nz-banner-${i}-m`, device_type: 'mobile' },
+  { desktop: banner1Desk, mobile: banner1Mob, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
+  { desktop: banner2Desk, mobile: banner2Mob, title: 'Ferramentas Entrega Full — até 85% de desconto' },
+  { desktop: banner3Desk, mobile: banner3Mob, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
+  { desktop: banner4Desk, mobile: banner4Mob, title: 'Torne-se um Licenciado — receba até 20% de comissão', link_url: createPageUrl('Licensing') },
+  { desktop: banner5Desk, mobile: banner5Mob, title: 'Seja um Licenciado — venda na Loja Virtual e ganhe de casa', link_url: createPageUrl('Licensing') },
+].flatMap(({ desktop, mobile, ...b }, i) => [
+  { ...b, image_url: desktop, id: `nz-banner-${i}-d`, device_type: 'desktop' },
+  { ...b, image_url: mobile, id: `nz-banner-${i}-m`, device_type: 'mobile' },
 ]);
 
 // Ícone redondo do rail de categorias (estilo Shopee, cores Leila)
@@ -174,12 +180,12 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
       </div>
 
       {/* HERO: banner full-bleed (borda a borda) nos dois mundos, SEMPRE na proporção
-          nativa das artes (1376×768 ≈ 16:9) — nada cortado, nada esticado.
-          Mobile: o container tem exatamente a proporção da arte, então ela preenche
-          100% da largura sem sobras. Desktop: altura fixa e a arte centralizada,
+          nativa das artes — nada cortado, nada esticado.
+          Mobile: arte 1344×768, container na mesma proporção → preenche 100% da largura.
+          Desktop: arte 1920×960 (2:1), altura fixa e a arte centralizada,
           com a própria arte desfocada preenchendo as laterais (ambient). */}
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
-        <div className="relative overflow-hidden bg-[#0f172a] aspect-[1376/768] md:aspect-auto md:h-[440px] lg:h-[500px] xl:h-[560px]">
+        <div className="relative overflow-hidden bg-[#21222b] aspect-[1344/768] md:aspect-auto md:h-[440px] lg:h-[500px] xl:h-[560px]">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
