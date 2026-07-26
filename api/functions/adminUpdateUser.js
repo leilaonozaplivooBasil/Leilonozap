@@ -30,7 +30,28 @@ const ALLOWED = [
   'active',
   // crédito manual de comissão pelo Painel de Controle
   'commission_balance',
+  // carteira do Sócio Executivo (1% sobre a própria estrutura de negócio)
+  'executive_owner_id', 'executive_owner_pinned', 'executive_owner_since',
+  'licenciado_context',
 ];
+
+// Campos da carteira executiva. Enquanto a coluna dedicada não existir no banco,
+// eles viajam dentro de licenciado_context (coluna livre) — a leitura no front
+// entende os dois formatos, então a migration pode ser feita a qualquer momento.
+const EXECUTIVE_FIELDS = ['executive_owner_id', 'executive_owner_pinned', 'executive_owner_since'];
+
+function foldExecutiveIntoContext(payload) {
+  const ctx = {};
+  for (const f of EXECUTIVE_FIELDS) {
+    if (f in payload) {
+      ctx[f] = payload[f];
+      delete payload[f];
+    }
+  }
+  if (Object.keys(ctx).length === 0) return payload;
+  payload.licenciado_context = JSON.stringify(ctx);
+  return payload;
+}
 
 // Auditoria: registra QUEM fez O QUÊ com QUEM. Guardado em system_logs
 // (tabela genérica de logs que já existe), no campo jsonb raw_base44.
@@ -111,12 +132,29 @@ export default async function handler(req, res) {
     }
     payload.updated_date = new Date().toISOString();
 
-    const upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
+    let upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
       body: JSON.stringify(payload),
     });
-    const rows = await upd.json();
+    let rows = await upd.json();
+
+    // Coluna dedicada ainda não criada (42703): repete gravando no campo de
+    // compatibilidade, para o painel funcionar antes da migration.
+    const semColuna =
+      !upd.ok &&
+      rows?.code === '42703' &&
+      EXECUTIVE_FIELDS.some((f) => f in payload);
+    if (semColuna) {
+      const alt = foldExecutiveIntoContext({ ...payload });
+      upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify(alt),
+      });
+      rows = await upd.json();
+    }
+
     if (!upd.ok) {
       return res.status(upd.status).json({ success: false, error: 'Falha ao salvar', details: rows });
     }
@@ -127,7 +165,8 @@ export default async function handler(req, res) {
     // Auditoria da ação (não bloqueia a resposta se falhar)
     const saved = rows[0];
     let action = 'update';
-    if ('active' in payload) action = payload.active === false ? 'trash' : 'restore';
+    if (EXECUTIVE_FIELDS.some((f) => f in payload) || 'licenciado_context' in payload) action = 'executive';
+    else if ('active' in payload) action = payload.active === false ? 'trash' : 'restore';
     else if ('referred_by_id' in payload) action = 'move';
     else if ('primary_career_level' in payload || 'career_levels' in payload) action = 'promote';
 

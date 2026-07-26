@@ -6,11 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award, Upload, ClipboardList, UserRound, TrendingUp, Trophy, Landmark, Network, Star } from 'lucide-react';
+import { Loader2, Award, Upload, ClipboardList, UserRound, TrendingUp, Trophy, Landmark, Network, Star, Briefcase } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from "sonner";
 // P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
 import { CAREER_LEVELS } from '@/lib/careerLevels';
+import {
+    listExecutives,
+    readExecutiveOwner,
+    buildExecutiveUpdate,
+    resolveEffectiveExecutive,
+    requiresExecutive,
+} from '@/lib/executiveStructure';
 
 const AppUser = base44.entities.AppUser;
 
@@ -26,6 +33,8 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
     const [displayLastName, setDisplayLastName] = useState('');
     const [referrerId, setReferrerId] = useState('');
     const [avatarUrlInput, setAvatarUrlInput] = useState('');
+    const [executiveOwnerId, setExecutiveOwnerId] = useState('');
+    const [executivePinned, setExecutivePinned] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -53,6 +62,9 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                     : (nameParts.length > 1 ? nameParts[nameParts.length - 1] : '')
             );
             setReferrerId(user.referred_by_id || '');
+            const own = readExecutiveOwner(user);
+            setExecutiveOwnerId(own.id || '');
+            setExecutivePinned(own.pinned);
         }
     }, [user]);
 
@@ -158,7 +170,9 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 primary_career_level: primaryLevel,
                 display_first_name: displayFirstName.trim() || null,
                 display_last_name: displayLastName.trim() || null,
-                avatar_url: userData.avatar_url || null
+                avatar_url: userData.avatar_url || null,
+                // Carteira do Sócio Executivo (1% sobre a própria estrutura)
+                ...buildExecutiveUpdate(executiveOwnerId || null, { pinned: executivePinned }),
             };
 
             // Salva via service_role (RLS impede escrita pela anon key — sem isso o save é no-op silencioso)
@@ -361,6 +375,80 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                             </p>
                         </div>
                     </div>
+
+                    {/* ESTRUTURA DE NEGÓCIO — carteira do Sócio Executivo */}
+                    {(() => {
+                        const executivos = listExecutives(allUsers);
+                        const byId = new Map((Array.isArray(allUsers) ? allUsers : []).map(u => [u.id, u]));
+                        const efetivo = resolveEffectiveExecutive(
+                            { ...user, executive_owner_id: executiveOwnerId || null },
+                            byId
+                        );
+                        const nomeEfetivo = efetivo.executiveId
+                            ? (byId.get(efetivo.executiveId)?.full_name || '—')
+                            : null;
+                        const precisa = requiresExecutive(user);
+                        return (
+                            <div className="space-y-3 pt-4 border-t border-gray-700">
+                                <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-1.5">
+                                    <Briefcase className="w-3.5 h-3.5" />
+                                    Estrutura de Negócio (Sócio Executivo)
+                                </h3>
+                                <p className="text-[11px] text-gray-400 leading-snug">
+                                    Define para quem vai o <strong className="text-purple-300">1% da estrutura</strong>.
+                                    É independente de quem indicou. Em branco, herda de quem está acima na linha.
+                                </p>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-[12px] text-gray-400">Executivo responsável</Label>
+                                    <Select
+                                        value={executiveOwnerId || 'herdar'}
+                                        onValueChange={(v) => setExecutiveOwnerId(v === 'herdar' ? '' : v)}
+                                    >
+                                        <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                            <SelectValue placeholder="Herdar de quem indicou" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
+                                            <SelectItem value="herdar">Herdar de quem indicou (automático)</SelectItem>
+                                            {executivos.map(e => (
+                                                <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <label className="flex items-start gap-2 cursor-pointer">
+                                    <Checkbox
+                                        checked={executivePinned}
+                                        onCheckedChange={(v) => setExecutivePinned(!!v)}
+                                        disabled={!executiveOwnerId}
+                                        className="mt-0.5"
+                                    />
+                                    <span className="text-[11.5px] text-gray-300 leading-snug">
+                                        Fixar esta escolha
+                                        <span className="block text-[10.5px] text-gray-500">
+                                            protege contra mudanças em massa — use quando for negociação específica
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <div className={`rounded-lg border p-2.5 text-[11.5px] ${
+                                    efetivo.executiveId
+                                        ? 'border-purple-500/25 bg-purple-900/12 text-gray-300'
+                                        : 'border-amber-500/40 bg-amber-900/15 text-amber-300'
+                                }`}>
+                                    {efetivo.executiveId ? (
+                                        <>Vale hoje: <strong className="text-purple-300">{nomeEfetivo}</strong>
+                                        <span className="text-gray-500"> ({efetivo.source}{efetivo.from ? ` de ${efetivo.from.full_name}` : ''})</span></>
+                                    ) : precisa ? (
+                                        <>Sem executivo definido — o 1% desta estrutura fica sem destino.</>
+                                    ) : (
+                                        <>Sem executivo (este cargo não exige).</>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* HIERARQUIA / INDICADOR */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">

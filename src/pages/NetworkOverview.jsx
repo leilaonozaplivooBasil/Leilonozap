@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -28,6 +28,12 @@ import MessageDispatcher from "../components/admin/MessageDispatcher";
 import TreeHierarchy from "../components/network/TreeHierarchy";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { CAREER_LEVELS } from "@/lib/careerLevels";
+import {
+  buildStructureReport,
+  buildExecutiveUpdate,
+  descendantsOf,
+  readExecutiveOwner,
+} from "@/lib/executiveStructure";
 
 function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit, onDelete }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -573,6 +579,11 @@ export default function NetworkOverview() {
     return map;
   }, [auditLog]);
 
+  // Carteira dos Sócios Executivos (1% sobre a própria estrutura)
+  const structure = useMemo(() => buildStructureReport(activeUsers), [activeUsers]);
+  const structureRef = useRef(structure);
+  useEffect(() => { structureRef.current = structure; }, [structure]);
+
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
       (u.email && u.email.toLowerCase() === 'site@leilaonozap.com') ||
@@ -707,7 +718,10 @@ export default function NetworkOverview() {
     // Confere campo a campo se o banco gravou mesmo o que foi pedido — sem isso,
     // um update ignorado silenciosamente voltaria como "sucesso".
     const saved = result.user || {};
-    const divergente = Object.keys(updates).find((k) => {
+    // Campos da carteira executiva podem ser gravados no campo de compatibilidade
+    // enquanto a coluna dedicada não existe — a conferência estrita não se aplica.
+    const IGNORA_CONFERENCIA = ['executive_owner_id', 'executive_owner_pinned', 'executive_owner_since', 'licenciado_context'];
+    const divergente = Object.keys(updates).filter((k) => !IGNORA_CONFERENCIA.includes(k)).find((k) => {
       const pedido = updates[k];
       const gravado = saved[k];
       if (pedido === null || pedido === undefined) return !(gravado === null || gravado === undefined);
@@ -719,6 +733,49 @@ export default function NetworkOverview() {
     }
     return saved;
   }, []);
+
+  // Atribui um executivo a alguém — opcionalmente para toda a equipe abaixo
+  const assignExecutive = useCallback(async (targetUser, executiveId, { cascade = false, pinned = false } = {}) => {
+    try {
+      await saveUserFields(targetUser.id, buildExecutiveUpdate(executiveId, { pinned }));
+      let afetados = 1;
+      if (cascade) {
+        // quem tem escolha fixada não é arrastado pela mudança em massa
+        const equipe = descendantsOf(targetUser.id, allUsers).filter(u => !readExecutiveOwner(u).pinned);
+        for (const membro of equipe) {
+          await saveUserFields(membro.id, buildExecutiveUpdate(executiveId, { pinned: false }));
+          afetados += 1;
+        }
+      }
+      const nome = allUsers.find(u => u.id === executiveId)?.full_name || 'executivo';
+      toast.success(`Estrutura vinculada a ${nome} — ${afetados} cadastro(s).`);
+      await fetchData();
+      await loadAudit();
+    } catch (error) {
+      toast.error('Erro ao vincular estrutura: ' + (error?.message || 'falha'));
+    }
+  }, [allUsers, saveUserFields, fetchData, loadAudit]);
+
+  // Carga inicial: vincula todo mundo que está sem executivo de uma vez só
+  const assignAllOrphans = useCallback(async (executiveId) => {
+    const alvos = structureRef.current?.orfaos || [];
+    if (!alvos.length) return;
+    const nome = allUsers.find(u => u.id === executiveId)?.full_name || 'executivo';
+    if (!window.confirm(`Vincular ${alvos.length} cadastro(s) à estrutura de ${nome}?`)) return;
+    toast.info(`Vinculando ${alvos.length} cadastro(s)…`);
+    let ok = 0;
+    for (const u of alvos) {
+      try {
+        await saveUserFields(u.id, buildExecutiveUpdate(executiveId, { pinned: false }));
+        ok += 1;
+      } catch { /* segue para os demais e reporta no fim */ }
+    }
+    toast[ok === alvos.length ? 'success' : 'warning'](
+      `${ok} de ${alvos.length} vinculados a ${nome}.`
+    );
+    await fetchData();
+    await loadAudit();
+  }, [allUsers, saveUserFields, fetchData, loadAudit]);
 
   const handlePromote = (user) => {
     setPromotingUser(user);
@@ -1435,7 +1492,7 @@ export default function NetworkOverview() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="licensees" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
+              <TabsList className="grid w-full grid-cols-4 bg-gray-700/50">
                 <TabsTrigger value="licensees">
                   <Network className="w-4 h-4 mr-2" />
                   Árvore da Rede
@@ -1443,6 +1500,15 @@ export default function NetworkOverview() {
                 <TabsTrigger value="users">
                   <Users className="w-4 h-4 mr-2" />
                   Usuários Gerais ({activeUsers.length})
+                </TabsTrigger>
+                <TabsTrigger value="estruturas">
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Estruturas ({structure.executives.length})
+                  {structure.orfaos.length > 0 && (
+                    <span className="ml-1.5 px-1.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-bold">
+                      {structure.orfaos.length}
+                    </span>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="trash">
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -1500,6 +1566,7 @@ export default function NetworkOverview() {
                         onPromote={handlePromote}
                         onRelink={handleRelink}
                         onDetach={handleDetachUser}
+                        allUsers={allUsers}
                       />
                     ) : (
                       <div className="text-center py-12 text-gray-500">
@@ -1645,7 +1712,136 @@ export default function NetworkOverview() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              {/* ABA 3: LIXEIRA — nada foi apagado, dá para restaurar */}
+              {/* ABA 3: ESTRUTURAS EXECUTIVAS — destino do 1% de cada estrutura */}
+              <TabsContent value="estruturas" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60 flex-wrap">
+                    <Briefcase className="w-4 h-4 text-purple-300 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-purple-300">Estruturas de Negócio</span>
+                    <span className="text-[11px] text-gray-500">
+                      o Sócio Executivo recebe 1% sobre a própria estrutura — cada licenciado precisa ter um dono definido
+                    </span>
+                  </div>
+
+                  {structure.executives.length === 0 ? (
+                    <p className="text-center py-8 text-[12px] text-gray-500">
+                      Nenhum Sócio Executivo cadastrado. Promova alguém ao cargo para montar as carteiras.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60">
+                      {structure.carteiras.map(({ executive, membros, definidos, herdados }) => (
+                        <div key={executive.id} className="px-4 py-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white text-[11px] font-bold overflow-hidden flex-shrink-0">
+                              {executive.avatar_url
+                                ? <img src={executive.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : (executive.full_name || '??').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[13px] text-white font-medium truncate">{executive.full_name}</p>
+                              <p className="text-[11px] text-gray-500">Sócio Executivo · 1% sobre esta estrutura</p>
+                            </div>
+                            <div className="flex-1" />
+                            <div className="text-right">
+                              <p className="text-[13px] text-purple-300 font-bold">{membros.length} na carteira</p>
+                              <p className="text-[10.5px] text-gray-500">{definidos} definidos · {herdados} herdados</p>
+                            </div>
+                          </div>
+
+                          {membros.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {membros.slice(0, 14).map(({ user: m, source }) => {
+                                const lv = CAREER_LEVELS.find(l => l.id === (m.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                                return (
+                                  <span
+                                    key={m.id}
+                                    className={`text-[10.5px] px-2 py-0.5 rounded border ${
+                                      source === 'herdado' || source === 'padrão'
+                                        ? 'border-gray-700 text-gray-400'
+                                        : 'border-purple-500/40 text-purple-200'
+                                    }`}
+                                    title={`${m.full_name} — ${lv.name} (${source})`}
+                                  >
+                                    {m.full_name}
+                                  </span>
+                                );
+                              })}
+                              {membros.length > 14 && (
+                                <span className="text-[10.5px] text-gray-500">+{membros.length - 14}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Alerta: licenciados sem destino para o 1% */}
+                <div className={`rounded-lg border overflow-hidden ${
+                  structure.orfaos.length ? 'border-amber-500/40 bg-amber-900/10' : 'border-gray-700 bg-gray-800/50'
+                }`}>
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <TriangleAlert className={`w-4 h-4 flex-shrink-0 ${structure.orfaos.length ? 'text-amber-400' : 'text-gray-500'}`} />
+                    <span className={`text-[13px] font-semibold ${structure.orfaos.length ? 'text-amber-300' : 'text-gray-400'}`}>
+                      Sem executivo definido ({structure.orfaos.length})
+                    </span>
+                    <span className="text-[11px] text-gray-500">
+                      enquanto estiverem aqui, o 1% dessas estruturas não tem para quem ir
+                    </span>
+                    <div className="flex-1" />
+                    {structure.orfaos.length > 0 && structure.executives.length > 0 && (
+                      <Select onValueChange={(execId) => assignAllOrphans(execId)}>
+                        <SelectTrigger className="w-64 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
+                          <SelectValue placeholder={`Vincular todos os ${structure.orfaos.length} a…`} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                          {structure.executives.map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {structure.orfaos.length === 0 ? (
+                    <p className="text-center py-6 text-[12px] text-gray-500">
+                      Todo licenciado ativo tem um executivo responsável.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60 max-h-96 overflow-y-auto">
+                      {structure.orfaos.map((u) => {
+                        const lv = CAREER_LEVELS.find(l => l.id === (u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                        return (
+                          <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 flex-wrap">
+                            <div className={`w-8 h-8 rounded-full ${lv.color} flex items-center justify-center text-white text-[10px] font-bold overflow-hidden flex-shrink-0`}>
+                              {u.avatar_url
+                                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : (u.full_name || '??').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12.5px] text-gray-200 truncate">{u.full_name}</p>
+                              <p className={`text-[10.5px] ${lv.textColor}`}>{lv.name}</p>
+                            </div>
+                            <Select onValueChange={(execId) => assignExecutive(u, execId, { cascade: true })}>
+                              <SelectTrigger className="w-56 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
+                                <SelectValue placeholder="Vincular a um executivo…" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                {structure.executives.map(e => (
+                                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* ABA 4: LIXEIRA — nada foi apagado, dá para restaurar */}
               <TabsContent value="trash" className="mt-4">
                 <div className="rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
                   <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">

@@ -26,10 +26,12 @@ import {
   Wallet,
   CalendarDays,
   Link as LinkIcon,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { levelColor as getCareerColor, getLevel } from '@/lib/careerLevels';
+import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStructure';
 
 /**
  * TreeHierarchy — Árvore da rede (Sistema de Alavancagem)
@@ -78,6 +80,7 @@ export default function TreeHierarchy({
   onPromote,
   onRelink,
   onDetach,
+  allUsers,
   fullHeight = false,
 }) {
   // Modo fica salvo: recarregar dados (editar, promover, mover) não pode
@@ -1035,6 +1038,22 @@ export default function TreeHierarchy({
                     label="Indicado por"
                     value={selectedParent ? selectedParent.full_name : 'Raiz da rede — sem indicador'}
                   />
+
+                  {(() => {
+                    const base = Array.isArray(allUsers) && allUsers.length ? allUsers : users;
+                    const mapa = new Map(base.map((u) => [u.id, u]));
+                    const efetivo = resolveEffectiveExecutive(selected, mapa);
+                    const nome = efetivo.executiveId ? mapa.get(efetivo.executiveId)?.full_name : null;
+                    const precisa = requiresExecutive(selected);
+                    if (!precisa && !nome) return null;
+                    return (
+                      <Field
+                        icon={Briefcase}
+                        label="Estrutura de negócio (1% do executivo)"
+                        value={nome ? `${nome} — ${efetivo.source}` : 'sem executivo definido'}
+                      />
+                    );
+                  })()}
 
                   <div className="rounded-xl border border-emerald-500/25 bg-emerald-900/12 p-3">
                     <p className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
