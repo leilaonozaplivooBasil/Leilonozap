@@ -91,10 +91,12 @@ export const PANEL_METADATA = {
   super_admin: {
     key: "super_admin",
     title: "Super Admin",
-    description: "Gestão de habilitações e controle máximo",
+    description: "Painel de controle máximo do sistema",
     iconName: "Crown",
     iconColor: "bg-yellow-600",
-    route: "/super-admin/painels",
+    // 26/07: abre o Painel de Controle completo (pedido Gabriel);
+    // a Gestão de Habilitações fica na sidebar em Sistema → Habilitar Painéis
+    route: "/NetworkOverview",
   },
 };
 

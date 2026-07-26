@@ -652,95 +652,96 @@ export default function Layout({ children, currentPageName }) {
   const _isLoggedInForMenu = currentUser && currentUser.email;
   const _isSuperAdminForMenu = _isLoggedInForMenu && currentUser.role === 'super_admin';
 
+  // 26/07: seções reorganizadas no formato do Painel de Controle (pedido Gabriel)
   const adminMenuItems = [
     {
-      title: "🤖 Ferramentas IA",
+      title: "📊 Visão Geral",
       isCategory: true,
       items: [
-        { title: "Arquiteto IA", pageName: "ArquitetoIA" },
-        { title: "⚡ PrecificaVivo", pageName: "PrecificaVivoPainel" },
+        { title: "Painel de Controle", pageName: "NetworkOverview" },
       ]
     },
     {
-      title: "🔨 Leilões",
+      title: "🔨 Operação — Leilões",
       isCategory: true,
       items: [
-        { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
-        { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
-        { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
-        { title: "🏗️ Sistema de Arremate", pageName: "SistemaDeArremate" },
+        { title: "Controle de Leilões", pageName: "AuctionControl" },
+        { title: "Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
+        { title: "Live Shop", pageName: "LiveShopControlNoZap" },
+        { title: "Sistema de Arremate", pageName: "SistemaDeArremate" },
       ]
     },
     {
-      title: "📦 Estoque & Produtos",
-      isCategory: true,
-      items: [
-        { title: "Gestão de Produtos", pageName: "ProductManagement" },
-        { title: "📋 Estoque Lotes", pageName: "EstoqueLotes" },
-      ]
-    },
-    {
-      title: "🛍️ Loja Virtual",
+      title: "🛍️ Operação — Loja Virtual",
       isCategory: true,
       items: [
         { title: "Gerenciar Loja Virtual", pageName: "CatalogManagement" },
-        { title: "🚚 Pedidos", pageName: "CatalogOrdersAdmin" },
-        { title: "🎟️ Cupons", pageName: "CuponsAdmin" },
-        { title: "🎨 Banners", pageName: "BannerManagement" },
-        { title: "🎨 Material Promocional", pageName: "PromoCreator" },
+        { title: "Pedidos da Loja", pageName: "CatalogOrdersAdmin" },
+        { title: "Cupons", pageName: "CuponsAdmin" },
+        { title: "Banners", pageName: "BannerManagement" },
+        { title: "Material Promocional", pageName: "PromoCreator" },
+      ]
+    },
+    {
+      title: "📦 Operação — Estoque",
+      isCategory: true,
+      items: [
+        { title: "Gestão de Produtos", pageName: "ProductManagement" },
+        { title: "Estoque de Lotes", pageName: "EstoqueLotes" },
       ]
     },
     {
       title: "💰 Financeiro",
       isCategory: true,
       items: [
-        { title: "💲 Dashboard Financeiro", pageName: "Financial" },
-        { title: "🛡️ KYC & Saques", pageName: "AdminFinanceiro" },
-        { title: "💳 Transações", pageName: "TransactionHistory" },
-        { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
-        { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
-        { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
+        { title: "Dashboard Financeiro", pageName: "Financial" },
+        { title: "KYC & Saques", pageName: "AdminFinanceiro" },
+        { title: "Transações", pageName: "TransactionHistory" },
+        { title: "Configurar Pagamentos", pageName: "PaymentSettings" },
+        { title: "Auditoria de Comissões", pageName: "CommissionPilot" },
+        { title: "Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
       ]
     },
     {
-      title: "👥 Rede & Parceiros",
+      title: "👥 Rede & Pessoas",
       isCategory: true,
       items: [
-        { title: "📊 CRM", pageName: "CRM" },
-        { title: "Painel de Controle", pageName: "NetworkOverview" },
-        { title: "💼 Parceiros Ativos", pageName: "ActivePartners" },
-        { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
-        { title: "🏪 Registrar Lojista", pageName: "StoreRegistration" },
-        { title: "🪪 Registrar Licenciado", pageName: "RegisterLicensee" },
-      ]
-    },
-    {
-      title: "⚙️ Configurações",
-      isCategory: true,
-      items: [
+        { title: "CRM", pageName: "CRM" },
+        { title: "Parceiros Ativos", pageName: "ActivePartners" },
+        { title: "Influenciadores", pageName: "InfluencersDashboard" },
+        { title: "Registrar Lojista", pageName: "StoreRegistration" },
+        { title: "Registrar Licenciado", pageName: "RegisterLicensee" },
         { title: "Gerenciar Senhas", pageName: "AdminUsers" },
-        { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
-        { title: "🩺 Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
+        { title: "Acessos VIP", pageName: "LuxuryAccessManager" },
+      ]
+    },
+    {
+      title: "🤖 Automação & IA",
+      isCategory: true,
+      items: [
+        { title: "Arquiteto IA", pageName: "ArquitetoIA" },
+        { title: "PrecificaVivo", pageName: "PrecificaVivoPainel" },
+      ]
+    },
+    {
+      title: "⚙️ Sistema",
+      isCategory: true,
+      items: [
+        { title: "Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
+        // 🆕 FASE 2: exclusivo do Super Admin
+        ...(_isSuperAdminForMenu ? [{ title: "Habilitar Painéis", pageName: "SuperAdminPanels" }] : []),
       ]
     },
     {
       title: "👤 Minha Conta",
       isCategory: true,
       items: [
-        { title: "💰 Minha Carteira", pageName: "Carteira" },
-        { title: "⬆️ Evoluir Nível", pageName: "Evoluir" },
-        { title: "🏆 Meus Arremates", pageName: "MyWinnings" },
-        { title: "👤 Perfil", pageName: "Profile" },
+        { title: "Minha Carteira", pageName: "Carteira" },
+        { title: "Evoluir Nível", pageName: "Evoluir" },
+        { title: "Meus Arremates", pageName: "MyWinnings" },
+        { title: "Perfil", pageName: "Profile" },
       ]
     },
-    // 🆕 FASE 2: Categoria exclusiva do Super Admin (renderizada condicionalmente abaixo)
-    ...(_isSuperAdminForMenu ? [{
-      title: "👑 Super Admin",
-      isCategory: true,
-      items: [
-        { title: "Habilitar Painéis", pageName: "SuperAdminPanels" },
-      ]
-    }] : []),
   ];
 
   const isLoggedIn = currentUser && currentUser.email;
