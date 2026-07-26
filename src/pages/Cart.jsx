@@ -30,7 +30,10 @@ import {
   ShieldCheck,
   Lock,
   Check,
-  PackageOpen
+  PackageOpen,
+  QrCode,
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -81,6 +84,44 @@ export default function Cart() {
     city: '',
     state: ''
   });
+  // 📒 Livro de endereços (múltiplos endereços salvos por usuário)
+  const [savedAddresses, setSavedAddresses] = useState([]);
+
+  // 💾 Auto-salva o formulário preenchido — na próxima compra já vem pronto
+  useEffect(() => {
+    if (!formData.name && !formData.cep) return;
+    const t = setTimeout(() => {
+      try { localStorage.setItem('checkoutFormData', JSON.stringify(formData)); } catch { /* quota */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [formData]);
+
+  const addressSig = (a) => `${(a.cep || '').replace(/\D/g, '')}|${(a.street || '').toLowerCase().trim()}|${(a.number || '').trim()}`;
+
+  const saveAddressToBook = (uid) => {
+    try {
+      const addr = {
+        cep: formData.cep, street: formData.street, number: formData.number,
+        complement: formData.complement, neighborhood: formData.neighborhood,
+        city: formData.city, state: formData.state,
+      };
+      if (!addr.cep?.trim() || !addr.street?.trim()) return;
+      const key = `savedAddresses_${uid}`;
+      const book = JSON.parse(localStorage.getItem(key) || '[]');
+      const next = [{ id: Date.now().toString(36), ...addr }, ...book.filter((b) => addressSig(b) !== addressSig(addr))].slice(0, 5);
+      localStorage.setItem(key, JSON.stringify(next));
+      setSavedAddresses(next);
+    } catch { /* silencioso */ }
+  };
+
+  const applyAddress = (a) => {
+    setFormData((prev) => ({
+      ...prev,
+      cep: a.cep || '', street: a.street || '', number: a.number || '',
+      complement: a.complement || '', neighborhood: a.neighborhood || '',
+      city: a.city || '', state: a.state || '',
+    }));
+  };
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -149,6 +190,26 @@ export default function Cart() {
             state: user.address_state || ''
           }));
         }
+
+        // 💾 Draft salvo tem prioridade: o que o usuário digitou por último volta preenchido
+        try {
+          const draft = JSON.parse(localStorage.getItem('checkoutFormData') || 'null');
+          if (draft && typeof draft === 'object') {
+            setFormData((prev) => {
+              const merged = { ...prev };
+              for (const k of Object.keys(prev)) {
+                if (typeof draft[k] === 'string' && draft[k].trim()) merged[k] = draft[k];
+              }
+              return merged;
+            });
+          }
+        } catch { /* draft corrompido → ignora */ }
+
+        // 📒 Carrega o livro de endereços do usuário
+        try {
+          const book = JSON.parse(localStorage.getItem(`savedAddresses_${user.id}`) || '[]');
+          if (Array.isArray(book)) setSavedAddresses(book);
+        } catch { /* ignora */ }
       }
     };
 
@@ -401,8 +462,8 @@ export default function Cart() {
     // Cartão é coletado na página segura da Stripe — sem validação de cartão inline.
 
     const totalAmount = calcularTotalFinal();
-    // PIX/cartão têm mínimo de R$5; saldo (redenção de comissão) não
-    if (paymentType !== 'SALDO' && totalAmount < 5) { toast.error('Valor mínimo para pagamento: R$ 5,00'); return; }
+    // PIX/cartão têm mínimo de R$1; saldo (redenção de comissão) não
+    if (paymentType !== 'SALDO' && totalAmount < 1) { toast.error('Valor mínimo para pagamento: R$ 1,00'); return; }
 
     // ✅ Todas validações passaram — agora bloqueia o botão
     setIsProcessing(true);
@@ -423,6 +484,23 @@ export default function Cart() {
         }
       }
     } catch (e) { /* usa currentUser existente */ }
+
+    // 📒 Salva o endereço usado no livro de endereços (dedup, máx. 5)
+    if (deliveryMethod === 'delivery' && freshUser?.id) saveAddressToBook(freshUser.id);
+
+    // 💾 Persiste os dados no perfil (vale em qualquer dispositivo) — não bloqueia o checkout
+    if (freshUser?.id) {
+      base44.entities.AppUser.update(freshUser.id, {
+        phone: formData.phone.trim(),
+        cpf: formData.cpf.replace(/\D/g, ''),
+        ...(deliveryMethod === 'delivery' ? {
+          address_street: formData.street, address_number: formData.number,
+          address_complement: formData.complement, address_neighborhood: formData.neighborhood,
+          address_city: formData.city, address_state: formData.state,
+          address_zip_code: formData.cep,
+        } : {}),
+      }).catch(() => { /* perfil não atualizado — segue o pagamento */ });
+    }
 
     // Se não tem usuário logado, orienta a fazer login/cadastro
     if (!freshUser?.id) {
@@ -846,6 +924,45 @@ export default function Cart() {
 
                 {deliveryMethod === 'delivery' && (
                   <div className="space-y-4">
+                    {/* 📒 Endereços salvos — escolhe com 1 clique ou cadastra um novo */}
+                    {savedAddresses.length > 0 && (
+                      <div>
+                        <Label className="text-gray-300 text-sm">Meus endereços</Label>
+                        <div className="flex flex-wrap gap-2 mt-1.5">
+                          {savedAddresses.map((a) => {
+                            const active = addressSig(a) === addressSig(formData);
+                            return (
+                              <button
+                                key={a.id}
+                                type="button"
+                                onClick={() => applyAddress(a)}
+                                className={`flex items-start gap-2 text-left rounded-lg border px-3 py-2 max-w-full transition-colors ${active
+                                  ? 'border-green-500 bg-green-500/10'
+                                  : 'border-gray-600 bg-gray-700/30 hover:border-green-500/50'}`}
+                              >
+                                <MapPin className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${active ? 'text-green-400' : 'text-gray-400'}`} />
+                                <span className="min-w-0">
+                                  <span className="block text-xs font-semibold text-white truncate">
+                                    {a.street}, {a.number}
+                                  </span>
+                                  <span className="block text-[10px] text-gray-400 truncate">
+                                    {a.neighborhood ? `${a.neighborhood} · ` : ''}{a.city}/{a.state} · {a.cep}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => applyAddress({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' })}
+                            className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-500 px-3 py-2 text-xs font-semibold text-gray-300 hover:border-green-500/60 hover:text-green-300 transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Novo endereço
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-gray-300 text-sm">CEP</Label>
@@ -1122,7 +1239,7 @@ export default function Cart() {
                 <button type="button" onClick={() => setPaymentType('PIX')}
                   className={`w-full text-left p-3 rounded-lg border-2 mb-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'PIX' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
                   <div>
-                    <p className="text-white font-semibold">💚 PIX <span className="ml-1 text-[10px] font-bold uppercase tracking-wide bg-green-600 text-white px-1.5 py-0.5 rounded">Recomendado</span></p>
+                    <p className="text-white font-semibold flex items-center gap-2"><QrCode className="w-4 h-4 text-green-400" /> PIX <span className="text-[10px] font-bold uppercase tracking-wide bg-green-600 text-white px-1.5 py-0.5 rounded">Recomendado</span></p>
                     <p className="text-gray-400 text-xs mt-0.5">Aprovação imediata</p>
                   </div>
                   <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'PIX' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
@@ -1134,7 +1251,7 @@ export default function Cart() {
                 <button type="button" onClick={() => setPaymentType('CREDIT_CARD')}
                   className={`w-full text-left p-3 rounded-lg border-2 transition-colors flex items-center justify-between gap-3 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
                   <div>
-                    <p className="text-white font-semibold">💳 Cartão de Crédito</p>
+                    <p className="text-white font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-gray-300" /> Cartão de Crédito</p>
                     <p className="text-gray-400 text-xs mt-0.5">Pagamento seguro — até 12x</p>
                   </div>
                   <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
@@ -1147,7 +1264,7 @@ export default function Cart() {
                   <button type="button" onClick={() => setPaymentType('SALDO')}
                     className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
                     <div>
-                      <p className="text-white font-semibold">👛 Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
+                      <p className="text-white font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-green-400" /> Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
                       <p className="text-gray-400 text-xs mt-0.5">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use suas comissões — aprovação na hora'}</p>
                     </div>
                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
@@ -1188,7 +1305,7 @@ export default function Cart() {
                 ) : (
                   /* ESTADO 2: Aguardando pagamento — QR Code normal */
                   <>
-                    <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
+                    <h3 className="text-lg font-bold text-green-400 text-center mb-4 flex items-center justify-center gap-2"><QrCode className="w-5 h-5" /> Pague com PIX</h3>
 
                     {/* Indicador de monitoramento */}
                     <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
