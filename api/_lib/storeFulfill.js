@@ -79,6 +79,8 @@ export async function fulfillStoreOrder(sale) {
   items = Array.isArray(items) ? items : [];
   // venda de item único (checkout direto / arremate) não tem items_json — usa o product_id da venda
   if (!items.length && sale.product_id) items = [{ product_id: sale.product_id, qty: Number(sale.quantity) || 1 }];
+  // PDV já baixou o estoque item a item na hora da venda — não baixar de novo
+  if (sale.skipStock) items = [];
   let baixados = 0;
   for (const it of items) {
     const pid = String(it.product_id || '');

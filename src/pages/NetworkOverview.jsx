@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2 } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -95,8 +95,9 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
 
           {/* 🔧 CORREÇÃO 3: Mostrar APENAS o nível principal */}
           <div className="flex items-center gap-2 mb-2">
-            <Badge className={`${primaryLevelConfig.color} text-white text-xs px-3 py-1 font-bold ring-2 ring-white/20`}>
-              ⭐ {primaryLevelConfig.name}
+            <Badge className={`${primaryLevelConfig.color} text-white text-xs px-3 py-1 font-bold ring-2 ring-white/20 inline-flex items-center gap-1`}>
+              <Star className="w-3 h-3" />
+              {primaryLevelConfig.name}
             </Badge>
           </div>
 
@@ -126,8 +127,8 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
                       if (!levelConfig) return null;
                       const isPrimary = levelId === primaryLevel;
                       return (
-                        <Badge key={levelId} className={`${levelConfig.color} text-white text-[10px] ${isPrimary ? 'ring-2 ring-white' : ''}`}>
-                          {isPrimary && '⭐ '}
+                        <Badge key={levelId} className={`${levelConfig.color} text-white text-[10px] inline-flex items-center gap-1 ${isPrimary ? 'ring-2 ring-white' : ''}`}>
+                          {isPrimary && <Star className="w-2.5 h-2.5" />}
                           {levelConfig.name}
                         </Badge>
                       );
@@ -153,8 +154,9 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-gray-700/50 rounded-lg p-2 text-center">
               <div className="text-gray-400 mb-1">Indicados</div>
-              <div className="text-white font-bold text-lg">
-                👥 {user.indicated_clients_count || 0}
+              <div className="text-white font-bold text-lg flex items-center justify-center gap-1.5">
+                <UserRound className="w-4 h-4 text-gray-400" />
+                {user.indicated_clients_count || 0}
               </div>
             </div>
             <div className="bg-green-900/30 rounded-lg p-2 text-center">
@@ -531,6 +533,9 @@ export default function NetworkOverview() {
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Faixa de estatísticas recolhível + árvore em tela cheia (mais espaço de trabalho)
+  const [showStats, setShowStats] = useState(false);
+  const [treeFullscreen, setTreeFullscreen] = useState(false);
 
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
@@ -553,12 +558,12 @@ export default function NetworkOverview() {
       const podeRede = user.role === 'admin' || user.role === 'super_admin' ||
         (Array.isArray(user.career_levels) && user.career_levels.some((c) => REDE_CARGOS.includes(c)));
       if (!podeRede) {
-        toast.error("❌ Acesso negado.");
+        toast.error("Acesso negado.");
         setIsLoading(false);
         return;
       }
     } else {
-      toast.error("❌ Acesso negado. Faça login como administrador.");
+      toast.error("Acesso negado. Faça login como administrador.");
       setIsLoading(false);
       return;
     }
@@ -696,7 +701,7 @@ export default function NetworkOverview() {
 
       const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
       const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
-      toast.success(`${promotingUser.full_name} agora é: ${levelNames}!\nFunção principal: ⭐ ${primaryName}`);
+   toast.success(`${promotingUser.full_name} agora é: ${levelNames}!\nFunção principal: ${primaryName}`);
 
       setPromotingUser(null);
       setSelectedLevels([]);
@@ -877,12 +882,12 @@ export default function NetworkOverview() {
 
   const handleCleanDuplicates = async () => {
     const confirmClean = window.confirm(
-      "⚠️ ATENÇÃO: Remover cadastros duplicados?\n\nEsta ação é irreversível e removerá todos os usuários com o mesmo e-mail, exceto o mais recente."
+      "ATENÇÃO: Remover cadastros duplicados?\n\nEsta ação é irreversível e removerá todos os usuários com o mesmo e-mail, exceto o mais recente."
     );
     if (!confirmClean) return;
 
     setIsCleaningDuplicates(true);
-    toast.info("🔍 Buscando duplicatas...");
+    toast.info("Buscando duplicatas...");
 
     try {
       const allUsersToProcess = await AppUser.list("-created_date", 1000);
@@ -937,7 +942,7 @@ export default function NetworkOverview() {
       }
 
       if (duplicatesRemoved === 0) {
-        toast.success("✅ Nenhum cadastro duplicado encontrado!");
+        toast.success("Nenhum cadastro duplicado encontrado!");
       } else {
         console.log("\n📊 RELATÓRIO DE LIMPEZA:");
         console.log(`Total de emails duplicados: ${duplicateEmails.length}`);
@@ -950,14 +955,14 @@ export default function NetworkOverview() {
           });
         });
 
-        toast.success(`🧹 ${duplicatesRemoved} duplicatas removidas!\n${duplicateEmails.length} emails tinham cadastros duplicados.`);
+        toast.success(`${duplicatesRemoved} duplicatas removidas!\n${duplicateEmails.length} emails tinham cadastros duplicados.`);
       }
 
       await fetchData();
 
     } catch (error) {
       console.error("❌ Erro ao limpar duplicatas:", error);
-      toast.error("❌ Erro ao limpar duplicatas: " + error.message);
+      toast.error("Erro ao limpar duplicatas: " + error.message);
     } finally {
       setIsCleaningDuplicates(false);
     }
@@ -965,19 +970,19 @@ export default function NetworkOverview() {
 
   const handleLinkOrphanUsers = async () => {
     const confirmLink = window.confirm(
-      "🔗 Vincular todos os usuários SEM indicação ao Licenciado Site?\n\nEsta ação vai buscar todos os usuários órfãos e vinculá-los automaticamente."
+      "Vincular todos os usuários SEM indicação ao Licenciado Site?\n\nEsta ação vai buscar todos os usuários órfãos e vinculá-los automaticamente."
     );
     if (!confirmLink) return;
 
     setIsLinkingOrphans(true);
-    toast.info("🔍 Buscando usuários órfãos...");
+    toast.info("Buscando usuários órfãos...");
 
     try {
       const response = await linkOrphanUsers();
 
       if (response.data && response.data.success) {
         const { linkedCount, totalOrphans, siteLicenseeName } = response.data;
-        toast.success(`✅ ${linkedCount} de ${totalOrphans} usuários vinculados ao "${siteLicenseeName}"!`);
+        toast.success(`${linkedCount} de ${totalOrphans} usuários vinculados ao "${siteLicenseeName}"!`);
 
         await fetchData();
       } else {
@@ -985,7 +990,7 @@ export default function NetworkOverview() {
       }
     } catch (error) {
       console.error("Erro ao vincular órfãos:", error);
-      toast.error("❌ Erro ao vincular usuários: " + error.message);
+      toast.error("Erro ao vincular usuários: " + error.message);
     } finally {
       setIsLinkingOrphans(false);
     }
@@ -993,18 +998,18 @@ export default function NetworkOverview() {
 
   const handleCleanSiteDuplicates = async () => {
     const confirmClean = window.confirm(
-      "🧹 LIMPAR DUPLICATAS DO SITE OFICIAL?\n\n" +
+      "LIMPAR DUPLICATAS DO SITE OFICIAL?\n\n" +
       "Esta ação vai:\n" +
       "1. Buscar TODOS os cadastros com 'Site Oficial' no nome\n" +
       "2. Manter APENAS o mais antigo\n" +
       "3. Deletar os duplicados\n\n" +
-      "⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n" +
+      "ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n" +
       "Deseja continuar?"
     );
     if (!confirmClean) return;
 
     setIsCleaningDuplicates(true);
-    toast.info("🔍 Buscando duplicatas...");
+    toast.info("Buscando duplicatas...");
 
     try {
       console.log("📞 Chamando cleanSiteDuplicates...");
@@ -1019,13 +1024,13 @@ export default function NetworkOverview() {
             console.log("📋 Detalhes:", response.data.deletionDetails);
 
             toast.success(
-              `✅ ${response.data.duplicatesRemoved} duplicatas removidas!\n` +
-              `🏆 Mantido: ${response.data.siteLicensee.full_name}` +
-              `${response.data.failedDeletions > 0 ? `\n⚠️ ${response.data.failedDeletions} falharam` : ''}`
+              `${response.data.duplicatesRemoved} duplicatas removidas!\n` +
+              `Mantido: ${response.data.siteLicensee.full_name}` +
+              `${response.data.failedDeletions > 0 ? `\n${response.data.failedDeletions} falharam` : ''}`
             );
           } else if (response.data.action === "already_clean") {
             console.log("✅ Sistema já está limpo");
-            toast.success("✅ Site Oficial já está único!");
+            toast.success("Site Oficial já está único!");
           }
 
           await fetchData();
@@ -1045,7 +1050,7 @@ export default function NetworkOverview() {
     } catch (error) {
       console.error("❌ Erro ao limpar duplicatas:", error);
       console.error("Stack:", error.stack);
-      toast.error(`❌ Erro: ${error.message}`);
+      toast.error(`Erro: ${error.message}`);
     } finally {
       setIsCleaningDuplicates(false);
     }
@@ -1063,7 +1068,7 @@ export default function NetworkOverview() {
 
   const handleDeleteUser = async (user) => {
     const confirmDelete = window.confirm(
-      `⚠️ ATENÇÃO: Deletar usuário e TODOS os seus dados?\n\n` +
+      `ATENÇÃO: Deletar usuário e TODOS os seus dados?\n\n` +
       `Usuário: ${user.full_name}\n` +
       `Email: ${user.email}\n\n` +
       `Esta ação é IRREVERSÍVEL!\n\n` +
@@ -1111,7 +1116,9 @@ export default function NetworkOverview() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+      {/* Largura ampliada (26/07): sem sidebar lateral, a tela inteira fica para a
+          gestão de usuários e a árvore genealógica. */}
+      <div className="max-w-[1800px] mx-auto">
         <PortalPageHeader
           icon={Users}
           title="Sistema de Alavancagem"
@@ -1123,40 +1130,51 @@ export default function NetworkOverview() {
               className="bg-blue-600 hover:bg-blue-700"
               size="sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 2L11 13" />
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-              </svg>
+              <Send className="w-4 h-4 mr-2" />
               Disparar Mensagens
             </Button>
           }
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4 mb-8">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
-              <div className="text-sm text-gray-400 mb-1">Total no Sistema</div>
-              <div className="text-2xl font-bold text-white">{stats.total}</div>
-            </CardContent>
-          </Card>
+        {/* Resumo da rede — faixa compacta e recolhível: ocupa pouca altura para
+            deixar a árvore genealógica em primeiro plano. */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              type="button"
+              onClick={() => setShowStats((v) => !v)}
+              className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-emerald-400/90 hover:text-emerald-300 transition-colors"
+            >
+              {showStats ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              Resumo da rede
+            </button>
+            <div className="flex items-center gap-3 text-[12px] text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-gray-500" />
+                <strong className="text-white">{stats.total}</strong> no sistema
+              </span>
+              <span className="flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-green-500" />
+                <strong className="text-green-400">R$ {fmtBR(stats.totalVolume)}</strong>
+              </span>
+            </div>
+          </div>
 
-          {stats.byLevel.map(level => (
-            <Card key={level.id} className={`bg-gray-800 border-2 ${level.borderColor}`}>
-              <CardContent className="p-4">
-                <div className={`text-xs ${level.textColor} mb-1 font-semibold line-clamp-1`}>{level.name}</div>
-                <div className="text-2xl font-bold text-white">{level.count}</div>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
-            <CardContent className="p-4">
-              <div className="text-sm text-green-400 mb-1">Volume R$</div>
-              <div className="text-2xl font-bold text-white">
-                R$ {fmtBR(stats.totalVolume)}
-              </div>
-            </CardContent>
-          </Card>
+          {showStats && (
+            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(130px,1fr))]">
+              {stats.byLevel.map(level => (
+                <div
+                  key={level.id}
+                  className={`rounded-lg bg-gray-800/70 border ${level.borderColor} px-3 py-2`}
+                >
+                  <div className={`text-[11px] ${level.textColor} font-semibold truncate`} title={level.name}>
+                    {level.name}
+                  </div>
+                  <div className="text-lg font-bold text-white leading-tight">{level.count}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <Card className="bg-gray-800 border-gray-700 mb-8">
@@ -1273,35 +1291,68 @@ export default function NetworkOverview() {
           </CardContent>
         </Card>
 
-        {/* The new main Card with Tabs for content */}
+        {/* Gestão de usuários — bloco principal de trabalho, ocupa a largura toda */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Gerenciamento de Usuários e Sistema de Alavancagem</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-base">Gerenciamento de Usuários e Sistema de Alavancagem</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* 🔧 AGORA SÓ 2 ABAS (removido Laboratório) */}
             <Tabs defaultValue="licensees" className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-gray-700/50">
                 <TabsTrigger value="licensees">
-                  <Award className="w-4 h-4 mr-2" />
-                  Licenciados
+                  <Network className="w-4 h-4 mr-2" />
+                  Árvore da Rede
                 </TabsTrigger>
                 <TabsTrigger value="users">
                   <Users className="w-4 h-4 mr-2" />
-                  Usuários Gerais
+                  Usuários Gerais ({allUsers.length})
                 </TabsTrigger>
               </TabsList>
 
-              {/* ABA 1: LICENCIADOS */}
-              <TabsContent value="licensees" className="mt-6">
-                <Card className="bg-gray-800/50 border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="text-green-400">Sistema Multinível - Visualização em Árvore</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
+              {/* ABA 1: ÁRVORE MULTINÍVEL */}
+              <TabsContent value="licensees" className="mt-4">
+                <div
+                  className={
+                    treeFullscreen
+                      ? "fixed inset-0 z-[120] bg-gray-950 flex flex-col"
+                      : "rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden"
+                  }
+                >
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-green-400">
+                      Sistema Multinível — Visualização em Árvore
+                    </span>
+                    <span className="text-[11px] text-gray-500 hidden sm:inline">
+                      arraste um nó para reposicionar na rede
+                    </span>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTreeFullscreen((v) => !v)}
+                      className="h-7 text-[11px] border-gray-600 text-gray-300 hover:bg-gray-700"
+                      title={treeFullscreen ? "Sair da tela cheia" : "Abrir em tela cheia"}
+                    >
+                      {treeFullscreen ? (
+                        <>
+                          <Minimize2 className="w-3.5 h-3.5 mr-1.5" />
+                          Sair da tela cheia
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="w-3.5 h-3.5 mr-1.5" />
+                          Tela cheia
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className={treeFullscreen ? "flex-1 overflow-auto" : ""}>
                     {allUsers.length > 0 ? (
                       <TreeHierarchy
                         users={allUsers}
+                        fullHeight={treeFullscreen}
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
                         onPromote={handlePromote}
@@ -1313,8 +1364,8 @@ export default function NetworkOverview() {
                         <p>Nenhum usuário no sistema ainda.</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               {/* ABA 2: USUÁRIOS GERAIS */}
@@ -1406,8 +1457,9 @@ export default function NetworkOverview() {
                                     )}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge className={`${primaryLevelConfig.color} text-white font-semibold`}>
-                                      ⭐ {primaryLevelConfig.name}
+                                    <Badge className={`${primaryLevelConfig.color} text-white font-semibold inline-flex items-center gap-1`}>
+                                      <Star className="w-3 h-3" />
+                                      {primaryLevelConfig.name}
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-gray-400 text-sm">
@@ -1534,8 +1586,9 @@ export default function NetworkOverview() {
               </div>
               {selectedLevels.length > 0 && (
                 <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-                  <p className="text-sm text-green-400">
-                    ⭐ Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
+                  <p className="text-sm text-green-400 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5" />
+                    Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     Esta será a função exibida no Plano de Carreira

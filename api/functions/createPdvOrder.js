@@ -2,7 +2,7 @@
 // e baixa o estoque (products). service_role. Guard: ator admin/super_admin OU cargo de estoque.
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
-import { payDirectCommissions } from '../_lib/commissions.js';
+import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -121,11 +121,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // comissão: só quando a venda foi vinculada a um vendedor da rede
+    // 💰 COMISSÃO — venda de balcão paga IGUAL à loja online: mesma ÁRVORE OFICIAL (30%).
+    // Distribuidor, Loja Física e Ponto de Retirada têm loja física e vendem pelo PDV; o split
+    // é o mesmo da venda online (20% cadeia + 10% topo), conforme licença e cargo de cada um.
+    // (Antes usava payDirectCommissions — motor legado com teto de 20% e regra diferente.)
     let comissao = 0;
-    if (vendedor) {
-      comissao = await payDirectCommissions({ saleId, sellerId: vendedor.id, total });
+    try {
+      const rr = await fulfillStoreOrder({
+        ...sale,
+        seller_id: vendedor?.id || sellerId,
+        items_json: itemsJson,
+        skipStock: true, // o estoque já foi baixado acima, item a item
+      });
+      comissao = rr?.commission ?? 0;
       if (comissao > 0) await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: comissao }) });
+    } catch (e) {
+      console.warn('PDV: comissão falhou (venda segue gravada):', e?.message);
     }
 
     return res.status(200).json({ success: true, sale_id: saleId, total, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || null, comissao });

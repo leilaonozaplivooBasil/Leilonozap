@@ -92,12 +92,31 @@ export function calcularComissao(sale, users) {
   }
 
   const elegiveisPool = users.filter((u) => u.full_name !== EMPRESA);
+  // 💰 Pool sem perda de centavo: divide a fatia em CENTAVOS INTEIROS pelo método do maior
+  // resto. Antes, round2 por pessoa engolia frações (1% ÷ 7 fundadores numa venda de R$ 2,00
+  // = R$ 0,00286 → R$ 0,00 pra todo mundo, e o dinheiro sumia). Agora a soma dos centavos
+  // pagos é SEMPRE igual à fatia devida — ninguém é lesado, nem a rede nem a empresa.
   const pagarPool = (id, pct, tipo) => {
     const donos = elegiveisPool.filter((u) => temCargo(u, id));
     if (!donos.length) { companyPercent += pct; return; }
+
+    const centavosTotais = Math.round(valor * pct); // valor * pct/100 * 100 = valor * pct
     const fatia = pct / donos.length;
-    for (const u of donos) {
-      assignments.push({ role: id, user_id: u.id, user_name: u.full_name, percent: fatia, amount: round2(valor * fatia / 100), tipo });
+    if (centavosTotais <= 0) { companyPercent += pct; return; }
+
+    const base = Math.floor(centavosTotais / donos.length);
+    let sobra = centavosTotais - base * donos.length;
+    // Ordem estável (por id) + rotação pela venda: a sobra não cai sempre nas mesmas pessoas.
+    // Ao longo das vendas o rodízio equilibra quem recebe o centavo extra.
+    const ordenados = [...donos].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const seed = String(sale.id || '').split('').reduce((s, ch) => (s + ch.charCodeAt(0)) % 9973, 0);
+    const offset = ordenados.length ? seed % ordenados.length : 0;
+    const rotacionados = [...ordenados.slice(offset), ...ordenados.slice(0, offset)];
+    for (const u of rotacionados) {
+      const centavos = base + (sobra > 0 ? 1 : 0);
+      if (sobra > 0) sobra--;
+      if (centavos <= 0) continue; // pool menor que o nº de pessoas: quem não pega fica de fora desta venda
+      assignments.push({ role: id, user_id: u.id, user_name: u.full_name, percent: fatia, amount: centavos / 100, tipo });
     }
   };
 
@@ -109,7 +128,8 @@ export function calcularComissao(sale, users) {
   // executivo na cadeia da venda, é dele. Sem cadeia (venda orgânica), entra no topo como pool.
   const exec = chain.find((u) => temCargo(u, 'executivo'));
   if (exec) {
-    assignments.push({ role: 'executivo', user_id: exec.id, user_name: exec.full_name, percent: PCT_EXECUTIVO, amount: round2(valor * PCT_EXECUTIVO / 100), tipo: 'estrutura' });
+    // fatia individual: centavos inteiros (o resíduo do arredondamento sobra pra empresa, sem sumir)
+    assignments.push({ role: 'executivo', user_id: exec.id, user_name: exec.full_name, percent: PCT_EXECUTIVO, amount: Math.round(valor * PCT_EXECUTIVO) / 100, tipo: 'estrutura' });
   } else {
     pagarPool('executivo', PCT_EXECUTIVO, 'estrutura');
   }
@@ -119,9 +139,19 @@ export function calcularComissao(sale, users) {
   for (const c of CADEIA) {
     const dono = chain.find((u) => temCargo(u, c.id));
     if (!dono) { companyPercent += c.pct; continue; }
-    assignments.push({ role: c.id, user_id: dono.id, user_name: dono.full_name, percent: c.pct, amount: round2(valor * c.pct / 100), tipo: 'cadeia' });
+    assignments.push({ role: c.id, user_id: dono.id, user_name: dono.full_name, percent: c.pct, amount: Math.round(valor * c.pct) / 100, tipo: 'cadeia' });
   }
 
-  const total = round2(assignments.reduce((s, a) => s + a.amount, 0));
-  return { assignments, companyPercent, companyAmount: round2(valor * companyPercent / 100), total };
+  // 💰 Fechamento em centavos: o que sobrou dos 30% (fatias sem dono + resíduo de arredondamento)
+  //    vai INTEGRALMENTE para a empresa. Soma paga + empresa == 30% da venda, sempre.
+  const centavosRede = Math.round(assignments.reduce((s, a) => s + a.amount, 0) * 100);
+  const centavos30 = Math.round(valor * TOTAL_PCT);
+  const centavosEmpresa = Math.max(0, centavos30 - centavosRede);
+  const total = centavosRede / 100;
+  return {
+    assignments,
+    companyPercent: valor > 0 ? (centavosEmpresa / valor) : companyPercent,
+    companyAmount: centavosEmpresa / 100,
+    total,
+  };
 }

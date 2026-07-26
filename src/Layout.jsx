@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ShareAppModal from "@/components/common/ShareAppModal";
 import WelcomeModal from "@/components/common/WelcomeModal";
@@ -23,7 +23,8 @@ import PainelSelector, { triggerPanelSelector } from "@/components/portal/Painel
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { fastTap } from "@/lib/fastTap";
-import RoleSidebar from "@/components/layout/RoleSidebar";
+import AdminTopNav from "@/components/layout/AdminTopNav";
+import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import useScrollDrift from "@/hooks/useScrollDrift";
 
@@ -34,7 +35,7 @@ const User = { me: () => base44.auth.me() };
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
 const ComparaiFloatingButton = React.lazy(() => import("@/components/comparai/ComparaiFloatingButton"));
-import { Menu, ShoppingCart as CartIcon, PanelLeft } from "lucide-react";
+import { Menu, ShoppingCart as CartIcon } from "lucide-react";
 
 
 
@@ -83,7 +84,6 @@ export default function Layout({ children, currentPageName }) {
   const [isLoading, setIsLoading] = useState(false);
   const hasInitializedRef = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -659,97 +659,9 @@ export default function Layout({ children, currentPageName }) {
   const _isLoggedInForMenu = currentUser && currentUser.email;
   const _isSuperAdminForMenu = _isLoggedInForMenu && currentUser.role === 'super_admin';
 
-  // 26/07: seções reorganizadas no formato do Painel de Controle (pedido Gabriel)
-  const adminMenuItems = [
-    {
-      title: "📊 Visão Geral",
-      isCategory: true,
-      items: [
-        { title: "Painel de Controle", pageName: "NetworkOverview" },
-      ]
-    },
-    {
-      title: "🔨 Operação — Leilões",
-      isCategory: true,
-      items: [
-        { title: "Controle de Leilões", pageName: "AuctionControl" },
-        { title: "Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
-        { title: "Live Shop", pageName: "LiveShopControlNoZap" },
-        { title: "Sistema de Arremate", pageName: "SistemaDeArremate" },
-      ]
-    },
-    {
-      title: "🛍️ Operação — Loja Virtual",
-      isCategory: true,
-      items: [
-        { title: "Gerenciar Loja Virtual", pageName: "CatalogManagement" },
-        { title: "Pedidos da Loja", pageName: "CatalogOrdersAdmin" },
-        { title: "Cupons", pageName: "CuponsAdmin" },
-        { title: "Banners", pageName: "BannerManagement" },
-        { title: "Material Promocional", pageName: "PromoCreator" },
-      ]
-    },
-    {
-      title: "📦 Operação — Estoque",
-      isCategory: true,
-      items: [
-        { title: "Gestão de Produtos", pageName: "ProductManagement" },
-        { title: "Estoque de Lotes", pageName: "EstoqueLotes" },
-      ]
-    },
-    {
-      title: "💰 Financeiro",
-      isCategory: true,
-      items: [
-        { title: "Dashboard Financeiro", pageName: "Financial" },
-        { title: "KYC & Saques", pageName: "AdminFinanceiro" },
-        { title: "Transações", pageName: "TransactionHistory" },
-        { title: "Configurar Pagamentos", pageName: "PaymentSettings" },
-        { title: "Auditoria de Comissões", pageName: "CommissionPilot" },
-        { title: "Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
-      ]
-    },
-    {
-      title: "👥 Rede & Pessoas",
-      isCategory: true,
-      items: [
-        { title: "CRM", pageName: "CRM" },
-        { title: "Parceiros Ativos", pageName: "ActivePartners" },
-        { title: "Influenciadores", pageName: "InfluencersDashboard" },
-        { title: "Registrar Lojista", pageName: "StoreRegistration" },
-        { title: "Registrar Licenciado", pageName: "RegisterLicensee" },
-        { title: "Gerenciar Senhas", pageName: "AdminUsers" },
-        { title: "Acessos VIP", pageName: "LuxuryAccessManager" },
-      ]
-    },
-    {
-      title: "🤖 Automação & IA",
-      isCategory: true,
-      items: [
-        { title: "Arquiteto IA", pageName: "ArquitetoIA" },
-        { title: "PrecificaVivo", pageName: "PrecificaVivoPainel" },
-      ]
-    },
-    {
-      title: "⚙️ Sistema",
-      isCategory: true,
-      items: [
-        { title: "Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
-        // 🆕 FASE 2: exclusivo do Super Admin
-        ...(_isSuperAdminForMenu ? [{ title: "Habilitar Painéis", pageName: "SuperAdminPanels" }] : []),
-      ]
-    },
-    {
-      title: "👤 Minha Conta",
-      isCategory: true,
-      items: [
-        { title: "Minha Carteira", pageName: "Carteira" },
-        { title: "Evoluir Nível", pageName: "Evoluir" },
-        { title: "Meus Arremates", pageName: "MyWinnings" },
-        { title: "Perfil", pageName: "Profile" },
-      ]
-    },
-  ];
+  // 26/07: menu do Painel de Controle agora vive em @/lib/adminMenu (ícones lucide,
+  // ZERO emoji — regra permanente do super admin) e é renderizado pela AdminTopNav.
+  const adminMenuItems = buildAdminMenu(_isSuperAdminForMenu);
 
   const isLoggedIn = currentUser && currentUser.email;
   const isSuperAdmin = isLoggedIn && currentUser.role === 'super_admin';
@@ -934,21 +846,8 @@ export default function Layout({ children, currentPageName }) {
 
               {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
               <div className="flex items-center gap-2 md:gap-4">
-                {/* 🆕 Botão hambúrguer esquerdo — abre a sidebar lateral no mobile */}
-                {(() => {
-                  const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
-                  if (!cfg.showSidebar) return null;
-                  return (
-                    <button
-                      type="button"
-                      {...fastTap(() => setSidebarMobileOpen(true))}
-                      className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-300 hover:text-emerald-300 hover:bg-white/5"
-                      aria-label="Abrir painel"
-                    >
-                      <PanelLeft className="h-5 w-5" />
-                    </button>
-                  );
-                })()}
+                {/* Hambúrguer da sidebar removido: o menu do painel agora é a
+                    AdminTopNav (barra no topo), acessível também no mobile. */}
                 <img
                   src={logoUrl}
                   alt="Leilão NoZap"
@@ -1034,31 +933,15 @@ export default function Layout({ children, currentPageName }) {
           onLogout={handleLogout}
         />
 
-        {/* 🛡️ SIDEBAR LATERAL CONTEXTUAL POR ROLE (desktop fixed + mobile drawer) */}
-        {(() => {
-          const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
-          if (!cfg.showSidebar) return null;
-          return (
-            <RoleSidebar
-              config={cfg}
-              currentPageName={currentPageName}
-              isMobileOpen={sidebarMobileOpen}
-              onCloseMobile={() => setSidebarMobileOpen(false)}
-            />
-          );
-        })()}
-
-        <main
-          className={
-            isLandingPage
-              ? ""
-              : `pt-14 sm:pt-16 ${
-                  getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems).showSidebar
-                    ? "md:pl-60"
-                    : ""
-                }`
-          }
-        >
+        <main className={isLandingPage ? "" : "pt-14 sm:pt-16"}>
+          {/* 26/07 — MENU DO PAINEL NO TOPO (substitui a sidebar lateral de 240px):
+              barra de comando sticky com mega-menu por seção, grade completa e
+              busca por Cmd+K. Libera a largura inteira da tela para o conteúdo. */}
+          {(() => {
+            const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
+            if (!cfg.showSidebar) return null;
+            return <AdminTopNav config={cfg} currentPageName={currentPageName} />;
+          })()}
           {/* FASE 4.6 — PanelSwitcherCard removido: troca de painel só pelo dropdown do avatar (UserAvatarMenu) */}
           {children}
         </main>

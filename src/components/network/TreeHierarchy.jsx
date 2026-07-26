@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, X, Pencil, Star, Trash2, MousePointerClick } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { levelColor as getCareerColor } from '@/lib/careerLevels';
@@ -11,7 +11,7 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRelink }) {
+export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRelink, fullHeight = false }) {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [lineKey, setLineKey] = useState(0);
   const [draggedNode, setDraggedNode] = useState(null);
@@ -312,26 +312,27 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); if (hideTimer.current) clearTimeout(hideTimer.current); setShowTooltip(false); }}
-                className="text-gray-500 hover:text-white text-sm leading-none -mt-0.5"
+                className="text-gray-500 hover:text-white leading-none -mt-0.5"
                 title="Fechar"
-              >✕</button>
+              ><X className="w-3.5 h-3.5" /></button>
             </div>
             {hasChildren && (
-              <div className="text-green-400 text-[10px] mt-1">
-                {isExpanded ? '👇 Clique no círculo para fechar' : `👆 Clique no círculo para ver ${node.children.length} indicados`}
+              <div className="text-green-400 text-[10px] mt-1 flex items-center gap-1">
+                <MousePointerClick className="w-3 h-3" />
+                {isExpanded ? 'Clique no círculo para fechar' : `Clique no círculo para ver ${node.children.length} indicados`}
               </div>
             )}
 
             <div className="flex gap-1.5 mt-2 pt-2 border-t border-gray-700">
               <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm text-blue-400 hover:bg-blue-500/20 flex items-center gap-1"
                 title="Editar usuário"
-                onClick={(e) => { e.stopPropagation(); onEdit(node); }}>✏️ <span className="text-[10px]">Editar</span></Button>
+                onClick={(e) => { e.stopPropagation(); onEdit(node); }}><Pencil className="w-3.5 h-3.5" /> <span className="text-[10px]">Editar</span></Button>
               <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm text-green-400 hover:bg-green-500/20"
                 title="Promover / mudar cargo"
-                onClick={(e) => { e.stopPropagation(); onPromote(node); }}>⭐</Button>
+                onClick={(e) => { e.stopPropagation(); onPromote(node); }}><Star className="w-3.5 h-3.5" /></Button>
               <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm text-red-400 hover:bg-red-500/20"
                 title="Excluir usuário"
-                onClick={(e) => { e.stopPropagation(); onDelete(node); }}>🗑️</Button>
+                onClick={(e) => { e.stopPropagation(); onDelete(node); }}><Trash2 className="w-3.5 h-3.5" /></Button>
             </div>
           </div>
         </div>
@@ -357,7 +358,10 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
   }
 
   return (
-    <div className="w-full p-8 bg-gray-900 rounded-lg relative min-h-[500px] overflow-auto" ref={containerRef}>
+    <div
+      className={`w-full p-8 bg-gray-900 relative overflow-auto ${fullHeight ? 'min-h-full' : 'rounded-lg min-h-[600px]'}`}
+      ref={containerRef}
+    >
       {/* Botão Expandir Todos / Colapsar Todos */}
       <div className="absolute top-4 right-4 z-20 flex gap-2">
         <Button
