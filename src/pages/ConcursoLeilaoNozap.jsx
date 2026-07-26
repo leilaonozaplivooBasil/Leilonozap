@@ -3,6 +3,7 @@ import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
 import ShareSection from '@/components/concurso/ShareSection';
+import OnboardingModal from '@/components/concurso/OnboardingModal';
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -72,6 +73,7 @@ export default function ConcursoLeilaoNozap() {
   const [savingCfg, setSavingCfg] = useState(false);
   const [rankExpanded, setRankExpanded] = useState(false);
   const [adminExpanded, setAdminExpanded] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Trava o scroll do fundo enquanto o painel admin está em tela cheia + fecha no ESC.
   useEffect(() => {
@@ -124,6 +126,7 @@ export default function ConcursoLeilaoNozap() {
       const j = await r.json();
       if (!r.ok) { setErr(j.error || 'Erro ao salvar.'); return; }
       localStorage.setItem('concurso_code', j.code); setMyCode(j.code);
+      setShowOnboarding(true); // FEATURE 8 — regra de qualificação antes de divulgar
       // auto-login: se criou conta NÍVEL 1 na plataforma (cadastro novo), já entra logado
       if (j.app_user) { try { localStorage.setItem('currentUser', JSON.stringify(j.app_user)); sessionStorage.setItem('isLoggedIn', 'true'); } catch (_) {} }
       load(periodo); setTimeout(loadMe, 300);
@@ -494,6 +497,9 @@ export default function ConcursoLeilaoNozap() {
             {RankingBlock}
           </div>
         </div>
+
+        {/* FEATURE 8 — modal de qualificação logo após gerar o link */}
+        {showOnboarding && myCode && <OnboardingModal link={myLink} onClose={() => setShowOnboarding(false)} />}
 
         {/* ADMIN — modo tela cheia (overlay), aberto pelo botão do topo */}
         {isAdmin && adminExpanded && (
