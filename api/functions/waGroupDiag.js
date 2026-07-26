@@ -70,13 +70,14 @@ export default async function handler(req, res) {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/`, { headers: { apikey: SR, Authorization: `Bearer ${SR}` } });
       const spec = await r.json().catch(() => ({}));
       const defs = spec.definitions || {};
+      const filtro = String(body.filtro || 'concurso'); // prefixo/substring das tabelas detalhadas
       const tabelas = {};
       for (const [nome, def] of Object.entries(defs)) {
-        if (!nome.startsWith('concurso')) continue;
+        if (!nome.includes(filtro)) continue;
         tabelas[nome] = Object.fromEntries(Object.entries(def.properties || {}).map(([c, v]) => [c, v.format || v.type]));
       }
-      const rpcs = Object.keys(spec.paths || {}).filter((p) => p.startsWith('/rpc/') && p.includes('concurso'));
-      return res.status(200).json({ tabelas, rpcs });
+      const rpcs = Object.keys(spec.paths || {}).filter((p) => p.startsWith('/rpc/'));
+      return res.status(200).json({ todas: Object.keys(defs).sort(), tabelas, rpcs: rpcs.sort() });
     }
 
     return res.status(400).json({ error: 'op desconhecida' });

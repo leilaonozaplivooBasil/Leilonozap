@@ -15,6 +15,7 @@ const fmtD = (iso) => {
   try { return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }); } catch { return '—'; }
 };
 const zapLink = (w) => (w ? `https://wa.me/55${String(w).replace(/\D/g, '')}` : null);
+const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function Stat({ icon: Ic, label, value, tint = '#f5c451' }) {
   return (
@@ -69,6 +70,12 @@ export default function AdminInsights({ userId }) {
             <Stat icon={Users} label="Divulgadores ativos 7d" value={t.ativos_7d} tint="#e9d5ff" />
           </div>
 
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
+            <Stat icon={Users} label="Com conta na plataforma" value={t.convertidos ?? 0} tint="#38bdf8" />
+            <Stat icon={BarChart3} label="Compras dos participantes" value={t.compras_total ?? 0} tint="#f5c451" />
+            <Stat icon={BarChart3} label="Gasto total (loja + adesão)" value={money(t.gasto_total)} tint="#4ade80" />
+          </div>
+
           {data.rastreamento_completo ? (
             <div className="grid grid-cols-2 gap-2.5 mb-4">
               <Stat icon={Users} label="Entraram no grupo" value={t.entraram ?? 0} tint="#4ade80" />
@@ -90,7 +97,7 @@ export default function AdminInsights({ userId }) {
           </div>
 
           <div className="overflow-auto rounded-xl border border-white/10" style={{ maxHeight: 420 }}>
-            <table className="w-full text-sm" style={{ minWidth: 720 }}>
+            <table className="w-full text-sm" style={{ minWidth: 960 }}>
               <thead className="sticky top-0 z-10" style={{ background: '#1c1233' }}>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-white/45">
                   <th className="px-3 py-2.5 font-bold">#</th>
@@ -102,6 +109,9 @@ export default function AdminInsights({ userId }) {
                   <th className="px-3 py-2.5 font-bold text-right">Total</th>
                   {data.rastreamento_completo && <th className="px-3 py-2.5 font-bold text-right text-emerald-300">Entrou</th>}
                   {data.rastreamento_completo && <th className="px-3 py-2.5 font-bold text-right text-red-300">Saiu</th>}
+                  <th className="px-3 py-2.5 font-bold text-center">Conta</th>
+                  <th className="px-3 py-2.5 font-bold text-right">Compras</th>
+                  <th className="px-3 py-2.5 font-bold text-right">Gastou</th>
                   <th className="px-3 py-2.5 font-bold">Último clique</th>
                   <th className="px-3 py-2.5 font-bold">Cadastro</th>
                 </tr>
@@ -123,6 +133,9 @@ export default function AdminInsights({ userId }) {
                     <td className="px-3 py-2 text-right font-black text-emerald-300">{p.cliques}</td>
                     {data.rastreamento_completo && <td className="px-3 py-2 text-right font-black text-emerald-400">{p.entrou || '·'}</td>}
                     {data.rastreamento_completo && <td className="px-3 py-2 text-right font-black text-red-400">{p.saiu || '·'}</td>}
+                    <td className="px-3 py-2 text-center">{p.convertido ? <span className="text-sky-300 font-black" title="Tem conta na plataforma">✓</span> : <span className="text-white/25">—</span>}</td>
+                    <td className="px-3 py-2 text-right font-bold text-white/80">{p.compras || '·'}</td>
+                    <td className="px-3 py-2 text-right font-bold whitespace-nowrap" style={{ color: (p.gasto + p.adesao) > 0 ? '#4ade80' : 'rgba(255,255,255,.3)' }}>{(p.gasto + p.adesao) > 0 ? money(p.gasto + p.adesao) : '·'}</td>
                     <td className="px-3 py-2 text-xs text-white/55 whitespace-nowrap">{fmtDT(p.ultimo_clique)}</td>
                     <td className="px-3 py-2 text-xs text-white/45 whitespace-nowrap">{fmtD(p.cadastro)}</td>
                   </tr>

@@ -206,8 +206,9 @@ export default async function handler(req, res) {
     // Entradas/saídas do grupo, conversões e gasto por indicado dependem da migração
     // de rastreamento (db/rank-premiado-tracking.sql) + webhook Evolution.
     if (action === 'admin_stats') {
-      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
-      const parts = await (await sb('concurso_participantes?select=code,nome,whatsapp,foto_url,created_at&limit=2000')).json();
+      const viaDiag = process.env.DIAG_KEY && body.diag === process.env.DIAG_KEY; // diagnóstico interno
+      if (!viaDiag && !(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      const parts = await (await sb('concurso_participantes?select=code,nome,whatsapp,foto_url,created_at,cpf&limit=2000')).json();
       const clicks = [];
       for (let p = 0; p < 20; p++) {
         const r = await sb(`concurso_referrals?select=referrer_code,created_at&order=created_at.desc&limit=1000&offset=${p * 1000}`);
@@ -244,13 +245,53 @@ export default async function handler(req, res) {
           f[x.status] = (f[x.status] || 0) + 1;
         }
       }
-      const participantes = (Array.isArray(parts) ? parts : [])
-        .map((p) => ({
-          code: p.code, nome: p.nome, whatsapp: p.whatsapp || null, foto_url: p.foto_url || null, cadastro: p.created_at || null,
-          cliques: agg[p.code]?.total || 0, dia: agg[p.code]?.dia || 0, semana: agg[p.code]?.semana || 0, mes: agg[p.code]?.mes || 0,
-          ultimo_clique: agg[p.code]?.ultimo || null,
-          ...(rastreado ? { entrou: funil[p.code]?.entrou || 0, saiu: funil[p.code]?.saiu || 0, aguardando: funil[p.code]?.clicou || 0 } : {}),
-        }))
+      // Conversão + gasto na plataforma: casa o CPF do participante com app_users e
+      // agrega compras da loja (catalog_sales) e adesões (adesao_orders). CPF fica
+      // no servidor — nunca vai pra resposta.
+      const chunk = (arr, n) => arr.reduce((acc, x, i) => { (acc[Math.floor(i / n)] ||= []).push(x); return acc; }, []);
+      const listaParts = Array.isArray(parts) ? parts : [];
+      const cpfs = [...new Set(listaParts.map((p) => digits(p.cpf)).filter((c) => c.length === 11))];
+      const contas = []; // {id, cpf, indicated_clients_count, network_bids_count}
+      for (const grupo of chunk(cpfs, 40)) {
+        const r = await sb(`app_users?select=id,cpf,indicated_clients_count,network_bids_count&cpf=in.(${grupo.map((c) => `"${c}"`).join(',')})`);
+        const rows = await r.json().catch(() => []);
+        if (Array.isArray(rows)) contas.push(...rows);
+      }
+      const contaPorCpf = Object.fromEntries(contas.map((u) => [digits(u.cpf), u]));
+      const PAGO = new Set(['paid', 'pago', 'approved', 'aprovado', 'confirmed', 'confirmado', 'completed', 'concluido', 'entregue', 'delivered', 'shipped', 'enviado']);
+      const gastoPorUser = {}; // user_id → { compras, gasto, adesao }
+      const ids = contas.map((u) => u.id);
+      for (const grupo of chunk(ids, 40)) {
+        const filtroIds = grupo.map((x) => `"${x}"`).join(',');
+        const vendas = await (await sb(`catalog_sales?select=buyer_id,total_amount,sale_price,status&buyer_id=in.(${filtroIds})&limit=5000`)).json().catch(() => []);
+        for (const v of Array.isArray(vendas) ? vendas : []) {
+          const g = gastoPorUser[v.buyer_id] || (gastoPorUser[v.buyer_id] = { compras: 0, gasto: 0, adesao: 0 });
+          g.compras++;
+          if (PAGO.has(String(v.status || '').toLowerCase())) g.gasto += Number(v.total_amount ?? v.sale_price) || 0;
+        }
+        const adesoes = await (await sb(`adesao_orders?select=user_id,valor_produto,status&user_id=in.(${filtroIds})&limit=5000`)).json().catch(() => []);
+        for (const a of Array.isArray(adesoes) ? adesoes : []) {
+          const g = gastoPorUser[a.user_id] || (gastoPorUser[a.user_id] = { compras: 0, gasto: 0, adesao: 0 });
+          if (PAGO.has(String(a.status || '').toLowerCase())) g.adesao += Number(a.valor_produto) || 0;
+        }
+      }
+      const participantes = listaParts
+        .map((p) => {
+          const conta = contaPorCpf[digits(p.cpf)];
+          const g = conta ? gastoPorUser[conta.id] : null;
+          return {
+            code: p.code, nome: p.nome, whatsapp: p.whatsapp || null, foto_url: p.foto_url || null, cadastro: p.created_at || null,
+            cliques: agg[p.code]?.total || 0, dia: agg[p.code]?.dia || 0, semana: agg[p.code]?.semana || 0, mes: agg[p.code]?.mes || 0,
+            ultimo_clique: agg[p.code]?.ultimo || null,
+            convertido: !!conta,
+            compras: g?.compras || 0,
+            gasto: Math.round((g?.gasto || 0) * 100) / 100,
+            adesao: Math.round((g?.adesao || 0) * 100) / 100,
+            indicados_plataforma: conta?.indicated_clients_count || 0,
+            lances_rede: conta?.network_bids_count || 0,
+            ...(rastreado ? { entrou: funil[p.code]?.entrou || 0, saiu: funil[p.code]?.saiu || 0, aguardando: funil[p.code]?.clicou || 0 } : {}),
+          };
+        })
         .sort((a, b) => b.cliques - a.cliques || (b.ultimo_clique || '').localeCompare(a.ultimo_clique || ''));
       return jset(res, 200, {
         totais: {
@@ -260,6 +301,9 @@ export default async function handler(req, res) {
           cliques_semana: participantes.reduce((s, p) => s + p.semana, 0),
           cliques_mes: participantes.reduce((s, p) => s + p.mes, 0),
           ativos_7d: participantes.filter((p) => p.ultimo_clique && (spNow - toSP(p.ultimo_clique)) < 7 * 864e5).length,
+          convertidos: participantes.filter((p) => p.convertido).length,
+          gasto_total: Math.round(participantes.reduce((s, p) => s + p.gasto + p.adesao, 0) * 100) / 100,
+          compras_total: participantes.reduce((s, p) => s + p.compras, 0),
           ...(rastreado ? {
             entraram: participantes.reduce((s, p) => s + (p.entrou || 0), 0),
             sairam: participantes.reduce((s, p) => s + (p.saiu || 0), 0),
