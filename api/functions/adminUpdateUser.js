@@ -40,6 +40,20 @@ const ALLOWED = [
 // entende os dois formatos, então a migration pode ser feita a qualquer momento.
 const EXECUTIVE_FIELDS = ['executive_owner_id', 'executive_owner_pinned', 'executive_owner_since'];
 
+// A coluna dedicada pode ainda não existir (migration pendente). Descobrimos uma
+// vez por instância e guardamos — assim nem chegamos a mandar um PATCH que falha.
+let _execColumnExists = null;
+async function executiveColumnExists() {
+  if (_execColumnExists !== null) return _execColumnExists;
+  try {
+    const r = await sb('app_users?select=executive_owner_id&limit=1');
+    _execColumnExists = r.ok;
+  } catch {
+    _execColumnExists = false;
+  }
+  return _execColumnExists;
+}
+
 function foldExecutiveIntoContext(payload) {
   const ctx = {};
   for (const f of EXECUTIVE_FIELDS) {
@@ -132,6 +146,12 @@ export default async function handler(req, res) {
     }
     payload.updated_date = new Date().toISOString();
 
+    // Sem a coluna dedicada, os campos da carteira executiva já vão dobrados
+    // no campo de compatibilidade — nada de PATCH que quebra o save inteiro.
+    if (EXECUTIVE_FIELDS.some((f) => f in payload) && !(await executiveColumnExists())) {
+      foldExecutiveIntoContext(payload);
+    }
+
     let upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
@@ -141,10 +161,14 @@ export default async function handler(req, res) {
 
     // Coluna dedicada ainda não criada (42703): repete gravando no campo de
     // compatibilidade, para o painel funcionar antes da migration.
-    const semColuna =
-      !upd.ok &&
-      rows?.code === '42703' &&
-      EXECUTIVE_FIELDS.some((f) => f in payload);
+    const erroDeColuna =
+      rows?.code === '42703' ||
+      rows?.code === 'PGRST204' ||
+      /column .* does not exist|Could not find the '.*' column/i.test(
+        `${rows?.message || ''} ${rows?.details || ''}`
+      );
+    const semColuna = !upd.ok && erroDeColuna && EXECUTIVE_FIELDS.some((f) => f in payload);
+    if (semColuna) _execColumnExists = false;
     if (semColuna) {
       const alt = foldExecutiveIntoContext({ ...payload });
       upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
