@@ -179,6 +179,58 @@ export default async function handler(req, res) {
       return jset(res, 200, { ok: true, group_link: GROUP_LINK, inviter: pr[0].nome, pontos });
     }
 
+    // ---------- ADMIN: inteligência das indicações (funil por participante) ----------
+    // v1 com o que o schema atual permite: impactados = cliques no link (concurso_referrals).
+    // Entradas/saídas do grupo, conversões e gasto por indicado dependem da migração
+    // de rastreamento (db/rank-premiado-tracking.sql) + webhook Evolution.
+    if (action === 'admin_stats') {
+      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      const parts = await (await sb('concurso_participantes?select=code,nome,whatsapp,foto_url,created_at&limit=2000')).json();
+      const clicks = [];
+      for (let p = 0; p < 20; p++) {
+        const r = await sb(`concurso_referrals?select=referrer_code,created_at&order=created_at.desc&limit=1000&offset=${p * 1000}`);
+        const rows = await r.json().catch(() => []);
+        if (!Array.isArray(rows) || !rows.length) break;
+        clicks.push(...rows);
+        if (rows.length < 1000) break;
+      }
+      // janelas em horário de Brasília (dia / semana desde segunda / mês)
+      const toSP = (d) => new Date(new Date(d).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const spNow = toSP(new Date());
+      const d0 = new Date(spNow); d0.setHours(0, 0, 0, 0);
+      const w0 = new Date(d0); w0.setDate(w0.getDate() - ((d0.getDay() + 6) % 7));
+      const m0 = new Date(d0); m0.setDate(1);
+      const agg = {};
+      for (const c of clicks) {
+        const a = agg[c.referrer_code] || (agg[c.referrer_code] = { total: 0, dia: 0, semana: 0, mes: 0, ultimo: null });
+        a.total++;
+        const t = toSP(c.created_at);
+        if (t >= d0) a.dia++;
+        if (t >= w0) a.semana++;
+        if (t >= m0) a.mes++;
+        if (!a.ultimo || c.created_at > a.ultimo) a.ultimo = c.created_at;
+      }
+      const participantes = (Array.isArray(parts) ? parts : [])
+        .map((p) => ({
+          code: p.code, nome: p.nome, whatsapp: p.whatsapp || null, foto_url: p.foto_url || null, cadastro: p.created_at || null,
+          cliques: agg[p.code]?.total || 0, dia: agg[p.code]?.dia || 0, semana: agg[p.code]?.semana || 0, mes: agg[p.code]?.mes || 0,
+          ultimo_clique: agg[p.code]?.ultimo || null,
+        }))
+        .sort((a, b) => b.cliques - a.cliques || (b.ultimo_clique || '').localeCompare(a.ultimo_clique || ''));
+      return jset(res, 200, {
+        totais: {
+          participantes: participantes.length,
+          impactados: clicks.length,
+          cliques_dia: participantes.reduce((s, p) => s + p.dia, 0),
+          cliques_semana: participantes.reduce((s, p) => s + p.semana, 0),
+          cliques_mes: participantes.reduce((s, p) => s + p.mes, 0),
+          ativos_7d: participantes.filter((p) => p.ultimo_clique && (spNow - toSP(p.ultimo_clique)) < 7 * 864e5).length,
+        },
+        participantes,
+        rastreamento_completo: false,
+      });
+    }
+
     // ---------- ADMIN: prêmios do pódio (1..10) ----------
     if (action === 'prizes') {
       if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });

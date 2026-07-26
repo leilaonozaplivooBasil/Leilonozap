@@ -4,6 +4,7 @@ import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
 import ShareSection from '@/components/concurso/ShareSection';
 import OnboardingModal from '@/components/concurso/OnboardingModal';
+import AdminInsights from '@/components/concurso/AdminInsights';
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -327,6 +328,9 @@ export default function ConcursoLeilaoNozap() {
   // Conteúdo do painel admin — reaproveitado inline e no modo tela cheia.
   const AdminInner = (
     <>
+      {/* Inteligência das indicações — funil por participante */}
+      <AdminInsights userId={currentUser?.id} />
+
       {/* Cards de configuração */}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
         {/* Destaque */}
