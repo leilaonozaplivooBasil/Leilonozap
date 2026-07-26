@@ -13,6 +13,7 @@ import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
   Maximize2, Minimize2, Save, Settings2, ArrowLeft,
+  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -78,7 +79,10 @@ export default function ConcursoLeilaoNozap() {
   const [savingCfg, setSavingCfg] = useState(false);
   const [rankExpanded, setRankExpanded] = useState(false);
   const [adminExpanded, setAdminExpanded] = useState(false);
+  const [adminTab, setAdminTab] = useState('insights');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [loaded, setLoaded] = useState(false); // 1º fetch concluído → tira o skeleton
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Trava o scroll do fundo enquanto o painel admin está em tela cheia + fecha no ESC.
   useEffect(() => {
@@ -132,7 +136,7 @@ export default function ConcursoLeilaoNozap() {
       setData(j);
       setCfg(j.config || {});
       const pe = {}; (j.premios || []).forEach((p) => { pe[p.posicao] = p.premio || ''; }); setPremiosEdit(pe);
-    } catch { /* */ }
+    } catch { /* */ } finally { setLoaded(true); }
   }, [periodo]);
 
   const loadMe = useCallback(async () => {
@@ -143,6 +147,12 @@ export default function ConcursoLeilaoNozap() {
   useEffect(() => { if (!ref) { load(periodo); loadMe(); const t = setInterval(() => { load(periodo); loadMe(); }, 15000); return () => clearInterval(t); } }, [load, loadMe, periodo, ref]);
 
   const myLink = myCode ? `${window.location.origin}/rankpremiado?ref=${myCode}` : '';
+  const copyMyLink = async () => {
+    try { await navigator.clipboard.writeText(myLink); } catch { /* */ }
+    setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500);
+  };
+  const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}`;
+  const shareZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   const config = data.config || {};
   const liveOn = !!config.live_ativa;
   const liveLink = config.live_url || LIVOO_VENDEDOR;
@@ -212,6 +222,11 @@ export default function ConcursoLeilaoNozap() {
 
   const CARD = { background: 'rgba(255,255,255,.045)', border: '1px solid rgba(245,196,81,.26)' };
   const rankingVisible = rankExpanded ? data.ranking.slice(0, 50) : data.ranking.slice(0, 5);
+  // Prêmio por posição (pódio top 10) — agora visível pro público: cria desejo de subir
+  const premioPos = {}; (data.premios || []).forEach((p) => { if (p.premio) premioPos[p.posicao] = p.premio; });
+  // Pódio visual só quando existe top 3 completo; o restante segue em lista
+  const podio = data.ranking.length >= 3 ? rankingVisible.slice(0, 3) : [];
+  const listaAposPodio = podio.length === 3 ? rankingVisible.slice(3) : rankingVisible;
 
   // ------ blocos reaproveitados nas duas colunas ------
   const LiveBlock = (
@@ -299,8 +314,25 @@ export default function ConcursoLeilaoNozap() {
           </div>
         ))}
       </div>
-      <div className="mt-3 bg-black/30 rounded-lg px-3 py-2 text-xs break-all text-green-100 border border-white/10 flex items-center gap-2"><Link2 className="w-4 h-4 text-yellow-300 shrink-0" />{myLink}</div>
-      <a href="/Licensing" className="mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#8b5cf6,#22c55e)' }}>
+      {/* Link de divulgação: a AÇÃO nº 1 da página — um toque copia, sem selecionar texto */}
+      <button
+        onClick={copyMyLink}
+        className="mt-3 w-full rounded-xl px-3 py-2.5 text-xs text-left border transition-colors flex items-center gap-2"
+        style={linkCopied
+          ? { background: 'rgba(34,197,94,.15)', borderColor: 'rgba(34,197,94,.55)' }
+          : { background: 'rgba(0,0,0,.3)', borderColor: 'rgba(255,255,255,.12)' }}
+        title="Tocar para copiar"
+      >
+        <Link2 className="w-4 h-4 text-yellow-300 shrink-0" />
+        <span className="flex-1 min-w-0 truncate text-green-100">{myLink.replace(/^https?:\/\//, '')}</span>
+        <span className={`shrink-0 inline-flex items-center gap-1 font-black text-[11px] uppercase ${linkCopied ? 'text-emerald-300' : 'text-yellow-300'}`}>
+          {linkCopied ? <><Check className="w-3.5 h-3.5" /> Copiado!</> : <><Copy className="w-3.5 h-3.5" /> Copiar</>}
+        </span>
+      </button>
+      <button onClick={shareZap} className="mt-2.5 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[#052e16] transition-transform active:scale-[.98]" style={{ background: '#25D366' }}>
+        <MessageCircle className="w-5 h-5" /> Divulgar no WhatsApp
+      </button>
+      <a href="/Licensing" className="mt-2.5 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#8b5cf6,#22c55e)' }}>
         <Briefcase className="w-5 h-5" /> Quero ser Influência Leilão NoZap
       </a>
     </div>
@@ -349,18 +381,60 @@ export default function ConcursoLeilaoNozap() {
         ))}
       </div>
       {premioPeriodo ? <div className="text-center text-xs text-yellow-300 mb-3 flex items-center justify-center gap-1.5"><Gift className="w-3.5 h-3.5" /> Prêmio {PERIODOS.find((p) => p.id === periodo)?.l}: <b>{premioPeriodo}</b></div> : null}
-      {data.ranking.length === 0 ? (
+      {!loaded ? (
+        <div className="space-y-2" aria-hidden>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border border-white/5 animate-pulse" style={{ background: 'rgba(255,255,255,.04)' }}>
+              <span className="w-[26px] h-[26px] rounded-full bg-white/10 shrink-0" />
+              <span className="w-[38px] h-[38px] rounded-full bg-white/10 shrink-0" />
+              <span className="h-3 rounded bg-white/10" style={{ width: `${60 - i * 7}%` }} />
+            </div>
+          ))}
+        </div>
+      ) : data.ranking.length === 0 ? (
         <p className="text-center text-green-300/60 py-8">Ninguém pontuou nesse período ainda. Seja o primeiro!</p>
       ) : (
         <>
+          {/* PÓDIO — top 3 em destaque (2º · 1º · 3º), com o prêmio da posição quando cadastrado */}
+          {podio.length === 3 && (
+            <div className="grid grid-cols-3 gap-2 items-end mb-3">
+              {[podio[1], podio[0], podio[2]].map((x) => {
+                const first = x.posicao === 1;
+                const isMe = x.code === myCode;
+                return (
+                  <div
+                    key={x.code}
+                    className="rounded-2xl px-2 pb-3 text-center border flex flex-col items-center"
+                    style={{
+                      paddingTop: first ? 14 : 10,
+                      borderColor: isMe ? '#f5c451' : first ? 'rgba(245,196,81,.55)' : 'rgba(255,255,255,.14)',
+                      background: first
+                        ? 'linear-gradient(180deg,rgba(245,196,81,.2),rgba(34,197,94,.07))'
+                        : 'linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03))',
+                    }}
+                  >
+                    {first && <Crown className="w-5 h-5 text-yellow-300 mb-1" />}
+                    <Avatar url={x.foto_url} nome={x.nome} size={first ? 62 : 46} />
+                    <div className="-mt-2.5"><PosBadge pos={x.posicao} size={first ? 26 : 22} /></div>
+                    <p className="font-black text-xs mt-1.5 leading-tight w-full truncate px-1">{x.nome}{isMe && <span className="text-yellow-300"> (você)</span>}</p>
+                    {premioPos[x.posicao] && (
+                      <p className="text-[10px] text-yellow-300/90 mt-1 w-full truncate px-1 flex items-center justify-center gap-1"><Gift className="w-3 h-3 shrink-0" />{premioPos[x.posicao]}</p>
+                    )}
+                    {isAdmin && <p className="text-[10px] font-black text-yellow-300 mt-1 inline-flex items-center gap-1"><Users className="w-3 h-3 opacity-80" />{x.pontos}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div className="space-y-2">
-            {rankingVisible.map((x) => {
+            {listaAposPodio.map((x) => {
               const isMe = x.code === myCode;
               return (
                 <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-yellow-400' : 'border-white/10'}`} style={{ background: x.posicao <= 3 ? 'linear-gradient(90deg,rgba(245,196,81,.15),rgba(34,197,94,.06))' : 'rgba(255,255,255,.04)' }}>
                   <PosBadge pos={x.posicao} />
                   <Avatar url={x.foto_url} nome={x.nome} size={38} />
-                  <span className="font-bold flex-1 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
+                  <span className="font-bold flex-1 min-w-0 truncate">{x.nome}{isMe && <span className="text-yellow-300 text-xs ml-2">(você)</span>}</span>
+                  {premioPos[x.posicao] && <span className="text-[10px] text-yellow-300/80 shrink-0 max-w-[38%] truncate inline-flex items-center gap-1"><Gift className="w-3 h-3 shrink-0" />{premioPos[x.posicao]}</span>}
                   {/* Pontuação só pro admin (parâmetros de conversão). Público vê o ranking, não os números. */}
                   {isAdmin && <span className="font-black text-yellow-300 inline-flex items-center gap-1"><Users className="w-3.5 h-3.5 opacity-80" />{x.pontos}</span>}
                 </div>
@@ -381,15 +455,18 @@ export default function ConcursoLeilaoNozap() {
     </p>
   );
 
-  // Conteúdo do painel admin — reaproveitado inline e no modo tela cheia.
-  const AdminInner = (
-    <>
-      {/* Inteligência das indicações — funil por participante */}
-      <AdminInsights userId={currentUser?.id} />
+  // ---- painel admin em ABAS: cada assunto numa tela só, funciona igual no desktop e no mobile ----
+  const ADMIN_TABS = [
+    { id: 'insights', l: 'Indicações', icon: BarChart3 },
+    { id: 'destaque', l: 'Sorteio do dia', icon: Gift },
+    { id: 'live', l: 'Live', icon: Radio },
+    { id: 'premios', l: 'Prêmios', icon: Award },
+    { id: 'acoes', l: 'Realizar sorteio', icon: Gavel },
+  ];
+  // Abas que mexem na config compartilhada → mostram a barra fixa de salvar
+  const adminTabSalva = ['destaque', 'live', 'premios'].includes(adminTab);
 
-      {/* Cards de configuração */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
-        {/* Destaque */}
+  const AdmDestaque = (
         <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
           <SecHead icon={Gift}>Destaque / Sorteio do dia</SecHead>
           <div className="space-y-2.5">
@@ -416,8 +493,9 @@ export default function ConcursoLeilaoNozap() {
             <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={3} className={`${inp} resize-none`} />
           </div>
         </div>
+  );
 
-        {/* Live */}
+  const AdmLive = (
         <div className="rounded-2xl p-4 border" style={{ background: 'rgba(233,30,131,.06)', borderColor: 'rgba(233,30,131,.3)' }}>
           <SecHead icon={Radio} tint="" dot="rgba(233,30,131,.9)"><span style={{ color: '#f5a3cf' }}>Live (Livoo)</span></SecHead>
           <div className="space-y-2.5">
@@ -428,9 +506,11 @@ export default function ConcursoLeilaoNozap() {
             <input value={cfg.live_audiencia || ''} onChange={(e) => setCfg({ ...cfg, live_audiencia: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Assistindo agora" className={inp} />
           </div>
         </div>
+  );
 
-        {/* Prêmios dos sorteios */}
-        <div className="rounded-2xl p-4 bg-black/25 border border-white/10 md:col-span-2 xl:col-span-1">
+  const AdmPremios = (
+    <div className="space-y-3">
+        <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
           <SecHead icon={Award}>Prêmios dos sorteios</SecHead>
           <div className="space-y-2.5">
             <input value={cfg.premio_dia || ''} onChange={(e) => setCfg({ ...cfg, premio_dia: e.target.value })} placeholder="Prêmio do sorteio DIÁRIO" className={inp} />
@@ -438,26 +518,10 @@ export default function ConcursoLeilaoNozap() {
             <input value={cfg.premio_mes || ''} onChange={(e) => setCfg({ ...cfg, premio_mes: e.target.value })} placeholder="Prêmio do sorteio MENSAL" className={inp} />
           </div>
         </div>
-      </div>
-
-      <button onClick={saveConfig} disabled={savingCfg} className="mt-4 w-full py-3.5 rounded-xl font-black text-white shadow-lg shadow-purple-900/30 disabled:opacity-60 flex items-center justify-center gap-2 transition-transform active:scale-[.99]" style={{ background: 'linear-gradient(90deg,#8b5cf6,#7c3aed)' }}>
-        <Save className="w-4 h-4" /> {savingCfg ? 'Salvando...' : <>Salvar configuração <span className="text-purple-200/90 text-xs font-medium">(destaque + live + prêmios)</span></>}
-      </button>
-
-      {/* Ações: sorteio + pódio */}
-      <div className="grid lg:grid-cols-2 gap-3 mt-4 items-start">
-        <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
-          <SecHead icon={Gavel}>Realizar sorteio (coroa o 1º do período)</SecHead>
-          <div className="grid grid-cols-3 gap-2">
-            {[['dia', 'Dia'], ['semana', 'Semana'], ['mes', 'Mês']].map(([id, l]) => (
-              <button key={id} onClick={() => realizarSorteio(id)} className="py-3 rounded-xl font-bold text-sm text-[#1a1205] shadow-md transition-transform active:scale-[.97]" style={{ background: 'linear-gradient(90deg,#f5c451,#e0a920)' }}>{l}</button>
-            ))}
-          </div>
-          <p className="text-[11px] text-purple-200/60 mt-3">Escolha o período para coroar quem trouxe mais gente. Registra o vencedor no histórico.</p>
-        </div>
 
         <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
           <SecHead icon={Crown}>Prêmios do pódio (top 10)</SecHead>
+          <p className="text-[11px] text-purple-200/60 -mt-1 mb-3">Estes aparecem no ranking público, ao lado de cada posição.</p>
           <div className="grid sm:grid-cols-2 gap-2">
             {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
               <div key={pos} className="flex items-center gap-2">
@@ -468,8 +532,32 @@ export default function ConcursoLeilaoNozap() {
           </div>
           <button onClick={savePremios} className="mt-3 w-full py-3 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-700 text-sm flex items-center justify-center gap-2 transition-colors"><Save className="w-4 h-4" /> Salvar prêmios do pódio</button>
         </div>
-      </div>
-    </>
+    </div>
+  );
+
+  const AdmAcoes = (
+        <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
+          <SecHead icon={Gavel}>Realizar sorteio (coroa o 1º do período)</SecHead>
+          <div className="grid grid-cols-3 gap-2">
+            {[['dia', 'Dia'], ['semana', 'Semana'], ['mes', 'Mês']].map(([id, l]) => (
+              <button key={id} onClick={() => realizarSorteio(id)} className="py-3 rounded-xl font-bold text-sm text-[#1a1205] shadow-md transition-transform active:scale-[.97]" style={{ background: 'linear-gradient(90deg,#f5c451,#e0a920)' }}>{l}</button>
+            ))}
+          </div>
+          <p className="text-[11px] text-purple-200/60 mt-3">Escolha o período para coroar quem trouxe mais gente. Registra o vencedor no histórico.</p>
+        </div>
+  );
+
+  // Conteúdo da aba ativa. Insights ocupa a largura toda (tabela); os formulários
+  // ficam numa coluna confortável centralizada no desktop e 100% no mobile.
+  const AdminTabContent = adminTab === 'insights' ? (
+    <AdminInsights userId={currentUser?.id} />
+  ) : (
+    <div className="w-full max-w-2xl mx-auto">
+      {adminTab === 'destaque' && AdmDestaque}
+      {adminTab === 'live' && AdmLive}
+      {adminTab === 'premios' && AdmPremios}
+      {adminTab === 'acoes' && AdmAcoes}
+    </div>
   );
 
   // Cabeçalho do painel admin (chip + badge + botão expandir/recolher)
@@ -537,6 +625,25 @@ export default function ConcursoLeilaoNozap() {
         {/* FEATURE 1 — contador regressivo do sorteio (FOMO) */}
         <CountdownTimer config={config} />
 
+        {/* COMO FUNCIONA — 3 passos pra quem chega pelo link e ainda não participa */}
+        {!myCode && (
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              [UserPlus, '1. Gere seu link', 'Cadastro grátis em 30s'],
+              [Share2, '2. Compartilhe', 'Mande pros seus contatos'],
+              [Trophy, '3. Concorra', 'Prêmio todo dia às 20h'],
+            ].map(([Ic, t, d], i) => (
+              <div key={i} className="rounded-2xl px-2.5 py-3 text-center" style={CARD}>
+                <span className="inline-grid place-items-center w-9 h-9 rounded-xl mb-1.5" style={{ background: 'rgba(245,196,81,.12)', border: '1px solid rgba(245,196,81,.35)' }}>
+                  <Ic className="w-4.5 h-4.5 text-yellow-300" style={{ width: 18, height: 18 }} />
+                </span>
+                <p className="font-black text-xs leading-tight">{t}</p>
+                <p className="text-[10px] text-green-300/70 mt-0.5 leading-tight">{d}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* DASHBOARD GRID — ranking é o conteúdo principal (esquerda no desktop);
             no celular o cadastro/painel pessoal vem primeiro pra não enterrar a conversão */}
         <div className="grid lg:grid-cols-[1.5fr_1fr] gap-4 mt-6 items-start">
@@ -575,24 +682,74 @@ export default function ConcursoLeilaoNozap() {
         {/* FEATURE 8 — modal de qualificação logo após gerar o link */}
         {showOnboarding && myCode && <OnboardingModal link={myLink} onClose={() => setShowOnboarding(false)} />}
 
-        {/* ADMIN — modo tela cheia (overlay), aberto pelo botão do topo */}
+        {/* ADMIN — modo tela cheia (overlay em abas), aberto pelo botão do topo.
+            Mobile: ocupa a tela inteira; desktop: card centralizado. */}
         {isAdmin && adminExpanded && (
           <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(3,10,7,.72)', backdropFilter: 'blur(6px)' }} onClick={() => setAdminExpanded(false)}>
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-6xl mx-auto my-3 sm:my-6 flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-              style={{ maxHeight: 'calc(100dvh - 24px)', background: 'linear-gradient(180deg,#1a1030,#120a24)', border: '1px solid rgba(139,92,246,.5)' }}
+              className="relative w-full max-w-6xl mx-auto sm:my-6 flex flex-col rounded-none sm:rounded-2xl overflow-hidden shadow-2xl h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-48px)]"
+              style={{ background: 'linear-gradient(180deg,#1a1030,#120a24)', border: '1px solid rgba(139,92,246,.5)' }}
             >
-              <div className="sticky top-0 z-10 px-4 sm:px-6 py-3.5 border-b" style={{ background: 'rgba(26,16,48,.95)', borderColor: 'rgba(139,92,246,.3)' }}>
+              <div className="shrink-0 px-4 sm:px-6 pt-3.5 pb-0 border-b" style={{ background: 'rgba(26,16,48,.95)', borderColor: 'rgba(139,92,246,.3)' }}>
                 {AdminHeader(true)}
+                {/* Barra de abas — rolável no mobile, tudo visível no desktop */}
+                <div className="flex gap-1.5 mt-3 -mx-1 px-1 overflow-x-auto pb-2.5" style={{ scrollbarWidth: 'none' }}>
+                  {ADMIN_TABS.map((t) => {
+                    const on = adminTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setAdminTab(t.id)}
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors"
+                        style={on
+                          ? { background: 'linear-gradient(90deg,#8b5cf6,#7c3aed)', color: '#fff', border: '1px solid rgba(139,92,246,.8)' }
+                          : { background: 'rgba(255,255,255,.05)', color: 'rgba(221,214,254,.75)', border: '1px solid rgba(255,255,255,.1)' }}
+                      >
+                        <t.icon className="w-3.5 h-3.5" /> {t.l}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="overflow-y-auto px-4 sm:px-6 py-5">{AdminInner}</div>
+
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5">{AdminTabContent}</div>
+
+              {/* Rodapé fixo: salvar sempre à mão nas abas de configuração (crítico no mobile) */}
+              {adminTabSalva && (
+                <div className="shrink-0 px-4 sm:px-6 py-3 border-t" style={{ background: 'rgba(26,16,48,.97)', borderColor: 'rgba(139,92,246,.3)', paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom, 0px))' }}>
+                  {msg && <p className="text-center text-xs text-emerald-300 font-bold mb-2">{msg}</p>}
+                  <button onClick={saveConfig} disabled={savingCfg} className="w-full py-3.5 rounded-xl font-black text-white shadow-lg shadow-purple-900/30 disabled:opacity-60 flex items-center justify-center gap-2 transition-transform active:scale-[.99]" style={{ background: 'linear-gradient(90deg,#8b5cf6,#7c3aed)' }}>
+                    <Save className="w-4 h-4" /> {savingCfg ? 'Salvando...' : <>Salvar configuração <span className="text-purple-200/90 text-xs font-medium">(destaque + live + prêmios)</span></>}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         <p className="text-center text-[11px] text-green-300/40 mt-10 flex items-center justify-center gap-1.5"><Users className="w-3 h-3" /> A contagem é por pessoas que entram no grupo pelo seu link.</p>
       </div>
+
+      {/* CTA FIXO MOBILE — a página é longa; a ação principal (divulgar) fica sempre à mão.
+          Só pra quem já tem link, e some quando o painel admin/onboarding está aberto. */}
+      {myCode && !adminExpanded && !showOnboarding && (
+        <div className="lg:hidden fixed inset-x-3 z-40" style={{ bottom: 'calc(.75rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="flex gap-2 p-2 rounded-2xl shadow-2xl shadow-black/60" style={{ background: 'rgba(4,16,11,.92)', border: '1px solid rgba(245,196,81,.35)', backdropFilter: 'blur(10px)' }}>
+            <button onClick={shareZap} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm text-[#052e16] active:scale-[.98] transition-transform" style={{ background: '#25D366' }}>
+              <MessageCircle className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /> Divulgar no WhatsApp
+            </button>
+            <button
+              onClick={copyMyLink}
+              aria-label="Copiar meu link"
+              className="shrink-0 w-12 grid place-items-center rounded-xl font-bold border transition-colors"
+              style={linkCopied ? { background: 'rgba(34,197,94,.3)', borderColor: 'rgba(34,197,94,.6)', color: '#86efac' } : { background: 'rgba(255,255,255,.08)', borderColor: 'rgba(255,255,255,.18)', color: '#fff' }}
+            >
+              {linkCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* FEATURE 6 — convite de instalação do PWA (Android nativo / dica iOS) */}
       <InstallPwaPrompt />

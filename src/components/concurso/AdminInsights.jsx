@@ -96,7 +96,39 @@ export default function AdminInsights({ userId }) {
             <span className="text-[11px] text-white/40">{lista.length} de {data.participantes.length}</span>
           </div>
 
-          <div className="overflow-auto rounded-xl border border-white/10" style={{ maxHeight: 420 }}>
+          {/* MOBILE — cards por participante (a tabela de 12+ colunas é só desktop) */}
+          <div className="md:hidden space-y-2 overflow-y-auto rounded-xl" style={{ maxHeight: 480 }}>
+            {lista.map((p, i) => (
+              <div key={p.code} className="rounded-xl p-3 bg-black/25 border border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black text-white/35 w-5 shrink-0">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-white/90 text-sm truncate">{p.nome}</p>
+                    <p className="text-[10px] text-white/35 font-mono">{p.code}</p>
+                  </div>
+                  {p.convertido && <span className="text-sky-300 font-black text-sm shrink-0" title="Tem conta na plataforma">✓ conta</span>}
+                  {p.whatsapp && (
+                    <a href={zapLink(p.whatsapp)} target="_blank" rel="noreferrer" className="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-lg text-emerald-300" style={{ background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.35)' }}>Zap</a>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 mt-2.5 text-center">
+                  {[['Hoje', p.dia, '#f5c451'], ['Semana', p.semana, '#fff'], ['Mês', p.mes, '#fff'], ['Total', p.cliques, '#4ade80']].map(([l, v, c]) => (
+                    <div key={l} className="rounded-lg py-1.5 bg-black/30 border border-white/5">
+                      <p className="text-sm font-black leading-none" style={{ color: v ? c : 'rgba(255,255,255,.25)' }}>{v || '·'}</p>
+                      <p className="text-[9px] uppercase font-bold text-white/40 mt-1">{l}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[10px] text-white/45">
+                  <span>{(p.gasto + p.adesao) > 0 ? <b className="text-emerald-400">{money(p.gasto + p.adesao)} gastos</b> : 'Sem compras'}{p.compras ? ` · ${p.compras} compra${p.compras > 1 ? 's' : ''}` : ''}</span>
+                  <span>Últ. clique: {fmtDT(p.ultimo_clique)}</span>
+                </div>
+              </div>
+            ))}
+            {!lista.length && <p className="px-3 py-8 text-center text-white/35 text-sm">Nada encontrado.</p>}
+          </div>
+
+          <div className="hidden md:block overflow-auto rounded-xl border border-white/10" style={{ maxHeight: 420 }}>
             <table className="w-full text-sm" style={{ minWidth: 960 }}>
               <thead className="sticky top-0 z-10" style={{ background: '#1c1233' }}>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-white/45">
@@ -141,7 +173,7 @@ export default function AdminInsights({ userId }) {
                   </tr>
                 ))}
                 {!lista.length && (
-                  <tr><td colSpan={9} className="px-3 py-8 text-center text-white/35">Nada encontrado.</td></tr>
+                  <tr><td colSpan={data.rastreamento_completo ? 14 : 12} className="px-3 py-8 text-center text-white/35">Nada encontrado.</td></tr>
                 )}
               </tbody>
             </table>
