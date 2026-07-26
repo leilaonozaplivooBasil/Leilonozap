@@ -960,6 +960,7 @@ export default function Layout({ children, currentPageName }) {
                   isCatalogPage={isCatalogPage}
                   adminMenuItems={adminMenuItems}
                   currentUser={currentUser}
+                  cartCount={cartCount}
                   onShareClick={() => setShowShareModal(true)}
                   onLoginClick={() => setShowLoginModal(true)}
                   onLogout={handleLogout}

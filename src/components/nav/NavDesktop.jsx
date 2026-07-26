@@ -33,6 +33,7 @@ const P = {
 export default function NavDesktop({
   currentPageName,
   currentUser,
+  cartCount = 0,
   onLoginClick,
   onLogout,
   // props legadas — mantidas no signature para compatibilidade com Layout.jsx
@@ -59,8 +60,10 @@ export default function NavDesktop({
 
   return (
     <div className="hidden md:flex items-center">
-      {/* === SETORES CENTRAIS — centralizados no meio da navbar (absolute no header) === */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-start gap-9">
+      {/* === SETORES CENTRAIS — centralizados no meio da navbar (absolute no header).
+          items-center + tile 38px + label colado: o conjunto (~54px) fica centrado
+          no h-16 do header, no MESMO eixo do carrinho/avatar/rank. === */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-8">
         {SECTORS.map((s) => {
           const active = sectorActive(s) || openSector === s.key;
           return (
@@ -72,11 +75,11 @@ export default function NavDesktop({
             >
               <SectorLink
                 target={s.external ? { external: s.external } : s.href}
-                className="flex flex-col items-center gap-1 group outline-none"
+                className="flex flex-col items-center gap-[3px] group outline-none"
               >
                 {/* tile 3D na paleta: gradiente sálvia → verde floresta, brilho interno */}
                 <span
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
+                  className="relative w-[38px] h-[38px] rounded-xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
                   style={{
                     background: `linear-gradient(150deg, ${P.sage} 0%, ${P.forest} 62%, #3c5a3a 100%)`,
                     border: active ? `1.5px solid ${P.beige}` : "1px solid rgba(255,255,255,0.28)",
@@ -94,7 +97,7 @@ export default function NavDesktop({
                   )}
                 </span>
                 <span
-                  className="font-slab text-[10px] font-bold uppercase tracking-[0.14em] whitespace-nowrap transition-colors"
+                  className="font-slab text-[9.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap leading-none transition-colors"
                   style={{ color: active ? P.sage : P.gray }}
                 >
                   {s.title}
@@ -145,21 +148,78 @@ export default function NavDesktop({
       </div>
 
       {/* === CLUSTER DIREITO: carrinho · Entrar/avatar · Rank Premiado ===
-          (AO VIVO AGORA mudou pra perto da logo — evita sobrepor o grupo central) */}
-      <div className="flex items-center gap-x-1">
+          Tudo em items-center no mesmo eixo vertical dos setores centrais. */}
+      <div className="flex items-center gap-x-2">
+        {/* 🛒 Carrinho — liquid glass verde da paleta, com contador vivo:
+            todo produto adicionado dispara 'cartUpdated' no Layout → cartCount
+            muda → badge pop + balanço do ícone (keys reiniciam as animações). */}
         <Link
           to={createPageUrl("Cart")}
-          className="p-2 rounded-lg transition-all duration-300"
-          style={
-            currentPageName === "Cart"
-              ? { color: P.sage, background: "rgba(153,193,152,0.12)" }
-              : { color: "#d1d5db" }
-          }
-          onMouseEnter={(e) => { if (currentPageName !== "Cart") e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-          onMouseLeave={(e) => { if (currentPageName !== "Cart") e.currentTarget.style.background = "transparent"; }}
-          aria-label="Carrinho"
+          className="cart-glass relative w-10 h-10 rounded-xl grid place-items-center group"
+          style={currentPageName === "Cart" ? { borderColor: P.beige } : undefined}
+          aria-label={`Carrinho${cartCount > 0 ? ` (${cartCount} ${cartCount === 1 ? 'item' : 'itens'})` : ''}`}
         >
-          <CartIcon className="w-5 h-5" />
+          <span key={`shake-${cartCount}`} className={cartCount > 0 ? "cart-shake" : undefined}>
+            <CartIcon className="w-[18px] h-[18px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+          </span>
+          {cartCount > 0 && (
+            <span key={`badge-${cartCount}`} className="cart-badge" aria-hidden="true">
+              {cartCount > 99 ? '99+' : cartCount}
+            </span>
+          )}
+          <style>{`
+            .cart-glass {
+              background: linear-gradient(155deg, rgba(153,193,152,0.30) 0%, rgba(77,114,75,0.45) 55%, rgba(33,34,43,0.6) 100%);
+              border: 1px solid rgba(153,193,152,0.45);
+              backdrop-filter: blur(14px) saturate(1.3);
+              -webkit-backdrop-filter: blur(14px) saturate(1.3);
+              box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.3);
+              animation: cart-breathe 3s ease-in-out infinite;
+              transition: transform 0.2s ease, border-color 0.2s ease;
+            }
+            .cart-glass:hover {
+              transform: translateY(-2px) scale(1.05);
+              border-color: rgba(153,193,152,0.8);
+            }
+            @keyframes cart-breathe {
+              0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.3), 0 0 0 rgba(153,193,152,0); }
+              50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.3), 0 0 14px rgba(153,193,152,0.35); }
+            }
+            .cart-badge {
+              position: absolute;
+              top: -6px;
+              right: -6px;
+              min-width: 18px;
+              height: 18px;
+              padding: 0 4px;
+              border-radius: 999px;
+              display: grid;
+              place-items: center;
+              background: linear-gradient(150deg, #ecd3ae, ${P.beige});
+              color: ${P.navy};
+              font-size: 10px;
+              font-weight: 800;
+              line-height: 1;
+              border: 2px solid #131418;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              animation: cart-badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            }
+            @keyframes cart-badge-pop {
+              0% { transform: scale(0); }
+              60% { transform: scale(1.35); }
+              100% { transform: scale(1); }
+            }
+            .cart-shake { display: inline-flex; animation: cart-shake 0.5s ease-in-out 0.05s; }
+            @keyframes cart-shake {
+              0%, 100% { transform: rotate(0); }
+              25% { transform: rotate(-12deg); }
+              50% { transform: rotate(10deg); }
+              75% { transform: rotate(-6deg); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .cart-glass, .cart-badge, .cart-shake { animation: none; }
+            }
+          `}</style>
         </Link>
 
         <div className="ml-1">
