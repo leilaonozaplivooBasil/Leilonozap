@@ -721,14 +721,16 @@ export default function Home() {
         background: 'radial-gradient(ellipse at 80% 10%, rgba(16,185,129,0.08) 0%, transparent 50%), radial-gradient(ellipse at 10% 60%, rgba(16,185,129,0.05) 0%, transparent 50%)'
       }} />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
-        {/* BANNER ROTATIVO — antes do card AO VIVO AGORA */}
-        {banners.length > 0 &&
-        <div className="mb-8 glass-card rounded-2xl p-1 overflow-hidden">
-            <RotatingBanner banners={banners} />
-          </div>
-        }
+      {/* BANNER FULL-BLEED — estilo Loja Virtual: toma a largura toda da tela */}
+      {banners.length > 0 &&
+      <div className="relative w-full z-0 hidden md:block">
+          <RotatingBanner banners={banners} heightClass="aspect-[16/5] max-h-[640px]" rounded={false} />
+          {/* fade na base pro card AO VIVO sobrepor fundindo com o fundo */}
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-gray-900 via-gray-900/55 to-transparent pointer-events-none" />
+        </div>
+      }
 
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? 'md:-mt-28' : ''}`}>
         {/* Hero Section - Glass */}
         <div className="mb-8">
           <div className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
