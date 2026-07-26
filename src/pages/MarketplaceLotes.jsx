@@ -531,7 +531,8 @@ export default function MarketplaceLotes() {
                                 depositType: 'investor_capital',
                                 auctionId: pendingCheckoutData.auctionId,
                                 auctionTitle: pendingCheckoutData.auctionTitle,
-                                autoSubmitPix: true
+                                autoSubmitPix: true,
+                                returnTo: window.location.pathname + window.location.search
                             }
                         });
                     }

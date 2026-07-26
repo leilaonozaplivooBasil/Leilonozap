@@ -31,7 +31,7 @@ export default function PassaporteLances() {
     if (!currentUser?.id) { navigate(createPageUrl('Cadastro')); return; }
     if (!todosMarcados) return;
     // reaproveita o checkout de depósito, marcando como 'passaporte' (webhook credita R$100 + cria o passaporte)
-    navigate(createPageUrl('AuctionCheckoutModern'), { state: { amount: VALOR, depositType: 'passaporte' } });
+    navigate(createPageUrl('AuctionCheckoutModern'), { state: { amount: VALOR, depositType: 'passaporte', returnTo: window.location.pathname + window.location.search } });
   };
 
   const Beneficio = ({ icon, titulo, texto }) => (

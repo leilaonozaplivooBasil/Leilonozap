@@ -166,7 +166,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
         console.warn(`⚠️ Saldo insuficiente. DigitalWallet: ${currentBalance} < ${minBid}`);
 
         if (confirm(`Saldo insuficiente (R$ ${currentBalance.toFixed(2)}). O lance mínimo é R$ ${minBid.toFixed(2)}.\n\nDeseja adicionar fundos agora?`)) {
-          navigate(createPageUrl("AddFunds"));
+          navigate(createPageUrl("AddFunds"), {
+            state: { returnTo: window.location.pathname + window.location.search }
+          });
         }
         return;
       }

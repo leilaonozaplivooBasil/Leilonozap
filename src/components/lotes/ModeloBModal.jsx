@@ -117,6 +117,7 @@ export default function ModeloBModal({ lote, currentUser, valorTotalLote, taxaPc
                 auctionId: lote.id,
                 auctionTitle: lote.title,
                 autoSubmitPix: true,
+                returnTo: window.location.pathname + window.location.search,
             },
         });
     };

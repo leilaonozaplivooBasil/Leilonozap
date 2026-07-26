@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { createPageUrl } from "@/utils";
 
 export default function AddFunds() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [packages, setPackages] = useState([]);
   const [selectedAmount, setSelectedAmount] = useState(null);
@@ -94,10 +95,11 @@ export default function AddFunds() {
     setProcessing(true);
     // Redireciona para AuctionCheckoutModern com flag de carteira digital
     navigate(createPageUrl("AuctionCheckoutModern"), { 
-      state: { 
+      state: {
         amount: selectedAmount,
-        depositType: 'digital_wallet' // FLAG PARA IDENTIFICAR DEPÓSITO DE CARTEIRA DIGITAL
-      } 
+        depositType: 'digital_wallet', // FLAG PARA IDENTIFICAR DEPÓSITO DE CARTEIRA DIGITAL
+        returnTo: location.state?.returnTo || null // volta ao leilão/loja de origem após confirmação
+      }
     });
   };
 

@@ -69,7 +69,8 @@ export default function CarteiraInvestidor() {
             state: {
                 amount: pendingAmount,
                 depositType: 'investor_capital',
-                auctionId: loteId || null
+                auctionId: loteId || null,
+                returnTo: window.location.pathname + window.location.search
             }
         });
     };

@@ -14,7 +14,8 @@ import BidInput from "../components/auction/BidInput";
 import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
-import FloatingBalance from '../components/auction/FloatingBalance';
+import WalletDrawer from '../components/wallet/WalletDrawer';
+import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
 import ComparaiButton from '../components/comparai/ComparaiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
 import AuctionTimeDebugger from "../components/system/AuctionTimeDebugger";
@@ -37,7 +38,7 @@ export default function AuctionRoom() {
   const location = useLocation();
 
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
-  const showFloatingBalance = searchParams.get("useBalance") === "true";
+  const [walletOpen, setWalletOpen] = useState(false);
   const spectatorModeParam = searchParams.get("spectator") === "true";
 
   const [auction, setAuction] = useState(null);
@@ -198,6 +199,18 @@ export default function AuctionRoom() {
       console.error("Failed to load user:", error);
       setCurrentUser(null);
     }
+  }, []);
+
+  // Recarrega apenas o saldo da carteira (usado após recarga no WalletDrawer)
+  const refreshWalletBalance = useCallback(async () => {
+    try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (!savedUser) return;
+      const user = JSON.parse(savedUser);
+      const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+      const walletData = result?.data || result;
+      setUserWallet({ balance: walletData?.balance || 0 });
+    } catch { /* silencioso */ }
   }, []);
 
   useEffect(() => {
@@ -810,8 +823,19 @@ export default function AuctionRoom() {
   return (
     <div className="auction-page-container">
       <PagePerformanceTracker pageName="AuctionRoom" />
-      {showFloatingBalance && currentUser && (
-        <FloatingBalance balance={currentUser.valora_pay_balance || 0} />
+      {currentUser && (
+        <>
+          <FloatingWalletButton
+            balance={userWallet?.balance}
+            onClick={() => setWalletOpen(true)}
+          />
+          <WalletDrawer
+            open={walletOpen}
+            onClose={() => setWalletOpen(false)}
+            currentUser={currentUser}
+            onBalanceUpdated={refreshWalletBalance}
+          />
+        </>
       )}
 
       {/* 🆕 RASTREADOR DE VISUALIZAÇÕES PARA IA */}

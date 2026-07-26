@@ -4,9 +4,9 @@ import { getServerTime } from "@/functions/getServerTime";
 const COUNTDOWN_DURATION = 142;
 
 const NARRATOR_TRIGGERS = [
-  { time: 110, phase: 1, message: "🔨 Dou-lhe UMA! A contagem está correndo. Não deixe essa oportunidade escapar!" },
-  { time: 70, phase: 2, message: "🔨🔨 Dou-lhe DUAS! A disputa está acirrada! Quem dará o próximo lance?" },
-  { time: 35, phase: 3, message: "🔨🔨🔨 Dou-lhe TRÊS! Última chamada! Alguém mais vai participar dessa guerra?" }
+  { time: 110, phase: 1, message: "Dou-lhe uma! O lote segue em disputa. Registre o seu lance." },
+  { time: 70, phase: 2, message: "Dou-lhe duas! A disputa continua aberta. Últimos lances." },
+  { time: 35, phase: 3, message: "Dou-lhe três! Última chamada antes do arremate." }
 ];
 
 export default function useAuctionTimer({ auction, onEndAuction, playSound }) {

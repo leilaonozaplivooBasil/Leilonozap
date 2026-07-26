@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Trophy, Sparkles, X, Crown } from "lucide-react";
+import { X } from "lucide-react";
 
 // 🏆 Modal de ARREMATADO — liquid glass verde do site, com 3 estados REAIS
 // (dados gravados pelo servidor em finalizeAuction, não estimativa do cliente):
@@ -66,27 +66,32 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
           </div>
         )}
 
-        {/* Ícone principal */}
-        <div className="relative mb-3">
-          {hasWinner ? (
-            <>
-              <div className="wm-trophy w-16 h-16 rounded-full grid place-items-center mx-auto"
-                style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}>
-                <Trophy className="w-8 h-8 text-yellow-900" />
-              </div>
-              <Sparkles className="absolute top-0 right-1/3 w-4 h-4 text-yellow-300 animate-pulse" />
-              <Sparkles className="absolute top-1 left-1/3 w-4 h-4 text-emerald-300 animate-pulse" style={{ animationDelay: '0.5s' }} />
-              {isWinner && (
-                <Crown className="wm-crown absolute -top-3 left-1/2 w-6 h-6 -translate-x-1/2 text-yellow-300" />
-              )}
-            </>
-          ) : (
-            <img src="/martelo-3d.png" alt="Martelo do leiloeiro" className="w-16 h-16 object-contain mx-auto drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
-          )}
+        {/* Ícone principal — martelo 3D martelando 3 vezes */}
+        <div className="relative mb-3 h-24 grid place-items-center">
+          <div className="wm-hammer-stage relative">
+            {hasWinner && (
+              <>
+                <span className="wm-impact-ring" style={{ animationDelay: '0.55s' }} />
+                <span className="wm-impact-ring" style={{ animationDelay: '1.15s' }} />
+                <span className="wm-impact-ring" style={{ animationDelay: '1.75s' }} />
+              </>
+            )}
+            <img
+              src="/martelo-3d.png"
+              alt="Martelo do leiloeiro"
+              className={`w-20 h-20 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] ${hasWinner ? 'wm-hammer-strike' : ''}`}
+            />
+          </div>
         </div>
 
+        {isWinner && (
+          <p className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-200 border border-emerald-300/30 bg-emerald-400/10 rounded-full px-3 py-1 mb-2">
+            Arremate confirmado
+          </p>
+        )}
+
         <h2 className="text-2xl font-black text-white mb-1 tracking-wide">
-          {isWinner ? '🎉 VOCÊ ARREMATOU! 🎉' : hasWinner ? '🔨 ARREMATADO!' : '🔨 Leilão encerrado'}
+          {isWinner ? 'VOCÊ ARREMATOU!' : hasWinner ? 'ARREMATADO!' : 'Leilão encerrado'}
         </h2>
         <p className="text-emerald-200 text-sm font-semibold mb-3">
           {isWinner
@@ -105,8 +110,8 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
           />
           <h3 className="text-white font-bold text-sm mb-2 line-clamp-1">{auction.title}</h3>
           <div className={`rounded-xl border p-2.5 ${hasWinner ? 'border-emerald-300/25 bg-emerald-400/15' : 'border-white/10 bg-white/5'}`}>
-            <p className="text-[11px] text-emerald-200 mb-0.5">
-              {isWinner ? '🏆 Seu lance vencedor' : hasWinner ? `${winnerLabel} arrematou por` : 'Encerrado em'}
+            <p className="text-[11px] text-emerald-200 mb-0.5 uppercase tracking-wide">
+              {isWinner ? 'Seu lance vencedor' : hasWinner ? `${winnerLabel} arrematou por` : 'Encerrado em'}
             </p>
             <p className={`text-2xl font-black drop-shadow ${hasWinner ? 'text-emerald-300 wm-price' : 'text-gray-200'}`}>
               R$ {price.toFixed(2)}
@@ -122,7 +127,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
               className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
               style={{ background: 'linear-gradient(135deg,#34d399,#10b981)', boxShadow: '0 10px 28px rgba(16,185,129,.4)' }}
             >
-              {isWinner ? '💳 Pagar e garantir meu arremate' : '📦 Ver Meus Arremates'}
+              {isWinner ? 'Pagar e garantir meu arremate' : 'Ver Meus Arremates'}
             </button>
             <p className="text-white/70 text-[11px] mt-2">
               {isWinner ? 'Realize o pagamento para garantir o produto!' : 'Confira os produtos arrematados'}
@@ -134,7 +139,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
               onClick={() => { onClose(); navigate(createPageUrl('Home')); }}
               className="w-full rounded-xl py-3 text-sm font-bold text-white shadow-lg transition-transform hover:scale-[1.03] border border-white/20 bg-white/10 hover:bg-white/15"
             >
-              🔍 Ver outros leilões
+              Ver outros leilões
             </button>
             <p className="text-white/70 text-[11px] mt-2">Novos lotes entram no ar todos os dias</p>
           </>
@@ -160,31 +165,50 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
           0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
           100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
         }
-        @keyframes wm-trophy-pop {
-          0% { transform: scale(0); }
-          60% { transform: scale(1.25) rotate(-8deg); }
-          100% { transform: scale(1) rotate(0); }
-        }
-        @keyframes wm-trophy-glow {
-          0%, 100% { box-shadow: 0 8px 24px rgba(251,191,36,.45); }
-          50% { box-shadow: 0 8px 44px rgba(251,191,36,.85), 0 0 60px rgba(251,191,36,.35); }
-        }
-        @keyframes wm-crown-drop {
-          0% { opacity: 0; transform: translate(-50%, -14px) rotate(-20deg); }
-          100% { opacity: 1; transform: translate(-50%, 0) rotate(0); }
-        }
         @keyframes wm-price-pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.06); }
         }
+        /* Martelo 3D: levanta e bate 3 vezes, depois descansa */
+        @keyframes wm-hammer-strike {
+          0%   { transform: rotate(0deg); }
+          8%   { transform: rotate(-42deg); }
+          17%  { transform: rotate(10deg) scale(0.97); }  /* 1ª batida ~0.55s */
+          22%  { transform: rotate(0deg); }
+          30%  { transform: rotate(-42deg); }
+          38%  { transform: rotate(10deg) scale(0.97); }  /* 2ª batida ~1.15s */
+          43%  { transform: rotate(0deg); }
+          51%  { transform: rotate(-46deg); }
+          59%  { transform: rotate(12deg) scale(0.95); }  /* 3ª batida ~1.75s */
+          66%  { transform: rotate(-4deg); }
+          74%  { transform: rotate(1deg); }
+          100% { transform: rotate(0deg); }
+        }
+        .wm-hammer-strike {
+          transform-origin: 82% 85%; /* pivô no cabo */
+          animation: wm-hammer-strike 3s cubic-bezier(0.36, 0, 0.24, 1) 0.15s both;
+        }
+        /* Onda de impacto a cada batida */
+        @keyframes wm-impact {
+          0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+          12%  { opacity: 0.9; }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+        }
+        .wm-impact-ring {
+          position: absolute;
+          left: 50%; top: 68%;
+          width: 58px; height: 58px;
+          border-radius: 9999px;
+          border: 2px solid rgba(52, 211, 153, 0.8);
+          box-shadow: 0 0 18px rgba(52, 211, 153, 0.5);
+          transform: translate(-50%, -50%) scale(0.3);
+          opacity: 0;
+          animation: wm-impact 0.7s ease-out both;
+          pointer-events: none;
+        }
         .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
         .animate-scaleIn { animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .animate-confetti { animation: confetti linear infinite; }
-        .wm-trophy {
-          animation: wm-trophy-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both,
-                     wm-trophy-glow 2s ease-in-out 0.8s infinite;
-        }
-        .wm-crown { animation: wm-crown-drop 0.5s ease-out 0.7s both; }
         .wm-price { display: inline-block; animation: wm-price-pulse 2s ease-in-out infinite; }
       `}</style>
     </div>

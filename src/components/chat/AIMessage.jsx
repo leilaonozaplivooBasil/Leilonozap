@@ -63,8 +63,8 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
             <div className="text-2xl font-black tracking-wide mb-1">
               {content}
             </div>
-            <div className="text-sm opacity-90 font-semibold">
-              {phase === 3 ? '⚡ ÚLTIMA CHANCE!' : '⏰ Lance agora!'}
+            <div className="text-sm opacity-90 font-semibold uppercase tracking-wide">
+              {phase === 3 ? 'Última chamada' : 'Lance agora'}
             </div>
           </div>
         </div>
