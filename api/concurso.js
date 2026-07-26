@@ -104,7 +104,9 @@ export default async function handler(req, res) {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
 
     // ---------- RANKING + CONFIG (público) ----------
-    if (req.method === 'GET' || action === 'ranking') {
+    // GET sem action (ou action=ranking). Os GETs "me" e "sorteios" seguem para os blocos abaixo —
+    // antes o catch-all de método engolia todo GET e o painel pessoal nunca carregava.
+    if ((req.method === 'GET' && !action) || action === 'ranking') {
       const periodo = (req.query?.periodo || 'geral').toString();
       const ranking = await rankingPeriodo(['dia', 'semana', 'mes', 'geral'].includes(periodo) ? periodo : 'geral');
       const p = await sb('concurso_premios?select=posicao,premio&order=posicao');

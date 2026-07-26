@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
+import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import {
   Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
@@ -203,10 +204,13 @@ export default function ConcursoLeilaoNozap() {
     </div>
   );
 
-  const DestaqueBlock = (config.produto_nome || config.propaganda) ? (
+  // Com o hero do prêmio ativo (Feature 7), este bloco vira só o mural de propaganda —
+  // o produto já aparece em destaque no topo da página.
+  const heroAtivo = !!config.produto_nome;
+  const DestaqueBlock = ((!heroAtivo && config.produto_nome) || config.propaganda) ? (
     <div className="rounded-2xl p-4" style={CARD}>
       <p className="text-[11px] font-bold uppercase tracking-wide text-green-300/60 mb-3 flex items-center gap-2"><Gift className="w-3.5 h-3.5" /> Destaque / Sorteio do dia</p>
-      {config.produto_nome && (
+      {!heroAtivo && config.produto_nome && (
         <div className="flex items-center gap-3">
           {config.produto_foto ? <img src={config.produto_foto} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" /> : <span className="w-16 h-16 rounded-xl grid place-items-center bg-green-900/60 border border-yellow-400/20"><Gift className="w-7 h-7 text-yellow-300" /></span>}
           <div>
@@ -220,7 +224,7 @@ export default function ConcursoLeilaoNozap() {
   ) : null;
 
   const MinePanel = (
-    <div className="rounded-2xl p-5" style={CARD}>
+    <div id="meu-painel" className="rounded-2xl p-5" style={CARD}>
       <div className="flex items-center gap-3">
         <label className="cursor-pointer relative">
           <Avatar url={me?.foto_url} nome={me?.nome} size={56} />
@@ -253,7 +257,7 @@ export default function ConcursoLeilaoNozap() {
   );
 
   const FormPanel = (
-    <div className="rounded-2xl p-5" style={CARD}>
+    <div id="cadastro-form" className="rounded-2xl p-5" style={CARD}>
       <p className="font-black text-lg mb-1 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-300" /> Participe agora</p>
       <p className="text-xs text-green-300/80 mb-4">Preencha pra gerar seu link. O CPF é só pra validar o prêmio, não aparece pra ninguém.</p>
       <label className="flex flex-col items-center gap-2 cursor-pointer mb-4">
@@ -467,6 +471,9 @@ export default function ConcursoLeilaoNozap() {
         </header>
 
         {msg && <div className="mt-4 text-center text-sm bg-white/10 rounded-lg py-2 px-3">{msg}</div>}
+
+        {/* FEATURE 7 — prêmio do dia em destaque ANTES do cadastro */}
+        <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
 
         {/* DASHBOARD GRID */}
         <div className="grid lg:grid-cols-[1.5fr_1fr] gap-4 mt-6 items-start">
