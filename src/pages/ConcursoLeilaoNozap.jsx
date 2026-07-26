@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
+import ShareSection from '@/components/concurso/ShareSection';
 import {
-  Trophy, Users, Gift, Radio, Link2, Copy, MessageCircle, ChevronDown,
+  Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
   Maximize2, Minimize2, Save, Settings2, ArrowLeft,
 } from 'lucide-react';
@@ -132,8 +133,6 @@ export default function ConcursoLeilaoNozap() {
   // Admin: anexar foto do produto do dispositivo (converte em data URL leve, sem depender de URL externa)
   const handleProdutoFoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setCfg((s) => ({ ...s, produto_foto: url })); } catch { /* */ } };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
-  const copyLink = () => { navigator.clipboard?.writeText(myLink); setMsg('Link copiado!'); setTimeout(() => setMsg(''), 3500); };
-  const shareZap = () => { const t = encodeURIComponent(`Tô no Rank Premiado Leilão NoZap! Entra no grupo pelo meu link e me ajuda a ganhar:\n${myLink}`); window.open(`https://wa.me/?text=${t}`, '_blank'); };
 
   const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
   const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, premio]) => ({ posicao: Number(posicao), premio })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
@@ -247,10 +246,6 @@ export default function ConcursoLeilaoNozap() {
         ))}
       </div>
       <div className="mt-3 bg-black/30 rounded-lg px-3 py-2 text-xs break-all text-green-100 border border-white/10 flex items-center gap-2"><Link2 className="w-4 h-4 text-yellow-300 shrink-0" />{myLink}</div>
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        <button onClick={copyLink} className="py-3 rounded-lg font-bold bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center gap-2"><Copy className="w-4 h-4" /> Copiar link</button>
-        <button onClick={shareZap} className="py-3 rounded-lg font-bold text-[#052e16] flex items-center justify-center gap-2" style={{ background: '#25D366' }}><MessageCircle className="w-4 h-4" /> WhatsApp</button>
-      </div>
       <a href="/Licensing" className="mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-white" style={{ background: 'linear-gradient(90deg,#8b5cf6,#22c55e)' }}>
         <Briefcase className="w-5 h-5" /> Quero ser Influência Leilão NoZap
       </a>
@@ -487,6 +482,15 @@ export default function ConcursoLeilaoNozap() {
           </div>
           <div className="flex flex-col gap-4">
             {myCode ? MinePanel : FormPanel}
+            {/* FEATURE 2 — story 1080x1080 personalizado + compartilhamento */}
+            {myCode && (
+              <ShareSection
+                nome={me?.nome}
+                posicao={me?.periodos?.dia?.posicao || me?.periodos?.geral?.posicao}
+                premio={config.produto_nome || config.premio_dia}
+                link={myLink}
+              />
+            )}
             {RankingBlock}
           </div>
         </div>
