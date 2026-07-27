@@ -1,0 +1,37 @@
+{
+  "name": "DigitalWallet",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio propriet\u00e1rio da carteira digital"
+    },
+    "balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo atual da carteira digital em reais (usado para leil\u00f5es)"
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

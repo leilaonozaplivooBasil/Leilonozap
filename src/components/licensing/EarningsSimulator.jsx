@@ -190,7 +190,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                     <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>{peopleNum} pessoas</span>
                   </div>
 
-                  <span className={isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'} text-sm>×</span>
+                  <span className={`text-sm ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>×</span>
 
                   <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border ${
                     isSaiDeBaixo 

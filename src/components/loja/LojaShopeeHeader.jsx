@@ -5,7 +5,6 @@ import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
-import { RatingBadge } from './StarRating';
 // 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
 // imediata em produção. Artes novas (25/07) em 1376×768 (~16:9) — mostrados com
 // fit=contain + fundo ambiente desfocado, sem cortar nada.
@@ -39,9 +38,7 @@ async function mostrarCupons() {
 }
 import { getReferral } from '@/lib/referral';
 import {
-  Search, ShoppingCart, Store, Smartphone, Instagram, MessageCircle, Music2,
-  HelpCircle, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt,
-  ChevronDown, MapPin, Play, User
+  Search, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt, MapPin
 } from 'lucide-react';
 
 // Botão "AO VIVO AGORA" abre o feed da Livoo Live (mesma URL do FAB da loja)

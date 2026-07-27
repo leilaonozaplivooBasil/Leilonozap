@@ -1,0 +1,94 @@
+{
+  "name": "CashRegister",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "description": "Status do caixa"
+    },
+    "operator_name": {
+      "type": "string",
+      "description": "Nome do operador"
+    },
+    "opening_time": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora de abertura"
+    },
+    "closing_time": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora de fechamento"
+    },
+    "opening_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo inicial em dinheiro"
+    },
+    "closing_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo final contabilizado"
+    },
+    "total_sales": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de vendas realizadas"
+    },
+    "total_pix": {
+      "type": "number",
+      "default": 0,
+      "description": "Total em PIX"
+    },
+    "total_cash": {
+      "type": "number",
+      "default": 0,
+      "description": "Total em Dinheiro"
+    },
+    "total_debit": {
+      "type": "number",
+      "default": 0,
+      "description": "Total em D\u00e9bito"
+    },
+    "total_credit": {
+      "type": "number",
+      "default": 0,
+      "description": "Total em Cr\u00e9dito"
+    },
+    "total_boleto": {
+      "type": "number",
+      "default": 0,
+      "description": "Total em Boleto"
+    },
+    "transactions_count": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero de transa\u00e7\u00f5es"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es do fechamento"
+    }
+  },
+  "required": [
+    "status",
+    "operator_name",
+    "opening_time"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

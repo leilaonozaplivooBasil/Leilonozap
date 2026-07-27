@@ -1,0 +1,110 @@
+{
+  "name": "FinancialExpense",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do gasto"
+    },
+    "company": {
+      "type": "string",
+      "description": "Empresa/Fornecedor"
+    },
+    "category": {
+      "type": "string",
+      "description": "Categoria do gasto"
+    },
+    "expense_type": {
+      "type": "string",
+      "enum": [
+        "fixo",
+        "unico",
+        "parcelado"
+      ],
+      "description": "Tipo: fixo mensal, pagamento \u00fanico ou parcelado"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor original da conta"
+    },
+    "interest_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor de juros (se vencida)"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Valor total (amount + interest)"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "pix",
+        "cartao_credito",
+        "cartao_debito",
+        "boleto",
+        "transferencia",
+        "dinheiro"
+      ],
+      "description": "Forma de pagamento"
+    },
+    "pix_or_card_info": {
+      "type": "string",
+      "description": "Qual PIX ou cart\u00e3o cadastrado (ex: PIX Santander, Cart\u00e3o Nubank)"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "pago_integral",
+        "pago_parcial",
+        "vencido",
+        "cancelado"
+      ],
+      "default": "pendente",
+      "description": "Status do pagamento"
+    },
+    "amount_paid": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor j\u00e1 pago"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que foi pago"
+    },
+    "installment_current": {
+      "type": "number",
+      "description": "Parcela atual (ex: 3)"
+    },
+    "installment_total": {
+      "type": "number",
+      "description": "Total de parcelas (ex: 12)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "recurring_day": {
+      "type": "number",
+      "description": "Dia do m\u00eas para contas fixas (1-31)"
+    }
+  },
+  "required": [
+    "description",
+    "amount",
+    "due_date",
+    "expense_type",
+    "payment_status"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

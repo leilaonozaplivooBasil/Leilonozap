@@ -1,0 +1,74 @@
+{
+  "name": "SystemLog",
+  "type": "object",
+  "properties": {
+    "entity_id": {
+      "type": "string",
+      "description": "ID da entidade relacionada (auction_id, user_id, etc)"
+    },
+    "component_name": {
+      "type": "string",
+      "description": "Nome do componente/fun\u00e7\u00e3o que gerou o log"
+    },
+    "step": {
+      "type": "string",
+      "description": "Etapa espec\u00edfica (STEP_1_AUTH, STEP_2_VALIDATE, etc)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "error",
+        "warning",
+        "info",
+        "performance",
+        "component_lifecycle",
+        "api_call",
+        "db_query",
+        "user_action"
+      ],
+      "description": "Status da opera\u00e7\u00e3o"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mensagem descritiva"
+    },
+    "error_details": {
+      "type": "object",
+      "description": "Detalhes t\u00e9cnicos do erro (stack, code, etc)"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent do navegador/device"
+    },
+    "is_mobile": {
+      "type": "boolean",
+      "description": "Se \u00e9 dispositivo m\u00f3vel"
+    },
+    "url": {
+      "type": "string",
+      "description": "URL onde ocorreu (se frontend)"
+    },
+    "execution_time_ms": {
+      "type": "number",
+      "description": "Tempo de execu\u00e7\u00e3o em milissegundos"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Dados contextuais: props, params, state, query details"
+    }
+  },
+  "required": [
+    "step",
+    "status",
+    "message"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": null
+  }
+}

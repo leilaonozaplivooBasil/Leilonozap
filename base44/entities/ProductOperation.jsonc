@@ -1,0 +1,53 @@
+{
+  "name": "ProductOperation",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto"
+    },
+    "product_description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do produto"
+    },
+    "operation_type": {
+      "type": "string",
+      "enum": [
+        "zerar_estoque",
+        "excluir_produto"
+      ],
+      "description": "Tipo de opera\u00e7\u00e3o realizada"
+    },
+    "operator_name": {
+      "type": "string",
+      "description": "Nome do operador que realizou a opera\u00e7\u00e3o"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Motivo da opera\u00e7\u00e3o"
+    },
+    "operation_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data e hora da opera\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "product_id",
+    "operation_type",
+    "operator_name",
+    "reason"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

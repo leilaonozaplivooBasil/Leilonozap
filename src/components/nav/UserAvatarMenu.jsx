@@ -95,8 +95,24 @@ function getInitials(name = "") {
 export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) {
   const navigate = useNavigate();
 
+  // 🛡️ FASE 4.6 — Anti-flash do botão "Entrar":
+  // Na primeira render o Layout ainda pode estar hidratando currentUser do
+  // localStorage. Se o localStorage já tem um usuário válido, usamos ele
+  // como fallback IMEDIATO — evita o pisca de "Entrar" antes do avatar aparecer.
+  const effectiveUser = React.useMemo(() => {
+    if (currentUser && currentUser.email) return currentUser;
+    try {
+      const cached = localStorage.getItem("currentUser");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.email) return parsed;
+      }
+    } catch { /* localStorage indisponível — segue como visitante */ }
+    return null;
+  }, [currentUser]);
+
   // ===== VISITANTE — não logado =====
-  if (!currentUser || !currentUser.email) {
+  if (!effectiveUser || !effectiveUser.email) {
     return (
       <Button
         onClick={onLoginClick}
@@ -114,23 +130,24 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
   }
 
   // ===== LOGADO =====
-  const panels = resolveUserPanels(currentUser);
-  const fullName = currentUser.full_name || currentUser.display_first_name || "Usuário";
-  const email = currentUser.email;
+  // 🛡️ FASE 4.6 — Usa effectiveUser (currentUser OU fallback do localStorage)
+  const panels = resolveUserPanels(effectiveUser);
+  const fullName = effectiveUser.full_name || effectiveUser.display_first_name || "Usuário";
+  const email = effectiveUser.email;
   const initials = getInitials(fullName);
-  const avatarColor = currentUser.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
-  const photoUrl = currentUser.profile_photo_url || currentUser.avatar_url;
+  const avatarColor = effectiveUser.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
+  const photoUrl = effectiveUser.profile_photo_url || effectiveUser.avatar_url;
 
   // Funcionário de PDV → atalho direto pro PDV
-  const isPdvOperator = currentUser.is_pdv_operator === true;
+  const isPdvOperator = effectiveUser.is_pdv_operator === true;
 
   // Cargo de rede (tem painel próprio /painel)
-  const redeCargo = getRedeCargo(currentUser);
+  const redeCargo = getRedeCargo(effectiveUser);
   const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
   const RedeIcon = redeMeta?.icon || Truck;
 
   // Badge da role principal — cargo de rede tem prioridade visual sobre "CLIENTE"
-  const roleKey = currentUser.role || "user";
+  const roleKey = effectiveUser.role || "user";
   const badge = (redeMeta && roleKey === "user")
     ? { label: redeMeta.label, className: "bg-green-500/15 text-green-300 border-green-500/40", icon: redeMeta.icon }
     : (ROLE_BADGE[roleKey] || ROLE_BADGE.user);
@@ -240,8 +257,8 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
                 const Icon = ICON_MAP[panel.iconName] || UserIcon;
                 // Subtitle customizado para Lojista (mostra nome da loja)
                 let subtitle = panel.description;
-                if (panel.key === "lojista" && currentUser.store_name) {
-                  subtitle = `Loja: ${currentUser.store_name}`;
+                if (panel.key === "lojista" && effectiveUser.store_name) {
+                  subtitle = `Loja: ${effectiveUser.store_name}`;
                 }
                 return (
                   <button

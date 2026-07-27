@@ -1,0 +1,31 @@
+{
+  "name": "LiveSession",
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "ID \u00fanico da sess\u00e3o (gerado no client)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio (se logado)"
+    },
+    "last_heartbeat": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "\u00daltimo heartbeat recebido"
+    },
+    "page": {
+      "type": "string",
+      "description": "P\u00e1gina atual"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent do navegador"
+    }
+  },
+  "required": [
+    "session_id",
+    "last_heartbeat"
+  ]
+}

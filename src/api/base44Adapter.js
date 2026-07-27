@@ -104,6 +104,13 @@ function mapFromDB(entity, row) {
     if (k === 'raw_base44') continue; // não expor coluna interna
     out[fmap[k] || k] = v;
   }
+  // 🛡️ Sanitiza campos numéricos nulos para Auction (evita crash .toFixed no AuctionRoom)
+  if (entity === 'Auction') {
+    if (out.starting_price === null || out.starting_price === undefined) out.starting_price = 0;
+    if (out.increment === null || out.increment === undefined) out.increment = 0;
+    if (out.current_price === null || out.current_price === undefined) out.current_price = out.starting_price || 0;
+    if (out.buy_now_price === null || out.buy_now_price === undefined) out.buy_now_price = 0;
+  }
   return out;
 }
 

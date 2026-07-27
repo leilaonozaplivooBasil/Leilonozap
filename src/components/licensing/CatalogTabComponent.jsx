@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2, Package } from 'lucide-react';
 import CatalogProductCard from '../catalog/CatalogProductCard';
 import RotatingBanner from '../banner/RotatingBanner';
+import StoreShareLinkCard from './StoreShareLinkCard';
 
 const Product = base44.entities.Product;
 
-export default function CatalogTabComponent({ isSaiDeBaixo }) {
+export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +53,12 @@ export default function CatalogTabComponent({ isSaiDeBaixo }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {user?.referral_code && (
+          <StoreShareLinkCard
+            storeLink={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`}
+            isSaiDeBaixo={isSaiDeBaixo}
+          />
+        )}
         {banners.length > 0 && (
           <div className="-mt-2">
             <RotatingBanner banners={banners} fit="contain" heightClass="h-56 md:h-72 lg:h-80" />

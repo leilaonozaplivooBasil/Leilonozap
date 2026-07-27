@@ -94,16 +94,11 @@ const CONTEXTS = {
       { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
     ],
   },
-  licenciado: {
-    title: "Painel Licenciado",
-    items: [
-      { title: "Dashboard", pageName: "Licensing", icon: ScrollText },
-      { title: "CRM", pageName: "CRM", icon: Users },
-      { title: "Minha Rede", pageName: "NetworkOverview", icon: Network },
-      { title: "Carteira", pageName: "AddFunds", icon: Wallet },
-      { title: "Parceiros Ativos", pageName: "ActivePartners", icon: Handshake },
-    ],
-  },
+  // 🛡️ FASE 4.6 — Contexto "licenciado" REMOVIDO.
+  // O painel /Licensing tem 10 abas internas próprias (Visão Geral, Loja Virtual,
+  // Minhas Vendas, Vendas Equipe, Pedidos, Meus Vendedores, Clientes, Comissões,
+  // Carreira, Admin). Sidebar externa duplicava navegação e confundia. A troca
+  // de painel é feita pelo dropdown do avatar (UserAvatarMenu) — fonte única.
   investidor: {
     title: "Painel Investidor",
     items: [
@@ -129,9 +124,13 @@ const CONTEXTS = {
 //    Define qual contexto a sidebar deve mostrar quando o admin está em X página
 // =====================================================================
 const CONTEXT_BY_PAGE = {
-  // Loja Virtual (cliente público comprando): admin NÃO vê sidebar aqui — enxerga a
-  // loja igual a um cliente comum. A navegação admin da loja fica nos painéis de
-  // gestão (CatalogManagement etc.), não sobreposta na vitrine.
+  // 🛍️ LOJA VIRTUAL: ambiente 100% do cliente. Admin acessa IGUAL cliente vê.
+  // Zero sidebar admin dentro da loja. Ferramentas admin da loja continuam
+  // acessíveis por rotas diretas (/CatalogManagement, /BannerManagement, /PDV etc.)
+  // e pelo dropdown do avatar. NÃO mapear páginas da Loja aqui.
+  //
+  //   Catalog, CatalogProductDetails, Cart, CatalogCheckout, CatalogCheckout2,
+  //   MyCatalogOrders  →  sem sidebar (mesmo pra admin)
 
   // Arrematante — Home, AuctionRoom, AuctionDetails e MyWinnings NÃO têm sidebar: são
   // vitrines/páginas do usuário e o admin as vê igual ao usuário comum (pedido Gabriel 25/07).
@@ -145,8 +144,9 @@ const CONTEXT_BY_PAGE = {
   // Lojista
   LojistaDashboard: "lojista",
 
-  // Licenciado — /Licensing é o Painel de Alavancagem (tela do usuário), NÃO deve ter
-  // menu lateral (P01). Sem mapeamento aqui, nem o admin vê sidebar nessa página.
+  // Licenciado — 🛡️ FASE 4.6: sem sidebar externa. /Licensing usa apenas suas
+  // 10 abas internas. Troca de painel via dropdown do avatar (regra mestra).
+
   // Investidor
   CarteiraInvestidor: "investidor",
   MarketplaceLotes: "investidor",
@@ -174,25 +174,26 @@ export function getSidebarConfigForUser(currentUser, currentPageName, adminMenuI
   const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
   if (!isAdmin) return empty;
 
-  // 🛡️ Profile com ?from=catalog: contexto = loja virtual (admin veio gerenciar perfil
-  // a partir da loja, então mostra menu da loja virtual ao invés do menu admin)
-  let fromCatalog = false;
+  // 🛍️ LOJA VIRTUAL: nunca mostrar sidebar admin dentro da Loja.
+  // A Loja é ambiente do cliente — admin acessa igual cliente vê. Ferramentas
+  // admin da loja continuam acessíveis via rotas diretas e dropdown do avatar.
+  const LOJA_PAGES = new Set([
+    "Catalog",
+    "CatalogProductDetails",
+    "Cart",
+    "CatalogCheckout",
+    "CatalogCheckout2",
+    "MyCatalogOrders",
+  ]);
+  if (LOJA_PAGES.has(currentPageName)) return empty;
+
+  // Profile com ?from=catalog também é parte do fluxo da Loja → sem sidebar
   try {
     const params = new URLSearchParams(window.location.search);
-    fromCatalog = params.get("from") === "catalog";
-  } catch {
-    fromCatalog = false;
-  }
-  if (currentPageName === "Profile" && fromCatalog) {
-    const ctx = CONTEXTS.loja_virtual;
-    return {
-      showSidebar: true,
-      categorized: false,
-      context: "loja_virtual",
-      title: ctx.title,
-      items: ctx.items,
-    };
-  }
+    if (currentPageName === "Profile" && params.get("from") === "catalog") {
+      return empty;
+    }
+  } catch { /* URLSearchParams indisponível — ignora */ }
 
   // 1️⃣ A página atual mapeia para algum contexto específico de painel?
   const contextKey = CONTEXT_BY_PAGE[currentPageName];

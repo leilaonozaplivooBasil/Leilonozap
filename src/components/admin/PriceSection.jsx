@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, CheckCircle, ChartColumn, Store, Gavel, Lightbulb, Zap } from "lucide-react";
+import { DollarSign, CheckCircle, ChartColumn, Store, Gavel, Lightbulb } from "lucide-react";
 
 // Sugere incremento proporcional ao lance inicial do leilão
 function suggestIncrement(lanceInicio) {

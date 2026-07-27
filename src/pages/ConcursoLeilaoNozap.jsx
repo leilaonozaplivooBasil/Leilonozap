@@ -130,7 +130,7 @@ export default function ConcursoLeilaoNozap() {
       .then((j) => { if (!alive) return; clearTimeout(t); if (j?.enabled) setRefMode('form'); else legacy(); })
       .catch(() => { clearTimeout(t); legacy(); });
     return () => { alive = false; clearTimeout(t); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const submitRefZap = () => {
@@ -177,7 +177,7 @@ export default function ConcursoLeilaoNozap() {
       localStorage.removeItem('concurso_code');
       setMyCode('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentUser?.id, myCode]);
 
   const myLink = myCode ? `${window.location.origin}/rankpremiado?ref=${myCode}` : '';

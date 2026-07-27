@@ -1,0 +1,99 @@
+{
+  "name": "EventQueue",
+  "type": "object",
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "performance"
+      ],
+      "default": "performance",
+      "description": "Tipo do evento (Fase 1: apenas performance)"
+    },
+    "source_gateway": {
+      "type": "string",
+      "enum": [
+        "asaas",
+        "mercadopago",
+        "internal"
+      ],
+      "description": "Gateway de origem do evento"
+    },
+    "source_payment_id": {
+      "type": "string",
+      "description": "ID do pagamento no gateway (chave de idempot\u00eancia)"
+    },
+    "source_entity_type": {
+      "type": "string",
+      "enum": [
+        "CatalogSale",
+        "Auction",
+        "WalletDeposit",
+        "PartnerPlan"
+      ],
+      "description": "Tipo da entidade confirmada"
+    },
+    "source_entity_id": {
+      "type": "string",
+      "description": "ID da entidade confirmada"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "sending",
+        "sent",
+        "failed",
+        "dead"
+      ],
+      "default": "queued",
+      "description": "Status atual do evento na fila"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Dados do evento para envio ao Core"
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero de tentativas de envio"
+    },
+    "max_retries": {
+      "type": "number",
+      "default": 5,
+      "description": "M\u00e1ximo de retentativas"
+    },
+    "last_error": {
+      "type": "string",
+      "description": "Mensagem do \u00faltimo erro"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Timestamp de envio bem-sucedido"
+    },
+    "next_retry_at": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Pr\u00f3xima tentativa agendada"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "UUID para rastreio ponta-a-ponta com o Core"
+    }
+  },
+  "required": [
+    "event_type",
+    "source_gateway",
+    "source_payment_id",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": null
+  }
+}

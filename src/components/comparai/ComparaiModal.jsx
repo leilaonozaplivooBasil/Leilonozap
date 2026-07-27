@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
-import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';

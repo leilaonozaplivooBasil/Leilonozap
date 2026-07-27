@@ -1,0 +1,61 @@
+{
+  "name": "SaleCommission",
+  "type": "object",
+  "properties": {
+    "sale_id": {
+      "type": "string",
+      "description": "ID da venda"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do vendedor"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do vendedor"
+    },
+    "seller_role": {
+      "type": "string",
+      "enum": [
+        "licenciado",
+        "licenciante"
+      ],
+      "default": "licenciado",
+      "description": "Papel do vendedor: licenciado (vendedor principal) ou licenciante (indicador)"
+    },
+    "commission_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed"
+      ],
+      "description": "Tipo de comiss\u00e3o"
+    },
+    "commission_value": {
+      "type": "number",
+      "description": "Valor da comiss\u00e3o (% ou R$)"
+    },
+    "commission_amount": {
+      "type": "number",
+      "description": "Valor final calculado da comiss\u00e3o em R$"
+    }
+  },
+  "required": [
+    "sale_id",
+    "seller_id",
+    "seller_name",
+    "commission_amount"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

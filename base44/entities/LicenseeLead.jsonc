@@ -1,0 +1,113 @@
+{
+  "name": "LicenseeLead",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do lead"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do lead"
+    },
+    "telefone": {
+      "type": "string",
+      "description": "Telefone do lead"
+    },
+    "status_lead": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "ativo",
+        "inativo"
+      ],
+      "default": "lead",
+      "description": "Status do lead"
+    },
+    "status_negociacao": {
+      "type": "string",
+      "enum": [
+        "sem_compra",
+        "em_negociacao",
+        "aguardando_pagamento",
+        "pago",
+        "enviado",
+        "entregue",
+        "cancelado"
+      ],
+      "default": "sem_compra",
+      "description": "Status da negocia\u00e7\u00e3o"
+    },
+    "origem": {
+      "type": "string",
+      "enum": [
+        "site",
+        "indicacao",
+        "whatsapp",
+        "instagram",
+        "outro"
+      ],
+      "default": "whatsapp",
+      "description": "Origem do lead"
+    },
+    "valor_negociado": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor em negocia\u00e7\u00e3o"
+    },
+    "valor_fechado": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor fechado/pago"
+    },
+    "ultimo_contato": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do \u00faltimo contato"
+    },
+    "proximo_followup": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do pr\u00f3ximo follow-up"
+    },
+    "probabilidade_fechamento": {
+      "type": "number",
+      "default": 0,
+      "description": "Probabilidade de fechamento em %"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o lead"
+    },
+    "historico_interacoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "observacao": {
+            "type": "string"
+          }
+        }
+      },
+      "default": [],
+      "description": "Hist\u00f3rico de intera\u00e7\u00f5es com o lead"
+    }
+  },
+  "required": [
+    "nome"
+  ],
+  "rls": {
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -147,14 +147,23 @@ export default function GlobalMonitor() {
             duration: endTime - startTime
           });
 
+          // O guard veio deste lado: sem ele, uma oscilação de rede virava alerta
+          // crítico. O diagnóstico detalhado (ad blocker, VPN, DNS) veio do Santana.
           if (!isTransientNetwork) {
+          
+            const isNetworkError = error.message === 'Failed to fetch' || error.message?.includes('NetworkError') || error.message?.includes('Network request failed');
+
             addIssue({
               level: 'critical',
-              type: 'request_error',
-              message: `Erro na requisição: ${error.message}`,
+              type: isNetworkError ? 'network_error' : 'request_error',
+              message: isNetworkError
+                ? '🌐 Erro de rede — conexão bloqueada ou interrompida'
+                : `Erro na requisição: ${error.message}`,
               location: requestUrl,
               timestamp: new Date().toISOString(),
-              prompt: `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${requestUrl}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
+              prompt: isNetworkError
+                ? `ERRO DE REDE: ${error.message}\n\nURL: ${requestUrl}\n\nDIAGNÓSTICO: O navegador não conseguiu completar a requisição (não é erro do servidor).\n\nCAUSAS MAIS PROVÁVEIS:\n1. 🚫 Ad blocker (uBlock, Brave Shields, AdGuard) bloqueando o domínio\n   → SOLUÇÃO: Desativar ad blocker para este site\n2. 🔌 Extensão de navegador interceptando chamadas\n   → SOLUÇÃO: Testar em modo anônimo (Ctrl+Shift+N)\n3. 🛡️ VPN/Proxy/Firewall bloqueando supabase.co\n   → SOLUÇÃO: Desativar VPN e testar\n4. 📡 Conexão instável ou DNS incorreto\n   → SOLUÇÃO: Testar em outra rede (4G vs WiFi) ou mudar DNS (8.8.8.8)\n\nAÇÃO IMEDIATA: Abrir em modo anônimo. Se funcionar, é extensão/ad blocker.`
+                : `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${requestUrl}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
             });
           }
         }

@@ -1,0 +1,36 @@
+{
+  "name": "MetricSnapshot",
+  "type": "object",
+  "properties": {
+    "snapshot_time": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Momento do snapshot"
+    },
+    "metrics": {
+      "type": "object",
+      "description": "M\u00e9tricas agregadas em JSON"
+    },
+    "period_minutes": {
+      "type": "number",
+      "default": 15,
+      "description": "Per\u00edodo de agrega\u00e7\u00e3o em minutos"
+    }
+  },
+  "required": [
+    "snapshot_time",
+    "metrics"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

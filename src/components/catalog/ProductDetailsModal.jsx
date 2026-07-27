@@ -54,7 +54,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // avaliações com comentário da loja (mesma fonte da página de detalhes)
   useEffect(() => {

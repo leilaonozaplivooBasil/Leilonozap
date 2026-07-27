@@ -23,7 +23,6 @@ import { AppUser } from '@/entities/AppUser';
 import { AuctionMessage } from '@/entities/AuctionMessage';
 import { toast } from "sonner";
 import { Toaster } from "sonner";
-import { getReferral, saveReferral } from '@/lib/referral';
 
 // 🛡️ PROTEÇÃO MASTER - LISTA DE ARQUIVOS BLINDADOS
 const PROTECTED_FILES = [

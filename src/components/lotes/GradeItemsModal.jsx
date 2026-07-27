@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Package } from 'lucide-react';
+import MLValidationButton from './MLValidationButton';
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -92,6 +93,7 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
                                     <th className="px-5 py-3 font-semibold">Descrição</th>
                                     <th className="px-5 py-3 font-semibold text-center w-20">Qtd</th>
                                     <th className="px-5 py-3 font-semibold text-right w-32">Valor</th>
+                                    <th className="px-5 py-3 font-semibold text-right w-44">ML Real</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -105,6 +107,9 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
                                         <td className="px-5 py-3 text-slate-300">{item.desc || '—'}</td>
                                         <td className="px-5 py-3 text-center text-slate-400">{item.qtd}</td>
                                         <td className="px-5 py-3 text-right font-medium text-emerald-400">{formatCurrency(item.valor)}</td>
+                                        <td className="px-5 py-3 text-right">
+                                            <MLValidationButton descricao={item.desc} valorPlanilha={item.valor} />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

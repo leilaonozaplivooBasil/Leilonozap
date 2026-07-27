@@ -32,9 +32,10 @@ export default function NavigationTracker() {
         }
 
         if (isAuthenticated && pageName) {
-            base44.appLogs.logUserInApp(pageName).catch(() => {
-                // Silently fail - logging shouldn't break the app
-            });
+            // appLogs pode não existir em todas as versões do SDK — falha silenciosa
+            try {
+                base44?.appLogs?.logUserInApp?.(pageName)?.catch?.(() => {});
+            } catch (_) { /* ignora */ }
         }
     }, [location, isAuthenticated, Pages, mainPageKey]);
 

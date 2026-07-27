@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
@@ -15,8 +14,6 @@ import { resetAllBalances } from "@/functions/resetAllBalances";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DivulgarTab from "@/components/licensing/DivulgarTab";
-import PromoCreator from "@/pages/PromoCreator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, Package, GripVertical } from 'lucide-react';
+import { Copy, Users, BarChart, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical } from 'lucide-react';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -37,11 +34,8 @@ import UserPasswordModal from '../components/admin/UserPasswordModal';
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
-import CatalogClients from '../components/lojista/CatalogClients';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CommissionsTab from '../components/licensing/CommissionsTab';
-import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
-import WithdrawalsHistoryTab from '../components/licensing/WithdrawalsHistoryTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
 import WithdrawalModal from '../components/licensing/WithdrawalModal';
@@ -49,9 +43,25 @@ import MyClientsTab from '../components/licensing/MyClientsTab';
 import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
+import DashboardTabsList from '../components/licensing/DashboardTabsList';
 
 const Product = base44.entities.Product;
-const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => <Card onClick={onClick} className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle><Icon className="h-4 w-4 text-gray-400" /></CardHeader><CardContent>{isL ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl font-bold text-white">{value}</div>}</CardContent></Card>;
+const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
+  <Card
+    onClick={onClick}
+    className={`relative overflow-hidden bg-gradient-to-br from-gray-900 ${isSaiDeBaixo ? 'via-red-950/20' : 'via-emerald-950/20'} to-gray-900 border ${isSaiDeBaixo ? 'border-red-500/20' : 'border-emerald-500/20'} shadow-lg backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer hover:-translate-y-0.5 hover:shadow-xl ${isSaiDeBaixo ? 'hover:border-red-500/50 hover:shadow-red-900/20' : 'hover:border-emerald-500/50 hover:shadow-emerald-900/20'}` : ''}`}>
+    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${isSaiDeBaixo ? 'via-red-500/70' : 'via-emerald-400/70'} to-transparent`} />
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</CardTitle>
+      <div className={`flex items-center justify-center w-9 h-9 rounded-lg border ${isSaiDeBaixo ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+        <Icon className={`h-4 w-4 ${isSaiDeBaixo ? 'text-red-400' : 'text-emerald-400'}`} />
+      </div>
+    </CardHeader>
+    <CardContent>
+      {isL ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl md:text-3xl font-black text-white tracking-tight">{value}</div>}
+    </CardContent>
+  </Card>
+);
 // 🆕 FUNÇÃO AUXILIAR PARA RETRY COM EXPONENTIAL BACKOFF
 const fetchWithRetry = async (fetchFunction, maxRetries = 3, baseDelay = 1000) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -79,7 +89,22 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
   const walletCardRef = useRef(null);
-  const [activeTab, setActiveTab] = useState('visao-geral');
+
+  // 🛡️ FASE 4.6 — Lê ?tab=xxx APENAS na primeira render (links externos ainda
+  // funcionam). Sem polling — a sidebar do Licenciado foi removida na FASE 4.6.
+  const getInitialTab = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('tab');
+      const VALID_TABS = ['visao-geral', 'catalogo', 'plano-carreira', 'admin'];
+      return VALID_TABS.includes(t) ? t : 'visao-geral';
+    } catch {
+      return 'visao-geral';
+    }
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [catalogSubTab, setCatalogSubTab] = useState('catalogo-produtos');
+
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isAuctionSelectionModalOpen, setIsAuctionSelectionModalOpen] = useState(false);
@@ -110,6 +135,67 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🆕 Estado do cadastro de vendedores (Etapa 5)
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [sellersRefreshCounter, setSellersRefreshCounter] = useState(0);
+
+  // 🎯 FASE 4.7.2 — Rotação de destaque das cédulas Valora
+  // Índices: 0=guardian(R$10) · 1=backBack(R$50) · 2=back(R$100) · 3=side(R$20) · 4=front(R$200)
+  // R$ 200 (índice 4) fica 10s em destaque (protagonismo). Demais ficam 5s cada.
+  const [featuredNoteIndex, setFeaturedNoteIndex] = useState(4); // começa na R$ 200
+  useEffect(() => {
+    let timeoutId = null;
+    let isPaused = false;
+
+    const scheduleNext = () => {
+      if (isPaused || timeoutId) return;
+      // Usa functional setState pra ler o índice atual sem virar dependência
+      setFeaturedNoteIndex((current) => {
+        // Agenda a próxima troca com base no PRÓXIMO índice que vai assumir
+        const nextIndex = (current + 1) % 5;
+        const delayForNext = nextIndex === 4 ? 10000 : 5000; // R$ 200 = 10s
+        timeoutId = setTimeout(() => {
+          timeoutId = null;
+          scheduleNext();
+        }, delayForNext);
+        return nextIndex;
+      });
+    };
+
+    const startCycle = () => {
+      if (isPaused || timeoutId) return;
+      // Primeira troca: R$ 200 começa destacada, então após 10s troca pra R$ 10
+      isPaused = false;
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        scheduleNext();
+      }, 10000);
+    };
+
+    const stopCycle = () => {
+      isPaused = true;
+      if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
+    };
+
+    // Só começa a rotação após a entrada completa (~4.5s) pra não sobrepor com a queda escalonada
+    const startTimeout = setTimeout(() => {
+      isPaused = false;
+      startCycle();
+    }, 4500);
+
+    // Pausa quando aba oculta, retoma ao voltar (protocolo multi-dispositivo)
+    const handleVisibility = () => {
+      if (document.hidden) stopCycle();
+      else startCycle();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', startCycle);
+    window.addEventListener('blur', stopCycle);
+    return () => {
+      clearTimeout(startTimeout);
+      stopCycle();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', startCycle);
+      window.removeEventListener('blur', stopCycle);
+    };
+  }, []);
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -147,6 +233,12 @@ const DashboardContent = ({ user, isAdmin }) => {
   const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
 
   const highestLevel = careerHierarchy.find((level) => userLevels.includes(level)) || 'usuario';
+
+  // 🆕 Só existe UM link de indicação ativo por vez: quem já avançou para
+  // Licenciado (ou além, na carreira) ganha pela Loja Virtual, não mais pelo App.
+  const hasAdvancedBeyondInfluencer = userLevels.some((l) =>
+    ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor', 'diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].includes(l)
+  );
 
   const shortName = user.display_first_name && user.display_last_name ?
     `${user.display_first_name} ${user.display_last_name}` :
@@ -329,25 +421,58 @@ const DashboardContent = ({ user, isAdmin }) => {
       setMyAuctions(wonAuctions);
 
       // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor)
+      let ownSales = [];
       try {
         const CatalogSale = base44.entities.CatalogSale;
 
         // ✅ ISOLAMENTO CRÍTICO: Filtrar NO SERVIDOR, não na UI
-        // Busca apenas vendas onde licensee_id = meu ID (não código de referral)
-        const catalogSales = Array.isArray(user.id) ? [] :
+        // Busca vendas onde licensee_id = meu ID (minha loja direta)
+        ownSales = Array.isArray(user.id) ? [] :
           await CatalogSale.filter(
             { licensee_id: user.id },
             '-created_date',
             300
           );
+        ownSales = Array.isArray(ownSales) ? ownSales : [];
 
-        console.log('✅ [ISOLAMENTO] Vendas catálogo do user_id:', user.id, '→', catalogSales.length, 'vendas');
-        setMySales(Array.isArray(catalogSales) ? catalogSales : []);
-        setMyCatalogSales(Array.isArray(catalogSales) ? catalogSales : []);
+        console.log('✅ [ISOLAMENTO] Vendas catálogo do user_id:', user.id, '→', ownSales.length, 'vendas');
+        setMySales(ownSales);
+        setMyCatalogSales(ownSales);
       } catch (catalogError) {
         console.error("Erro ao buscar vendas do catálogo:", catalogError);
+        ownSales = [];
         setMySales([]);
         setMyCatalogSales([]);
+      }
+
+      // 🆕 SINCRONIA: cargos diretor+ (fundador, conselheiro, ceo, etc) recebem
+      // bônus de TODA a rede, não só da própria loja. Para o Relatório/Pedidos
+      // baterem com o extrato de Comissões, tentamos incluir também as vendas
+      // que geraram registros de comissão para este usuário. Isolado em seu
+      // próprio try/catch para NUNCA apagar as vendas próprias já carregadas.
+      try {
+        const CatalogSale = base44.entities.CatalogSale;
+        const commissionRecords = await base44.entities.CommissionRecord.filter(
+          { user_id: user.id, sale_type: 'catalog' },
+          '-created_date',
+          300
+        );
+        const ownSaleIds = new Set(ownSales.map((s) => s.id));
+        const extraSaleIds = [...new Set(
+          (Array.isArray(commissionRecords) ? commissionRecords : [])
+            .map((r) => r.sale_id)
+            .filter((id) => id && !ownSaleIds.has(id))
+        )];
+
+        if (extraSaleIds.length > 0) {
+          const networkSales = await CatalogSale.filter({ id: { $in: extraSaleIds } }, '-created_date', 300);
+          const allSales = [...ownSales, ...(Array.isArray(networkSales) ? networkSales : [])]
+            .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+          setMySales(allSales);
+          setMyCatalogSales(allSales);
+        }
+      } catch (networkError) {
+        console.error("Erro ao buscar vendas da rede vinculadas às comissões (mantendo vendas próprias):", networkError);
       }
 
     } catch (error) {
@@ -451,34 +576,6 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const [guardianNote, backBackNote, backNote, frontNote, sideNote] = getNoteStack(user.valora_pay_balance || 0);
 
-  // Destaque rotativo das cédulas: R$200 (índice 4) fica 10s, as demais 5s cada.
-  const [featuredNoteIndex, setFeaturedNoteIndex] = useState(4);
-  useEffect(() => {
-    let timeoutId = null;
-    let stopped = false;
-    const scheduleNext = () => {
-      if (stopped) return;
-      setFeaturedNoteIndex((current) => {
-        const next = (current + 1) % 5;
-        timeoutId = setTimeout(scheduleNext, next === 4 ? 10000 : 5000);
-        return next;
-      });
-    };
-    // começa depois da animação de entrada (~4,5s)
-    const startTimeout = setTimeout(scheduleNext, 10000);
-    const onVisibility = () => {
-      if (document.hidden) { stopped = true; if (timeoutId) clearTimeout(timeoutId); }
-      else if (stopped) { stopped = false; timeoutId = setTimeout(scheduleNext, 5000); }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      stopped = true;
-      clearTimeout(startTimeout);
-      if (timeoutId) clearTimeout(timeoutId);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, []);
-
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
     toast.success('Link copiado!');
@@ -534,7 +631,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             text-shadow: 0 0 20px #1DB24A, 0 2px 8px rgba(0,0,0,0.8);
             letter-spacing: 1px;
           ">
-            R$ ${fmtBR(totalAvailable)}
+            R$ ${totalAvailable.toFixed(2)}
           </span>
         </div>
       `;
@@ -666,7 +763,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         }
       });
 
-      toast.success(`R$ ${fmtBR(amount)} creditados!`);
+      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
       setSelectedLicenseeId('');
       setCommissionAmount('');
       await delay(2000);
@@ -934,37 +1031,6 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8">
-      <style>{`
-        /* ===== CÉDULAS VALORA: caem, se organizam em leque e flutuam em loop ===== */
-        .nota-transition { transition: opacity 0.6s ease-out; }
-        .nota-pos-guardian { transform: translate(-46px, -5px) rotate(-14deg); }
-        .nota-pos-backback { transform: translate(42px, 11px)  rotate(11deg);  }
-        .nota-pos-back     { transform: translate(-30px, 14px) rotate(-6deg);  }
-        .nota-pos-side     { transform: translate(35px, -11px) rotate(7deg);   }
-        .nota-pos-front    { transform: translate(0, 0)        rotate(2deg);   }
-        .nota-entrance-guardian { animation: notaEntranceGuardian 2.0s cubic-bezier(0.22,1,0.36,1) 0ms both, notaFloatGuardian 3.4s ease-in-out infinite 3000ms; will-change: transform; }
-        .nota-entrance-backback { animation: notaEntranceBackBack 2.1s cubic-bezier(0.22,1,0.36,1) 350ms both, notaFloatBackBack 3.2s ease-in-out infinite 3200ms; will-change: transform; }
-        .nota-entrance-back     { animation: notaEntranceBack 2.2s cubic-bezier(0.22,1,0.36,1) 700ms both, notaFloatBack 3.6s ease-in-out infinite 3400ms; will-change: transform; }
-        .nota-entrance-side     { animation: notaEntranceSide 2.0s cubic-bezier(0.22,1,0.36,1) 1050ms both, notaFloatSide 3.0s ease-in-out infinite 3600ms; will-change: transform; }
-        .nota-entrance-front    { animation: notaEntranceFront 2.4s cubic-bezier(0.22,1,0.36,1) 1400ms both, notaFloatFront 3.8s ease-in-out infinite 3800ms; will-change: transform; }
-        @keyframes notaEntranceGuardian { 0% { transform: translate(-900px,-1000px) rotate(-60deg) scale(0.7); opacity:0 } 40% { opacity:.80 } 100% { transform: translate(-46px,-5px) rotate(-14deg) scale(1); opacity:.80 } }
-        @keyframes notaEntranceBackBack { 0% { transform: translate(900px,1000px) rotate(75deg) scale(0.7); opacity:0 } 40% { opacity:.82 } 100% { transform: translate(42px,11px) rotate(11deg) scale(1); opacity:.82 } }
-        @keyframes notaEntranceBack { 0% { transform: translate(-1200px,-800px) rotate(-40deg) scale(0.7); opacity:0 } 40% { opacity:.85 } 100% { transform: translate(-30px,14px) rotate(-6deg) scale(1); opacity:.85 } }
-        @keyframes notaEntranceSide { 0% { transform: translate(1100px,-1100px) rotate(65deg) scale(0.7); opacity:0 } 40% { opacity:.90 } 100% { transform: translate(35px,-11px) rotate(7deg) scale(1); opacity:.90 } }
-        @keyframes notaEntranceFront { 0% { transform: translate(-200px,-1200px) rotate(-25deg) scale(0.7); opacity:0 } 40% { opacity:1 } 100% { transform: translate(0,0) rotate(2deg) scale(1); opacity:1 } }
-        @keyframes notaFloatGuardian { 0%,100% { transform: translate(-46px,-5px) rotate(-14deg); } 50% { transform: translate(-46px,-11px) rotate(-14deg); } }
-        @keyframes notaFloatBackBack { 0%,100% { transform: translate(42px,11px) rotate(11deg); } 50% { transform: translate(42px,5px) rotate(11deg); } }
-        @keyframes notaFloatBack { 0%,100% { transform: translate(-30px,14px) rotate(-6deg); } 50% { transform: translate(-30px,8px) rotate(-6deg); } }
-        @keyframes notaFloatSide { 0%,100% { transform: translate(35px,-11px) rotate(7deg); } 50% { transform: translate(35px,-17px) rotate(7deg); } }
-        @keyframes notaFloatFront { 0%,100% { transform: translate(0,0) rotate(2deg); } 50% { transform: translate(0,-5px) rotate(2deg); } }
-        .nota-featured { filter: drop-shadow(0 20px 40px rgba(29,178,74,0.35)) brightness(1.05); transform-origin: center center; zoom: 1.08; }
-        @supports not (zoom: 1) { .nota-featured { outline: 2px solid rgba(29,178,74,0.4); outline-offset: 4px; } }
-        @media (prefers-reduced-motion: reduce) {
-          .nota-entrance-guardian, .nota-entrance-backback, .nota-entrance-back, .nota-entrance-side, .nota-entrance-front { animation: none !important; }
-          .nota-transition { transition: none !important; }
-          .nota-featured { filter: none; zoom: 1; outline: none; }
-        }
-      `}</style>
       <div className="flex flex-col gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Painel de Alavancagem
@@ -1012,41 +1078,49 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className={`mb-8 relative shadow-2xl backdrop-blur-xl overflow-hidden ${isSaiDeBaixo ?
-        'bg-gradient-to-br from-red-950/70 via-red-900/50 to-red-950/70 border-2 border-red-500/40 shadow-red-900/40' :
-        'bg-gradient-to-br from-emerald-950/70 via-green-900/50 to-emerald-950/70 border-2 border-emerald-500/40 shadow-emerald-900/40'}`
+      <Card ref={walletCardRef} className={`mb-8 relative bg-gradient-to-br backdrop-blur-xl border-2 shadow-2xl ${isSaiDeBaixo ?
+        'from-red-950/60 via-red-900/40 to-red-950/60 border-red-500/40 shadow-red-900/30' :
+        'from-emerald-950/70 via-green-900/50 to-emerald-950/70 border-emerald-500/40 shadow-emerald-900/40'}`
       }>
         <CardContent className="p-6 md:px-12 md:py-8">
           <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-20">
-
             <div className="w-full md:w-auto">
               <h3 className={`text-sm font-medium uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-300/80' : 'text-emerald-300/80'}`}>Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
-                <span className={`text-5xl font-black text-white tracking-tight ${isSaiDeBaixo ? 'drop-shadow-[0_2px_8px_rgba(239,68,68,0.3)]' : 'drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'}`}>
-                  R$ {fmtBR(totalAvailable)}
+                <span className="text-5xl font-black text-white tracking-tight drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]">
+                  R$ {totalAvailable.toFixed(2)}
                 </span>
               </div>
 
-              {pendingWithdrawalAmount > 0 &&
-                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 my-3 max-w-[280px]">
-                  <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Saque em Processo: R$ {fmtBR(pendingWithdrawalAmount)}
-                  </p>
-                  <p className="text-xs text-yellow-300/70 mt-1">Aguardando aprovação</p>
-                </div>
-              }
-
               <div className={`h-px bg-gradient-to-r from-transparent to-transparent my-4 max-w-[280px] ${isSaiDeBaixo ? 'via-red-500/30' : 'via-emerald-500/30'}`} />
 
+              {pendingWithdrawalAmount > 0 &&
+                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4 max-w-[280px]">
+                  <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-yellow-300/70 mt-1">
+                    Aguardando aprovação
+                  </p>
+                </div>
+              }
               <div className="flex flex-col gap-2 max-w-[280px]">
-                <Button onClick={() => setIsAuctionSelectionModalOpen(true)}
-                  className={`text-white font-semibold h-10 text-sm shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSaiDeBaixo ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-red-500/20' : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 shadow-green-500/20 hover:shadow-green-500/40'}`}>
+                <Button
+                  onClick={() => setIsAuctionSelectionModalOpen(true)}
+                  className={`text-white font-semibold h-10 text-sm shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSaiDeBaixo ?
+                    'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-red-500/20 hover:shadow-red-500/40' :
+                    'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 shadow-green-500/20 hover:shadow-green-500/40'}`}>
+
                   <Zap className="w-4 h-4 mr-2" />
                   Usar em Leilões
                 </Button>
-                <Button onClick={() => setShowWithdrawalModal(true)}
-                  className="bg-gray-800/60 border border-gray-600/50 text-white font-medium h-10 text-sm transition-all duration-300 hover:bg-gray-700 hover:border-emerald-500/50">
+                <Button
+                  onClick={() => setShowWithdrawalModal(true)}
+                  className={`bg-gray-800/60 border text-white font-medium h-10 text-sm transition-all duration-300 hover:bg-gray-700 hover:shadow-md ${isSaiDeBaixo ?
+                    'border-gray-600/50 hover:border-red-500/50 hover:shadow-red-500/20' :
+                    'border-gray-600/50 hover:border-emerald-500/50 hover:shadow-emerald-500/20'}`}>
+
                   <Wallet className="w-4 h-4 mr-2" />
                   Sacar
                 </Button>
@@ -1054,35 +1128,54 @@ const DashboardContent = ({ user, isAdmin }) => {
             </div>
 
             <div className="relative w-56 h-36 flex items-center justify-center nota-stack-container">
-              {guardianNote?.url &&
-                <img src={guardianNote.url} alt=""
+              {guardianNote && guardianNote.url &&
+                <img
+                  src={guardianNote.url}
+                  alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
+
               }
-              {backBackNote?.url &&
-                <img src={backBackNote.url} alt=""
+
+              {backBackNote && backBackNote.url &&
+                <img
+                  src={backBackNote.url}
+                  alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
+
               }
-              {backNote?.url &&
-                <img src={backNote.url} alt=""
+
+              {backNote && backNote.url &&
+                <img
+                  src={backNote.url}
+                  alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
+
               }
-              {sideNote?.url &&
-                <img src={sideNote.url} alt=""
+
+              {sideNote && sideNote.url &&
+                <img
+                  src={sideNote.url}
+                  alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
+
               }
-              {frontNote?.url &&
-                <img src={frontNote.url} alt=""
+
+              {frontNote && frontNote.url &&
+                <img
+                  src={frontNote.url}
+                  alt=""
                   className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
                   style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92, backgroundColor: '#f7f3e9' }}
                   onError={(e) => { e.target.style.display = 'none'; }} />
+
               }
             </div>
           </div>
@@ -1093,7 +1186,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={DollarSign}
           label="Saldo Disponível"
-          value={`R$ ${fmtBR(totalAvailable)}`}
+          value={`R$ ${totalAvailable.toFixed(2)}`}
           onClick={() => setIsAuctionSelectionModalOpen(true)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
@@ -1113,240 +1206,45 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <StatCard
           icon={BarChart}
-          label="Comissões Totais (histórico)"
-          value={`R$ ${fmtBR((user.total_commissions_generated || 0))}`}
+          label="Total Comissões (App + Loja Virtual)"
+          value={`R$ ${((user.commission_balance || 0) + (user.catalog_commission_balance || 0)).toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        {/* 3 GRUPOS PRINCIPAIS (Santana: enxugar ~9 abas → 3) */}
-        {(() => {
-          const grupo = activeTab === 'visao-geral' ? 'geral' : activeTab === 'plano-carreira' ? 'carreira' : 'vendas';
-          const base = 'flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap';
-          const on = 'bg-green-600 text-white shadow-lg';
-          const off = isSaiDeBaixo ? 'text-gray-600 hover:bg-gray-200' : 'text-gray-400 hover:bg-gray-700';
-          return (
-            <div className={`flex flex-wrap gap-2 p-2 rounded-xl mb-3 ${isSaiDeBaixo ? 'bg-white border border-gray-300' : 'bg-gray-800 border border-gray-700'}`}>
-              <button onClick={() => setActiveTab('visao-geral')} className={`${base} ${grupo === 'geral' ? on : off}`}>🗂️ Visão Geral</button>
-              <button onClick={() => setActiveTab((userLevels.includes('licenciado_catalogo') || userLevels.includes('licenciado') || isAdmin) ? 'catalogo' : 'divulgar')} className={`${base} ${grupo === 'vendas' ? on : off}`}>🛒 Central de Vendas</button>
-              <button onClick={() => setActiveTab('plano-carreira')} className={`${base} ${grupo === 'carreira' ? on : off}`}>🎯 Carreira</button>
-            </div>
-          );
-        })()}
+        <DashboardTabsList
+          isSaiDeBaixo={isSaiDeBaixo}
+          userLevels={userLevels}
+          isAdmin={isAdmin}
+          myClientsCount={myClients.length}
+        />
 
-        {/* SUB-NAVEGAÇÃO da Central de Vendas (só aparece dentro do grupo vendas) */}
-        {activeTab !== 'visao-geral' && activeTab !== 'plano-carreira' &&
-          <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800/60 border-gray-700'} flex-wrap h-auto gap-2 p-2 mb-4`}>
-            {/* P04: Sua Loja Virtual é a PRIMEIRA aba (padrão Base44). Gate ampliado — antes usava
-                'licenciado_catalogo' (id obsoleto) e a aba ficava escondida pros licenciados atuais. */}
-            {(userLevels.includes('licenciado_catalogo') || userLevels.includes('licenciado') || isAdmin) && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Sua Loja Virtual</TabsTrigger>}
-            <TabsTrigger value="divulgar" className="text-xs sm:text-sm whitespace-nowrap">📣 Divulgar</TabsTrigger>
-            <TabsTrigger value="material" className="text-xs sm:text-sm whitespace-nowrap">🎨 Material / Banner</TabsTrigger>
-            <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
-            {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
-            {(userLevels.includes('licenciado_catalogo') || userLevels.includes('licenciado') || isAdmin) && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
-            {(userLevels.includes('licenciado_catalogo') || isAdmin) && <TabsTrigger value="meus-vendedores" className="text-xs sm:text-sm whitespace-nowrap">🤝 Meus Vendedores</TabsTrigger>}
-            <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
-            <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
-            <TabsTrigger value="saques" className="text-xs sm:text-sm whitespace-nowrap">💸 Saques</TabsTrigger>
-            {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
-          </TabsList>
-        }
 
-        {/* ABA: DIVULGAR — links (cadastro/loja/leilões) + WhatsApp + QR Code */}
-        <TabsContent value="divulgar" className="space-y-6">
-          <DivulgarTab user={user} isSaiDeBaixo={isSaiDeBaixo} />
-        </TabsContent>
 
-        {/* ABA: MATERIAL / BANNER — o gerador de artes agora é do licenciado também (era admin-only) */}
-        <TabsContent value="material" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎨 Gerador de Material de Divulgação</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Monte a arte do produto, baixe em PNG e publique. Pegue o seu link e o QR Code na aba <strong>📣 Divulgar</strong> para acompanhar o material.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PromoCreator embedded />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ABA: MINHAS VENDAS */}
-        <TabsContent value="minhas-vendas" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Acompanhe suas vendas de leilão e loja virtual
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingSales ?
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                </div> :
-
-                <Tabs defaultValue="leilao" className="w-full">
-                  <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
-                    <TabsTrigger value="leilao">Leilão</TabsTrigger>
-                    <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="leilao" className="mt-4">
-                    {myAuctions.length === 0 ?
-                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Arremates dos indicados: 0
-                      </p> :
-
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (3%)</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {myAuctions.map((auction) =>
-                              <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {fmtBR(auction.current_price)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {fmtBR((auction.current_price * 0.03))}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
-                                  {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    }
-                  </TabsContent>
-
-                  <TabsContent value="catalogo" className="mt-4">
-                    {mySales.length === 0 ?
-                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Nenhuma venda da loja virtual
-                      </p> :
-
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comprador</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Sua Comissão</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mySales.map((sale) =>
-                              <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {fmtBR(sale.sale_price)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {fmtBR(sale.commission_licensee_amount)}</TableCell>
-                                <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
-                                  {new Date(sale.created_date).toLocaleDateString('pt-BR')}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    }
-                  </TabsContent>
-                </Tabs>
-              }
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ABA: VENDAS DA EQUIPE - Apenas diretores+ */}
-        {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
-          <TabsContent value="vendas-equipe" className="space-y-6">
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-              <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Vendas da Minha Equipe</CardTitle>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Acompanhe as vendas dos seus licenciados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                  <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
-                  <p>Seu sistema de alavancagem está crescendo!</p>
-                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${fmtBR(user.total_commissions_generated)}` : 'R$ 0.00'}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        }
-
-        {/* ABA: PEDIDOS - Apenas licenciados de catálogo */}
-        {userLevels.includes('licenciado_catalogo') &&
-          <TabsContent value="pedidos" className="space-y-6">
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-              <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Pedidos da Loja Virtual</CardTitle>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Acompanhe seus pedidos de venda direta
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                  <Package className="w-12 h-12 mx-auto opacity-50 mb-4" />
-                  <p>Nenhum pedido ainda</p>
-                  <p className="text-sm mt-2">Comece a vender pelo seu link da loja virtual!</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        }
-
-        {/* ABA: MEUS VENDEDORES - Licenciados de catálogo ou admin */}
-        {(userLevels.includes('licenciado_catalogo') || isAdmin) && (
-          <TabsContent value="meus-vendedores" className="space-y-6">
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
-                    <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Cadastre vendedores que vão vender pela sua rede (10% por venda).</CardDescription>
-                  </div>
-                  <Button onClick={() => setShowSellerModal(true)} className="bg-green-600 hover:bg-green-700 text-white min-h-[44px]">+ Cadastrar Vendedor</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {/* ABA: CATÁLOGO - Produtos para vender + Dashboard */}
-        {userLevels.includes('licenciado_catalogo') &&
+        {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
+        {(userLevels.includes('licenciado_catalogo') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
-            <Tabs defaultValue="catalogo-home" className="w-full">
+            <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
-                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Página Inicial</TabsTrigger>
+                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Sua Loja Virtual</TabsTrigger>
+                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
                 <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
-                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes</TabsTrigger>
-                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Produtos</TabsTrigger>
+                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes ({myClients.length})</TabsTrigger>
+                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm">🤝 Vendedores</TabsTrigger>
+                <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm">💰 Comissões</TabsTrigger>
               </TabsList>
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
-                <CatalogHome currentStore={null} catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} />
+                <CatalogHome
+                  currentStore={null}
+                  catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []}
+                  user={user}
+                  onGoToPedidos={() => setCatalogSubTab('catalogo-pedidos')}
+                  onGoToComissoes={() => setCatalogSubTab('catalogo-comissoes')}
+                />
               </TabsContent>
 
               <TabsContent value="catalogo-pedidos" className="mt-6">
@@ -1355,12 +1253,154 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsContent>
 
               <TabsContent value="catalogo-clientes" className="mt-6">
-                {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
-                <CatalogClients catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} />
+                <MyClientsTab
+                  isSaiDeBaixo={isSaiDeBaixo}
+                  isLoadingClients={isLoadingClients}
+                  filteredClients={filteredClients}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  allUsers={allUsers}
+                />
               </TabsContent>
 
               <TabsContent value="catalogo-produtos" className="mt-6">
-                <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} />
+                <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} user={user} />
+              </TabsContent>
+
+              <TabsContent value="catalogo-vendedores" className="mt-6">
+                <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
+                        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Cadastre vendedores que vão vender pela sua rede (10% por venda).</CardDescription>
+                      </div>
+                      <Button onClick={() => setShowSellerModal(true)} className="bg-green-600 hover:bg-green-700 text-white min-h-[44px]">+ Cadastrar Vendedor</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="catalogo-comissoes" className="mt-6">
+                <Tabs defaultValue="extrato" className="w-full">
+                  <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                    <TabsTrigger value="extrato">Extrato</TabsTrigger>
+                    <TabsTrigger value="vendas">Vendas</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="extrato" className="mt-4">
+                    <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
+                  </TabsContent>
+
+                  <TabsContent value="vendas" className="mt-4">
+                    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                      <CardHeader>
+                        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
+                        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                          As vendas que geraram suas comissões
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoadingSales ?
+                          <div className="flex justify-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                          </div> :
+
+                          <Tabs defaultValue="leilao" className="w-full">
+                            <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
+                              <TabsTrigger value="leilao">Leilão</TabsTrigger>
+                              <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
+                              {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="equipe">Equipe</TabsTrigger>}
+                            </TabsList>
+
+                            <TabsContent value="leilao" className="mt-4">
+                              {myAuctions.length === 0 ?
+                                <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  Arremates dos indicados: 0
+                                </p> :
+
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (3%)</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {myAuctions.map((auction) =>
+                                        <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.03).toFixed(2)}</TableCell>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                            {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              }
+                            </TabsContent>
+
+                            <TabsContent value="catalogo" className="mt-4">
+                              {mySales.length === 0 ?
+                                <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  Nenhuma venda da loja virtual
+                                </p> :
+
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comprador</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Sua Comissão</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {mySales.map((sale) =>
+                                        <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                                          <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                            {new Date(sale.created_date).toLocaleDateString('pt-BR')}
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              }
+                            </TabsContent>
+
+                            {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
+                              <TabsContent value="equipe" className="mt-4">
+                                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
+                                  <p>Seu sistema de alavancagem está crescendo!</p>
+                                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                                </div>
+                              </TabsContent>
+                            }
+                          </Tabs>
+                        }
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -1382,14 +1422,12 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
-          {/* P02: Link Influencer (App 5%) REMOVIDO da Visão Geral — só a Loja Virtual aparece.
-              A árvore oficial (30%) é o que vale; o "App 5%" isolado saiu conforme pedido do Heloim. */}
-          {userLevels.includes('licenciado_catalogo') &&
+          {hasAdvancedBeyondInfluencer ?
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Loja Virtual) - 30% distribuídos na rede</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Seu Link (Loja Virtual) - 26% distribuídos</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Você é o ÂNCORA da venda e recebe 3% de Licenciado + as fatias dos seus outros cargos ativos
+                  Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1400,11 +1438,35 @@ const DashboardContent = ({ user, isAdmin }) => {
                     className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
                   <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
-                  <a href={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
+                  <a href={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (30% na rede):</strong> Como Licenciado Âncora, você recebe 3% + as comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card> :
+
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <CardHeader>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Seu Link (Influencer) - 3% por arremate</CardTitle>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Ganhe 3% em R$ sobre cada arremate feito pelos seus indicados no App
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={referralLink}
+                    readOnly
+                    className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+
+                  <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
+                  <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
+                </div>
+                <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
+                  <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
@@ -1430,30 +1492,6 @@ const DashboardContent = ({ user, isAdmin }) => {
           <HowItWorksCard isSaiDeBaixo={isSaiDeBaixo} />
         </TabsContent>
 
-        <TabsContent value="meus-clientes" className="space-y-6">
-          <MyClientsTab
-            isSaiDeBaixo={isSaiDeBaixo}
-            isLoadingClients={isLoadingClients}
-            filteredClients={filteredClients}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            allUsers={allUsers}
-          />
-        </TabsContent>
-
-        {/* ABA: MEU CRM — REMOVIDA (sem TabsTrigger correspondente, código inalcançável) */}
-
-        <TabsContent value="comissoes" className="space-y-6">
-          {/* Extrato TRANSPARENTE: de onde veio cada centavo (data, produto, quem vendeu, cargo, %) */}
-          <ExtratoComissoes user={user} isSaiDeBaixo={isSaiDeBaixo} />
-          <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
-        </TabsContent>
-
-        {/* ABA: SAQUES — religada (o componente existia mas estava sem TabsTrigger) */}
-        <TabsContent value="saques" className="space-y-6">
-          <WithdrawalsHistoryTab isSaiDeBaixo={isSaiDeBaixo} isLoadingWithdrawals={isLoadingWithdrawals} myWithdrawals={myWithdrawals} />
-        </TabsContent>
-
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">
             <Accordion type="single" collapsible className="w-full space-y-4">
@@ -1477,7 +1515,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                             const licTotal = ((lic.commission_balance || 0) + (lic.catalog_commission_balance || 0));
                             return (
                               <SelectItem key={lic.id} value={lic.id}>
-                                {lic.full_name} - R$ {fmtBR(licTotal)}
+                                {lic.full_name} - R$ {licTotal.toFixed(2)}
                               </SelectItem>
                             );
                           })}
@@ -1489,7 +1527,6 @@ const DashboardContent = ({ user, isAdmin }) => {
                       <Input
                         type="number"
                         placeholder="100.00"
-                        value={commissionAmount}
                         onChange={(e) => setCommissionAmount(e.target.value)}
                         className="bg-gray-700 border-gray-600 text-white" />
 
@@ -1861,7 +1898,10 @@ export default function LicensingPage() {
         'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
         'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
       }>
-        {/* Hero Section */}
+        {/* 🛡️ FASE 4.5 — Hero pública SÓ para visitantes (isLicensee=false).
+            Usuário logado (licenciado/admin) vai direto pro Dashboard, sem
+            landing de recrutamento em cima. */}
+        {!isLicensee && (
         <div className="relative overflow-hidden py-20 px-6">
           <div className={`absolute inset-0 bg-gradient-to-r ${isSaiDeBaixo ?
             'from-red-500/10 to-orange-500/10' :
@@ -1888,7 +1928,7 @@ export default function LicensingPage() {
                     Torne-se um Influenciador
                   </h1>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>5% em dinheiro real (R$)</strong> em cada venda e arremate que eles fizerem!
+                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                     Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
@@ -1900,7 +1940,7 @@ export default function LicensingPage() {
                       Você já é um Influenciador!
                     </h1>
                     <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Compartilhe seu link &rarr; Seus indicados compram ou arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 5% em dinheiro real!</strong>
+                      Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 3% em dinheiro real!</strong>
                     </p>
                     <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                       Continue crescendo sua rede e <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>aumente seus ganhos</strong> com o sistema de alavancagem!
@@ -1967,6 +2007,7 @@ export default function LicensingPage() {
             </motion.div>
           </div>
         </div>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {isLicensee ?
@@ -1981,6 +2022,8 @@ export default function LicensingPage() {
           }
         </div>
 
+        {/* 🛡️ FASE 4.5 — Rodapé motivacional também é copy pública. Só para visitantes. */}
+        {!isLicensee && (
         <div className={`py-20 px-6 ${isSaiDeBaixo ? 'bg-gray-100/50' : 'bg-gray-800/50'}`}>
           <div className="max-w-6xl mx-auto">
             <h2 className={`text-4xl font-bold text-center mb-4 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
@@ -1991,6 +2034,7 @@ export default function LicensingPage() {
             </p>
           </div>
         </div>
+        )}
 
       </div>
 
@@ -2043,6 +2087,172 @@ export default function LicensingPage() {
           50% {
             opacity: 1;
             transform: scale(1.05);
+          }
+        }
+
+        /* ============================================================
+           🛡️ FASE 4.7.2 — CÉDULAS VALORA DO SALDO DISPONÍVEL
+           
+           Refinamento final:
+           • Cédulas caem do TOPO REAL da tela (translates 900–1200px)
+           • Posições finais em "leque aberto" (menos embaralhado)
+           • Opacidades secundárias elevadas (0.80–0.92) → sempre nítidas
+           • Transição suave (0.6s) na troca de destaque
+           • Stagger de entrada: 0/350/700/1050/1400ms
+           • R$ 200 fica 10s em destaque (gerenciado no React state)
+           ============================================================ */
+
+        /* TRANSIÇÃO SUAVE — aplicada em TODAS as .nota-* para que
+           opacity/zIndex mudem de forma animada quando o React troca o
+           featuredNoteIndex a cada 5-10s. Não afeta os keyframes de
+           entrada/float (que usam transform). */
+        .nota-transition {
+          transition: opacity 0.6s ease-out;
+        }
+
+        /* POSIÇÕES FINAIS EM LEQUE ABERTO — R$ 200 domina o centro,
+           demais espalhadas no eixo X (menos sobreposição no meio). */
+
+        /* Guardian (R$ 10) — extremo esquerdo, leve inclinação */
+        .nota-pos-guardian {
+          transform: translate(-46px, -5px) rotate(-14deg);
+        }
+        /* BackBack (R$ 50) — direita-baixo */
+        .nota-pos-backback {
+          transform: translate(42px, 11px) rotate(11deg);
+        }
+        /* Back (R$ 100) — esquerda-baixo, mais pra fora */
+        .nota-pos-back {
+          transform: translate(-30px, 14px) rotate(-6deg);
+        }
+        /* Side (R$ 20) — direita-cima */
+        .nota-pos-side {
+          transform: translate(35px, -11px) rotate(7deg);
+        }
+        /* Front (R$ 200) — CENTRALIZADA, quase reta, dominante */
+        .nota-pos-front {
+          transform: translate(0, 0) rotate(2deg);
+        }
+
+        /* ENTRADA: cada cédula vem de MUITO longe (topo real da tela),
+           rotacionando forte, aterrissa suavemente na posição de leque.
+           Duração 2.0–2.4s, stagger 0/350/700/1050/1400ms. */
+
+        .nota-entrance-guardian {
+          animation:
+            notaEntranceGuardian 2.0s cubic-bezier(0.22, 1, 0.36, 1) 0ms both,
+            notaFloatGuardian 3.4s ease-in-out infinite 3000ms;
+          will-change: transform;
+        }
+        .nota-entrance-backback {
+          animation:
+            notaEntranceBackBack 2.1s cubic-bezier(0.22, 1, 0.36, 1) 350ms both,
+            notaFloatBackBack 3.2s ease-in-out infinite 3200ms;
+          will-change: transform;
+        }
+        .nota-entrance-back {
+          animation:
+            notaEntranceBack 2.2s cubic-bezier(0.22, 1, 0.36, 1) 700ms both,
+            notaFloatBack 3.6s ease-in-out infinite 3400ms;
+          will-change: transform;
+        }
+        .nota-entrance-side {
+          animation:
+            notaEntranceSide 2.0s cubic-bezier(0.22, 1, 0.36, 1) 1050ms both,
+            notaFloatSide 3.0s ease-in-out infinite 3600ms;
+          will-change: transform;
+        }
+        .nota-entrance-front {
+          animation:
+            notaEntranceFront 2.4s cubic-bezier(0.22, 1, 0.36, 1) 1400ms both,
+            notaFloatFront 3.8s ease-in-out infinite 3800ms;
+          will-change: transform;
+        }
+
+        /* Keyframes — cada cédula sai de um ponto distante (topo/cantos
+           da viewport) e termina na sua posição final em leque.
+           Opacity FINAL sincronizada com a opacity base do inline style. */
+
+        @keyframes notaEntranceGuardian {
+          0%   { transform: translate(-900px, -1000px) rotate(-60deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.80; }
+          100% { transform: translate(-46px, -5px) rotate(-14deg) scale(1); opacity: 0.80; }
+        }
+        @keyframes notaEntranceBackBack {
+          0%   { transform: translate(900px, 1000px) rotate(75deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.82; }
+          100% { transform: translate(42px, 11px) rotate(11deg) scale(1); opacity: 0.82; }
+        }
+        @keyframes notaEntranceBack {
+          0%   { transform: translate(-1200px, -800px) rotate(-40deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.85; }
+          100% { transform: translate(-30px, 14px) rotate(-6deg) scale(1); opacity: 0.85; }
+        }
+        @keyframes notaEntranceSide {
+          0%   { transform: translate(1100px, -1100px) rotate(65deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 0.90; }
+          100% { transform: translate(35px, -11px) rotate(7deg) scale(1); opacity: 0.90; }
+        }
+        @keyframes notaEntranceFront {
+          0%   { transform: translate(-200px, -1200px) rotate(-25deg) scale(0.7); opacity: 0; }
+          40%  { opacity: 1; }
+          100% { transform: translate(0, 0) rotate(2deg) scale(1); opacity: 1; }
+        }
+
+        /* Flutuação individualizada — respira em torno da posição de leque */
+
+        @keyframes notaFloatGuardian {
+          0%, 100% { transform: translate(-46px, -5px)  rotate(-14deg); }
+          50%      { transform: translate(-46px, -11px) rotate(-14deg); }
+        }
+        @keyframes notaFloatBackBack {
+          0%, 100% { transform: translate(42px, 11px) rotate(11deg); }
+          50%      { transform: translate(42px, 5px)  rotate(11deg); }
+        }
+        @keyframes notaFloatBack {
+          0%, 100% { transform: translate(-30px, 14px) rotate(-6deg); }
+          50%      { transform: translate(-30px, 8px) rotate(-6deg); }
+        }
+        @keyframes notaFloatSide {
+          0%, 100% { transform: translate(35px, -11px) rotate(7deg); }
+          50%      { transform: translate(35px, -17px) rotate(7deg); }
+        }
+        @keyframes notaFloatFront {
+          0%, 100% { transform: translate(0, 0)  rotate(2deg); }
+          50%      { transform: translate(0, -5px) rotate(2deg); }
+        }
+
+        /* DESTAQUE: cédula em foco brilha e cresce sutilmente */
+        .nota-featured {
+          filter: drop-shadow(0 20px 40px rgba(29, 178, 74, 0.35)) brightness(1.05);
+          animation-play-state: running !important;
+          transform-origin: center center;
+          zoom: 1.08;
+        }
+        /* Fallback pra browsers sem 'zoom' (Firefox) */
+        @supports not (zoom: 1) {
+          .nota-featured {
+            outline: 2px solid rgba(29, 178, 74, 0.4);
+            outline-offset: 4px;
+          }
+        }
+
+        /* Acessibilidade */
+        @media (prefers-reduced-motion: reduce) {
+          .nota-entrance-guardian,
+          .nota-entrance-backback,
+          .nota-entrance-back,
+          .nota-entrance-side,
+          .nota-entrance-front {
+            animation: none !important;
+          }
+          .nota-transition {
+            transition: none !important;
+          }
+          .nota-featured {
+            filter: none;
+            zoom: 1;
+            outline: none;
           }
         }
       `}</style>

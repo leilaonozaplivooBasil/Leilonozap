@@ -1,0 +1,66 @@
+{
+  "name": "AuctionMessage",
+  "type": "object",
+  "properties": {
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o"
+    },
+    "sender_id": {
+      "type": "string",
+      "description": "ID \u00fanico do usu\u00e1rio que enviou a mensagem (se aplic\u00e1vel)"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "bid",
+        "ai_narration",
+        "countdown",
+        "winner_announcement",
+        "start",
+        "reminder"
+      ],
+      "description": "Tipo da mensagem"
+    },
+    "content": {
+      "type": "string",
+      "description": "Conte\u00fado da mensagem"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Nome do remetente (para lances) ou 'IA NoZap' para narra\u00e7\u00f5es"
+    },
+    "bid_amount": {
+      "type": "number",
+      "description": "Valor do lance (se aplic\u00e1vel)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Momento da mensagem"
+    },
+    "is_system_message": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 mensagem do sistema/IA"
+    },
+    "countdown_phase": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "description": "Fase do martelo: 1=primeira, 2=segunda, 3=terceira"
+    }
+  },
+  "required": [
+    "auction_id",
+    "message_type",
+    "content"
+  ],
+  "rls": {
+    "read": null,
+    "write": null
+  }
+}

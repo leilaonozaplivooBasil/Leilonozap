@@ -1,0 +1,46 @@
+{
+  "name": "UserPreference",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "preferred_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categorias de interesse"
+    },
+    "price_range_min": {
+      "type": "number",
+      "description": "Faixa de pre\u00e7o m\u00ednima"
+    },
+    "price_range_max": {
+      "type": "number",
+      "description": "Faixa de pre\u00e7o m\u00e1xima"
+    },
+    "preferred_source": {
+      "type": "string",
+      "enum": [
+        "all",
+        "factory_new",
+        "return_resale"
+      ],
+      "default": "all",
+      "description": "Prefer\u00eancia de origem do produto"
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

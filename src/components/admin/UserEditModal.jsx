@@ -41,13 +41,18 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             setUserData({ ...user });
             
             // Carregar níveis de carreira
-            const userLevels = Array.isArray(user.career_levels) 
+            const validLevelIds = CAREER_LEVELS.map(l => l.id);
+            const rawLevels = Array.isArray(user.career_levels) 
                 ? user.career_levels 
                 : (user.career_levels ? [user.career_levels] : ['usuario']);
-            setSelectedLevels(userLevels);
+            const userLevels = rawLevels.filter(l => validLevelIds.includes(l));
+            setSelectedLevels(userLevels.length > 0 ? userLevels : ['usuario']);
             
-            // Carregar nível principal
-            setPrimaryLevel(user.primary_career_level || userLevels[0] || 'usuario');
+            // Carregar nível principal — só aceita IDs que existem no CAREER_LEVELS
+            const validPrimary = user.primary_career_level && validLevelIds.includes(user.primary_career_level)
+                ? user.primary_career_level
+                : (userLevels[0] || 'usuario');
+            setPrimaryLevel(validPrimary);
             
             // Carregar nomes para exibição
             const nameParts = user.full_name.split(' ').filter(part => part.trim() !== '');
@@ -149,23 +154,34 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 setIsSaving(false);
                 return;
             }
-            // Admin que está executando a edição (guard server-side da API service_role)
+            // Admin que está executando a edição
             let actorId = null;
             try { actorId = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { actorId = null; }
 
+            // Verifica se o ator é admin (leitura direta via Supabase — AppUser tem RLS null)
+            if (!actorId) {
+                throw new Error('Sessão expirada. Faça login novamente como admin.');
+            }
+            const actorRows = await AppUser.filter({ id: actorId });
+            const actor = actorRows && actorRows[0];
+            if (!actor || !['admin', 'super_admin'].includes(actor.role)) {
+                throw new Error('Apenas admin pode editar usuários.');
+            }
+
+            // Se mudou indicador, limpa o indicador antigo do usuário que apontava para este
             if (newReferrerId) {
                 const refUser = (Array.isArray(allUsers) ? allUsers : []).find(u => u.id === newReferrerId);
                 if (refUser && refUser.referred_by_id === user.id) {
-                    await base44.functions.invoke('adminUpdateUser', { userId: refUser.id, updates: { referred_by_id: null }, actorId });
+                    await AppUser.update(refUser.id, { referred_by_id: '' });
                 }
             }
+
             const updatePayload = {
                 full_name: userData.full_name,
-                nickname: userData.nickname || null,
+                nickname: userData.nickname || '',
                 email: userData.email,
-                phone: userData.phone || null,
+                phone: userData.phone || '',
                 role: userData.role,
-                referred_by_id: newReferrerId,
                 career_levels: selectedLevels,
                 primary_career_level: primaryLevel,
                 display_first_name: displayFirstName.trim() || null,
@@ -174,14 +190,17 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 // Carteira do Sócio Executivo (1% sobre a própria estrutura)
                 ...buildExecutiveUpdate(executiveOwnerId || null, { pinned: executivePinned }),
             };
-
-            // Salva via service_role (RLS impede escrita pela anon key — sem isso o save é no-op silencioso)
-            const result = await base44.functions.invoke('adminUpdateUser', { userId: user.id, updates: updatePayload, actorId });
-            if (!result || result.success !== true) {
-                throw new Error(result?.error || 'Não foi possível salvar. Verifique se você está logado como admin.');
+            if (newReferrerId) {
+                updatePayload.referred_by_id = newReferrerId;
             }
-            // Confirma que o banco realmente gravou o que mandamos
-            if (result.user && result.user.primary_career_level !== primaryLevel) {
+
+            // Update direto via Supabase (AppUser tem RLS null — funciona com anon key)
+            await AppUser.update(user.id, updatePayload);
+
+            // Confirma relendo o registro do banco (o retorno do update pode vir incompleto)
+            const confirmRows = await AppUser.filter({ id: user.id });
+            const confirmed = confirmRows && confirmRows[0];
+            if (!confirmed || confirmed.primary_career_level !== primaryLevel) {
                 throw new Error('O servidor não confirmou a alteração da função principal. Tente novamente.');
             }
 

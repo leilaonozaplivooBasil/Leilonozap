@@ -148,7 +148,7 @@ export default function TreeHierarchy({
       const main = roots.find((r) => r.children.length);
       if (main) setExpanded(new Set([main.id]));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [roots.length]);
 
   /* ------------------------------------------------------------------ */
@@ -278,7 +278,7 @@ export default function TreeHierarchy({
   useEffect(() => {
     const t = setTimeout(() => fitToView(), 90);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [fullHeight, mode]);
 
   const zoomBy = useCallback((factor, origin) => {

@@ -1,0 +1,63 @@
+{
+  "name": "LuxuryAuction",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo do item de luxo"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada"
+    },
+    "image_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Imagens do item"
+    },
+    "price": {
+      "type": "number",
+      "description": "Pre\u00e7o base (R$)"
+    },
+    "starting_price": {
+      "type": "number",
+      "description": "Pre\u00e7o inicial do leil\u00e3o (R$)"
+    },
+    "increment": {
+      "type": "number",
+      "description": "Incremento m\u00ednimo por lance (R$)"
+    },
+    "buy_now_price": {
+      "type": "number",
+      "description": "Pre\u00e7o de Compra R\u00e1pida (R$)"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora de t\u00e9rmino do leil\u00e3o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "hidden"
+      ],
+      "default": "active",
+      "description": "Visibilidade"
+    }
+  },
+  "required": [
+    "title",
+    "price"
+  ],
+  "rls": {
+    "read": null,
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

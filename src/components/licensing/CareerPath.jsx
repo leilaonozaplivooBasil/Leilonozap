@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Briefcase, ArrowUp, Users, Gem, Megaphone, Store, MapPin, Building2 } from 'lucide-react';
+import { Award, BookOpen, Briefcase, Star, ArrowUp, Users, Crown, Gem, Trophy, Megaphone, Store, MapPin, Building2, ShieldCheck, Landmark } from 'lucide-react';
 import { cn } from "@/lib/utils"
 
 // Comissão de VENDA DIRETA por cargo (plano de carreira atual — bloco rede).
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 const rolePercentages = {
   influenciador: 5,
   vendedor: 10,
-  licenciado: 13,
+  licenciado_catalogo: 13,
   parceiro: 15,
   ponto_retirada: 16,
   loja_fisica: 19,
@@ -58,7 +58,25 @@ const directorSteps = [
 ];
 
 const careerSteps = [
-  // Topo → Base (hierarquia de rede atual)
+  // Topo → Base (hierarquia de rede atual + escada de convite acima do Distribuidor)
+  { id: 'fundador', title: 'Fundador', icon: Trophy,
+    achievedDescription: '🏆 Fundador da Leilão NoZap.',
+    lockedDescription: 'Convites abertos apenas até o lançamento oficial da Leilão NoZap, em dezembro de 2026 (pré-lançamento). Após essa data, não haverá mais novos Fundadores.' },
+  { id: 'conselheiro', title: 'Conselheiro', icon: Star,
+    achievedDescription: '⭐ Conselheiro da Leilão NoZap.',
+    lockedDescription: 'Convite exclusivo para se tornar Conselheiro.' },
+  { id: 'ceo', title: 'CEO', icon: Crown,
+    achievedDescription: '👑 CEO liderando a expansão da Leilão NoZap.',
+    lockedDescription: 'Convidado para se tornar CEO e liderar a expansão da Leilão NoZap em novos estados.' },
+  { id: 'diretoria', title: 'Diretoria Executiva', icon: Landmark,
+    achievedDescription: '🏛️ Membro da Diretoria Executiva.',
+    lockedDescription: 'Convidado para integrar a Diretoria Executiva e participar das decisões estratégicas do negócio.' },
+  { id: 'diretor', title: 'Diretor Operacional', icon: ShieldCheck,
+    achievedDescription: '🛡️ Diretor Operacional.',
+    lockedDescription: 'Convidado para assumir uma posição na Diretoria Operacional.' },
+  { id: 'socio', title: 'Sócio Executivo', icon: BookOpen,
+    achievedDescription: '📖 Sócio: 1% sobre todo o seu sistema de alavancagem.',
+    lockedDescription: 'Convidado para participar da mentoria X-OS (nossa Academia de Desenvolvimento). Ao concluir, torna-se Sócio e ganha 1% sobre todo o seu sistema de alavancagem — ex: se um Distribuidor da sua rede vender R$ 10 milhões, você ganha 1% sobre esse total.' },
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
     achievedDescription: '💎 Topo da rede. Estoque próprio, sobe produtos e recebe 20% na venda direta.',
     lockedDescription: 'Adesão R$ 4.000.000 (100% em produto). 20% na venda direta + topo da rede.' },
@@ -71,7 +89,7 @@ const careerSteps = [
   { id: 'parceiro', title: 'Parceiro', icon: Store,
     achievedDescription: '🤝 Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
     lockedDescription: 'Adesão R$ 20.000 (100% em produto). 15% na venda direta.' },
-  { id: 'licenciado', title: 'Licenciado', icon: Briefcase,
+  { id: 'licenciado_catalogo', title: 'Licenciado', icon: Briefcase,
     achievedDescription: '📚 Licenciado. 13% na venda direta pelo seu link.',
     lockedDescription: 'Adesão R$ 5.000 (100% em produto). 13% na venda direta.' },
   { id: 'vendedor', title: 'Vendedor', icon: Award,

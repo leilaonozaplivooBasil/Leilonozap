@@ -1,0 +1,147 @@
+{
+  "name": "AsaasPayment",
+  "type": "object",
+  "properties": {
+    "payment_id": {
+      "type": "string",
+      "description": "ID do pagamento no ASAAS"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "ID do cliente no ASAAS"
+    },
+    "billing_type": {
+      "type": "string",
+      "enum": [
+        "PIX",
+        "BOLETO",
+        "CREDIT_CARD"
+      ],
+      "description": "Tipo de cobran\u00e7a"
+    },
+    "value": {
+      "type": "number",
+      "description": "Valor da cobran\u00e7a"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "received",
+        "failed",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Status do pagamento"
+    },
+    "external_reference": {
+      "type": "string",
+      "description": "Refer\u00eancia interna (catalog_sale_id ou auction_id)"
+    },
+    "catalog_sale_id": {
+      "type": "string",
+      "description": "ID da venda do cat\u00e1logo (pode conter m\u00faltiplos IDs separados por v\u00edrgula)"
+    },
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o"
+    },
+    "wallet_deposit_user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio para dep\u00f3sito de carteira"
+    },
+    "is_wallet_deposit": {
+      "type": "boolean",
+      "default": false,
+      "description": "True se \u00e9 um dep\u00f3sito de carteira (inclui dep\u00f3sito de capital de investidor)"
+    },
+    "is_investor_capital": {
+      "type": "boolean",
+      "default": false,
+      "description": "True se \u00e9 um dep\u00f3sito de capital de investidor para lote de investimento"
+    },
+    "partner_plan_code": {
+      "type": "string",
+      "description": "C\u00f3digo do plano de parceiro (se for ativa\u00e7\u00e3o de plano)"
+    },
+    "partner_licensee_id": {
+      "type": "string",
+      "description": "ID do licenciado/parceiro (se for ativa\u00e7\u00e3o de plano)"
+    },
+    "buyer_id": {
+      "type": "string",
+      "description": "ID do comprador"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Nome do comprador"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Email do comprador"
+    },
+    "buyer_cpf": {
+      "type": "string",
+      "description": "CPF do comprador"
+    },
+    "pix_qr_code": {
+      "type": "string",
+      "description": "QR Code PIX (base64 ou URL)"
+    },
+    "pix_payload": {
+      "type": "string",
+      "description": "Payload PIX (copia e cola)"
+    },
+    "boleto_url": {
+      "type": "string",
+      "description": "URL do boleto"
+    },
+    "invoice_url": {
+      "type": "string",
+      "description": "URL da fatura ASAAS"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de confirma\u00e7\u00e3o do pagamento"
+    },
+    "webhook_event_id": {
+      "type": "string",
+      "description": "ID do evento de webhook (para idempot\u00eancia)"
+    }
+  },
+  "required": [
+    "payment_id",
+    "billing_type",
+    "value",
+    "external_reference"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "buyer_id": "{{user.id}}"
+        },
+        {
+          "wallet_deposit_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

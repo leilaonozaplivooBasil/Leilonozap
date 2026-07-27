@@ -1,0 +1,144 @@
+{
+  "name": "CatalogSale",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto vendido"
+    },
+    "product_title": {
+      "type": "string",
+      "description": "T\u00edtulo do produto"
+    },
+    "product_image": {
+      "type": "string",
+      "description": "URL da imagem do produto"
+    },
+    "sale_price": {
+      "type": "number",
+      "description": "Pre\u00e7o de venda unit\u00e1rio"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Quantidade vendida"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Valor total da venda"
+    },
+    "buyer_id": {
+      "type": "string",
+      "description": "ID do comprador"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Nome do comprador"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Email do comprador"
+    },
+    "buyer_phone": {
+      "type": "string",
+      "description": "Telefone do comprador"
+    },
+    "licensee_id": {
+      "type": "string",
+      "description": "ID do licenciado que indicou (ou 'site_official')"
+    },
+    "licensee_name": {
+      "type": "string",
+      "description": "Nome do licenciado"
+    },
+    "licensee_plan": {
+      "type": "string",
+      "description": "Plano de carreira do licenciado"
+    },
+    "referred_by_code": {
+      "type": "string",
+      "description": "C\u00f3digo de indica\u00e7\u00e3o usado"
+    },
+    "referral_code": {
+      "type": "string",
+      "description": "C\u00f3digo de refer\u00eancia"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Nome do lojista respons\u00e1vel pela venda"
+    },
+    "seller_id": {
+      "type": "string",
+      "description": "ID do lojista respons\u00e1vel (Store)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_payment",
+        "paid",
+        "shipped",
+        "delivered",
+        "canceled"
+      ],
+      "default": "pending_payment",
+      "description": "Status da venda"
+    },
+    "payment_confirmed_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de confirma\u00e7\u00e3o do pagamento"
+    },
+    "asaas_payment_id": {
+      "type": "string",
+      "description": "ID do pagamento ASAAS vinculado"
+    },
+    "tracking_code": {
+      "type": "string",
+      "description": "C\u00f3digo de rastreio"
+    },
+    "shipped_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de envio"
+    },
+    "delivered_date": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de entrega"
+    },
+    "commission_processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se as comiss\u00f5es j\u00e1 foram processadas"
+    },
+    "commission_amount": {
+      "type": "number",
+      "description": "Valor total de comiss\u00f5es distribu\u00eddas"
+    }
+  },
+  "required": [
+    "product_id",
+    "sale_price",
+    "total_amount",
+    "buyer_id",
+    "licensee_id"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "buyer_id": "{{user.id}}"
+        },
+        {
+          "licensee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": null
+  }
+}

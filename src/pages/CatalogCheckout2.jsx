@@ -171,7 +171,7 @@ export default function CatalogCheckout2() {
             return;
         }
 
-        // eslint-disable-next-line no-unreachable
+         
         let sale = null;
         try {
             const savedUserJSON = localStorage.getItem('currentUser');

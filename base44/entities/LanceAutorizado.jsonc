@@ -1,0 +1,111 @@
+{
+  "name": "LanceAutorizado",
+  "type": "object",
+  "properties": {
+    "investidor_id": {
+      "type": "string",
+      "description": "ID do investidor que autorizou"
+    },
+    "investidor_email": {
+      "type": "string",
+      "description": "Email do investidor"
+    },
+    "investidor_nome": {
+      "type": "string",
+      "description": "Nome do investidor"
+    },
+    "auction_id": {
+      "type": "string",
+      "description": "ID do lote/leil\u00e3o"
+    },
+    "auction_title": {
+      "type": "string",
+      "description": "T\u00edtulo do lote"
+    },
+    "modelo": {
+      "type": "string",
+      "enum": [
+        "individual",
+        "compartilhado"
+      ],
+      "description": "Modelo de investimento: individual (A) ou compartilhado (B)"
+    },
+    "valor_maximo_autorizado": {
+      "type": "number",
+      "description": "Valor m\u00e1ximo que o investidor autoriza para este lote (capital bruto)"
+    },
+    "percentual_compartilhado": {
+      "type": "number",
+      "description": "Percentual de equity (se modelo compartilhado)"
+    },
+    "taxa_operacao_percentual": {
+      "type": "number",
+      "default": 10,
+      "description": "Percentual da taxa de opera\u00e7\u00e3o cobrada no momento da autoriza\u00e7\u00e3o (fixo: 10%)"
+    },
+    "valor_taxa_operacao": {
+      "type": "number",
+      "description": "Valor em R$ da taxa de opera\u00e7\u00e3o calculada no momento da autoriza\u00e7\u00e3o"
+    },
+    "valor_capital_liquido": {
+      "type": "number",
+      "description": "Valor do capital l\u00edquido (sem a taxa) que o investidor est\u00e1 aportando"
+    },
+    "deposito_confirmado": {
+      "type": "number",
+      "description": "Valor total efetivamente a depositar (capital l\u00edquido + taxa de opera\u00e7\u00e3o)"
+    },
+    "status_autorizacao": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "confirmada",
+        "cancelada",
+        "concluida"
+      ],
+      "default": "confirmada",
+      "description": "Status da autoriza\u00e7\u00e3o"
+    },
+    "data_autorizacao": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data e hora da autoriza\u00e7\u00e3o"
+    },
+    "data_conclusao": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data e hora da conclus\u00e3o (quando lote foi vendido)"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Anota\u00e7\u00f5es do admin ou sistema"
+    }
+  },
+  "required": [
+    "investidor_id",
+    "investidor_email",
+    "auction_id",
+    "modelo",
+    "valor_maximo_autorizado",
+    "status_autorizacao"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "investidor_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

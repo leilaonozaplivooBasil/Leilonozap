@@ -1,0 +1,51 @@
+{
+  "name": "WebhookLog",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "Provedor do webhook (mercadopago, stripe, etc)"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Tipo de evento (order, payment, etc)"
+    },
+    "resource_id": {
+      "type": "string",
+      "description": "ID do recurso notificado"
+    },
+    "headers": {
+      "type": "object",
+      "description": "Headers HTTP recebidos"
+    },
+    "body": {
+      "type": "object",
+      "description": "Body JSON recebido"
+    },
+    "signature_valid": {
+      "type": "boolean",
+      "description": "Se a assinatura foi validada"
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se foi processado com sucesso"
+    },
+    "error": {
+      "type": "string",
+      "description": "Erro durante processamento"
+    }
+  },
+  "required": [
+    "provider",
+    "event_type"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": null
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "FavoriteAuction",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que favoritou"
+    },
+    "auction_id": {
+      "type": "string",
+      "description": "ID do leil\u00e3o favoritado"
+    },
+    "context": {
+      "type": "string",
+      "enum": [
+        "nozap",
+        "sai_de_baixo"
+      ],
+      "default": "nozap",
+      "description": "Contexto onde foi favoritado: nozap (Leil\u00e3o NoZap) ou sai_de_baixo (Sai de Baixo Leil\u00f5es)"
+    }
+  },
+  "required": [
+    "user_id",
+    "auction_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
