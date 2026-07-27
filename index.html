@@ -53,6 +53,44 @@
 
     <!-- manifest: injetado automaticamente pelo vite-plugin-pwa (/manifest.json) -->
 
+    <!-- 🛟 RECUPERAÇÃO DE CACHE (27/07/2026) — o app instalado no celular abria em
+         branco. Causa: quem tinha um deploy antigo em cache pedia /assets/<hash-velho>.js;
+         a Vercel devolvia o index.html (200) em vez de 404, o navegador recusava o módulo
+         ("MIME type text/html") e a tela nunca montava. O service worker ainda guardava
+         esse HTML no lugar do script, então nem recarregar resolvia.
+         Aqui: ao primeiro erro de script/módulo, apaga service worker + caches e recarrega
+         UMA vez por sessão (a trava evita ficar em laço de recarga). -->
+    <script>
+      (function () {
+        var TRAVA = 'nz-recuperou-cache';
+        var recuperando = false;
+        function recuperar() {
+          if (recuperando) return;
+          try { if (sessionStorage.getItem(TRAVA)) return; sessionStorage.setItem(TRAVA, '1'); } catch (e) {}
+          recuperando = true;
+          var tarefas = [];
+          if (navigator.serviceWorker) {
+            tarefas.push(navigator.serviceWorker.getRegistrations()
+              .then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+              .catch(function () {}));
+          }
+          if (window.caches) {
+            tarefas.push(caches.keys()
+              .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+              .catch(function () {}));
+          }
+          Promise.all(tarefas).then(function () { location.reload(); });
+        }
+        window.addEventListener('error', function (e) {
+          var alvo = e && e.target;
+          if (alvo && (alvo.tagName === 'SCRIPT' || alvo.tagName === 'LINK')) recuperar();
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          var msg = String((e && e.reason && e.reason.message) || '');
+          if (/dynamically imported module|Importing a module script failed|MIME type/i.test(msg)) recuperar();
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
