@@ -12,6 +12,7 @@
 // IDEMPOTENTE: venda que já tem lançamento no ledger é pulada. Rodar duas vezes não duplica.
 
 import { computeTopPool } from '../_lib/topPool.js';
+import { bestSellingLevel, overridePct } from '../_lib/networkChain.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -52,9 +53,8 @@ function computeChain(sale, byId, levels, ov) {
   const out = [];
   for (let i = 0; i < chain.length && running < cap - 0.001; i++) {
     const { child, anc } = chain[i];
-    const pct = i === 0
-      ? Number(levels[anc.primary_career_level]?.venda_direta_pct || 0)
-      : Number((ov[anc.primary_career_level] || {})[child.primary_career_level] || 0);
+    // mesmo critério do motor ao vivo: melhor cargo da pessoa, não só o principal
+    const pct = i === 0 ? bestSellingLevel(anc, levels).pct : overridePct(ov, anc, child);
     let amount = round2((value * pct) / 100);
     if (running + amount > cap) amount = round2(cap - running);
     if (amount > 0.001) {

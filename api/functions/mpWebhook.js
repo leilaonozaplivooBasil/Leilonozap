@@ -2,6 +2,7 @@
 // (não confia no corpo), marca a venda como paga e PAGA as comissões pela cadeia (telescópio, teto 20%).
 // Idempotente: se a venda já está paga, não repaga.
 import { computeTopPool } from '../_lib/topPool.js';
+import { bestSellingLevel, overridePct } from '../_lib/networkChain.js';
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
@@ -85,7 +86,9 @@ async function payCommissions(sale) {
   const cap = 0.20 * value; let running = 0; let total = 0;
   for (let i = 0; i < chain.length && running < cap - 0.001; i++) {
     const { child, anc } = chain[i];
-    const pct = i === 0 ? (levels[anc.primary_career_level]?.venda_direta_pct || 0) : ((ov[anc.primary_career_level] || {})[child.primary_career_level] || 0);
+    // usa o MELHOR cargo da pessoa, não só o principal — quem tem cargo
+    // institucional como principal (Livoo Live, Embaixador…) recebia 0% aqui.
+    const pct = i === 0 ? bestSellingLevel(anc, levels).pct : overridePct(ov, anc, child);
     let amount = round2(value * pct / 100);
     if (running + amount > cap) amount = round2(cap - running);
     if (amount > 0.001) {
