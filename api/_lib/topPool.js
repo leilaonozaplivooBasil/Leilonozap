@@ -69,9 +69,21 @@ export function computeTopPool(value, users, anchorId) {
   for (const role of TOP_ROLES) {
     const donos = ativos.filter((u) => levelsOf(u).includes(role.level));
     if (!donos.length) continue;
+    donos.sort((a, b) => String(a.id).localeCompare(String(b.id))); // ordem estável
     const pctPorPessoa = role.pool ? role.pct / donos.length : role.pct;
-    for (const d of donos) {
-      const amount = round2((total * pctPorPessoa) / 100);
+
+    // Repartição em CENTAVOS. Dividir o pool e arredondar cada parte fazia a soma
+    // estourar o percentual: 1% de R$ 100 entre 8 conselheiros dá R$ 0,125 cada,
+    // que vira R$ 0,13 — R$ 1,04 no lugar de R$ 1,00. Aqui o bolo é fatiado por
+    // inteiro: cada um leva a parte cheia e os centavos que sobram vão, um a um,
+    // para os primeiros da lista. A soma fecha no percentual exato do plano.
+    const bolo = Math.round((total * role.pct) / 100 * 100); // centavos do cargo
+    const base = role.pool ? Math.floor(bolo / donos.length) : Math.round((total * role.pct) / 100 * 100);
+    const sobra = role.pool ? bolo - base * donos.length : 0;
+
+    for (let i = 0; i < donos.length; i++) {
+      const d = donos[i];
+      const amount = round2((base + (i < sobra ? 1 : 0)) / 100);
       if (amount > 0.001) {
         out.push({
           beneficiary_id: d.id,
