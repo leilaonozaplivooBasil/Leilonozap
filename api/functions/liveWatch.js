@@ -128,9 +128,14 @@ export default async function handler(req, res) {
       }
     }
 
+    // body.bruto → devolve o registro cru das vendas, para auditar campo a campo
+    // (qual loja foi gravada, se veio link de indicação, forma de pagamento…)
+    const bruto = body.bruto ? lista(vendas).slice(0, 6) : undefined;
+
     return res.status(200).json({
       ok: true,
       agora: new Date().toISOString(),
+      bruto,
       total_vendas_janela: lista(vendas).length,
       total_ledger_janela: lista(ledger).length,
       total_records_janela: lista(records).length,

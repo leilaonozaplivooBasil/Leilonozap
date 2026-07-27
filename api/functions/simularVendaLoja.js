@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     const busca = String(body.loja || '').trim();
 
     const users = lista(await (await sb(
-      'app_users?select=id,full_name,email,store_slug,store_name,career_levels,primary_career_level,referred_by_id,active&limit=5000'
+      'app_users?select=id,full_name,email,store_slug,store_name,career_levels,primary_career_level,referred_by_id,active,licenciado_context&limit=5000'
     )).json());
     // o motor real só considera contas ativas
     const ativos = users.filter((u) => u.active !== false);

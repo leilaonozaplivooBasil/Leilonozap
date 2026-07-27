@@ -63,6 +63,22 @@ const ALIAS = {
   diretoria_executiva: ['diretoria_executiva', 'diretoria'],
   diretoria_operacao: ['diretoria_operacao', 'diretor'],
 };
+// Carteira executiva: qual Sócio Executivo é dono da estrutura desta pessoa. Fica na
+// coluna dedicada quando ela existir, ou dentro de licenciado_context (JSON livre)
+// enquanto a migration não roda. É o que o painel da rede grava ao trocar a estrutura.
+const lerCarteiraExecutiva = (u) => {
+  if (!u) return null;
+  if (u.executive_owner_id) return u.executive_owner_id;
+  const ctx = u.licenciado_context;
+  if (!ctx) return null;
+  try {
+    const p = typeof ctx === 'string' ? JSON.parse(ctx) : ctx;
+    return p?.executive_owner_id || null;
+  } catch {
+    return null;
+  }
+};
+
 const temCargo = (u, cargo) => {
   const meus = Array.isArray(u?.career_levels) ? u.career_levels : [];
   return (ALIAS[cargo] || [cargo]).some((c) => meus.includes(c));
@@ -124,14 +140,27 @@ export function calcularComissao(sale, users) {
   //    mesmo na venda orgânica (sem cadeia), porque ganham pelo CARGO, não por indicação.
   for (const p of POOLS) pagarPool(p.id, p.pct, 'governanca');
 
-  // Executivo (1%): pela árvore, ganha "exclusivamente sobre a PRÓPRIA estrutura" → se houver um
-  // executivo na cadeia da venda, é dele. Sem cadeia (venda orgânica), entra no topo como pool.
-  const exec = chain.find((u) => temCargo(u, 'executivo'));
+  // Executivo (1%): ganha "exclusivamente sobre a PRÓPRIA estrutura". NUNCA é pool —
+  // ordem do Gabriel em 27/07/2026, depois de o rateio ter dividido o 1% entre Ribeiro
+  // e Luiz numa venda da estrutura do Ribeiro. Ordem de busca:
+  //   1º executivo na cadeia da venda (o mais próximo do cliente manda);
+  //   2º a carteira executiva de quem está na cadeia (executive_owner, definido no
+  //      painel da rede) — cobre a venda cuja cadeia não tem executivo, mas pertence
+  //      à estrutura de um;
+  //   3º ninguém → a fatia fica com a EMPRESA. Não se divide entre executivos.
+  let exec = chain.find((u) => temCargo(u, 'executivo'));
+  if (!exec) {
+    for (const u of chain) {
+      const donoId = lerCarteiraExecutiva(u);
+      const dono = donoId ? byId.get(donoId) : null;
+      if (dono && temCargo(dono, 'executivo')) { exec = dono; break; }
+    }
+  }
   if (exec) {
     // fatia individual: centavos inteiros (o resíduo do arredondamento sobra pra empresa, sem sumir)
     assignments.push({ role: 'executivo', user_id: exec.id, user_name: exec.full_name, percent: PCT_EXECUTIVO, amount: Math.round(valor * PCT_EXECUTIVO) / 100, tipo: 'estrutura' });
   } else {
-    pagarPool('executivo', PCT_EXECUTIVO, 'estrutura');
+    companyPercent += PCT_EXECUTIVO;
   }
 
   // 2) OPERAÇÃO + COMERCIAL (20%) — só pela CADEIA daquela venda.

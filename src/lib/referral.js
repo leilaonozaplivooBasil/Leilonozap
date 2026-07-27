@@ -56,6 +56,24 @@ export function getReferral() {
     const l = localStorage.getItem(LEGACY_KEY);
     if (l) return String(l);
   } catch { /* ignora */ }
+
+  // ÚLTIMO RECURSO: o código ainda está na barra de endereço, mas não chegou ao
+  // storage. Acontece de verdade — 27/07/2026, uma compra de R$ 101,98 foi paga com
+  // ref_code vazio e a comissão da linha inteira caiu para a empresa. Basta o link
+  // abrir no navegador do WhatsApp e a compra terminar no app instalado (storage
+  // separado), ou o modo privado recusar a escrita. Ler a URL aqui cobre todos os
+  // pontos de checkout de uma vez, porque todos passam por esta função.
+  try {
+    const daUrl = new URLSearchParams(window.location.search).get('ref');
+    if (daUrl) {
+      const clean = String(daUrl).trim();
+      if (clean) {
+        saveReferral(clean); // grava para os próximos passos do checkout
+        return clean;
+      }
+    }
+  } catch { /* sem window (SSR) ou URL estranha */ }
+
   return '';
 }
 

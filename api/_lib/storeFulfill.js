@@ -29,7 +29,7 @@ async function payStoreCommissions(sale) {
   if (Array.isArray(jaTem) && jaTem.length) return 0;
 
   // active=neq.false → conta desativada (ex.: duplicata) NÃO entra nos pools
-  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id&active=neq.false&limit=2000')).json();
+  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id,licenciado_context&active=neq.false&limit=2000')).json();
   if (!Array.isArray(users) || !users.length) return 0;
   const { assignments, companyPercent, companyAmount } = calcularComissao(sale, users);
 
