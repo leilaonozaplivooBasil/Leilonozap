@@ -777,6 +777,53 @@ export default function NetworkOverview() {
     await loadAudit();
   }, [allUsers, saveUserFields, fetchData, loadAudit]);
 
+  // Normaliza a cascata: todo descendente passa a pertencer ao executivo da raiz
+  // da estrutura dele. Corrige vínculos antigos feitos antes da cascata existir.
+  const normalizarCascata = useCallback(async () => {
+    const byId = new Map(allUsers.map(u => [u.id, u]));
+    const correcoes = [];
+
+    for (const u of activeUsers) {
+      const proprio = readExecutiveOwner(u);
+      if (proprio.pinned) continue; // escolha fixada não é arrastada
+
+      // sobe a linha até achar quem tem executivo definido (a raiz da estrutura)
+      const visto = new Set([u.id]);
+      let cur = u.referred_by_id ? byId.get(u.referred_by_id) : null;
+      let executivoDaRaiz = null;
+      while (cur && !visto.has(cur.id)) {
+        visto.add(cur.id);
+        const dono = readExecutiveOwner(cur);
+        if (dono.id) { executivoDaRaiz = dono.id; break; }
+        cur = cur.referred_by_id ? byId.get(cur.referred_by_id) : null;
+      }
+
+      if (executivoDaRaiz && proprio.id !== executivoDaRaiz) {
+        correcoes.push({ user: u, de: proprio.id, para: executivoDaRaiz });
+      }
+    }
+
+    if (!correcoes.length) {
+      toast.success('Nada a corrigir — toda estrutura já segue o executivo da raiz.');
+      return;
+    }
+    if (!window.confirm(
+      `Corrigir ${correcoes.length} cadastro(s) para o executivo da estrutura acima deles?`
+    )) return;
+
+    toast.info(`Aplicando cascata em ${correcoes.length} cadastro(s)…`);
+    let ok = 0;
+    for (const c of correcoes) {
+      try {
+        await saveUserFields(c.user.id, buildExecutiveUpdate(c.para, { pinned: false }));
+        ok += 1;
+      } catch { /* segue */ }
+    }
+    toast[ok === correcoes.length ? 'success' : 'warning'](`${ok} de ${correcoes.length} corrigidos.`);
+    await fetchData();
+    await loadAudit();
+  }, [allUsers, activeUsers, saveUserFields, fetchData, loadAudit]);
+
   const handlePromote = (user) => {
     setPromotingUser(user);
     const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
@@ -1173,9 +1220,42 @@ export default function NetworkOverview() {
     setEditingUserFull(user);
   };
 
-  const handleSaveEditUser = async () => {
+  const handleSaveEditUser = async (salvo) => {
+    const anterior = editingUserFull;
     setEditingUserFull(null);
+
+    // CASCATA — regra validada: definir o executivo de uma estrutura vale para
+    // TODA a estrutura, não só para o nó escolhido. Antes isso só acontecia quando
+    // a troca era feita pela linha da carteira; pelo modal ficava só na pessoa e os
+    // filhos continuavam no executivo antigo (Iara, Diana, Ponto de Retirada e
+    // Elenice ficaram no Luiz quando o Bangu foi para o Ribeiro).
+    try {
+      const antes = readExecutiveOwner(anterior || {});
+      const agora = readExecutiveOwner(salvo || {});
+      if (agora.id && agora.id !== antes.id && anterior?.id) {
+        const equipe = descendantsOf(anterior.id, allUsers).filter(u => !readExecutiveOwner(u).pinned);
+        let n = 0;
+        for (const membro of equipe) {
+          try {
+            await saveUserFields(membro.id, buildExecutiveUpdate(agora.id, { pinned: false }));
+            n += 1;
+          } catch { /* segue e reporta no fim */ }
+        }
+        if (n) {
+          const nome = allUsers.find(u => u.id === agora.id)?.full_name || 'executivo';
+          const pulados = descendantsOf(anterior.id, allUsers).length - n;
+          toast.success(
+            `Estrutura inteira movida para ${nome}: ${n} cadastro(s)` +
+            (pulados > 0 ? ` · ${pulados} com escolha fixada não foram alterados` : '')
+          );
+        }
+      }
+    } catch (e) {
+      toast.error('Alteração salva, mas a cascata falhou: ' + (e?.message || 'erro'));
+    }
+
     await fetchData();
+    await loadAudit();
     toast.success("Usuário atualizado com sucesso!");
   };
 
@@ -1721,6 +1801,17 @@ export default function NetworkOverview() {
                     <span className="text-[11px] text-gray-500">
                       o Sócio Executivo recebe 1% sobre a própria estrutura — cada licenciado precisa ter um dono definido
                     </span>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={normalizarCascata}
+                      className="h-7 px-2 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white"
+                      title="Faz cada descendente seguir o executivo da raiz da estrutura dele"
+                    >
+                      <Network className="w-3.5 h-3.5 mr-1.5" />
+                      Aplicar cascata em toda a rede
+                    </Button>
                   </div>
 
                   {structure.executives.length === 0 ? (
