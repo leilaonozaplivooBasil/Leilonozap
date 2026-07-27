@@ -1,9 +1,12 @@
 // bulkImportProducts — importa produtos em massa (planilha) pra Loja Virtual (service_role).
-// Guard: ator admin/super_admin. Já publica na loja (catalog_active=true).
+// Guard: ator admin/super_admin.
+// REGRA (pilar do negócio): importação NUNCA publica direto nem carrega o preço do lote como preço de loja.
+// Produto entra INATIVO e SEM preço de venda; só aparece na loja depois de precificado 1 a 1 pelo motor real
+// (média de mercado − 20%) e validado. Preço não validado na base = comissão errada = fura o plano de carreira.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 const num = (v) => {
   if (v == null || v === '') return null;
   const n = Number(String(v).replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
@@ -24,7 +27,7 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
     const items = Array.isArray(body?.items) ? body.items : [];
-    const publish = body?.publish !== false;
+    // publish ignorado de propósito: importação SEMPRE entra inativa (regra acima).
     if (!actorId) return res.status(400).json({ success: false, error: 'actorId obrigatório' });
     if (!items.length) return res.status(400).json({ success: false, error: 'Nenhum produto na planilha' });
     if (items.length > 2000) return res.status(400).json({ success: false, error: 'Limite de 2000 por importação' });
@@ -51,16 +54,17 @@ export default async function handler(req, res) {
       rows.push({
         id, base44_id: id,
         description: name.slice(0, 500),
-        price_catalog: price,
-        selling_price_retail: price,
-        cost_price: cost,
-        market_value: compare,
+        // SEM preço de loja no import: só será precificado pelo motor real e validado 1 a 1.
+        price_catalog: null,
+        selling_price_retail: null,
+        cost_price: cost,               // custo da compra (planilha)
+        market_value: compare,          // referência da planilha (NÃO é o preço de venda)
         quantity: qty != null ? qty : 1,
         lot: it.sku ? String(it.sku) : null,
         image_urls: images,
         notes: it.notes ? String(it.notes).slice(0, 2000) : null,
-        catalog_active: !!publish,
-        status: 'ESTOQUE',
+        catalog_active: false,          // NUNCA publica direto — validar antes de aparecer na loja
+        status: 'A_PRECIFICAR',
         is_featured: false,
         created_date: now, updated_date: now,
       });

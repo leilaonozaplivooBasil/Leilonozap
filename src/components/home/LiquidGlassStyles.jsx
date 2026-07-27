@@ -38,19 +38,23 @@ export default function LiquidGlassStyles() {
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
 
-      /* Glass Hero — PERF: keep blur only on hero (single element) */
+      /* Glass Hero — PERF: keep blur only on hero (single element).
+         Translúcido de verdade: o banner atrás aparece através do vidro. */
       .glass-hero {
         background: linear-gradient(
           160deg,
-          rgba(16, 185, 129, 0.08) 0%,
-          rgba(17, 24, 39, 0.92) 30%,
-          rgba(17, 24, 39, 0.95) 60%,
-          rgba(16, 185, 129, 0.05) 100%
+          rgba(16, 185, 129, 0.10) 0%,
+          rgba(17, 24, 39, 0.55) 30%,
+          rgba(17, 24, 39, 0.62) 60%,
+          rgba(16, 185, 129, 0.07) 100%
         );
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(16, 185, 129, 0.15);
-        box-shadow: 0 16px 64px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(28px) saturate(150%);
+        -webkit-backdrop-filter: blur(28px) saturate(150%);
+        border: 1px solid rgba(134, 239, 172, 0.22);
+        box-shadow:
+          0 16px 64px rgba(0, 0, 0, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.04);
       }
 
       /* Glass Button — PERF: no backdrop-filter */
@@ -151,6 +155,26 @@ export default function LiquidGlassStyles() {
       @keyframes scroll {
         0% { transform: translateX(0); }
         100% { transform: translateX(-50%); }
+      }
+
+      /* Hero Actions Carousel — botões do hero correndo em loop contínuo */
+      .hero-actions-scroller {
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+      }
+      .hero-actions-scroller__inner {
+        display: flex;
+        gap: 12px;
+        width: fit-content;
+        animation: scroll 35s linear infinite;
+        will-change: transform;
+      }
+      .hero-actions-scroller:hover .hero-actions-scroller__inner {
+        animation-play-state: paused;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-actions-scroller__inner { animation: none; }
       }
 
       /* Fire Animation */

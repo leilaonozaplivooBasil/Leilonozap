@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { X, UploadCloud, FileSpreadsheet, AlertCircle, Trash2, CheckCircle2, Loader2, Percent } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
@@ -285,7 +286,7 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
 
             await Auction.create({
                 title: lote.nomeLote,
-                description: `Local de Retirada: ${lote.localColeta}\nTotal de Itens: ${lote.quantidadeTotal}\nValor de Mercado: R$ ${lote.valorMercadoTotal.toFixed(2)}`,
+                description: `Local de Retirada: ${lote.localColeta}\nTotal de Itens: ${lote.quantidadeTotal}\nValor de Mercado: R$ ${fmtBR(lote.valorMercadoTotal)}`,
                 starting_price: lote.valorMercadoTotal * 0.3,
                 current_price: lote.valorMercadoTotal * 0.3,
                 increment: 100,

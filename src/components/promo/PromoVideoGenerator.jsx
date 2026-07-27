@@ -1,10 +1,11 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
 import { Sparkles, Download, Loader2, Image as ImageIcon } from "lucide-react";
 
-const LOGO_URL = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+const LOGO_URL = "/brand/icon-3d.webp";
 
 export default function PromoVideoGenerator({ product }) {
   const [generatedImage, setGeneratedImage] = useState(null);
@@ -67,7 +68,7 @@ export default function PromoVideoGenerator({ product }) {
         ctx.font = `900 ${priceFontSize}px sans-serif`;
         ctx.fillStyle = "#25d366";
         ctx.textAlign = "left";
-        const priceText = `R$ ${price.toFixed(2)}`;
+        const priceText = `R$ ${fmtBR(price)}`;
         ctx.fillText(priceText, Math.round(W * 0.04), Math.round(topBarH * 0.75));
 
         // Preço riscado (se tiver desconto)
@@ -76,7 +77,7 @@ export default function PromoVideoGenerator({ product }) {
           ctx.font = `600 ${oldPriceFontSize}px sans-serif`;
           ctx.fillStyle = "rgba(255,255,255,0.4)";
           ctx.textAlign = "left";
-          const oldPriceText = `R$ ${marketPrice.toFixed(2)}`;
+          const oldPriceText = `R$ ${fmtBR(marketPrice)}`;
           const priceWidth = ctx.measureText(priceText).width;
           // Usar font de preço para medir
           ctx.font = `900 ${priceFontSize}px sans-serif`;
@@ -151,6 +152,11 @@ export default function PromoVideoGenerator({ product }) {
         existing_image_urls: product.image_urls?.[0] ? [product.image_urls[0]] : undefined,
       });
 
+      if (!result || result.ok === false || !result.url) {
+        setError(result?.needs_key ? '⚙️ A IA de imagem ainda não está conectada. Peça pra ativar a chave do AI Gateway.' : 'Não foi possível gerar a imagem. Tente novamente.');
+        setLoading(false);
+        return;
+      }
       setGeneratedImage(result.url);
       const final = await addOverlay(result.url);
       setCompositeImage(final);

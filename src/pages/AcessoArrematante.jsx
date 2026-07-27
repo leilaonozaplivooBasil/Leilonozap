@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { createPageUrl } from '@/utils';
 import bcrypt from 'bcryptjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,7 +64,7 @@ export default function AcessoArrematante() {
       // Auto-migra senha legada para bcrypt (não bloqueante)
       if (!isBcrypt) {
         const hashed = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-        AppUser.update(user.id, { password: hashed }).catch(() => {});
+        AppUser.update(user.id, { password: hashed }).catch((e) => console.warn('Falha ao migrar senha p/ bcrypt:', e?.message));
       }
 
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -172,7 +171,7 @@ export default function AcessoArrematante() {
         {/* Logo */}
         <div className="text-center mb-8">
           <img
-            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src="/brand/icon-3d.webp"
             alt="Leilão NoZap"
             className="h-16 w-auto mx-auto mb-4"
           />

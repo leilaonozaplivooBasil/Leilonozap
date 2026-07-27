@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
@@ -8,8 +9,23 @@ import {
   Package, User as UserIcon, Phone, CreditCard, Banknote, QrCode, Store, Truck
 } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const priceOf = (p) => Number(p.price_catalog || p.selling_price_retail || 0);
+// aceita "69,80", "69.80", "1.234,56", "6980" → número
+const parseBRL = (s) => {
+  if (typeof s === 'number') return s;
+  let t = String(s ?? '').trim().replace(/[^\d.,]/g, '');
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); // vírgula = separador decimal
+  const n = Number(t);
+  return Number.isFinite(n) ? n : 0;
+};
+const toText = (n) => (Number(n) || 0).toFixed(2).replace('.', ','); // 69.8 → "69,80"
+const CARGO_LABEL = {
+  distribuidor: 'Distribuidor', loja_fisica: 'Loja Física', ponto_retirada: 'Ponto de Retirada', parceiro: 'Parceiro',
+  licenciado: 'Licenciado', licenciado_catalogo: 'Licenciado Catálogo', licenciado_aplicativo: 'Licenciado App',
+  vendedor: 'Vendedor', influenciador: 'Influenciador', plano_lider: 'Líder', trainee: 'Trainee', usuario: 'Usuário',
+  fundador: 'Fundador', ceo: 'CEO', socio: 'Sócio',
+};
+const cargoLabel = (c) => CARGO_LABEL[c] || c || '—';
 
 export default function TirarPedido() {
   const navigate = useNavigate();
@@ -24,32 +40,53 @@ export default function TirarPedido() {
   const [processing, setProcessing] = useState(false);
   const [todayTotal, setTodayTotal] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
+  // 🧑‍💼 vincular a um vendedor (comissão) — opcional
+  const [sellers, setSellers] = useState([]);
+  const [sellerQuery, setSellerQuery] = useState('');
+  const [vendedor, setVendedor] = useState(null); // { id, full_name, primary_career_level }
+  const isStore = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
 
   useEffect(() => {
     let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
     setUser(u);
     loadToday(u);
+    // carrega quem pode vender por esse distribuidor: a rede + a cúpula (sócios/fundadores/CEO)
+    if (u?.id && !['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level)) {
+      supabase.rpc('vendedores_disponiveis', { _owner: u.id })
+        .then(({ data }) => setSellers(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    }
   }, []);
 
   const loadToday = async (u = user) => {
     if (!u?.id) return;
     const start = new Date(); start.setHours(0, 0, 0, 0);
-    const { data } = await supabase.from('catalog_sales').select('total_amount').eq('source', 'pdv').gte('created_at', start.toISOString());
+    const { data } = await supabase.from('catalog_sales').select('total_amount').eq('source', 'pdv').eq('seller_id', u.id).gte('created_at', start.toISOString());
     const list = data || [];
     setTodayCount(list.length);
     setTodayTotal(list.reduce((s, x) => s + (Number(x.total_amount) || 0), 0));
   };
 
   const doSearch = useCallback(async (q) => {
-    if (!q || q.trim().length < 2) { setResults([]); return; }
+    if (!q || q.trim().length < 1) { setResults([]); return; }
     setSearching(true);
     try {
-      const { data } = await supabase
-        .from('products')
-        .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
-        .or(`description.ilike.%${q}%,lot.ilike.%${q}%`)
-        .limit(20);
-      setResults(data || []);
+      const u = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; } })();
+      const isStore = u && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
+      if (isStore) {
+        // dono de loja vende do PRÓPRIO estoque (store_inventory)
+        const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q, lim: 20 });
+        setResults((data || []).filter((x) => x.ativo && Number(x.quantidade) > 0).map((x) => ({
+          id: x.product_id, description: x.descricao, price_catalog: x.preco, quantity: x.quantidade, lot: '', image_urls: x.imagem ? [x.imagem] : [],
+        })));
+      } else {
+        const { data } = await supabase
+          .from('products')
+          .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
+          .or(`description.ilike.%${q}%,lot.ilike.%${q}%`)
+          .limit(20);
+        setResults(data || []);
+      }
     } catch (e) { console.error(e); }
     setSearching(false);
   }, []);
@@ -63,15 +100,21 @@ export default function TirarPedido() {
     setCart((prev) => {
       const ex = prev.find((x) => x.id === p.id);
       if (ex) return prev.map((x) => (x.id === p.id ? { ...x, qty: x.qty + 1 } : x));
-      return [...prev, { id: p.id, description: p.description, price: priceOf(p), qty: 1, stock: Number(p.quantity) || 0 }];
+      return [...prev, { id: p.id, description: p.description, priceText: toText(priceOf(p)), qty: 1, stock: Number(p.quantity) || 0 }];
     });
     setTerm(''); setResults([]);
+    toast.success('Item adicionado. Pode buscar e adicionar mais.');
   };
   const setQty = (id, qty) => setCart((prev) => prev.map((x) => (x.id === id ? { ...x, qty: Math.max(1, qty) } : x)));
-  const setPrice = (id, price) => setCart((prev) => prev.map((x) => (x.id === id ? { ...x, price: Number(price) || 0 } : x)));
+  // mantém o texto cru (aceita vírgula) — só converte pra número no total/fechamento
+  const setPriceText = (id, raw) => setCart((prev) => prev.map((x) => (x.id === id ? { ...x, priceText: String(raw).replace(/[^\d.,]/g, '') } : x)));
   const remove = (id) => setCart((prev) => prev.filter((x) => x.id !== id));
 
-  const total = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const total = cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0);
+  const sellerOptions = sellers.filter((s) => {
+    const q = sellerQuery.trim().toLowerCase();
+    return !q || (s.full_name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q) || (s.primary_career_level || '').toLowerCase().includes(q);
+  });
 
   const finalize = async () => {
     if (!user?.id) { toast.error('Faça login.'); return; }
@@ -80,14 +123,15 @@ export default function TirarPedido() {
     try {
       const r = await base44.functions.invoke('createPdvOrder', {
         actorId: user.id,
-        items: cart.map((x) => ({ product_id: x.id, quantity: x.qty, price: x.price })),
+        items: cart.map((x) => ({ product_id: x.id, quantity: x.qty, price: parseBRL(x.priceText) })),
         customer: { name: customer.name, phone: customer.phone },
         payment_method: payment,
         delivered,
+        vendedor_id: vendedor?.id || null,
       });
       if (!r?.success) { toast.error(r?.error || 'Falha ao finalizar'); setProcessing(false); return; }
-      toast.success(`Pedido fechado! ${money(r.total)}`);
-      setCart([]); setCustomer({ name: '', phone: '' });
+      toast.success(`Pedido fechado! ${money(r.total)}${r.comissao ? ` · comissão ${money(r.comissao)}` : ''}`);
+      setCart([]); setCustomer({ name: '', phone: '' }); setVendedor(null); setSellerQuery('');
       loadToday();
     } catch (e) { toast.error('Erro ao finalizar'); }
     setProcessing(false);
@@ -156,6 +200,9 @@ export default function TirarPedido() {
               Busque um produto para começar o pedido.
             </div>
           )}
+          {!term && cart.length > 0 && (
+            <p className="text-[12px] text-green-400/80 flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> Busque acima pra adicionar <strong>mais itens</strong> no mesmo pedido.</p>
+          )}
         </div>
 
         {/* carrinho / fechamento */}
@@ -180,11 +227,49 @@ export default function TirarPedido() {
                     </div>
                     <div className="flex items-center gap-1 text-sm">
                       <span className="text-gray-500 text-xs">R$</span>
-                      <input value={x.price} onChange={(e) => setPrice(x.id, e.target.value.replace(',', '.'))} className="w-20 bg-gray-950 border border-gray-700 rounded px-2 py-1 text-right text-sm outline-none focus:border-green-500" />
+                      <input
+                        inputMode="decimal"
+                        value={x.priceText}
+                        onChange={(e) => setPriceText(x.id, e.target.value)}
+                        onBlur={(e) => setPriceText(x.id, toText(parseBRL(e.target.value)))}
+                        placeholder="0,00"
+                        className="w-24 bg-gray-950 border border-gray-700 rounded px-2 py-1 text-right text-sm outline-none focus:border-green-500"
+                      />
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* quem vendeu? (comissão) — só pro distribuidor/operador, não pra dono de loja */}
+          {!isStore && (
+            <div className="mb-3">
+              <label className="text-[11px] text-gray-400 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Quem vendeu? (comissão entra pra esse login) — opcional</label>
+              {vendedor ? (
+                <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
+                  <span className="text-sm text-green-200 truncate">{vendedor.full_name} <span className="text-[10px] text-green-400/70">· {cargoLabel(vendedor.primary_career_level)}</span></span>
+                  <button onClick={() => { setVendedor(null); setSellerQuery(''); }} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <div>
+                  <input value={sellerQuery} onChange={(e) => setSellerQuery(e.target.value)} placeholder="Filtrar por nome, e-mail ou cargo…" className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500 mb-1" />
+                  <div className="border border-gray-800 rounded-lg max-h-56 overflow-y-auto bg-gray-950/60">
+                    {sellerOptions.length === 0 ? (
+                      <div className="px-3 py-3 text-xs text-gray-500">{sellers.length ? 'Nenhum login encontrado.' : 'Carregando logins da rede…'}</div>
+                    ) : sellerOptions.map((s) => (
+                      <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 hover:bg-gray-800 text-sm border-b border-gray-800/60 last:border-0 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium flex items-center gap-1.5">{s.full_name || s.email}{s.cupula && <span className="text-[8px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold">CÚPULA</span>}</div>
+                          <div className="text-[10px] text-gray-500 truncate">{s.email}</div>
+                        </div>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded shrink-0 ${s.cupula ? 'bg-yellow-500/15 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>{cargoLabel(s.primary_career_level)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">{sellers.length} logins vinculados ao distribuidor · sem seleção, a venda fica na casa.</p>
+                </div>
+              )}
             </div>
           )}
 

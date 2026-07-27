@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, ImagePlus, Sparkles } from "lucide-react";
+import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, ImagePlus, Sparkles, DollarSign } from "lucide-react";
 
 export default function CreateLuxuryAuction() {
   const navigate = useNavigate();
@@ -133,7 +133,7 @@ export default function CreateLuxuryAuction() {
             Cadastrar Leilão
           </Button>
           <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
-            🔑 Gerenciar Acessos VIP
+            <Key className="w-4 h-4 mr-2" />Gerenciar Acessos VIP
           </Button>
           <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryBannerManagement"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             <ImagePlus className="w-4 h-4 mr-2" /> Adicionar Banner
@@ -168,7 +168,7 @@ export default function CreateLuxuryAuction() {
               </div>
               <div className="border border-emerald-800/40 bg-emerald-900/10 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-3">
-                  <span>💲</span>
+                  <DollarSign className="w-4 h-4" />
                   <span>Preços e Duração</span>
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">

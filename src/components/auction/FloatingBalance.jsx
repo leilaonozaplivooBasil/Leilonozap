@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { DollarSign } from 'lucide-react';
 
 export default function FloatingBalance({ balance }) {
@@ -31,7 +32,7 @@ export default function FloatingBalance({ balance }) {
               <DollarSign className="w-5 h-5" />
             </div>
           )}
-          <span className="amulet-balance">R$ {balance.toFixed(2)}</span>
+          <span className="amulet-balance">R$ {fmtBR(balance)}</span>
         </div>
       </div>
       <style>{`

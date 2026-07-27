@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -295,31 +296,30 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
       if (isMlUrl) {
         setAutoImportStatus('🛒 Importando do Mercado Livre...');
         const mlResponse = await base44.functions.invoke('extractMLImages', { productUrl: sourceUrl });
-        if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
-          setFormData(prev => ({ ...prev, image_urls: mlResponse.data.images.slice(0, 5) }));
-          setAutoImportStatus(`✅ ${mlResponse.data.images.length} imagens importadas do ML!`);
+        const mlImgs = mlResponse?.images || mlResponse?.data?.images || [];
+        if (mlImgs.length > 0) {
+          setFormData(prev => ({ ...prev, image_urls: mlImgs.slice(0, 5) }));
+          setAutoImportStatus(`✅ ${mlImgs.length} imagens importadas do ML!`);
           setTimeout(() => setAutoImportStatus(''), 3000);
           return;
         }
       }
 
-      // Fallback: Google Shopping
-      setAutoImportStatus('🔎 Buscando no Google Shopping...');
+      // Busca fotos (Bing Images)
+      setAutoImportStatus('🔎 Buscando fotos do produto...');
       const gsResponse = await base44.functions.invoke('extractGoogleShoppingImages', {
         productName: product.description
       });
-      const gsData = gsResponse?.data?.data;
-      if (gsData?.products?.length > 0) {
-        const imgs = gsData.products.slice(0, 5).map(p => p.imageUrl).filter(Boolean);
-        if (imgs.length > 0) {
-          setFormData(prev => ({ ...prev, image_urls: imgs }));
-          setAutoImportStatus(`✅ ${imgs.length} imagens importadas!`);
-          setTimeout(() => setAutoImportStatus(''), 3000);
-          return;
-        }
+      // adapter retorna JSON cru → { images: [...] }
+      const imgs = (gsResponse?.images || gsResponse?.data?.images || []).filter(Boolean).slice(0, 6);
+      if (imgs.length > 0) {
+        setFormData(prev => ({ ...prev, image_urls: imgs }));
+        setAutoImportStatus(`✅ ${imgs.length} fotos encontradas!`);
+        setTimeout(() => setAutoImportStatus(''), 3000);
+        return;
       }
 
-      setAutoImportStatus('⚠️ Não encontrei imagens automaticamente. Faça upload manual.');
+      setAutoImportStatus('⚠️ Não encontrei fotos automaticamente. Faça upload manual.');
       setTimeout(() => setAutoImportStatus(''), 5000);
     } catch (e) {
       console.error('Auto-fetch images failed:', e);
@@ -603,8 +603,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         altura: parseFloat(formData.height) || 0,
         largura: parseFloat(formData.width) || 0,
         lot: formData.sku || formData.lot,
-        purchase_order: formData.purchase_order,
-        seller_name: formData.seller_name || ''
+        purchase_order: formData.purchase_order
       };
 
       const sourceProduct = location.state?.sourceProduct;
@@ -1429,7 +1428,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                         <Input
                           type="text"
                           value={formData.price && formData.cost_price 
-                            ? `R$ ${(parseFloat(formData.price) - parseFloat(formData.cost_price)).toFixed(2)}`
+                            ? `R$ ${fmtBR((parseFloat(formData.price) - parseFloat(formData.cost_price)))}`
                             : 'R$ 0,00'
                           }
                           readOnly

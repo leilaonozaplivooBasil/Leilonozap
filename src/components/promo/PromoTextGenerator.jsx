@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { Copy, Sparkles, MessageCircle, Instagram, Check, Loader2 } from "lucide-react";
@@ -20,8 +21,8 @@ export default function PromoTextGenerator({ product }) {
       prompt: `Gere textos promocionais para o seguinte produto de um leilão/catálogo online chamado "Leilão NoZap":
 
 Produto: ${product.description}
-Preço: R$ ${price.toFixed(2)}
-${discount > 0 ? `Desconto: ${discount}% (de R$ ${marketPrice.toFixed(2)} por R$ ${price.toFixed(2)})` : ""}
+Preço: R$ ${fmtBR(price)}
+${discount > 0 ? `Desconto: ${discount}% (de R$ ${fmtBR(marketPrice)} por R$ ${fmtBR(price)})` : ""}
 Lote: ${product.lot || "N/A"}
 
 Gere 3 textos:
@@ -39,6 +40,11 @@ IMPORTANTE: Use linguagem de vendas brasileira, com emojis, e mencione "Leilão 
         },
       },
     });
+    if (!result || result.ok === false || (!result.whatsapp && !result.instagram && !result.stories)) {
+      alert(result?.needs_key ? '⚙️ A IA ainda não está conectada. Peça pra ativar a chave do AI Gateway.' : '⚠️ Não consegui gerar os textos agora. Tente de novo.');
+      setLoading(false);
+      return;
+    }
     setTexts(result);
     setLoading(false);
   };

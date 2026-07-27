@@ -6,22 +6,19 @@ const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Filter } from "lucide-react";
-import { motion } from "framer-motion";
+import { Filter, MessageCircle, SlidersHorizontal, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import CatalogProductCard from "../components/catalog/CatalogProductCard";
-import WelcomeModal from "../components/common/WelcomeModal";
-import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
-import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
-// 🆕 Novos componentes de layout da Loja Virtual
-import CatalogInternalHeader from "../components/catalog/CatalogInternalHeader";
-import CatalogSellerCard from "../components/catalog/CatalogSellerCard";
-import CatalogHero from "../components/catalog/CatalogHero";
-import CatalogSearchBar from "../components/catalog/CatalogSearchBar";
-import CatalogCategoriesBar from "../components/catalog/CatalogCategoriesBar";
-import CatalogFlashDeals from "../components/catalog/CatalogFlashDeals";
+
+import CatalogProductCard from "../components/catalog/CatalogProductCard";
+import ProductDetailsModal from "../components/catalog/ProductDetailsModal";
+import WelcomeModal from "../components/common/WelcomeModal";
+import { supabase } from '@/api/supabaseClient';
+import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
+import OfertasRelampago from '../components/loja/OfertasRelampago';
+import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
+import { getReferral, saveReferral } from '@/lib/referral';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -48,6 +45,50 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [storeRating, setStoreRating] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // 🔍 produto aberto EXPANDIDO na própria página (modal) — sem navegar (pedido Gabriel 25/07)
+  const [detailsProduct, setDetailsProduct] = useState(null);
+  const openDetails = useCallback((product) => setDetailsProduct(product), []);
+
+  // média da loja (resolve o lojista pelo ref) — passada pros cards
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
+        if (!ref) return;
+        const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
+        if (!u?.id) return;
+        const { data } = await supabase.rpc('avaliacao_loja', { _seller: u.id });
+        if (alive && data && data.total > 0) setStoreRating(data);
+      } catch (_) { /* sem avaliação */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const [reachedEnd, setReachedEnd] = useState(false);
+
+  const PAGE = 60;
+  const loadMore = React.useCallback(async () => {
+    if (loadingMore || reachedEnd) return;
+    setLoadingMore(true);
+    try {
+      const f = { catalog_active: true };
+      if (selectedCategory && selectedCategory !== "all") f.category_id = selectedCategory;
+      const next = await base44.entities.Product.filter(f, "-created_date", PAGE, products.length);
+      if (Array.isArray(next) && next.length > 0) {
+        setProducts((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...next.filter((p) => p && p.id && !seen.has(p.id))];
+        });
+        if (next.length < PAGE) setReachedEnd(true);
+      } else {
+        setReachedEnd(true);
+      }
+    } catch (e) { /* silencioso */ } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, reachedEnd, selectedCategory, products.length]);
 
   useEffect(() => {
     const slider = scrollerRef.current;
@@ -109,11 +150,17 @@ export default function Catalog() {
       filtered = filtered.filter((p) => p.category_id === selectedCategory);
     }
 
-    // Filtro por texto
+    // Filtro por texto — por PALAVRAS (cada termo tem que aparecer, em qualquer ordem) e
+    // ignorando pontuação. Antes buscava a frase LITERAL: "fonte chocolate" não achava
+    // "Fonte de Chocolate" (o "de" no meio) e um "#" colado zerava tudo.
     if (searchTerm) {
-      filtered = filtered.filter((p) =>
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const termos = searchTerm.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+      if (termos.length) {
+        filtered = filtered.filter((p) => {
+          const desc = (p.description || '').toLowerCase();
+          return termos.every((t) => desc.includes(t));
+        });
+      }
     }
 
     // Filtro por preço mínimo
@@ -142,18 +189,21 @@ export default function Catalog() {
       filtered = [...filtered].sort((a, b) => (a.description || "").localeCompare(b.description || ""));
     }
 
+    // 🛒 Esgotados sempre por último (não some, mas não atrapalha quem quer comprar)
+    filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
+
     setFilteredProducts(filtered);
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
 
   const loadLicenseePhone = React.useCallback(async () => {
     try {
-      let refCode = sessionStorage.getItem('referralCode');
+      let refCode = getReferral();
       
       // Se não há ref no sessionStorage, tenta pegar da URL diretamente
       if (!refCode) {
         const urlParams = new URLSearchParams(window.location.search);
         refCode = urlParams.get('ref');
-        if (refCode) sessionStorage.setItem('referralCode', refCode);
+        if (refCode) saveReferral(refCode);
       }
       
       // Se ainda não há ref, tenta usar o referral_code do próprio usuário logado (se for vendedor/licenciado)
@@ -166,7 +216,7 @@ export default function Catalog() {
             // Se é vendedor E tem referral_code, força usar o dele
             if (u?.is_seller === true && u?.referral_code) {
               refCode = u.referral_code;
-              sessionStorage.setItem('referralCode', refCode);
+              saveReferral(refCode);
               console.log(`✅ [VENDEDOR] Usando ref do vendedor logado: ${refCode}`);
             } else if (u?.referral_code && u?.role === 'licensee') {
               refCode = u.referral_code;
@@ -259,7 +309,7 @@ export default function Catalog() {
               const newUrl = `/Loja-Virtual?ref=${sellerCode}`;
               window.history.replaceState(null, '', newUrl);
               console.log(`✅ [VENDEDOR] URL forçada SÍNCRONO para: ${newUrl}`);
-              sessionStorage.setItem('referralCode', sellerCode);
+              saveReferral(sellerCode);
               
               // 🔧 Recarrega dados do licenciado COM O NOVO REF
               setTimeout(async () => {
@@ -338,7 +388,7 @@ export default function Catalog() {
 
             if (age > 2000) {
               setTimeout(() => {
-                Product.filter({ catalog_active: true }, "-created_date", 50).then((data) => {
+                Product.filter({ catalog_active: true }, "-created_date", 240).then((data) => {
                   if (Array.isArray(data)) {
                     sessionStorage.setItem('products_catalog_cache', JSON.stringify(data));
                     sessionStorage.setItem('products_catalog_cache_time', Date.now().toString());
@@ -357,7 +407,7 @@ export default function Catalog() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-      const data = await Product.filter({ catalog_active: true }, "-created_date", 50);
+      const data = await Product.filter({ catalog_active: true }, "-created_date", 240);
       clearTimeout(timeoutId);
 
       if (Array.isArray(data) && data.length >= 0) {
@@ -432,8 +482,8 @@ export default function Catalog() {
 
       // Carrega categorias
       try {
-        const allCategories = await base44.entities.Category.filter({ parent_category_id: null });
-        setCategories(allCategories || []);
+        const allCategories = await base44.entities.Category.filter({ parent_category_id: null, is_active: true });
+        setCategories((allCategories || []).filter(c => c.is_active !== false));
       } catch (error) {
         console.debug('Erro ao carregar categorias:', error);
       }
@@ -482,9 +532,53 @@ export default function Catalog() {
     }
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
 
+  // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página)
+  useEffect(() => {
+    let alive = true;
+    setReachedEnd(false);
+    const fetchByCategory = async () => {
+      try {
+        if (selectedCategory && selectedCategory !== "all") {
+          const data = await Product.filter({ catalog_active: true, category_id: selectedCategory }, "-created_date", 240);
+          if (alive && Array.isArray(data)) setProducts(data);
+        } else {
+          const data = await Product.filter({ catalog_active: true }, "-created_date", 240);
+          if (alive && Array.isArray(data)) setProducts(data);
+        }
+      } catch (e) { /* mantém o que já tem */ }
+    };
+    fetchByCategory();
+    return () => { alive = false; };
+  }, [selectedCategory]);
+
+  // 🔎 Busca no SERVIDOR (catálogo inteiro, não só os 240 carregados). Cada palavra vira um
+  // ilike (%palavra%) — assim "fonte chocolate" acha "Fonte de Chocolate". Debounce de 350ms.
+  useEffect(() => {
+    const termo = (searchTerm || '').trim();
+    if (!termo) return;
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        // pega a palavra mais longa (mais específica) e busca no servidor com ilike; o refino
+        // AND das demais palavras acontece no filtro do cliente (filterProducts).
+        const palavras = termo.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 1);
+        if (!palavras.length) return;
+        const chave = palavras.sort((a, b) => b.length - a.length)[0];
+        const data = await Product.filter({ catalog_active: true, description: { $contains: chave } }, "-created_date", 240);
+        if (alive && Array.isArray(data) && data.length) {
+          setProducts((prev) => {
+            const seen = new Set(prev.map((p) => p.id));
+            return [...prev, ...data.filter((p) => p && p.id && !seen.has(p.id))];
+          });
+        }
+      } catch (e) { /* mantém local; o filtro por palavras ainda roda no cliente */ }
+    }, 350);
+    return () => { alive = false; clearTimeout(t); };
+  }, [searchTerm]);
+
   const featuredProducts = useMemo(() => {
     return products
-      .filter(p => p.catalog_active && p.is_featured)
+      .filter(p => p.catalog_active && p.is_featured && p.quantity > 0)
       .slice(0, 4);
   }, [products]);
 
@@ -505,232 +599,284 @@ export default function Catalog() {
     }
   }, [currentUser]);
 
-  // 🎬 Animação sutil de entrada por sessão (efeito premium — 300ms)
-  const fadeIn = {
-    initial: { opacity: 0, y: 12 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.3, ease: "easeOut" },
-  };
-
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
+    <div className="bg-gray-900 text-white min-h-screen overflow-x-hidden">
       <PagePerformanceTracker pageName="Catalog" />
       <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .category-scroller {
+          overflow-x: scroll;
+          cursor: grab;
+          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          scrollbar-width: none;
+        }
+        .category-scroller::-webkit-scrollbar {
+          display: none;
+        }
+        .category-scroller.grabbing {
+            cursor: grabbing;
+        }
+        @keyframes fire {
+          0% { transform: scale(1) rotate(0deg); opacity: 1; }
+          25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
+          50% { transform: scale(1) rotate(-1deg); opacity: 1; }
+          75% { transform: scale(1.03) rotate(1deg); opacity: 0.98; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .animate-fire {
+          animation: fire 1.8s ease-in-out infinite;
+        }
       `}</style>
+      
+      {/* 📱 pb maior no mobile: respiro pros botões flutuantes não cobrirem o fim da página */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-28 sm:py-6">
+        
+        {/* Nome/identidade da loja fica só no card de perfil ABAIXO das ofertas (evita duplicar). */}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-10">
-
-        {/* a) HEADER INTERNO DA LOJA — ⋮ painéis + região */}
-        <CatalogInternalHeader
-          currentUser={currentUser}
-          licenseeData={licenseeData}
+        {/* Header estilo Shopee (identidade Leila) — barra utilitária + busca + hero + rail */}
+        <LojaShopeeHeader
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          categories={categories}
+          onSelectCategory={(id) => setSelectedCategory(id)}
+          banners={banners}
         />
 
-        {/* b) 🎯 BANNER HERO PANORÂMICO — FULL-BLEED edge-to-edge (estilo Mercado Livre) */}
-        {banners.length > 0 && (
-          <motion.div
-            {...fadeIn}
-            className="relative overflow-hidden mb-2"
-            style={{
-              marginLeft: "calc(50% - 50vw)",
-              marginRight: "calc(50% - 50vw)",
-            }}
-          >
-            <CatalogHero banners={banners} />
-            {/* Degradês suaves nas bordas laterais — acabamento premium */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 sm:w-16 bg-gradient-to-r from-gray-900 to-transparent z-10" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-16 bg-gradient-to-l from-gray-900 to-transparent z-10" />
-          </motion.div>
-        )}
+        {/* OFERTAS RELÂMPAGO */}
+        <OfertasRelampago products={products} onOpenDetails={openDetails} />
 
-        {/* b.2) ⚡ OFERTAS RELÂMPAGO — carrossel fluido abaixo do banner */}
-        {!isLoading && products.length > 0 && (
-          <motion.div {...fadeIn} className={banners.length > 0 ? "mt-4 sm:mt-6" : ""}>
-            <CatalogFlashDeals products={products} />
-          </motion.div>
-        )}
+        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja */}
+        <div className="mb-6 flex items-center gap-3 sm:gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-3 sm:p-4">
+          {licenseeData?.photo ? (
+            <img src={licenseeData.photo} alt={licenseeData.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-green-500/40 shrink-0" />
+          ) : (
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-black shrink-0">
+              {(licenseeData?.name || 'Loja Virtual Especial').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-white font-bold text-base sm:text-lg truncate">
+              {licenseeData?.name ? `Loja Virtual ${licenseeData.name}` : 'Loja Virtual Especial'}
+            </h3>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mt-1">
+              <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-green-400" /> {products.length} produtos</span>
+              <span className="text-gray-600">·</span>
+              <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-green-400" /> Envio para todo Brasil</span>
+            </div>
+          </div>
+          {licenseeData?.phone && (
+            <a
+              href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Falar Comigo</span>
+            </a>
+          )}
+        </div>
 
-        {/* c) CARD DO VENDEDOR — barra compacta */}
-        <motion.div {...fadeIn} className="mt-4 sm:mt-6">
-          <CatalogSellerCard
-            licenseeData={licenseeData}
-            productCount={products.length}
-          />
-        </motion.div>
-
-        {/* d) BUSCA PROTAGONISTA */}
-        <motion.div {...fadeIn} className="mt-6 sm:mt-8">
-          <CatalogSearchBar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            showFilters={showFilters}
-            onToggleFilters={() => setShowFilters(!showFilters)}
-          />
-
-          {/* Painel de Filtros (mesma lógica, só reorganizado) */}
-          {showFilters && (
-            <div className="mt-3 bg-gray-800/80 border border-gray-700 rounded-2xl p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  Filtros
-                </h3>
-                <button
-                  onClick={() => {
-                    setSelectedCategory("all");
-                    setPriceRange({ min: "", max: "" });
-                    setSortBy("recent");
-                    setStockFilter("all");
-                  }}
-                  className="text-sm text-gray-400 hover:text-white"
-                >
-                  Limpar filtros
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Categoria</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
-                  >
-                    <option value="all">Todas</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
-                  <input
-                    type="number"
-                    placeholder="R$ 0"
-                    value={priceRange.min}
-                    onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
+        {/* CONTEÚDO PRINCIPAL */}
+        <div className="w-full">
+          {/* Produtos em Destaque */}
+           {featuredProducts.length > 0 && (
+             <div className="mb-8">
+               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2 justify-center">
+                 ⭐ Produtos em Destaque
+               </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {featuredProducts.map((product) => (
+                  <CatalogProductCard
+                    key={product.id}
+                    product={product}
+                    currentUser={currentUser}
+                    licenseePhone={licenseePhone}
+                    storeRating={storeRating}
+                    onOpenDetails={openDetails}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Preço máximo</label>
-                  <input
-                    type="number"
-                    placeholder="R$ 9999"
-                    value={priceRange.max}
-                    onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
-                  >
-                    <option value="recent">Mais recentes</option>
-                    <option value="priceAsc">Menor preço</option>
-                    <option value="priceDesc">Maior preço</option>
-                    <option value="nameAsc">Nome A-Z</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Disponibilidade</label>
-                  <select
-                    value={stockFilter}
-                    onChange={(e) => setStockFilter(e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
-                  >
-                    <option value="all">Todos</option>
-                    <option value="inStock">Em estoque</option>
-                    <option value="outOfStock">Esgotados</option>
-                  </select>
-                </div>
+                ))}
               </div>
             </div>
           )}
-        </motion.div>
 
-        {/* e) CATEGORIAS LINEARES */}
-        {categories.length > 0 && (
-          <motion.div {...fadeIn} className="mt-4 sm:mt-6">
-            <CatalogCategoriesBar
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-            />
-          </motion.div>
-        )}
-
-        {/* f) PRODUTOS EM DESTAQUE */}
-        {featuredProducts.length > 0 && (
-          <motion.section {...fadeIn} className="mt-6 sm:mt-8">
-            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-4 flex items-center gap-3">
-              <span className="inline-block w-1 h-6 bg-emerald-500 rounded-full" />
-              <span>⭐ Produtos em Destaque</span>
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              {featuredProducts.map((product) => (
-                <CatalogProductCard
-                  key={product.id}
-                  product={product}
-                  currentUser={currentUser}
-                  licenseePhone={licenseePhone}
-                />
-              ))}
+          {/* Filtros (o buscador agora fica no topo, no cabeçalho da loja).
+              📱 MOBILE: o botão solto ocupava uma faixa inteira à toa — ele foi pra DENTRO
+              da barra de categorias (ícone ancorado à direita, padrão Shopee/ML). A faixa
+              standalone abaixo só existe no desktop (ou no mobile se não houver categorias). */}
+          <div className={`space-y-4 ${showFilters ? 'mb-8' : 'sm:mb-8'}`}>
+            <div className={`${categories.length > 0 ? 'hidden sm:flex' : 'flex'} justify-end`}>
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 h-10 text-sm sm:px-6 sm:h-[46px] sm:text-base ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold shadow-lg transition-all`}
+              >
+                <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span>Filtros</span>
+              </Button>
             </div>
-          </motion.section>
-        )}
 
-        {/* Alerta de erro de conexão (preservado, apenas reestilizado sutil) */}
-        {loadError && retryCount >= 3 && (
-          <div className="mt-6 sm:mt-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="text-5xl">⚠️</div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
-                <p className="text-gray-300 mb-4">{loadError}</p>
-                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-blue-300">
-                    💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
-                  </p>
+            {/* Painel de Filtros */}
+            {showFilters && (
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filtros
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory("all");
+                      setPriceRange({ min: "", max: "" });
+                      setSortBy("recent");
+                      setStockFilter("all");
+                    }}
+                    className="text-sm text-gray-400 hover:text-white"
+                  >
+                    Limpar filtros
+                  </button>
                 </div>
-                <Button
-                  onClick={() => {
-                    setRetryCount(0);
-                    setIsLoading(true);
-                    setLoadError(null);
-                    loadProducts(true);
-                  }}
-                  className="bg-yellow-600 hover:bg-yellow-700 font-bold">
-                  🔄 Tentar Novamente
-                </Button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {/* Categoria */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Categoria</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-[15px] text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="all" className="text-[15px]">Todas</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id} className="text-[15px]">{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Faixa de Preço */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
+                    <input
+                      type="number"
+                      placeholder="R$ 0"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Preço máximo</label>
+                    <input
+                      type="number"
+                      placeholder="R$ 9999"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Ordenação */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="recent">Mais recentes</option>
+                      <option value="priceAsc">Menor preço</option>
+                      <option value="priceDesc">Maior preço</option>
+                      <option value="nameAsc">Nome A-Z</option>
+                    </select>
+                  </div>
+
+                  {/* Estoque */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Disponibilidade</label>
+                    <select
+                      value={stockFilter}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="inStock">Em estoque</option>
+                      <option value="outOfStock">Esgotados</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ABAS DE CATEGORIA horizontais (padrão Base44) + botão Filtros ancorado à
+              direita SÓ no mobile (no desktop o Filtros segue na faixa standalone acima) */}
+          {categories.length > 0 && (
+            <div className="mb-6 flex items-center border-b border-gray-800">
+              <div className="flex-1 flex items-center gap-4 sm:gap-6 overflow-x-auto category-scroller">
+                {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
+                  const active = selectedCategory === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCategory(c.id)}
+                      className={`relative pb-3 pt-1 text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                    >
+                      {c.name}
+                      {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-green-500 rounded-full" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                aria-label="Filtros"
+                className={`sm:hidden shrink-0 ml-2 mb-1.5 flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-bold transition-colors ${showFilters ? 'bg-green-600 text-white' : 'bg-gray-800 border border-gray-700 text-gray-200'}`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Filtros
+              </button>
+            </div>
+          )}
+
+          {loadError && retryCount >= 3 &&
+          <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="text-5xl">⚠️</div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
+                  <p className="text-gray-300 mb-4">{loadError}</p>
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-300">
+                      💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setRetryCount(0);
+                      setIsLoading(true);
+                      setLoadError(null);
+                      loadProducts(true);
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 font-bold">
+                    🔄 Tentar Novamente
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          }
 
-        {/* g) GRID COMPLETO DE PRODUTOS */}
-        <motion.section {...fadeIn} className="mt-6 sm:mt-8">
-          {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
+          {isLoading ?
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {Array(6).fill(0).map((_, i) =>
+            <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
                   <div className="w-full aspect-square bg-gray-700 rounded-xl mb-3"></div>
                   <div className="h-5 bg-gray-700 rounded mb-2"></div>
                   <div className="h-4 bg-gray-700 rounded w-2/3"></div>
                 </div>
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 && !loadError ? (
-            <div className="text-center py-16 text-gray-400">
+            )}
+            </div> :
+          filteredProducts.length === 0 && !loadError ?
+          <div className="text-center py-12 text-gray-400">
               <div className="text-6xl mb-4">📦</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
                 Nenhum produto encontrado
@@ -738,9 +884,9 @@ export default function Catalog() {
               <p className="text-gray-500 mb-6">
                 Tente ajustar a busca ou volte mais tarde para novos produtos!
               </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            </div> :
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {filteredProducts.map((product) => {
                 if (!product || !product.id) {
                   console.warn('⚠️ Product inválido detectado:', product);
@@ -751,16 +897,43 @@ export default function Catalog() {
                     key={product.id}
                     product={product}
                     currentUser={currentUser}
+                    licenseePhone={licenseePhone}
+                    storeRating={storeRating}
+                    onOpenDetails={openDetails}
                   />
                 );
               })}
             </div>
+          }
+
+          {/* Carregar mais — só na navegação (sem busca de texto) */}
+          {!searchTerm && !reachedEnd && filteredProducts.length >= 12 && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-6 py-2.5 text-sm sm:px-8 sm:py-3 sm:text-base rounded-xl font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-60 transition-colors"
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais produtos"}
+              </button>
+            </div>
           )}
-        </motion.section>
+        </div>
       </div>
 
-      <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
+      {/* Flutuantes (CompareAQUI + Fale com a Leila) agora são globais, renderizados no Layout */}
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
+
+      {/* Produto expandido na própria página — todas as informações sem sair da loja */}
+      {detailsProduct && (
+        <ProductDetailsModal
+          product={detailsProduct}
+          currentUser={currentUser}
+          licenseePhone={licenseePhone}
+          storeRating={storeRating}
+          onClose={() => setDetailsProduct(null)}
+        />
+      )}
     </div>
   );
 }

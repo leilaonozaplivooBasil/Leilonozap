@@ -6,17 +6,20 @@ const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;
 const AppUser = base44.entities.AppUser;
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
 import { format } from 'date-fns';
 
 import AIMessage from "../components/chat/AIMessage";
 import BidInput from "../components/auction/BidInput";
+import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
-import FloatingBalance from '../components/auction/FloatingBalance';
+import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
+import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
+import WalletDrawer from '../components/wallet/WalletDrawer';
+import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
 import ComparaiButton from '../components/comparai/ComparaiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
-import AuctionTimeDebugger from "../components/system/AuctionTimeDebugger";
 import ViewTracker from "../components/recommendations/ViewTracker";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
 import WinnerModal from "../components/auction/WinnerModal";
@@ -36,7 +39,7 @@ export default function AuctionRoom() {
   const location = useLocation();
 
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
-  const showFloatingBalance = searchParams.get("useBalance") === "true";
+  const [walletOpen, setWalletOpen] = useState(false);
   const spectatorModeParam = searchParams.get("spectator") === "true";
 
   const [auction, setAuction] = useState(null);
@@ -49,7 +52,6 @@ export default function AuctionRoom() {
   const [userMap, setUserMap] = useState({});
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  const [showDebugger, setShowDebugger] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
@@ -61,11 +63,43 @@ export default function AuctionRoom() {
 
   const chatRef = useRef(null);
 
+  // 📜 Overflow do chat: botão de scroll quando o usuário está longe do fim
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const wasNearBottomRef = useRef(true);
+
+  const isChatNearBottom = useCallback(() => {
+    const el = chatRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+  }, []);
+
+  const handleChatScroll = useCallback(() => {
+    const near = isChatNearBottom();
+    wasNearBottomRef.current = near;
+    setShowScrollDown(!near);
+  }, [isChatNearBottom]);
+
+  const scrollChatToBottom = useCallback((smooth = true) => {
+    const el = chatRef.current;
+    if (!el) return;
+    wasNearBottomRef.current = true;
+    setShowScrollDown(false);
+    // scrollTo depois do re-render (rAF): o setState acima re-renderiza e o
+    // Chrome cancela animações smooth em andamento. Fallback 500ms garante o
+    // fim mesmo se a animação for interrompida por qualquer outro motivo.
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    });
+    setTimeout(() => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (dist > 40) el.scrollTop = el.scrollHeight;
+    }, 500);
+  }, []);
+
   const audioContextRef = useRef(null);
   const abortControllerRef = useRef(null);
 
   const isEndingRef = useRef(false);
-  const isCreatingVictoryMessageRef = useRef(false);
 
   const hasInitializedRef = useRef(false);
 
@@ -98,6 +132,24 @@ export default function AuctionRoom() {
     if (!audioContextRef.current) return;
     try {
       const ctx = audioContextRef.current;
+      // Martelo do arremate: batida percussiva "bum" (queda de pitch + ataque rápido/decaimento curto).
+      // Disparado 3x em sequência no encerramento -> "bum bum bum".
+      if (type === 'hammer') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        const t = ctx.currentTime;
+        osc.frequency.setValueAtTime(190, t);
+        osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.9, t + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.22);
+        osc.start(t);
+        osc.stop(t + 0.24);
+        return;
+      }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -134,7 +186,7 @@ export default function AuctionRoom() {
           const walletData = result?.data || result;
           const balance = walletData?.balance || 0;
           setUserWallet({ balance });
-          console.log(`💰 Saldo digital do usuário: R$ ${balance.toFixed(2)}`);
+          console.log(`💰 Saldo digital do usuário: R$ ${fmtBR(balance)}`);
         } catch (error) {
           console.warn("Erro ao carregar saldo da carteira digital:", error.message);
           // Não bloqueia o lance se não conseguir verificar saldo
@@ -149,13 +201,18 @@ export default function AuctionRoom() {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentUser && currentUser.role === 'admin') {
-      setShowDebugger(true);
-    } else {
-      setShowDebugger(false);
-    }
-  }, [currentUser]);
+  // Recarrega apenas o saldo da carteira (usado após recarga no WalletDrawer)
+  const refreshWalletBalance = useCallback(async () => {
+    try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (!savedUser) return;
+      const user = JSON.parse(savedUser);
+      const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+      const walletData = result?.data || result;
+      setUserWallet({ balance: walletData?.balance || 0 });
+    } catch { /* silencioso */ }
+  }, []);
+
 
   // ── HOOKS ─────────────────────────────────────────────────────────────
   // Timer hook (provides calibrateServerOffset, getServerSyncedTime, timeRemaining, auctioneer state)
@@ -182,11 +239,12 @@ export default function AuctionRoom() {
     playSound,
   });
 
+  // 🔨 ARREMATE REAL — o SERVIDOR é a autoridade (pedido Gabriel 25/07: "não pode
+  // ser simulação"). O cliente só detecta o fim do relógio e chama finalizeAuction:
+  // vencedor, preço final, status, mensagem de vitória e comissão são apurados e
+  // gravados no backend (api/functions/finalizeAuction.js). Aqui a gente exibe.
   const endAuction = useCallback(async () => {
-    if (!auction) {
-      console.log("⏸️ [END] Auction não existe.");
-      return;
-    }
+    if (!auction) return;
 
     if (auction.status !== 'active') {
       console.log("⏸️ [END] Leilão não está ativo.");
@@ -200,21 +258,13 @@ export default function AuctionRoom() {
     }
 
     const endTime = new Date(auction.end_time).getTime();
-    const timeRemainingEndCheck = Math.floor((endTime - serverNow) / 1000);
+    if (Math.floor((endTime - serverNow) / 1000) > 0) return;
 
-    if (timeRemainingEndCheck > 0) {
-      console.log(`⚠️ [END] Ainda ${timeRemainingEndCheck}s restantes.`);
-      return;
-    }
-
-    if (isEndingRef.current) {
-      console.log("⏸️ [END] Já em andamento.");
-      return;
-    }
+    if (isEndingRef.current) return;
 
     try {
       isEndingRef.current = true;
-      console.log("🔨 [END] FINALIZANDO...");
+      console.log("🔨 [END] Solicitando arremate ao servidor...");
 
       clearSyncIntervals();
       clearCountdown();
@@ -222,283 +272,87 @@ export default function AuctionRoom() {
         abortControllerRef.current.abort();
       }
 
-      // 🔐 SEGURANÇA: Atualização de status para 'processing' via backend (Edge Function)
-      // Não chamamos Auction.update() diretamente para evitar manipulação de dados via DevTools
-      try {
-        const base44Client = (await import('@/api/base44Client')).base44;
-        await base44Client.functions.invoke('finalizeAuction', { auction_id: auction.id });
-      } catch (secureErr) {
-        // Fallback para garantir que o fluxo visual não quebre
-        console.warn('⚠️ [END] Edge Function não disponível, usando fallback local:', secureErr.message);
-        await Auction.update(auction.id, { status: "processing" });
+      // Chama o backend com retentativas curtas — SEM fallback de escrita local.
+      let result = null;
+      for (let attempt = 0; attempt < 3 && !result; attempt++) {
+        try {
+          const resp = await base44.functions.invoke('finalizeAuction', { auction_id: auction.id });
+          const data = resp?.data || resp;
+          if (data?.success && data.result) {
+            result = data.result;
+            break;
+          }
+          // Servidor diz que ainda falta tempo → nosso relógio derrapou. Re-calibra e volta.
+          if (data?.seconds_remaining > 0) {
+            console.warn(`⏱️ [END] Servidor: faltam ${data.seconds_remaining}s. Re-calibrando.`);
+            await calibrateServerOffset();
+            await syncAuctionDataOnly();
+            return;
+          }
+          console.warn("⚠️ [END] finalizeAuction sem sucesso:", data?.error);
+        } catch (err) {
+          console.warn(`⚠️ [END] Tentativa ${attempt + 1} falhou:`, err.message);
+        }
+        await new Promise(r => setTimeout(r, 1200));
       }
 
-      setAuction(prev => ({ ...prev, status: "processing" }));
+      if (!result) {
+        // Backend indisponível: NÃO inventa resultado no cliente. Re-sincroniza e
+        // deixa o próximo ciclo de sync tentar de novo.
+        console.error("❌ [END] Servidor não confirmou o arremate. Aguardando novo ciclo.");
+        await syncAuctionDataOnly();
+        return;
+      }
 
-      // 🔨 3 MARTELADAS
+      console.log(`🏆 [END/SERVIDOR] Vencedor: ${result.winner_name || 'sem lances'} — R$ ${fmtBR(Number(result.final_price))}`);
+
+      // Estado local reflete o que o SERVIDOR gravou
+      setAuction(prev => ({
+        ...prev,
+        status: result.status || "ended",
+        winner_id: result.winner_id,
+        winner_name: result.winner_name,
+        current_price: result.final_price,
+        order_status: result.order_status,
+      }));
+
+      // 🔨 3 MARTELADAS + leiloeiro "VENDIDO!" — só DEPOIS da confirmação real
       playSound('hammer');
       setTimeout(() => playSound('hammer'), 300);
       setTimeout(() => playSound('hammer'), 600);
 
-      // 🎉 LEILOEIRO COM "VENDIDO!" (FASE 4)
       setTimeout(() => {
         setAuctioneerPhase(4);
-        setAuctioneerMessage("🎉 VENDIDO! 🎉");
+        setAuctioneerMessage(result.winner_name ? `🎉 VENDIDO para ${result.winner_name}! 🎉` : "🔨 Leilão encerrado!");
         setShowAuctioneer(true);
-      }, 1000); // 1 segundo após as marteladas
+      }, 900);
 
-      // ⏰ AGUARDA 5 SEGUNDOS ANTES DE CRIAR A MENSAGEM NO CHAT
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      if (result.winner_id) playSound('winner');
 
-      // 🆕 PROTEÇÃO CONTRA CRIAÇÃO SIMULTÂNEA
-      if (isCreatingVictoryMessageRef.current) {
-        console.log("⏸️ [END] Mensagem de vitória já está sendo criada!");
-        return;
-      }
-
-      isCreatingVictoryMessageRef.current = true;
-
-      // 🆕 VERIFICA SE JÁ EXISTE MENSAGEM DE VITÓRIA
-      const existingMessages = await AuctionMessage.filter({
-        auction_id: auction.id,
-        message_type: 'winner_announcement'
-      });
-
-      if (existingMessages.length > 0) {
-        console.log("⚠️ [END] Mensagem de vitória JÁ EXISTE no banco! Pulando criação.");
-        isCreatingVictoryMessageRef.current = false;
-
-        // Atualiza só o status do leilão
-        await Auction.update(auction.id, {
-          status: "ended",
-          order_status: "awaiting_payment"
-        });
-
-        setAuction(prev => ({
-          ...prev,
-          status: "ended",
-          order_status: "awaiting_payment"
-        }));
-
-        // Re-sync messages to ensure the existing winner message is displayed
-        try {
-          const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
-          setMessages(freshMessages);
-          lastMessageCountRef.current = freshMessages.length;
-        } catch (error) {
-          console.error("❌ [END] Erro ao atualizar mensagens após detectar duplicata:", error);
-        }
-
-        // 🎉 AINDA MOSTRA O MODAL APÓS 5 SEGUNDOS
-        setTimeout(() => {
-          console.log("🎉 [WINNER MODAL] Mostrando modal de arrematado!");
-          setShowWinnerModal(true);
-        }, 5000);
-
-        return;
-      }
-
-      const latestMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
-      const bidMessages = latestMessages.filter(m => m.message_type === 'bid');
-      const highestBid = bidMessages.sort((a, b) => b.bid_amount - a.bid_amount)[0];
-
-      const winnerId = highestBid?.sender_id || null;
-      const winnerName = highestBid?.sender_name || null;
-      const finalPrice = highestBid?.bid_amount || auction.starting_price;
-
-      let winnerData = null;
-      if (winnerId) {
-        try {
-          const winners = await AppUser.filter({ id: winnerId });
-          if (winners && winners.length > 0) {
-            winnerData = winners[0];
-            console.log(`✅ [END] Vencedor encontrado: ${winnerData.full_name}`);
-          } else {
-            console.warn(`⚠️ [END] Vencedor ID ${winnerId} não encontrado na entidade AppUser`);
-            // Cria dados básicos do vencedor a partir do que temos
-            winnerData = {
-              id: winnerId,
-              full_name: winnerName || 'Vencedor',
-              nickname: winnerName || 'Vencedor',
-              email: '',
-              avatar_url: null
-            };
-          }
-        } catch (error) {
-          console.warn(`⚠️ [END] Erro ao buscar vencedor (${winnerId}):`, error.message);
-          // Fallback: usa dados básicos
-          winnerData = {
-            id: winnerId,
-            full_name: winnerName || 'Vencedor',
-            nickname: winnerName || 'Vencedor',
-            email: '',
-            avatar_url: null
-          };
-        }
-      }
-
-      // 🆕 ATUALIZAR LICENCIADO SE O VENCEDOR FOI INDICADO
-      if (winnerData && winnerData.referred_by_id && !auction.is_investment_plan) {
-        try {
-          console.log(`💰 [COMMISSION] Vencedor foi indicado! Buscando licenciado...`);
-
-          const licensees = await AppUser.filter({ id: winnerData.referred_by_id });
-
-          if (licensees && licensees.length > 0) {
-            const licensee = licensees[0];
-            const commission = finalPrice * 0.03;
-
-            // 🆕 VERIFICAR SE É LEILÃO DE TESTE
-            const isTestAuction = auction.is_test_auction === true;
-
-            console.log(`✅ [COMMISSION] Licenciado: ${licensee.full_name}`);
-            console.log(`💵 [COMMISSION] Comissão: R$ ${commission.toFixed(2)}`);
-            console.log(`🧪 [COMMISSION] É teste? ${isTestAuction ? 'SIM' : 'NÃO'}`);
-            console.log(`📊 [COMMISSION] É plano? ${auction.is_investment_plan ? 'SIM' : 'NÃO'}`);
-
-            if (isTestAuction) {
-              // LEILÃO DE TESTE - atualiza saldo de teste
-              await AppUser.update(licensee.id, {
-                network_bids_count: (licensee.network_bids_count || 0) + 1,
-                commission_balance: (licensee.commission_balance || 0) + commission,
-                test_valora_balance: (licensee.test_valora_balance || 0) + commission,
-              });
-              console.log(`🧪 [COMMISSION] Atualizado SALDO DE TESTE!`);
-            } else {
-              // LEILÃO REAL - atualiza saldo real
-              await AppUser.update(licensee.id, {
-                network_bids_count: (licensee.network_bids_count || 0) + 1,
-                commission_balance: (licensee.commission_balance || 0) + commission,
-                valora_pay_balance: (licensee.valora_pay_balance || 0) + commission,
-              });
-              console.log(`💰 [COMMISSION] Atualizado SALDO REAL!`);
-            }
-
-            console.log(`🎉 [COMMISSION] Licenciado atualizado com sucesso!`);
-          } else {
-            console.warn(`⚠️ [COMMISSION] Licenciado não encontrado: ${winnerData.referred_by_id}`);
-          }
-        } catch (commissionError) {
-          console.error(`❌ [COMMISSION] Erro ao atualizar licenciado:`, commissionError);
-        }
-      } else {
-        if (auction.is_investment_plan) {
-          console.log(`ℹ️ [COMMISSION] Plano de investimento - SEM comissão`);
-        } else {
-          console.log(`ℹ️ [COMMISSION] Vencedor não tem licenciado associado.`);
-        }
-      }
-
-      // 🆕 GARANTIR QUE A IMAGEM SEMPRE EXISTA
-      const productImage = (auction.image_urls && auction.image_urls.length > 0)
-        ? auction.image_urls[0]
-        : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
-
-      // 🆕 CRIAR OBJETO LIMPO
-      const victoryData = {
-        winner: winnerData ? {
-          id: winnerData.id,
-          full_name: winnerData.full_name || '',
-          nickname: winnerData.nickname || '',
-          email: winnerData.email || '',
-          avatar_url: winnerData.avatar_url || null
-        } : null,
-        auction: {
-          id: auction.id,
-          title: auction.title || 'Produto',
-          image_urls: [productImage], // 🆕 SEMPRE TEM PELO MENOS 1 IMAGEM
-          current_price: finalPrice,
-          starting_price: auction.starting_price || 0
-        }
-      };
-
-      const victoryJSON = JSON.stringify(victoryData);
-
-      console.log('📦 [END] JSON que será salvo:', victoryJSON);
-
-      await AuctionMessage.create({
-        auction_id: auction.id,
-        message_type: "winner_announcement",
-        content: victoryJSON,
-        sender_name: "LanceIA",
-        is_system_message: true,
-      });
-
-      console.log(`🏆 [END] Vencedor: ${winnerName} - R$ ${finalPrice.toFixed(2)}`);
-
-      // Libera flag após criar
-      isCreatingVictoryMessageRef.current = false;
-
-      // Força atualização imediata das mensagens
-      console.log("🔄 [END] Forçando atualização das mensagens...");
-      await new Promise(resolve => setTimeout(resolve, 800));
-
+      // Recarrega o chat — a mensagem de vitória foi criada pelo servidor
+      await new Promise(resolve => setTimeout(resolve, 1200));
       try {
         const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
-        console.log(`✅ [END] ${freshMessages.length} mensagens carregadas!`);
         setMessages(freshMessages);
         lastMessageCountRef.current = freshMessages.length;
       } catch (error) {
         console.error("❌ [END] Erro ao atualizar mensagens:", error);
       }
 
-      // 🎉 MODAL DE ARREMATADO APARECE 5 SEGUNDOS APÓS A MENSAGEM NO CHAT
-      setTimeout(() => {
-        console.log("🎉 [WINNER MODAL] Mostrando modal de arrematado!");
-        setShowWinnerModal(true);
-      }, 5000);
-
-      // 🔐 SEGURANÇA: Encerramento via Edge Function no backend
-      // Toda a lógica crítica (Auction.update status=ended, AppUser stats, order_status)
-      // roda no servidor com ServiceRole — não pode ser manipulada via DevTools
-      try {
-        const base44Client = (await import('@/api/base44Client')).base44;
-        await base44Client.functions.invoke('finalizeAuction', { auction_id: auction.id });
-        console.log(`🔐 [END] Encerramento seguro via Edge Function executado!`);
-      } catch (secureErr) {
-        console.warn('⚠️ [END] Edge Function não disponível, usando fallback local:', secureErr.message);
-        // Fallback para garantir que o fluxo do leilão não quebre
-        await Auction.update(auction.id, {
-          status: "ended",
-          winner_id: winnerId,
-          winner_name: winnerName,
-          current_price: finalPrice,
-          order_status: "awaiting_payment"
-        });
+      // 🎉 Modal de arrematado alguns segundos depois do card no chat —
+      // SÓ quando houve vencedor de verdade (sem lances = sem festa)
+      if (result.winner_id) {
+        setTimeout(() => setShowWinnerModal(true), 4000);
       }
-
-      // Atualiza o estado local do React para refletir o encerramento
-      setAuction(prev => ({
-        ...prev,
-        status: "ended",
-        winner_id: winnerId,
-        winner_name: winnerName,
-        current_price: finalPrice,
-        order_status: "awaiting_payment"
-      }));
-
-      if (winnerId && winnerData && winnerData.email) {
-
-        playSound('winner');
-      }
-
-      console.log("🎉 [END] FINALIZADO!");
 
     } catch (error) {
       console.error("❌ [END] Erro:", error);
-      isCreatingVictoryMessageRef.current = false; // Libera em caso de erro
-
-      try {
-        await Auction.update(auction.id, { status: "ended" });
-        setAuction(prev => ({ ...prev, status: "ended" }));
-      } catch (recoveryError) {
-        console.error("❌ [END] Recuperação falhou:", recoveryError);
-      }
-
     } finally {
       isEndingRef.current = false;
     }
-  }, [auction, playSound, getServerSyncedTime]);
+    // syncAuctionDataOnly/clearSyncIntervals vêm do useAuctionSync declarado DEPOIS —
+    // são acessados só em tempo de execução (mesmo padrão que o código já usava).
+  }, [auction, playSound, getServerSyncedTime, calibrateServerOffset]);
 
   // Wire up the ref so the timer hook can call endAuction without circular deps
   endAuctionRef.current = endAuction;
@@ -615,10 +469,36 @@ export default function AuctionRoom() {
   // Unified sync loop is now in useAuctionSync hook
 
   useEffect(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    // Auto-scroll só quando o usuário JÁ estava no fim do chat — se ele rolou
+    // pra cima lendo mensagens, não rouba a posição: mostra o botão de descer.
+    // Depende de isLoading porque durante o load o chat nem está no DOM
+    // (chatRef null) — sem isso a sala abria presa no TOPO do chat.
+    // Re-tenta em 300/900ms: as imagens do card de vitória carregam DEPOIS e
+    // aumentam o scrollHeight — uma rolagem única ficava no meio do caminho.
+    if (isLoading || !chatRef.current) return;
+    if (!wasNearBottomRef.current) {
+      setShowScrollDown(true);
+      return;
     }
-  }, [messages]);
+    const toBottom = () => {
+      if (chatRef.current && wasNearBottomRef.current) {
+        chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      }
+    };
+    toBottom();
+    const t1 = setTimeout(toBottom, 300);
+    const t2 = setTimeout(toBottom, 900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [messages, isLoading]);
+
+  useEffect(() => {
+    // 🔒 Overflow bem definido: na sala, a PÁGINA não rola — só o chat.
+    // (o Layout tem header fixo + footer; sem isso o body rolava e o card
+    // de vitória ficava cortado no meio, sem jeito de ver o restante)
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, []);
 
   // Countdown effect is now in useAuctionTimer hook
 
@@ -642,7 +522,7 @@ export default function AuctionRoom() {
     }
 
     // Verifica saldo antes de abrir o modal de arremate
-    const buyNowAmount = (auction.current_price || auction.starting_price) * 1.45;
+    const buyNowAmount = mulMoney(auction.current_price || auction.starting_price, 1.45);
     try {
       const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
@@ -650,7 +530,7 @@ export default function AuctionRoom() {
       setUserWallet({ balance: freshBalance });
 
       if (freshBalance < buyNowAmount) {
-        console.warn(`⚠️ Saldo insuficiente para arremate: R$ ${freshBalance.toFixed(2)} < R$ ${buyNowAmount.toFixed(2)}`);
+        console.warn(`⚠️ Saldo insuficiente para arremate: R$ ${fmtBR(freshBalance)} < R$ ${fmtBR(buyNowAmount)}`);
         setShowLowBalanceModal(true);
         return;
       }
@@ -667,18 +547,18 @@ export default function AuctionRoom() {
     setIsBuyingNow(true);
 
     try {
-      // 🆕 ARREMATE = LANCE ATUAL + 45%
-      const currentPrice = auction.current_price || auction.starting_price;
-      const buyNowPrice = currentPrice * 1.45;
+      // 🆕 ARREMATE = LANCE ATUAL + 45% (centavos exatos)
+      const currentPrice = money(auction.current_price || auction.starting_price);
+      const buyNowPrice = mulMoney(currentPrice, 1.45);
 
       // VERIFICA E DEBITA SALDO
       const debitResult = await base44.functions.invoke('debitWalletBalance', {
         user_id: currentUser.id, amount: buyNowPrice, auction_id: auction.id,
-        description: `Arremate - ${auction.title} - R$ ${buyNowPrice.toFixed(2)}`
+        description: `Arremate - ${auction.title} - R$ ${fmtBR(buyNowPrice)}`
       });
       const debitData = debitResult?.data || debitResult;
       if (!debitData?.success) {
-        alert(`❌ Saldo insuficiente! Seu saldo: R$ ${(debitData?.balance || 0).toFixed(2)}`);
+        alert(`❌ Saldo insuficiente! Seu saldo: R$ ${fmtBR((debitData?.balance || 0))}`);
         setUserWallet({ balance: debitData?.balance || 0 });
         setIsBuyingNow(false);
         setShowBuyNowModal(false);
@@ -692,7 +572,7 @@ export default function AuctionRoom() {
         auction_id: auction.id,
         message_type: "bid",
         sender_id: currentUser.id,
-        content: `🔥 ARREMATE RÁPIDO! R$ ${buyNowPrice.toFixed(2)}`,
+        content: `🔥 ARREMATE RÁPIDO! R$ ${fmtBR(buyNowPrice)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: buyNowPrice,
         is_system_message: false
@@ -828,7 +708,7 @@ export default function AuctionRoom() {
     const shareText = `🔥 LEILÃO NOZAP!
 
 📱 ${auction.title}
-💰 Lance: R$ ${currentPrice.toFixed(2)}
+💰 Lance: R$ ${fmtBR(currentPrice)}
 
 ⚡ Dê seu lance: ${productUrl}`;
 
@@ -926,7 +806,9 @@ export default function AuctionRoom() {
 
   const displayTime = getDisplayTime();
   const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
-  const currentPrice = auction.current_price || auction.starting_price;
+  const currentPrice = money(auction.current_price || auction.starting_price);
+  // Leilão pode vir sem incremento definido (ex.: reativado/legado) — nunca deixar null quebrar o render nem gerar NaN no lance
+  const safeIncrement = Number(auction.increment) > 0 ? money(auction.increment) : 1;
   const mainImageUrl = auction.image_urls?.[0] || "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400";
 
   const isWarMode = timeRemaining !== null && timeRemaining <= COUNTDOWN_DURATION && isAuctionActive;
@@ -934,8 +816,19 @@ export default function AuctionRoom() {
   return (
     <div className="auction-page-container">
       <PagePerformanceTracker pageName="AuctionRoom" />
-      {showFloatingBalance && currentUser && (
-        <FloatingBalance balance={currentUser.valora_pay_balance || 0} />
+      {currentUser && (
+        <>
+          <FloatingWalletButton
+            balance={userWallet?.balance}
+            onClick={() => setWalletOpen(true)}
+          />
+          <WalletDrawer
+            open={walletOpen}
+            onClose={() => setWalletOpen(false)}
+            currentUser={currentUser}
+            onBalanceUpdated={refreshWalletBalance}
+          />
+        </>
       )}
 
       {/* 🆕 RASTREADOR DE VISUALIZAÇÕES PARA IA */}
@@ -947,15 +840,8 @@ export default function AuctionRoom() {
         />
       )}
 
-      {showDebugger && auction && (
-        <AuctionTimeDebugger
-          auction={auction}
-          serverTimeOffset={serverOffsetRef.current || 0}
-          timeRemaining={timeRemaining}
-          getServerSyncedTime={getServerSyncedTime}
-          currentUser={currentUser}
-          onManualSync={syncAuctionDataOnly}
-        />
+      {(currentUser?.role === 'admin' || currentUser?.role === 'super_admin') && auction && (
+        <AdminLiveBar auction={auction} setAuction={setAuction} />
       )}
 
       {currentUser?.role === 'admin' && auction && auction.status === 'ended' && timeRemaining !== null && timeRemaining > 0 && (
@@ -1023,7 +909,7 @@ export default function AuctionRoom() {
 
         <div className="mobile-header__info">
           <div className="mobile-header__price-row">
-            <span className="mobile-header__price">R$ {currentPrice.toFixed(2)}</span>
+            <span className="mobile-header__price">R$ {fmtBR(currentPrice)}</span>
             <button className="mobile-header__info-btn" onClick={() => setShowMobilePanel(true)}>
               <Info className="w-4 h-4 text-green-400" />
             </button>
@@ -1063,15 +949,21 @@ export default function AuctionRoom() {
             <div className="product-panel__body">
               <h2 className="product-panel__title">{auction.title}</h2>
               <div className="product-panel__meta">
-                <span className="product-panel__price">Lance atual: R$ {currentPrice.toFixed(2)}</span>
+                <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
                 <span className="product-panel__timer">{displayTime}</span>
               </div>
               <p className="product-panel__desc">{auction.description}</p>
+              <AuctionDisputePanel
+                auction={auction}
+                messages={messages}
+                currentUser={currentUser}
+              />
             </div>
           </div>
         </aside>
 
-        <div ref={chatRef} className="auction-messages">
+        <div className="chat-wrapper">
+        <div ref={chatRef} className="auction-messages" onScroll={handleChatScroll}>
           {messages.length === 0 ? (
             <div className="empty-chat">
               <div className="empty-chat__icon">💬</div>
@@ -1137,6 +1029,7 @@ export default function AuctionRoom() {
                       message={message}
                       winner={winner}
                       auction={auctionData}
+                      currentUser={currentUser}
                     />
                   );
                 }
@@ -1178,11 +1071,23 @@ export default function AuctionRoom() {
             </>
           )}
         </div>
+
+        {/* 📜 Botão de scroll — aparece quando há overflow e o usuário não está no fim */}
+        {showScrollDown && (
+          <button
+            className="chat-scroll-btn"
+            onClick={() => scrollChatToBottom(true)}
+            aria-label="Descer para as últimas mensagens"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </button>
+        )}
+        </div>
       </main>
 
       {isAuctionActive && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          <BidInput currentPrice={currentPrice} increment={auction.increment} onSubmitBid={submitBid} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={submitBid} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (
@@ -1224,11 +1129,11 @@ export default function AuctionRoom() {
             <div className="mobile-bottom-sheet__stats">
               <div className="stat">
                 <span className="stat__label">Lance atual</span>
-                <span className="stat__value">R$ {currentPrice.toFixed(2)}</span>
+                <span className="stat__value">R$ {fmtBR(currentPrice)}</span>
               </div>
               <div className="stat">
                 <span className="stat__label">Incremento</span>
-                <span className="stat__value">R$ {auction.increment.toFixed(2)}</span>
+                <span className="stat__value">R$ {fmtBR(safeIncrement)}</span>
               </div>
             </div>
           </div>
@@ -1264,6 +1169,8 @@ export default function AuctionRoom() {
         auction={auction}
         finalPrice={currentPrice}
         currentUser={currentUser}
+        messages={messages}
+        onSettled={refreshWalletBalance}
         onClose={() => setShowWinnerModal(false)}
       />
 
@@ -1279,11 +1186,11 @@ export default function AuctionRoom() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-400">Lance Atual:</span>
-                  <span className="font-semibold text-white">R$ {currentPrice.toFixed(2)}</span>
+                  <span className="font-semibold text-white">R$ {fmtBR(currentPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Arremate (+45%):</span>
-                  <span className="text-2xl font-bold text-orange-400">R$ {(currentPrice * 1.45).toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-orange-400">R$ {fmtBR(mulMoney(currentPrice, 1.45))}</span>
                 </div>
               </div>
             </div>
@@ -1324,13 +1231,15 @@ export default function AuctionRoom() {
         </div>
       )}
 
-      <ComparaiButton auction={auction} />
+      {/* Um único CompareAQUI na sala: o botão visível é o de baixo (LojaFloatActions);
+          aqui só o modal com a comparação real do produto deste leilão. */}
+      <ComparaiButton auction={auction} trigger="event" />
 
       {/* 🆕 Modal de Saldo Baixo */}
       <LowBalanceModal
         isOpen={showLowBalanceModal}
         currentBalance={userWallet?.balance || 0}
-        requiredAmount={currentPrice + (auction?.increment || 0)}
+        requiredAmount={addMoney(currentPrice, safeIncrement)}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);
@@ -1339,19 +1248,54 @@ export default function AuctionRoom() {
       />
 
       <style>{`
-        .auction-page-container { display: flex; flex-direction: column; height: 100vh; background-color: #111827; overflow: hidden; }
+        /* Altura EXATA da viewport menos o header fixo do Layout (pt-14 = 56px,
+           sm:pt-16 = 64px) — o chat rola por dentro e a página fica travada. */
+        .auction-page-container { display: flex; flex-direction: column; height: calc(100dvh - 56px); background-color: #111827; overflow: hidden; }
+        @media (min-width: 640px) { .auction-page-container { height: calc(100dvh - 64px); } }
         
-        @media (max-width: 1023px) { 
-          .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; } 
-          .auction-sidebar { display: none; } 
+        @media (max-width: 1023px) {
+          .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+          .auction-sidebar { display: none; }
+          .chat-wrapper { flex-grow: 1; }
         }
-        
+
         @media (min-width: 1024px) {
           .mobile-header { display: none; }
-          .main-content { display: grid; grid-template-columns: 360px 1fr; gap: 16px; max-width: 1280px; margin: 16px auto; width: 100%; flex: 1; overflow: hidden; }
-          .auction-sidebar { grid-column: 1; height: fit-content; position: sticky; top: 80px; }
-          .auction-messages { grid-column: 2; }
+          /* grid-template-rows minmax(0,1fr): sem isso a row implícita cresce com o
+             conteúdo do chat e o overflow-y interno NUNCA ativa (chat cortado sem scroll) */
+          .main-content { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: minmax(0, 1fr); gap: 16px; max-width: 1280px; margin: 16px auto; width: 100%; flex: 1; overflow: hidden; min-height: 0; }
+          .auction-sidebar { grid-column: 1; height: fit-content; position: sticky; top: 80px; overflow-y: auto; max-height: 100%; }
+          .chat-wrapper { grid-column: 2; height: 100%; }
           .bid-input-container { padding: 16px; background: rgba(31, 41, 55, 0.5); backdrop-filter: blur(8px); border-top: 1px solid rgba(55, 65, 81, 0.8); }
+        }
+
+        .chat-wrapper { position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+        /* Botão liquid glass de descer o chat */
+        .chat-scroll-btn {
+          position: absolute;
+          right: 16px;
+          bottom: 16px;
+          z-index: 30;
+          display: grid;
+          place-items: center;
+          width: 42px;
+          height: 42px;
+          border-radius: 999px;
+          color: #34d399;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(17, 24, 39, 0.6);
+          backdrop-filter: blur(16px) saturate(1.3);
+          -webkit-backdrop-filter: blur(16px) saturate(1.3);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+          cursor: pointer;
+          animation: chat-scroll-in 0.25s ease-out;
+          transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .chat-scroll-btn:hover { transform: translateY(-2px); background: rgba(17, 24, 39, 0.8); }
+        @keyframes chat-scroll-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
         .auction-messages { 
@@ -1360,9 +1304,11 @@ export default function AuctionRoom() {
           overflow-x: hidden;
           padding: 16px; 
           background-image: linear-gradient(to bottom, transparent, rgba(0,0,0,0.4)), url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23374151' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/svg%3E"); 
-          display: flex; 
+          display: flex;
           flex-direction: column;
-          scroll-behavior: smooth;
+          /* scroll-behavior: smooth REMOVIDO — transformava cada scrollTop
+             programático numa animação; sets sucessivos se atropelavam e o
+             chat ficava preso no topo. O botão de descer usa scrollTo smooth. */
         }
         
         /* Scrollbar moderno minimalista - fundo 100% transparente */

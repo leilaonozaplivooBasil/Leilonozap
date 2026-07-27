@@ -6,7 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -26,6 +25,9 @@ import {
   Crown,
   Truck,
   MapPin,
+  Target,
+  Image as ImageIcon,
+  Wallet as WalletIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -170,7 +172,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             )}
           </div>
           {/* Nome (truncado, só desktop largo) */}
-          <span className="hidden lg:inline text-sm font-semibold text-white max-w-[120px] truncate">
+          <span className="hidden lg:inline font-slab text-sm font-normal text-white max-w-[120px] truncate">
             {fullName.split(" ")[0]} {fullName.split(" ")[1] || ""}
           </span>
           <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -283,6 +285,31 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
 
         {/* ===== Ações pessoais ===== */}
         <div className="p-2">
+          {["admin", "super_admin"].includes(roleKey) && (
+            <DropdownMenuItem
+              onClick={() => navigate("/Metas")}
+              className="cursor-pointer text-yellow-300 hover:bg-yellow-500/10 focus:bg-yellow-500/10 hover:text-yellow-200 rounded-md gap-3 px-3 py-2"
+            >
+              <Target className="w-4 h-4" />
+              Metas (CEO)
+            </DropdownMenuItem>
+          )}
+          {["admin", "super_admin"].includes(roleKey) && (
+            <DropdownMenuItem
+              onClick={() => navigate(createPageUrl("PainelMidia"))}
+              className="cursor-pointer text-cyan-300 hover:bg-cyan-500/10 focus:bg-cyan-500/10 hover:text-cyan-200 rounded-md gap-3 px-3 py-2"
+            >
+              <ImageIcon className="w-4 h-4" />
+              Painel de Mídia
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
+            className="cursor-pointer text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
+          >
+            <WalletIcon className="w-4 h-4" />
+            Carteira
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate(createPageUrl("Profile"))}
             className="cursor-pointer text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
+import { money, addMoney, gtMoney, gteMoney } from "@/lib/money";
 
 const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;
@@ -65,7 +66,7 @@ export default function useBidSubmission({
       return;
     }
 
-    const bidAmount = parseFloat(amount);
+    const bidAmount = money(parseFloat(amount));
     const serverNow = getServerSyncedTime();
 
     if (serverNow === null) {
@@ -93,17 +94,17 @@ export default function useBidSubmission({
       }
 
       const freshAuction = freshAuctionData[0];
-      const currentPrice = freshAuction.current_price || freshAuction.starting_price;
-      const minBid = currentPrice + freshAuction.increment;
+      const currentPrice = money(freshAuction.current_price || freshAuction.starting_price);
+      const minBid = addMoney(currentPrice, freshAuction.increment);
 
-      if (bidAmount <= currentPrice) {
-        alert(`❌ Lance maior! Atual: R$ ${currentPrice.toFixed(2)}`);
+      if (!gtMoney(bidAmount, currentPrice)) {
+        alert(`❌ Lance maior! Atual: R$ ${fmtBR(currentPrice)}`);
         setAuction(freshAuction);
         return;
       }
 
-      if (bidAmount < minBid) {
-        alert(`❌ Mínimo: R$ ${minBid.toFixed(2)}`);
+      if (!gteMoney(bidAmount, minBid)) {
+        alert(`❌ Mínimo: R$ ${fmtBR(minBid)}`);
         return;
       }
 
@@ -119,7 +120,7 @@ export default function useBidSubmission({
       try {
         const debitResult = await base44.functions.invoke('debitWalletBalance', {
           user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
-          description: `Lance - R$ ${bidAmount.toFixed(2)}`
+          description: `Lance - R$ ${fmtBR(bidAmount)}`
         });
         const debitData = debitResult?.data || debitResult;
         if (!debitData?.success) {
@@ -140,7 +141,7 @@ export default function useBidSubmission({
         auction_id: auctionId,
         message_type: "bid",
         sender_id: currentUser.id,
-        content: `Lance de R$ ${bidAmount.toFixed(2)}`,
+        content: `Lance de R$ ${fmtBR(bidAmount)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: bidAmount,
         is_system_message: false,
@@ -160,7 +161,7 @@ export default function useBidSubmission({
         auction_id: auctionId,
         message_type: "bid",
         sender_id: currentUser.id,
-        content: `Lance de R$ ${bidAmount.toFixed(2)}`,
+        content: `Lance de R$ ${fmtBR(bidAmount)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: bidAmount,
         is_system_message: false
@@ -169,15 +170,16 @@ export default function useBidSubmission({
       await new Promise(resolve => setTimeout(resolve, 800));
 
       const revalidateAuction = await Auction.filter({ id: auctionId });
-      const revalidatePrice = revalidateAuction[0].current_price || revalidateAuction[0].starting_price;
+      const revalidatePrice = money(revalidateAuction[0].current_price || revalidateAuction[0].starting_price);
 
-      if (revalidatePrice >= bidAmount) {
+      if (gteMoney(revalidatePrice, bidAmount)) {
         alert("Outro lance foi dado!");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
         setAuction(prev => ({
           ...prev,
           current_price: revalidatePrice,
+          winner_id: revalidateAuction[0].winner_id,
           winner_name: revalidateAuction[0].winner_name
         }));
         return;
@@ -223,6 +225,7 @@ export default function useBidSubmission({
 
       await Auction.update(auctionId, {
         current_price: bidAmount,
+        winner_id: currentUser.id,
         winner_name: currentUser.nickname || currentUser.full_name,
         end_time: newEndTimeISO
       });
@@ -230,6 +233,7 @@ export default function useBidSubmission({
       setAuction(prev => ({
         ...prev,
         current_price: bidAmount,
+        winner_id: currentUser.id,
         winner_name: currentUser.nickname || currentUser.full_name,
         end_time: newEndTimeISO
       }));
@@ -256,7 +260,17 @@ export default function useBidSubmission({
         if (timeSinceLastAI > 20000 || bidAmount % 50 === 0) {
           lastAICommentTime.current = serverTimeStamp;
           const name = currentUser.nickname || currentUser.full_name;
-          const comments = [`🔥 UHULLLL! ${name} MANDOU R$ ${bidAmount.toFixed(2)}!`, `💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`, `⚡ ${name} ON FIRE!`, `🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`, `💥 POW! ${name} não brinca!`, `🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`, `⭐ SHOWWW! ${name}!`, `🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`];
+          const v = bidAmount.toFixed(2).replace('.', ',');
+          const comments = [
+            `${name} ASSUME A LIDERANÇA! R$ ${v} na mesa. Quem cobre?`,
+            `VIRADA! ${name} cobre o lance e crava R$ ${v}!`,
+            `${name} não deixa barato: R$ ${v}! A disputa está pegando fogo.`,
+            `R$ ${v}! ${name} atropela e toma a frente do lote!`,
+            `GOLPE DE MESTRE! ${name} sobe para R$ ${v} sem piscar.`,
+            `${name} ataca de novo — R$ ${v}! A liderança tem dono novo.`,
+            `NINGUÉM SEGURA ${name}! Já são R$ ${v} neste lote.`,
+            `PRESSÃO TOTAL! ${name} manda R$ ${v} e desafia a sala!`,
+          ];
           setTimeout(async () => {
             await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
           }, 1500);

@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, Calendar } from "lucide-react";
 
@@ -13,7 +14,7 @@ export default function SellerStatsCards({ data }) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-400">
-            R$ {data.saldo_liberado_final.toFixed(2)}
+            R$ {fmtBR(data.saldo_liberado_final)}
           </div>
           <p className="text-xs text-gray-500 mt-1">Após 7 dias da venda</p>
         </CardContent>
@@ -27,7 +28,7 @@ export default function SellerStatsCards({ data }) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-yellow-400">
-            R$ {data.saldo_bloqueado.toFixed(2)}
+            R$ {fmtBR(data.saldo_bloqueado)}
           </div>
           <p className="text-xs text-gray-500 mt-1">Desbloqueia em 7 dias</p>
         </CardContent>
@@ -41,7 +42,7 @@ export default function SellerStatsCards({ data }) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-blue-400">{data.total_vendas_mes}</div>
-          <p className="text-xs text-gray-500 mt-1">R$ {data.total_vendido_mes.toFixed(2)}</p>
+          <p className="text-xs text-gray-500 mt-1">R$ {fmtBR(data.total_vendido_mes)}</p>
         </CardContent>
       </Card>
     </div>

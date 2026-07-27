@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
@@ -7,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2 } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -26,23 +27,14 @@ import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
 import TreeHierarchy from "../components/network/TreeHierarchy";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
-
-const CAREER_LEVELS = [
-  { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
-  { id: 'influenciador', name: 'Influenciador', color: 'bg-green-500', textColor: 'text-green-400', borderColor: 'border-green-500' },
-  { id: 'licenciado_catalogo', name: 'Licenciado', color: 'bg-yellow-500', textColor: 'text-yellow-400', borderColor: 'border-yellow-500' },
-  { id: 'vendedor', name: 'Vendedor', color: 'bg-blue-500', textColor: 'text-blue-400', borderColor: 'border-blue-500' },
-  { id: 'parceiro', name: 'Parceiro', color: 'bg-purple-500', textColor: 'text-purple-400', borderColor: 'border-purple-500' },
-  { id: 'ponto_retirada', name: 'Ponto de Retirada', color: 'bg-emerald-500', textColor: 'text-emerald-400', borderColor: 'border-emerald-500' },
-  { id: 'loja_fisica', name: 'Loja Física', color: 'bg-indigo-500', textColor: 'text-indigo-400', borderColor: 'border-indigo-500' },
-  { id: 'distribuidor', name: 'Distribuidor', color: 'bg-sky-500', textColor: 'text-sky-400', borderColor: 'border-sky-500' },
-  { id: 'socio', name: 'Sócio Executivo', color: 'bg-teal-500', textColor: 'text-teal-400', borderColor: 'border-teal-500' },
-  { id: 'diretor', name: 'Diretor Operacional', color: 'bg-orange-500', textColor: 'text-orange-400', borderColor: 'border-orange-500' },
-  { id: 'diretoria', name: 'Diretoria Executiva', color: 'bg-fuchsia-500', textColor: 'text-fuchsia-400', borderColor: 'border-fuchsia-500' },
-  { id: 'ceo', name: 'CEO', color: 'bg-red-500', textColor: 'text-red-400', borderColor: 'border-red-500' },
-  { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500', textColor: 'text-cyan-400', borderColor: 'border-cyan-500' },
-  { id: 'fundador', name: 'Fundador', color: 'bg-amber-500', textColor: 'text-amber-400', borderColor: 'border-amber-500' }
-];
+import { CAREER_LEVELS } from "@/lib/careerLevels";
+import {
+  buildStructureReport,
+  buildExecutiveUpdate,
+  descendantsOf,
+  readExecutiveOwner,
+  resolveEffectiveExecutive,
+} from "@/lib/executiveStructure";
 
 function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit, onDelete }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -110,8 +102,9 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
 
           {/* 🔧 CORREÇÃO 3: Mostrar APENAS o nível principal */}
           <div className="flex items-center gap-2 mb-2">
-            <Badge className={`${primaryLevelConfig.color} text-white text-xs px-3 py-1 font-bold ring-2 ring-white/20`}>
-              ⭐ {primaryLevelConfig.name}
+            <Badge className={`${primaryLevelConfig.color} text-white text-xs px-3 py-1 font-bold ring-2 ring-white/20 inline-flex items-center gap-1`}>
+              <Star className="w-3 h-3" />
+              {primaryLevelConfig.name}
             </Badge>
           </div>
 
@@ -141,8 +134,8 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
                       if (!levelConfig) return null;
                       const isPrimary = levelId === primaryLevel;
                       return (
-                        <Badge key={levelId} className={`${levelConfig.color} text-white text-[10px] ${isPrimary ? 'ring-2 ring-white' : ''}`}>
-                          {isPrimary && '⭐ '}
+                        <Badge key={levelId} className={`${levelConfig.color} text-white text-[10px] inline-flex items-center gap-1 ${isPrimary ? 'ring-2 ring-white' : ''}`}>
+                          {isPrimary && <Star className="w-2.5 h-2.5" />}
                           {levelConfig.name}
                         </Badge>
                       );
@@ -168,14 +161,15 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-gray-700/50 rounded-lg p-2 text-center">
               <div className="text-gray-400 mb-1">Indicados</div>
-              <div className="text-white font-bold text-lg">
-                👥 {user.indicated_clients_count || 0}
+              <div className="text-white font-bold text-lg flex items-center justify-center gap-1.5">
+                <UserRound className="w-4 h-4 text-gray-400" />
+                {user.indicated_clients_count || 0}
               </div>
             </div>
             <div className="bg-green-900/30 rounded-lg p-2 text-center">
               <div className="text-gray-400 mb-1">Saldo R$</div>
               <div className="text-green-400 font-bold text-lg">
-                R$ {saldoReais.toFixed(2)}
+                R$ {fmtBR(saldoReais)}
               </div>
             </div>
           </div>
@@ -370,7 +364,7 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
             </div>
             <div className="text-center">
               <div className="text-gray-400">Saldo</div>
-              <div className="text-green-400 font-bold">R$ {(user.valora_pay_balance || 0).toFixed(2)}</div>
+              <div className="text-green-400 font-bold">R$ {fmtBR((user.valora_pay_balance || 0))}</div>
             </div>
           </div>
 
@@ -546,6 +540,50 @@ export default function NetworkOverview() {
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Faixa de estatísticas recolhível + árvore em tela cheia (mais espaço de trabalho)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [auditLog, setAuditLog] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showStats, setShowStats] = useState(false);
+  const [treeFullscreen, setTreeFullscreen] = useState(false);
+
+  // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
+  const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);
+  const trashedUsers = useMemo(() => allUsers.filter(u => u.active === false), [allUsers]);
+
+  // Auditoria: quem excluiu/moveu/promoveu quem (gravada pelo servidor em system_logs)
+  const loadAudit = useCallback(async () => {
+    try {
+      const rows = await base44.entities.SystemLog?.list?.('-created_date', 300);
+      const list = (Array.isArray(rows) ? rows : [])
+        .map((r) => ({ ...(r.raw_base44 || {}), created_at: r.created_at || r.created_date }))
+        .filter((r) => r.kind === 'network_audit');
+      setAuditLog(list);
+    } catch {
+      setAuditLog([]);
+    }
+  }, []);
+
+  useEffect(() => { loadAudit(); }, [loadAudit, allUsers.length]);
+
+  // Último registro de exclusão de cada usuário — mostrado na Lixeira
+  const trashInfoByUser = useMemo(() => {
+    const map = {};
+    for (const e of auditLog) {
+      if (e.action !== 'trash' || !e.target_id) continue;
+      const atual = map[e.target_id];
+      if (!atual || new Date(e.at || e.created_at) > new Date(atual.at || atual.created_at)) {
+        map[e.target_id] = e;
+      }
+    }
+    return map;
+  }, [auditLog]);
+
+  // Carteira dos Sócios Executivos (1% sobre a própria estrutura)
+  const structure = useMemo(() => buildStructureReport(activeUsers), [activeUsers]);
+  const structureRef = useRef(structure);
+  useEffect(() => { structureRef.current = structure; }, [structure]);
 
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
@@ -568,12 +606,12 @@ export default function NetworkOverview() {
       const podeRede = user.role === 'admin' || user.role === 'super_admin' ||
         (Array.isArray(user.career_levels) && user.career_levels.some((c) => REDE_CARGOS.includes(c)));
       if (!podeRede) {
-        toast.error("❌ Acesso negado.");
+        toast.error("Acesso negado.");
         setIsLoading(false);
         return;
       }
     } else {
-      toast.error("❌ Acesso negado. Faça login como administrador.");
+      toast.error("Acesso negado. Faça login como administrador.");
       setIsLoading(false);
       return;
     }
@@ -605,6 +643,7 @@ export default function NetworkOverview() {
       toast.error("Erro ao carregar dados do Sistema de Alavancagem."); // Changed here
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
   }, []);
 
@@ -656,6 +695,136 @@ export default function NetworkOverview() {
     return tempUsers;
   }, [allUsers, filterRole, searchTerm]);
 
+  /**
+   * Grava alterações de um usuário na rede.
+   * ⚠️ Antes o painel chamava a função 'updateUserNetwork', que NÃO existe na API
+   * (404). O erro era engolido e a UI dizia "Vínculo atualizado!" sem nada mudar —
+   * era por isso que arrastar/promover não associava. Agora usa adminUpdateUser,
+   * que existe, tem guard de admin e confirma a gravação.
+   */
+  const saveUserFields = useCallback(async (userId, updates) => {
+    let actor = null;
+    try { actor = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { actor = null; }
+    if (!actor) {
+      throw new Error('faça login como admin para alterar a rede');
+    }
+    const result = await base44.functions.invoke('adminUpdateUser', {
+      userId,
+      updates,
+      actorId: actor,
+    });
+    if (!result || result.success !== true) {
+      throw new Error(result?.error || 'o servidor não confirmou a gravação');
+    }
+    // Confere campo a campo se o banco gravou mesmo o que foi pedido — sem isso,
+    // um update ignorado silenciosamente voltaria como "sucesso".
+    const saved = result.user || {};
+    // Campos da carteira executiva podem ser gravados no campo de compatibilidade
+    // enquanto a coluna dedicada não existe — a conferência estrita não se aplica.
+    const IGNORA_CONFERENCIA = ['executive_owner_id', 'executive_owner_pinned', 'executive_owner_since', 'licenciado_context'];
+    const divergente = Object.keys(updates).filter((k) => !IGNORA_CONFERENCIA.includes(k)).find((k) => {
+      const pedido = updates[k];
+      const gravado = saved[k];
+      if (pedido === null || pedido === undefined) return !(gravado === null || gravado === undefined);
+      if (Array.isArray(pedido)) return JSON.stringify(pedido) !== JSON.stringify(gravado);
+      return String(pedido) !== String(gravado);
+    });
+    if (divergente) {
+      throw new Error(`o servidor não gravou o campo "${divergente}" (permissão ou regra do banco)`);
+    }
+    return saved;
+  }, []);
+
+  // Atribui um executivo a alguém — opcionalmente para toda a equipe abaixo
+  const assignExecutive = useCallback(async (targetUser, executiveId, { cascade = false, pinned = false } = {}) => {
+    try {
+      await saveUserFields(targetUser.id, buildExecutiveUpdate(executiveId, { pinned }));
+      let afetados = 1;
+      if (cascade) {
+        // quem tem escolha fixada não é arrastado pela mudança em massa
+        const equipe = descendantsOf(targetUser.id, allUsers).filter(u => !readExecutiveOwner(u).pinned);
+        for (const membro of equipe) {
+          await saveUserFields(membro.id, buildExecutiveUpdate(executiveId, { pinned: false }));
+          afetados += 1;
+        }
+      }
+      const nome = allUsers.find(u => u.id === executiveId)?.full_name || 'executivo';
+      toast.success(`Estrutura vinculada a ${nome} — ${afetados} cadastro(s).`);
+      await fetchData();
+      await loadAudit();
+    } catch (error) {
+      toast.error('Erro ao vincular estrutura: ' + (error?.message || 'falha'));
+    }
+  }, [allUsers, saveUserFields, fetchData, loadAudit]);
+
+  // Carga inicial: vincula todo mundo que está sem executivo de uma vez só
+  const assignAllOrphans = useCallback(async (executiveId) => {
+    const alvos = structureRef.current?.orfaos || [];
+    if (!alvos.length) return;
+    const nome = allUsers.find(u => u.id === executiveId)?.full_name || 'executivo';
+    if (!window.confirm(`Vincular ${alvos.length} cadastro(s) à estrutura de ${nome}?`)) return;
+    toast.info(`Vinculando ${alvos.length} cadastro(s)…`);
+    let ok = 0;
+    for (const u of alvos) {
+      try {
+        await saveUserFields(u.id, buildExecutiveUpdate(executiveId, { pinned: false }));
+        ok += 1;
+      } catch { /* segue para os demais e reporta no fim */ }
+    }
+    toast[ok === alvos.length ? 'success' : 'warning'](
+      `${ok} de ${alvos.length} vinculados a ${nome}.`
+    );
+    await fetchData();
+    await loadAudit();
+  }, [allUsers, saveUserFields, fetchData, loadAudit]);
+
+  // Normaliza a cascata: todo descendente passa a pertencer ao executivo da raiz
+  // da estrutura dele. Corrige vínculos antigos feitos antes da cascata existir.
+  const normalizarCascata = useCallback(async () => {
+    const byId = new Map(allUsers.map(u => [u.id, u]));
+    const correcoes = [];
+
+    for (const u of activeUsers) {
+      const proprio = readExecutiveOwner(u);
+      if (proprio.pinned) continue; // escolha fixada não é arrastada
+
+      // sobe a linha até achar quem tem executivo definido (a raiz da estrutura)
+      const visto = new Set([u.id]);
+      let cur = u.referred_by_id ? byId.get(u.referred_by_id) : null;
+      let executivoDaRaiz = null;
+      while (cur && !visto.has(cur.id)) {
+        visto.add(cur.id);
+        const dono = readExecutiveOwner(cur);
+        if (dono.id) { executivoDaRaiz = dono.id; break; }
+        cur = cur.referred_by_id ? byId.get(cur.referred_by_id) : null;
+      }
+
+      if (executivoDaRaiz && proprio.id !== executivoDaRaiz) {
+        correcoes.push({ user: u, de: proprio.id, para: executivoDaRaiz });
+      }
+    }
+
+    if (!correcoes.length) {
+      toast.success('Nada a corrigir — toda estrutura já segue o executivo da raiz.');
+      return;
+    }
+    if (!window.confirm(
+      `Corrigir ${correcoes.length} cadastro(s) para o executivo da estrutura acima deles?`
+    )) return;
+
+    toast.info(`Aplicando cascata em ${correcoes.length} cadastro(s)…`);
+    let ok = 0;
+    for (const c of correcoes) {
+      try {
+        await saveUserFields(c.user.id, buildExecutiveUpdate(c.para, { pinned: false }));
+        ok += 1;
+      } catch { /* segue */ }
+    }
+    toast[ok === correcoes.length ? 'success' : 'warning'](`${ok} de ${correcoes.length} corrigidos.`);
+    await fetchData();
+    await loadAudit();
+  }, [allUsers, activeUsers, saveUserFields, fetchData, loadAudit]);
+
   const handlePromote = (user) => {
     setPromotingUser(user);
     const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
@@ -697,21 +866,18 @@ export default function NetworkOverview() {
     setIsPromoting(true);
     try {
       const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
-        target_user_id: promotingUser.id,
-        update_data: {
+      await saveUserFields(promotingUser.id, {
           career_levels: selectedLevels,
           primary_career_level: primaryLevel,
           display_first_name: displayFirstName.trim() || null,
           display_last_name: displayLastName.trim() || null
-        }
-      });
+        });
 
       await fetchData();
 
       const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
       const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
-      toast.success(`${promotingUser.full_name} agora é: ${levelNames}!\nFunção principal: ⭐ ${primaryName}`);
+   toast.success(`${promotingUser.full_name} agora é: ${levelNames}!\nFunção principal: ${primaryName}`);
 
       setPromotingUser(null);
       setSelectedLevels([]);
@@ -754,16 +920,13 @@ export default function NetworkOverview() {
       if (!licensee) throw new Error("Licenciado não encontrado.");
 
       const amount = parseFloat(commissionAmount);
-      const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
-        target_user_id: selectedLicenseeId,
-        update_data: {
-          commission_balance: (licensee.commission_balance || 0) + amount,
-          valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
-        }
+      // A tabela app_users tem commission_balance; 'valora_pay_balance' não existe
+      // como coluna — mandar isso fazia o update inteiro falhar.
+      await saveUserFields(selectedLicenseeId, {
+        commission_balance: (licensee.commission_balance || 0) + amount,
       });
 
-      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`R$ ${fmtBR(amount)} creditados!`);
       await fetchData();
       setSelectedLicenseeId('');
       setCommissionAmount('');
@@ -810,16 +973,10 @@ export default function NetworkOverview() {
 
         // Evita ciclo imediato (quando o licenciado é indicado pelo usuário que será movido)
         if (licensee.referred_by_id === userToLink.id) {
-          await base44Client.functions.invoke('updateUserNetwork', {
-            target_user_id: licensee.id,
-            update_data: { referred_by_id: null }
-          });
+          await saveUserFields(licensee.id, { referred_by_id: null });
         }
 
-        await base44Client.functions.invoke('updateUserNetwork', {
-          target_user_id: userId,
-          update_data: { referred_by_id: licensee.id }
-        });
+        await saveUserFields(userId, { referred_by_id: licensee.id });
       }
 
       toast.info("Recalculando estatísticas...");
@@ -870,14 +1027,39 @@ export default function NetworkOverview() {
 
         if (isDescendant(draggedId, targetId)) {
           // Quebra o ciclo: solta o alvo na raiz antes de mover o arrastado
-          await AppUser.update(targetId, { referred_by_id: '' });
+          const base44Client = (await import('@/api/base44Client')).base44;
+          await saveUserFields(targetId, { referred_by_id: null });
         }
       }
 
-      // Grava direto no Supabase (AppUser tem RLS null — mesmo mecanismo do UserEditModal)
-      await AppUser.update(draggedId, { referred_by_id: targetId || '' });
-      toast.success('Vínculo atualizado!');
+      await saveUserFields(draggedId, { referred_by_id: targetId });
+
+      // Mudar de lugar na árvore muda a ESTRUTURA a que a pessoa pertence.
+      // Sem isto, ela levava junto a carteira executiva do lugar antigo — foi o que
+      // aconteceu com o Gabriel: movido para a linha do Ribeiro, continuou na
+      // carteira do Luiz, e o 1% da venda iria para o executivo errado.
+      try {
+        const byId = new Map(allUsers.map(u => [u.id, u]));
+        const novoPai = byId.get(targetId);
+        const efetivo = novoPai ? resolveEffectiveExecutive(novoPai, byId) : null;
+        const movido = byId.get(draggedId);
+        if (efetivo?.executiveId && movido && !readExecutiveOwner(movido).pinned) {
+          const equipe = [movido, ...descendantsOf(draggedId, allUsers)]
+            .filter(u => !readExecutiveOwner(u).pinned);
+          for (const membro of equipe) {
+            await saveUserFields(membro.id, buildExecutiveUpdate(efetivo.executiveId, { pinned: false }));
+          }
+          const nomeExec = allUsers.find(u => u.id === efetivo.executiveId)?.full_name || 'executivo';
+          toast.success(`Vínculo atualizado — estrutura agora é de ${nomeExec} (${equipe.length} cadastro(s)).`);
+        } else {
+          toast.success('Vínculo atualizado!');
+        }
+      } catch {
+        toast.success('Vínculo atualizado! (confira a estrutura executiva)');
+      }
+
       await fetchData();
+      await loadAudit();
     } catch (error) {
       toast.error('Erro ao mover: ' + error.message);
     }
@@ -885,12 +1067,12 @@ export default function NetworkOverview() {
 
   const handleCleanDuplicates = async () => {
     const confirmClean = window.confirm(
-      "⚠️ ATENÇÃO: Remover cadastros duplicados?\n\nEsta ação é irreversível e removerá todos os usuários com o mesmo e-mail, exceto o mais recente."
+      "ATENÇÃO: Remover cadastros duplicados?\n\nEsta ação é irreversível e removerá todos os usuários com o mesmo e-mail, exceto o mais recente."
     );
     if (!confirmClean) return;
 
     setIsCleaningDuplicates(true);
-    toast.info("🔍 Buscando duplicatas...");
+    toast.info("Buscando duplicatas...");
 
     try {
       const allUsersToProcess = await AppUser.list("-created_date", 1000);
@@ -945,7 +1127,7 @@ export default function NetworkOverview() {
       }
 
       if (duplicatesRemoved === 0) {
-        toast.success("✅ Nenhum cadastro duplicado encontrado!");
+        toast.success("Nenhum cadastro duplicado encontrado!");
       } else {
         console.log("\n📊 RELATÓRIO DE LIMPEZA:");
         console.log(`Total de emails duplicados: ${duplicateEmails.length}`);
@@ -958,14 +1140,14 @@ export default function NetworkOverview() {
           });
         });
 
-        toast.success(`🧹 ${duplicatesRemoved} duplicatas removidas!\n${duplicateEmails.length} emails tinham cadastros duplicados.`);
+        toast.success(`${duplicatesRemoved} duplicatas removidas!\n${duplicateEmails.length} emails tinham cadastros duplicados.`);
       }
 
       await fetchData();
 
     } catch (error) {
       console.error("❌ Erro ao limpar duplicatas:", error);
-      toast.error("❌ Erro ao limpar duplicatas: " + error.message);
+      toast.error("Erro ao limpar duplicatas: " + error.message);
     } finally {
       setIsCleaningDuplicates(false);
     }
@@ -973,19 +1155,19 @@ export default function NetworkOverview() {
 
   const handleLinkOrphanUsers = async () => {
     const confirmLink = window.confirm(
-      "🔗 Vincular todos os usuários SEM indicação ao Licenciado Site?\n\nEsta ação vai buscar todos os usuários órfãos e vinculá-los automaticamente."
+      "Vincular todos os usuários SEM indicação ao Licenciado Site?\n\nEsta ação vai buscar todos os usuários órfãos e vinculá-los automaticamente."
     );
     if (!confirmLink) return;
 
     setIsLinkingOrphans(true);
-    toast.info("🔍 Buscando usuários órfãos...");
+    toast.info("Buscando usuários órfãos...");
 
     try {
       const response = await linkOrphanUsers();
 
       if (response.data && response.data.success) {
         const { linkedCount, totalOrphans, siteLicenseeName } = response.data;
-        toast.success(`✅ ${linkedCount} de ${totalOrphans} usuários vinculados ao "${siteLicenseeName}"!`);
+        toast.success(`${linkedCount} de ${totalOrphans} usuários vinculados ao "${siteLicenseeName}"!`);
 
         await fetchData();
       } else {
@@ -993,7 +1175,7 @@ export default function NetworkOverview() {
       }
     } catch (error) {
       console.error("Erro ao vincular órfãos:", error);
-      toast.error("❌ Erro ao vincular usuários: " + error.message);
+      toast.error("Erro ao vincular usuários: " + error.message);
     } finally {
       setIsLinkingOrphans(false);
     }
@@ -1001,18 +1183,18 @@ export default function NetworkOverview() {
 
   const handleCleanSiteDuplicates = async () => {
     const confirmClean = window.confirm(
-      "🧹 LIMPAR DUPLICATAS DO SITE OFICIAL?\n\n" +
+      "LIMPAR DUPLICATAS DO SITE OFICIAL?\n\n" +
       "Esta ação vai:\n" +
       "1. Buscar TODOS os cadastros com 'Site Oficial' no nome\n" +
       "2. Manter APENAS o mais antigo\n" +
       "3. Deletar os duplicados\n\n" +
-      "⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n" +
+      "ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n" +
       "Deseja continuar?"
     );
     if (!confirmClean) return;
 
     setIsCleaningDuplicates(true);
-    toast.info("🔍 Buscando duplicatas...");
+    toast.info("Buscando duplicatas...");
 
     try {
       console.log("📞 Chamando cleanSiteDuplicates...");
@@ -1027,13 +1209,13 @@ export default function NetworkOverview() {
             console.log("📋 Detalhes:", response.data.deletionDetails);
 
             toast.success(
-              `✅ ${response.data.duplicatesRemoved} duplicatas removidas!\n` +
-              `🏆 Mantido: ${response.data.siteLicensee.full_name}` +
-              `${response.data.failedDeletions > 0 ? `\n⚠️ ${response.data.failedDeletions} falharam` : ''}`
+              `${response.data.duplicatesRemoved} duplicatas removidas!\n` +
+              `Mantido: ${response.data.siteLicensee.full_name}` +
+              `${response.data.failedDeletions > 0 ? `\n${response.data.failedDeletions} falharam` : ''}`
             );
           } else if (response.data.action === "already_clean") {
             console.log("✅ Sistema já está limpo");
-            toast.success("✅ Site Oficial já está único!");
+            toast.success("Site Oficial já está único!");
           }
 
           await fetchData();
@@ -1053,7 +1235,7 @@ export default function NetworkOverview() {
     } catch (error) {
       console.error("❌ Erro ao limpar duplicatas:", error);
       console.error("Stack:", error.stack);
-      toast.error(`❌ Erro: ${error.message}`);
+      toast.error(`Erro: ${error.message}`);
     } finally {
       setIsCleaningDuplicates(false);
     }
@@ -1063,41 +1245,155 @@ export default function NetworkOverview() {
     setEditingUserFull(user);
   };
 
-  const handleSaveEditUser = async () => {
+  const handleSaveEditUser = async (salvo) => {
+    const anterior = editingUserFull;
     setEditingUserFull(null);
+
+    // CASCATA — regra validada: definir o executivo de uma estrutura vale para
+    // TODA a estrutura, não só para o nó escolhido. Antes isso só acontecia quando
+    // a troca era feita pela linha da carteira; pelo modal ficava só na pessoa e os
+    // filhos continuavam no executivo antigo (Iara, Diana, Ponto de Retirada e
+    // Elenice ficaram no Luiz quando o Bangu foi para o Ribeiro).
+    try {
+      const antes = readExecutiveOwner(anterior || {});
+      const agora = readExecutiveOwner(salvo || {});
+      if (agora.id && agora.id !== antes.id && anterior?.id) {
+        const equipe = descendantsOf(anterior.id, allUsers).filter(u => !readExecutiveOwner(u).pinned);
+        let n = 0;
+        for (const membro of equipe) {
+          try {
+            await saveUserFields(membro.id, buildExecutiveUpdate(agora.id, { pinned: false }));
+            n += 1;
+          } catch { /* segue e reporta no fim */ }
+        }
+        if (n) {
+          const nome = allUsers.find(u => u.id === agora.id)?.full_name || 'executivo';
+          const pulados = descendantsOf(anterior.id, allUsers).length - n;
+          toast.success(
+            `Estrutura inteira movida para ${nome}: ${n} cadastro(s)` +
+            (pulados > 0 ? ` · ${pulados} com escolha fixada não foram alterados` : '')
+          );
+        }
+      }
+    } catch (e) {
+      toast.error('Alteração salva, mas a cascata falhou: ' + (e?.message || 'erro'));
+    }
+
     await fetchData();
+    await loadAudit();
     toast.success("Usuário atualizado com sucesso!");
   };
 
-  const handleDeleteUser = async (user) => {
-    const confirmDelete = window.confirm(
-      `⚠️ ATENÇÃO: Deletar usuário e TODOS os seus dados?\n\n` +
-      `Usuário: ${user.full_name}\n` +
-      `Email: ${user.email}\n\n` +
-      `Esta ação é IRREVERSÍVEL!\n\n` +
-      `Tem certeza que deseja continuar?`
-    );
-    if (!confirmDelete) return;
+  /* ------------------------------------------------------------------ */
+  /* LIXEIRA — exclusão que não quebra a estrutura de negócio            */
+  /*                                                                     */
+  /* Excluir NÃO apaga nada do banco: marca o usuário como inativo       */
+  /* (active=false) e religa os indicados dele a quem indicava ele, para */
+  /* a rede não ficar com gente órfã. Dá para restaurar depois.          */
+  /* ------------------------------------------------------------------ */
+  const actorId = (() => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { return null; }
+  })();
 
-    setDeletingUserId(user.id);
+  // Quantas pessoas existem abaixo de alguém (equipe inteira)
+  const countDescendants = useCallback((userId) => {
+    const stack = [userId];
+    const seen = new Set();
+    while (stack.length) {
+      const cur = stack.pop();
+      for (const u of allUsers) {
+        if (u.referred_by_id === cur && !seen.has(u.id)) {
+          seen.add(u.id);
+          stack.push(u.id);
+        }
+      }
+    }
+    return seen.size;
+  }, [allUsers]);
+
+  // Abre o diálogo (a árvore e a tabela chamam isto no lugar de deletar direto)
+  const handleDeleteUser = (user) => {
+    if (user.active === false) {
+      handleRestoreUser(user);
+      return;
+    }
+    setDeleteTarget(user);
+    setDeleteConfirmText('');
+  };
+
+  const handleMoveToTrash = async () => {
+    const user = deleteTarget;
+    if (!user) return;
     setIsDeleting(true);
-    toast.info("Deletando usuário...");
-
+    setDeletingUserId(user.id);
     try {
-      // Chamar função backend para deletar usuário e todos os dados associados
-      await base44.functions.invoke('deleteUserAndData', { user_id: user.id });
-      toast.success(`${user.full_name} e todos os seus dados foram deletados!`);
+      // 1) Preserva a estrutura: os indicados diretos sobem para o indicador dele
+      const directChildren = allUsers.filter(u => u.referred_by_id === user.id);
+      const newParent = user.referred_by_id || null;
+      for (const child of directChildren) {
+        await saveUserFields(child.id, { referred_by_id: newParent });
+      }
+
+      // 2) Manda para a lixeira (nada é apagado)
+      const result = await base44.functions.invoke('adminUpdateUser', {
+        userId: user.id,
+        updates: { active: false },
+        actorId,
+      });
+      if (!result || result.success !== true) {
+        throw new Error(result?.error || 'não foi possível concluir');
+      }
+
+      toast.success(
+        directChildren.length
+          ? `${user.full_name} foi para a lixeira. ${directChildren.length} indicado(s) passaram para ${newParent ? 'o indicador acima' : 'a raiz'}.`
+          : `${user.full_name} foi para a lixeira.`
+      );
+      setDeleteTarget(null);
+      setDeleteConfirmText('');
       await fetchData();
+      await loadAudit();
     } catch (error) {
-      console.error("Erro ao deletar usuário:", error);
-      toast.error(`Erro ao deletar usuário: ${error.message}`);
+      toast.error('Erro ao excluir: ' + (error?.message || 'falha'));
     } finally {
-      setDeletingUserId(null);
       setIsDeleting(false);
+      setDeletingUserId(null);
     }
   };
 
-  if (isLoading) {
+  const handleRestoreUser = async (user) => {
+    try {
+      const result = await base44.functions.invoke('adminUpdateUser', {
+        userId: user.id,
+        updates: { active: true },
+        actorId,
+      });
+      if (!result || result.success !== true) {
+        throw new Error(result?.error || 'não foi possível restaurar');
+      }
+      toast.success(`${user.full_name} foi restaurado.`);
+      await fetchData();
+      await loadAudit();
+    } catch (error) {
+      toast.error('Erro ao restaurar: ' + (error?.message || 'falha'));
+    }
+  };
+
+  // Soltar da rede: vira raiz, sem indicador
+  const handleDetachUser = async (user) => {
+    try {
+      await saveUserFields(user.id, { referred_by_id: null });
+      toast.success(`${user.full_name} agora é raiz da rede.`);
+      await fetchData();
+    } catch (error) {
+      toast.error('Erro ao soltar da rede: ' + (error?.message || 'falha'));
+    }
+  };
+
+  // ⚠️ O spinner de tela cheia só aparece no PRIMEIRO carregamento. Antes ele
+  // voltava a cada refresh (editar, promover, mover) e remontava a página inteira —
+  // a árvore perdia modo, zoom e o que estava expandido ("voltava pro modo lista").
+  if (isLoading && !hasLoadedOnce) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-green-500" />
@@ -1119,7 +1415,9 @@ export default function NetworkOverview() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+      {/* Largura ampliada (26/07): sem sidebar lateral, a tela inteira fica para a
+          gestão de usuários e a árvore genealógica. */}
+      <div className="max-w-[1800px] mx-auto">
         <PortalPageHeader
           icon={Users}
           title="Sistema de Alavancagem"
@@ -1131,40 +1429,51 @@ export default function NetworkOverview() {
               className="bg-blue-600 hover:bg-blue-700"
               size="sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 2L11 13" />
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-              </svg>
+              <Send className="w-4 h-4 mr-2" />
               Disparar Mensagens
             </Button>
           }
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4 mb-8">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
-              <div className="text-sm text-gray-400 mb-1">Total no Sistema</div>
-              <div className="text-2xl font-bold text-white">{stats.total}</div>
-            </CardContent>
-          </Card>
+        {/* Resumo da rede — faixa compacta e recolhível: ocupa pouca altura para
+            deixar a árvore genealógica em primeiro plano. */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              type="button"
+              onClick={() => setShowStats((v) => !v)}
+              className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-emerald-400/90 hover:text-emerald-300 transition-colors"
+            >
+              {showStats ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              Resumo da rede
+            </button>
+            <div className="flex items-center gap-3 text-[12px] text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-gray-500" />
+                <strong className="text-white">{stats.total}</strong> no sistema
+              </span>
+              <span className="flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-green-500" />
+                <strong className="text-green-400">R$ {fmtBR(stats.totalVolume)}</strong>
+              </span>
+            </div>
+          </div>
 
-          {stats.byLevel.map(level => (
-            <Card key={level.id} className={`bg-gray-800 border-2 ${level.borderColor}`}>
-              <CardContent className="p-4">
-                <div className={`text-xs ${level.textColor} mb-1 font-semibold line-clamp-1`}>{level.name}</div>
-                <div className="text-2xl font-bold text-white">{level.count}</div>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
-            <CardContent className="p-4">
-              <div className="text-sm text-green-400 mb-1">Volume R$</div>
-              <div className="text-2xl font-bold text-white">
-                R$ {stats.totalVolume.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
+          {showStats && (
+            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(130px,1fr))]">
+              {stats.byLevel.map(level => (
+                <div
+                  key={level.id}
+                  className={`rounded-lg bg-gray-800/70 border ${level.borderColor} px-3 py-2`}
+                >
+                  <div className={`text-[11px] ${level.textColor} font-semibold truncate`} title={level.name}>
+                    {level.name}
+                  </div>
+                  <div className="text-lg font-bold text-white leading-tight">{level.count}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <Card className="bg-gray-800 border-gray-700 mb-8">
@@ -1191,7 +1500,7 @@ export default function NetworkOverview() {
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
                           {licensees.map(lic => (
                             <SelectItem key={lic.id} value={lic.id}>
-                              {lic.full_name} - R$ {(lic.valora_pay_balance || 0).toFixed(2)}
+                              {lic.full_name} - R$ {fmtBR((lic.valora_pay_balance || 0))}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1281,39 +1590,88 @@ export default function NetworkOverview() {
           </CardContent>
         </Card>
 
-        {/* The new main Card with Tabs for content */}
+        {/* Gestão de usuários — bloco principal de trabalho, ocupa a largura toda */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Gerenciamento de Usuários e Sistema de Alavancagem</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-base">Gerenciamento de Usuários e Sistema de Alavancagem</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* 🔧 AGORA SÓ 2 ABAS (removido Laboratório) */}
             <Tabs defaultValue="licensees" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-700/50">
+              <TabsList className="grid w-full grid-cols-4 bg-gray-700/50">
                 <TabsTrigger value="licensees">
-                  <Award className="w-4 h-4 mr-2" />
-                  Licenciados
+                  <Network className="w-4 h-4 mr-2" />
+                  Árvore da Rede
                 </TabsTrigger>
                 <TabsTrigger value="users">
                   <Users className="w-4 h-4 mr-2" />
-                  Usuários Gerais
+                  Usuários Gerais ({activeUsers.length})
+                </TabsTrigger>
+                <TabsTrigger value="estruturas">
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Estruturas ({structure.executives.length})
+                  {structure.orfaos.length > 0 && (
+                    <span className="ml-1.5 px-1.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-bold">
+                      {structure.orfaos.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="trash">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Lixeira ({trashedUsers.length})
                 </TabsTrigger>
               </TabsList>
 
-              {/* ABA 1: LICENCIADOS */}
-              <TabsContent value="licensees" className="mt-6">
-                <Card className="bg-gray-800/50 border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="text-green-400">Sistema Multinível - Visualização em Árvore</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
+              {/* ABA 1: ÁRVORE MULTINÍVEL */}
+              <TabsContent value="licensees" className="mt-4">
+                <div
+                  className={
+                    treeFullscreen
+                      ? "fixed inset-0 z-[120] bg-gray-950 flex flex-col"
+                      : "rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden"
+                  }
+                >
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-green-400">
+                      Sistema Multinível — Visualização em Árvore
+                    </span>
+                    <span className="text-[11px] text-gray-500 hidden sm:inline">
+                      arraste uma pessoa sobre outra para mudar o indicador (pede confirmação)
+                    </span>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTreeFullscreen((v) => !v)}
+                      className="h-7 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black"
+                      title={treeFullscreen ? "Sair da tela cheia" : "Abrir em tela cheia"}
+                    >
+                      {treeFullscreen ? (
+                        <>
+                          <Minimize2 className="w-3.5 h-3.5 mr-1.5" />
+                          Sair da tela cheia
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="w-3.5 h-3.5 mr-1.5" />
+                          Tela cheia
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* A árvore controla o próprio zoom/pan — sem scroll externo */}
+                  <div className={treeFullscreen ? "flex-1 min-h-0 overflow-hidden" : ""}>
                     {allUsers.length > 0 ? (
                       <TreeHierarchy
-                        users={allUsers}
+                        users={activeUsers}
+                        fullHeight={treeFullscreen}
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
                         onPromote={handlePromote}
                         onRelink={handleRelink}
+                        onDetach={handleDetachUser}
+                        allUsers={allUsers}
                       />
                     ) : (
                       <div className="text-center py-12 text-gray-500">
@@ -1321,8 +1679,8 @@ export default function NetworkOverview() {
                         <p>Nenhum usuário no sistema ainda.</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               {/* ABA 2: USUÁRIOS GERAIS */}
@@ -1414,8 +1772,9 @@ export default function NetworkOverview() {
                                     )}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge className={`${primaryLevelConfig.color} text-white font-semibold`}>
-                                      ⭐ {primaryLevelConfig.name}
+                                    <Badge className={`${primaryLevelConfig.color} text-white font-semibold inline-flex items-center gap-1`}>
+                                      <Star className="w-3 h-3" />
+                                      {primaryLevelConfig.name}
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-gray-400 text-sm">
@@ -1457,6 +1816,278 @@ export default function NetworkOverview() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+              {/* ABA 3: ESTRUTURAS EXECUTIVAS — destino do 1% de cada estrutura */}
+              <TabsContent value="estruturas" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60 flex-wrap">
+                    <Briefcase className="w-4 h-4 text-purple-300 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-purple-300">Estruturas de Negócio</span>
+                    <span className="text-[11px] text-gray-500">
+                      o Sócio Executivo recebe 1% sobre a própria estrutura — cada licenciado precisa ter um dono definido
+                    </span>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={normalizarCascata}
+                      className="h-7 px-2 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white"
+                      title="Faz cada descendente seguir o executivo da raiz da estrutura dele"
+                    >
+                      <Network className="w-3.5 h-3.5 mr-1.5" />
+                      Aplicar cascata em toda a rede
+                    </Button>
+                  </div>
+
+                  {structure.executives.length === 0 ? (
+                    <p className="text-center py-8 text-[12px] text-gray-500">
+                      Nenhum Sócio Executivo cadastrado. Promova alguém ao cargo para montar as carteiras.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60">
+                      {structure.carteiras.map(({ executive, membros, definidos, herdados }) => (
+                        <div key={executive.id} className="px-4 py-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white text-[11px] font-bold overflow-hidden flex-shrink-0">
+                              {executive.avatar_url
+                                ? <img src={executive.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : (executive.full_name || '??').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[13px] text-white font-medium truncate">{executive.full_name}</p>
+                              <p className="text-[11px] text-gray-500">Sócio Executivo · 1% sobre esta estrutura</p>
+                            </div>
+                            <div className="flex-1" />
+                            <div className="text-right">
+                              <p className="text-[13px] text-purple-300 font-bold">{membros.length} na carteira</p>
+                              <p className="text-[10.5px] text-gray-500">{definidos} definidos · {herdados} herdados</p>
+                            </div>
+                          </div>
+
+                          {membros.length > 0 && (
+                            <div className="mt-2 rounded-lg border border-gray-700/70 divide-y divide-gray-700/50">
+                              {membros.map(({ user: m, source }) => {
+                                const lv = CAREER_LEVELS.find(l => l.id === (m.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                                const fixado = readExecutiveOwner(m).pinned;
+                                return (
+                                  <div key={m.id} className="flex items-center gap-2.5 px-2.5 py-1.5 flex-wrap hover:bg-white/[0.03]">
+                                    <span className={`w-6 h-6 rounded-full ${lv.color} flex items-center justify-center text-white text-[9px] font-bold overflow-hidden flex-shrink-0`}>
+                                      {m.avatar_url
+                                        ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
+                                        : (m.full_name || '??').slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <span className="min-w-0">
+                                      <span className="block text-[12px] text-gray-200 truncate">{m.full_name}</span>
+                                      <span className={`block text-[10px] ${lv.textColor}`}>
+                                        {lv.name}
+                                        <span className="text-gray-600"> · {source}{fixado ? ' · fixado' : ''}</span>
+                                      </span>
+                                    </span>
+                                    <div className="flex-1" />
+                                    {/* trocar o executivo desta pessoa direto na linha */}
+                                    <Select
+                                      value={executive.id}
+                                      onValueChange={(novoExec) => {
+                                        if (novoExec === executive.id) return;
+                                        assignExecutive(m, novoExec, { cascade: true, pinned: true });
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-52 h-7 bg-gray-800 border-gray-600 text-white text-[11.5px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                        {structure.executives.map(e => (
+                                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Alerta: licenciados sem destino para o 1% */}
+                <div className={`rounded-lg border overflow-hidden ${
+                  structure.orfaos.length ? 'border-amber-500/40 bg-amber-900/10' : 'border-gray-700 bg-gray-800/50'
+                }`}>
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <TriangleAlert className={`w-4 h-4 flex-shrink-0 ${structure.orfaos.length ? 'text-amber-400' : 'text-gray-500'}`} />
+                    <span className={`text-[13px] font-semibold ${structure.orfaos.length ? 'text-amber-300' : 'text-gray-400'}`}>
+                      Sem executivo definido ({structure.orfaos.length})
+                    </span>
+                    <span className="text-[11px] text-gray-500">
+                      enquanto estiverem aqui, o 1% dessas estruturas não tem para quem ir
+                    </span>
+                    <div className="flex-1" />
+                    {structure.orfaos.length > 0 && structure.executives.length > 0 && (
+                      <Select onValueChange={(execId) => assignAllOrphans(execId)}>
+                        <SelectTrigger className="w-64 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
+                          <SelectValue placeholder={`Vincular todos os ${structure.orfaos.length} a…`} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                          {structure.executives.map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {structure.orfaos.length === 0 ? (
+                    <p className="text-center py-6 text-[12px] text-gray-500">
+                      Todo licenciado ativo tem um executivo responsável.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60 max-h-96 overflow-y-auto">
+                      {structure.orfaos.map((u) => {
+                        const lv = CAREER_LEVELS.find(l => l.id === (u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                        return (
+                          <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 flex-wrap">
+                            <div className={`w-8 h-8 rounded-full ${lv.color} flex items-center justify-center text-white text-[10px] font-bold overflow-hidden flex-shrink-0`}>
+                              {u.avatar_url
+                                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : (u.full_name || '??').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12.5px] text-gray-200 truncate">{u.full_name}</p>
+                              <p className={`text-[10.5px] ${lv.textColor}`}>{lv.name}</p>
+                            </div>
+                            <Select onValueChange={(execId) => assignExecutive(u, execId, { cascade: true })}>
+                              <SelectTrigger className="w-56 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
+                                <SelectValue placeholder="Vincular a um executivo…" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                {structure.executives.map(e => (
+                                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* ABA 4: LIXEIRA — nada foi apagado, dá para restaurar */}
+              <TabsContent value="trash" className="mt-4">
+                <div className="rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <Trash2 className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-red-300">Lixeira</span>
+                    <span className="text-[11px] text-gray-500">
+                      ninguém é apagado do banco — quem está aqui sai da árvore e perde o acesso, e pode voltar quando você quiser
+                    </span>
+                  </div>
+
+                  {trashedUsers.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Trash2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                      <p className="text-sm">A lixeira está vazia.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60">
+                      {trashedUsers.map((u) => {
+                        const lv = CAREER_LEVELS.find(l => l.id === (u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                        return (
+                          <div key={u.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-700/20">
+                            <div className={`w-9 h-9 rounded-full ${lv.color} flex items-center justify-center text-white text-[11px] font-bold overflow-hidden flex-shrink-0 opacity-70`}>
+                              {u.avatar_url
+                                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : (u.full_name || '??').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] text-gray-300 truncate">{u.full_name}</p>
+                              <p className="text-[11px] text-gray-500 truncate">{u.email} · {lv.name}</p>
+                              {(() => {
+                                const reg = trashInfoByUser[u.id];
+                                if (!reg) {
+                                  return (
+                                    <p className="text-[10.5px] text-gray-600 truncate">
+                                      excluído antes do registro de auditoria
+                                    </p>
+                                  );
+                                }
+                                const quando = reg.at || reg.created_at;
+                                return (
+                                  <p className="text-[10.5px] text-amber-400/80 truncate flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3 flex-shrink-0" />
+                                    excluído por {reg.actor_name || reg.actor_email || 'admin'}
+                                    {quando && ` · ${new Date(quando).toLocaleString('pt-BR')}`}
+                                  </p>
+                                );
+                              })()}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRestoreUser(u)}
+                              className="h-8 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 font-semibold"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                              Restaurar
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Histórico de ações da rede — quem fez o quê */}
+                <div className="mt-4 rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                    <ShieldCheck className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold text-amber-300">Registro de ações</span>
+                    <span className="text-[11px] text-gray-500">
+                      toda exclusão, restauração, mudança de indicador e promoção fica registrada com autor e horário
+                    </span>
+                  </div>
+                  {auditLog.length === 0 ? (
+                    <p className="text-center py-8 text-[12px] text-gray-500">
+                      Nenhuma ação registrada ainda.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-700/60 max-h-80 overflow-y-auto">
+                      {auditLog.slice(0, 100).map((e, i) => {
+                        const rotulo = {
+                          trash: 'excluiu',
+                          restore: 'restaurou',
+                          move: 'moveu',
+                          promote: 'promoveu',
+                          update: 'editou',
+                        }[e.action] || e.action;
+                        const cor = {
+                          trash: 'text-red-400',
+                          restore: 'text-emerald-400',
+                          move: 'text-blue-400',
+                          promote: 'text-amber-400',
+                        }[e.action] || 'text-gray-400';
+                        return (
+                          <div key={`${e.target_id}-${e.at}-${i}`} className="px-4 py-2 text-[12px] flex items-center gap-2 flex-wrap">
+                            <span className="text-gray-300 font-medium">{e.actor_name || e.actor_email || 'admin'}</span>
+                            <span className={cor}>{rotulo}</span>
+                            <span className="text-gray-300">{e.target_name || e.target_id}</span>
+                            {e.action === 'move' && e.new_parent_name && (
+                              <span className="text-gray-500">→ para baixo de {e.new_parent_name}</span>
+                            )}
+                            <span className="flex-1" />
+                            <span className="text-[10.5px] text-gray-600">
+                              {(e.at || e.created_at) && new Date(e.at || e.created_at).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -1542,8 +2173,9 @@ export default function NetworkOverview() {
               </div>
               {selectedLevels.length > 0 && (
                 <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-                  <p className="text-sm text-green-400">
-                    ⭐ Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
+                  <p className="text-sm text-green-400 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5" />
+                    Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     Esta será a função exibida no Plano de Carreira
@@ -1567,6 +2199,89 @@ export default function NetworkOverview() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* CONFIRMAÇÃO DE EXCLUSÃO — precisa digitar "deletar" */}
+      {deleteTarget && (() => {
+        const diretos = allUsers.filter(u => u.referred_by_id === deleteTarget.id).length;
+        const equipe = countDescendants(deleteTarget.id);
+        const indicador = deleteTarget.referred_by_id
+          ? allUsers.find(u => u.id === deleteTarget.referred_by_id)
+          : null;
+        const podeExcluir = deleteConfirmText.trim().toLowerCase() === 'deletar';
+        return (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-gray-900 shadow-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
+                <TriangleAlert className="w-4 h-4 text-red-400" />
+                <span className="text-[14px] font-semibold text-white">Excluir usuário da rede</span>
+              </div>
+
+              <div className="px-4 py-4 space-y-3 text-[13px] text-gray-300">
+                <p>
+                  <strong className="text-white">{deleteTarget.full_name}</strong>
+                  <span className="text-gray-500"> · {deleteTarget.email}</span>
+                </p>
+
+                <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-3 space-y-1.5 text-[12px]">
+                  <p className="flex items-center gap-2 text-gray-300">
+                    <Users className="w-3.5 h-3.5 text-gray-500" />
+                    {diretos} indicado(s) direto(s) · {equipe} pessoa(s) na equipe abaixo
+                  </p>
+                  {diretos > 0 && (
+                    <p className="text-emerald-400/90">
+                      A estrutura é preservada: os indicados diretos passam para{' '}
+                      <strong>{indicador ? indicador.full_name : 'a raiz da rede'}</strong>.
+                    </p>
+                  )}
+                  <p className="text-gray-500">
+                    Nada é apagado do banco — o cadastro vai para a Lixeira e pode ser restaurado.
+                  </p>
+                  {diretos > 0 && (
+                    <p className="text-emerald-400/80">
+                      No plano de alavancagem, o rebate dessa perna passa a subir direto por{' '}
+                      <strong>{indicador ? indicador.full_name : 'a raiz'}</strong>.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-gray-400 text-[12px]">
+                    Para confirmar, escreva <strong className="text-red-400">deletar</strong>
+                  </Label>
+                  <Input
+                    autoFocus
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && podeExcluir) handleMoveToTrash(); }}
+                    placeholder="deletar"
+                    className="mt-1 bg-gray-800 border-gray-600 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isDeleting}
+                  onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}
+                  className="h-8 text-[12px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!podeExcluir || isDeleting}
+                  onClick={handleMoveToTrash}
+                  className="h-8 text-[12px] bg-red-600 hover:bg-red-500 disabled:opacity-40"
+                >
+                  {isDeleting ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Excluindo…</> : <><Trash2 className="w-3.5 h-3.5 mr-1.5" />Excluir</>}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {editingUserFull && (
         <UserEditModal

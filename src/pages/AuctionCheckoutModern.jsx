@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -22,15 +23,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PaymentErrorModal from '@/components/payment/PaymentErrorModal';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const Auction = base44.entities.Auction;
 
 export default function AuctionCheckoutModern() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const location = useLocation();
   const [isWalletDeposit, setIsWalletDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
   const [depositType, setDepositType] = useState(null); // 'digital_wallet' ou null
+  const [returnTo, setReturnTo] = useState(null); // URL de origem para voltar após confirmação
+  const [redirectCountdown, setRedirectCountdown] = useState(null);
 
   const [auction, setAuction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -255,10 +260,12 @@ export default function AuctionCheckoutModern() {
         billing_type: paymentType,
         description: isWalletDeposit
           ? (isInvestorCapital
-            ? `Depósito de Capital — Lote de Investimento - R$ ${amount.toFixed(2)}`
-            : depositType === 'digital_wallet'
-              ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
-              : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
+            ? `Depósito de Capital — Lote de Investimento - R$ ${fmtBR(amount)}`
+            : depositType === 'passaporte'
+              ? `Passaporte de Lances NoZap - R$ ${fmtBR(amount)}`
+              : depositType === 'digital_wallet'
+                ? `Depósito na Carteira Digital - R$ ${fmtBR(amount)}`
+                : `Depósito na Carteira de Comissões - R$ ${fmtBR(amount)}`)
           : `Arremate - ${auction.title}`,
         card_data: cardData,
         deposit_type: depositType,
@@ -370,6 +377,7 @@ export default function AuctionCheckoutModern() {
           setIsWalletDeposit(true);
           setDepositAmount(stateAmount);
           setDepositType(stateDepositType); // Armazena tipo de depósito
+          setReturnTo(location.state?.returnTo || null);
           const isInvestorCapital = stateDepositType === 'investor_capital';
           setAuction({
             id: isInvestorCapital ? (stateAuctionId || 'investor-deposit') : (stateDepositType === 'digital_wallet' ? 'digital-wallet-deposit' : 'wallet-deposit'),
@@ -486,6 +494,23 @@ export default function AuctionCheckoutModern() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [step, pixData, paymentConfirmed]);
+
+  // Após recarga confirmada, volta automaticamente para o leilão/loja de origem
+  useEffect(() => {
+    if (!paymentConfirmed || !isWalletDeposit) return;
+    setRedirectCountdown(3);
+    const countdownInterval = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          navigate(returnTo || createPageUrl('Home'), { replace: true });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countdownInterval);
+  }, [paymentConfirmed, isWalletDeposit]);
 
   if (isLoading) {
     return (
@@ -903,19 +928,34 @@ export default function AuctionCheckoutModern() {
                         </div>
                         <h3 className="text-2xl font-bold text-white">Pagamento Recebido!</h3>
                         <p className="text-gray-300">
-                          O valor de <span className="text-green-400 font-bold">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span> foi adicionado à sua conta no Leilão NoZap.
+                          O valor de <span className="text-green-400 font-bold">R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}</span> foi adicionado à sua conta no Leilão NoZap.
                         </p>
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 space-y-2">
                           <p className="text-green-300 font-semibold">🎉 Saldo creditado com sucesso!</p>
                           <p className="text-gray-400 text-sm">Seu saldo já está disponível para uso.</p>
+                          {isWalletDeposit && redirectCountdown !== null && redirectCountdown > 0 && (
+                            <p className="text-green-400 text-sm font-medium">
+                              Voltando para {returnTo ? 'onde você estava' : 'a loja'} em {redirectCountdown}s...
+                            </p>
+                          )}
                         </div>
-                        <Button
-                          onClick={() => navigate(createPageUrl(isWalletDeposit ? 'AddFunds' : 'MyWinnings'))}
-                          className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
-                        >
-                          <Wallet className="w-5 h-5 mr-2" />
-                          {isWalletDeposit ? 'Ver Minha Carteira' : 'Ver Meus Arremates'}
-                        </Button>
+                        {isWalletDeposit ? (
+                          <Button
+                            onClick={() => navigate(returnTo || createPageUrl('Home'), { replace: true })}
+                            className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                          >
+                            <ArrowLeft className="w-5 h-5 mr-2" />
+                            {returnTo ? 'Voltar Agora' : 'Voltar para a Loja'}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => navigate(createPageUrl('MyWinnings'))}
+                            className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                          >
+                            <Wallet className="w-5 h-5 mr-2" />
+                            Ver Meus Arremates
+                          </Button>
+                        )}
                       </div>
                     ) : pixData && pixData.billing_type === 'PIX' ? (
                       <div className="text-center space-y-6">
@@ -934,14 +974,11 @@ export default function AuctionCheckoutModern() {
                         </div>
 
                         <Button
-                          onClick={() => {
-                            navigator.clipboard.writeText(pixData.pix_payload);
-                            toast.success('Código PIX copiado!');
-                          }}
-                          className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                          onClick={() => copiarPix(pixData.pix_payload)}
+                          className={`w-full h-12 text-white font-bold transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'}`}
                         >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copiar Código PIX
+                          {pixCopiado ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                          {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                         </Button>
 
                         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
@@ -984,7 +1021,7 @@ export default function AuctionCheckoutModern() {
                 <div className="space-y-3 py-4 border-y border-white/10">
                   <div className="flex justify-between text-sm">
                     <span className="text-white">Valor</span>
-                    <span className="text-white">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span>
+                    <span className="text-white">R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}</span>
                   </div>
                   {!isWalletDeposit && (
                     <div className="flex justify-between text-sm">
@@ -995,7 +1032,7 @@ export default function AuctionCheckoutModern() {
                   <div className="flex justify-between text-base font-bold pt-2">
                     <span className="text-white">Total</span>
                     <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
-                      R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}
+                      R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}
                     </span>
                   </div>
                 </div>
@@ -1068,12 +1105,22 @@ export default function AuctionCheckoutModern() {
                 )}
 
                 {step === 'payment' && (
-                  <Button
-                    onClick={() => navigate(createPageUrl('MyWinnings'))}
-                    className="w-full h-12 bg-gray-700 hover:bg-gray-600 text-white font-semibold"
-                  >
-                    Ver Meus Arremates
-                  </Button>
+                  isWalletDeposit ? (
+                    <Button
+                      onClick={() => navigate(returnTo || createPageUrl('Home'), { replace: true })}
+                      className="w-full h-12 bg-gray-700 hover:bg-gray-600 text-white font-semibold"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      {returnTo ? 'Voltar ao Leilão' : 'Voltar para a Loja'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => navigate(createPageUrl('MyWinnings'))}
+                      className="w-full h-12 bg-gray-700 hover:bg-gray-600 text-white font-semibold"
+                    >
+                      Ver Meus Arremates
+                    </Button>
+                  )
                 )}
               </CardContent>
             </Card>

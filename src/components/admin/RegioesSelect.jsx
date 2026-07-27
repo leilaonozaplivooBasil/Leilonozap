@@ -19,7 +19,7 @@ export default function RegioesSelect({ value, onChange }) {
   return (
     <div>
       <Label htmlFor="allowed_regions" className="text-sm font-medium text-gray-400">
-        📍 Regiões Permitidas (Estados)
+        Regiões Permitidas (Estados)
       </Label>
       <Select
         value={value.length === 0 ? "todos" : "custom"}
@@ -28,12 +28,12 @@ export default function RegioesSelect({ value, onChange }) {
         <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100">
           <SelectValue>
             {value.length === 0
-              ? "✅ Todo o Brasil"
+              ? "Todo o Brasil"
               : `${value.length} estado${value.length > 1 ? 's' : ''} selecionado${value.length > 1 ? 's' : ''}`}
           </SelectValue>
         </SelectTrigger>
         <SelectContent className="bg-gray-800 border-gray-700 text-gray-200 max-h-[400px]">
-          <SelectItem value="todos">✅ Todo o Brasil</SelectItem>
+          <SelectItem value="todos">Todo o Brasil</SelectItem>
           <div className="px-2 py-1 text-xs text-gray-400 font-semibold">Selecione os estados:</div>
           {ESTADOS.map((estado) => (
             <div
@@ -60,7 +60,7 @@ export default function RegioesSelect({ value, onChange }) {
         </SelectContent>
       </Select>
       <p className="text-xs text-gray-500 mt-2">
-        {value.length === 0 ? "✅ Leilão disponível em TODO o Brasil" : `🎯 Disponível em: ${value.join(", ")}`}
+        {value.length === 0 ? "Leilão disponível em TODO o Brasil" : `Disponível em: ${value.join(", ")}`}
       </p>
     </div>
   );

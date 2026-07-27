@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Beaker, Zap, FastForward, Trash2, RefreshCw, Loader2, AlertCircle, FlaskConical } from "lucide-react";
+import { Beaker, Zap, FastForward, Trash2, RefreshCw, Loader2, AlertCircle, FlaskConical, DollarSign, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { createTestAuction } from "@/functions/createTestAuction";
 import { simulateTestBids } from "@/functions/simulateTestBids";
@@ -69,11 +70,11 @@ export default function AuctionTestLab() {
     setIsProcessingTest(true);
     try {
       const data = await createTestAuction({ duration: testDuration });
-      toast.success("✅ Leilão de teste criado!");
+      toast.success("Leilão de teste criado!");
       loadTestAuctions();
       navigate(createPageUrl("AuctionRoom") + `?id=${data.auction_id}`);
     } catch (error) {
-      toast.error("❌ Erro ao criar teste: " + error.message);
+      toast.error("Erro ao criar teste: " + error.message);
     } finally { setIsProcessingTest(false); }
   };
 
@@ -82,9 +83,9 @@ export default function AuctionTestLab() {
     setIsProcessingTest(true);
     try {
       await simulateTestBids({ auction_id: selectedTestAuction, bid_count: bidCount });
-      toast.success(`✅ ${bidCount} lances simulados!`);
+      toast.success(` ${bidCount} lances simulados!`);
       loadTestAuctions();
-    } catch (error) { toast.error("❌ Erro: " + error.message); }
+    } catch (error) { toast.error("Erro: " + error.message); }
     finally { setIsProcessingTest(false); }
   };
 
@@ -95,45 +96,45 @@ export default function AuctionTestLab() {
       await fastForwardTestAuction({ auction_id: selectedTestAuction, seconds: secondsToSkip });
       toast.success(`⏩ Tempo acelerado em ${secondsToSkip}s!`);
       loadTestAuctions();
-    } catch (error) { toast.error("❌ Erro: " + error.message); }
+    } catch (error) { toast.error("Erro: " + error.message); }
     finally { setIsProcessingTest(false); }
   };
 
   const handleDeleteTests = async () => {
-    if (!confirm("⚠️ Deletar TODOS os leilões de teste?")) return;
+    if (!confirm("Deletar TODOS os leilões de teste?")) return;
     setIsProcessingTest(true);
     try {
       const data = await deleteTestAuctions();
-      toast.success(`🗑️ ${data?.deletedAuctions?.length || 0} leilões deletados!`);
+      toast.success(` ${data?.deletedAuctions?.length || 0} leilões deletados!`);
       loadTestAuctions();
       setSelectedTestAuction("");
-    } catch (error) { toast.error("❌ Erro: " + error.message); }
+    } catch (error) { toast.error("Erro: " + error.message); }
     finally { setIsProcessingTest(false); }
   };
 
   const handleResetData = async () => {
-    if (!confirm("⚠️ RESETAR TODOS os dados de teste?")) return;
-    if (!confirm("🚨 TEM CERTEZA ABSOLUTA? Esta ação é IRREVERSÍVEL!")) return;
+    if (!confirm("RESETAR TODOS os dados de teste?")) return;
+    if (!confirm("TEM CERTEZA ABSOLUTA? Esta ação é IRREVERSÍVEL!")) return;
     setIsProcessingTest(true);
     try {
       await resetTestData();
-      toast.success("🔄 Sistema de testes resetado!");
+      toast.success("Sistema de testes resetado!");
       loadTestAuctions();
-    } catch (error) { toast.error("❌ Erro: " + error.message); }
+    } catch (error) { toast.error("Erro: " + error.message); }
     finally { setIsProcessingTest(false); }
   };
 
   const handleResetTestValora = async () => {
-    if (!window.confirm("🧪 ZERAR VALORA PAY DE TESTE?\n\nEsta ação vai ZERAR todo o saldo de TESTE de TODOS os usuários.\n\n⚠️ O saldo REAL NÃO será afetado.\n\nDeseja continuar?")) return;
+    if (!window.confirm("ZERAR VALORA PAY DE TESTE?\n\nEsta ação vai ZERAR todo o saldo de TESTE de TODOS os usuários.\n\nO saldo REAL NÃO será afetado.\n\nDeseja continuar?")) return;
     setIsResettingTestValora(true);
-    toast.info("🧪 Zerando saldos de teste...");
+    toast.info("Zerando saldos de teste...");
     try {
       const response = await resetTestValora();
       if (response.status === 200) {
         const data = response.data;
-        toast.success(`✅ ${data.usersReset} usuários resetados!\n💰 V$ ${data.totalTestValoraZerado} de teste zerado`);
+        toast.success(` ${data.usersReset} usuários resetados!\nV$ ${data.totalTestValoraZerado} de teste zerado`);
       }
-    } catch (err) { toast.error("❌ Erro ao zerar: " + err.message); }
+    } catch (err) { toast.error("Erro ao zerar: " + err.message); }
     finally { setIsResettingTestValora(false); }
   };
 
@@ -150,7 +151,7 @@ export default function AuctionTestLab() {
       <Card className="bg-gray-700/30 border-purple-500/30">
         <CardHeader>
           <CardTitle className="text-purple-400 flex items-center gap-2">
-            <FlaskConical className="w-5 h-5" /> 🧪 Laboratório de Testes
+            <FlaskConical className="w-5 h-5" /> Laboratório de Testes
           </CardTitle>
           <p className="text-sm text-gray-400">Crie leilões de teste para simular lances e testar funcionalidades sem afetar dados reais.</p>
         </CardHeader>
@@ -171,10 +172,10 @@ export default function AuctionTestLab() {
 
           {/* SALDO DE TESTE */}
           <div className="border-t border-gray-700 pt-4">
-            <h4 className="text-sm font-semibold text-yellow-400 mb-1">💰 Gerenciar Saldo de Teste</h4>
+            <h4 className="text-sm font-semibold text-yellow-400 mb-1 flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" />Gerenciar Saldo de Teste</h4>
             <p className="text-xs text-gray-400 mb-3">Zera apenas o Valora Pay de TESTE, mantém o REAL intacto</p>
             <Button onClick={handleResetTestValora} disabled={isResettingTestValora} variant="outline" className="w-full border-yellow-500 text-yellow-400 hover:bg-yellow-500/10">
-              {isResettingTestValora ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Zerando...</> : <><Trash2 className="w-4 h-4 mr-2" />🧪 Zerar Valora Pay de TESTE</>}
+              {isResettingTestValora ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Zerando...</> : <><Trash2 className="w-4 h-4 mr-2" />Zerar Valora Pay de TESTE</>}
             </Button>
             <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
               <p className="text-xs text-blue-300 flex items-start gap-2">
@@ -187,13 +188,13 @@ export default function AuctionTestLab() {
           {/* LISTA DE TESTES */}
           {testAuctions.length > 0 && (
             <div className="space-y-4 p-4 bg-gray-800/50 rounded-lg border border-gray-600">
-              <h3 className="font-semibold text-white">📋 Leilões de Teste Ativos ({testAuctions.length})</h3>
+              <h3 className="font-semibold text-white flex items-center gap-2"><ClipboardList className="w-4 h-4" />Leilões de Teste Ativos ({testAuctions.length})</h3>
               <Select value={selectedTestAuction} onValueChange={setSelectedTestAuction}>
                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white"><SelectValue placeholder="Selecione um leilão de teste" /></SelectTrigger>
                 <SelectContent className="bg-gray-700 border-gray-600">
                   {testAuctions.map((test) => (
                     <SelectItem key={test.id} value={test.id} className="text-white hover:bg-gray-600">
-                      <span>{test.title}</span><span className="text-xs text-gray-400 ml-4">R$ {test.current_price?.toFixed(2)} • {formatTestAuctionTime(test.end_time, test.status)}</span>
+                      <span>{test.title}</span><span className="text-xs text-gray-400 ml-4">R$ {fmtBR(test.current_price)} • {formatTestAuctionTime(test.end_time, test.status)}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { money } from '@/lib/format';
+import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
+import { supabase } from '@/api/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,18 +26,37 @@ import {
   Plus,
   Minus,
   Copy,
-  ShoppingCart
+  ShoppingCart,
+  ShieldCheck,
+  Lock,
+  Check,
+  PackageOpen,
+  QrCode,
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
+import { getReferral } from '@/lib/referral';
 
 export default function Cart() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+  // Endereço do CD (galpão do distribuidor) — vem do cadastro, não fica chumbado no código
+  const [pickupAddress, setPickupAddress] = useState(DEFAULT_PICKUP_ADDRESS);
+  useEffect(() => { fetchPickupAddress().then(setPickupAddress); }, []);
   const [coupon, setCoupon] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, desconto }
+  const [couponMsg, setCouponMsg] = useState('');
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [observation, setObservation] = useState('');
+  const [freteOpcoes, setFreteOpcoes] = useState(null); // null=não calculado, []=sem opções
+  const [freteMsg, setFreteMsg] = useState('');
+  const [calculandoFrete, setCalculandoFrete] = useState(false);
   const [paymentType, setPaymentType] = useState('PIX');
   const [pixData, setPixData] = useState(null);
   // Estados de cartão mantidos para compatibilidade com backend (não usados na UI)
@@ -43,6 +65,8 @@ export default function Cart() {
   const cardExpiry = '';
   const cardCvv = '';
   const [pixConfirmed, setPixConfirmed] = useState(false);
+  const [saldo, setSaldo] = useState(0);
+  const [saldoOk, setSaldoOk] = useState(false);
   const [paymentDetected, setPaymentDetected] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [createdSales, setCreatedSales] = useState([]);
@@ -63,6 +87,44 @@ export default function Cart() {
     city: '',
     state: ''
   });
+  // 📒 Livro de endereços (múltiplos endereços salvos por usuário)
+  const [savedAddresses, setSavedAddresses] = useState([]);
+
+  // 💾 Auto-salva o formulário preenchido — na próxima compra já vem pronto
+  useEffect(() => {
+    if (!formData.name && !formData.cep) return;
+    const t = setTimeout(() => {
+      try { localStorage.setItem('checkoutFormData', JSON.stringify(formData)); } catch { /* quota */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [formData]);
+
+  const addressSig = (a) => `${(a.cep || '').replace(/\D/g, '')}|${(a.street || '').toLowerCase().trim()}|${(a.number || '').trim()}`;
+
+  const saveAddressToBook = (uid) => {
+    try {
+      const addr = {
+        cep: formData.cep, street: formData.street, number: formData.number,
+        complement: formData.complement, neighborhood: formData.neighborhood,
+        city: formData.city, state: formData.state,
+      };
+      if (!addr.cep?.trim() || !addr.street?.trim()) return;
+      const key = `savedAddresses_${uid}`;
+      const book = JSON.parse(localStorage.getItem(key) || '[]');
+      const next = [{ id: Date.now().toString(36), ...addr }, ...book.filter((b) => addressSig(b) !== addressSig(addr))].slice(0, 5);
+      localStorage.setItem(key, JSON.stringify(next));
+      setSavedAddresses(next);
+    } catch { /* silencioso */ }
+  };
+
+  const applyAddress = (a) => {
+    setFormData((prev) => ({
+      ...prev,
+      cep: a.cep || '', street: a.street || '', number: a.number || '',
+      complement: a.complement || '', neighborhood: a.neighborhood || '',
+      city: a.city || '', state: a.state || '',
+    }));
+  };
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -81,6 +143,7 @@ export default function Cart() {
           const appUsers = await base44.entities.AppUser.filter({ id: user.id });
           if (appUsers && appUsers.length > 0) {
             const fullUser = appUsers[0];
+            setSaldo(Number(fullUser.commission_balance) || 0);
             setFormData(prev => ({
               ...prev,
               name: fullUser.full_name || user.full_name || '',
@@ -130,6 +193,26 @@ export default function Cart() {
             state: user.address_state || ''
           }));
         }
+
+        // 💾 Draft salvo tem prioridade: o que o usuário digitou por último volta preenchido
+        try {
+          const draft = JSON.parse(localStorage.getItem('checkoutFormData') || 'null');
+          if (draft && typeof draft === 'object') {
+            setFormData((prev) => {
+              const merged = { ...prev };
+              for (const k of Object.keys(prev)) {
+                if (typeof draft[k] === 'string' && draft[k].trim()) merged[k] = draft[k];
+              }
+              return merged;
+            });
+          }
+        } catch { /* draft corrompido → ignora */ }
+
+        // 📒 Carrega o livro de endereços do usuário
+        try {
+          const book = JSON.parse(localStorage.getItem(`savedAddresses_${user.id}`) || '[]');
+          if (Array.isArray(book)) setSavedAddresses(book);
+        } catch { /* ignora */ }
       }
     };
 
@@ -143,6 +226,9 @@ export default function Cart() {
       const timer = setTimeout(() => {
         setCountdown(0);
         setPixConfirmed(true);
+        // pagamento realizado → zera o carrinho de vez
+        localStorage.setItem('catalogCart', '[]');
+        setCartItems([]);
         toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
       }, 1000);
       return () => clearTimeout(timer);
@@ -242,6 +328,63 @@ export default function Cart() {
     }, 0);
   };
 
+  // total já com o desconto do cupom aplicado
+  const descontoCupom = appliedCoupon?.desconto || 0;
+  const calcularTotalFinal = () => Math.max(0, calculateSubtotal() - descontoCupom);
+
+  const aplicarCupom = async () => {
+    const code = (coupon || '').trim();
+    if (!code) { setCouponMsg('Digite um cupom.'); return; }
+    setApplyingCoupon(true); setCouponMsg('');
+    try {
+      // resolve o lojista (pra cupom específico de loja); null = cupom global
+      let sellerId = null;
+      const ref = getReferral();
+      if (ref) {
+        const { data: u } = await supabase.from('app_users').select('id').eq('referral_code', ref).limit(1).maybeSingle();
+        sellerId = u?.id || null;
+      }
+      const { data } = await supabase.rpc('aplicar_cupom', { _code: code, _subtotal: calculateSubtotal(), _seller: sellerId });
+      if (data?.valido) {
+        setAppliedCoupon({ code: data.code, desconto: Number(data.desconto) || 0 });
+        setCouponMsg('');
+        toast.success(`🎉 Cupom ${data.code} aplicado! -${money(data.desconto)}`);
+      } else {
+        setAppliedCoupon(null);
+        setCouponMsg(data?.motivo || 'Cupom inválido');
+      }
+    } catch (e) {
+      setCouponMsg('Não foi possível validar agora.');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const removerCupom = () => { setAppliedCoupon(null); setCoupon(''); setCouponMsg(''); };
+
+  const calcularFrete = async () => {
+    const cep = (formData.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) { setFreteMsg('Preencha o CEP pra calcular.'); return; }
+    setCalculandoFrete(true); setFreteMsg('');
+    try {
+      const r = await base44.functions.invoke('calcularFrete', {
+        cep,
+        items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
+      });
+      if (r?.success && r?.configured && Array.isArray(r.opcoes)) {
+        setFreteOpcoes(r.opcoes);
+        if (!r.opcoes.length) setFreteMsg('Sem opções de frete pra esse CEP.');
+      } else {
+        setFreteOpcoes([]);
+        setFreteMsg(r?.message || 'Frete combinado no WhatsApp da loja.');
+      }
+    } catch (e) {
+      setFreteMsg('Não foi possível calcular agora.');
+    } finally {
+      setCalculandoFrete(false);
+    }
+  };
+
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
@@ -324,8 +467,9 @@ export default function Cart() {
 
     // Cartão é coletado na página segura da Stripe — sem validação de cartão inline.
 
-    const totalAmount = calculateSubtotal();
-    if (totalAmount < 5) { toast.error('Valor mínimo para pagamento: R$ 5,00'); return; }
+    const totalAmount = calcularTotalFinal();
+    // PIX/cartão têm mínimo de R$1; saldo (redenção de comissão) não
+    if (paymentType !== 'SALDO' && totalAmount < 1) { toast.error('Valor mínimo para pagamento: R$ 1,00'); return; }
 
     // ✅ Todas validações passaram — agora bloqueia o botão
     setIsProcessing(true);
@@ -346,6 +490,23 @@ export default function Cart() {
         }
       }
     } catch (e) { /* usa currentUser existente */ }
+
+    // 📒 Salva o endereço usado no livro de endereços (dedup, máx. 5)
+    if (deliveryMethod === 'delivery' && freshUser?.id) saveAddressToBook(freshUser.id);
+
+    // 💾 Persiste os dados no perfil (vale em qualquer dispositivo) — não bloqueia o checkout
+    if (freshUser?.id) {
+      base44.entities.AppUser.update(freshUser.id, {
+        phone: formData.phone.trim(),
+        cpf: formData.cpf.replace(/\D/g, ''),
+        ...(deliveryMethod === 'delivery' ? {
+          address_street: formData.street, address_number: formData.number,
+          address_complement: formData.complement, address_neighborhood: formData.neighborhood,
+          address_city: formData.city, address_state: formData.state,
+          address_zip_code: formData.cep,
+        } : {}),
+      }).catch(() => { /* perfil não atualizado — segue o pagamento */ });
+    }
 
     // Se não tem usuário logado, orienta a fazer login/cadastro
     if (!freshUser?.id) {
@@ -384,6 +545,37 @@ export default function Cart() {
         };
       }
 
+      // Saldo de comissão (commission_balance) — redime comissão em produto da plataforma.
+      // Validação de preço/estoque/saldo e baixa são ATÔMICAS no servidor (comprar_com_saldo).
+      if (paymentType === 'SALDO') {
+        const pay = await base44.functions.invoke('payWithBalance', {
+          buyer_id: freshUser.id,
+          buyer_name: formData.name.trim(),
+          buyer_phone: formData.phone.replace(/\D/g, ''),
+          buyer_address: deliveryMethod === 'delivery' ? `${formData.street}, ${formData.number} ${formData.complement || ''} - ${formData.neighborhood}, ${formData.city}/${formData.state}`.trim() : 'Retirada',
+          buyer_cep: formData.cep.replace(/\D/g, ''),
+          items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
+          ref_code: getReferral(),
+          coupon_code: appliedCoupon?.code || null,
+        });
+        toast.dismiss('checkout-loading');
+        if (!pay?.success) {
+          toast.error(pay?.error === 'Saldo insuficiente'
+            ? `Saldo insuficiente. Você tem ${money(pay?.saldo || saldo)} e o pedido é ${money(pay?.total || totalAmount)}.`
+            : 'Não foi possível pagar com saldo: ' + (pay?.error || 'tente novamente'));
+          setIsProcessing(false);
+          return;
+        }
+        // sucesso — limpa carrinho e mostra confirmação
+        localStorage.setItem('catalogCart', '[]');
+        setCartItems([]);
+        setSaldo(Number(pay.novo_saldo) || 0);
+        setCreatedSales([{ id: pay.sale_id }]);
+        setSaldoOk(true);
+        toast.success(`✅ Compra paga com saldo! Restam ${money(pay.novo_saldo)} na carteira.`, { duration: 5000 });
+        return;
+      }
+
       // Cartão via Stripe Checkout (página hospedada e segura) — redireciona pro pagamento
       if (paymentType === 'CREDIT_CARD') {
         const st = await base44.functions.invoke('createStripeCheckout', {
@@ -391,7 +583,8 @@ export default function Cart() {
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
-          ref_code: sessionStorage.getItem('referralCode') || '',
+          ref_code: getReferral(),
+          coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
@@ -406,10 +599,12 @@ export default function Cart() {
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
-          ref_code: sessionStorage.getItem('referralCode') || '',
+          ref_code: getReferral(),
+          coupon_code: appliedCoupon?.code || null,
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
+        setCheckoutItems([...cartItems]); // snapshot para o resumo enquanto o PIX está pendente
         setCreatedSales([{ id: mp.sale_id }]);
         setPixData({
           billing_type: 'PIX',
@@ -453,7 +648,7 @@ export default function Cart() {
       // PASSO 2: PAGAMENTO GERADO COM SUCESSO — agora registra vendas
       // Isso acontece DEPOIS do PIX/pagamento estar garantido
       // ═══════════════════════════════════════════════════════════
-      const referralCode = sessionStorage.getItem('referralCode');
+      const referralCode = getReferral();
       let licenseeId = 'site_official';
       let licenseeData = null;
 
@@ -564,22 +759,67 @@ export default function Cart() {
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(createPageUrl('Catalog'))}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl font-bold text-white">Finalizar Pedido</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <button
+                onClick={() => navigate(createPageUrl('Catalog'))}
+                className="text-gray-400 hover:text-white transition-colors shrink-0"
+                aria-label="Voltar para a loja"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h1 className="text-xl font-bold text-white truncate">Finalizar Pedido</h1>
+            </div>
+
+            {/* Etapas do checkout (desktop) */}
+            <div className="hidden md:flex items-center gap-2 text-xs">
+              {[
+                { label: 'Carrinho', done: true },
+                { label: 'Pagamento', done: !!pixData || saldoOk },
+                { label: 'Confirmação', done: pixConfirmed || saldoOk },
+              ].map((step, i, arr) => (
+                <React.Fragment key={step.label}>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step.done ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 border border-gray-600'}`}>
+                      {step.done ? <Check className="w-3 h-3" /> : i + 1}
+                    </span>
+                    <span className={step.done ? 'text-green-400 font-medium' : 'text-gray-400'}>{step.label}</span>
+                  </div>
+                  {i < arr.length - 1 && <div className="w-8 h-px bg-gray-600" />}
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* Selo de segurança */}
+            <div className="flex items-center gap-1.5 text-green-400 shrink-0">
+              <Lock className="w-4 h-4" />
+              <span className="text-xs font-medium hidden sm:inline">Compra 100% segura</span>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Coluna Esquerda - Formulários */}
-          <div className="space-y-4">
+        {cartItems.length === 0 && !pixData && !saldoOk ? (
+          /* Carrinho vazio — estado dedicado, sem formulários sem propósito */
+          <div className="max-w-md mx-auto py-16 text-center">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <PackageOpen className="w-12 h-12 text-gray-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Seu carrinho está vazio</h2>
+            <p className="text-gray-400 mb-8">Explore as ofertas da loja virtual e os leilões ao vivo para adicionar produtos.</p>
+            <Button
+              onClick={() => navigate(createPageUrl('Catalog'))}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-full px-10 h-12 text-base shadow-lg shadow-green-600/30"
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Ver produtos da loja
+            </Button>
+          </div>
+        ) : (
+        <div className={`grid grid-cols-1 gap-6 ${(pixData || saldoOk) ? 'max-w-xl mx-auto' : 'lg:grid-cols-2'}`}>
+          {/* Coluna Esquerda - Formulários (some após gerar o pagamento) */}
+          <div className={`space-y-4 ${(pixData || saldoOk) ? 'hidden' : ''}`}>
 
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-5">
@@ -601,32 +841,32 @@ export default function Cart() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-300 text-sm">Celular</Label>
-                    <div className="flex gap-2 mt-1.5">
-                      <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-3 text-gray-300 text-sm h-11">
-                        <span>BR</span>
-                        <span>+55</span>
-                      </div>
-                      <Input
-                        placeholder="Telefone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
-                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-11"
-                      />
+                <div>
+                  <Label className="text-gray-300 text-sm">Celular</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-3 text-gray-300 text-sm h-11 shrink-0">
+                      <span>BR</span>
+                      <span>+55</span>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-gray-300 text-sm">CPF</Label>
                     <Input
-                      placeholder="000.000.000-00"
-                      value={formData.cpf}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
-                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
-                      maxLength={14}
+                      inputMode="numeric"
+                      placeholder="(21) 90000-0000"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-11 text-base"
                     />
                   </div>
+                </div>
+                <div>
+                  <Label className="text-gray-300 text-sm">CPF</Label>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="000.000.000-00"
+                    value={formData.cpf}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11 text-base"
+                    maxLength={14}
+                  />
                 </div>
 
                 <div>
@@ -682,7 +922,7 @@ export default function Cart() {
                       <div>
                         <p className="text-gray-300 text-sm font-medium">Endereço para retirada:</p>
                         <p className="text-gray-400 text-sm mt-1">
-                          Estrada do Pontal, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ, 22790877
+                          {pickupAddress}
                         </p>
                       </div>
                     </div>
@@ -691,6 +931,45 @@ export default function Cart() {
 
                 {deliveryMethod === 'delivery' && (
                   <div className="space-y-4">
+                    {/* 📒 Endereços salvos — escolhe com 1 clique ou cadastra um novo */}
+                    {savedAddresses.length > 0 && (
+                      <div>
+                        <Label className="text-gray-300 text-sm">Meus endereços</Label>
+                        <div className="flex flex-wrap gap-2 mt-1.5">
+                          {savedAddresses.map((a) => {
+                            const active = addressSig(a) === addressSig(formData);
+                            return (
+                              <button
+                                key={a.id}
+                                type="button"
+                                onClick={() => applyAddress(a)}
+                                className={`flex items-start gap-2 text-left rounded-lg border px-3 py-2 max-w-full transition-colors ${active
+                                  ? 'border-green-500 bg-green-500/10'
+                                  : 'border-gray-600 bg-gray-700/30 hover:border-green-500/50'}`}
+                              >
+                                <MapPin className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${active ? 'text-green-400' : 'text-gray-400'}`} />
+                                <span className="min-w-0">
+                                  <span className="block text-xs font-semibold text-white truncate">
+                                    {a.street}, {a.number}
+                                  </span>
+                                  <span className="block text-[10px] text-gray-400 truncate">
+                                    {a.neighborhood ? `${a.neighborhood} · ` : ''}{a.city}/{a.state} · {a.cep}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => applyAddress({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' })}
+                            className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-500 px-3 py-2 text-xs font-semibold text-gray-300 hover:border-green-500/60 hover:text-green-300 transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Novo endereço
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-gray-300 text-sm">CEP</Label>
@@ -802,7 +1081,20 @@ export default function Cart() {
               </h2>
 
               {(pixData ? checkoutItems : cartItems).length === 0 ? (
-                <p className="text-gray-400 text-center py-8">Seu carrinho está vazio</p>
+                <div className="text-center py-10">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-700/60 border border-gray-600 flex items-center justify-center">
+                    <PackageOpen className="w-10 h-10 text-gray-500" />
+                  </div>
+                  <p className="text-white font-semibold text-lg mb-1">Seu carrinho está vazio</p>
+                  <p className="text-gray-400 text-sm mb-6">Explore as ofertas da loja e adicione produtos ao carrinho.</p>
+                  <Button
+                    onClick={() => navigate(createPageUrl('Catalog'))}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-full px-8 h-11"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Ver produtos da loja
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-4">
@@ -823,7 +1115,10 @@ export default function Cart() {
                                 {item.description}
                               </h4>
                               <p className="text-green-400 font-bold text-lg mt-2">
-                                R$ {price.toFixed(2)}
+                                {money(price)}
+                                {(item.quantity || 1) > 1 && (
+                                  <span className="text-gray-400 text-xs font-normal ml-2">× {item.quantity} = {money(price * item.quantity)}</span>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center justify-between">
@@ -857,40 +1152,76 @@ export default function Cart() {
 
                   <div className="border-t border-gray-600 pt-6 mt-6 space-y-3">
                     <div className="flex justify-between text-base">
-                      <span className="text-gray-400">Total de itens ({(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
-                      <span className="text-white font-medium">R$ {calculateSubtotal().toFixed(2)}</span>
+                      <span className="text-gray-400">Subtotal ({(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0)} {(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0) === 1 ? 'item' : 'itens'})</span>
+                      <span className="text-white font-medium">{money(calculateSubtotal())}</span>
                     </div>
-                    <div className="flex justify-between text-base">
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-base">
+                        <span className="text-gray-400">Cupom {appliedCoupon.code}</span>
+                        <span className="text-green-400 font-medium">− {money(appliedCoupon.desconto)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-base">
                       <span className="text-gray-400">Valor do frete</span>
-                      <span className="text-green-400 font-medium">A combinar</span>
+                      {freteOpcoes && freteOpcoes.length > 0 ? (
+                        <span className="text-green-400 font-medium">a partir de {money(Math.min(...freteOpcoes.map(o => o.preco)))}</span>
+                      ) : (
+                        <button onClick={calcularFrete} disabled={calculandoFrete} className="text-green-400 font-medium text-sm underline hover:text-green-300 disabled:opacity-60">
+                          {calculandoFrete ? 'calculando…' : 'Calcular frete'}
+                        </button>
+                      )}
                     </div>
-                    <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-600">
+                    {freteMsg && <p className="text-gray-500 text-xs -mt-1">{freteMsg}</p>}
+                    {freteOpcoes && freteOpcoes.length > 0 && (
+                      <div className="text-xs text-gray-400 space-y-0.5 -mt-1">
+                        {freteOpcoes.slice(0, 3).map((o) => (
+                          <div key={o.id} className="flex justify-between"><span>{o.nome}{o.prazo ? ` · ${o.prazo} dias` : ''}</span><span className="text-green-400">{money(o.preco)}</span></div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>
-                      <span className="text-green-400">R$ {calculateSubtotal().toFixed(2)}</span>
+                      <div className="text-right">
+                        <span className="text-green-400">{money(calcularTotalFinal())}</span>
+                        <p className="text-gray-500 text-[11px] font-normal">no PIX ou em até 12x no cartão</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </Card>
 
-            {/* Cupom e Observação lado a lado */}
+            {/* Cupom e Observação lado a lado — só com itens no carrinho */}
+            {!pixData && !saldoOk && cartItems.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Aplicar Cupom */}
               <Card className="bg-gray-800 border-gray-700 p-4">
                 <h3 className="text-white font-medium mb-3">Aplicar cupom</h3>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Cupons em breve..."
-                    disabled={true}
-                    className="bg-gray-700 border-gray-600 text-gray-500 placeholder:text-gray-500 flex-1 h-10 opacity-60 cursor-not-allowed"
-                  />
-                  <Button
-                    disabled={true}
-                    className="bg-gray-700 border-gray-600 text-gray-500 h-10 opacity-60 cursor-not-allowed"
-                  >
-                    Em breve
-                  </Button>
-                </div>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-green-600/15 border border-green-500/40 rounded-lg px-3 py-2.5">
+                    <div>
+                      <p className="text-green-400 font-bold text-sm">🎉 {appliedCoupon.code}</p>
+                      <p className="text-green-300/80 text-xs">−{money(appliedCoupon.desconto)} de desconto</p>
+                    </div>
+                    <button onClick={removerCupom} className="text-gray-400 hover:text-white text-xs underline">remover</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Tem um cupom? Digite aqui"
+                        value={coupon}
+                        onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && aplicarCupom()}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-10 uppercase"
+                      />
+                      <Button onClick={aplicarCupom} disabled={applyingCoupon} className="bg-green-600 hover:bg-green-700 text-white h-10 font-bold">
+                        {applyingCoupon ? '...' : 'Aplicar'}
+                      </Button>
+                    </div>
+                    {couponMsg && <p className="text-red-400 text-xs mt-2">{couponMsg}</p>}
+                  </>
+                )}
               </Card>
 
               {/* Observação */}
@@ -904,6 +1235,7 @@ export default function Cart() {
                 />
               </Card>
             </div>
+            )}
 
             {/* Forma de Pagamento — APENAS PIX */}
             {!pixData && cartItems.length > 0 && (
@@ -912,17 +1244,41 @@ export default function Cart() {
 
                 {/* PIX (Mercado Pago) */}
                 <button type="button" onClick={() => setPaymentType('PIX')}
-                  className={`w-full text-left p-3 rounded-lg border-2 mb-3 transition-colors ${paymentType === 'PIX' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
-                  <p className="text-white font-semibold">💚 PIX</p>
-                  <p className="text-gray-400 text-xs">Aprovação imediata</p>
+                  className={`w-full text-left p-3 rounded-lg border-2 mb-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'PIX' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
+                  <div>
+                    <p className="text-white font-semibold flex items-center gap-2"><QrCode className="w-4 h-4 text-green-400" /> PIX <span className="text-[10px] font-bold uppercase tracking-wide bg-green-600 text-white px-1.5 py-0.5 rounded">Recomendado</span></p>
+                    <p className="text-gray-400 text-xs mt-0.5">Aprovação imediata</p>
+                  </div>
+                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'PIX' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
+                    {paymentType === 'PIX' && <Check className="w-3 h-3 text-white" />}
+                  </span>
                 </button>
 
                 {/* Cartão de Crédito (Stripe) */}
                 <button type="button" onClick={() => setPaymentType('CREDIT_CARD')}
-                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
-                  <p className="text-white font-semibold">💳 Cartão de Crédito</p>
-                  <p className="text-gray-400 text-xs">Pagamento seguro — até 12x</p>
+                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors flex items-center justify-between gap-3 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
+                  <div>
+                    <p className="text-white font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-gray-300" /> Cartão de Crédito</p>
+                    <p className="text-gray-400 text-xs mt-0.5">Pagamento seguro — até 12x</p>
+                  </div>
+                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
+                    {paymentType === 'CREDIT_CARD' && <Check className="w-3 h-3 text-white" />}
+                  </span>
                 </button>
+
+                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
+                {saldo > 0 && (
+                  <button type="button" onClick={() => setPaymentType('SALDO')}
+                    className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
+                    <div>
+                      <p className="text-white font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-green-400" /> Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
+                      <p className="text-gray-400 text-xs mt-0.5">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use suas comissões — aprovação na hora'}</p>
+                    </div>
+                    <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
+                      {paymentType === 'SALDO' && <Check className="w-3 h-3 text-white" />}
+                    </span>
+                  </button>
+                )}
               </Card>
             )}
 
@@ -956,7 +1312,7 @@ export default function Cart() {
                 ) : (
                   /* ESTADO 2: Aguardando pagamento — QR Code normal */
                   <>
-                    <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
+                    <h3 className="text-lg font-bold text-green-400 text-center mb-4 flex items-center justify-center gap-2"><QrCode className="w-5 h-5" /> Pague com PIX</h3>
 
                     {/* Indicador de monitoramento */}
                     <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
@@ -985,14 +1341,11 @@ export default function Cart() {
                       </p>
                     </div>
                     <Button
-                      onClick={() => {
-                        navigator.clipboard.writeText(pixData.pix_payload);
-                        toast.success('Código PIX copiado!');
-                      }}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold mb-3"
+                      onClick={() => copiarPix(pixData.pix_payload)}
+                      className={`w-full text-white font-bold mb-3 transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}
                     >
-                      <Copy className="w-5 h-5 mr-2" />
-                      Copiar Código PIX
+                      {pixCopiado ? <Check className="w-5 h-5 mr-2" /> : <Copy className="w-5 h-5 mr-2" />}
+                      {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                     </Button>
                     <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
                       <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
@@ -1026,11 +1379,29 @@ export default function Cart() {
 
             {/* Sucesso PIX (igual ao cartão) */}
             {pixData && pixData.billing_type === 'PIX' && pixConfirmed && (
+              <Card className="bg-gray-800 border-gray-700 p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/15 border-2 border-green-500/50 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">Pagamento Confirmado</h3>
+                <p className="text-gray-400 text-sm mb-6">Seu pedido foi registrado e já está sendo preparado.</p>
+                <Button
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
+                  className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold"
+                >
+                  <Truck className="w-4 h-4 mr-2" />
+                  Acompanhar meu pedido
+                </Button>
+              </Card>
+            )}
+
+            {/* Sucesso Saldo */}
+            {saldoOk && (
               <Card className="bg-gray-800 border-gray-700 p-5">
-                <h3 className="text-lg font-bold text-green-400 text-center mb-4">✅ Pagamento Confirmado</h3>
+                <h3 className="text-lg font-bold text-green-400 text-center mb-4">✅ Compra Confirmada</h3>
                 <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 mb-4">
-                  <p className="text-green-400 text-center">Pagamento PIX confirmado com sucesso!</p>
-                  <p className="text-gray-400 text-sm text-center mt-2">Seu pedido está sendo processado.</p>
+                  <p className="text-green-400 text-center">Pago com saldo da carteira!</p>
+                  <p className="text-gray-400 text-sm text-center mt-2">Saldo restante: <span className="text-white font-semibold">{money(saldo)}</span></p>
                 </div>
                 <Button
                   onClick={() => navigate(createPageUrl('MyCatalogOrders') + '?filter=paid')}
@@ -1043,28 +1414,46 @@ export default function Cart() {
 
             {/* Sucesso Cartão (mantido para compatibilidade caso existam pagamentos antigos) */}
 
-            {/* Botão Pagar */}
-            {!pixData && (
-              <Button
-                onClick={handleCheckout}
-                disabled={isProcessing || cartItems.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : 'GERAR PIX'}
-                  </>
-                )}
-              </Button>
+            {/* Botão Pagar — só aparece com itens no carrinho */}
+            {!pixData && !saldoOk && cartItems.length > 0 && (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleCheckout}
+                  disabled={isProcessing}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5 mr-2" />
+                      {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : paymentType === 'SALDO' ? 'PAGAR COM SALDO' : `PAGAR ${money(calcularTotalFinal())} NO PIX`}
+                    </>
+                  )}
+                </Button>
+
+                {/* Selos de confiança */}
+                <div className="flex items-center justify-center gap-5 text-gray-400 text-xs pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-green-500" />
+                    <span>Pagamento seguro</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-green-500" />
+                    <span>Dados criptografados</span>
+                  </div>
+                </div>
+                <p className="text-center text-gray-500 text-[11px]">
+                  Processado por {paymentType === 'CREDIT_CARD' ? 'Stripe' : 'Mercado Pago'} — não armazenamos seus dados de pagamento.
+                </p>
+              </div>
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

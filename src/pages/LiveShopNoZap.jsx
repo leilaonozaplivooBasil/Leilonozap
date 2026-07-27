@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { money, addMoney, mulMoney, gteMoney } from "@/lib/money";
 import { Eye, ShoppingBag, ChevronLeft, ChevronRight, Zap, TrendingUp, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,6 @@ import { Card } from "@/components/ui/card";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import LogoTransparent from '@/assets/logo-transparent.png';
 
 const Auction = base44.entities.Auction;
 const Bid = base44.entities.Bid;
@@ -139,12 +139,12 @@ export default function LiveShopNoZap() {
 
     if (!currentProduct) return;
 
-    const finalAmount = amount || parseFloat(bidAmount);
+    const finalAmount = money(amount || parseFloat(bidAmount));
     if (!finalAmount || isNaN(finalAmount)) return;
 
-    const minBid = currentProduct.current_price + currentProduct.increment;
-    if (finalAmount < minBid) {
-      toast.error(`Lance mínimo é R$ ${minBid.toFixed(2)}`);
+    const minBid = addMoney(currentProduct.current_price, currentProduct.increment);
+    if (!gteMoney(finalAmount, minBid)) {
+      toast.error(`Lance mínimo é R$ ${fmtBR(minBid)}`);
       return;
     }
 
@@ -170,7 +170,7 @@ export default function LiveShopNoZap() {
       });
 
       setBidAmount("");
-      toast.success(`Lance de R$ ${finalAmount.toFixed(2)} enviado! 🎯`);
+      toast.success(`Lance de R$ ${fmtBR(finalAmount)} enviado! 🎯`);
     } catch (error) {
       console.error("Erro ao enviar lance:", error);
       toast.error("Erro ao enviar lance. Tente novamente.");
@@ -198,7 +198,7 @@ export default function LiveShopNoZap() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img
-                src={LogoTransparent}
+                src="/brand/logo-horizontal-dark.webp"
                 alt="Leilão NoZap"
                 className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => navigate(createPageUrl("Home"))}
@@ -317,16 +317,16 @@ export default function LiveShopNoZap() {
                   <div className="text-center mb-4">
                     <p className="text-sm text-gray-400 mb-1">Lance Atual</p>
                     <p className="text-4xl font-bold text-green-400">
-                      R$ {currentProduct.current_price?.toFixed(2)}
+                      R$ {fmtBR(currentProduct.current_price)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Incremento mínimo: + R$ {currentProduct.increment?.toFixed(2)}
+                      Incremento mínimo: + R$ {fmtBR(currentProduct.increment)}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {[1, 2, 5].map((mult) => {
-                      const quickAmount = currentProduct.current_price + (currentProduct.increment * mult);
+                      const quickAmount = addMoney(currentProduct.current_price, mulMoney(currentProduct.increment, mult));
                       return (
                         <Button
                           key={mult}
@@ -335,7 +335,7 @@ export default function LiveShopNoZap() {
                           className="bg-green-600 hover:bg-green-700 text-white flex flex-col items-center py-3 h-auto"
                         >
                           <Zap className="w-4 h-4 mb-1" />
-                          <span className="text-xs">R$ {quickAmount.toFixed(2)}</span>
+                          <span className="text-xs">R$ {fmtBR(quickAmount)}</span>
                         </Button>
                       );
                     })}
@@ -351,7 +351,7 @@ export default function LiveShopNoZap() {
                         placeholder="Valor personalizado"
                         disabled={isSubmitting || !currentUser}
                         className="flex-1 bg-gray-900 border-gray-600 text-white"
-                        min={currentProduct.current_price + currentProduct.increment}
+                        min={addMoney(currentProduct.current_price, currentProduct.increment)}
                       />
                       <Button
                         onClick={() => handleSubmitBid()}
@@ -391,7 +391,7 @@ export default function LiveShopNoZap() {
                               </span>
                             </div>
                             <span className="text-sm font-bold text-green-400">
-                              R$ {bid.amount.toFixed(2)}
+                              R$ {fmtBR(bid.amount)}
                             </span>
                           </div>
                         </div>
@@ -438,7 +438,7 @@ export default function LiveShopNoZap() {
                       <div>
                         <p className="text-xs text-gray-400">Lance atual</p>
                         <p className="text-lg font-bold text-green-400">
-                          R$ {currentProduct.current_price?.toFixed(2)}
+                          R$ {fmtBR(currentProduct.current_price)}
                         </p>
                       </div>
                       <Button

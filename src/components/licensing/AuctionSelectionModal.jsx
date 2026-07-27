@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 const Auction = base44.entities.Auction;
@@ -16,7 +17,7 @@ const AuctionItem = ({ auction, onSelect }) => {
             />
             <div className="flex-grow">
                 <p className="font-semibold text-white line-clamp-2">{auction.title}</p>
-                <p className="text-sm text-gray-400">Lance atual: <span className="font-bold text-green-500">R$ {(auction.current_price || auction.starting_price).toFixed(2)}</span></p>
+                <p className="text-sm text-gray-400">Lance atual: <span className="font-bold text-green-500">R$ {fmtBR((auction.current_price || auction.starting_price))}</span></p>
             </div>
             <Button size="sm" className="bg-green-600 hover:bg-green-700 ml-auto">
                 <Zap className="w-4 h-4 mr-2"/>

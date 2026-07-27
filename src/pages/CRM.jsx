@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Users, UserPlus, Search, Filter, Mail, Phone,
   DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX,
-  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Briefcase
+  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Briefcase,
+  Pencil, Plus, RefreshCw, TriangleAlert
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -110,7 +112,7 @@ export default function CRM() {
       }
 
       if (!user || user.role !== 'admin' && user.role !== 'super_admin') {
-        alert("❌ Acesso negado! Apenas administradores.");
+        alert("Acesso negado! Apenas administradores.");
         navigate(createPageUrl('Home'));
         return;
       }
@@ -142,9 +144,9 @@ export default function CRM() {
         return qty > 0;
       });
       setAvailableProducts(inStock);
-      console.log(`✅ ${inStock.length} produtos carregados com estoque`);
+      console.log(` ${inStock.length} produtos carregados com estoque`);
     } catch (error) {
-      console.error('❌ Erro ao carregar produtos:', error);
+      console.error('Erro ao carregar produtos:', error);
       setAvailableProducts([]);
     } finally {
       setLoadingProducts(false);
@@ -187,7 +189,7 @@ export default function CRM() {
       console.error('Erro ao carregar clientes:', error);
       setCustomers([]);
       setFilteredCustomers([]);
-      alert('❌ Erro ao carregar clientes - tente novamente');
+      alert('Erro ao carregar clientes - tente novamente');
     } finally {
       setIsLoading(false);
     }
@@ -282,10 +284,10 @@ export default function CRM() {
     try {
       if (editingCustomer) {
         await base44.entities.Customer.update(editingCustomer.id, formData);
-        alert('✅ Cliente atualizado!');
+        alert('Cliente atualizado!');
       } else {
         await base44.entities.Customer.create(formData);
-        alert('✅ Cliente cadastrado!');
+        alert('Cliente cadastrado!');
       }
 
       setFormData({
@@ -311,7 +313,7 @@ export default function CRM() {
       await loadCustomers();
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      alert('❌ Erro ao salvar cliente');
+      alert('Erro ao salvar cliente');
     }
   };
 
@@ -319,11 +321,11 @@ export default function CRM() {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
     try {
       await base44.entities.Customer.delete(id);
-      alert('✅ Cliente excluído!');
+      alert('Cliente excluído!');
       await loadCustomers();
     } catch (error) {
       console.error('Erro ao excluir:', error);
-      alert('❌ Erro ao excluir cliente');
+      alert('Erro ao excluir cliente');
     }
   };
 
@@ -351,11 +353,11 @@ export default function CRM() {
       await base44.entities.Seller.update(seller.id, {
         is_active: !seller.is_active
       });
-      alert(`✅ Vendedor ${!seller.is_active ? 'ativado' : 'desativado'}!`);
+      alert(`Vendedor ${!seller.is_active ? 'ativado' : 'desativado'}!`);
       await loadSellers();
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
-      alert('❌ Erro ao atualizar status');
+      alert('Erro ao atualizar status');
     }
   };
 
@@ -364,10 +366,10 @@ export default function CRM() {
     try {
       if (editingSeller) {
         await base44.entities.Seller.update(editingSeller.id, sellerFormData);
-        alert('✅ Vendedor atualizado!');
+        alert('Vendedor atualizado!');
       } else {
         await base44.entities.Seller.create(sellerFormData);
-        alert('✅ Vendedor cadastrado!');
+        alert('Vendedor cadastrado!');
       }
       setSellerFormData({
         name: '',
@@ -383,7 +385,7 @@ export default function CRM() {
       await loadSellers();
     } catch (error) {
       console.error('Erro ao salvar vendedor:', error);
-      alert('❌ Erro ao salvar vendedor');
+      alert('Erro ao salvar vendedor');
     }
   };
 
@@ -435,7 +437,7 @@ CEP: ${customer.address_zip_code || 'Não informado'}
 
 ━━━━━━━━━━━━━━━━━━━━
 
-*Gasto Total:* R$ ${(customer.total_spent || 0).toFixed(2)}
+*Gasto Total:* R$ ${fmtBR((customer.total_spent || 0))}
 
 ${customer.notes ? `━━━━━━━━━━━━━━━━━━━━
 
@@ -894,7 +896,7 @@ _Enviado via CRM Leilão NoZap_`;
                         {customer.last_contact ? new Date(customer.last_contact).toLocaleDateString('pt-BR') : '-'}
                       </td>
                       <td className="p-3 text-right text-green-400 font-bold">
-                        R$ {(customer.total_spent || 0).toFixed(2)}
+                        R$ {fmtBR((customer.total_spent || 0))}
                       </td>
                       <td className="p-3">
                         <div className="flex items-center justify-center gap-2">
@@ -1049,7 +1051,10 @@ _Enviado via CRM Leilão NoZap_`;
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white">
-                    {editingSeller ? '✏️ Editar Vendedor' : '➕ Novo Vendedor'}
+                    <span className="inline-flex items-center gap-2">
+                      {editingSeller ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {editingSeller ? 'Editar Vendedor' : 'Novo Vendedor'}
+                    </span>
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -1191,7 +1196,7 @@ _Enviado via CRM Leilão NoZap_`;
             <Card className="bg-gray-800 border-gray-700 max-w-md w-full">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white">📲 Encaminhar para Vendedor</CardTitle>
+                  <CardTitle className="text-white flex items-center gap-2"><Send className="w-4 h-4" />Encaminhar para Vendedor</CardTitle>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1265,7 +1270,10 @@ _Enviado via CRM Leilão NoZap_`;
               <CardHeader className="border-b border-gray-700 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white text-xl font-bold">
-                    {editingCustomer ? '✏️ Editar Cliente' : '➕ Novo Cliente'}
+                    <span className="inline-flex items-center gap-2">
+                      {editingCustomer ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                      {editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}
+                    </span>
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -1419,7 +1427,7 @@ _Enviado via CRM Leilão NoZap_`;
                     {/* PRODUTOS DE INTERESSE */}
                     <div className="col-span-full border-t border-gray-700 pt-4 mt-4">
                       <Label className="text-gray-300 text-base font-semibold mb-3 block">
-                        📦 Produtos de Interesse (opcional)
+                        <span className="inline-flex items-center gap-2"><Package className="w-4 h-4" />Produtos de Interesse (opcional)</span>
                       </Label>
                       
                       <div className="space-y-3">
@@ -1452,7 +1460,7 @@ _Enviado via CRM Leilão NoZap_`;
                                   onClick={loadProducts}
                                   className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
                                 >
-                                  🔄 Recarregar Produtos
+                                  <span className="inline-flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Recarregar Produtos</span>
                                 </button>
                               </div>
                             ) : filteredProductsForModal.length > 0 ? (
@@ -1488,7 +1496,7 @@ _Enviado via CRM Leilão NoZap_`;
                         {formData.interested_products.length > 0 && (
                           <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
                             <Label className="text-gray-400 text-xs mb-2 block">
-                              ✅ Produtos Marcados ({formData.interested_products.length}/10)
+                              <span className="inline-flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" />Produtos Marcados ({formData.interested_products.length}/10)</span>
                             </Label>
                             <div className="flex flex-wrap gap-2">
                               {formData.interested_products.map(p => (
@@ -1509,7 +1517,7 @@ _Enviado via CRM Leilão NoZap_`;
                             </div>
                             {formData.interested_products.length >= 10 && (
                               <p className="text-xs text-yellow-400 mt-2">
-                                ⚠️ Limite máximo atingido (10 produtos)
+                                <span className="inline-flex items-center gap-1.5"><TriangleAlert className="w-3.5 h-3.5" />Limite máximo atingido (10 produtos)</span>
                               </p>
                             )}
                           </div>

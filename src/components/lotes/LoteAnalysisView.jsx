@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { DollarSign, TrendingUp, Activity, Package, Eye } from 'lucide-react';
 import GradeItemsModal from './GradeItemsModal';
@@ -130,10 +131,10 @@ export default function LoteAnalysisView({ lote }) {
             <h3 className="font-bold text-white text-sm flex items-center gap-2"><DollarSign size={16} className="text-amber-400" />Cenário Financeiro e Custos</h3>
           </div>
           <div className="p-4 space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-gray-400">Valor Arremate</span><span className="text-white font-semibold">R$ {parsed.valorArremate.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Taxa de Leilão</span><span className="text-white font-semibold">{parsed.taxaPct}% {parsed.taxaValor > 0 ? `(R$ ${parsed.taxaValor.toFixed(2)})` : ''}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Frete</span><span className="text-white font-semibold">R$ {parsed.frete.toFixed(2)}</span></div>
-            {parsed.outros > 0 && <div className="flex justify-between"><span className="text-gray-400">Outros</span><span className="text-white font-semibold">R$ {parsed.outros.toFixed(2)}</span></div>}
+            <div className="flex justify-between"><span className="text-gray-400">Valor Arremate</span><span className="text-white font-semibold">R$ {fmtBR(parsed.valorArremate)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Taxa de Leilão</span><span className="text-white font-semibold">{parsed.taxaPct}% {parsed.taxaValor > 0 ? `(R$ ${fmtBR(parsed.taxaValor)})` : ''}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">Frete</span><span className="text-white font-semibold">R$ {fmtBR(parsed.frete)}</span></div>
+            {parsed.outros > 0 && <div className="flex justify-between"><span className="text-gray-400">Outros</span><span className="text-white font-semibold">R$ {fmtBR(parsed.outros)}</span></div>}
             <div className="flex justify-between pt-3 border-t border-gray-700">
               <span className="font-bold text-gray-300">CUSTO DO LOTE:</span>
               <span className="font-bold text-amber-400 text-base">{formatCurrency(custoTotal)}</span>

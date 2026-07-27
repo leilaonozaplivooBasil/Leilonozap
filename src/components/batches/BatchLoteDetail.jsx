@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
@@ -39,7 +40,7 @@ export default function BatchLoteDetail({ lote, loteIndex, batch, lotesStatus, o
         <div className="flex items-center gap-2">
           {lote.valor_lote > 0 && (
             <span className="text-xs font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-md px-2 py-0.5">
-              R$ {lote.valor_lote?.toFixed(2)}
+              R$ {fmtBR(lote.valor_lote)}
             </span>
           )}
           {onConvertSingleLot && (

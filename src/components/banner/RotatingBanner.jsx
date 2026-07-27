@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function RotatingBanner({ banners, fit = 'cover', heightClass = 'h-64 md:h-80 lg:h-96', rounded = true }) {
+// ambient: preenche as laterais/sobras do container com a própria arte desfocada
+// (em vez de barras chapadas) quando fit="contain" e o banner não cobre tudo.
+export default function RotatingBanner({ banners, fit = 'cover', heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -66,18 +68,28 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
               isActive ? 'opacity-100' : 'opacity-0'
             }`}
           >
+            {ambient && (
+              <img
+                src={banner.image_url}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60"
+                loading={shouldEagerLoad ? 'eager' : 'lazy'}
+                decoding="async"
+              />
+            )}
             {banner.link_url ? (
               <a href={banner.link_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full overflow-hidden">
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full cursor-pointer ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
+                  className={`w-full h-full cursor-pointer relative ${fit === 'contain' ? 'object-contain' : ''} ${fit === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
                     objectFit: fit,
-                    backgroundColor: fit === 'contain' ? '#0f172a' : undefined,
+                    backgroundColor: fit === 'contain' && !ambient ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
                       transform: `scale(${banner.image_adjustments.scale || 1})`
@@ -90,13 +102,13 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
+                  className={`w-full h-full relative ${fit === 'contain' ? 'object-contain' : ''} ${fit === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
                     objectFit: fit,
-                    backgroundColor: fit === 'contain' ? '#0f172a' : undefined,
+                    backgroundColor: fit === 'contain' && !ambient ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
                       transform: `scale(${banner.image_adjustments.scale || 1})`

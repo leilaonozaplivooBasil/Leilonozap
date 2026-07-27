@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, Loader2, FileText, Package, CheckCircle, X, 
-  Edit, Trash2, Save, Plus, ArrowLeft, ArrowRight, ChevronDown, ChevronUp, FileImage,
-  Calendar, DollarSign
+import { Loader2, Package, CheckCircle, X, Trash2, Save, Plus, ArrowLeft,
+  Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
+import { brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
 import BatchCard from '@/components/batches/BatchCard';
 import BatchLoteDetail from '@/components/batches/BatchLoteDetail';
 import LoteAnalysisView from '@/components/lotes/LoteAnalysisView';
@@ -916,15 +915,15 @@ export default function RegisterBatches() {
                 <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-400">Valor da Nota:</span>
-                    <span className="text-white font-bold">R$ {manualBatch.valor_total.toFixed(2)}</span>
+                    <span className="text-white font-bold">R$ {fmtBR(manualBatch.valor_total)}</span>
                   </div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-400">+ Frete:</span>
-                    <span className="text-blue-400 font-bold">R$ {(editFreteValue || 0).toFixed(2)}</span>
+                    <span className="text-blue-400 font-bold">R$ {fmtBR((editFreteValue || 0))}</span>
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-blue-500/30">
                     <span className="text-white font-bold">Total com Frete:</span>
-                    <span className="text-white font-bold">R$ {(manualBatch.valor_total + (editFreteValue || 0)).toFixed(2)}</span>
+                    <span className="text-white font-bold">R$ {fmtBR((manualBatch.valor_total + (editFreteValue || 0)))}</span>
                   </div>
                   <div className="bg-green-900/30 border border-green-600/50 rounded p-2 mt-3">
                     <p className="text-green-400 font-bold text-center">
@@ -1169,15 +1168,15 @@ export default function RegisterBatches() {
                 <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-400">Valor da Nota:</span>
-                    <span className="text-white font-bold">R$ {manualBatch.valor_total.toFixed(2)}</span>
+                    <span className="text-white font-bold">R$ {fmtBR(manualBatch.valor_total)}</span>
                   </div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-400">+ Frete:</span>
-                    <span className="text-blue-400 font-bold">R$ {(manualFreteValue || 0).toFixed(2)}</span>
+                    <span className="text-blue-400 font-bold">R$ {fmtBR((manualFreteValue || 0))}</span>
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-blue-500/30">
                     <span className="text-white font-bold">Total com Frete:</span>
-                    <span className="text-white font-bold">R$ {(manualBatch.valor_total + (manualFreteValue || 0)).toFixed(2)}</span>
+                    <span className="text-white font-bold">R$ {fmtBR((manualBatch.valor_total + (manualFreteValue || 0)))}</span>
                   </div>
                   <div className="bg-green-900/30 border border-green-600/50 rounded p-2 mt-3">
                     <p className="text-green-400 font-bold text-center">
@@ -1392,15 +1391,15 @@ export default function RegisterBatches() {
                   <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3 mb-4">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-400">Valor da Nota:</span>
-                      <span className="text-white font-bold">R$ {(extractedData.valor_total || 0).toFixed(2)}</span>
+                      <span className="text-white font-bold">R$ {fmtBR((extractedData.valor_total || 0))}</span>
                     </div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-400">+ Frete:</span>
-                      <span className="text-blue-400 font-bold">R$ {(freteValue || 0).toFixed(2)}</span>
+                      <span className="text-blue-400 font-bold">R$ {fmtBR((freteValue || 0))}</span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-blue-500/30">
                       <span className="text-white font-bold">Total com Frete:</span>
-                      <span className="text-white font-bold">R$ {((extractedData.valor_total || 0) + (freteValue || 0)).toFixed(2)}</span>
+                      <span className="text-white font-bold">R$ {fmtBR(((extractedData.valor_total || 0) + (freteValue || 0)))}</span>
                     </div>
                     <div className="flex justify-between text-sm mt-2">
                       <span className="text-gray-400">Total de Produtos:</span>
@@ -1435,7 +1434,7 @@ export default function RegisterBatches() {
                             <p className="text-gray-400 text-xs">{totalProdutosLote} produtos</p>
                           </div>
                           <Badge variant="outline" className="text-blue-400 border-blue-400">
-                            R$ {(lote.valor_lote || 0).toFixed(2)}
+                            R$ {fmtBR((lote.valor_lote || 0))}
                           </Badge>
                         </div>
                         <div className="space-y-1">

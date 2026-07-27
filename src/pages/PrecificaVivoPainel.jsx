@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Zap, Users, TrendingUp, Shield, Play, RefreshCw, Activity,
-  ArrowUpCircle, ArrowDownCircle, AlertTriangle, CheckCircle2, HelpCircle
+  ArrowUpCircle, ArrowDownCircle, CheckCircle2, HelpCircle,
+  FlaskConical, MousePointerClick, Package, Clock
 } from 'lucide-react';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
@@ -43,34 +45,34 @@ export default function PrecificaVivoPainel() {
   }, [loadData]);
 
   const handleRunNow = async () => {
-    if (!confirm('⚠️ Executar o PrecificaVivo AGORA?\n\nIsso vai consumir créditos do SerpAPI se houver tráfego ≥ 10 sessões ativas.')) return;
+    if (!confirm('Executar o PrecificaVivo AGORA?\n\nIsso vai consumir créditos do SerpAPI se houver tráfego ≥ 10 sessões ativas.')) return;
 
     setIsRunning(true);
     setLastRunResult(null);
     try {
       const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_now' });
       setLastRunResult(res?.data?.result || res?.data);
-      alert('✅ Execução concluída! Veja o resultado no painel.');
+      alert('Execução concluída! Veja o resultado no painel.');
       await loadData();
     } catch (err) {
-      alert('❌ Erro: ' + err.message);
+      alert('Erro: ' + err.message);
     } finally {
       setIsRunning(false);
     }
   };
 
   const handleRunTest = async () => {
-    if (!confirm('🧪 MODO TESTE\n\nIgnora o limite de sessões e processa APENAS 1 produto (consumo mínimo SerpAPI).\n\nContinuar?')) return;
+    if (!confirm('MODO TESTE\n\nIgnora o limite de sessões e processa APENAS 1 produto (consumo mínimo SerpAPI).\n\nContinuar?')) return;
 
     setIsTestRunning(true);
     setLastRunResult(null);
     try {
       const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_test' });
       setLastRunResult(res?.data?.result || res?.data);
-      alert('✅ Teste concluído! Veja o resultado no painel.');
+      alert('Teste concluído! Veja o resultado no painel.');
       await loadData();
     } catch (err) {
-      alert('❌ Erro: ' + err.message);
+      alert('Erro: ' + err.message);
     } finally {
       setIsTestRunning(false);
     }
@@ -112,7 +114,7 @@ export default function PrecificaVivoPainel() {
               {isTestRunning ? (
                 <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Testando...</>
               ) : (
-                <>🧪 Rodar em Modo Teste</>
+                <><FlaskConical className="w-3.5 h-3.5 mr-1.5" />Rodar em Modo Teste</>
               )}
             </Button>
             <Button
@@ -140,7 +142,7 @@ export default function PrecificaVivoPainel() {
             <div className="text-sm text-blue-200">
               <p className="font-semibold mb-1">Automação agendada a cada 5 min</p>
               <p className="text-blue-300/80 text-xs">
-                A ativação/pausa é feita no <strong>Dashboard Base44 → Automations → "⚡ PrecificaVivo Tick (5min)"</strong>.
+                A ativação/pausa é feita no <strong>Dashboard Base44 → Automations → "PrecificaVivo Tick (5min)"</strong>.
                 Use "Rodar Agora" para testar manualmente a qualquer momento.
               </p>
             </div>
@@ -286,10 +288,10 @@ function HistoryRow({ record }) {
   const ArrowIcon = isUp ? ArrowUpCircle : ArrowDownCircle;
 
   const triggerLabels = {
-    auto_traffic: { label: 'Auto', icon: '⚡', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-    manual_single: { label: 'Manual', icon: '👆', color: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
-    manual_batch: { label: 'Lote', icon: '📦', color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
-    scheduled: { label: 'Agendado', icon: '⏰', color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' }
+    auto_traffic: { label: 'Auto', icon: Zap, color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+    manual_single: { label: 'Manual', icon: MousePointerClick, color: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+    manual_batch: { label: 'Lote', icon: Package, color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+    scheduled: { label: 'Agendado', icon: Clock, color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' }
   };
   const trig = triggerLabels[record.trigger_type] || triggerLabels.auto_traffic;
 
@@ -313,7 +315,7 @@ function HistoryRow({ record }) {
             </p>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <Badge className={`text-[10px] px-2 py-0.5 ${trig.color} border font-medium gap-1`}>
-                <span>{trig.icon}</span> {trig.label}
+                <trig.icon className="w-3 h-3" /> {trig.label}
               </Badge>
               {record.floor_applied && (
                 <Badge className="text-[10px] px-2 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium gap-1">
@@ -332,9 +334,9 @@ function HistoryRow({ record }) {
           {/* Coluna direita: antes → depois + variação */}
           <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 line-through">R$ {(record.old_price || 0).toFixed(2)}</span>
+              <span className="text-gray-500 line-through">R$ {fmtBR((record.old_price || 0))}</span>
               <span className="text-gray-600">→</span>
-              <span className="text-white font-bold text-sm">R$ {(record.new_price || 0).toFixed(2)}</span>
+              <span className="text-white font-bold text-sm">R$ {fmtBR((record.new_price || 0))}</span>
             </div>
             <div className={`text-xs font-bold px-2 py-0.5 rounded-md border ${variationBg} ${variationColor}`}>
               {isUp ? '+' : ''}{variation.toFixed(2)}%
@@ -350,11 +352,11 @@ function HistoryRow({ record }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Antes</p>
-              <p className="text-sm text-gray-400 line-through">R$ {(record.old_price || 0).toFixed(2)}</p>
+              <p className="text-sm text-gray-400 line-through">R$ {fmtBR((record.old_price || 0))}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Depois</p>
-              <p className="text-sm text-white font-bold">R$ {(record.new_price || 0).toFixed(2)}</p>
+              <p className="text-sm text-white font-bold">R$ {fmtBR((record.new_price || 0))}</p>
             </div>
           </div>
 
@@ -369,7 +371,7 @@ function HistoryRow({ record }) {
           {record.new_market > 0 && (
             <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-gray-800">
               <span className="text-gray-500">Mercado (mediana Google)</span>
-              <span className="text-purple-300 font-semibold">R$ {record.new_market.toFixed(2)}</span>
+              <span className="text-purple-300 font-semibold">R$ {fmtBR(record.new_market)}</span>
             </div>
           )}
 

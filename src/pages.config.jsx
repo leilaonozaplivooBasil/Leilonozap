@@ -24,6 +24,7 @@ const AuctionDetails = React.lazy(() => import('./pages/AuctionDetails'));
 const AuctionRoom = React.lazy(() => import('./pages/AuctionRoom'));
 const AuditSnapshot = React.lazy(() => import('./pages/AuditSnapshot'));
 const BannerManagement = React.lazy(() => import('./pages/BannerManagement'));
+const PainelMidia = React.lazy(() => import('./pages/PainelMidia'));
 const CadastroInvestidor = React.lazy(() => import('./pages/CadastroInvestidor'));
 const CadastroLeiloeiro = React.lazy(() => import('./pages/CadastroLeiloeiro'));
 const CarteiraInvestidor = React.lazy(() => import('./pages/CarteiraInvestidor'));
@@ -46,6 +47,8 @@ const CreateLuxuryAuction = React.lazy(() => import('./pages/CreateLuxuryAuction
 const CustomerDetails = React.lazy(() => import('./pages/CustomerDetails'));
 const DailyReportView = React.lazy(() => import('./pages/DailyReportView'));
 const DiretoDeFabrica = React.lazy(() => import('./pages/DiretoDeFabrica'));
+const ArremateDevolucoes = React.lazy(() => import('./pages/ArremateDevolucoes'));
+const SejaVendedor = React.lazy(() => import('./pages/SejaVendedor'));
 const EditAuction = React.lazy(() => import('./pages/EditAuction'));
 const EditCatalogProduct = React.lazy(() => import('./pages/EditCatalogProduct'));
 const ErrorReport = React.lazy(() => import('./pages/ErrorReport'));
@@ -72,7 +75,6 @@ const MyCatalogOrders = React.lazy(() => import('./pages/MyCatalogOrders'));
 const MyWinnings = React.lazy(() => import('./pages/MyWinnings'));
 const NetworkOverview = React.lazy(() => import('./pages/NetworkOverview'));
 const OrderTracking = React.lazy(() => import('./pages/OrderTracking'));
-const PDV = React.lazy(() => import('./pages/PDV'));
 const PartnerPlanActivation = React.lazy(() => import('./pages/PartnerPlanActivation'));
 const Partners = React.lazy(() => import('./pages/Partners'));
 const Portal = React.lazy(() => import('./pages/Portal'));
@@ -103,7 +105,12 @@ const WalletHistory = React.lazy(() => import('./pages/WalletHistory'));
 
 export const PAGES = {
     "AcessoVendedor": AcessoVendedor,
-    "ActivePartners": ActivePartners,
+    // 🔒 Carteira de parceiros (nomes, e-mails, CPFs, valores investidos) — só admin.
+    "ActivePartners": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <ActivePartners />
+        </RequireRole>
+    ),
     "AddCatalogProduct": AddCatalogProduct,
     "AnaliseDeLotes": AnaliseDeLotes,
     "AddFunds": AddFunds,
@@ -118,6 +125,12 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "AuditSnapshot": AuditSnapshot,
     "BannerManagement": BannerManagement,
+    // 🖼️ Painel de Mídia — banners por página, logo e favicon. Só admin.
+    "PainelMidia": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <PainelMidia />
+        </RequireRole>
+    ),
     "CadastroInvestidor": CadastroInvestidor,
     "CadastroLeiloeiro": CadastroLeiloeiro,
     "CarteiraInvestidor": () => (
@@ -148,6 +161,8 @@ export const PAGES = {
     "CustomerDetails": CustomerDetails,
     "DailyReportView": DailyReportView,
     "DiretoDeFabrica": DiretoDeFabrica,
+    "ArremateDevolucoes": ArremateDevolucoes,
+    "SejaVendedor": SejaVendedor,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
     "ErrorReport": ErrorReport,
@@ -178,9 +193,13 @@ export const PAGES = {
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
-    "PDV": PDV,
-    "PartnerPlanActivation": PartnerPlanActivation,
-    "Partners": Partners,
+    // 🔒 Ativação de plano de parceiro (mexe em dinheiro/plano) — só admin.
+    "PartnerPlanActivation": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <PartnerPlanActivation />
+        </RequireRole>
+    ),
+    "Partners": Partners, // pública de propósito: é a landing "Seja um Parceiro"
     "Portal": Portal,
     "SuperAdminPanels": SuperAdminPanels,
     "PaymentFailure": PaymentFailure,

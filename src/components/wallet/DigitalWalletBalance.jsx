@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Wallet, Loader2 } from 'lucide-react';
@@ -56,7 +57,7 @@ export default function DigitalWalletBalance({ userId, showActions = true }) {
                 </p>
               </div>
               <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                R$ {balance.toFixed(2)}
+                R$ {fmtBR(balance)}
               </p>
               <p className="text-xs text-gray-500 mt-1">Saldo disponível para leilões</p>
             </div>

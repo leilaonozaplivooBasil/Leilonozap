@@ -1,55 +1,68 @@
 import React, { Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
+// O app inteiro chama `toast` do sonner (85 arquivos), mas o container do sonner
+// nunca foi montado — só o Toaster do shadcn, que responde a outro hook. Resultado:
+// nenhum toast aparecia em lugar nenhum. Os dois convivem: o de baixo é o do sonner.
+import { Toaster as SonnerToaster } from "sonner"
 import { Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config.jsx'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import CRMInvestidores from '@/pages/CRMInvestidores';
-import CarteiraInvestidor from '@/pages/CarteiraInvestidor';
-import CadastroInvestidor from '@/pages/CadastroInvestidor';
-import CadastroLeiloeiro from '@/pages/CadastroLeiloeiro';
-import MarketplaceLotes from '@/pages/MarketplaceLotes';
-import AnaliseDeLotes from '@/pages/AnaliseDeLotes';
-import GestaoLotes from '@/pages/GestaoLotes';
-import SistemaDeArremate from '@/pages/SistemaDeArremate';
-import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
-import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
-import CatalogOrdersAdmin from '@/pages/CatalogOrdersAdmin';
-import AnaliseLoteEstoque from '@/pages/AnaliseLoteEstoque';
-import EstoqueLotes from '@/pages/EstoqueLotes';
-import Evoluir from '@/pages/Evoluir';
-import Carteira from '@/pages/Carteira';
-import AdminFinanceiro from '@/pages/AdminFinanceiro';
-import Recepcao from '@/pages/Recepcao';
-import PainelDistribuidor from '@/pages/PainelDistribuidor';
-import Cadastro from '@/pages/Cadastro';
-import PedidosDistribuidor from '@/pages/PedidosDistribuidor';
-import TirarPedido from '@/pages/TirarPedido';
-import ImageOptimizer from '@/pages/ImageOptimizer';
-import VisualizarLote from '@/pages/VisualizarLote';
-import SentinelNoZap from '@/pages/SentinelNoZap';
-import PrecificaVivoPainel from '@/pages/PrecificaVivoPainel';
-import ParceiroLotes from '@/pages/ParceiroLotes';
-import AcessoArrematante from '@/pages/AcessoArrematante';
-import AcessoVendedor from '@/pages/AcessoVendedor';
-import SellerPanel from '@/pages/SellerPanel';
+// ⚡ Páginas em lazy: só Recepcao ("/") e Catalog ("/Loja-Virtual" — porta de
+// entrada do PWA) ficam no bundle inicial. O resto baixa sob demanda, senão o
+// primeiro carregamento arrasta dezenas de painéis admin que o cliente nunca abre.
 import RequireRole from '@/components/common/RequireRole';
 import Catalog from '@/pages/Catalog';
-import Portal from '@/pages/Portal';
-import SuperAdminPanels from '@/pages/SuperAdminPanels';
-import PortalArrematante from '@/pages/portal/PortalArrematante';
-import PortalLojaVirtual from '@/pages/portal/PortalLojaVirtual';
-import PortalLicenciado from '@/pages/portal/PortalLicenciado';
-import PortalLojista from '@/pages/portal/PortalLojista';
-import PortalVendedor from '@/pages/portal/PortalVendedor';
-import PortalInvestidor from '@/pages/portal/PortalInvestidor';
-import PortalLeiloeiro from '@/pages/portal/PortalLeiloeiro';
-import PrivacyPolicy from '@/pages/PrivacyPolicy';
-import TermsOfUse from '@/pages/TermsOfUse';
-import DossieArremate from '@/pages/DossieArremate';
+import Recepcao from '@/pages/Recepcao';
 import PageNotFound from './lib/PageNotFound';
+import ChunkErrorBoundary from './lib/ChunkErrorBoundary.jsx';
+const CRMInvestidores = React.lazy(() => import('@/pages/CRMInvestidores'));
+const CarteiraInvestidor = React.lazy(() => import('@/pages/CarteiraInvestidor'));
+const CadastroInvestidor = React.lazy(() => import('@/pages/CadastroInvestidor'));
+const CadastroLeiloeiro = React.lazy(() => import('@/pages/CadastroLeiloeiro'));
+const MarketplaceLotes = React.lazy(() => import('@/pages/MarketplaceLotes'));
+const AnaliseDeLotes = React.lazy(() => import('@/pages/AnaliseDeLotes'));
+const GestaoLotes = React.lazy(() => import('@/pages/GestaoLotes'));
+const SistemaDeArremate = React.lazy(() => import('@/pages/SistemaDeArremate'));
+const AdminDepositosConfirmados = React.lazy(() => import('@/pages/AdminDepositosConfirmados'));
+const AdminLancesAutorizados = React.lazy(() => import('@/pages/AdminLancesAutorizados'));
+const CatalogOrdersAdmin = React.lazy(() => import('@/pages/CatalogOrdersAdmin'));
+const CuponsAdmin = React.lazy(() => import('@/pages/CuponsAdmin'));
+const AnaliseLoteEstoque = React.lazy(() => import('@/pages/AnaliseLoteEstoque'));
+const EstoqueLotes = React.lazy(() => import('@/pages/EstoqueLotes'));
+const Evoluir = React.lazy(() => import('@/pages/Evoluir'));
+const Carteira = React.lazy(() => import('@/pages/Carteira'));
+const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
+const PainelDistribuidor = React.lazy(() => import('@/pages/PainelDistribuidor'));
+const Cadastro = React.lazy(() => import('@/pages/Cadastro'));
+const ConcursoLeilaoNozap = React.lazy(() => import('@/pages/ConcursoLeilaoNozap'));
+const PassaporteLances = React.lazy(() => import('@/pages/PassaporteLances'));
+const LojaVitrine = React.lazy(() => import('@/pages/LojaVitrine'));
+const PedidosDistribuidor = React.lazy(() => import('@/pages/PedidosDistribuidor'));
+const TirarPedido = React.lazy(() => import('@/pages/TirarPedido'));
+const GestaoMetas = React.lazy(() => import('@/pages/GestaoMetas'));
+const MeuEstoque = React.lazy(() => import('@/pages/MeuEstoque'));
+const ImageOptimizer = React.lazy(() => import('@/pages/ImageOptimizer'));
+const VisualizarLote = React.lazy(() => import('@/pages/VisualizarLote'));
+const SentinelNoZap = React.lazy(() => import('@/pages/SentinelNoZap'));
+const PrecificaVivoPainel = React.lazy(() => import('@/pages/PrecificaVivoPainel'));
+const ParceiroLotes = React.lazy(() => import('@/pages/ParceiroLotes'));
+const AcessoArrematante = React.lazy(() => import('@/pages/AcessoArrematante'));
+const AcessoVendedor = React.lazy(() => import('@/pages/AcessoVendedor'));
+const SellerPanel = React.lazy(() => import('@/pages/SellerPanel'));
+const Portal = React.lazy(() => import('@/pages/Portal'));
+const SuperAdminPanels = React.lazy(() => import('@/pages/SuperAdminPanels'));
+const PortalArrematante = React.lazy(() => import('@/pages/portal/PortalArrematante'));
+const PortalLojaVirtual = React.lazy(() => import('@/pages/portal/PortalLojaVirtual'));
+const PortalLicenciado = React.lazy(() => import('@/pages/portal/PortalLicenciado'));
+const PortalLojista = React.lazy(() => import('@/pages/portal/PortalLojista'));
+const PortalVendedor = React.lazy(() => import('@/pages/portal/PortalVendedor'));
+const PortalInvestidor = React.lazy(() => import('@/pages/portal/PortalInvestidor'));
+const PortalLeiloeiro = React.lazy(() => import('@/pages/portal/PortalLeiloeiro'));
+const PrivacyPolicy = React.lazy(() => import('@/pages/PrivacyPolicy'));
+const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -60,6 +73,44 @@ import { useState, useCallback } from 'react';
 const RedirectWithParams = ({ to }) => {
   const location = window.location;
   return <Navigate to={`${to}${location.search}`} replace />;
+};
+
+// 🧭 APELIDOS DE ROTA — o app usa rotas em PT e case-sensitive (/Loja-Virtual, /Licensing…),
+// então quem digita /loja, /store, /entrar, /leiloes minúsculo caía num 404 (reclamação do
+// teste: "páginas internas dão 404 por rota direta"). Aqui um mapa case-insensitive manda a
+// pessoa (ou o buscador) pra rota certa, preservando ?ref= etc.
+const ROUTE_ALIASES = {
+  // Loja
+  'loja': '/Loja-Virtual', 'loja-virtual': '/Loja-Virtual', 'store': '/Loja-Virtual',
+  'shop': '/Loja-Virtual', 'lojavirtual': '/Loja-Virtual', 'catalogo': '/Loja-Virtual',
+  'catalog': '/Loja-Virtual', 'produtos': '/Loja-Virtual',
+  // Leilões
+  'leiloes': '/leiloes', 'leilao': '/leiloes', 'auctions': '/leiloes',
+  // Entrar / conta
+  'entrar': '/Home', 'login': '/Home', 'signin': '/Home', 'conta': '/Carteira',
+  'carteira': '/Carteira', 'wallet': '/Carteira', 'carrinho': '/Cart', 'cart': '/Cart',
+  // Ganhe dinheiro / rede
+  'ganhe-dinheiro': '/Licensing', 'ganhedinheiro': '/Licensing', 'licenciado': '/Licensing',
+  'seja-licenciado': '/Licensing', 'licensing': '/Licensing', 'alavancagem': '/Licensing',
+  'parceiro': '/Partners', 'seja-parceiro': '/Partners', 'investidor': '/Partners',
+  'partners': '/Partners', 'vendedor': '/SejaVendedor', 'seja-vendedor': '/SejaVendedor',
+  'sejavendedor': '/SejaVendedor',
+  // Setores
+  'direto-de-fabrica': '/DiretoDeFabrica', 'diretodefabrica': '/DiretoDeFabrica',
+  'fabrica': '/DiretoDeFabrica', 'arremate-devolucoes': '/ArremateDevolucoes',
+  'arremate': '/ArremateDevolucoes', 'devolucoes': '/ArremateDevolucoes',
+  'collection': '/LuxuryCollection', 'luxo': '/LuxuryCollection',
+  'ao-vivo': '/LiveShopNoZap', 'aovivo': '/LiveShopNoZap', 'live': '/LiveShopNoZap',
+  // Perfil
+  'perfil': '/Profile', 'profile': '/Profile', 'minha-conta': '/Profile',
+};
+
+// Resolve o apelido antes de mostrar 404. Mantém query e casa sem diferenciar maiúsculas.
+const AliasOrNotFound = () => {
+  const raw = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  const alvo = ROUTE_ALIASES[raw.toLowerCase()];
+  if (alvo) return <Navigate to={`${alvo}${window.location.search}`} replace />;
+  return <PageNotFound />;
 };
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -100,6 +151,7 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <ChunkErrorBoundary>
     <Suspense fallback={
       <div className="fixed inset-0 flex items-center justify-center bg-gray-900">
         <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -133,10 +185,18 @@ const AuthenticatedApp = () => {
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<Evoluir />} />
       <Route path="/Cadastro" element={<Cadastro />} />
+      <Route path="/rankpremiado" element={<ConcursoLeilaoNozap />} />
+      <Route path="/concursoleilaonozap" element={<Navigate to={`/rankpremiado${window.location.search}`} replace />} />
+      <Route path="/passaporte" element={<PassaporteLances />} />
+      <Route path="/Passaporte" element={<PassaporteLances />} />
+      {/* 🏪 Vitrine pública por loja da rede (standalone, sem Layout) */}
+      <Route path="/loja/:slug" element={<LojaVitrine />} />
       <Route path="/Carteira" element={<Carteira />} />
       <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pedidos" element={<LayoutWrapper currentPageName="PedidosDistribuidor"><PedidosDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />
+      <Route path="/Metas" element={<LayoutWrapper currentPageName="GestaoMetas"><GestaoMetas /></LayoutWrapper>} />
+      <Route path="/painel/estoque" element={<LayoutWrapper currentPageName="MeuEstoque"><MeuEstoque /></LayoutWrapper>} />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
       <Route path="/portal/arrematante" element={<PortalArrematante />} />
       <Route path="/portal/loja-virtual" element={<PortalLojaVirtual />} />
@@ -235,20 +295,12 @@ const AuthenticatedApp = () => {
       } />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfUse />} />
-      <Route path="/DossieArremate" element={
-        <LayoutWrapper currentPageName="DossieArremate">
-          <DossieArremate />
-        </LayoutWrapper>
-      } />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
       <Route path="/Loja-Virtual" element={
         <LayoutWrapper currentPageName="Catalog">
           <Catalog />
         </LayoutWrapper>
       } />
-      {/* 🆕 FASE 4A: Aliases de recrutamento (landings dedicadas virão na Fase 4C) */}
-      <Route path="/SejaVendedor" element={<RedirectWithParams to="/Licensing" />} />
-      <Route path="/SejaLicenciado" element={<RedirectWithParams to="/Licensing" />} />
       <Route path="/ImageOptimizer" element={
         <LayoutWrapper currentPageName="ImageOptimizer">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
@@ -277,6 +329,13 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
+      <Route path="/CuponsAdmin" element={
+        <LayoutWrapper currentPageName="CuponsAdmin">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <CuponsAdmin />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/AdminLancesAutorizados" element={
         <LayoutWrapper currentPageName="AdminLancesAutorizados">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
@@ -299,9 +358,11 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
-      <Route path="*" element={<PageNotFound />} />
+      {/* Antes de 404: tenta resolver como apelido de rota (/loja, /store, /entrar…) */}
+      <Route path="*" element={<AliasOrNotFound />} />
     </Routes>
     </Suspense>
+    </ChunkErrorBoundary>
   );
 };
 
@@ -353,6 +414,7 @@ function App() {
           </div>
         </Router>
         <Toaster />
+        <SonnerToaster position="top-center" richColors closeButton theme="dark" />
       </QueryClientProvider>
     </AuthProvider>
   )

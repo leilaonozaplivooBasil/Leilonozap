@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import LogoTransparent from '@/assets/logo-transparent.png';
 
 export default function Footer() {
   const [footerSettings, setFooterSettings] = useState(null);
@@ -65,9 +64,9 @@ export default function Footer() {
         >
           <div className="flex items-center gap-4">
             <img
-              src={LogoTransparent}
+              src="/brand/icon-3d.webp"
               alt="Leilão NoZap"
-              className="h-8 w-auto"
+              className="h-10 w-auto"
             />
           </div>
 

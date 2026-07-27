@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store, Palette, ChartColumn, FileText, CheckCircle, Ban, Pencil, Ruler } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
@@ -23,6 +23,9 @@ export default function CatalogManagement() {
     const isRede = u && Array.isArray(u.career_levels) && u.career_levels.some((c) => rede.includes(c));
     return isRede ? { backTo: '/painel', backLabel: 'Voltar ao Painel' } : {};
   })();
+  // escrita via service_role (anon não persiste). uid = ator logado.
+  const _uid = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.id; } catch { return null; } })();
+  const _ew = (entity, action, id, data) => base44.functions.invoke('adminEntityWrite', { actorId: _uid, entity, action, id, data });
   const [catalogBanners, setCatalogBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
@@ -58,11 +61,11 @@ export default function CatalogManagement() {
       if (settings && settings.length > 0) {
         setCatalogSettings(settings[0]);
       } else {
-        const newSettings = await base44.entities.CatalogSettings.create({
-          featured_section_title: '⭐ Produtos em Destaque',
+        const _r = await _ew('CatalogSettings', 'create', null, {
+          featured_section_title: 'Produtos em Destaque',
           featured_section_description: 'Veja nossos destaques selecionados'
         });
-        setCatalogSettings(newSettings);
+        setCatalogSettings(_r?.row || null);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -99,11 +102,8 @@ export default function CatalogManagement() {
 
   const handleCreateBanner = async (formData) => {
     try {
-      await base44.entities.BannerImage.create({
-        ...formData,
-        context: 'catalog',
-        order: catalogBanners.length
-      });
+      const _r = await _ew('BannerImage', 'create', null, { ...formData, context: 'catalog', order: catalogBanners.length });
+      if (!_r?.success) { toast.error('Erro ao criar banner'); return; }
       toast.success('Banner criado com sucesso!');
       loadBanners();
       setEditingBanner(null);
@@ -115,7 +115,7 @@ export default function CatalogManagement() {
 
   const handleUpdateBanner = async (id, formData) => {
     try {
-      await base44.entities.BannerImage.update(id, formData);
+      await _ew('BannerImage', 'update', id, formData);
       toast.success('Banner atualizado com sucesso!');
       loadBanners();
       setEditingBanner(null);
@@ -129,7 +129,7 @@ export default function CatalogManagement() {
     if (!confirm('Tem certeza que deseja excluir este banner?')) return;
     
     try {
-      await base44.entities.BannerImage.delete(id);
+      await _ew('BannerImage', 'delete', id);
       toast.success('Banner excluído com sucesso!');
       loadBanners();
     } catch (error) {
@@ -140,9 +140,7 @@ export default function CatalogManagement() {
 
   const handleToggleActive = async (banner) => {
     try {
-      await base44.entities.BannerImage.update(banner.id, {
-        is_active: !banner.is_active
-      });
+      await _ew('BannerImage', 'update', banner.id, { is_active: !banner.is_active });
       loadBanners();
       toast.success(banner.is_active ? 'Banner desativado' : 'Banner ativado');
     } catch (error) {
@@ -162,9 +160,7 @@ export default function CatalogManagement() {
 
     try {
       await Promise.all(
-        items.map((item, index) =>
-          base44.entities.BannerImage.update(item.id, { order: index })
-        )
+        items.map((item, index) => _ew('BannerImage', 'update', item.id, { order: index }))
       );
       toast.success('Ordem atualizada!');
     } catch (error) {
@@ -176,9 +172,7 @@ export default function CatalogManagement() {
 
   const handleToggleFeatured = async (product) => {
     try {
-      await base44.entities.Product.update(product.id, {
-        is_featured: !product.is_featured
-      });
+      await _ew('Product', 'update', product.id, { is_featured: !product.is_featured });
       loadProducts();
       toast.success(product.is_featured ? 'Removido do destaque' : 'Adicionado ao destaque');
     } catch (error) {
@@ -189,9 +183,7 @@ export default function CatalogManagement() {
 
   const handleUpdateFeaturedProduct = async (productId, newDescription) => {
     try {
-      await base44.entities.Product.update(productId, {
-        description: newDescription
-      });
+      await _ew('Product', 'update', productId, { description: newDescription });
       loadProducts();
       setEditingFeaturedProduct(null);
       toast.success('Nome do produto atualizado!');
@@ -204,7 +196,7 @@ export default function CatalogManagement() {
   const handleUpdateSettings = async (title, description) => {
     try {
       if (catalogSettings.id) {
-        await base44.entities.CatalogSettings.update(catalogSettings.id, {
+        await _ew('CatalogSettings', 'update', catalogSettings.id, {
           featured_section_title: title,
           featured_section_description: description
         });
@@ -244,35 +236,35 @@ export default function CatalogManagement() {
             variant={activeTab === 'banners' ? 'default' : 'outline'}
             className={activeTab === 'banners' ? 'bg-green-600 hover:bg-green-700' : ''}
           >
-            🎨 Banners
+            <Palette className="w-4 h-4 mr-2" />Banners
           </Button>
           <Button
             onClick={() => setActiveTab('catalog-products')}
             variant={activeTab === 'catalog-products' ? 'default' : 'outline'}
             className={activeTab === 'catalog-products' ? 'bg-blue-600 hover:bg-blue-700' : ''}
           >
-            📦 Produtos da Loja Virtual
+            <Package className="w-4 h-4 mr-2" />Produtos da Loja Virtual
           </Button>
           <Button
             onClick={() => setActiveTab('importar')}
             variant={activeTab === 'importar' ? 'default' : 'outline'}
             className={activeTab === 'importar' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
           >
-            📊 Importar Planilha
+            <ChartColumn className="w-4 h-4 mr-2" />Importar Planilha
           </Button>
           <Button
             onClick={() => setActiveTab('produtos')}
             variant={activeTab === 'produtos' ? 'default' : 'outline'}
             className={activeTab === 'produtos' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
           >
-            ⭐ Produtos em Destaque
+            <Star className="w-4 h-4 mr-2" />Produtos em Destaque
           </Button>
           <Button
             onClick={() => setActiveTab('rodape')}
             variant={activeTab === 'rodape' ? 'default' : 'outline'}
             className={activeTab === 'rodape' ? 'bg-purple-600 hover:bg-purple-700' : ''}
           >
-            📄 Rodapé
+            <FileText className="w-4 h-4 mr-2" />Rodapé
           </Button>
         </div>
 
@@ -320,7 +312,8 @@ export default function CatalogManagement() {
                 {products.filter(p => p.catalog_active).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
-                      ✅ Ativos na Loja Virtual ({products.filter(p => p.catalog_active).length})
+                      <CheckCircle className="w-5 h-5" />
+                      Ativos na Loja Virtual ({products.filter(p => p.catalog_active).length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {products.filter(p => p.catalog_active).map((product) => (
@@ -368,7 +361,8 @@ export default function CatalogManagement() {
                 {products.filter(p => !p.catalog_active).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-400 mb-4 flex items-center gap-2">
-                      ⛔ Inativos ({products.filter(p => !p.catalog_active).length})
+                      <Ban className="w-5 h-5" />
+                      Inativos ({products.filter(p => !p.catalog_active).length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {products.filter(p => !p.catalog_active).map((product) => (
@@ -589,7 +583,7 @@ export default function CatalogManagement() {
                 onClick={() => setEditingSettings(true)}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
-                ✏️ Editar Título da Seção
+                <Pencil className="w-4 h-4 mr-2" />Editar Título da Seção
               </Button>
             </div>
 
@@ -602,7 +596,8 @@ export default function CatalogManagement() {
                 {products.filter(p => p.catalog_active && p.is_featured).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-yellow-400 mb-4 flex items-center gap-2">
-                      ⭐ Em Destaque ({products.filter(p => p.is_featured).length}/4)
+                      <Star className="w-5 h-5" />
+                      Em Destaque ({products.filter(p => p.is_featured).length}/4)
                     </h3>
                     <div className="space-y-3">
                       {products.filter(p => p.is_featured).map((product) => (
@@ -751,7 +746,7 @@ export default function CatalogManagement() {
                           type="text"
                           name="title"
                           defaultValue={catalogSettings.featured_section_title || ''}
-                          placeholder="⭐ Produtos em Destaque"
+                          placeholder="Produtos em Destaque"
                           className="bg-gray-700 text-white border-gray-600"
                         />
                       </div>
@@ -820,7 +815,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
       toast.error('É necessário fazer upload de uma imagem');
       return;
     }
-    console.log('📤 Salvando banner com ajustes:', formData.image_adjustments);
+    console.log('Salvando banner com ajustes:', formData.image_adjustments);
     onSave(formData);
   };
 
@@ -832,10 +827,10 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
           deviceType={formData.device_type}
           initialAdjustments={formData.image_adjustments}
           onSave={(adjustments) => {
-            console.log('💾 Salvando ajustes:', adjustments);
+            console.log('Salvando ajustes:', adjustments);
             setFormData(prev => ({ ...prev, image_adjustments: adjustments }));
             setShowPositionEditor(false);
-            toast.success('✅ Posição ajustada! Clique em "Salvar Banner" para aplicar.');
+            toast.success('Posição ajustada! Clique em "Salvar Banner"para aplicar.');
           }}
           onCancel={() => setShowPositionEditor(false)}
         />
@@ -908,7 +903,10 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
                 </Button>
               </div>
               <p className="text-gray-400 text-xs mt-1">
-                {formData.device_type === 'desktop' ? '📐 Recomendado: 1920x600px' : '📱 Recomendado: 800x600px'}
+                <span className="inline-flex items-center gap-1.5">
+                  <Ruler className="w-3 h-3" />
+                  {formData.device_type === 'desktop' ? 'Recomendado: 1920x600px' : 'Recomendado: 800x600px'}
+                </span>
               </p>
             </div>
 

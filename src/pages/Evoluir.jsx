@@ -3,7 +3,8 @@ import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ArrowUp, Check, Lock, X, Loader2, TrendingUp, Package, Users, Crown } from 'lucide-react';
+import { ArrowUp, Check, X, Loader2, TrendingUp, Package, Users, Crown } from 'lucide-react';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 // descrição de conversão por nível pago
 const PITCH = {
@@ -17,6 +18,7 @@ const money = (n) => 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFraction
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
 
 export default function Evoluir() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const [user, setUser] = useState(null);
   const [levels, setLevels] = useState([]);
   const [perms, setPerms] = useState({});
@@ -140,7 +142,7 @@ export default function Evoluir() {
                 <p className="text-green-400 font-semibold mb-3">💚 Pague com PIX para ativar</p>
                 {pix.qr_code_base64 && <img src={`data:image/png;base64,${pix.qr_code_base64}`} alt="QR PIX" className="w-56 h-56 mx-auto bg-white rounded-xl p-2" />}
                 <div className="text-2xl font-black text-green-400 my-2">{money(pix.amount)}</div>
-                <Button onClick={() => { navigator.clipboard.writeText(pix.pix_code || ''); toast.success('Código PIX copiado!'); }} className="w-full bg-green-600 hover:bg-green-700 mb-2">Copiar código PIX</Button>
+                <Button onClick={() => copiarPix(pix.pix_code || '')} className={`w-full mb-2 transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}>{pixCopiado ? <><Check className="w-4 h-4 mr-2" />Código PIX copiado!</> : 'Copiar código PIX'}</Button>
                 <p className="text-[11px] text-gray-500">Assim que o pagamento cair, seu nível ativa sozinho. Pode fechar esta janela.</p>
               </div>
             )}

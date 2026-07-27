@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Copy, Edit, ExternalLink, Share2, Calendar, Clock, User, ShoppingBag, Trash2, Power } from "lucide-react";
+import { Copy, Edit, ExternalLink, Share2, Calendar, Clock, User, Trash2, Power } from "lucide-react";
 import LicenseeShareModal from "./LicenseeShareModal";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";

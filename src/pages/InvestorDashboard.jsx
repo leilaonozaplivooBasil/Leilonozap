@@ -17,6 +17,7 @@ import {
   CheckCircle,
   ArrowRight,
   ShieldCheck,
+  Check,
   Wallet,
   TrendingUp,
   Clock,
@@ -37,10 +38,13 @@ import {
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const FeaturedProduct = base44.entities.FeaturedProduct;
 
 export default function InvestorDashboard() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
+  const { copiado: pixCopiado2, copiar: copiarPix2 } = useCopiarPix();
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
@@ -766,7 +770,7 @@ export default function InvestorDashboard() {
               >
                 <div className="text-center mb-4">
                   <img
-                    src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                    src="/brand/icon-3d.webp"
                     alt="Leilão NoZap"
                     className="h-16 mx-auto mb-4"
                   />
@@ -1349,9 +1353,9 @@ export default function InvestorDashboard() {
 
                 {/* Botão Copiar Código PIX */}
                 <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(pixData.pix_code);
-                    toast.success("Código PIX copiado! Cole no seu banco.");
+                  onClick={async () => {
+                    const ok = await copiarPix(pixData.pix_code);
+                    if (!ok) return; // não copiou: não manda o cliente pro banco sem o código
                     // Abre o app do Banco nativo (se existir)
                     const isAndroid = /Android/i.test(navigator.userAgent);
                     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -1362,9 +1366,9 @@ export default function InvestorDashboard() {
                       }, 300);
                     }
                   }}
-                  className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-4 text-base"
+                  className={`w-full text-white font-bold py-4 text-base transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-700 hover:bg-green-800'}`}
                 >
-                  ✅ Copiar Código PIX e Ir para Banco
+                  {pixCopiado ? '✅ Código PIX copiado!' : 'Copiar Código PIX e Ir para Banco'}
                 </Button>
 
                 <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
@@ -1376,15 +1380,12 @@ export default function InvestorDashboard() {
                       className="text-xs bg-gray-700 border-gray-600 text-white font-mono"
                     />
                     <Button
-                      onClick={() => {
-                        navigator.clipboard.writeText(pixData.pix_code);
-                        toast.success("Código copiado!");
-                      }}
+                      onClick={() => copiarPix2(pixData.pix_code)}
                       size="icon"
                       variant="outline"
-                      className="bg-green-700 hover:bg-green-600 border-green-600 flex-shrink-0"
+                      className={`flex-shrink-0 border-green-600 transition-colors ${pixCopiado2 ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-700 hover:bg-green-600'}`}
                     >
-                      <Copy className="w-4 h-4" />
+                      {pixCopiado2 ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>

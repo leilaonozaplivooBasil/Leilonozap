@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, Image as ImageIcon, CheckCircle, Package, Target, Gavel, ShoppingCart, ChartColumn, Zap } from 'lucide-react';
 
 export default function ConfirmProductDuplicationModal({
   isOpen,
@@ -36,7 +37,7 @@ export default function ConfirmProductDuplicationModal({
 
   const handleConfirm = () => {
     if (!includeAuction && !includeCatalog) {
-      alert('⚠️ Selecione pelo menos um destino (Leilão ou Loja Virtual)');
+      alert('Selecione pelo menos um destino (Leilão ou Loja Virtual)');
       return;
     }
     onConfirm({
@@ -51,7 +52,7 @@ export default function ConfirmProductDuplicationModal({
       <DialogContent className="bg-gray-900 border-2 border-green-500/50 max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-green-400 flex items-center gap-2">
-            ✅ Confirmar Cadastro de Produto
+            <CheckCircle className="w-5 h-5 inline mr-2" />Confirmar Cadastro de Produto
           </DialogTitle>
         </DialogHeader>
 
@@ -59,7 +60,7 @@ export default function ConfirmProductDuplicationModal({
           {/* RESUMO DO PRODUTO */}
           <Card className="bg-gray-800/50 border border-gray-700 p-4">
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-              📦 Resumo do Produto
+              <Package className="w-4 h-4 inline mr-2" />Resumo do Produto
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -68,7 +69,7 @@ export default function ConfirmProductDuplicationModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Preço Inicial:</span>
-                <span className="text-green-400 font-bold">R$ {parseFloat(formData.starting_price || 0).toFixed(2)}</span>
+                <span className="text-green-400 font-bold">R$ {fmtBR(parseFloat(formData.starting_price || 0))}</span>
               </div>
               <div className="flex justify-between items-start">
                 <span className="text-gray-400">Imagens:</span>
@@ -91,7 +92,7 @@ export default function ConfirmProductDuplicationModal({
           {/* SELEÇÃO DE DESTINOS */}
           <div className="space-y-3">
             <h3 className="font-semibold text-white flex items-center gap-2">
-              🎯 Onde adicionar este produto?
+              <Target className="w-4 h-4 inline mr-2" />Onde adicionar este produto?
             </h3>
 
             {/* CHECKBOX LEILÃO */}
@@ -109,7 +110,7 @@ export default function ConfirmProductDuplicationModal({
                   className="w-5 h-5"
                 />
                 <div className="flex-1">
-                  <div className="font-semibold text-white">🔨 Adicionar ao Leilão</div>
+                  <div className="font-semibold text-white flex items-center gap-1.5"><Gavel className="w-4 h-4" />Adicionar ao Leilão</div>
                   <div className="text-xs text-gray-400 mt-1">
                     Produto aparecerá na seção de leilões para concorrência de preço
                   </div>
@@ -132,7 +133,7 @@ export default function ConfirmProductDuplicationModal({
                   className="w-5 h-5"
                 />
                 <div className="flex-1">
-                  <div className="font-semibold text-white">🛒 Adicionar à Loja Virtual</div>
+                  <div className="font-semibold text-white flex items-center gap-1.5"><ShoppingCart className="w-4 h-4" />Adicionar à Loja Virtual</div>
                   <div className="text-xs text-gray-400 mt-1">
                     Produto fica disponível para venda direta pelos licenciados
                   </div>
@@ -144,7 +145,7 @@ export default function ConfirmProductDuplicationModal({
             {includeCatalog && (
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
                 <div>
-                  <Label className="text-gray-300 text-sm mb-1 block">🛒 Preço na Loja Virtual (R$) <span className="text-green-400 text-xs">(automático — editável)</span></Label>
+                  <Label className="text-gray-300 text-sm mb-1 block">Preço na Loja Virtual (R$) <span className="text-green-400 text-xs">(automático — editável)</span></Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -162,20 +163,20 @@ export default function ConfirmProductDuplicationModal({
                   <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600 space-y-1.5">
                     <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Preços que serão aplicados:</p>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">📊 Mercado real (+20%):</span>
-                      <span className="text-white font-bold">R$ {(parseFloat(formData.starting_price || 0) / 0.80).toFixed(2)}</span>
+                      <span className="text-gray-400 inline-flex items-center gap-1"><ChartColumn className="w-3 h-3" />Mercado real (+20%):</span>
+                      <span className="text-white font-bold">R$ {fmtBR((parseFloat(formData.starting_price || 0) / 0.80))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🛒 Loja Virtual:</span>
-                      <span className="text-blue-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-gray-400 inline-flex items-center gap-1"><ShoppingCart className="w-3 h-3" />Loja Virtual:</span>
+                      <span className="text-blue-400 font-bold">R$ {fmtBR(parseFloat(catalogPrice || formData.starting_price || 0))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">🔨 Lance inicial (−20% loja):</span>
-                      <span className="text-yellow-400 font-bold">R$ {(parseFloat(formData.starting_price || 0) * 0.80).toFixed(2)}</span>
+                      <span className="text-gray-400 inline-flex items-center gap-1"><Gavel className="w-3 h-3" />Lance inicial (−20% loja):</span>
+                      <span className="text-yellow-400 font-bold">R$ {fmtBR((parseFloat(formData.starting_price || 0) * 0.80))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">⚡ Arremate Agora (= loja):</span>
-                      <span className="text-green-400 font-bold">R$ {parseFloat(catalogPrice || formData.starting_price || 0).toFixed(2)}</span>
+                      <span className="text-gray-400 inline-flex items-center gap-1"><Zap className="w-3 h-3" />Arremate Agora (= loja):</span>
+                      <span className="text-green-400 font-bold">R$ {fmtBR(parseFloat(catalogPrice || formData.starting_price || 0))}</span>
                     </div>
                   </div>
                 )}
@@ -212,7 +213,7 @@ export default function ConfirmProductDuplicationModal({
                 Criando...
               </>
             ) : (
-              <>✅ Concluir</>
+              <><CheckCircle className="w-4 h-4 mr-2" />Concluir</>
             )}
           </Button>
         </DialogFooter>

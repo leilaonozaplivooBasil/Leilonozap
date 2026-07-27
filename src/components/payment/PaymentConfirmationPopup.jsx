@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,7 @@ export default function PaymentConfirmationPopup() {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-xs text-gray-500 mb-1">Valor Pago</p>
                     <p className="font-bold text-2xl text-green-600">
-                      R$ {orderData.amount.toFixed(2)}
+                      R$ {fmtBR(orderData.amount)}
                     </p>
                   </div>
                 )}

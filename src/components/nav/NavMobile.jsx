@@ -15,8 +15,12 @@ import {
   Hammer,
   Shield,
   Crown,
+  ChevronDown,
+  Wallet as WalletIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
+import { SECTORS } from "@/lib/sectors";
+import SectorLink from "@/components/nav/SectorLink";
 
 const ICON_MAP = {
   ShoppingBag,
@@ -73,24 +77,25 @@ export default function NavMobile({
   onLoginClick,
   onLogout,
   // props legadas — mantidas para compatibilidade
-  // eslint-disable-next-line no-unused-vars
+   
   finalMenuItems,
-  // eslint-disable-next-line no-unused-vars
+   
   isLoggedIn,
-  // eslint-disable-next-line no-unused-vars
+   
   isAdmin,
-  // eslint-disable-next-line no-unused-vars
+   
   isInvestidor,
-  // eslint-disable-next-line no-unused-vars
+   
   isLeiloeiro,
-  // eslint-disable-next-line no-unused-vars
+   
   isCatalogPage,
-  // eslint-disable-next-line no-unused-vars
+   
   adminMenuItems,
-  // eslint-disable-next-line no-unused-vars
+   
   onShareClick,
 }) {
   const navigate = useNavigate();
+  const [openSector, setOpenSector] = React.useState(null);
 
   if (!isOpen) return null;
 
@@ -105,12 +110,6 @@ export default function NavMobile({
   const initials = getInitials(fullName);
   const avatarColor = currentUser?.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
   const photoUrl = currentUser?.profile_photo_url || currentUser?.avatar_url;
-
-  const PUBLIC_LINKS = [
-    { title: "Leilões", pageName: "Home" },
-    { title: "Loja", pageName: "Catalog" },
-    { title: "Seja Licenciado", pageName: "Licensing" },
-  ];
 
   const isActive = (pageName) => {
     if (pageName === "Home" && currentPageName === "Home") return true;
@@ -186,29 +185,60 @@ export default function NavMobile({
 
           {/* ===== Content ===== */}
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            {/* === LINKS PÚBLICOS === */}
-            {PUBLIC_LINKS.map((item) => (
-              <Link
-                key={item.title}
-                to={createPageUrl(item.pageName)}
-                onClick={onClose}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${
-                  isActive(item.pageName)
-                    ? "text-emerald-300"
-                    : "text-gray-400 hover:text-white hover:translate-x-1"
-                }`}
-                style={
-                  isActive(item.pageName)
-                    ? {
-                        background: "rgba(16,185,129,0.1)",
-                        borderLeft: "3px solid rgba(16,185,129,0.5)",
-                      }
-                    : {}
-                }
-              >
-                {item.title}
-              </Link>
-            ))}
+            {/* === RANK PREMIADO (destaque — primeiro item) === */}
+            <Link
+              to="/rankpremiado"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
+              style={{
+                background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(217,119,6,0.08))",
+                border: "1px solid rgba(250,204,21,0.30)",
+              }}
+            >
+              <img src="/icons/trophy-3d.png" alt="" className="w-7 h-7 shrink-0 drop-shadow-[0_2px_6px_rgba(250,204,21,0.45)]" aria-hidden="true" />
+              <span>Rank Premiado</span>
+            </Link>
+
+            {/* === SETORES (acordeão — mesma fonte do desktop) === */}
+            {SECTORS.map((s) => {
+              const open = openSector === s.key;
+              return (
+                <div key={s.key}>
+                  <button
+                    onClick={() => setOpenSector(open ? null : s.key)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide transition-all duration-200 ${
+                      open ? "text-emerald-300" : "text-gray-300 hover:text-white"
+                    }`}
+                    style={open ? { background: "rgba(16,185,129,0.1)", borderLeft: "3px solid rgba(16,185,129,0.5)" } : {}}
+                  >
+                    {s.icon && <s.icon className="w-5 h-5 text-emerald-300 shrink-0" />}
+                    <span className="flex-1 text-left">{s.title}</span>
+                    {s.live && (
+                      <span className="relative flex h-2 w-2" aria-hidden>
+                        <span className="animate-ping absolute h-full w-full rounded-full bg-red-500 opacity-75" />
+                        <span className="relative rounded-full h-2 w-2 bg-red-500" />
+                      </span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                  </button>
+                  {open && (
+                    <div className="pl-4 pb-1 space-y-0.5">
+                      {s.items.map((it) => (
+                        <SectorLink
+                          key={it.title}
+                          target={it}
+                          onClick={onClose}
+                          className="block px-4 py-2.5 rounded-xl hover:bg-white/5"
+                        >
+                          <p className="text-sm font-semibold text-gray-200">{it.title}</p>
+                          <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
+                        </SectorLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {/* === CARRINHO === */}
             <Link
@@ -291,6 +321,13 @@ export default function NavMobile({
                 className="pt-4 mt-3 space-y-1"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
+                <button
+                  onClick={() => { window.dispatchEvent(new CustomEvent('openWallet')); onClose(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-emerald-300 hover:text-emerald-200"
+                >
+                  <WalletIcon className="w-5 h-5" />
+                  Carteira
+                </button>
                 <Link
                   to={createPageUrl("Profile")}
                   onClick={onClose}

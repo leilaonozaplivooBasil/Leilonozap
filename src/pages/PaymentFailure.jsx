@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 
 export default function PaymentFailure() {
@@ -16,7 +17,7 @@ export default function PaymentFailure() {
         {order && (
           <div className="bg-gray-800 border border-gray-700 rounded p-4 text-left">
             <div>Número do pedido: <strong>{order.orderNumber}</strong></div>
-            <div>Total: <strong>R$ {Number(order.totalAmount).toFixed(2)}</strong></div>
+            <div>Total: <strong>R$ {fmtBR(Number(order.totalAmount))}</strong></div>
           </div>
         )}
       </div>

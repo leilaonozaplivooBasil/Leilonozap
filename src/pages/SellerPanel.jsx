@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, DollarSign, TrendingUp, RotateCw, AlertTriangle } from "lucide-react";
+import { Loader2, RotateCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import SellerStatsCards from "../components/sellers/SellerStatsCards";
 import SellerSalesTable from "../components/sellers/SellerSalesTable";
@@ -169,11 +170,11 @@ export default function SellerPanel() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <div className="text-5xl font-bold text-white mb-2">
-                      R$ {dashboardData.saldo_liberado_final.toFixed(2)}
+                      R$ {fmtBR(dashboardData.saldo_liberado_final)}
                     </div>
                     {dashboardData.saques_total_pendentes > 0 && (
                       <p className="text-yellow-300 text-sm">
-                        + R$ {dashboardData.saques_total_pendentes.toFixed(2)} em saques pendentes
+                        + R$ {fmtBR(dashboardData.saques_total_pendentes)} em saques pendentes
                       </p>
                     )}
                   </div>

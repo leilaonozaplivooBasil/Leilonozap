@@ -1,4 +1,5 @@
 import React from 'react';
+import { fmtBR } from '@/lib/money';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ export default function FixedAuctionPanel({ auction }) {
              <span>Termina em <CountdownTimer endTime={auction.end_time} /></span>
           </p>
           <p className="text-xl font-bold text-green-600">
-            R$ {currentPrice.toFixed(2)}
+            R$ {fmtBR(currentPrice)}
           </p>
         </div>
         <Link 

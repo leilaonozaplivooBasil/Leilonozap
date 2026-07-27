@@ -1,17 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import MetaBanner from '@/components/painel/MetaBanner';
+import RankingDia from '@/components/painel/RankingDia';
+import RankingFull from '@/components/painel/RankingFull';
+import EvolucaoDiaria from '@/components/painel/EvolucaoDiaria';
+import EvolucaoVendedores from '@/components/painel/EvolucaoVendedores';
+import VendasAuditoria from '@/components/painel/VendasAuditoria';
+import RegiaoCard from '@/components/painel/RegiaoCard';
+import EntrarAoVivo from '@/components/livoo/EntrarAoVivo';
+import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
-  ArrowRight, MousePointerClick, UserPlus, Megaphone, Briefcase, Send, MapPin, Hash, Mail, Phone,
-  UserCog, Factory, Plus, Trash2, KeyRound
+  ArrowRight, MousePointerClick, UserPlus, Megaphone, Send, MapPin, Hash, Mail, Phone,
+  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, X
 } from 'lucide-react';
 
-const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const ORIGIN = (typeof window !== 'undefined' ? window.location.origin : 'https://leilaonozap.net');
 const CARGO_LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
 const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
@@ -41,10 +50,26 @@ export default function PainelDistribuidor() {
   const [employees, setEmployees] = useState([]);
   const [supForm, setSupForm] = useState({ nome: '', cnpj: '', contato: '', telefone: '', email: '', categoria: '', observacao: '' });
   const [empForm, setEmpForm] = useState({ full_name: '', email: '', password: '' });
+  const [vendas, setVendas] = useState(null);
+  const [vendasResumo, setVendasResumo] = useState({ total_vendas: 0, total_valor: 0 });
+  const [lojaStats, setLojaStats] = useState(null);
+  const [storeSlug, setStoreSlug] = useState('');
+  const [vendasSeller, setVendasSeller] = useState(''); // filtro de vendedor vindo do ranking
+  const [dashPeriodo, setDashPeriodo] = useState('dia'); // filtro de período da Visão Geral (dia/semana/mes)
+  const [periodoDados, setPeriodoDados] = useState({ total: 0, pedidos: 0 }); // faturamento REAL do período (planilha/PDV)
+  const [menuOpen, setMenuOpen] = useState(false); // drawer do menu no mobile
+  const [pwForm, setPwForm] = useState({ atual: '', nova: '', conf: '' });
+  const [marketing, setMarketing] = useState(null);
+  const [atend, setAtend] = useState(null); // { whatsapp, atividade }
+  const [waEdit, setWaEdit] = useState('');
+  const [iaQ, setIaQ] = useState('');
+  const [iaAns, setIaAns] = useState('');
   const [busy, setBusy] = useState('');
   const [stats, setStats] = useState({
-    gmv: 0, vendas: 0, comissao: 0, saldo: 0, cliques: 0,
-    rede: 0, vendedores: 0, influenciadores: 0, parceiros: 0, licenciados: 0, pontos: 0, lojas: 0,
+    produtos_total: 0, produtos_ativos: 0, estoque_qtd: 0, vendidos_qtd: 0, faturado: 0, valor_estoque: 0,
+    pedidos_abrir: 0, pedidos_total: 0, vendas_valor: 0, pdv_hoje: 0,
+    funcionarios: 0, fornecedores: 0, comissao: 0, saldo: 0, cliques: 0,
+    rede_total: 0, vendedores: 0, influenciadores: 0, licenciados: 0, parceiros: 0, pontos: 0, lojas: 0,
   });
 
   useEffect(() => {
@@ -53,48 +78,25 @@ export default function PainelDistribuidor() {
     if (u && u.is_pdv_operator === true) { navigate('/painel/pdv'); return; }
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
+    // slug da loja online (/loja/:slug) — do user ou resolvido no banco
+    if (u.store_slug) setStoreSlug(u.store_slug);
+    else supabase.from('app_users').select('store_slug').eq('id', u.id).limit(1).single().then(({ data }) => { if (data?.store_slug) setStoreSlug(data.store_slug); }).catch(() => {});
+    const _isLoja = ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
     (async () => {
       try {
-        const [allUsers, vendas, wallet, lv, rp, cliques] = await Promise.all([
-          supabase.from('app_users').select('id,full_name,email,phone,referred_by_id,primary_career_level,created_date,created_at'),
-          supabase.from('catalog_sales').select('total_amount').eq('seller_id', u.id).eq('status', 'paid'),
+        const [dash, wallet, lv, rp, rede] = await Promise.all([
+          _isLoja ? supabase.rpc('loja_dash', { _owner: u.id }) : supabase.rpc('distribuidor_dash', { dist_id: u.id }),
           base44.functions.invoke('getMyWallet', { user_id: u.id }),
           supabase.from('career_levels').select('id,nome,adesao_valor,ordem').eq('bloco', 'rede').order('ordem'),
           supabase.from('register_permissions').select('can_register_level,bonus_adesao_pct').eq('actor_level', u.primary_career_level),
-          supabase.from('catalog_visits').select('id', { count: 'exact', head: true }).eq('referral_code', u.referral_code || '___'),
+          supabase.rpc('distribuidor_rede', { dist_id: u.id }),
         ]);
-
-        // monta a árvore (BFS) a partir do distribuidor → toda a rede descendente
-        const rows = allUsers.data || [];
-        const childrenOf = {};
-        rows.forEach((r) => { (childrenOf[r.referred_by_id] ||= []).push(r); });
-        const tree = [];
-        const queue = [...(childrenOf[u.id] || [])];
-        while (queue.length) {
-          const node = queue.shift();
-          tree.push(node);
-          (childrenOf[node.id] || []).forEach((c) => queue.push(c));
-        }
-        const countBy = (cargo) => tree.filter((x) => x.primary_career_level === cargo).length;
-
-        const vlist = vendas.data || [];
-        setDownline(tree.sort((a, b) => new Date(b.created_at || b.created_date || 0) - new Date(a.created_at || a.created_date || 0)));
+        const d = dash?.data || {};
         setLevels(lv.data || []);
         setPerms(rp.data || []);
-        setStats({
-          gmv: vlist.reduce((s, x) => s + (Number(x.total_amount) || 0), 0),
-          vendas: vlist.length,
-          comissao: wallet?.commission_balance || 0,
-          saldo: wallet?.saldo_disponivel || 0,
-          cliques: cliques.count || 0,
-          rede: tree.length,
-          vendedores: countBy('vendedor'),
-          influenciadores: countBy('influenciador'),
-          parceiros: countBy('parceiro'),
-          licenciados: countBy('licenciado'),
-          pontos: countBy('ponto_retirada'),
-          lojas: countBy('loja_fisica'),
-        });
+        setDownline(rede.data || []);
+        if (_isLoja) setLojaStats({ ...d, saldo: wallet?.saldo_disponivel || 0, comissao: d.comissao ?? 0 });
+        else setStats((s) => ({ ...s, ...d, saldo: wallet?.saldo_disponivel || 0, comissao: d.comissao ?? (wallet?.commission_balance || 0) }));
       } catch (e) { console.error(e); }
       setLoading(false);
       // fornecedores + funcionários (não bloqueiam a tela)
@@ -108,6 +110,14 @@ export default function PainelDistribuidor() {
       } catch (_) { /* silencioso */ }
     })();
   }, []);
+
+  // faturamento REAL do período (catalog_sales = planilha + PDV), period-aware
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.rpc('ranking_periodo', { _owner: user.id, _period: dashPeriodo, _linha: null })
+      .then(({ data }) => setPeriodoDados({ total: Number(data?.total || 0), pedidos: Number(data?.pedidos || 0) }))
+      .catch(() => {});
+  }, [user, dashPeriodo]);
 
   const linkFor = (cargo) => `${ORIGIN}/c/${cargo}?ref=${encodeURIComponent(user?.referral_code || '')}`;
   const copy = (cargo) => { navigator.clipboard.writeText(linkFor(cargo)); setCopied(cargo); toast.success('Link copiado!'); setTimeout(() => setCopied(''), 1500); };
@@ -147,7 +157,90 @@ export default function PainelDistribuidor() {
   };
   const removeEmployee = async (id) => { setBusy(id); try { await base44.functions.invoke('manageEmployees', { action: 'remove', actorId: user.id, id }); setEmployees((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
 
-  const MENU = [
+  // Trocar senha
+  const trocarSenha = async () => {
+    if (pwForm.nova.length < 6) { toast.error('Nova senha: mínimo 6 caracteres.'); return; }
+    if (pwForm.nova !== pwForm.conf) { toast.error('A confirmação não bate com a nova senha.'); return; }
+    setBusy('senha');
+    try {
+      const r = await base44.functions.invoke('changeOwnPassword', { userId: user.id, currentPassword: pwForm.atual, newPassword: pwForm.nova });
+      if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
+      toast.success('Senha alterada com sucesso!');
+      setPwForm({ atual: '', nova: '', conf: '' });
+    } catch { toast.error('Erro'); }
+    setBusy('');
+  };
+
+  // Atendimento (lazy): config whatsapp + feed de atividade
+  const loadAtendimento = async () => {
+    if (atend !== null || !user?.id) return;
+    try {
+      const isDist = user.primary_career_level === 'distribuidor';
+      const [wa, ativ] = await Promise.all([
+        base44.functions.invoke('manageConfig', { action: 'get', chave: 'whatsapp_suporte' }),
+        supabase.rpc('painel_atividade', { _owner: user.id, _is_dist: isDist, _lim: 40 }),
+      ]);
+      setAtend({ whatsapp: wa?.valor || '', atividade: ativ.data || [] });
+      setWaEdit(wa?.valor || '');
+    } catch (e) { console.error(e); setAtend({ whatsapp: '', atividade: [] }); }
+  };
+  const salvarWhats = async () => {
+    setBusy('wa');
+    try {
+      const r = await base44.functions.invoke('manageConfig', { action: 'set', actorId: user.id, chave: 'whatsapp_suporte', valor: onlyDigits(waEdit) });
+      if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
+      setAtend((a) => ({ ...a, whatsapp: onlyDigits(waEdit) })); toast.success('WhatsApp do suporte salvo!');
+    } catch { toast.error('Erro'); }
+    setBusy('');
+  };
+  const perguntarIA = async () => {
+    setBusy('ia'); setIaAns('');
+    try {
+      const r = await base44.functions.invoke('atendimentoIA', { ownerId: user.id, isDist: user.primary_career_level === 'distribuidor', question: iaQ });
+      if (r?.needs_key) { setIaAns('⚙️ ' + r.message); }
+      else if (!r?.success) { setIaAns('❌ ' + (r?.error || 'IA indisponível')); }
+      else setIaAns(r.answer);
+    } catch { setIaAns('❌ Erro ao consultar a IA.'); }
+    setBusy('');
+  };
+
+  // Marketing (lazy)
+  const loadMarketing = async () => {
+    if (marketing !== null || !user?.id) return;
+    try {
+      const { data } = await supabase.rpc('marketing_resumo', { _ref: user.referral_code || '___', _owner: user.id });
+      setMarketing(data || {});
+    } catch (e) { console.error(e); setMarketing({}); }
+  };
+
+  // Histórico de vendas (lazy)
+  const loadVendas = async () => {
+    if (vendas !== null || !user?.id) return;
+    try {
+      const [list, resumo] = await Promise.all([
+        supabase.rpc('distribuidor_vendas', { dist_id: user.id, lim: 300 }),
+        supabase.rpc('distribuidor_vendas_resumo', { dist_id: user.id }),
+      ]);
+      setVendas(list.data || []);
+      if (resumo.data) setVendasResumo(resumo.data);
+    } catch (e) { console.error(e); setVendas([]); }
+  };
+
+  const isLoja = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
+  const MENU = isLoja ? [
+    { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
+    { id: 'rede', label: 'Minha Rede', icon: Network },
+    { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
+    { id: 'estoque', label: 'Meu Estoque', icon: Package, route: '/painel/estoque', star: true },
+    { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
+    { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
+    { id: 'ranking', label: 'Ranking', icon: Trophy },
+    { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
+    { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
+    { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
+    { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
+  ] : [
     { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Rede', icon: Network },
@@ -157,30 +250,52 @@ export default function PainelDistribuidor() {
     { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
+    { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
+    { id: 'ranking', label: 'Ranking', icon: Trophy },
+    { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
+    { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ];
-  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else setTab(m.id); };
+  const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); if (m.id === 'marketing') loadMarketing(); if (m.id === 'atendimento') loadAtendimento(); } };
+  // clique num vendedor no ranking → abre a aba Vendas já filtrada nele
+  const goSellerSales = (id) => { setVendasSeller(id); setTab('vendas'); loadVendas(); };
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando painel…</div>;
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
 
   const cargoNome = CARGO_LABEL[user.primary_career_level] || user.primary_career_level;
 
+  const currentLabel = (MENU.find((m) => m.id === tab)?.label) || 'Visão Geral';
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col md:flex-row">
-      {/* MENU LATERAL */}
-      <aside className="md:w-64 bg-gray-950 border-r border-gray-800 p-4 md:min-h-screen md:sticky md:top-0 md:self-start">
-        <div className="mb-6 px-2">
-          <div className="text-xs text-gray-500 uppercase tracking-wide">Painel do</div>
-          <div className="text-lg font-black text-green-400">{cargoNome}</div>
-          <div className="text-[11px] text-gray-500 truncate">{user.full_name}</div>
+    <div className="min-h-screen bg-gray-900 text-white md:flex">
+      {/* TOPO MOBILE — hambúrguer + seção atual + atalho pedido */}
+      <div className="md:hidden sticky top-0 z-30 bg-gray-950/95 backdrop-blur border-b border-gray-800 px-3 py-2.5 flex items-center justify-between gap-2">
+        <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 text-gray-100 min-w-0">
+          <Menu className="w-6 h-6 shrink-0" />
+          <span className="font-bold truncate">{currentLabel}</span>
+        </button>
+        <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
+      </div>
+
+      {/* backdrop do drawer (mobile) */}
+      {menuOpen && <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setMenuOpen(false)} />}
+
+      {/* MENU LATERAL — drawer no mobile, fixo no desktop */}
+      <aside className={`bg-gray-950 border-r border-gray-800 p-4 w-72 md:w-64 overflow-y-auto fixed md:sticky top-0 left-0 h-full md:h-auto md:min-h-screen md:self-start z-50 transition-transform duration-200 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <div className="mb-6 px-2 flex items-start justify-between">
+          <div className="min-w-0">
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Painel do</div>
+            <div className="text-lg font-black text-green-400">{cargoNome}</div>
+            <div className="text-[11px] text-gray-500 truncate">{user.full_name}</div>
+          </div>
+          <button onClick={() => setMenuOpen(false)} className="md:hidden p-1 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <nav className="space-y-1">
           {MENU.map((m) => {
             const active = !m.ext && !m.route && tab === m.id;
             return (
-              <button key={m.id} onClick={() => onMenu(m)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active ? 'bg-green-500/15 text-green-400 font-semibold' : 'text-gray-300 hover:bg-gray-800'}`}>
+              <button key={m.id} onClick={() => { onMenu(m); setMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active ? 'bg-green-500/15 text-green-400 font-semibold' : 'text-gray-300 hover:bg-gray-800'}`}>
                 <m.icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span className="flex-1 text-left">{m.label}</span>
                 {m.star && <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded">★</span>}
@@ -192,72 +307,152 @@ export default function PainelDistribuidor() {
       </aside>
 
       {/* CONTEÚDO */}
-      <main className="flex-1 p-6 md:p-8">
-        {/* ───────────────────── VISÃO GERAL ───────────────────── */}
-        {tab === 'visao' && (
+      <main className="flex-1 min-w-0 p-4 md:p-8">
+        {/* ───────────────────────── RANKING (aba dedicada) ───────────────────────── */}
+        {tab === 'ranking' && (
           <div>
-            <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
-            <p className="text-gray-400 text-sm mb-6">Resumo completo da sua operação.</p>
-
-            {/* Métricas financeiras */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {[
-                [<DollarSign key="1" className="w-4 h-4" />, 'Faturamento (loja)', money(stats.gmv), 'text-green-400'],
-                [<ShoppingCart key="2" className="w-4 h-4" />, 'Vendas pagas', stats.vendas, 'text-white'],
-                [<TrendingUp key="3" className="w-4 h-4" />, 'Comissões', money(stats.comissao), 'text-yellow-400'],
-                [<Wallet key="4" className="w-4 h-4" />, 'Saldo disponível', money(stats.saldo), 'text-emerald-400'],
-              ].map((c, i) => (
-                <div key={i} className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">{c[0]} {c[1]}</div>
-                  <div className={`text-2xl font-black ${c[3]}`}>{c[2]}</div>
-                </div>
-              ))}
+            <h1 className="text-2xl font-black mb-1 flex items-center gap-2"><Trophy className="w-6 h-6 text-yellow-400" /> Ranking</h1>
+            <p className="text-gray-400 text-sm mb-5">Campeões de venda — por dia, semana e mês. Vendedor, produto e categoria.</p>
+            <RankingFull userId={user.id} onSeller={goSellerSales} />
+          </div>
+        )}
+        {/* ───────────── VISÃO GERAL — LOJA (loja_fisica/ponto/parceiro) ───────────── */}
+        {tab === 'visao' && isLoja && (
+          <div>
+            <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
+            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
+            <RegiaoCard user={user} />
+            <EntrarAoVivo user={user} />
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+              <div>
+                <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
+                <p className="text-gray-400 text-sm">{user.store_name || user.full_name} · {cargoNome}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
+                <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-bold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
+              </div>
             </div>
-
-            {/* Métricas de rede */}
+            <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name} />
+            <SectionLabel>📦 Minha loja</SectionLabel>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Stat icon={Package} label="Produtos na loja" value={Number(lojaStats?.itens || 0).toLocaleString('pt-BR')} sub={`${lojaStats?.ativos || 0} ativos`} color="text-white" />
+              <Stat icon={Box} label="Em estoque" value={Number(lojaStats?.estoque_qtd || 0).toLocaleString('pt-BR')} sub={`${lojaStats?.sem_estoque || 0} zerados`} color="text-blue-400" />
+              <Stat icon={DollarSign} label="Valor em loja" value={money(lojaStats?.valor_loja || 0)} sub="estoque × preço" color="text-amber-400" />
+              <Stat icon={Truck} label="Pedidos a despachar" value={lojaStats?.pedidos_abrir || 0} sub="aguardando" color={lojaStats?.pedidos_abrir > 0 ? 'text-orange-400' : 'text-white'} />
+            </div>
+            <SectionLabel>💰 Vendas & Rede</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {[
-                [<MousePointerClick key="1" className="w-4 h-4" />, 'Cliques na loja', stats.cliques, 'text-blue-400'],
-                [<Users key="2" className="w-4 h-4" />, 'Rede total', stats.rede, 'text-white'],
-                [<Megaphone key="3" className="w-4 h-4" />, 'Influenciadores', stats.influenciadores, 'text-pink-400'],
-                [<UserPlus key="4" className="w-4 h-4" />, 'Vendedores', stats.vendedores, 'text-purple-400'],
-              ].map((c, i) => (
-                <div key={i} className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">{c[0]} {c[1]}</div>
-                  <div className={`text-2xl font-black ${c[3]}`}>{c[2]}</div>
-                </div>
-              ))}
+              <Stat icon={ShoppingCart} label="Vendas" value={money(lojaStats?.vendas_valor || 0)} sub="online + PDV" color="text-green-400" />
+              <Stat icon={TrendingUp} label="Comissões" value={money(lojaStats?.comissao || 0)} sub="acumuladas" color="text-yellow-400" />
+              <Stat icon={Users} label="Minha rede" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
+              <Stat icon={Wallet} label="Saldo" value={money(lojaStats?.saldo || 0)} sub="pra sacar" color="text-emerald-400" />
+            </div>
+            <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
+            <SectionLabel>⚡ Atalhos</SectionLabel>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Shortcut onClick={() => navigate(ROUTES.pdv)} icon={ShoppingCart} title="PDV · Tirar pedido" desc="Venda e baixe estoque." highlight />
+              <Shortcut onClick={() => navigate('/painel/estoque')} icon={Package} title="Meu Estoque" desc="Veja e ajuste sua loja." />
+              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Monte sua equipe." />
+              <Shortcut onClick={() => navigate(ROUTES.pedidos)} icon={Truck} title="Pedidos & Envio" desc="Despache suas vendas." />
+            </div>
+          </div>
+        )}
+
+        {/* ───────────────────── VISÃO GERAL — DISTRIBUIDOR ───────────────────── */}
+        {tab === 'visao' && !isLoja && (
+          <div>
+            <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
+            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
+            <RegiaoCard user={user} />
+            <EntrarAoVivo user={user} />
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+              <div>
+                <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
+                <p className="text-gray-400 text-sm">Retrato da operação do Distribuidor 01 (Bangu).</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
+                {stats.pedidos_abrir > 0 && (
+                  <button onClick={() => navigate(ROUTES.pedidos)} className="px-4 py-2.5 rounded-lg bg-orange-500/20 border border-orange-500/40 text-orange-300 text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4" /> {stats.pedidos_abrir} a despachar</button>
+                )}
+              </div>
             </div>
 
-            {/* breakdown cargos pagos */}
+            <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name || 'Leilão NoZap'} />
+
+            <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
+
+            {/* destaque: faturamento REAL do período (espelha a planilha + PDV) */}
+            <div className="grid sm:grid-cols-2 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-green-900/50 to-emerald-800/20 border border-green-500/30 rounded-2xl p-5">
+                <div className="flex items-center gap-2 text-green-300 text-xs mb-1"><DollarSign className="w-4 h-4" /> Faturado · {({ dia: 'Hoje', semana: 'Semana', mes: 'Mês' })[dashPeriodo]}</div>
+                <div className="text-3xl font-black text-green-400">{money(periodoDados.total)}</div>
+                <div className="text-xs text-gray-400 mt-1">{periodoDados.pedidos} venda(s) no período · espelha a planilha</div>
+              </div>
+              <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-5">
+                <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><ShoppingCart className="w-4 h-4" /> Ticket médio · {({ dia: 'Hoje', semana: 'Semana', mes: 'Mês' })[dashPeriodo]}</div>
+                <div className="text-3xl font-black text-white">{money(periodoDados.total / Math.max(1, periodoDados.pedidos))}</div>
+                <div className="text-xs text-gray-400 mt-1">por venda no período</div>
+              </div>
+            </div>
+
+            {/* ESTOQUE */}
+            <SectionLabel>📦 Estoque & Produtos</SectionLabel>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Stat icon={Package} label="Produtos cadastrados" value={Number(stats.produtos_total).toLocaleString('pt-BR')} sub={`${stats.produtos_ativos} ativos na loja`} color="text-white" />
+              <Stat icon={Box} label="Em estoque" value={Number(stats.estoque_qtd).toLocaleString('pt-BR')} sub="unidades" color="text-blue-400" />
+              <Stat icon={TrendingUp} label="Vendidos (histórico)" value={Number(stats.vendidos_qtd).toLocaleString('pt-BR')} sub="unidades · migração" color="text-green-400" />
+              <Stat icon={DollarSign} label="Capital em estoque" value={money(stats.valor_estoque)} sub="a custo" color="text-amber-400" />
+            </div>
+
+            {/* FINANCEIRO */}
+            <SectionLabel>💰 Financeiro</SectionLabel>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Stat icon={Truck} label="Pedidos a despachar" value={stats.pedidos_abrir} sub="aguardando envio" color={stats.pedidos_abrir > 0 ? 'text-orange-400' : 'text-white'} />
+              <Stat icon={ShoppingCart} label="Vendas (pedidos)" value={money(stats.vendas_valor)} sub="online + PDV" color="text-white" />
+              <Stat icon={TrendingUp} label="Comissões" value={money(stats.comissao)} sub="acumuladas" color="text-yellow-400" />
+              <Stat icon={Wallet} label="Saldo disponível" value={money(stats.saldo)} sub="pra sacar" color="text-emerald-400" />
+            </div>
+
+            {/* REDE & EQUIPE */}
+            <SectionLabel>🌐 Rede & Equipe</SectionLabel>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
+              <Stat icon={Users} label="Rede total" value={stats.rede_total} sub="pessoas abaixo" color="text-white" />
+              <Stat icon={UserCog} label="Funcionários (PDV)" value={stats.funcionarios} sub="logins de balcão" color="text-cyan-400" />
+              <Stat icon={Factory} label="Fornecedores" value={stats.fornecedores} sub="cadastrados" color="text-fuchsia-400" />
+              <Stat icon={MousePointerClick} label="Cliques na loja" value={stats.cliques} sub="visitas" color="text-blue-400" />
+            </div>
             <div className="flex flex-wrap gap-2 mb-8 text-xs">
-              <span className="bg-gray-800 border border-gray-700 rounded-full px-3 py-1">Licenciados: <b className="text-white">{stats.licenciados}</b></span>
-              <span className="bg-gray-800 border border-gray-700 rounded-full px-3 py-1">Parceiros: <b className="text-white">{stats.parceiros}</b></span>
-              <span className="bg-gray-800 border border-gray-700 rounded-full px-3 py-1">Pontos de Retirada: <b className="text-white">{stats.pontos}</b></span>
-              <span className="bg-gray-800 border border-gray-700 rounded-full px-3 py-1">Lojas Físicas: <b className="text-white">{stats.lojas}</b></span>
+              <Chip>Influenciadores: {stats.influenciadores}</Chip>
+              <Chip>Vendedores: {stats.vendedores}</Chip>
+              <Chip>Licenciados: {stats.licenciados}</Chip>
+              <Chip>Parceiros: {stats.parceiros}</Chip>
+              <Chip>Pontos de Retirada: {stats.pontos}</Chip>
+              <Chip>Lojas Físicas: {stats.lojas}</Chip>
             </div>
 
             {/* atalhos */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <button onClick={() => setTab('cadastrar')} className="text-left bg-gradient-to-br from-green-900/40 to-green-800/20 border border-green-500/30 rounded-xl p-5 hover:border-green-400 transition-colors">
-                <Link2 className="w-6 h-6 text-green-400 mb-2" />
-                <div className="font-bold">Cadastrar & Vender</div>
-                <div className="text-sm text-gray-400">Gere e envie links pra montar sua rede.</div>
-                <div className="mt-2 text-green-400 text-sm flex items-center gap-1">Abrir <ArrowRight className="w-4 h-4" /></div>
-              </button>
-              <button onClick={() => navigate(createPageUrl('ProductManagement'))} className="text-left bg-gray-800/60 border border-gray-700 rounded-xl p-5 hover:border-gray-500 transition-colors">
-                <Package className="w-6 h-6 text-green-400 mb-2" />
-                <div className="font-bold">Subir produtos</div>
-                <div className="text-sm text-gray-400">Gerencie o estoque da sua loja.</div>
-                <div className="mt-2 text-green-400 text-sm flex items-center gap-1">Abrir <ArrowRight className="w-4 h-4" /></div>
-              </button>
-              <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="text-left bg-gray-800/60 border border-gray-700 rounded-xl p-5 hover:border-gray-500 transition-colors">
-                <Store className="w-6 h-6 text-green-400 mb-2" />
-                <div className="font-bold">Editar loja</div>
-                <div className="text-sm text-gray-400">Banner, nome e vitrine da sua loja.</div>
-                <div className="mt-2 text-green-400 text-sm flex items-center gap-1">Abrir <ArrowRight className="w-4 h-4" /></div>
-              </button>
+            <SectionLabel>⚡ Atalhos</SectionLabel>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Shortcut onClick={() => navigate(ROUTES.pdv)} icon={ShoppingCart} title="PDV · Tirar pedido" desc="Venda no balcão e baixe estoque." highlight />
+              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Links pra montar sua rede." />
+              <Shortcut onClick={() => navigate(ROUTES.pedidos)} icon={Truck} title="Pedidos & Envio" desc="Despache e acompanhe entregas." />
+              <Shortcut onClick={() => navigate(createPageUrl('CatalogManagement'))} icon={Store} title="Editar loja / Importar" desc="Vitrine, banners e planilha." />
             </div>
+
+            {['admin', 'super_admin'].includes(user.role) && (
+              <button onClick={() => navigate('/Metas')} className="mt-4 w-full text-left rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/15 transition-colors flex items-center gap-3">
+                <Target className="w-6 h-6 text-yellow-300 flex-shrink-0" />
+                <div className="flex-1"><div className="font-bold text-yellow-200">Definir Metas (CEO)</div><div className="text-sm text-gray-400">Busque um login e defina a meta da categoria.</div></div>
+                <ArrowRight className="w-4 h-4 text-yellow-300" />
+              </button>
+            )}
+
+            {/* 📈 evolução diária do mês + meta */}
+            <div className="mt-8"><EvolucaoDiaria userId={user.id} /></div>
+            {/* 👥 evolução dos vendedores por dia */}
+            <div className="mt-2"><EvolucaoVendedores userId={user.id} /></div>
           </div>
         )}
 
@@ -300,7 +495,7 @@ export default function PainelDistribuidor() {
         {tab === 'rede' && (
           <div>
             <h1 className="text-2xl font-black mb-1">Minha Rede</h1>
-            <p className="text-gray-400 text-sm mb-6">{stats.rede} pessoa(s) cadastrada(s) abaixo de você.</p>
+            <p className="text-gray-400 text-sm mb-6">{stats.rede_total} pessoa(s) cadastrada(s) abaixo de você.</p>
             <div className="flex flex-wrap gap-2 mb-6 text-xs">
               <span className="bg-purple-500/15 text-purple-300 rounded-full px-3 py-1">Vendedores: <b>{stats.vendedores}</b></span>
               <span className="bg-pink-500/15 text-pink-300 rounded-full px-3 py-1">Influenciadores: <b>{stats.influenciadores}</b></span>
@@ -370,8 +565,128 @@ export default function PainelDistribuidor() {
 
             <div className="flex flex-wrap gap-3">
               <button onClick={() => navigate(createPageUrl('Carteira'))} className="px-4 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4" /> Carteira & KYC</button>
-              <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>
+              {isLoja
+                ? <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
+                : <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>}
             </div>
+
+            {/* Trocar senha */}
+            <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5 mt-4 max-w-md">
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><KeyRound className="w-4 h-4 text-green-400" /> Trocar senha</h3>
+              <div className="space-y-2.5">
+                <input type="password" value={pwForm.atual} onChange={(e) => setPwForm({ ...pwForm, atual: e.target.value })} placeholder="Senha atual" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                <input type="password" value={pwForm.nova} onChange={(e) => setPwForm({ ...pwForm, nova: e.target.value })} placeholder="Nova senha (mín. 6)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                <input type="password" value={pwForm.conf} onChange={(e) => setPwForm({ ...pwForm, conf: e.target.value })} placeholder="Confirmar nova senha" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                <button onClick={trocarSenha} disabled={busy === 'senha'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'senha' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Alterar senha</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ───────────────────── ATENDIMENTO (WhatsApp + IA) ───────────────────── */}
+        {tab === 'atendimento' && (
+          <div className="max-w-5xl">
+            <h1 className="text-2xl font-black mb-1">Atendimento</h1>
+            <p className="text-gray-400 text-sm mb-6">WhatsApp do galpão + IA que atende e fiscaliza — tudo num lugar só.</p>
+
+            {/* Inbox WhatsApp (Baileys) */}
+            <div className="mb-8"><WhatsAppInbox user={user} /></div>
+            <SectionLabel>🛡️ Fiscalização do painel</SectionLabel>
+            {atend === null ? (
+              <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* WhatsApp + IA */}
+                <div className="space-y-6">
+                  <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-green-400" /> WhatsApp do Suporte</h3>
+                    <div className="flex gap-2 mb-3">
+                      <input value={waEdit} onChange={(e) => setWaEdit(e.target.value)} placeholder="Número com DDD (ex: 21999999999)" className="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
+                      <button onClick={salvarWhats} disabled={busy === 'wa'} className="px-4 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold">{busy === 'wa' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}</button>
+                    </div>
+                    {atend.whatsapp
+                      ? <a href={`https://wa.me/55${atend.whatsapp}`} target="_blank" rel="noreferrer" className="w-full block text-center py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-bold flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" /> Falar com o suporte</a>
+                      : <p className="text-[11px] text-gray-500">Configure o número pra liberar o botão de suporte.</p>}
+                  </div>
+
+                  <div className="bg-gradient-to-br from-indigo-900/30 to-gray-900 border border-indigo-500/25 rounded-xl p-5">
+                    <h3 className="font-semibold mb-1 flex items-center gap-2"><Bot className="w-4 h-4 text-indigo-300" /> IA de Atendimento & Fiscalização</h3>
+                    <p className="text-[11px] text-gray-400 mb-3">A IA observa o painel, responde dúvidas e <b>alerta</b> sobre anomalias de venda. Não executa ações.</p>
+                    <textarea value={iaQ} onChange={(e) => setIaQ(e.target.value)} placeholder="Pergunte algo (ex: tem alguma venda fora do padrão hoje?)" rows={2} className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 mb-2 resize-none" />
+                    <button onClick={perguntarIA} disabled={busy === 'ia'} className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2">{busy === 'ia' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Consultar a IA</button>
+                    {iaAns && <div className="mt-3 bg-gray-950/60 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 whitespace-pre-wrap">{iaAns}</div>}
+                  </div>
+                </div>
+
+                {/* Feed de fiscalização */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2"><Receipt className="w-4 h-4 text-green-400" /> Atividade do painel (fiscalização)</h3>
+                  {(!atend.atividade || atend.atividade.length === 0) ? (
+                    <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-400 text-sm">Sem atividade recente.</div>
+                  ) : (
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                      {atend.atividade.map((a, i) => (
+                        <div key={a.id || i} className="bg-gray-800/60 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
+                          <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${a.tipo === 'venda' ? 'bg-green-500/15' : 'bg-blue-500/15'}`}>{a.tipo === 'venda' ? <ShoppingCart className="w-4 h-4 text-green-400" /> : <UserPlus className="w-4 h-4 text-blue-400" />}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm truncate">{a.titulo}</div>
+                            <div className="text-[11px] text-gray-500">{a.quem || ''} · {a.quando ? new Date(a.quando).toLocaleString('pt-BR') : ''}</div>
+                          </div>
+                          {a.valor != null && <div className="text-sm font-bold text-green-400">{money(a.valor)}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ───────────────────── MARKETING & CLIQUES ───────────────────── */}
+        {tab === 'marketing' && (
+          <div>
+            <h1 className="text-2xl font-black mb-1">Marketing & Cliques</h1>
+            <p className="text-gray-400 text-sm mb-6">Cliques na sua loja e desempenho dos seus anúncios.</p>
+            {marketing === null ? (
+              <div className="flex items-center gap-2 text-gray-400 py-10"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
+            ) : (
+              <>
+                <SectionLabel>🖱️ Cliques na loja</SectionLabel>
+                <div className="grid grid-cols-3 gap-4 mb-8 max-w-2xl">
+                  <Stat icon={MousePointerClick} label="Hoje" value={Number(marketing.cliques_hoje || 0).toLocaleString('pt-BR')} sub="visitas" color="text-blue-400" />
+                  <Stat icon={MousePointerClick} label="7 dias" value={Number(marketing.cliques_7d || 0).toLocaleString('pt-BR')} sub="visitas" color="text-white" />
+                  <Stat icon={MousePointerClick} label="Total" value={Number(marketing.cliques_total || 0).toLocaleString('pt-BR')} sub="visitas" color="text-white" />
+                </div>
+
+                <SectionLabel>📣 Anúncios (Ads)</SectionLabel>
+                {marketing.tem_ads ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    <Stat icon={Megaphone} label="Impressões" value={Number(marketing.ads_impressoes || 0).toLocaleString('pt-BR')} color="text-white" />
+                    <Stat icon={MousePointerClick} label="Cliques" value={Number(marketing.ads_cliques || 0).toLocaleString('pt-BR')} color="text-blue-400" />
+                    <Stat icon={DollarSign} label="Gasto" value={money(marketing.ads_gasto || 0)} color="text-red-400" />
+                    <Stat icon={ShoppingCart} label="Conversões" value={Number(marketing.ads_conversoes || 0).toLocaleString('pt-BR')} color="text-green-400" />
+                    <Stat icon={TrendingUp} label="ROAS" value={`${(marketing.ads_gasto > 0 ? (Number(marketing.ads_receita) / Number(marketing.ads_gasto)) : 0).toFixed(2)}x`} sub={money(marketing.ads_receita || 0)} color="text-yellow-400" />
+                  </div>
+                ) : (
+                  <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-8 text-center">
+                    <Megaphone className="w-8 h-8 mx-auto mb-2 text-gray-500" />
+                    <p className="text-gray-300 font-semibold mb-1">Conecte suas campanhas</p>
+                    <p className="text-sm text-gray-500">Meta Ads, Google Ads e TikTok aparecem aqui com impressões, cliques, gasto, conversões e ROAS. Em breve.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ───────────────────── VENDAS / HISTÓRICO ───────────────────── */}
+        {tab === 'vendas' && (
+          <div>
+            <h1 className="text-2xl font-black mb-1">Vendas / Histórico</h1>
+            <p className="text-gray-400 text-sm mb-1">Tudo que foi lançado — PDV, loja online e histórico.</p>
+            <p className="text-[11px] text-gray-500 mb-4">ℹ️ Clique numa venda pra ver os itens e a baixa no estoque. Clique no vendedor pra filtrar as vendas dele. Os totais batem com a Visão Geral e o Ranking.</p>
+            <VendasAuditoria userId={user.id} initialSeller={vendasSeller} />
           </div>
         )}
 
@@ -469,6 +784,72 @@ function Field({ icon: Icon, label, value, mono }) {
     <div>
       <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5"><Icon className="w-3.5 h-3.5" /> {label}</div>
       <div className={`text-gray-200 ${mono ? 'font-mono tracking-wide' : ''}`}>{value || <span className="text-gray-600">—</span>}</div>
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">{children}</div>;
+}
+
+function Stat({ icon: Icon, label, value, sub, color = 'text-white' }) {
+  return (
+    <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+      <div className="flex items-center gap-2 text-gray-400 text-xs mb-1"><Icon className="w-4 h-4" /> {label}</div>
+      <div className={`text-2xl font-black ${color}`}>{value}</div>
+      {sub && <div className="text-[11px] text-gray-500 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function Chip({ children }) {
+  return <span className="bg-gray-800 border border-gray-700 rounded-full px-3 py-1 text-white">{children}</span>;
+}
+
+function Shortcut({ onClick, icon: Icon, title, desc, highlight }) {
+  return (
+    <button onClick={onClick} className={`text-left rounded-xl p-5 transition-colors border ${highlight ? 'bg-gradient-to-br from-green-900/40 to-green-800/20 border-green-500/30 hover:border-green-400' : 'bg-gray-800/60 border-gray-700 hover:border-gray-500'}`}>
+      <Icon className="w-6 h-6 text-green-400 mb-2" />
+      <div className="font-bold">{title}</div>
+      <div className="text-sm text-gray-400">{desc}</div>
+      <div className="mt-2 text-green-400 text-sm flex items-center gap-1">Abrir <ArrowRight className="w-4 h-4" /></div>
+    </button>
+  );
+}
+
+// 🏪 Card "Sua loja online" — link público /loja/:slug pra copiar e compartilhar
+function LojaLinkCard({ slug, name }) {
+  const [copied, setCopied] = useState(false);
+  if (!slug) return null;
+  const url = `${ORIGIN}/loja/${slug}`;
+  const copy = () => { navigator.clipboard?.writeText(url); setCopied(true); toast.success('Link da loja copiado!'); setTimeout(() => setCopied(false), 1800); };
+  const waText = encodeURIComponent(`🛒 Conheça a loja ${name} no Leilão NoZap! Produtos com entrega: ${url}`);
+  return (
+    <div className="bg-gradient-to-br from-emerald-900/40 to-green-800/10 border border-emerald-500/30 rounded-2xl p-5 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold mb-1"><Store className="w-4 h-4" /> SUA LOJA ONLINE</div>
+          <a href={url} target="_blank" rel="noreferrer" className="text-lg font-black text-white hover:text-emerald-300 break-all">{url}</a>
+          <p className="text-xs text-gray-400 mt-1">Compartilhe esse link — o cliente compra direto do seu estoque e você recebe.</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a href={url} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500"><ExternalLink className="w-4 h-4" /> Abrir</a>
+          <button onClick={copy} className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500">{copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />} {copied ? 'Copiado' : 'Copiar'}</button>
+          <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Compartilhar</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// filtro de período da Visão Geral (Hoje/Semana/Mês)
+function DashFiltro({ value, onChange }) {
+  const PER = [['dia', 'Hoje'], ['semana', 'Semana'], ['mes', 'Mês']];
+  return (
+    <div className="inline-flex bg-gray-800/70 border border-gray-700 rounded-xl p-1 mb-4">
+      {PER.map(([id, label]) => (
+        <button key={id} onClick={() => onChange(id)} className={`px-5 py-2 rounded-lg text-sm font-bold transition ${value === id ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:text-white'}`}>{label}</button>
+      ))}
     </div>
   );
 }

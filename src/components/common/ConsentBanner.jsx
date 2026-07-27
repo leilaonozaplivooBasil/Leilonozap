@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, X } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import LegalTermsModal from './LegalTermsModal';
 

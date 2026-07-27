@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -189,7 +190,7 @@ export default function AdminWithdrawals() {
                 </div>
                 <div>
                   <p className="text-3xl font-bold">
-                    R$ {pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0).toFixed(2)}
+                    R$ {fmtBR(pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0))}
                   </p>
                   <p className="text-gray-400 text-sm">Total Pendente</p>
                 </div>
@@ -222,7 +223,7 @@ export default function AdminWithdrawals() {
                             <div>
                               <p className="text-gray-400">Valor:</p>
                               <p className="text-xl font-bold text-green-400">
-                                R$ {withdrawal.amount.toFixed(2)}
+                                R$ {fmtBR(withdrawal.amount)}
                               </p>
                             </div>
                             <div>
@@ -289,7 +290,7 @@ export default function AdminWithdrawals() {
                           <div>
                             <p className="font-semibold">{user?.full_name || 'Usuário'}</p>
                             <p className="text-sm text-gray-400">
-                              R$ {withdrawal.amount.toFixed(2)} • {withdrawal.pix_key_type}
+                              R$ {fmtBR(withdrawal.amount)} • {withdrawal.pix_key_type}
                             </p>
                           </div>
                         </div>
@@ -328,7 +329,7 @@ export default function AdminWithdrawals() {
                 <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
                   <p className="text-sm text-gray-400 mb-1">Valor do Saque:</p>
                   <p className="text-3xl font-bold text-green-400">
-                    R$ {selectedWithdrawal.amount.toFixed(2)}
+                    R$ {fmtBR(selectedWithdrawal.amount)}
                   </p>
                 </div>
 
@@ -380,7 +381,7 @@ export default function AdminWithdrawals() {
                 <div className="bg-red-900/20 rounded-lg p-4 border border-red-500/30">
                   <p className="text-sm text-red-300 mb-2">⚠️ O saldo será estornado ao influenciador</p>
                   <p className="text-2xl font-bold text-red-400">
-                    R$ {selectedWithdrawal.amount.toFixed(2)}
+                    R$ {fmtBR(selectedWithdrawal.amount)}
                   </p>
                 </div>
 

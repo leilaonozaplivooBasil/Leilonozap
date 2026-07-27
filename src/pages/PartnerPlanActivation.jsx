@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Search, CheckCircle, AlertCircle, FileText, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PLANS = [
@@ -148,7 +148,7 @@ export default function PartnerPlanActivation() {
         notes: notes.trim() || null
       });
 
-      console.log('✅ Plano criado com ID:', newPurchase.id);
+      console.log('Plano criado com ID:', newPurchase.id);
 
       // ⚠️ NÃO atualiza mais o AppUser (legacy) - agora só usa PartnerPlanPurchase
       // O AppUser mantém os campos para compatibilidade mas não é mais fonte de verdade
@@ -170,7 +170,7 @@ export default function PartnerPlanActivation() {
       }).catch(() => {});
 
       toast.dismiss(loadingToast);
-      toast.success(`✅ Plano ${planName} ativado! O parceiro verá no painel.`);
+      toast.success(`Plano ${planName} ativado! O parceiro verá no painel.`);
 
       // Adicionar ao histórico
       setActivationHistory([
@@ -272,7 +272,7 @@ export default function PartnerPlanActivation() {
               {/* Observações */}
               {foundUser && (
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-300">📝 Observações / Lembretes (Opcional)</label>
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300"><FileText className="w-3.5 h-3.5" />Observações / Lembretes (Opcional)</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -280,7 +280,7 @@ export default function PartnerPlanActivation() {
                     rows={3}
                     className="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   />
-                  <p className="text-xs text-gray-400">💡 Use este campo para adicionar lembretes sobre taxas especiais ou condições diferenciadas</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1"><Lightbulb className="w-3 h-3 flex-shrink-0" />Use este campo para adicionar lembretes sobre taxas especiais ou condições diferenciadas</p>
                 </div>
               )}
 

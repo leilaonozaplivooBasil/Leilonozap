@@ -1,6 +1,6 @@
 import React from 'react';
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, ShoppingBag, Users, Wallet, Award, Shield } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield } from 'lucide-react';
 
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },

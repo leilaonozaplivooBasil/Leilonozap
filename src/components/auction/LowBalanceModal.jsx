@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -42,21 +43,21 @@ export default function LowBalanceModal({
           <div className="flex items-center justify-between">
             <span className="text-gray-300">Seu saldo:</span>
             <span className="text-lg font-semibold text-gray-100">
-              R$ {currentBalance.toFixed(2)}
+              R$ {fmtBR(currentBalance)}
             </span>
           </div>
           <div className="h-px bg-gray-600"></div>
           <div className="flex items-center justify-between">
             <span className="text-gray-300">Lance mínimo:</span>
             <span className="text-lg font-semibold text-yellow-400">
-              R$ {requiredAmount.toFixed(2)}
+              R$ {fmtBR(requiredAmount)}
             </span>
           </div>
           <div className="h-px bg-gray-600"></div>
           <div className="flex items-center justify-between">
             <span className="text-gray-300">Faltam:</span>
             <span className="text-lg font-bold text-red-400">
-              R$ {deficit.toFixed(2)}
+              R$ {fmtBR(deficit)}
             </span>
           </div>
         </div>
@@ -66,7 +67,9 @@ export default function LowBalanceModal({
           {/* Add Funds */}
           <Button
             onClick={() => {
-              navigate(createPageUrl("AddFunds"));
+              navigate(createPageUrl("AddFunds"), {
+                state: { returnTo: window.location.pathname + window.location.search }
+              });
               onClose();
             }}
             className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-base shadow-lg"

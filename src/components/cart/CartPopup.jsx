@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { fmtBR } from '@/lib/money';
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,7 @@ export default function CartPopup({ isOpen, onClose }) {
                           </div>
 
                           <span className="text-sm font-semibold text-gray-900">
-                            R$ {(price * item.quantity).toFixed(2)}
+                            R$ {fmtBR((price * item.quantity))}
                           </span>
                         </div>
                       </div>
@@ -175,7 +176,7 @@ export default function CartPopup({ isOpen, onClose }) {
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Valor total</span>
               <span className="text-lg font-bold text-gray-900">
-                R$ {calculateTotal().toFixed(2)}
+                R$ {fmtBR(calculateTotal())}
               </span>
             </div>
             

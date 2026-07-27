@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, Check, Image as ImageIcon } from "lucide-react";
@@ -32,7 +33,7 @@ export default function GoogleShoppingImporter({ onApply }) {
         setResults(data);
         // Pre-seleciona todas as imagens disponíveis (máx 5)
         setSelectedImages(data.products.slice(0, 5).map((p, i) => i));
-        toast.success(`✅ ${data.imageCount} imagens encontradas!`);
+        toast.success(` ${data.imageCount} imagens encontradas!`);
       } else {
         toast.error("Nenhuma imagem encontrada para este produto.");
       }
@@ -78,7 +79,7 @@ export default function GoogleShoppingImporter({ onApply }) {
       source_url: results.products[0]?.productUrl || "",
     });
 
-    toast.success(`✅ ${selectedImages.length} imagens aplicadas do Google Shopping!`);
+    toast.success(` ${selectedImages.length} imagens aplicadas do Google Shopping!`);
     setResults(null);
     setProductName("");
     setSelectedImages([]);
@@ -131,15 +132,15 @@ export default function GoogleShoppingImporter({ onApply }) {
           {results.avgPrice && (
             <div className="flex items-center gap-4 text-xs bg-gray-800 rounded-lg px-3 py-2 border border-gray-700">
               <span className="text-gray-400">
-                Menor: <span className="text-red-400 font-bold">R$ {results.minPrice?.toFixed(2)}</span>
+                Menor: <span className="text-red-400 font-bold">R$ {fmtBR(results.minPrice)}</span>
               </span>
               <span className="text-gray-400">
-                Médio: <span className="text-emerald-400 font-bold">R$ {results.avgPrice?.toFixed(2)}</span>
+                Médio: <span className="text-emerald-400 font-bold">R$ {fmtBR(results.avgPrice)}</span>
               </span>
               <span className="text-gray-400">
-                Maior: <span className="text-orange-400 font-bold">R$ {results.maxPrice?.toFixed(2)}</span>
+                Maior: <span className="text-orange-400 font-bold">R$ {fmtBR(results.maxPrice)}</span>
               </span>
-              <span className="text-gray-500 ml-auto">Preço inicial (-20%): <span className="text-sky-400 font-bold">R$ {(results.avgPrice * 0.8).toFixed(2)}</span></span>
+              <span className="text-gray-500 ml-auto">Preço inicial (-20%): <span className="text-sky-400 font-bold">R$ {fmtBR((results.avgPrice * 0.8))}</span></span>
             </div>
           )}
 
@@ -175,13 +176,13 @@ export default function GoogleShoppingImporter({ onApply }) {
                     </div>
                     {isSelected && (
                       <div className="absolute top-1 right-1 bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-[10px] font-bold">
-                        {selOrder === 0 ? "★" : selOrder + 1}
+                        {selOrder === 0 ? <Star className="w-3 h-3" /> : selOrder + 1}
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
                       <p className="text-[9px] text-gray-300 truncate">{product.store}</p>
                       {product.price && (
-                        <p className="text-[9px] text-emerald-400 font-bold">R$ {product.price.toFixed(2)}</p>
+                        <p className="text-[9px] text-emerald-400 font-bold">R$ {fmtBR(product.price)}</p>
                       )}
                     </div>
                   </div>

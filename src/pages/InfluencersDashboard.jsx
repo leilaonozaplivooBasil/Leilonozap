@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, DollarSign, Search, ChevronDown, ChevronUp, Wallet, CheckCircle, XCircle, Megaphone } from "lucide-react";
+import { Users, TrendingUp, DollarSign, Search, ChevronDown, ChevronUp, Wallet, CheckCircle, XCircle, Megaphone, SearchX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
@@ -212,7 +213,7 @@ export default function InfluencersDashboard() {
             <CardContent className="p-6 text-center">
               <DollarSign className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
               <p className="text-4xl font-bold text-white mb-2">
-                R$ {totalStats.totalRevenue.toFixed(2)}
+                R$ {fmtBR(totalStats.totalRevenue)}
               </p>
               <p className="text-gray-400">Receita Total Gerada</p>
             </CardContent>
@@ -258,7 +259,7 @@ export default function InfluencersDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-yellow-400">
-                        R$ {influencer.totalRevenue.toFixed(2)}
+                        R$ {fmtBR(influencer.totalRevenue)}
                       </p>
                       <p className="text-xs text-gray-400">Receita</p>
                     </div>
@@ -291,9 +292,9 @@ export default function InfluencersDashboard() {
                               ? 'bg-blue-500/20 text-blue-400'
                               : 'bg-gray-500/20 text-gray-400'
                           }`}>
-                            {lead.status === 'active_buyer' ? '✅ Comprador' : 
-                             lead.status === 'registered' ? '📝 Cadastrado' : 
-                             '⏳ Pendente'}
+                            {lead.status === 'active_buyer' ? 'Comprador' :
+                             lead.status === 'registered' ? 'Cadastrado' :
+                             'Pendente'}
                           </div>
                         </div>
                         <div className="flex gap-4 text-sm">
@@ -301,7 +302,7 @@ export default function InfluencersDashboard() {
                             Compras: <span className="text-green-400 font-semibold">{lead.total_purchases || 0}</span>
                           </span>
                           <span className="text-gray-400">
-                            Total gasto: <span className="text-yellow-400 font-semibold">R$ {(lead.total_spent || 0).toFixed(2)}</span>
+                            Total gasto: <span className="text-yellow-400 font-semibold">R$ {fmtBR((lead.total_spent || 0))}</span>
                           </span>
                         </div>
                       </div>
@@ -321,7 +322,7 @@ export default function InfluencersDashboard() {
                               </p>
                             </div>
                             <p className="text-green-400 font-bold">
-                              R$ {purchase.amount.toFixed(2)}
+                              R$ {fmtBR(purchase.amount)}
                             </p>
                           </div>
                         ))}
@@ -337,7 +338,7 @@ export default function InfluencersDashboard() {
         {filteredInfluencers.length === 0 && (
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">🔍</div>
+              <SearchX className="w-14 h-14 mx-auto mb-4 text-gray-600" />
               <h3 className="text-2xl font-bold text-white mb-3">
                 Nenhum influenciador encontrado
               </h3>
@@ -387,16 +388,16 @@ export default function InfluencersDashboard() {
                             </div>
                             <div className="text-right mr-6">
                               <p className="text-2xl font-bold text-green-400">
-                                R$ {request.amount.toFixed(2)}
+                                R$ {fmtBR(request.amount)}
                               </p>
                               <div className={`mt-2 px-3 py-1 rounded-full text-xs font-semibold inline-block ${
                                 request.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
                                 request.status === 'completed' || request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
                                 'bg-red-500/20 text-red-400'
                               }`}>
-                                {request.status === 'pending' ? '⏳ Pendente' :
-                                 request.status === 'completed' || request.status === 'approved' ? '✅ Aprovado' :
-                                 '❌ Rejeitado'}
+                                {request.status === 'pending' ? 'Pendente' :
+                                 request.status === 'completed' || request.status === 'approved' ? 'Aprovado' :
+                                 'Rejeitado'}
                               </div>
                             </div>
                             {request.status === 'pending' && (

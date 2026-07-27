@@ -1,16 +1,23 @@
 import React, { useState, useEffect, useRef, memo } from "react";
+import { fmtBR } from '@/lib/money';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2 } from "lucide-react";
+import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 import ComparaiModal from '../comparai/ComparaiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
+import { Stars } from '../loja/StarRating';
+import { getReferral } from '@/lib/referral';
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
-function CatalogProductCard({ product, currentUser, licenseePhone }) {
+// onOpenDetails: quando presente (Loja Virtual), o clique abre o produto EXPANDIDO na
+// própria página (ProductDetailsModal) em vez de navegar — pedido Gabriel 25/07.
+function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, onOpenDetails }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
@@ -42,22 +49,35 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
       return () => window.removeEventListener('cartUpdated', checkCart);
     }, [product.id]);
 
-  const addToCart = (e) => {
+  // Limite real de unidades: o estoque do produto (quantity). Sem estoque definido → sem limite prático.
+  const maxStock = Number(product.quantity) > 0 ? Number(product.quantity) : 999;
+
+  // Soma unidades no carrinho SEM sair da página, respeitando o estoque.
+  // openPopup: o ADICIONAR principal abre o popup do carrinho; o botão "+" só soma
+  // (permite cliques rápidos em sequência pra levar várias unidades).
+  const addUnit = (e, { openPopup = false } = {}) => {
     e.stopPropagation();
-    
-    // Pegar carrinho atual
+
     const savedCart = localStorage.getItem('catalogCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
-    
-    // Verificar se já existe no carrinho
+
     const existingIndex = cart.findIndex(item => item.id === product.id);
-    
+    const currentQty = existingIndex >= 0 ? (Number(cart[existingIndex].quantity) || 0) : 0;
+
+    if (currentQty >= maxStock) {
+      toast({
+        title: '🚫 Limite do estoque',
+        description: `Este produto tem apenas ${maxStock} unidade${maxStock > 1 ? 's' : ''} disponíve${maxStock > 1 ? 'is' : 'l'} — todas já estão no seu carrinho.`,
+        duration: 2500,
+      });
+      return;
+    }
+
     if (existingIndex >= 0) {
-      // Incrementar quantidade
-      cart[existingIndex].quantity += 1;
-      setCartQuantity(cart[existingIndex].quantity);
+      cart[existingIndex].quantity = currentQty + 1;
+      cart[existingIndex].availableStock = maxStock;
+      setCartQuantity(currentQty + 1);
     } else {
-      // Adicionar novo item
       cart.push({
         id: product.id,
         description: product.description,
@@ -65,22 +85,41 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
         selling_price_wholesale: product.selling_price_wholesale,
         image_urls: product.image_urls,
         quantity: 1,
-        availableStock: product.quantity || 999
+        availableStock: maxStock
       });
       setCartQuantity(1);
     }
-    
-    // Salvar no localStorage
+
     localStorage.setItem('catalogCart', JSON.stringify(cart));
-    
-    // Atualiza estado local
     setIsInCart(true);
-    
-    // Dispara evento para atualizar contador no header
+
+    // Atualiza contador no header
     window.dispatchEvent(new Event('cartUpdated'));
-    
-    // Abre popup do carrinho
-    window.dispatchEvent(new Event('openCartPopup'));
+
+    if (openPopup) {
+      window.dispatchEvent(new Event('openCartPopup'));
+    }
+  };
+
+  // Diminui uma unidade direto do card (0 unidades → sai do carrinho)
+  const removeUnit = (e) => {
+    e.stopPropagation();
+    const savedCart = localStorage.getItem('catalogCart');
+    let cart = savedCart ? JSON.parse(savedCart) : [];
+    const existingIndex = cart.findIndex(item => item.id === product.id);
+    if (existingIndex < 0) return;
+
+    const currentQty = Number(cart[existingIndex].quantity) || 0;
+    if (currentQty <= 1) {
+      cart.splice(existingIndex, 1);
+      setCartQuantity(0);
+      setIsInCart(false);
+    } else {
+      cart[existingIndex].quantity = currentQty - 1;
+      setCartQuantity(currentQty - 1);
+    }
+    localStorage.setItem('catalogCart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const images = (product.image_urls && product.image_urls.length > 0)
@@ -140,7 +179,11 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
       alert("Erro: Produto inválido");
       return;
     }
-    
+
+    if (onOpenDetails) {
+      onOpenDetails(product);
+      return;
+    }
     navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
   };
 
@@ -153,10 +196,10 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
     e.preventDefault();
     e.stopPropagation();
 
-    const ref = sessionStorage.getItem('referralCode');
-    const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
+    const ref = getReferral();
+    const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
     const phone = licenseePhone ? `55${licenseePhone.replace(/\D/g, '')}` : DEFAULT_STORE_PHONE;
-    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -165,9 +208,9 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
     e.preventDefault();
     e.stopPropagation();
 
-    const ref = sessionStorage.getItem('referralCode');
-    const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}${ref ? '&ref=' + ref : ''}`;
-    const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
+    const ref = getReferral();
+    const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
+    const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     const imageUrl = product.image_urls?.[0];
 
     // NÍVEL 1: Share com imagem via Web Share API
@@ -345,9 +388,17 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
       </div>
       
       <CardContent className="p-2 sm:p-4 flex-1 flex flex-col">
-        <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-2 mb-2">
+        <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-2 mb-1">
           {product.description}
         </h3>
+
+        {/* avaliação da loja */}
+        {storeRating && storeRating.total > 0 && (
+          <div className="flex items-center gap-1 mb-2">
+            <Stars value={storeRating.media} size={12} />
+            <span className="text-[10px] text-gray-400">{Number(storeRating.media).toFixed(1)} ({storeRating.total})</span>
+          </div>
+        )}
 
         <div className="mb-2 sm:mb-4">
           <div className="flex items-center justify-between mb-0.5">
@@ -372,26 +423,48 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
             </div>
           ) : (
             <>
-              <Button
-                onClick={addToCart}
-                className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
-                  isInCart 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                } text-white rounded-lg`}
-              >
-                {isInCart ? (
-                  <>
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    <span>NO CARRINHO</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    <span>ADICIONAR</span>
-                  </>
+              {/* ADICIONAR + botão "+" ao lado: soma unidades sem sair da página,
+                  respeitando o estoque (pedido Gabriel 25/07) */}
+              <div className="flex gap-1.5 sm:gap-2">
+                <Button
+                  onClick={(e) => addUnit(e, { openPopup: true })}
+                  className="flex-1 min-w-0 h-10 sm:h-11 text-sm sm:text-base font-bold transition-all bg-green-600 hover:bg-green-700 text-white rounded-lg px-2"
+                >
+                  {isInCart ? (
+                    <>
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">NO CARRINHO{cartQuantity > 1 ? ` · ${cartQuantity}` : ''}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 flex-shrink-0" />
+                      <span className="truncate">ADICIONAR</span>
+                    </>
+                  )}
+                </Button>
+                {isInCart && (
+                  <Button
+                    onClick={removeUnit}
+                    title={cartQuantity <= 1 ? 'Remover do carrinho' : 'Tirar uma unidade'}
+                    className="h-10 sm:h-11 w-10 sm:w-11 flex-shrink-0 rounded-lg bg-gray-700 hover:bg-red-600/80 text-white font-bold border border-white/15 p-0 transition-colors"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </Button>
                 )}
-              </Button>
+                <Button
+                  onClick={(e) => addUnit(e)}
+                  disabled={cartQuantity >= maxStock}
+                  title={cartQuantity >= maxStock ? `Estoque máximo (${maxStock}) já no carrinho` : 'Adicionar mais uma unidade'}
+                  className="relative h-10 sm:h-11 w-10 sm:w-11 flex-shrink-0 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold border border-green-400/40 disabled:opacity-40 disabled:cursor-not-allowed p-0"
+                >
+                  <Plus className="w-5 h-5" />
+                  {cartQuantity > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-yellow-400 text-green-950 text-[10px] font-black grid place-items-center shadow">
+                      {cartQuantity}
+                    </span>
+                  )}
+                </Button>
+              </div>
 
               {/* COMPARAR PREÇOS */}
               <Button
@@ -401,9 +474,9 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
                 }}
                 className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
               >
-                <img 
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                  alt="Comparai"
+                <img
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
                   className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
                 />
                 <span className="truncate">COMPARAR PREÇOS</span>
@@ -426,6 +499,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (onOpenDetails) { onOpenDetails(product); return; }
                   navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
                 }}
                 className="w-full text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-1 underline underline-offset-2"
@@ -461,6 +535,8 @@ export default memo(CatalogProductCard, (prevProps, nextProps) => {
   return (
     prevProps.product.id === nextProps.product.id &&
     prevProps.currentUser?.id === nextProps.currentUser?.id &&
-    prevProps.licenseePhone === nextProps.licenseePhone
+    prevProps.licenseePhone === nextProps.licenseePhone &&
+    prevProps.storeRating?.media === nextProps.storeRating?.media &&
+    prevProps.storeRating?.total === nextProps.storeRating?.total
   );
 });

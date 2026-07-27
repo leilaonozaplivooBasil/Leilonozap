@@ -299,8 +299,8 @@ export default function Layout({ children, currentPageName }) {
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
     if (refCode) {
-      if (!sessionStorage.getItem('referralCode')) {
-        sessionStorage.setItem('referralCode', refCode);
+      if (!getReferral()) {
+        saveReferral(refCode);
         console.log(\`Código de indicação '\${refCode}' capturado.\`);
       }
     }

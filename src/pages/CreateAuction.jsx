@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 
@@ -14,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, AlertCircle, Sparkles, CheckCircle, Copy, Package, RefreshCw, ArrowLeft } from "lucide-react";
+import { Upload, Image as ImageIcon, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, AlertCircle, Sparkles, CheckCircle, Copy, RefreshCw, ArrowLeft } from "lucide-react";
 import { createPageUrl } from "@/utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1323,7 +1325,7 @@ export default function CreateAuction() {
                             <h4 className="font-bold text-white mb-2 line-clamp-2">{foundMlAd.title}</h4>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-400">Preço:</span>
-                              <span className="text-green-400 font-bold">R$ {foundMlAd.price?.toFixed(2)}</span>
+                              <span className="text-green-400 font-bold">R$ {fmtBR(foundMlAd.price)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm mt-1">
                               <span className="text-gray-400">Loja:</span>
@@ -1406,7 +1408,7 @@ export default function CreateAuction() {
                             {productPreview.price && (
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                <span className="text-green-400 font-bold">R$ {productPreview.price.toFixed(2)}</span>
+                                <span className="text-green-400 font-bold">R$ {fmtBR(productPreview.price)}</span>
                               </div>
                             )}
 
@@ -1468,7 +1470,7 @@ export default function CreateAuction() {
                           <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
                             <div><span className="text-green-400 font-semibold">Título:</span> {importedData?.title || extractedData?.title || formData.title}</div>
                             {importedData?.price && (
-                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {importedData.price.toFixed(2)}</div>
+                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {fmtBR(importedData.price)}</div>
                             )}
                           </div>
                         </div>
@@ -1756,7 +1758,7 @@ export default function CreateAuction() {
                       {/* 🆕 MODO COMPARAI */}
                       <div>
                         <Label htmlFor="comparai_mode" className="text-sm font-medium text-gray-400">
-                          🔍 Onde a Comparai vai buscar o preço?
+                          🔍 Onde o CompareAQUI vai buscar o preço?
                         </Label>
                         <Select value={formData.comparai_mode} onValueChange={(value) => handleInputChange("comparai_mode", value)}>
                           <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100">
@@ -1770,14 +1772,14 @@ export default function CreateAuction() {
                             </SelectItem>
                             <SelectItem value="google_shopping">
                               <div className="flex items-center gap-2">
-                                <span>🔎 Usar Comparai (página de arremate)</span>
+                                <span>🔎 Usar CompareAQUI (página de arremate)</span>
                               </div>
                             </SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500 mt-1">
                           {formData.comparai_mode === 'supplier'
-                            ? '🏭 A Comparai buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)'
+                            ? '🏭 O CompareAQUI buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)'
                             : '🔎 Mesma comparação usada nos produtos de arremate'}
                         </p>
                       </div>
@@ -1788,7 +1790,7 @@ export default function CreateAuction() {
                           <div>
                             <Label htmlFor="supplier_url" className="text-sm font-bold text-green-300 flex items-center gap-2 mb-2">
                               <LinkIcon className="w-4 h-4" />
-                              🏭 URL do Fornecedor (para Comparai) *
+                              🏭 URL do Fornecedor (para o CompareAQUI) *
                             </Label>
                             <Input
                               id="supplier_url"
@@ -1801,11 +1803,11 @@ export default function CreateAuction() {
                             />
                             <p className="text-xs text-green-300 mt-2 flex items-center gap-1">
                               <img
-                                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                                alt="Comparai"
+                                src={CompareAquiIcon}
+                                alt="CompareAQUI"
                                 className="w-4 h-4 rounded-full"
                               />
-                              <span>A Comparai usará esta URL para buscar o preço oficial do fornecedor!</span>
+                              <span>O CompareAQUI usará esta URL para buscar o preço oficial do fornecedor!</span>
                             </p>
                           </div>
 
@@ -1867,7 +1869,7 @@ export default function CreateAuction() {
                             />
 
                             <p className="text-xs text-green-300 mt-2">
-                              Esta logo aparecerá no card "Preço no Fabricante" da Comparai
+                              Esta logo aparecerá no card "Preço no Fabricante" do CompareAQUI
                             </p>
                           </div>
                         </div>

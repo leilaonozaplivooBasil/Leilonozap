@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Package, X, ArrowLeft, Plus,
-  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2, PackagePlus
+  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2, PackagePlus,
+  Paperclip, Boxes, Inbox
 } from 'lucide-react';
 import { gerarProdutosDoLote } from '@/functions/gerarProdutosDoLote';
 import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
@@ -18,24 +20,25 @@ const MARKETPLACES = [
   'Amazon', 'Americanas', 'Submarino', 'Netshoes', 'Dafiti', 'OLX', 'Outros'
 ];
 
-const MARKETPLACE_ICONS = {
-  'Mercado Livre': '🟡',
-  'Shopee': '🟠',
-  'Magazine Luiza': '🔵',
-  'Casas Bahia': '🔴',
-  'Extra': '🟢',
-  'Amazon': '🟤',
-  'Americanas': '❤️',
-  'Submarino': '🔷',
-  'Netshoes': '👟',
-  'Dafiti': '👗',
-  'OLX': '🟣',
-  'Outros': '📦',
+// Sem emoji: cada marketplace é identificado por cor no ícone padrão (regra do super admin)
+const MARKETPLACE_COLORS = {
+  'Mercado Livre': 'text-yellow-400',
+  'Shopee': 'text-orange-400',
+  'Magazine Luiza': 'text-blue-400',
+  'Casas Bahia': 'text-red-400',
+  'Extra': 'text-green-400',
+  'Amazon': 'text-amber-600',
+  'Americanas': 'text-rose-400',
+  'Submarino': 'text-sky-400',
+  'Netshoes': 'text-lime-400',
+  'Dafiti': 'text-fuchsia-400',
+  'OLX': 'text-purple-400',
+  'Outros': 'text-gray-400',
 };
 
 const STATUS_CONFIG = {
-  recebido: { label: 'Recebido', color: 'bg-blue-600', next: 'comprado', nextLabel: '✅ Marcar como Comprado' },
-  comprado: { label: 'Comprado', color: 'bg-yellow-600', next: 'enviado_ao_estoque', nextLabel: '📦 Enviar ao Estoque' },
+  recebido: { label: 'Recebido', color: 'bg-blue-600', next: 'comprado', nextLabel: 'Marcar como Comprado' },
+  comprado: { label: 'Comprado', color: 'bg-yellow-600', next: 'enviado_ao_estoque', nextLabel: 'Enviar ao Estoque' },
   enviado_ao_estoque: { label: 'No Estoque', color: 'bg-green-600', next: null, nextLabel: null },
 };
 
@@ -87,7 +90,7 @@ export default function EstoqueLotes() {
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
       await loadLotes();
     } catch (e) {
-      alert('❌ Erro ao salvar: ' + e.message);
+      alert('Erro ao salvar: ' + e.message);
     }
   };
 
@@ -98,7 +101,7 @@ export default function EstoqueLotes() {
       await base44.entities.LoteRecebido.update(lote.id, { status: cfg.next });
       await loadLotes();
     } catch (e) {
-      alert('❌ Erro: ' + e.message);
+      alert('Erro: ' + e.message);
     }
   };
 
@@ -113,7 +116,7 @@ export default function EstoqueLotes() {
       await base44.entities.LoteRecebido.update(arrematarLote.id, {
         status: 'comprado',
         valor_lote: custoTotal,
-        observacoes: `Arremate: R$ ${valorArremate.toFixed(2)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${taxaValor.toFixed(2)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${custoTotal.toFixed(2)}\n${arrematarLote.observacoes || ''}`,
+        observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
       });
       setArrematarLote(null);
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
@@ -131,24 +134,24 @@ export default function EstoqueLotes() {
       await base44.entities.LoteRecebido.delete(id);
       await loadLotes();
     } catch (e) {
-      alert('❌ Erro: ' + e.message);
+      alert('Erro: ' + e.message);
     }
   };
 
   const handleGerarProdutos = async (lote) => {
     if (!lote.itens_json) {
-      alert('❌ Este lote não possui itens detalhados salvos. Só é possível gerar produtos em lotes importados via planilha.');
+      alert('Este lote não possui itens detalhados salvos. Só é possível gerar produtos em lotes importados via planilha.');
       return;
     }
     const qtd = lote.quantidade_total || 0;
     const jaGerados = lote.produtos_gerados_count || 0;
     const msgRetomada = jaGerados > 0 && !lote.produtos_gerados
-      ? `\n\n⚠️ ATENÇÃO: Este lote já tem ${jaGerados} produtos criados anteriormente. Esta ação vai retomar e criar apenas os que faltam (não duplica).`
+      ? `\n\nATENÇÃO: Este lote já tem ${jaGerados} produtos criados anteriormente. Esta ação vai retomar e criar apenas os que faltam (não duplica).`
       : '';
     const confirmacao = confirm(
       `Gerar produtos no estoque para o lote "${lote.nome_lote}"?\n\n` +
       `• Quantidade total: ${qtd} unidades\n` +
-      `• Custo total do lote: R$ ${(lote.valor_lote || 0).toFixed(2)}\n` +
+      `• Custo total do lote: R$ ${fmtBR((lote.valor_lote || 0))}\n` +
       `• Custo unitário médio: R$ ${qtd > 0 ? ((lote.valor_lote || 0) / qtd).toFixed(2) : '0.00'}\n` +
       `• Depósito destino: ${lote.deposito_destino || 'Bangu'}${msgRetomada}\n\n` +
       `Esta ação cria os produtos na "Posição de Estoque".`
@@ -159,13 +162,13 @@ export default function EstoqueLotes() {
       const data = res?.data || res;
       if (data?.status === 'success' || data?.status === 'partial') {
         const msg = data.mensagem || `${data.produtos_criados} produtos criados.`;
-        alert(`${data.status === 'success' ? '✅' : '⚠️'} ${msg}\n\nCriados agora: ${data.produtos_criados}\nJá existiam: ${data.ja_existentes || 0}\nTotal no lote: ${data.total_acumulado || data.produtos_criados}\nCusto unitário: R$ ${data.custo_unitario_medio?.toFixed(2)}`);
+        alert(`${data.status === 'success' ? '' : ''} ${msg}\n\nCriados agora: ${data.produtos_criados}\nJá existiam: ${data.ja_existentes || 0}\nTotal no lote: ${data.total_acumulado || data.produtos_criados}\nCusto unitário: R$ ${fmtBR(data.custo_unitario_medio)}`);
         await loadLotes();
       } else {
-        alert(`❌ Erro: ${data?.error || 'Resposta inesperada'}`);
+        alert(`Erro: ${data?.error || 'Resposta inesperada'}`);
       }
     } catch (e) {
-      alert(`❌ Erro ao gerar produtos: ${e.message}`);
+      alert(`Erro ao gerar produtos: ${e.message}`);
     }
   };
 
@@ -196,7 +199,7 @@ export default function EstoqueLotes() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
-            <h1 className="text-3xl font-bold text-white">🗂️ Estoque de Lotes Recebidos</h1>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-2"><Boxes className="w-7 h-7 text-blue-400" />Estoque de Lotes Recebidos</h1>
           </div>
           <Button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
@@ -244,7 +247,10 @@ export default function EstoqueLotes() {
               onClick={() => setFiltroMarketplace(filtroMarketplace === mp ? 'todos' : mp)}
               className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${filtroMarketplace === mp ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
             >
-              {MARKETPLACE_ICONS[mp]} {mp}
+              <span className="inline-flex items-center gap-1.5">
+                <Store className={`w-3.5 h-3.5 ${MARKETPLACE_COLORS[mp] || 'text-gray-400'}`} />
+                {mp}
+              </span>
             </button>
           ))}
         </div>
@@ -271,19 +277,19 @@ export default function EstoqueLotes() {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-lg">{MARKETPLACE_ICONS[lote.marketplace] || '📦'}</span>
+                          <Store className={`w-4 h-4 ${MARKETPLACE_COLORS[lote.marketplace] || 'text-gray-400'}`} />
                           <h3 className="text-white font-bold text-base">{lote.nome_lote}</h3>
                           <Badge className={cfg.color}>{cfg.label}</Badge>
                           <Badge variant="outline" className="text-gray-300 border-gray-600 text-xs">{lote.marketplace}</Badge>
                         </div>
                         {lote.valor_lote > 0 && (
-                          <p className="text-green-400 text-sm font-semibold">R$ {lote.valor_lote?.toFixed(2)}</p>
+                          <p className="text-green-400 text-sm font-semibold">R$ {fmtBR(lote.valor_lote)}</p>
                         )}
                         {lote.observacoes && (
                           <p className="text-gray-400 text-xs mt-1">{lote.observacoes}</p>
                         )}
                         {lote.arquivo_nome && (
-                          <p className="text-gray-500 text-xs mt-1">📎 {lote.arquivo_nome}</p>
+                          <p className="text-gray-500 text-xs mt-1 flex items-center gap-1"><Paperclip className="w-3 h-3" />{lote.arquivo_nome}</p>
                         )}
                         <p className="text-gray-600 text-xs mt-1">
                           {lote.data_recebimento ? new Date(lote.data_recebimento).toLocaleDateString('pt-BR') : ''}
@@ -342,7 +348,8 @@ export default function EstoqueLotes() {
                         {/* Badge: já gerou produtos completo */}
                         {lote.produtos_gerados && (
                           <Badge className="bg-emerald-700 text-white">
-                            ✓ {lote.produtos_gerados_count} produtos no estoque
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            {lote.produtos_gerados_count} produtos no estoque
                           </Badge>
                         )}
 
@@ -406,17 +413,17 @@ export default function EstoqueLotes() {
               {arrematarForm.valorArremate && (
                 <div className="bg-amber-900/20 border border-amber-700/40 rounded-lg p-3">
                   <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>Arremate</span><span>R$ {parseFloat(arrematarForm.valorArremate || 0).toFixed(2)}</span>
+                    <span>Arremate</span><span>R$ {fmtBR(parseFloat(arrematarForm.valorArremate || 0))}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>Taxa ({arrematarForm.taxaPct}%)</span><span>R$ {(parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100).toFixed(2)}</span>
+                    <span>Taxa ({arrematarForm.taxaPct}%)</span><span>R$ {fmtBR((parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100))}</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>Frete</span><span>R$ {arrematarForm.frete.toFixed(2)}</span>
+                    <span>Frete</span><span>R$ {fmtBR(arrematarForm.frete)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-amber-300 border-t border-amber-700/40 pt-2 mt-1">
                     <span>CUSTO TOTAL</span>
-                    <span>R$ {(parseFloat(arrematarForm.valorArremate || 0) + parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100 + arrematarForm.frete + arrematarForm.outros).toFixed(2)}</span>
+                    <span>R$ {fmtBR((parseFloat(arrematarForm.valorArremate || 0) + parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100 + arrematarForm.frete + arrematarForm.outros))}</span>
                   </div>
                 </div>
               )}
@@ -438,7 +445,7 @@ export default function EstoqueLotes() {
           <Card className="bg-gray-800 border-gray-700 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-white">📥 Adicionar Lote Recebido</CardTitle>
+                <CardTitle className="text-white flex items-center gap-2"><Inbox className="w-5 h-5" />Adicionar Lote Recebido</CardTitle>
                 <Button size="sm" variant="outline" onClick={() => setShowModal(false)} className="border-gray-600 text-gray-400">
                   <X className="w-4 h-4" />
                 </Button>
@@ -466,7 +473,10 @@ export default function EstoqueLotes() {
                       onClick={() => setForm(f => ({ ...f, marketplace: mp }))}
                       className={`px-3 py-2 rounded-lg text-sm font-semibold text-left transition-all ${form.marketplace === mp ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                     >
-                      {MARKETPLACE_ICONS[mp]} {mp}
+                      <span className="inline-flex items-center gap-1.5">
+                        <Store className={`w-3.5 h-3.5 ${MARKETPLACE_COLORS[mp] || 'text-gray-400'}`} />
+                        {mp}
+                      </span>
                     </button>
                   ))}
                 </div>

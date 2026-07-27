@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { fmtBR } from '@/lib/money';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ export default function SellerWithdrawalModal({
     }
 
     if (amountNum > saldoDisponivel) {
-      toast.error(`Saldo insuficiente. Disponível: R$ ${saldoDisponivel.toFixed(2)}`);
+      toast.error(`Saldo insuficiente. Disponível: R$ ${fmtBR(saldoDisponivel)}`);
       return;
     }
 
@@ -82,7 +83,7 @@ export default function SellerWithdrawalModal({
         <DialogHeader>
           <DialogTitle className="text-white">Solicitar Saque</DialogTitle>
           <DialogDescription className="text-gray-400">
-            Saldo disponível: R$ {saldoDisponivel.toFixed(2)}
+            Saldo disponível: R$ {fmtBR(saldoDisponivel)}
           </DialogDescription>
         </DialogHeader>
 

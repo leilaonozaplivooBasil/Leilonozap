@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Receipt, Search, DollarSign, Clock, CheckCircle, CreditCard, QrCode, RefreshCw } from "lucide-react";
+import { Receipt, Search, DollarSign, Clock, CheckCircle, CreditCard, RefreshCw, Smartphone, FileText, Wallet, TrendingUp, ShoppingCart, Gavel, Handshake } from "lucide-react";
 import { format } from "date-fns";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 
@@ -100,19 +100,20 @@ export default function TransactionHistory() {
     refunded: { label: "Reembolsado", color: "bg-gray-600 text-gray-100", icon: RefreshCw },
   };
 
+  // Ícones lucide (sem emoji — regra do super admin)
   const billingConfig = {
-    PIX: { label: "PIX", icon: "📱", color: "text-green-400" },
-    CREDIT_CARD: { label: "Cartão", icon: "💳", color: "text-blue-400" },
-    BOLETO: { label: "Boleto", icon: "📄", color: "text-yellow-400" },
+    PIX: { label: "PIX", icon: Smartphone, color: "text-green-400" },
+    CREDIT_CARD: { label: "Cartão", icon: CreditCard, color: "text-blue-400" },
+    BOLETO: { label: "Boleto", icon: FileText, color: "text-yellow-400" },
   };
 
   const getPaymentType = (p) => {
-    if (p.is_wallet_deposit && !p.is_investor_capital) return "💰 Depósito Carteira";
-    if (p.is_investor_capital) return "📈 Capital Investidor";
-    if (p.catalog_sale_id) return "🛒 Venda Catálogo";
-    if (p.auction_id) return "🔨 Leilão";
-    if (p.partner_plan_code) return "🤝 Plano Parceiro";
-    return "💳 Pagamento";
+    if (p.is_wallet_deposit && !p.is_investor_capital) return { label: "Depósito Carteira", icon: Wallet };
+    if (p.is_investor_capital) return { label: "Capital Investidor", icon: TrendingUp };
+    if (p.catalog_sale_id) return { label: "Venda Catálogo", icon: ShoppingCart };
+    if (p.auction_id) return { label: "Leilão", icon: Gavel };
+    if (p.partner_plan_code) return { label: "Plano Parceiro", icon: Handshake };
+    return { label: "Pagamento", icon: CreditCard };
   };
 
   if (!currentUser || currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
@@ -223,11 +224,11 @@ export default function TransactionHistory() {
             className="bg-gray-800 border border-gray-700 text-white rounded-md px-4 py-2 min-w-[160px]"
           >
             <option value="all">Todos os Status</option>
-            <option value="confirmed">✅ Confirmados</option>
-            <option value="received">✅ Recebidos</option>
-            <option value="pending">⏳ Pendentes</option>
-            <option value="failed">❌ Falhados</option>
-            <option value="refunded">↩️ Reembolsados</option>
+            <option value="confirmed">Confirmados</option>
+            <option value="received">Recebidos</option>
+            <option value="pending">Pendentes</option>
+            <option value="failed">Falhados</option>
+            <option value="refunded">Reembolsados</option>
           </select>
 
           <select
@@ -236,9 +237,9 @@ export default function TransactionHistory() {
             className="bg-gray-800 border border-gray-700 text-white rounded-md px-4 py-2 min-w-[140px]"
           >
             <option value="all">Todos os Tipos</option>
-            <option value="PIX">📱 PIX</option>
-            <option value="CREDIT_CARD">💳 Cartão</option>
-            <option value="BOLETO">📄 Boleto</option>
+            <option value="PIX">PIX</option>
+            <option value="CREDIT_CARD">Cartão</option>
+            <option value="BOLETO">Boleto</option>
           </select>
         </div>
 
@@ -263,7 +264,10 @@ export default function TransactionHistory() {
             filteredPayments.map((payment) => {
               const cfg = statusConfig[payment.status] || statusConfig.pending;
               const StatusIcon = cfg.icon;
-              const billing = billingConfig[payment.billing_type] || { label: payment.billing_type, icon: "💳", color: "text-gray-400" };
+              const billing = billingConfig[payment.billing_type] || { label: payment.billing_type, icon: CreditCard, color: "text-gray-400" };
+              const BillingIcon = billing.icon;
+              const paymentType = getPaymentType(payment);
+              const PaymentTypeIcon = paymentType.icon;
 
               return (
                 <Card key={payment.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
@@ -275,7 +279,7 @@ export default function TransactionHistory() {
                           <p className="text-white font-semibold truncate">{payment.buyer_name || '—'}</p>
                           <p className="text-gray-400 text-sm truncate">{payment.buyer_email || '—'}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <span className="text-gray-500 text-xs">{getPaymentType(payment)}</span>
+                            <span className="text-gray-500 text-xs inline-flex items-center gap-1"><PaymentTypeIcon className="w-3 h-3" />{paymentType.label}</span>
                             {payment.payment_id && (
                               <span className="text-gray-600 text-xs font-mono">{payment.payment_id}</span>
                             )}
@@ -291,8 +295,9 @@ export default function TransactionHistory() {
                           <Badge className={`text-xs ${cfg.color}`}>
                             {cfg.label}
                           </Badge>
-                          <span className={`text-xs font-medium ${billing.color}`}>
-                            {billing.icon} {billing.label}
+                          <span className={`text-xs font-medium inline-flex items-center gap-1 ${billing.color}`}>
+                            <BillingIcon className="w-3 h-3" />
+                            {billing.label}
                           </span>
                         </div>
                       </div>

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart, Wallet, Lock } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, ChevronRight, Wallet } from 'lucide-react';
 import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import GradeDistributionChart from '../components/lotes/GradeDistributionChart';
 import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
-import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
 import VisualizarLoteReservedBanner from '../components/lotes/VisualizarLoteReservedBanner';
 import { createPageUrl } from '@/utils';
 
@@ -592,7 +591,8 @@ export default function VisualizarLote() {
                                 depositType: 'investor_capital',
                                 auctionId: pendingCheckoutData.auctionId,
                                 auctionTitle: pendingCheckoutData.auctionTitle,
-                                autoSubmitPix: true
+                                autoSubmitPix: true,
+                                returnTo: window.location.pathname + window.location.search
                             }
                         });
                     }

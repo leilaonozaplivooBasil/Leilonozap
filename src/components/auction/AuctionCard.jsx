@@ -11,13 +11,16 @@
  * ========================================================================
  */
 import React, { useState, useEffect, useRef, memo, useMemo } from "react";
+import { capOf } from '@/lib/fotoLegenda';
+import { addMoney, gteMoney, fmtBR } from '@/lib/money';
+import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share2 } from "lucide-react"; // 🆕 Adicionado Share2
+import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share2, Zap } from "lucide-react";
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
@@ -30,7 +33,7 @@ import { proxyImage } from "@/functions/proxyImage";
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
-function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap" }) {
+function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -157,14 +160,16 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       const digitalWallet = digitalWallets && digitalWallets.length > 0 ? digitalWallets[0] : null;
 
       const currentBalance = digitalWallet?.balance || 0;
-      const minBid = auction.current_price + auction.increment;
+      const minBid = addMoney(auction.current_price, auction.increment);
 
       // 🐛 FIX: Se saldo insuficiente → Alerta e opção de recarga
-      if (currentBalance < minBid) {
+      if (!gteMoney(currentBalance, minBid)) {
         console.warn(`⚠️ Saldo insuficiente. DigitalWallet: ${currentBalance} < ${minBid}`);
 
-        if (confirm(`Saldo insuficiente (R$ ${currentBalance.toFixed(2)}). O lance mínimo é R$ ${minBid.toFixed(2)}.\n\nDeseja adicionar fundos agora?`)) {
-          navigate(createPageUrl("AddFunds"));
+        if (confirm(`Saldo insuficiente (R$ ${fmtBR(currentBalance)}). O lance mínimo é R$ ${fmtBR(minBid)}.\n\nDeseja adicionar fundos agora?`)) {
+          navigate(createPageUrl("AddFunds"), {
+            state: { returnTo: window.location.pathname + window.location.search }
+          });
         }
         return;
       }
@@ -228,7 +233,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const shareMessage = `🔨📦 LEILÃO NO🔥ZAP!
 
 📱 ${displayTitle}
-💰 Lance: R$ ${currentPrice.toFixed(2)}
+💰 Lance: R$ ${fmtBR(currentPrice)}
 
 ⚡ Dê seu lance: ${productUrl}`;
 
@@ -310,7 +315,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
   // 🌎 FORMATA DATA EM FUSO HORÁRIO DE SÃO PAULO
   const getTimeRemaining = () => {
-    if (auction.status !== 'active') {
+    if (auction.status !== 'active' && auction.status !== 'scheduled') {
       return null;
     }
 
@@ -352,19 +357,24 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining());
 
   useEffect(() => {
-    if (auction.status !== 'active') {
+    if (auction.status !== 'active' && auction.status !== 'scheduled') {
       setTimeRemaining(null);
       return;
     }
 
-    // Atualiza imediatamente
-    setTimeRemaining(getTimeRemaining());
+    // ⏱️ Countdown EM TEMPO REAL: tick de 1s até o fim do leilão. Barato mesmo com muitos
+    // cards — quando o texto não muda ("5 dias"), devolvemos o mesmo objeto e o React
+    // pula o re-render; só a janela HH:MM:SS re-renderiza de fato a cada segundo.
+    const tick = () => {
+      setTimeRemaining((prev) => {
+        const next = getTimeRemaining();
+        if (prev && next && prev.text === next.text && prev.isUrgent === next.isUrgent) return prev;
+        return next;
+      });
+    };
 
-    // PERF: Update every 10s on card grid (precise countdown only needed inside AuctionRoom)
-    const interval = setInterval(() => {
-      const newTime = getTimeRemaining();
-      setTimeRemaining(newTime);
-    }, 10000);
+    tick(); // Atualiza imediatamente (ex.: leilão recém-reativado já nasce com o timer)
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
   }, [auction.status, auction.end_time]);
@@ -420,7 +430,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 key={index}
                 src={img}
                 alt={`${auction.title} - imagem ${index + 1}`}
-                loading="lazy"
+                loading={index === 0 ? "eager" : "lazy"}
+                fetchPriority={index === 0 ? "high" : "auto"}
                 decoding="async"
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                   }`}
@@ -430,6 +441,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 }}
               />
             ))}
+
+            {capOf(images[currentImageIndex]) && (
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-8 pb-2 px-3 pointer-events-none z-10">
+                <p className="text-xs font-bold text-white truncate text-center drop-shadow">{capOf(images[currentImageIndex])}</p>
+              </div>
+            )}
 
             <div
               className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${images.length > 0 ? 'opacity-0' : 'opacity-100'
@@ -534,13 +551,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <p className={`text-xs sm:text-sm ${secondaryTextColor}`}>
-                  {isActive ? 'Lance atual' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+                <p className={`text-xs sm:text-sm ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
+                  {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
-                R$ {currentPrice.toFixed(2)}
+                R$ {fmtBR(currentPrice)}
               </p>
             </div>
 
@@ -555,29 +572,47 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 </div>
               </div>
             )}
+
+            {auction.status === 'scheduled' && timeRemaining && (
+              <div className="text-right flex-shrink-0">
+                <div className="flex items-center gap-1 text-sky-400 mb-1">
+                  <Clock className="w-3 h-3" />
+                  <span className="text-xs font-bold">Começa em</span>
+                </div>
+                <div className="font-mono text-sm sm:text-lg md:text-xl font-bold text-sky-400">
+                  {timeRemaining.text}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                <span>{stableRandomUsers}</span>
+                <span>{bidStats?.users ?? stableRandomUsers}</span>
               </div>
               <div className="flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" />
-                <span>{stableRandomBids} lances</span>
+                <span>{bidStats?.bids ?? stableRandomBids} lances</span>
               </div>
             </div>
+            {isActive && Number(auction.buy_now_price) > 0 && (
+              <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2 py-1">
+                <Zap className="w-3.5 h-3.5" />
+                Compre já: R$ {fmtBR(Number(auction.buy_now_price))}
+              </div>
+            )}
           </div>
 
-          {!isActive && (
+          {!isActive && auction.status !== 'paused' && auction.status !== 'scheduled' && (
             <div className="rounded-xl p-3 mb-4 text-center" style={{
               background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
               border: '1px solid rgba(16,185,129,0.15)',
             }}>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <img
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                  src="/brand/icon-3d.webp"
                   alt="Leilão NoZap"
                   className="w-8 h-8"
                 />
@@ -636,8 +671,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 } : {}}
               >
                 <img
-                  src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                  alt="Comparai"
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
                   className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
                 />
                 Comparar Preços
@@ -680,6 +715,19 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   Ver Detalhes do Lote
                 </Button>
               </Link>
+              {/* 🆕 COMPARAI também nos lotes encerrados/arrematados */}
+              <Button
+                onClick={(e) => { e.stopPropagation(); setShowComparai(true); }}
+                className="w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', boxShadow: '0 4px 16px rgba(59,130,246,0.35)' }}
+              >
+                <img
+                  src={CompareAquiIcon}
+                  alt="CompareAQUI"
+                  className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
+                />
+                Comparar Preços
+              </Button>
               <Link
                 to={createPageUrl("Home") + "?filter=ativos"}
                 onClick={(e) => e.stopPropagation()}

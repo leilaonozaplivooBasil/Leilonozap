@@ -334,12 +334,12 @@ export default function SystemChecklist() {
     },
     {
       id: 'comparai',
-      title: '🔍 Sistema Comparai',
+      title: '🔍 Sistema CompareAQUI',
       color: 'cyan',
       items: [
         {
           id: 41,
-          task: 'Abrir modal Comparai',
+          task: 'Abrir modal CompareAQUI',
           status: 'ready',
           description: 'ComparaiButton: floating, abre modal com comparação',
           page: 'Home/AuctionRoom'

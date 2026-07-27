@@ -2,36 +2,35 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Zap } from "lucide-react";
+import { money, addMoney, mulMoney, gtMoney, gteMoney } from "@/lib/money";
 
 export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow }) {
   const [bidAmount, setBidAmount] = useState("");
   const [quickBids, setQuickBids] = useState([]);
 
-  // 🆕 Recalcula os botões sempre que currentPrice ou increment mudar
+  // Recalcula os botões em centavos exatos sempre que currentPrice ou increment mudar
   useEffect(() => {
     const calculatedBids = [
-      currentPrice + increment,
-      currentPrice + (increment * 2),
-      currentPrice + (increment * 5)
+      addMoney(currentPrice, increment),
+      addMoney(currentPrice, mulMoney(increment, 2)),
+      addMoney(currentPrice, mulMoney(increment, 5))
     ].filter((val, i, self) => self.indexOf(val) === i); // Remove duplicatas
-    
+
     setQuickBids(calculatedBids);
-    
-    console.log(`🔄 [BID INPUT] Botões atualizados: Preço=${currentPrice}, Botões=[${calculatedBids.join(', ')}]`);
   }, [currentPrice, increment]);
 
   const handleSubmit = React.useCallback((amount = null) => {
-    const finalAmount = amount || parseFloat(bidAmount);
+    const finalAmount = money(amount || parseFloat(bidAmount));
     if (!finalAmount || isNaN(finalAmount)) return;
 
-    const minBid = currentPrice + increment;
-    if (finalAmount <= currentPrice) {
-      alert(`❌ Seu lance deve ser MAIOR que R$ ${currentPrice.toFixed(2)}`);
+    const minBid = addMoney(currentPrice, increment);
+    if (!gtMoney(finalAmount, currentPrice)) {
+      alert(`❌ Seu lance deve ser MAIOR que R$ ${fmtBR(money(currentPrice))}`);
       return;
     }
-    
-    if (finalAmount < minBid) {
-      alert(`❌ Lance mínimo é R$ ${minBid.toFixed(2)}`);
+
+    if (!gteMoney(finalAmount, minBid)) {
+      alert(`❌ Lance mínimo é R$ ${fmtBR(minBid)}`);
       return;
     }
 
@@ -59,7 +58,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             className="items-center gap-1 bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500 min-h-[44px] px-3 sm:px-4"
           >
             <Zap className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">R$ {amount.toFixed(2)}</span>
+            <span className="text-xs sm:text-sm">R$ {fmtBR(amount)}</span>
           </Button>
         ))}
         
@@ -82,9 +81,9 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             value={bidAmount}
             onChange={(e) => setBidAmount(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={`Mín: R$ ${(currentPrice + increment).toFixed(2)}`}
+            placeholder={`Mín: R$ ${fmtBR(addMoney(currentPrice, increment))}`}
             className="bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-400 pr-12 sm:pr-16 rounded-full focus:border-green-500 h-12 sm:h-14 text-base sm:text-lg"
-            min={currentPrice + increment}
+            min={addMoney(currentPrice, increment)}
             disabled={isLoading}
           />
           <div className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
@@ -105,7 +104,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
       </div>
 
       <p className="text-xs sm:text-sm text-center text-gray-500 mt-2">
-        Incremento mínimo: + R$ {increment.toFixed(2)}
+        Incremento mínimo: + R$ {fmtBR(increment)}
       </p>
       
       <style>{`

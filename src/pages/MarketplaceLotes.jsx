@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart, Users, User } from 'lucide-react';
+import { Package, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart, Users, User } from 'lucide-react';
 import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
 import LoteArrematadoOverlay from '../components/lotes/LoteArrematadoOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -531,7 +531,8 @@ export default function MarketplaceLotes() {
                                 depositType: 'investor_capital',
                                 auctionId: pendingCheckoutData.auctionId,
                                 auctionTitle: pendingCheckoutData.auctionTitle,
-                                autoSubmitPix: true
+                                autoSubmitPix: true,
+                                returnTo: window.location.pathname + window.location.search
                             }
                         });
                     }

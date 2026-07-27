@@ -1,10 +1,10 @@
 // manageEmployees — funcionários de balcão (PDV) do distribuidor. action: list|add|remove|toggle.
 // Cria app_user com is_pdv_operator=true + employer_id + senha (app_users_auth). Guard: ator admin/super_admin.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const oid = () => crypto.randomBytes(12).toString('hex');
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {

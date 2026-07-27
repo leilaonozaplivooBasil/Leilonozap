@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -200,7 +201,7 @@ export default function NegotiationModal({ customer, onClose, onSave, sellers })
                           <span className="text-green-600 font-bold">Estoque: {product.quantity}</span>
                           <span>•</span>
                           <span className="text-blue-600 font-bold">
-                            R$ {(product.selling_price_retail || 0).toFixed(2)}
+                            R$ {fmtBR((product.selling_price_retail || 0))}
                           </span>
                         </div>
                       </div>
@@ -247,7 +248,7 @@ export default function NegotiationModal({ customer, onClose, onSave, sellers })
                           />
                         </td>
                         <td className="p-3 text-right text-gray-600">
-                          R$ {item.table_price.toFixed(2)}
+                          R$ {fmtBR(item.table_price)}
                         </td>
                         <td className="p-3">
                           <Input
@@ -269,7 +270,7 @@ export default function NegotiationModal({ customer, onClose, onSave, sellers })
                           </Badge>
                         </td>
                         <td className="p-3 text-right text-green-600 font-bold">
-                          R$ {item.subtotal.toFixed(2)}
+                          R$ {fmtBR(item.subtotal)}
                         </td>
                         <td className="p-3 text-center">
                           <Button
@@ -292,7 +293,7 @@ export default function NegotiationModal({ customer, onClose, onSave, sellers })
                 <div className="flex items-center justify-between">
                   <span className="text-gray-900 font-bold text-lg">VALOR TOTAL DA NEGOCIAÇÃO:</span>
                   <span className="text-green-600 font-bold text-3xl">
-                    R$ {totalValue.toFixed(2)}
+                    R$ {fmtBR(totalValue)}
                   </span>
                 </div>
               </div>

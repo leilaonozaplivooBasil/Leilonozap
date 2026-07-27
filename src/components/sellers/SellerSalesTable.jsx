@@ -1,4 +1,5 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -25,9 +26,9 @@ export default function SellerSalesTable({ vendas }) {
           {vendas.map((venda) => (
             <TableRow key={venda.id} className="border-gray-700">
               <TableCell className="text-gray-300 text-sm">{venda.product_title}</TableCell>
-              <TableCell className="text-gray-300 text-right">R$ {venda.total_amount.toFixed(2)}</TableCell>
+              <TableCell className="text-gray-300 text-right">R$ {fmtBR(venda.total_amount)}</TableCell>
               <TableCell className="text-green-400 font-semibold text-right">
-                R$ {venda.commission_amount.toFixed(2)}
+                R$ {fmtBR(venda.commission_amount)}
               </TableCell>
               <TableCell>
                 {venda.is_liberada ? (

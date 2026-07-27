@@ -84,7 +84,7 @@ export const calculateExpectedCommission = (sale, allUsers) => {
     }
 
     const totalAmount = parseFloat(sale.total_amount || 0);
-    trace.push(`🚀 Auditando Venda ${sale.id.slice(0, 8)}... Valor: R$ ${totalAmount.toFixed(2)}`);
+    trace.push(`🚀 Auditando Venda ${sale.id.slice(0, 8)}... Valor: R$ ${fmtBR(totalAmount)}`);
     trace.push(`👤 Âncora: ${anchorUser.full_name} (${anchorUser.email})`);
 
     // 2. Constrói cadeia

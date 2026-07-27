@@ -3,10 +3,13 @@ import { cva } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// pointer-events-none nos CONTAINERS: eles cobrem o topo da tela no mobile (fixed
+// top-0 z-100 w-full) e engoliam o 1º toque no carrinho/hambúrguer do header.
+// Os toasts em si têm pointer-events-auto (toastVariants), então seguem clicáveis.
 const ToastProvider = React.forwardRef(({ ...props }, ref) => (
   <div
     ref={ref}
-    className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
+    className="pointer-events-none fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
     {...props}
   />
 ));
@@ -15,20 +18,23 @@ ToastProvider.displayName = "ToastProvider";
 const ToastViewport = React.forwardRef(({ ...props }, ref) => (
   <div
     ref={ref}
-    className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
+    className="pointer-events-none fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
     {...props}
   />
 ));
 ToastViewport.displayName = "ToastViewport";
 
+// 🟢 Liquid glass verde — padrão oficial das notificações do site (pedido Gabriel 25/07):
+// vidro translúcido esverdeado com blur, borda emerald e brilho interno sutil.
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-2xl border p-5 pr-10 backdrop-blur-xl transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
+        default:
+          "border-emerald-400/30 bg-gradient-to-br from-emerald-500/25 via-emerald-900/40 to-emerald-950/60 text-white shadow-[0_8px_32px_rgba(16,185,129,0.25),inset_0_1px_0_rgba(255,255,255,0.15)]",
         destructive:
-          "destructive group border-destructive bg-destructive text-destructive-foreground",
+          "destructive group border-red-400/30 bg-gradient-to-br from-red-500/25 via-red-900/40 to-red-950/60 text-white shadow-[0_8px_32px_rgba(239,68,68,0.25),inset_0_1px_0_rgba(255,255,255,0.12)]",
       },
     },
     defaultVariants: {
@@ -60,14 +66,17 @@ const ToastAction = React.forwardRef(({ className, ...props }, ref) => (
 ));
 ToastAction.displayName = "ToastAction";
 
+// X SEMPRE visível (mobile não tem hover — a notificação precisa poder ser fechada em
+// qualquer dispositivo), com área de toque generosa e vidrinho próprio.
 const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
   <button
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full border border-white/15 bg-white/10 text-white/80 opacity-100 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 group-[.destructive]:focus:ring-red-400/60",
       className
     )}
     toast-close=""
+    aria-label="Fechar notificação"
     {...props}
   >
     <X className="h-4 w-4" />

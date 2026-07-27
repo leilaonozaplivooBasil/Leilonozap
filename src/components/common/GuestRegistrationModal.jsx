@@ -10,8 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from "@/components/ui/checkbox";
 import { User as UserIcon, Sparkles, ShieldCheck, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { ensureSiteLicensee } from '@/functions/ensureSiteLicensee'; // New import for the ensureSiteLicensee function
+import { getReferral } from '@/lib/referral';
 
-export default function GuestRegistrationModal({ onClose, onSuccess }) {
+export default function GuestRegistrationModal({ onClose, onSuccess, referrerName }) {
   const [fullName, setFullName] = useState('');
   const [nickname, setNickname] = useState('');
   const [avatarPrompt, setAvatarPrompt] = useState('');
@@ -80,8 +81,8 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMessage("❌ A senha deve ter pelo menos 6 caracteres.");
+    if (password.length < 8) {
+      setErrorMessage("❌ A senha deve ter pelo menos 8 caracteres.");
       return;
     }
 
@@ -126,7 +127,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
 
       // 🏢 LÓGICA DE INDICAÇÃO CORRIGIDA
       let referredById = null;
-      const referralCode = sessionStorage.getItem('referralCode');
+      const referralCode = getReferral();
       
       console.log(`🔍 [CADASTRO] Código de indicação na sessão: ${referralCode || 'NENHUM'}`);
       
@@ -183,27 +184,26 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
       console.log("✅ [CADASTRO] Email disponível, criando USUÁRIO COMUM...");
       console.log(`📎 [CADASTRO] Será vinculado ao ID: ${referredById}`);
       
-      const newUser = {
-        full_name: fullName.trim(),
-        display_first_name: firstName || null,
-        display_last_name: lastName || null,
-        nickname: nickname.trim(),
-        email: normalizedEmail,
-        password: password,
-        phone: phoneDigits,
-        terms_accepted: true,
-        avatar_url: avatarUrl || null,
-        points: 0,
-        total_bids: 0,
-        won_auctions: 0,
-        avatar_color: '#' + Math.floor(Math.random()*16777215).toString(16),
-        role: 'user',
-        referred_by_id: referredById,
-      };
-
+      // 🔐 Cadastro REAL via rota server-side (publicRegister, service_role). Antes usava
+      // AppUser.create, bloqueado por RLS (42501) — o cadastro do visitante nunca concluía.
+      // O indicador é resolvido no servidor pelo ref_code (link de indicação).
       let createdUser;
       try {
-        createdUser = await AppUser.create(newUser);
+        const resp = await base44.functions.invoke('publicRegister', {
+          full_name: fullName.trim(),
+          email: normalizedEmail,
+          password,
+          phone: phoneDigits,
+          ref_code: referralCode || '',
+          display_first_name: firstName || null,
+          display_last_name: lastName || null,
+        });
+        if (!resp?.success) {
+          setErrorMessage("❌ " + (resp?.error || "Não foi possível concluir o cadastro."));
+          setIsRegistering(false);
+          return;
+        }
+        createdUser = resp.user;
       } catch (error) {
         console.error("❌ Erro ao criar usuário:", error);
         setErrorMessage("❌ Erro ao criar conta. Tente novamente em alguns segundos.");
@@ -461,6 +461,12 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
         >
           <X className="w-4 h-4" />
         </Button>
+        {referrerName && (
+          <div className="mx-4 mt-4 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm font-semibold text-white"
+            style={{ background: 'linear-gradient(135deg, rgba(233,30,131,.18), rgba(255,107,53,.1))', border: '1px solid rgba(233,30,131,.35)' }}>
+            <span>🎉</span> Você foi convidado por <span style={{ color: '#ff8a5c' }}>{referrerName}</span>
+          </div>
+        )}
         {step === 1 ? renderStepOne() : renderStepTwo()}
       </Card>
     </div>

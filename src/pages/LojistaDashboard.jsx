@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -19,6 +20,10 @@ const StoreEntity = base44.entities.Store;
 const AuctionEntity = base44.entities.Auction;
 const CatalogSaleEntity = base44.entities.CatalogSale;
 const AppUserEntity = base44.entities.AppUser;
+
+// Status que contam como venda concluída — em inglês (legado) e português (planilha NEXUS).
+const VENDA_CONCLUIDA = ['paid', 'shipped', 'delivered', 'pago', 'enviado', 'entregue', 'concluido', 'concluído'];
+const isVendaConcluida = (s) => VENDA_CONCLUIDA.includes(String(s || '').toLowerCase());
 
 export default function LojistaDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -145,9 +150,9 @@ export default function LojistaDashboard() {
         .filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id))
         .reduce((sum, a) => sum + (a.current_price || 0), 0);
       const totalSalesCatalog = storeCatalogSales
-        .filter(s => s.status === 'paid' || s.status === 'shipped' || s.status === 'delivered')
+        .filter(s => isVendaConcluida(s.status))
         .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-      const totalCatalogProducts = storeCatalogSales.filter(s => s.status === 'paid' || s.status === 'shipped' || s.status === 'delivered').length;
+      const totalCatalogProducts = storeCatalogSales.filter(s => isVendaConcluida(s.status)).length;
 
       setStats({
         totalSales: totalSalesAuctions + totalSalesCatalog,
@@ -226,7 +231,7 @@ export default function LojistaDashboard() {
       }
       const printWindow = window.open('', '_blank');
       if (!printWindow) { toast.error("Bloqueio de pop-up detectado."); return; }
-      const htmlContent = `<html><head><title>Comprovante</title><style>body{font-family:Arial,sans-serif;padding:20px;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.section{margin:20px 0}.section-title{font-weight:bold;font-size:14px;margin-bottom:10px;border-bottom:1px solid #ccc;padding-bottom:5px}.info{margin:8px 0;font-size:13px}.footer{margin-top:30px;text-align:center;font-size:12px;border-top:1px solid #ccc;padding-top:10px}</style></head><body><div class="header"><h2>${currentStore.store_name}</h2><p>CNPJ: ${currentStore.cnpj || 'N/A'}</p></div><h3>Comprovante de Venda</h3><div class="section"><div class="section-title">Produto</div><div class="info"><strong>Descrição:</strong> ${auction.title || 'N/A'}</div><div class="info"><strong>Valor:</strong> R$ ${(auction.current_price || 0).toFixed(2)}</div><div class="info"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</div></div><div class="section"><div class="section-title">Cliente</div><div class="info"><strong>Nome:</strong> ${clientData?.full_name || auction.winner_name || 'N/A'}</div><div class="info"><strong>Email:</strong> ${clientData?.email || 'N/A'}</div><div class="info"><strong>Telefone:</strong> ${clientData?.phone || 'N/A'}</div></div>${clientData?.address_street ? `<div class="section"><div class="section-title">Endereço</div><div class="info">${clientData.address_street}${clientData.address_number ? ', ' + clientData.address_number : ''}</div><div class="info">${clientData.address_neighborhood || ''} - ${clientData.address_city || ''} / ${clientData.address_state || ''}</div><div class="info">CEP: ${clientData.address_zip_code || 'N/A'}</div></div>` : ''}<div class="footer"><p>Obrigado pela preferência!</p><p style="font-size:10px;color:#666">Gerado em ${new Date().toLocaleString('pt-BR')}</p></div></body></html>`;
+      const htmlContent = `<html><head><title>Comprovante</title><style>body{font-family:Arial,sans-serif;padding:20px;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.section{margin:20px 0}.section-title{font-weight:bold;font-size:14px;margin-bottom:10px;border-bottom:1px solid #ccc;padding-bottom:5px}.info{margin:8px 0;font-size:13px}.footer{margin-top:30px;text-align:center;font-size:12px;border-top:1px solid #ccc;padding-top:10px}</style></head><body><div class="header"><h2>${currentStore.store_name}</h2><p>CNPJ: ${currentStore.cnpj || 'N/A'}</p></div><h3>Comprovante de Venda</h3><div class="section"><div class="section-title">Produto</div><div class="info"><strong>Descrição:</strong> ${auction.title || 'N/A'}</div><div class="info"><strong>Valor:</strong> R$ ${fmtBR((auction.current_price || 0))}</div><div class="info"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</div></div><div class="section"><div class="section-title">Cliente</div><div class="info"><strong>Nome:</strong> ${clientData?.full_name || auction.winner_name || 'N/A'}</div><div class="info"><strong>Email:</strong> ${clientData?.email || 'N/A'}</div><div class="info"><strong>Telefone:</strong> ${clientData?.phone || 'N/A'}</div></div>${clientData?.address_street ? `<div class="section"><div class="section-title">Endereço</div><div class="info">${clientData.address_street}${clientData.address_number ? ', ' + clientData.address_number : ''}</div><div class="info">${clientData.address_neighborhood || ''} - ${clientData.address_city || ''} / ${clientData.address_state || ''}</div><div class="info">CEP: ${clientData.address_zip_code || 'N/A'}</div></div>` : ''}<div class="footer"><p>Obrigado pela preferência!</p><p style="font-size:10px;color:#666">Gerado em ${new Date().toLocaleString('pt-BR')}</p></div></body></html>`;
       printWindow.document.write(htmlContent);
       printWindow.document.close();
       setTimeout(() => printWindow.print(), 250);
@@ -406,7 +411,7 @@ export default function LojistaDashboard() {
                   )}
                   <div className="space-y-1.5 text-sm">
                     <p className="text-white font-semibold">{detailsAuction.title}</p>
-                    <p className="text-green-400 text-lg font-bold">R$ {detailsAuction.current_price?.toFixed(2)}</p>
+                    <p className="text-green-400 text-lg font-bold">R$ {fmtBR(detailsAuction.current_price)}</p>
                     <p className="text-gray-500 text-xs">{new Date(detailsAuction.created_date).toLocaleDateString('pt-BR')}</p>
                     {detailsAuction.tracking_code && (
                       <p className="text-gray-400 text-xs font-mono">Rastreio: {detailsAuction.tracking_code}</p>

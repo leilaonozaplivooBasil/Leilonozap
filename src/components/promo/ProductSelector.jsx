@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Search, Package } from "lucide-react";
@@ -63,7 +64,7 @@ export default function ProductSelector({ onSelect, selectedProduct }) {
                 <p className="text-sm font-medium text-white truncate">{product.description}</p>
                 <p className="text-xs text-gray-400 mt-1">Lote: {product.lot || "N/A"}</p>
                 <p className="text-sm font-bold text-emerald-400 mt-1">
-                  R$ {(product.price_catalog || product.selling_price_retail || 0).toFixed(2)}
+                  R$ {fmtBR((product.price_catalog || product.selling_price_retail || 0))}
                 </p>
               </div>
             </button>

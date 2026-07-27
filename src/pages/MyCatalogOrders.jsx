@@ -1,113 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, Package, Truck, CheckCircle, Eye, ArrowLeft, Clock, Filter, Trash2 } from 'lucide-react';
+import { Loader2, ShoppingBag, Package, ArrowLeft, Filter, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import AvaliarLojistaModal from '@/components/loja/AvaliarLojistaModal';
+import { supabase } from '@/api/supabaseClient';
 
 const CatalogSale = base44.entities.CatalogSale;
 
-const statusConfig = {
-  pending_payment: { text: "Aguardando Pagamento", icon: Clock, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  paid: { text: "Pago", icon: CheckCircle, color: "bg-green-500/20 text-green-400 border-green-500/30" },
-  processing: { text: "Processando", icon: Package, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  shipped: { text: "Enviado", icon: Truck, color: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" },
-  delivered: { text: "Entregue", icon: Package, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-  canceled: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
-};
-
-const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick }) => {
-  const config = statusConfig[order.status] || statusConfig.pending_payment;
-  const mainImage = order.product_image || "https://via.placeholder.com/150";
-
-  return (
-    <div className="group cursor-pointer">
-      <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/30 text-white overflow-hidden flex flex-col h-full hover:border-green-500/40 hover:shadow-xl hover:shadow-green-500/20 transition-all duration-300">
-
-        {/* IMAGEM - Destaque Principal */}
-        <div className="relative w-full bg-gradient-to-b from-gray-600/30 to-gray-900/60 px-5 pt-6 pb-5 flex justify-center">
-          <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-gray-900/40 border border-white/20 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg shadow-black/40">
-            <img
-              src={mainImage}
-              alt={order.product_title}
-              onError={(e) => {
-                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='12' fill='%239CA3AF' text-anchor='middle' dy='.3em'%3EImagem%3C/text%3E%3C/svg%3E"
-              }}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-
-        {/* NOME DO PRODUTO */}
-        <div className="px-4 pt-3 pb-2">
-          <h3 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-green-300 transition-colors">
-            {order.product_title}
-          </h3>
-        </div>
-
-        {/* DATA + HORA */}
-        <div className="px-4 pb-3">
-          <p className="text-xs text-gray-500">
-            {new Date(order.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às {new Date(order.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-          </p>
-        </div>
-
-        {/* SEPARADOR */}
-        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mx-4" />
-
-        {/* TOTAL */}
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400 font-medium">Total:</span>
-            <span className="font-bold text-green-400 text-base">
-              R$ {(order.total_amount || order.sale_price || 0).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* STATUS */}
-        <div className="px-4 pb-3">
-          <Badge className={`flex items-center gap-1.5 text-xs font-semibold ${config.color} border w-full justify-center py-1.5`}>
-            <config.icon className="w-3 h-3" />
-            <span>{config.text}</span>
-          </Badge>
-        </div>
-
-        {/* BOTÃO CTA */}
-        <button
-          onClick={() => onTrackClick(order)}
-          className="mx-4 mb-4 py-2.5 px-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-green-500/40 flex items-center justify-center gap-2 group/btn"
-        >
-          <Eye className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
-          Acompanhar Pedido
-        </button>
-
-        {/* EXCLUIR — pendentes e cancelados */}
-        {(order.status === 'pending_payment' || order.status === 'canceled') && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDeleteClick(order); }}
-            className="mx-4 mb-4 py-2 px-3 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium text-xs transition-all duration-300 flex items-center justify-center gap-1.5"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Excluir Pedido
-          </button>
-        )}
-
-        {/* RASTREIO (se houver) */}
-        {order.tracking_code && (
-          <div className="px-4 pb-4 text-center">
-            <p className="text-xs text-gray-500">
-              Rastreio: <span className="text-green-400 font-mono font-semibold text-xs">{order.tracking_code}</span>
-            </p>
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-};
+// Card + configs de status agora são COMPARTILHADOS com a aba "Meus Pedidos" do
+// Profile (extraídos pra components/catalog/CatalogOrderCard.jsx em 25/07).
+import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function MyCatalogOrders() {
   const [orders, setOrders] = useState([]);
@@ -143,7 +49,14 @@ export default function MyCatalogOrders() {
     // resolve com {ok:false} sem lançar erro — por isso o fallback antigo nunca rodava).
     try {
       const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
-      return Array.isArray(directResult) ? directResult : [];
+      const list = Array.isArray(directResult) ? directResult : [];
+      // anexa as avaliações que o cliente já deu (pra mostrar "Você avaliou")
+      try {
+        const { data: ratings } = await supabase.from('seller_ratings').select('sale_id,stars,comment').eq('buyer_id', userId);
+        const byS = {}; (ratings || []).forEach((r) => { if (r.sale_id) byS[r.sale_id] = r; });
+        list.forEach((o) => { o.minha_avaliacao = byS[o.id] || null; });
+      } catch (_) { /* sem avaliação ainda */ }
+      return list;
     } catch (e) {
       console.error('fetchOrders falhou:', e.message);
       return [];
@@ -214,9 +127,40 @@ export default function MyCatalogOrders() {
   }, []);
 
   const [cancelingId, setCancelingId] = useState(null);
+  const [ratingOrder, setRatingOrder] = useState(null);
+  const [confirmedIds, setConfirmedIds] = useState(new Set());
+  const [confirmingId, setConfirmingId] = useState(null);
 
-  const handleDeleteOrder = async (order) => {
-    if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
+  // Confirmações DA PLATAFORMA (ConfirmModal) — nada de window.confirm do navegador
+  const [confirmAction, setConfirmAction] = useState(null); // { kind: 'receipt'|'delete'|'deleteAll', order? }
+
+  const handleConfirmReceipt = (order) => setConfirmAction({ kind: 'receipt', order });
+  const handleDeleteOrder = (order) => setConfirmAction({ kind: 'delete', order });
+  const handleDeleteAll = () => { if (deletableOrders.length > 0) setConfirmAction({ kind: 'deleteAll' }); };
+
+  // 🟢 comprador confirma recebimento → libera o saldo a liberar do vendedor na hora
+  const doConfirmReceipt = async (order) => {
+    if (confirmingId) return;
+    setConfirmingId(order.id);
+    try {
+      const uid = currentUser?.id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
+      const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
+      if (r?.success) {
+        setConfirmedIds(prev => new Set(prev).add(order.id));
+        toast.success('Recebimento confirmado! Pagamento liberado pro vendedor.');
+      } else {
+        toast.error(r?.error || 'Não foi possível confirmar agora.');
+      }
+    } catch (err) {
+      console.error('confirmarRecebimento falhou:', err);
+      toast.error('Erro ao confirmar recebimento.');
+    } finally {
+      setConfirmingId(null);
+      setConfirmAction(null);
+    }
+  };
+
+  const doDeleteOrder = async (order) => {
     setCancelingId(order.id);
     try {
       await CatalogSale.delete(order.id);
@@ -227,15 +171,15 @@ export default function MyCatalogOrders() {
       toast.error('Erro ao excluir pedido');
     } finally {
       setCancelingId(null);
+      setConfirmAction(null);
     }
   };
 
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const deletableOrders = orders.filter(o => o.status === 'pending_payment' || o.status === 'canceled');
 
-  const handleDeleteAll = async () => {
-    if (deletableOrders.length === 0) return;
-    if (!window.confirm(`Excluir ${deletableOrders.length} pedido(s) pendentes/cancelados?\n\nEssa ação não pode ser desfeita.`)) return;
+  const doDeleteAll = async () => {
+    if (deletableOrders.length === 0) { setConfirmAction(null); return; }
     setIsDeletingAll(true);
     let deleted = 0;
     for (const order of deletableOrders) {
@@ -249,6 +193,7 @@ export default function MyCatalogOrders() {
     setOrders(prev => prev.filter(o => o.status !== 'pending_payment' && o.status !== 'canceled'));
     toast.success(`${deleted} pedido(s) excluído(s)`);
     setIsDeletingAll(false);
+    setConfirmAction(null);
   };
 
   const handleTrackClick = (order) => {
@@ -372,6 +317,10 @@ export default function MyCatalogOrders() {
                     order={order}
                     onTrackClick={handleTrackClick}
                     onDeleteClick={handleDeleteOrder}
+                    onRateClick={setRatingOrder}
+                    onConfirmReceipt={handleConfirmReceipt}
+                    confirmado={confirmedIds.has(order.id)}
+                    confirmando={confirmingId === order.id}
                   />
                 ))}
               </div>
@@ -379,6 +328,50 @@ export default function MyCatalogOrders() {
           </>
         )}
       </div>
+
+      {/* Confirmações da plataforma (sem diálogo do navegador) */}
+      <ConfirmModal
+        open={confirmAction?.kind === 'receipt'}
+        title="Confirmar recebimento?"
+        message={<>Você confirma que recebeu <b className="text-white">{confirmAction?.order?.product_title}</b>?<br />Isso libera o pagamento pro vendedor.</>}
+        confirmLabel="✅ Sim, recebi"
+        loading={!!confirmingId}
+        onConfirm={() => doConfirmReceipt(confirmAction.order)}
+        onClose={() => setConfirmAction(null)}
+      />
+      <ConfirmModal
+        open={confirmAction?.kind === 'delete'}
+        danger
+        title="Excluir pedido?"
+        message={<>O pedido <b className="text-white">{confirmAction?.order?.product_title}</b> será removido permanentemente.</>}
+        confirmLabel="🗑️ Excluir"
+        loading={!!cancelingId}
+        onConfirm={() => doDeleteOrder(confirmAction.order)}
+        onClose={() => setConfirmAction(null)}
+      />
+      <ConfirmModal
+        open={confirmAction?.kind === 'deleteAll'}
+        danger
+        title={`Excluir ${deletableOrders.length} pedido(s)?`}
+        message="Somente pendentes/cancelados serão removidos. Essa ação não pode ser desfeita."
+        confirmLabel="🗑️ Excluir todos"
+        loading={isDeletingAll}
+        onConfirm={doDeleteAll}
+        onClose={() => setConfirmAction(null)}
+      />
+
+      {ratingOrder && (
+        <AvaliarLojistaModal
+          order={ratingOrder}
+          buyer={currentUser}
+          onClose={() => setRatingOrder(null)}
+          onDone={({ saleId, stars, comment }) => {
+            setOrders(prev => prev.map(o => o.id === saleId ? { ...o, minha_avaliacao: { stars, comment } } : o));
+            setRatingOrder(null);
+            toast.success('⭐ Avaliação enviada! Obrigado.');
+          }}
+        />
+      )}
     </div>
   );
 }

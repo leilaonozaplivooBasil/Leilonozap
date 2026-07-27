@@ -19,6 +19,35 @@
  *   Para criar novo contexto, adicione entrada em CONTEXTS.
  */
 
+import {
+  Store,
+  Package,
+  Star,
+  ShoppingBag,
+  Truck,
+  Image as ImageIcon,
+  Palette,
+  TrendingUp,
+  Receipt,
+  CreditCard,
+  Gavel,
+  Trophy,
+  Wallet,
+  History,
+  LayoutDashboard,
+  KeyRound,
+  Building2,
+  ScrollText,
+  Users,
+  Network,
+  Handshake,
+  Briefcase,
+  ShoppingCart,
+  UsersRound,
+  ClipboardList,
+  Target,
+} from "lucide-react";
+
 // =====================================================================
 // 1. CONTEXTOS — cada um define título + itens da sidebar
 // =====================================================================
@@ -26,43 +55,43 @@ const CONTEXTS = {
   loja_virtual: {
     title: "Painel Loja Virtual",
     items: [
-      { title: "🏪 Ver a loja", pageName: "Catalog" },
-      { title: "📦 Gestão de Produtos", pageName: "CatalogManagement" },
-      { title: "⭐ Destaques", pageName: "BannerManagement" },
-      { title: "🛒 Pedidos da Loja", pageName: "CatalogOrdersAdmin" },
-      { title: "🚚 Meus Pedidos", pageName: "MyCatalogOrders" },
-      { title: "🖼️ Banners", pageName: "BannerManagement" },
-      { title: "🎨 Material Promocional", pageName: "PromoCreator" },
-      { title: "💰 PrecificaVivo", pageName: "PrecificaVivoPainel" },
-      { title: "🧾 PDV", pageName: "PDV" },
-      { title: "💳 Config. Pagamentos", pageName: "PaymentSettings" },
+      { title: "Ver a loja", pageName: "Catalog", icon: Store },
+      { title: "Gestão de Produtos", pageName: "CatalogManagement", icon: Package },
+      { title: "Destaques", pageName: "BannerManagement", icon: Star },
+      { title: "Pedidos da Loja", pageName: "CatalogOrdersAdmin", icon: ShoppingBag },
+      { title: "Meus Pedidos", pageName: "MyCatalogOrders", icon: Truck },
+      { title: "Banners", pageName: "BannerManagement", icon: ImageIcon },
+      { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
+      { title: "PrecificaVivo", pageName: "PrecificaVivoPainel", icon: TrendingUp },
+      { title: "PDV", pageName: "PDV", icon: Receipt },
+      { title: "Config. Pagamentos", pageName: "PaymentSettings", icon: CreditCard },
     ],
   },
   arrematante: {
     title: "Painel Arrematante",
     items: [
-      { title: "🔨 Leilões ao vivo", pageName: "Home" },
-      { title: "🏆 Meus Arremates", pageName: "MyWinnings" },
-      { title: "💰 Minha Carteira", pageName: "AddFunds" },
-      { title: "📊 Histórico Wallet", pageName: "WalletHistory" },
+      { title: "Leilões ao vivo", pageName: "Home", icon: Gavel },
+      { title: "Meus Arremates", pageName: "MyWinnings", icon: Trophy },
+      { title: "Minha Carteira", pageName: "AddFunds", icon: Wallet },
+      { title: "Histórico Wallet", pageName: "WalletHistory", icon: History },
     ],
   },
   vendedor: {
     title: "Painel Vendedor",
     items: [
-      { title: "📊 Meu Painel", pageName: "SellerPanel" },
-      { title: "🛍️ Loja Virtual", pageName: "Catalog" },
-      { title: "🔑 Acesso Vendedor", pageName: "AcessoVendedor" },
+      { title: "Meu Painel", pageName: "SellerPanel", icon: LayoutDashboard },
+      { title: "Loja Virtual", pageName: "Catalog", icon: ShoppingCart },
+      { title: "Acesso Vendedor", pageName: "AcessoVendedor", icon: KeyRound },
     ],
   },
   lojista: {
     title: "Painel Lojista",
     items: [
-      { title: "🏢 Dashboard", pageName: "LojistaDashboard" },
-      { title: "🛍️ Minha Loja", pageName: "CatalogManagement" },
-      { title: "📦 Pedidos", pageName: "CatalogOrdersAdmin" },
-      { title: "🖼️ Banners", pageName: "BannerManagement" },
-      { title: "🎨 Material Promocional", pageName: "PromoCreator" },
+      { title: "Dashboard", pageName: "LojistaDashboard", icon: Building2 },
+      { title: "Minha Loja", pageName: "CatalogManagement", icon: Store },
+      { title: "Pedidos", pageName: "CatalogOrdersAdmin", icon: ShoppingBag },
+      { title: "Banners", pageName: "BannerManagement", icon: ImageIcon },
+      { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
     ],
   },
   // 🛡️ FASE 4.6 — Contexto "licenciado" REMOVIDO.
@@ -73,18 +102,18 @@ const CONTEXTS = {
   investidor: {
     title: "Painel Investidor",
     items: [
-      { title: "💼 Minha Carteira", pageName: "CarteiraInvestidor" },
-      { title: "🛒 Marketplace de Lotes", pageName: "MarketplaceLotes" },
-      { title: "👥 CRM Investidores", pageName: "CRMInvestidores" },
+      { title: "Minha Carteira", pageName: "CarteiraInvestidor", icon: Briefcase },
+      { title: "Marketplace de Lotes", pageName: "MarketplaceLotes", icon: ShoppingCart },
+      { title: "CRM Investidores", pageName: "CRMInvestidores", icon: UsersRound },
     ],
   },
   leiloeiro: {
     title: "Painel Leiloeiro",
     items: [
-      { title: "📋 Meus Lotes", pageName: "ParceiroLotes" },
-      { title: "🔨 Gestão de Lotes", pageName: "GestaoLotes" },
-      { title: "🎯 Controle de Leilões", pageName: "AuctionControl" },
-      { title: "👥 CRM Investidores", pageName: "CRMInvestidores" },
+      { title: "Meus Lotes", pageName: "ParceiroLotes", icon: ClipboardList },
+      { title: "Gestão de Lotes", pageName: "GestaoLotes", icon: Package },
+      { title: "Controle de Leilões", pageName: "AuctionControl", icon: Target },
+      { title: "CRM Investidores", pageName: "CRMInvestidores", icon: UsersRound },
     ],
   },
   // Contexto especial "admin": usa o adminMenuItems completo (39 itens categorizados)
@@ -103,11 +132,8 @@ const CONTEXT_BY_PAGE = {
   //   Catalog, CatalogProductDetails, Cart, CatalogCheckout, CatalogCheckout2,
   //   MyCatalogOrders  →  sem sidebar (mesmo pra admin)
 
-  // Arrematante (rota /leiloes vai pra Home, AuctionRoom é sala de leilão)
-  Home: "arrematante",
-  AuctionRoom: "arrematante",
-  AuctionDetails: "arrematante",
-  MyWinnings: "arrematante",
+  // Arrematante — Home, AuctionRoom, AuctionDetails e MyWinnings NÃO têm sidebar: são
+  // vitrines/páginas do usuário e o admin as vê igual ao usuário comum (pedido Gabriel 25/07).
   AddFunds: "arrematante",
   WalletHistory: "arrematante",
 
@@ -139,6 +165,9 @@ const CONTEXT_BY_PAGE = {
 // =====================================================================
 export function getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems) {
   const empty = { showSidebar: false, items: [], title: null, context: null };
+
+  // ✅ REATIVADA 26/07/2026 (pedido Gabriel): clicar em Super Admin deve abrir o
+  // Painel de Controle completo com o menu lateral MODO ADMIN.
 
   // ⛔ GATE ABSOLUTO: APENAS admin/super_admin vê sidebar
   if (!currentUser || !currentUser.email) return empty;

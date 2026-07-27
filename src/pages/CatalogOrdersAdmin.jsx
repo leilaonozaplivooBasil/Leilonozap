@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
-import { getCatalogOrders } from '@/functions/getCatalogOrders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw } from 'lucide-react';
+import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CatalogSale = base44.entities.CatalogSale;
@@ -17,6 +17,11 @@ const STATUS_CONFIG = {
   shipped: { label: 'Enviado', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: Truck },
   delivered: { label: 'Entregue', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
   canceled: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
+  // status reais em português (gravados pelo painel do vendedor / updateOrderStatus)
+  preparando: { label: 'Preparando', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Package },
+  saiu_entrega: { label: 'Saiu para entrega', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: Truck },
+  entregue: { label: 'Entregue', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
+  cancelado: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
 };
 
 export default function CatalogOrdersAdmin() {
@@ -70,9 +75,9 @@ export default function CatalogOrdersAdmin() {
 
   const stats = useMemo(() => ({
     total: orders.length,
-    paid: orders.filter(o => o.status === 'paid').length,
-    shipped: orders.filter(o => o.status === 'shipped').length,
-    delivered: orders.filter(o => o.status === 'delivered').length,
+    paid: orders.filter(o => o.status === 'paid' || o.status === 'preparando').length,
+    shipped: orders.filter(o => o.status === 'shipped' || o.status === 'saiu_entrega').length,
+    delivered: orders.filter(o => o.status === 'delivered' || o.status === 'entregue').length,
     pending: orders.filter(o => o.status === 'pending_payment').length,
   }), [orders]);
 
@@ -131,9 +136,9 @@ export default function CatalogOrdersAdmin() {
           {[
             { label: 'Total', value: stats.total, color: 'text-white', filter: 'all' },
             { label: 'Aguardando Pgto', value: stats.pending, color: 'text-yellow-400', filter: 'pending_payment' },
-            { label: '✅ Pagos (Enviar)', value: stats.paid, color: 'text-blue-400', filter: 'paid' },
-            { label: '📦 Enviados', value: stats.shipped, color: 'text-indigo-400', filter: 'shipped' },
-            { label: '🎉 Entregues', value: stats.delivered, color: 'text-green-400', filter: 'delivered' },
+            { label: 'Pagos (Enviar)', value: stats.paid, color: 'text-blue-400', filter: 'paid' },
+            { label: 'Enviados', value: stats.shipped, color: 'text-indigo-400', filter: 'shipped' },
+            { label: 'Entregues', value: stats.delivered, color: 'text-green-400', filter: 'delivered' },
           ].map(card => (
             <Card
               key={card.filter}
@@ -192,10 +197,10 @@ export default function CatalogOrdersAdmin() {
                         <p className="font-semibold text-white truncate">{order.product_title}</p>
                         <p className="text-sm text-gray-400">{order.buyer_name} • {order.buyer_email}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-green-400 font-bold text-sm">R$ {(order.total_amount || order.sale_price || 0).toFixed(2)}</span>
+                          <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
                           <span className="text-gray-500 text-xs">{new Date(order.created_date).toLocaleDateString('pt-BR')}</span>
                           {order.tracking_code && (
-                            <span className="text-indigo-300 text-xs font-mono">📦 {order.tracking_code}</span>
+                            <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
                         </div>
                       </div>
@@ -238,7 +243,7 @@ export default function CatalogOrdersAdmin() {
                 <p className="text-sm text-gray-400">Produto: <span className="text-white font-medium">{selectedOrder.product_title}</span></p>
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
-                <p className="text-sm text-gray-400">Valor: <span className="text-green-400 font-bold">R$ {(selectedOrder.total_amount || selectedOrder.sale_price || 0).toFixed(2)}</span></p>
+                <p className="text-sm text-gray-400">Valor: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
                 {selectedOrder.buyer_phone && (
                   <p className="text-sm text-gray-400">Telefone: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
                 )}
@@ -252,10 +257,10 @@ export default function CatalogOrdersAdmin() {
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700">
                     <SelectItem value="pending_payment">⏳ Aguardando Pagamento</SelectItem>
-                    <SelectItem value="paid">✅ Pago</SelectItem>
-                    <SelectItem value="shipped">📦 Enviado</SelectItem>
-                    <SelectItem value="delivered">🎉 Entregue</SelectItem>
-                    <SelectItem value="canceled">❌ Cancelado</SelectItem>
+                    <SelectItem value="paid"><span className="inline-flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5" />Pago</span></SelectItem>
+                    <SelectItem value="shipped"><span className="inline-flex items-center gap-2"><Truck className="w-3.5 h-3.5" />Enviado</span></SelectItem>
+                    <SelectItem value="delivered"><span className="inline-flex items-center gap-2"><PartyPopper className="w-3.5 h-3.5" />Entregue</span></SelectItem>
+                    <SelectItem value="canceled"><span className="inline-flex items-center gap-2"><XCircle className="w-3.5 h-3.5" />Cancelado</span></SelectItem>
                   </SelectContent>
                 </Select>
               </div>

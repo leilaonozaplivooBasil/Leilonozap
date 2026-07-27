@@ -6,28 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award, Upload } from 'lucide-react';
+import { Loader2, Award, Upload, ClipboardList, UserRound, TrendingUp, Trophy, Landmark, Network, Star, Briefcase } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from "sonner";
+// P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
+import { CAREER_LEVELS } from '@/lib/careerLevels';
+import {
+    listExecutives,
+    readExecutiveOwner,
+    buildExecutiveUpdate,
+    resolveEffectiveExecutive,
+    requiresExecutive,
+} from '@/lib/executiveStructure';
 
 const AppUser = base44.entities.AppUser;
-
-const CAREER_LEVELS = [
-    { id: 'usuario', name: 'Usuário', color: 'bg-gray-500' },
-    { id: 'influenciador', name: 'Influenciador', color: 'bg-pink-500' },
-    { id: 'vendedor', name: 'Vendedor', color: 'bg-blue-500' },
-    { id: 'licenciado_catalogo', name: 'Licenciado', color: 'bg-yellow-500' },
-    { id: 'parceiro', name: 'Parceiro', color: 'bg-teal-500' },
-    { id: 'ponto_retirada', name: 'Ponto de Retirada', color: 'bg-indigo-500' },
-    { id: 'loja_fisica', name: 'Loja Física', color: 'bg-lime-500' },
-    { id: 'distribuidor', name: 'Distribuidor', color: 'bg-sky-500' },
-    { id: 'socio', name: 'Sócio Executivo', color: 'bg-emerald-500' },
-    { id: 'diretor', name: 'Diretor Operacional', color: 'bg-orange-500' },
-    { id: 'diretoria', name: 'Diretoria Executiva', color: 'bg-fuchsia-500' },
-    { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
-    { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500' },
-    { id: 'fundador', name: 'Fundador', color: 'bg-amber-500' }
-];
 
 export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
     const [userData, setUserData] = useState(null);
@@ -40,6 +32,9 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
     const [displayFirstName, setDisplayFirstName] = useState('');
     const [displayLastName, setDisplayLastName] = useState('');
     const [referrerId, setReferrerId] = useState('');
+    const [avatarUrlInput, setAvatarUrlInput] = useState('');
+    const [executiveOwnerId, setExecutiveOwnerId] = useState('');
+    const [executivePinned, setExecutivePinned] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -72,6 +67,9 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                     : (nameParts.length > 1 ? nameParts[nameParts.length - 1] : '')
             );
             setReferrerId(user.referred_by_id || '');
+            const own = readExecutiveOwner(user);
+            setExecutiveOwnerId(own.id || '');
+            setExecutivePinned(own.pinned);
         }
     }, [user]);
 
@@ -88,14 +86,29 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
         setIsUploadingAvatar(true);
         try {
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            if (!file_url) throw new Error('o servidor não devolveu a URL do arquivo');
             setUserData(prev => ({ ...prev, avatar_url: file_url }));
-            toast.success('Foto de perfil atualizada!');
+            toast.success('Foto anexada — salve para confirmar.');
         } catch (error) {
             console.error("Erro ao fazer upload:", error);
-            toast.error('Erro ao fazer upload da foto.');
+            toast.error('Erro ao enviar o arquivo: ' + (error?.message || 'falha'));
         } finally {
             setIsUploadingAvatar(false);
+            e.target.value = '';
         }
+    };
+
+    // Foto por URL: cola o link e aplica direto no perfil
+    const applyAvatarUrl = () => {
+        const url = (avatarUrlInput || '').trim();
+        if (!url) return;
+        if (!/^https?:\/\//i.test(url)) {
+            toast.error('A URL precisa começar com http:// ou https://');
+            return;
+        }
+        setUserData(prev => ({ ...prev, avatar_url: url }));
+        setAvatarUrlInput('');
+        toast.success('Foto por URL aplicada — salve para confirmar.');
     };
 
     const toggleLevel = (levelId) => {
@@ -171,9 +184,11 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 role: userData.role,
                 career_levels: selectedLevels,
                 primary_career_level: primaryLevel,
-                display_first_name: displayFirstName.trim() || '',
-                display_last_name: displayLastName.trim() || '',
-                avatar_url: userData.avatar_url || ''
+                display_first_name: displayFirstName.trim() || null,
+                display_last_name: displayLastName.trim() || null,
+                avatar_url: userData.avatar_url || null,
+                // Carteira do Sócio Executivo (1% sobre a própria estrutura)
+                ...buildExecutiveUpdate(executiveOwnerId || null, { pinned: executivePinned }),
             };
             if (newReferrerId) {
                 updatePayload.referred_by_id = newReferrerId;
@@ -192,12 +207,12 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
 
-            toast.success(`✅ Usuário atualizado!\nCargos: ${levelNames}\n⭐ Principal: ${primaryName}`);
-            onSuccess(confirmed);
+            toast.success(`Usuário atualizado!\nCargos: ${levelNames}\nPrincipal: ${primaryName}`);
+            onSuccess(result.user);
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);
-            toast.error(`❌ Não foi salvo: ${error.message || 'erro desconhecido'}`);
+            toast.error(`Não foi salvo: ${error.message || 'erro desconhecido'}`);
         } finally {
             setIsSaving(false);
         }
@@ -205,100 +220,135 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] bg-gray-800 border-gray-700 text-white max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-5xl bg-gray-800 border-gray-700 text-white max-h-[90vh] md:aspect-video md:max-h-[86vh] p-0 gap-0 flex flex-col overflow-hidden">
+                <DialogHeader className="px-6 pt-5 pb-3 border-b border-gray-700 flex-shrink-0">
                     <DialogTitle className="text-white flex items-center gap-2">
                         <Award className="w-5 h-5 text-green-400" />
-                        Editar Usuário Completo: {user.full_name}
+                        Editar Usuário: {user.full_name}
                     </DialogTitle>
                 </DialogHeader>
-                
-                <div className="grid gap-4 py-4">
+
+                {/* duas colunas no desktop para caber no 16:9 sem virar um corredor */}
+                <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[400px_1fr] overflow-hidden">
+                  {/* ---- coluna esquerda: identidade e vínculo (rola sozinha) ---- */}
+                  <div className="overflow-y-auto px-5 py-4 space-y-5 md:border-r border-gray-700">
                     {/* DADOS BÁSICOS */}
                     <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-green-400">📋 Dados Básicos</h3>
+                        <h3 className="text-sm font-semibold text-green-400 flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" />Dados Básicos</h3>
                         
                         {/* AVATAR UPLOAD */}
-                        <div className="flex items-center gap-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
-                            <div className="w-16 h-16 rounded-full border-2 border-gray-600 overflow-hidden flex-shrink-0 bg-gray-700 flex items-center justify-center">
+                        <div className="p-3 bg-gray-700/30 rounded-lg border border-gray-600 space-y-2.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-full border-2 border-gray-600 overflow-hidden flex-shrink-0 bg-gray-700 flex items-center justify-center">
                                 {userData.avatar_url ? (
                                     <img src={userData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="text-gray-400 text-xs text-center px-1">Sem foto</span>
                                 )}
                             </div>
-                            <div className="flex-1">
-                                <Label htmlFor="avatar-upload" className="text-xs text-gray-400 mb-2 block">
-                                    Foto de Perfil
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                                <Label htmlFor="avatar-upload" className="text-[11px] text-gray-400 block leading-tight">
+                                    Foto de perfil — arquivo ou URL
                                 </Label>
                                 <input
                                     id="avatar-upload"
                                     type="file"
-                                    accept="image/*"
                                     onChange={handleAvatarUpload}
                                     disabled={isUploadingAvatar}
                                     className="hidden"
                                 />
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700"
-                                    onClick={() => document.getElementById('avatar-upload')?.click()}
-                                    disabled={isUploadingAvatar}
-                                >
-                                    <Upload className="w-3 h-3 mr-2" />
-                                    {isUploadingAvatar ? 'Enviando...' : 'Escolher Foto'}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700"
+                                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                                        disabled={isUploadingAvatar}
+                                    >
+                                        {isUploadingAvatar
+                                            ? <><Loader2 className="w-3 h-3 mr-2 animate-spin" />Enviando…</>
+                                            : <><Upload className="w-3 h-3 mr-2" />Escolher arquivo</>}
+                                    </Button>
+                                    {userData.avatar_url && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-red-400 hover:bg-red-500/15"
+                                            onClick={() => setUserData(prev => ({ ...prev, avatar_url: null }))}
+                                        >
+                                            Remover foto
+                                        </Button>
+                                    )}
+                                </div>
+                              </div>
                             </div>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        value={avatarUrlInput}
+                                        onChange={(e) => setAvatarUrlInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyAvatarUrl(); } }}
+                                        placeholder="https://… cole o link da imagem"
+                                        className="bg-gray-700 border-gray-600 text-white h-8 text-xs"
+                                    />
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 border-gray-600 text-gray-300 hover:bg-gray-700 flex-shrink-0"
+                                        onClick={applyAvatarUrl}
+                                        disabled={!avatarUrlInput.trim()}
+                                    >
+                                        Aplicar
+                                    </Button>
+                                </div>
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right text-gray-300">Nome</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="name" className="text-[12px] text-gray-400">Nome</Label>
                             <Input 
                                 id="name" 
                                 value={userData.full_name} 
                                 onChange={(e) => handleInputChange('full_name', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="nickname" className="text-right text-gray-300">Apelido</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="nickname" className="text-[12px] text-gray-400">Apelido</Label>
                             <Input 
                                 id="nickname" 
                                 value={userData.nickname || ''} 
                                 onChange={(e) => handleInputChange('nickname', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                                 placeholder="Nome usado nos lances"
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email" className="text-right text-gray-300">Email</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email" className="text-[12px] text-gray-400">Email</Label>
                             <Input 
                                 id="email" 
                                 type="email" 
                                 value={userData.email} 
                                 onChange={(e) => handleInputChange('email', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="phone" className="text-right text-gray-300">Telefone</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="phone" className="text-[12px] text-gray-400">Telefone</Label>
                             <Input 
                                 id="phone" 
                                 value={userData.phone || ''} 
                                 onChange={(e) => handleInputChange('phone', e.target.value)} 
-                                className="col-span-3 bg-gray-700 border-gray-600 text-white" 
+                                className="bg-gray-700 border-gray-600 text-white" 
                                 placeholder="(00) 00000-0000"
                             />
                         </div>
                         
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="role" className="text-right text-gray-300">Permissão</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="role" className="text-[12px] text-gray-400">Permissão</Label>
                             <Select value={userData.role} onValueChange={(value) => handleInputChange('role', value)}>
-                                <SelectTrigger className="col-span-3 bg-gray-700 border-gray-600 text-white">
+                                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                                     <SelectValue placeholder="Selecione a permissão" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
@@ -312,7 +362,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
                     {/* NOMES PARA PAINEL */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-blue-400">👤 Nomes para Exibição no Painel</h3>
+                        <h3 className="text-sm font-semibold text-blue-400 flex items-center gap-1.5"><UserRound className="w-3.5 h-3.5" />Nomes para Exibição no Painel</h3>
                         
                         <div className="grid grid-cols-2 gap-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
                             <div>
@@ -345,12 +395,86 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         </div>
                     </div>
 
+                    {/* ESTRUTURA DE NEGÓCIO — carteira do Sócio Executivo */}
+                    {(() => {
+                        const executivos = listExecutives(allUsers);
+                        const byId = new Map((Array.isArray(allUsers) ? allUsers : []).map(u => [u.id, u]));
+                        const efetivo = resolveEffectiveExecutive(
+                            { ...user, executive_owner_id: executiveOwnerId || null },
+                            byId
+                        );
+                        const nomeEfetivo = efetivo.executiveId
+                            ? (byId.get(efetivo.executiveId)?.full_name || '—')
+                            : null;
+                        const precisa = requiresExecutive(user);
+                        return (
+                            <div className="space-y-3 pt-4 border-t border-gray-700">
+                                <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-1.5">
+                                    <Briefcase className="w-3.5 h-3.5" />
+                                    Estrutura de Negócio (Sócio Executivo)
+                                </h3>
+                                <p className="text-[11px] text-gray-400 leading-snug">
+                                    Define para quem vai o <strong className="text-purple-300">1% da estrutura</strong>.
+                                    É independente de quem indicou. Em branco, herda de quem está acima na linha.
+                                </p>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-[12px] text-gray-400">Executivo responsável</Label>
+                                    <Select
+                                        value={executiveOwnerId || 'herdar'}
+                                        onValueChange={(v) => setExecutiveOwnerId(v === 'herdar' ? '' : v)}
+                                    >
+                                        <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                            <SelectValue placeholder="Herdar de quem indicou" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
+                                            <SelectItem value="herdar">Herdar de quem indicou (automático)</SelectItem>
+                                            {executivos.map(e => (
+                                                <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <label className="flex items-start gap-2 cursor-pointer">
+                                    <Checkbox
+                                        checked={executivePinned}
+                                        onCheckedChange={(v) => setExecutivePinned(!!v)}
+                                        disabled={!executiveOwnerId}
+                                        className="mt-0.5"
+                                    />
+                                    <span className="text-[11.5px] text-gray-300 leading-snug">
+                                        Fixar esta escolha
+                                        <span className="block text-[10.5px] text-gray-500">
+                                            protege contra mudanças em massa — use quando for negociação específica
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <div className={`rounded-lg border p-2.5 text-[11.5px] ${
+                                    efetivo.executiveId
+                                        ? 'border-purple-500/25 bg-purple-900/12 text-gray-300'
+                                        : 'border-amber-500/40 bg-amber-900/15 text-amber-300'
+                                }`}>
+                                    {efetivo.executiveId ? (
+                                        <>Vale hoje: <strong className="text-purple-300">{nomeEfetivo}</strong>
+                                        <span className="text-gray-500"> ({efetivo.source}{efetivo.from ? ` de ${efetivo.from.full_name}` : ''})</span></>
+                                    ) : precisa ? (
+                                        <>Sem executivo definido — o 1% desta estrutura fica sem destino.</>
+                                    ) : (
+                                        <>Sem executivo (este cargo não exige).</>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* HIERARQUIA / INDICADOR */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Indicador</Label>
-                            <div className="col-span-3">
+                        <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Hierarquia (Sistema de Alavancagem)</h3>
+                        <div className="space-y-1.5">
+                            <Label className="text-[12px] text-gray-400">Indicador</Label>
+                            <div>
                                 <Select value={referrerId} onValueChange={setReferrerId}>
                                     <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                                         <SelectValue placeholder="Selecione o indicador (opcional)" />
@@ -368,53 +492,78 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         </div>
                     </div>
 
+                  </div>
+
+                  {/* ---- coluna direita: plano de carreira (rola sozinha) ---- */}
+                  <div className="overflow-y-auto px-5 py-4">
                     {/* NÍVEIS DE CARREIRA */}
-                    <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-purple-400">🏆 Níveis de Carreira</h3>
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5" />Níveis de Carreira</h3>
                         
                         <p className="text-xs text-gray-400">Selecione um ou mais cargos:</p>
+
+                        {/* Regra de negócio do plano — a equipe trabalha entendendo a função */}
+                        <div className="bg-emerald-900/15 border border-emerald-500/25 rounded-lg p-3 text-[11px] leading-relaxed text-gray-300">
+                            <p className="font-bold text-emerald-300 uppercase tracking-wide text-[10px] mb-1">Distribuição do plano — 30% por venda</p>
+                            <p><span className="text-white font-semibold">20% CADEIA</span> (usuário → distribuidor): venda direta + rebate por nível cadastrado.</p>
+                            <p><span className="text-white font-semibold">10% TOPO</span>: CEO 3% · Livoo Live 2% · Embaixador 1% · Sócio Executivo 1% (sobre a própria estrutura, não é pool) · Conselheiros 1% pool · Fundadores 1% pool · Dir. Operacional 0,5% pool · Dir. Executiva 0,5% pool.</p>
+                            <p className="text-gray-500 mt-1">Todo pagamento se origina desta configuração — cargo certo aqui = comissão certa no ato do pagamento.</p>
+                        </div>
                         
-                        <div className="space-y-2">
-                            {CAREER_LEVELS.slice().reverse().map(level => {
-                                const isSelected = selectedLevels.includes(level.id);
-                                const isPrimary = primaryLevel === level.id;
-                                
-                                return (
-                                    <div key={level.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
-                                        <div className="flex items-center space-x-3">
-                                            <Checkbox
-                                                id={`level-${level.id}`}
-                                                checked={isSelected}
-                                                onCheckedChange={() => toggleLevel(level.id)}
-                                                className="border-gray-600"
-                                            />
-                                            <label htmlFor={`level-${level.id}`} className="flex items-center gap-2 flex-1 cursor-pointer">
-                                                <Badge className={`${level.color} text-white text-xs`}>
-                                                    {level.name}
-                                                </Badge>
-                                            </label>
-                                        </div>
-                                        {isSelected && (
-                                            <div className="flex items-center gap-2">
-                                                <label className="text-xs text-gray-400">Principal</label>
-                                                <input
-                                                    type="radio"
-                                                    name="primary"
-                                                    checked={isPrimary}
-                                                    onChange={() => setPrimaryLevel(level.id)}
-                                                    className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500"
-                                                />
+                        <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
+                            {/* P18/19: 2 categorias — Institucional (TTT, topo) × Rede (plano de carreira) */}
+                            {[
+                                { bloco: 'diretor', label: 'Cargos Institucionais (Diretoria / TTT)', icon: Landmark },
+                                { bloco: 'rede', label: 'Cargos de Rede (Plano de Carreira)', icon: Network },
+                            ].map((grp) => (
+                                <div key={grp.bloco} className="space-y-2">
+                                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-300">{grp.label}</p>
+                                    {CAREER_LEVELS.filter((l) => l.bloco === grp.bloco).slice().reverse().map((level) => {
+                                        const isSelected = selectedLevels.includes(level.id);
+                                        const isPrimary = primaryLevel === level.id;
+                                        return (
+                                            <div key={level.id} className="p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center space-x-3">
+                                                        <Checkbox
+                                                            id={`level-${level.id}`}
+                                                            checked={isSelected}
+                                                            onCheckedChange={() => toggleLevel(level.id)}
+                                                            className="border-gray-600"
+                                                        />
+                                                        <label htmlFor={`level-${level.id}`} className="flex items-center gap-2 flex-1 cursor-pointer">
+                                                            <Badge className={`${level.color} text-white text-xs`}>{level.name}</Badge>
+                                                        </label>
+                                                    </div>
+                                                    {isSelected && (
+                                                        <div className="flex items-center gap-2">
+                                                            <label className="text-xs text-gray-400">Principal</label>
+                                                            <input
+                                                                type="radio"
+                                                                name="primary"
+                                                                checked={isPrimary}
+                                                                onChange={() => setPrimaryLevel(level.id)}
+                                                                className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {level.regra && (
+                                                    <p className="text-[11px] text-gray-400 leading-snug mt-1.5 ml-7">
+                                                        {level.regra}
+                                                    </p>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    })}
+                                </div>
+                            ))}
                         </div>
                         
                         {selectedLevels.length > 0 && (
                             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
                                 <p className="text-sm text-green-400">
-                                    ⭐ Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
+                                    <Star className="w-3.5 h-3.5 inline mr-1" />Função Principal: <strong>{CAREER_LEVELS.find(l => l.id === primaryLevel)?.name}</strong>
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     Esta será a função exibida no Plano de Carreira
@@ -422,9 +571,10 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                             </div>
                         )}
                     </div>
+                  </div>
                 </div>
-                
-                <DialogFooter>
+
+                <DialogFooter className="px-6 py-4 border-t border-gray-700 flex-shrink-0 bg-gray-800">
                     <DialogClose asChild>
                         <Button type="button" variant="secondary" className="bg-gray-700 text-white">
                             Cancelar

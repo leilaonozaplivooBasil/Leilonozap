@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
     Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users,
-    DollarSign, Gavel, ArrowLeft, Trash2, Copy, ChevronDown, ChevronUp,
-    TrendingUp, Calendar, Filter, ArrowUpDown, Pencil
+    DollarSign, Gavel, ArrowLeft, Trash2, Copy,
+    TrendingUp, Calendar, ArrowUpDown, Pencil
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
@@ -338,7 +339,7 @@ export default function GestaoLotes() {
                     await base44.asServiceRole.entities.LanceAutorizado.update(auth.id, {
                         status_autorizacao: 'concluida',
                         data_conclusao: new Date().toISOString(),
-                        observacoes: `Arremate registrado em ${new Date().toLocaleDateString('pt-BR')} por R$ ${valorFinal.toFixed(2)}. Saldo restante liberado: R$ ${saldoRestante.toFixed(2)}`
+                        observacoes: `Arremate registrado em ${new Date().toLocaleDateString('pt-BR')} por R$ ${fmtBR(valorFinal)}. Saldo restante liberado: R$ ${fmtBR(saldoRestante)}`
                     });
                 }
             } catch (saldoErr) {

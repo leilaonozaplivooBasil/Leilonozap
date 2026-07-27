@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import LeiloeiroAvatar from '@/assets/leiloeiro-avatar.webp';
 
 export default function AuctioneerFloat({ phase, message, onComplete }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -88,7 +89,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
               className="relative z-10"
             >
               <img
-                src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/d97d32ed2_image.png"
+                src={LeiloeiroAvatar}
                 alt="Leiloeiro"
                 className="auctioneer-image object-contain drop-shadow-2xl"
                 style={{
@@ -161,9 +162,9 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
       )}
       
       <style>{`
-        /* 📱 MOBILE - Posiciona ACIMA do Comparai */
+        /* 📱 MOBILE - Acima do CompareAQUI de baixo (o botão de cima foi removido 25/07) */
         .auctioneer-position {
-          bottom: 200px;
+          bottom: 150px;
           left: 6px;
         }
         
@@ -185,7 +186,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
         /* 💻 DESKTOP - Posiciona ACIMA da área de lances, entre o card e o input */
         @media (min-width: 1024px) {
           .auctioneer-position {
-            bottom: 140px;
+            bottom: 110px;
             left: 24px;
           }
           

@@ -29,4 +29,5 @@ dist-ssr
 
 .env
 .vercel
+.gstack/
 base44/.app.jsonc

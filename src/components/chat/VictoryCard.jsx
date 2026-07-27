@@ -1,309 +1,279 @@
 import React from 'react';
-import { Crown, Sparkles, Trophy, Zap } from 'lucide-react';
+import { fmtBR } from '@/lib/money';
+import { Crown, Trophy } from 'lucide-react';
 
-export default function VictoryCard({ winner, auction }) {
-  const winnerName = winner?.nickname || winner?.full_name || 'Vencedor';
+const HAMMER_3D = '/martelo-3d.png';
+
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
+
+// Partículas discretas (determinísticas — mesma sequência a cada render,
+// para a animação não "pular" quando o chat re-renderiza)
+const PARTICLES = Array.from({ length: 14 }, (_, i) => ({
+  left: (i * 41 + 13) % 100,
+  delay: ((i * 53) % 30) / 10,
+  duration: 3 + ((i * 29) % 20) / 10,
+  size: 3 + ((i * 13) % 4),
+  color: i % 3 === 0 ? 'rgba(251,191,36,0.75)' : 'rgba(52,211,153,0.7)',
+}));
+
+// 🏆 Card de arremate no chat — liquid glass verde do site (mesma linguagem do
+// WinnerModal). Sequência: martelo bate → "VENDIDO" revela → conteúdo em cascata.
+export default function VictoryCard({ winner, auction, currentUser }) {
+  const hasWinner = Boolean(winner?.id || winner?.nickname || winner?.full_name);
+  const winnerName = winner?.nickname || winner?.full_name || null;
+  const isMe = Boolean(hasWinner && currentUser && winner?.id === currentUser.id);
   const finalPrice = auction?.current_price || auction?.starting_price || 0;
-  
-  // 🆕 GARANTIR QUE SEMPRE TENHA UMA IMAGEM
-  const productImage = (auction?.image_urls && auction.image_urls.length > 0) 
-    ? auction.image_urls[0] 
-    : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
-  
-  const productTitle = auction?.title || 'Produto Arrematado';
-  
-  return (
-    <div className="flex justify-center mb-4 md:mb-6 px-2 md:px-4 animate-victory-entrance">
-      <div className="victory-card-premium relative max-w-2xl w-full rounded-2xl md:rounded-3xl overflow-hidden">
-        
-        {/* 🌈 FUNDO DEGRADÊ NEON */}
-        <div className="absolute inset-0 bg-gradient-to-br from-green-500 via-emerald-400 to-yellow-400 opacity-90"></div>
-        
-        {/* ✨ EFEITO DE BRILHO PULSANTE */}
-        <div className="absolute inset-0 bg-gradient-radial from-white/30 via-transparent to-transparent animate-pulse-glow"></div>
-        
-        {/* 🎆 CONFETE ANIMADO */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="confetti-1"></div>
-          <div className="confetti-2"></div>
-          <div className="confetti-3"></div>
-          <div className="confetti-4"></div>
-          <div className="confetti-5"></div>
-        </div>
 
-        {/* 📦 CONTEÚDO DO CARTÃO */}
-        <div className="relative z-10 p-4 md:p-8 text-center">
-          
-          {/* 🔨 LOGO DO MARTELO */}
-          <div className="flex justify-center mb-3 md:mb-6">
-            <img 
-              src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/50cd0ef98_image.png"
-              alt="Arrematado"
-              className="w-20 h-20 md:w-32 md:h-32 object-contain animate-bounce-celebration drop-shadow-2xl"
+  const productImage = (auction?.image_urls && auction.image_urls.length > 0)
+    ? auction.image_urls[0]
+    : FALLBACK_IMG;
+  const productTitle = auction?.title || 'Produto';
+
+  // ── 🔨 SEM LANCES: encerramento sóbrio ────────────────────────────────────
+  if (!hasWinner) {
+    return (
+      <div className="flex justify-center mb-4 md:mb-6 px-2 md:px-4 vc-entrance">
+        <div className="vc-glass vc-glass--amber relative max-w-xl w-full p-5 md:p-7 text-center">
+          <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="mx-auto mb-3 h-16 w-16 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
+          <h3 className="text-lg md:text-xl font-bold text-white mb-1">Leilão encerrado</h3>
+          <p className="text-amber-200/80 text-sm mb-4">Este lote terminou sem lances.</p>
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3 text-left backdrop-blur-xl">
+            <img
+              src={productImage}
+              alt={productTitle}
+              className="h-14 w-14 rounded-xl object-cover flex-shrink-0"
+              onError={(e) => { e.target.src = FALLBACK_IMG; }}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{productTitle}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Encerrado em <span className="font-semibold text-gray-200">R$ {fmtBR(Number(finalPrice))}</span></p>
+            </div>
+          </div>
+          <VictoryStyles />
+        </div>
+      </div>
+    );
+  }
+
+  // ── 🏆 COM VENCEDOR: liquid glass + sequência de arremate ─────────────────
+  return (
+    <div className="flex justify-center mb-4 md:mb-6 px-2 md:px-4 vc-entrance">
+      <div className="vc-glass relative max-w-xl w-full overflow-hidden">
+
+        {/* brilho varrendo o vidro, bem sutil */}
+        <div className="vc-sheen absolute inset-0 pointer-events-none"></div>
+
+        {/* partículas discretas caindo */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {PARTICLES.map((p, i) => (
+            <span
+              key={i}
+              className="vc-particle"
               style={{
-                filter: 'drop-shadow(0 0 30px rgba(255, 215, 0, 0.8)) drop-shadow(0 10px 40px rgba(0,0,0,0.6))'
+                left: `${p.left}%`,
+                width: p.size,
+                height: p.size,
+                background: p.color,
+                animationDelay: `${1.2 + p.delay}s`,
+                animationDuration: `${p.duration}s`,
               }}
             />
-          </div>
+          ))}
+        </div>
 
-          {/* 🎊 TÍTULO "VENDIDO!" */}
-          <div className="mb-3 md:mb-4">
-            <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-1 md:mb-2 tracking-tight animate-pulse-text"
-                style={{
-                  textShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(34,197,94,0.6), 0 4px 12px rgba(0,0,0,0.4)'
-                }}>
-              🎊 VENDIDO! 🎉
-            </h2>
-            <div className="text-xl md:text-3xl lg:text-4xl font-bold text-yellow-300 animate-scale-pulse"
-                 style={{ 
-                   textShadow: '0 0 25px rgba(253,224,71,0.9), 0 0 50px rgba(234,179,8,0.7), 0 4px 10px rgba(0,0,0,0.5)'
-                 }}>
-              Para {winnerName}!
+        <div className="relative z-10 p-5 md:p-8 text-center">
+
+          {/* 🔨 Martelo — 3 batidas com ondas finas */}
+          <div className="relative mx-auto mb-4 h-16 w-16 md:h-20 md:w-20">
+            <span className="vc-ring" style={{ animationDelay: '0.25s' }}></span>
+            <span className="vc-ring" style={{ animationDelay: '0.65s' }}></span>
+            <span className="vc-ring vc-ring--gold" style={{ animationDelay: '1.05s' }}></span>
+            <div className="grid h-full w-full place-items-center">
+              <img src={HAMMER_3D} alt="Martelo do leiloeiro" className="vc-hammer h-16 w-16 md:h-20 md:w-20 object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)]" />
             </div>
           </div>
 
-          {/* 👤 AVATAR DO VENCEDOR */}
-          <div className="flex justify-center mb-3 md:mb-6">
+          {/* VENDIDO — carimbo limpo */}
+          <div className="mb-4">
+            <h2 className="vc-stamp text-3xl md:text-5xl font-black tracking-[0.08em] text-white">
+              VENDIDO
+            </h2>
+            <div className="vc-underline mx-auto mt-2 h-[3px] w-24 rounded-full"></div>
+            <p className="vc-rise mt-2.5 text-base md:text-lg font-semibold text-emerald-300" style={{ animationDelay: '1.7s' }}>
+              {isMe ? 'para você' : `para ${winnerName}`}
+            </p>
+          </div>
+
+          {/* Avatar do vencedor */}
+          <div className="vc-rise flex justify-center mb-4" style={{ animationDelay: '1.85s' }}>
             {winner?.avatar_url ? (
-              <div 
-                className="w-16 h-16 md:w-24 md:h-24 rounded-full border-4 overflow-hidden animate-scale-pulse"
-                style={{ 
-                  borderColor: '#FFD700',
-                  boxShadow: '0 0 40px rgba(255, 215, 0, 0.9), 0 0 80px rgba(34,197,94,0.5)'
-                }}
-              >
-                <img 
-                  src={winner.avatar_url} 
-                  alt={winnerName}
-                  className="w-full h-full object-cover"
-                />
+              <div className="vc-avatar h-16 w-16 md:h-20 md:w-20 overflow-hidden rounded-full">
+                <img src={winner.avatar_url} alt={winnerName} className="h-full w-full object-cover" />
               </div>
             ) : (
-              <div 
-                className="w-16 h-16 md:w-24 md:h-24 rounded-full border-4 flex items-center justify-center text-2xl md:text-4xl font-black text-white animate-scale-pulse bg-gradient-to-br from-green-600 to-emerald-700"
-                style={{ 
-                  borderColor: '#FFD700',
-                  boxShadow: '0 0 40px rgba(255, 215, 0, 0.9), 0 0 80px rgba(34,197,94,0.5)'
-                }}
-              >
-                {winnerName.charAt(0).toUpperCase()}
+              <div className="vc-avatar grid h-16 w-16 md:h-20 md:w-20 place-items-center rounded-full bg-gradient-to-br from-emerald-700 to-emerald-900 text-2xl md:text-3xl font-black text-white">
+                {(winnerName || 'V').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
 
-          {/* 🏆 MENSAGEM DE PARABENIZAÇÃO */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-xl md:rounded-2xl p-3 md:p-6 mb-3 md:mb-6 border-2 border-yellow-400 shadow-2xl">
-            <div className="flex items-center justify-center gap-2 mb-2 md:mb-3">
-              <Trophy className="w-5 h-5 md:w-7 md:h-7 text-yellow-400 animate-bounce" />
-              <h3 className="text-lg md:text-2xl font-bold text-yellow-300">Parabéns!</h3>
-              <Trophy className="w-5 h-5 md:w-7 md:h-7 text-yellow-400 animate-bounce" />
-            </div>
-            <p className="text-white text-sm md:text-xl leading-relaxed font-semibold">
-              <strong className="text-yellow-300">{winnerName}</strong> arrematou com sucesso:
-            </p>
-          </div>
+          <p className="vc-rise mb-4 text-sm md:text-base text-white/85" style={{ animationDelay: '2.0s' }}>
+            <Trophy className="mr-1.5 inline h-4 w-4 text-amber-300 align-[-2px]" />
+            {isMe ? 'Parabéns! Você arrematou:' : <><strong className="text-white">{winnerName}</strong> arrematou com sucesso:</>}
+          </p>
 
-          {/* 📦 CARD DO PRODUTO */}
-          <div className="bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl p-3 md:p-6 border-2 border-green-400 shadow-2xl">
-            <div className="flex items-start gap-2 md:gap-4">
-              {/* 🆕 IMAGEM RESPONSIVA */}
-              <img 
-                src={productImage} 
+          {/* Produto — vidro claro por cima do vidro verde */}
+          <div className="vc-rise mx-auto max-w-md rounded-2xl border border-white/12 bg-white/[0.07] p-3 md:p-4 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]" style={{ animationDelay: '2.15s' }}>
+            <div className="flex items-center gap-3 md:gap-4">
+              <img
+                src={productImage}
                 alt={productTitle}
-                className="w-20 h-20 md:w-28 md:h-28 object-cover rounded-lg md:rounded-xl flex-shrink-0 shadow-lg"
-                onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
-                }}
+                className="h-16 w-16 md:h-20 md:w-20 flex-shrink-0 rounded-xl object-cover"
+                onError={(e) => { e.target.src = FALLBACK_IMG; }}
               />
-              <div className="text-left flex-1">
-                <h4 className="text-sm md:text-xl font-bold text-gray-900 mb-2 md:mb-3 leading-tight">
-                  {productTitle}
-                </h4>
-                
-                {/* 💰 PREÇO COM RESPONSIVIDADE */}
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg md:rounded-xl p-2 md:p-4 mb-1 md:mb-2 shadow-lg animate-pulse-glow-price">
-                  <div className="flex items-center justify-center gap-1 md:gap-2">
-                    <Sparkles className="w-4 h-4 md:w-6 md:h-6 text-yellow-300 animate-spin-slow" />
-                    <span className="text-2xl md:text-4xl font-black text-white"
-                          style={{
-                            textShadow: '0 0 20px rgba(255,255,255,0.8), 0 2px 8px rgba(0,0,0,0.4)'
-                          }}>
-                      R$ {finalPrice.toFixed(2)}
-                    </span>
-                    <Zap className="w-4 h-4 md:w-6 md:h-6 text-yellow-300 animate-bounce" />
-                  </div>
-                  <p className="text-center text-yellow-100 text-xs md:text-sm font-bold mt-0.5 md:mt-1">
-                    Lance vencedor
-                  </p>
+              <div className="flex-1 text-left min-w-0">
+                <h4 className="mb-2 truncate text-sm md:text-base font-semibold text-white">{productTitle}</h4>
+                <div className="vc-price inline-flex flex-col items-start rounded-xl border border-emerald-300/25 bg-emerald-400/15 px-3.5 py-1.5">
+                  <span className="text-[10px] uppercase tracking-wider text-emerald-200/90">Lance vencedor</span>
+                  <span className="text-xl md:text-2xl font-black text-emerald-300">R$ {fmtBR(Number(finalPrice))}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 👑 RODAPÉ */}
-          <div className="mt-3 md:mt-6 flex items-center justify-center gap-2 text-white text-xs md:text-sm font-bold">
-            <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 animate-bounce" />
-            <span style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}>
-              Leilão NoZap - Você arrematou!
-            </span>
-            <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 animate-bounce" />
+          {/* Rodapé */}
+          <div className="vc-rise mt-4 flex items-center justify-center gap-1.5 text-[11px] md:text-xs font-medium text-white/55" style={{ animationDelay: '2.3s' }}>
+            <Crown className="h-3.5 w-3.5 text-amber-300/80" />
+            <span>{isMe ? 'Leilão NoZap · Você arrematou' : 'Leilão NoZap · Arrematado ao vivo'}</span>
           </div>
         </div>
+
+        <VictoryStyles />
       </div>
-
-      <style>{`
-        @keyframes victory-entrance {
-          0% {
-            opacity: 0;
-            transform: scale(0.7) translateY(60px);
-          }
-          60% {
-            transform: scale(1.08) translateY(-15px);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-
-        @keyframes bounce-celebration {
-          0%, 100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          25% {
-            transform: translateY(-20px) rotate(8deg);
-          }
-          50% {
-            transform: translateY(0) rotate(0deg);
-          }
-          75% {
-            transform: translateY(-12px) rotate(-8deg);
-          }
-        }
-
-        @keyframes scale-pulse {
-          0%, 100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.15);
-          }
-        }
-
-        @keyframes pulse-glow {
-          0%, 100% {
-            opacity: 0.4;
-          }
-          50% {
-            opacity: 0.7;
-          }
-        }
-        
-        @keyframes pulse-text {
-          0%, 100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.05);
-          }
-        }
-        
-        @keyframes pulse-glow-price {
-          0%, 100% {
-            box-shadow: 0 0 20px rgba(34,197,94,0.6), 0 0 40px rgba(16,185,129,0.4);
-          }
-          50% {
-            box-shadow: 0 0 40px rgba(34,197,94,0.9), 0 0 80px rgba(16,185,129,0.6);
-          }
-        }
-        
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        
-        @keyframes confetti-fall {
-          0% {
-            transform: translateY(-100%) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(100vh) rotate(720deg);
-            opacity: 0;
-          }
-        }
-
-        .animate-victory-entrance {
-          animation: victory-entrance 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-
-        .animate-bounce-celebration {
-          animation: bounce-celebration 2s ease-in-out infinite;
-        }
-
-        .animate-scale-pulse {
-          animation: scale-pulse 2s ease-in-out infinite;
-        }
-
-        .animate-pulse-glow {
-          animation: pulse-glow 3s ease-in-out infinite;
-        }
-        
-        .animate-pulse-text {
-          animation: pulse-text 1.5s ease-in-out infinite;
-        }
-        
-        .animate-pulse-glow-price {
-          animation: pulse-glow-price 2s ease-in-out infinite;
-        }
-        
-        .animate-spin-slow {
-          animation: spin-slow 3s linear infinite;
-        }
-        
-        .confetti-1, .confetti-2, .confetti-3, .confetti-4, .confetti-5 {
-          position: absolute;
-          width: 10px;
-          height: 10px;
-          background: #FFD700;
-          animation: confetti-fall 3s linear infinite;
-        }
-        
-        .confetti-1 {
-          left: 10%;
-          animation-delay: 0s;
-          background: #FFD700;
-        }
-        
-        .confetti-2 {
-          left: 30%;
-          animation-delay: 0.5s;
-          background: #22c55e;
-        }
-        
-        .confetti-3 {
-          left: 50%;
-          animation-delay: 1s;
-          background: #3b82f6;
-        }
-        
-        .confetti-4 {
-          left: 70%;
-          animation-delay: 1.5s;
-          background: #f59e0b;
-        }
-        
-        .confetti-5 {
-          left: 90%;
-          animation-delay: 2s;
-          background: #ef4444;
-        }
-        
-        .victory-card-premium {
-          box-shadow: 0 0 60px rgba(34,197,94,0.8), 0 0 120px rgba(255,215,0,0.6), 0 20px 80px rgba(0,0,0,0.4);
-          border: 3px solid rgba(255,215,0,0.8);
-        }
-      `}</style>
     </div>
+  );
+}
+
+function VictoryStyles() {
+  return (
+    <style>{`
+      /* Liquid glass verde — mesma linguagem do WinnerModal */
+      .vc-glass {
+        border-radius: 24px;
+        border: 1px solid rgba(52, 211, 153, 0.32);
+        background: linear-gradient(155deg, rgba(16,185,129,0.22) 0%, rgba(6,78,59,0.5) 45%, rgba(2,44,34,0.72) 100%);
+        backdrop-filter: blur(24px) saturate(1.4);
+        -webkit-backdrop-filter: blur(24px) saturate(1.4);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 34px rgba(16,185,129,0.18), inset 0 1px 0 rgba(255,255,255,0.16);
+      }
+      .vc-glass--amber {
+        border-color: rgba(251, 191, 36, 0.25);
+        background: linear-gradient(155deg, rgba(120,85,15,0.18) 0%, rgba(41,32,10,0.5) 45%, rgba(17,24,39,0.75) 100%);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+      }
+
+      @keyframes vc-entrance {
+        0% { opacity: 0; transform: scale(0.92) translateY(28px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      .vc-entrance { animation: vc-entrance 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+      /* Martelo: 3 batidas secas (sincronizadas com o som) */
+      @keyframes vc-hammer-strike {
+        0%, 8% { transform: rotate(-34deg); }
+        14% { transform: rotate(10deg); }
+        20%, 30% { transform: rotate(-34deg); }
+        36% { transform: rotate(10deg); }
+        42%, 52% { transform: rotate(-38deg); }
+        58% { transform: rotate(12deg); }
+        70%, 100% { transform: rotate(0deg); }
+      }
+      .vc-hammer {
+        transform-origin: 75% 80%;
+        animation: vc-hammer-strike 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      /* Ondas finas a cada batida */
+      @keyframes vc-ring {
+        0% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.6); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); }
+      }
+      .vc-ring {
+        position: absolute; left: 50%; top: 50%;
+        width: 100%; height: 100%; border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 0;
+        animation: vc-ring 0.6s ease-out both;
+        pointer-events: none;
+      }
+      .vc-ring--gold { border-color: rgba(251, 191, 36, 0.6); border-width: 2px; animation-duration: 0.8s; }
+
+      /* "VENDIDO": revela após a batida final, sem exagero */
+      @keyframes vc-stamp {
+        0% { opacity: 0; transform: scale(1.5); letter-spacing: 0.3em; }
+        100% { opacity: 1; transform: scale(1); letter-spacing: 0.08em; }
+      }
+      .vc-stamp {
+        display: inline-block;
+        animation: vc-stamp 0.45s cubic-bezier(0.22, 1, 0.36, 1) 1.15s both;
+        text-shadow: 0 2px 18px rgba(16, 185, 129, 0.45);
+      }
+      @keyframes vc-underline-grow {
+        0% { transform: scaleX(0); }
+        100% { transform: scaleX(1); }
+      }
+      .vc-underline {
+        background: linear-gradient(90deg, transparent, #34d399, transparent);
+        animation: vc-underline-grow 0.5s ease-out 1.5s both;
+      }
+
+      @keyframes vc-rise {
+        0% { opacity: 0; transform: translateY(14px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      .vc-rise { animation: vc-rise 0.4s ease-out both; }
+
+      /* brilho varrendo o vidro */
+      @keyframes vc-sheen {
+        0% { transform: translateX(-130%) skewX(-16deg); }
+        100% { transform: translateX(230%) skewX(-16deg); }
+      }
+      .vc-sheen {
+        background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.09) 50%, transparent 65%);
+        animation: vc-sheen 3.6s ease-in-out 1.6s infinite;
+      }
+
+      .vc-avatar {
+        border: 2px solid rgba(52, 211, 153, 0.7);
+        box-shadow: 0 0 22px rgba(52, 211, 153, 0.35);
+      }
+
+      @keyframes vc-price-breathe {
+        0%, 100% { box-shadow: 0 0 0 rgba(52, 211, 153, 0); }
+        50% { box-shadow: 0 0 18px rgba(52, 211, 153, 0.25); }
+      }
+      .vc-price { animation: vc-price-breathe 2.6s ease-in-out infinite; }
+
+      /* partículas finas caindo dentro do card */
+      @keyframes vc-particle-fall {
+        0% { transform: translateY(-16px); opacity: 0; }
+        10% { opacity: 1; }
+        100% { transform: translateY(115%); opacity: 0; }
+      }
+      .vc-particle {
+        position: absolute; top: 0;
+        border-radius: 999px;
+        animation-name: vc-particle-fall;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .vc-hammer, .vc-stamp, .vc-rise, .vc-sheen, .vc-particle, .vc-ring, .vc-underline, .vc-price, .vc-entrance {
+          animation: none !important; opacity: 1 !important; transform: none !important;
+        }
+      }
+    `}</style>
   );
 }

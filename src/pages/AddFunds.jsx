@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { fmtBR } from '@/lib/money';
+import { useNavigate, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { createPageUrl } from "@/utils";
 
 export default function AddFunds() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [packages, setPackages] = useState([]);
   const [selectedAmount, setSelectedAmount] = useState(null);
@@ -94,10 +96,11 @@ export default function AddFunds() {
     setProcessing(true);
     // Redireciona para AuctionCheckoutModern com flag de carteira digital
     navigate(createPageUrl("AuctionCheckoutModern"), { 
-      state: { 
+      state: {
         amount: selectedAmount,
-        depositType: 'digital_wallet' // FLAG PARA IDENTIFICAR DEPÓSITO DE CARTEIRA DIGITAL
-      } 
+        depositType: 'digital_wallet', // FLAG PARA IDENTIFICAR DEPÓSITO DE CARTEIRA DIGITAL
+        returnTo: location.state?.returnTo || null // volta ao leilão/loja de origem após confirmação
+      }
     });
   };
 
@@ -215,7 +218,7 @@ export default function AddFunds() {
                           {hasBonus && (
                             <div className="mt-4 pt-4 border-t border-white/10">
                               <p className={`text-xs font-semibold ${isSelected ? "text-yellow-300" : "text-yellow-400/80"}`}>
-                                🎁 Ganhe R$ {(pkg.amount * (pkg.bonus_percentage / 100)).toFixed(2)}
+                                🎁 Ganhe R$ {fmtBR((pkg.amount * (pkg.bonus_percentage / 100)))}
                               </p>
                             </div>
                           )}
@@ -286,7 +289,7 @@ export default function AddFunds() {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between p-2.5 backdrop-blur-sm bg-black/20 rounded-lg">
                             <span className="text-gray-300 text-xs font-medium">Valor do depósito:</span>
-                            <span className="text-white font-bold text-base">R$ {selectedAmount.toFixed(2)}</span>
+                            <span className="text-white font-bold text-base">R$ {fmtBR(selectedAmount)}</span>
                           </div>
                           
                           {(() => {
@@ -303,7 +306,7 @@ export default function AddFunds() {
                                       <Gift className="w-3.5 h-3.5" />
                                       Bônus ({bonus}%)
                                     </span>
-                                    <span className="text-yellow-300 font-bold text-base">+ R$ {bonusAmount.toFixed(2)}</span>
+                                    <span className="text-yellow-300 font-bold text-base">+ R$ {fmtBR(bonusAmount)}</span>
                                   </div>
                                 )}
                                 
@@ -312,7 +315,7 @@ export default function AddFunds() {
                                   <div className="relative p-3 backdrop-blur-sm bg-black/30 rounded-lg border border-green-400/30 flex items-center justify-between">
                                     <span className="text-white font-bold text-xs">Total:</span>
                                     <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text font-bold text-lg">
-                                      R$ {totalAmount.toFixed(2)}
+                                      R$ {fmtBR(totalAmount)}
                                     </span>
                                   </div>
                                 </div>
@@ -407,7 +410,7 @@ export default function AddFunds() {
                       <div key={tx.id} className="flex items-center justify-between p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-purple-400/30 transition-all">
                         <div>
                           <p className="text-white text-base font-bold">
-                            R$ {tx.amount.toFixed(2)}
+                            R$ {fmtBR(tx.amount)}
                           </p>
                           <p className="text-gray-400 text-xs mt-1">
                             {new Date(tx.created_date).toLocaleDateString('pt-BR')}

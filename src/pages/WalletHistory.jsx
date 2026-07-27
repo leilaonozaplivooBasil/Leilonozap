@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -195,14 +196,14 @@ export default function WalletHistory() {
                   <p className="text-green-300/50 text-xs font-light uppercase tracking-wider">Entradas</p>
                   <div className="flex items-center gap-2">
                     <ArrowUpRight className="w-5 h-5 text-green-400" />
-                    <p className="text-2xl font-bold text-green-400">R$ {totalDeposited.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-400">R$ {fmtBR(totalDeposited)}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-green-300/50 text-xs font-light uppercase tracking-wider">Saídas</p>
                   <div className="flex items-center gap-2">
                     <ArrowDownLeft className="w-5 h-5 text-red-400" />
-                    <p className="text-2xl font-bold text-red-400">R$ {totalUsed.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-red-400">R$ {fmtBR(totalUsed)}</p>
                   </div>
                 </div>
               </div>
@@ -315,7 +316,7 @@ export default function WalletHistory() {
                               </div>
                               <div className="text-right">
                                 <p className={`text-lg font-bold ${getTransactionColor(transaction.direction)}`}>
-                                  {transaction.direction === "credit" ? "+" : "-"}R$ {transaction.amount.toFixed(2)}
+                                  {transaction.direction === "credit" ? "+" : "-"}R$ {fmtBR(transaction.amount)}
                                 </p>
                                 {getStatusBadge(transaction.status)}
                               </div>
@@ -380,7 +381,7 @@ export default function WalletHistory() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-green-400">+R$ {transaction.amount.toFixed(2)}</p>
+                                <p className="text-lg font-bold text-green-400">+R$ {fmtBR(transaction.amount)}</p>
                                 {getStatusBadge(transaction.status)}
                               </div>
                             </div>
@@ -441,7 +442,7 @@ export default function WalletHistory() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-red-400">-R$ {transaction.amount.toFixed(2)}</p>
+                                <p className="text-lg font-bold text-red-400">-R$ {fmtBR(transaction.amount)}</p>
                                 {getStatusBadge(transaction.status)}
                               </div>
                             </div>
@@ -502,7 +503,7 @@ export default function WalletHistory() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-blue-400">+R$ {transaction.amount.toFixed(2)}</p>
+                                <p className="text-lg font-bold text-blue-400">+R$ {fmtBR(transaction.amount)}</p>
                                 {getStatusBadge(transaction.status)}
                               </div>
                             </div>

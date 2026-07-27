@@ -1,6 +1,7 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 
-const LOGO_URL = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+const LOGO_URL = "/brand/icon-3d.webp";
 
 export default function DiagonalTemplate({ displayTitle, displayImage, displayBadge, displayCta, whatsappNumber, price, marketPrice, discount, accent, template, renderProductImage, logoUrl }) {
   const WhatsAppBadge = () => whatsappNumber ? (
@@ -58,12 +59,12 @@ export default function DiagonalTemplate({ displayTitle, displayImage, displayBa
         <div>
           <p style={{ color: "white", fontSize: 17, fontWeight: 800, lineHeight: 1.2, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            {discount > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+            {discount > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, textDecoration: "line-through" }}>R$ {fmtBR(marketPrice)}</span>}
             <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 16, fontWeight: 600 }}>R$</span>
             <span style={{ color: "white", fontSize: 44, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
             <span style={{ color: accent, fontSize: 24, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
           </div>
-          {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 4 }}>ou 12x de R$ {(price / 12).toFixed(2)} sem juros</p>}
+          {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 4 }}>ou 12x de R$ {fmtBR((price / 12))} sem juros</p>}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

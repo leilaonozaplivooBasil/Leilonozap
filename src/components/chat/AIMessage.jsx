@@ -1,8 +1,9 @@
 import React from "react";
 import { Bot, Zap, Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
+import LeiloeiroAvatar from "@/assets/leiloeiro-avatar.webp";
 
-export default function AIMessage({ message, winner, auction }) {
+export default function AIMessage({ message, winner, auction, currentUser }) {
   const formatTime = (timestamp) => {
     return new Date(timestamp || message.created_date).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
@@ -41,7 +42,7 @@ export default function AIMessage({ message, winner, auction }) {
     }
     
     if (message.message_type === 'ai_narration') {
-      return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg';
+      return 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-900/40 border border-white/15';
     }
     
     return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
@@ -53,17 +54,17 @@ export default function AIMessage({ message, winner, auction }) {
       const phase = message.countdown_phase || 1;
       return (
         <div className="flex items-center gap-3 py-2">
-          <img 
-            src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
+          <img
+            src={LeiloeiroAvatar}
             alt="Leiloeiro"
-            className="w-16 h-16 animate-swing"
+            className="w-16 h-16 object-contain animate-swing"
           />
           <div className="flex-1">
             <div className="text-2xl font-black tracking-wide mb-1">
               {content}
             </div>
-            <div className="text-sm opacity-90 font-semibold">
-              {phase === 3 ? '⚡ ÚLTIMA CHANCE!' : '⏰ Lance agora!'}
+            <div className="text-sm opacity-90 font-semibold uppercase tracking-wide">
+              {phase === 3 ? 'Última chamada' : 'Lance agora'}
             </div>
           </div>
         </div>
@@ -76,34 +77,22 @@ export default function AIMessage({ message, winner, auction }) {
   // 🏆 SE FOR MENSAGEM DE VITÓRIA, SEMPRE RENDERIZA O CARTÃO
   // 🆕 MESMO SE winner OU auction forem null! (usa fallback)
   if (message.message_type === 'winner_announcement') {
-    console.log('🎯 [AIMESSAGE] Renderizando VictoryCard');
-    console.log('🎯 [AIMESSAGE] Winner:', winner);
-    console.log('🎯 [AIMESSAGE] Auction:', auction);
-    
     // 🆕 SE NÃO TEM DADOS, TENTA PARSEAR DO message.content
     let finalWinner = winner;
     let finalAuction = auction;
-    
+
     if (!finalWinner || !finalAuction) {
-      console.log('⚠️ [AIMESSAGE] Dados incompletos, tentando parsear do content...');
       try {
         const parsed = JSON.parse(message.content);
-        if (!finalWinner && parsed.winner) {
-          finalWinner = parsed.winner;
-          console.log('✅ [AIMESSAGE] Winner recuperado do content!');
-        }
-        if (!finalAuction && parsed.auction) {
-          finalAuction = parsed.auction;
-          console.log('✅ [AIMESSAGE] Auction recuperado do content!');
-        }
+        if (!finalWinner && parsed.winner) finalWinner = parsed.winner;
+        if (!finalAuction && parsed.auction) finalAuction = parsed.auction;
       } catch (e) {
-        console.error('❌ [AIMESSAGE] Erro ao parsear content:', e);
+        console.warn('⚠️ [AIMESSAGE] Erro ao parsear content:', e.message);
       }
     }
-    
+
     // 🆕 SE AINDA NÃO TEM AUCTION, USA UM PLACEHOLDER
     if (!finalAuction) {
-      console.warn('⚠️ [AIMESSAGE] Auction ainda null, usando placeholder');
       finalAuction = {
         title: 'Produto Arrematado',
         current_price: 0,
@@ -111,8 +100,8 @@ export default function AIMessage({ message, winner, auction }) {
         image_urls: []
       };
     }
-    
-    return <VictoryCard winner={finalWinner} auction={finalAuction} />;
+
+    return <VictoryCard winner={finalWinner} auction={finalAuction} currentUser={currentUser} />;
   }
 
   const messageStyle = getMessageStyle();

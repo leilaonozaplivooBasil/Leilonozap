@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { X, UploadCloud, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import * as XLSX from 'xlsx';
 

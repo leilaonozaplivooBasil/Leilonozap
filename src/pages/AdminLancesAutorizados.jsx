@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { fmtBR } from '@/lib/money';
 import { adminDataProxy } from '@/functions/adminDataProxy';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Download, Filter, AlertCircle } from 'lucide-react';
+import { Eye, Download, Filter } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 export default function AdminLancesAutorizados() {
@@ -165,8 +165,8 @@ export default function AdminLancesAutorizados() {
                             {auth.modelo === 'individual' ? 'A' : 'B'}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-right text-white font-semibold">R$ {(auth.valor_maximo_autorizado || 0).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-right text-emerald-400 font-semibold">R$ {(auth.deposito_confirmado || 0).toFixed(2)}</td>
+                        <td className="py-3 px-4 text-right text-white font-semibold">R$ {fmtBR((auth.valor_maximo_autorizado || 0))}</td>
+                        <td className="py-3 px-4 text-right text-emerald-400 font-semibold">R$ {fmtBR((auth.deposito_confirmado || 0))}</td>
                         <td className="py-3 px-4 text-center">
                           <Badge className={
                             auth.status_autorizacao === 'confirmada' ? 'bg-blue-900 text-blue-300' :
@@ -227,11 +227,11 @@ export default function AdminLancesAutorizados() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-slate-400 uppercase">Valor Máximo</p>
-                    <p className="text-white font-bold text-lg">R$ {(selectedAuthorization.valor_maximo_autorizado || 0).toFixed(2)}</p>
+                    <p className="text-white font-bold text-lg">R$ {fmtBR((selectedAuthorization.valor_maximo_autorizado || 0))}</p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-400 uppercase">Depósito</p>
-                    <p className="text-emerald-400 font-bold text-lg">R$ {(selectedAuthorization.deposito_confirmado || 0).toFixed(2)}</p>
+                    <p className="text-emerald-400 font-bold text-lg">R$ {fmtBR((selectedAuthorization.deposito_confirmado || 0))}</p>
                   </div>
                 </div>
                 <div>

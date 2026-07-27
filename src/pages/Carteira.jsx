@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Wallet, ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -78,21 +79,25 @@ export default function Carteira() {
       <div className="max-w-3xl mx-auto space-y-5">
         <div className="flex items-center gap-2"><Wallet className="w-6 h-6 text-green-400" /><h1 className="text-2xl font-black">Minha Carteira</h1></div>
 
-        {/* Saldo */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Saldo — commission_balance é a fonte de verdade (sacável e usável na loja);
+            saldo_a_liberar são vendas em hold (liberam após confirmação do comprador / prazo). */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Disponível</div>
-            <div className="text-2xl font-black text-green-400">{money(w?.saldo_disponivel)}</div>
+            <div className="text-xs text-gray-400">Disponível (sacar / usar na loja)</div>
+            <div className="text-2xl font-black text-green-400 tabular-nums">{money(w?.commission_balance)}</div>
           </div>
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Em saque</div>
-            <div className="text-2xl font-black text-yellow-400">{money(w?.saldo_alocado)}</div>
-          </div>
-          <div className="bg-gray-700/40 border border-gray-600 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Comissões (total)</div>
-            <div className="text-2xl font-black">{money(w?.commission_balance)}</div>
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+            <div className="text-xs text-gray-400">A liberar (suas vendas)</div>
+            <div className="text-2xl font-black text-blue-300 tabular-nums">{money(w?.saldo_a_liberar)}</div>
+            <div className="text-[11px] text-gray-400 mt-1">Libera quando o comprador confirma ou no prazo (PIX 7d · cartão 14d)</div>
           </div>
         </div>
+        {Number(w?.saldo_alocado) > 0 && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+            <div className="text-xs text-gray-400">Em saque (aguardando aprovação)</div>
+            <div className="text-2xl font-black text-yellow-400 tabular-nums">{money(w?.saldo_alocado)}</div>
+          </div>
+        )}
 
         {/* KYC */}
         <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
@@ -144,27 +149,24 @@ export default function Carteira() {
         </div>
 
         {/* Extrato */}
-        <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
-          <h2 className="font-bold mb-3">Extrato</h2>
-          {(!w?.commissions?.length && !w?.withdrawals?.length) ? (
-            <p className="text-sm text-gray-400">Nenhuma movimentação ainda.</p>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+        {/* SAQUES */}
+        {(w?.withdrawals?.length > 0) && (
+          <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+            <h2 className="font-bold mb-3">Saques</h2>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {(w?.withdrawals || []).map((s, i) => (
                 <div key={'w' + i} className="flex items-center justify-between text-sm border-b border-gray-700/50 pb-2">
                   <span className="text-gray-300">Saque · <span className={s.status === 'paid' ? 'text-green-400' : s.status === 'rejected' ? 'text-red-400' : 'text-yellow-400'}>{s.status === 'paid' ? 'pago' : s.status === 'rejected' ? 'rejeitado' : 'pendente'}</span></span>
                   <span className="text-red-300 font-semibold">- {money(s.valor)}</span>
                 </div>
               ))}
-              {(w?.commissions || []).map((c, i) => (
-                <div key={'c' + i} className="flex items-center justify-between text-sm border-b border-gray-700/50 pb-2">
-                  <span className="text-gray-300">{c.role_in_sale === 'bonus_adesao' ? 'Bônus de adesão' : c.role_in_sale === 'venda_direta' ? 'Venda direta' : 'Override'} ({c.pct}%)</span>
-                  <span className="text-green-400 font-semibold">+ {money(c.amount)}</span>
-                </div>
-              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* 📄 EXTRATO DE COMISSÕES — transparência: data, produto, quem vendeu, cargo, % e ganho.
+            Antes aqui só aparecia "Override (3%)", sem dizer de qual venda veio. */}
+        <ExtratoComissoes user={user} />
       </div>
     </div>
   );

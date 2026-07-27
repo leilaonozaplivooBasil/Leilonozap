@@ -1,12 +1,38 @@
 // mpWebhook — recebe notificação do Mercado Pago, CONFIRMA o pagamento buscando-o na API do MP
 // (não confia no corpo), marca a venda como paga e PAGA as comissões pela cadeia (telescópio, teto 20%).
 // Idempotente: se a venda já está paga, não repaga.
+import { computeTopPool } from '../_lib/topPool.js';
+import { bestSellingLevel, overridePct } from '../_lib/networkChain.js';
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
+import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const round2 = (n) => Math.round(n * 100) / 100;
-const oid = () => crypto.randomBytes(12).toString('hex');
+
+// Depósito na carteira: credita saldo de forma atômica (CAS). NÃO paga comissão nem cumpre pedido — é só recarga.
+// Chamado só depois do flip atômico (execução única por venda). A coluna depende da carteira-destino:
+//   wallet_deposit -> saldo_disponivel (carteira digital, usada em arremate/lance)
+//   commission_deposit -> commission_balance (carteira de comissões, usada no 'Pagar com saldo' da loja)
+async function creditWalletDeposit(sale) {
+  const col = sale.kind === 'commission_deposit' ? 'commission_balance' : 'saldo_disponivel';
+  const amount = round2(Number(sale.total_amount || sale.sale_price) || 0);
+  if (!sale.buyer_id || amount <= 0) return { credited: 0, skipped: true };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const rows = await (await sb(`app_users?select=${col}&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+    const user = Array.isArray(rows) ? rows[0] : null;
+    if (!user) return { credited: 0, error: 'buyer_notfound' };
+    const current = round2(Number(user[col]) || 0);
+    const novo = round2(current + amount);
+    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&${col}=eq.${current}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ [col]: novo }),
+    });
+    const updated = await patch.json().catch(() => []);
+    if (Array.isArray(updated) && updated.length) return { credited: amount, wallet: col, new_balance: novo };
+  }
+  return { credited: 0, error: 'cas_conflict' };
+}
 
 // Adesão de cargo: ativa o nível, gera pedido de produto (valor volta em produto) e paga 20% pro vendedor
 async function activateAdesao(sale) {
@@ -60,7 +86,9 @@ async function payCommissions(sale) {
   const cap = 0.20 * value; let running = 0; let total = 0;
   for (let i = 0; i < chain.length && running < cap - 0.001; i++) {
     const { child, anc } = chain[i];
-    const pct = i === 0 ? (levels[anc.primary_career_level]?.venda_direta_pct || 0) : ((ov[anc.primary_career_level] || {})[child.primary_career_level] || 0);
+    // usa o MELHOR cargo da pessoa, não só o principal — quem tem cargo
+    // institucional como principal (Livoo Live, Embaixador…) recebia 0% aqui.
+    const pct = i === 0 ? bestSellingLevel(anc, levels).pct : overridePct(ov, anc, child);
     let amount = round2(value * pct / 100);
     if (running + amount > cap) amount = round2(cap - running);
     if (amount > 0.001) {
@@ -72,6 +100,27 @@ async function payCommissions(sale) {
       running += amount; total += amount;
     }
   }
+
+  // ---- TOPO DO PLANO (10%) — governança ----
+  // A cadeia acima cobre os 20%. Este bloco paga os cargos institucionais (CEO,
+  // Livoo Live, Embaixador, Conselheiros, Fundadores, Diretorias) e o 1% do Sócio
+  // Executivo sobre a própria estrutura. Antes de 26/07/2026 essa fatia nunca era
+  // distribuída — o dinheiro simplesmente não saía para eles.
+  try {
+    const todos = await (await sb('app_users?select=id,full_name,career_levels,primary_career_level,referred_by_id,commission_balance,licenciado_context,active&limit=5000')).json();
+    const lista = Array.isArray(todos) ? todos : [];
+    const ancora = sale.seller_id || (lista.find((u) => u.id === sale.buyer_id)?.referred_by_id ?? null);
+    const linhasTopo = computeTopPool(value, lista, ancora);
+    for (const l of linhasTopo) {
+      await sb('commission_ledger', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ sale_id: sale.id, ...l }) });
+      const alvo = lista.find((u) => u.id === l.beneficiary_id);
+      await sb(`app_users?id=eq.${l.beneficiary_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: round2((Number(alvo?.commission_balance) || 0) + l.amount) }) });
+      total += l.amount;
+    }
+  } catch (e) {
+    console.error('[comissao] topo do plano falhou:', e?.message || e);
+  }
+
   return round2(total);
 }
 
@@ -95,15 +144,57 @@ export default async function handler(req, res) {
     const rows = await (await sb(`catalog_sales?select=*&or=(id.eq.${saleId},mp_payment_id.eq.${pay.id})&limit=1`)).json();
     const sale = Array.isArray(rows) ? rows[0] : null;
     if (!sale) return res.status(200).json({ ok: true, sale_notfound: true });
-    if (sale.status === 'paid') return res.status(200).json({ ok: true, already_paid: true }); // idempotência
+    if (sale.status === 'paid') return res.status(200).json({ ok: true, already_paid: true }); // idempotência rápida
 
-    await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }) });
+    // 🔒 FLIP ATÔMICO: o webhook do MP dispara VÁRIAS vezes. A checagem acima (ler-status →
+    // marcar-paid) NÃO é atômica: dois webhooks liam 'pending' ao mesmo tempo, os dois passavam
+    // e a comissão era paga EM DOBRO (aconteceu numa venda real). Aqui só flipa quem pegar a linha
+    // AINDA em pending_payment; os outros recebem 0 linhas e param. Só quem flipou paga a comissão.
+    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=eq.pending_payment`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
+    });
+    const flipped = await flip.json().catch(() => []);
+    if (!Array.isArray(flipped) || !flipped.length) {
+      return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+    }
 
+    if (sale.kind === 'passaporte') {
+      // Passaporte de Lances: credita o valor na carteira (saldo_disponivel) E cria o passaporte
+      // (20 acessos + validade 90d saldo / 30d acessos). Sem comissão nem fulfillment.
+      const r = await creditWalletDeposit({ ...sale, kind: 'wallet_deposit' });
+      try {
+        const now = Date.now();
+        await sb('passaportes', {
+          method: 'POST', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            user_id: sale.buyer_id, sale_id: sale.id, valor: round2(Number(sale.total_amount) || 0),
+            acessos_total: 20, acessos_restantes: 20,
+            validade_saldo: new Date(now + 90 * 86400000).toISOString(),
+            validade_acessos: new Date(now + 30 * 86400000).toISOString(),
+            status: 'ativo',
+          }),
+        });
+      } catch (_) { /* crédito já entrou; registro do passaporte é secundário */ }
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r });
+    }
+    if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
+      // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
+      const r = await creditWalletDeposit(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r });
+    }
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
-    const commission = await payCommissions(sale);
+    if (sale.kind === 'loja') {
+      const r = await fulfillStoreOrder(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
+    // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não
+    // pagava NADA ao bloco diretor). fulfillStoreOrder aplica a mesma regra de 26%.
+    const rr = await fulfillStoreOrder(sale);
+    const commission = rr?.commission ?? 0;
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
     return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission });
   } catch (e) {

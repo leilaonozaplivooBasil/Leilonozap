@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     if (!w) return res.status(200).json({ success: false, error: 'Pedido não encontrado' });
     if (w.status !== 'pending') return res.status(200).json({ success: false, error: 'Pedido já processado' });
     const valor = round2(Number(w.valor) || 0);
-    const u = (await (await sb(`app_users?select=saldo_alocado,saldo_disponivel&id=eq.${w.user_id}&limit=1`)).json())[0];
+    const u = (await (await sb(`app_users?select=saldo_alocado,commission_balance&id=eq.${w.user_id}&limit=1`)).json())[0];
     const alocado = round2(Number(u?.saldo_alocado) || 0);
 
     if (decision === 'approve') {
@@ -32,9 +32,9 @@ export default async function handler(req, res) {
       await sb(`app_users?id=eq.${w.user_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ saldo_alocado: round2(Math.max(0, alocado - valor)) }) });
       return res.status(200).json({ success: true, status: 'paid' });
     } else {
-      // rejeitado: devolve o reservado pro disponível
+      // rejeitado: devolve o reservado pro commission_balance
       await sb(`withdrawal_requests?id=eq.${withdrawal_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'rejected', reviewed_at: new Date().toISOString(), reject_reason: reason || 'Reprovado' }) });
-      await sb(`app_users?id=eq.${w.user_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ saldo_alocado: round2(Math.max(0, alocado - valor)), saldo_disponivel: round2((Number(u?.saldo_disponivel) || 0) + valor) }) });
+      await sb(`app_users?id=eq.${w.user_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ saldo_alocado: round2(Math.max(0, alocado - valor)), commission_balance: round2((Number(u?.commission_balance) || 0) + valor) }) });
       return res.status(200).json({ success: true, status: 'rejected' });
     }
   } catch (e) { return res.status(200).json({ success: false, error: String(e?.message || e) }); }

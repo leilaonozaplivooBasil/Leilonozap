@@ -1,18 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ShoppingCart, Copy, CheckCircle } from 'lucide-react';
+import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
+import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
+import { getReferral } from '@/lib/referral';
 
 const Product = base44.entities.Product;
 const Auction = base44.entities.Auction;
 const CatalogSale = base44.entities.CatalogSale;
 
 export default function CatalogCheckout2() {
+    const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    // Endereço do CD (galpão do distribuidor) — vem do cadastro, não fica chumbado no código
+    const [pickupAddress, setPickupAddress] = useState(DEFAULT_PICKUP_ADDRESS);
+    useEffect(() => { fetchPickupAddress().then(setPickupAddress); }, []);
     const [currentUser, setCurrentUser] = useState(null);
     const [phone, setPhone] = useState('');
     const [cpf, setCpf] = useState('');
@@ -121,11 +129,54 @@ export default function CatalogCheckout2() {
         setIsProcessing(true);
         toast.loading('Processando compra...', { id: 'checkout-loading' });
 
+        // 🚀 FLUXO MODERNO (igual ao Cart): createMPPix cria a venda + PIX no servidor
+        // (valor validado no banco, anti-fraude; webhook confirma, credita comissão e baixa estoque)
+        try {
+            const savedUserJSON = localStorage.getItem('currentUser');
+            const savedUser = JSON.parse(savedUserJSON);
+            const referralCode = getReferral();
+
+            const mp = await base44.functions.invoke('createMPPix', {
+                items: [{ product_id: product.id, quantity: 1 }],
+                buyer: { id: savedUser.id, name: firstName.trim(), email: email.trim(), cpf: cpf.replace(/\D/g, '') },
+                delivery_type: deliveryType,
+                address: { street: addressStreet, number: addressNumber, complement: addressComplement, neighborhood: addressNeighborhood, city: addressCity, state: addressState, zip: addressZip },
+                ref_code: referralCode || '',
+            });
+            const mpData = mp?.data || mp;
+            setIsProcessing(false);
+            toast.dismiss('checkout-loading');
+
+            if (!mpData?.success) {
+                toast.error('Erro ao gerar PIX: ' + (mpData?.error || 'tente novamente'));
+                return;
+            }
+
+            setCurrentSaleId(mpData.sale_id);
+            setPixData({
+                billing_type: 'PIX',
+                payment_id: mpData.payment_id,
+                pix_qr_code: mpData.qr_code_base64 ? `data:image/png;base64,${mpData.qr_code_base64}` : null,
+                pix_payload: mpData.pix_code,
+                sale_id: mpData.sale_id,
+                ticket_url: mpData.ticket_url,
+            });
+            toast.success('✅ PIX gerado!');
+            return;
+        } catch (error) {
+            console.error('❌ Erro ao gerar PIX (createMPPix):', error);
+            setIsProcessing(false);
+            toast.dismiss('checkout-loading');
+            toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
+            return;
+        }
+
+         
         let sale = null;
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
             const savedUser = JSON.parse(savedUserJSON);
-            const referralCode = sessionStorage.getItem('referralCode');
+            const referralCode = getReferral();
 
             // 🔒 PASSO 1: Resolver licensee_id (ID real, não string)
             let licenseeId = null;
@@ -534,7 +585,7 @@ export default function CatalogCheckout2() {
                                         onChange={(e) => setDeliveryType(e.target.value)}
                                         className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
                                     >
-                                        <option value="delivery">🏠 Entrega em domicílio</option>
+                                        <option value="delivery">Entrega em domicílio</option>
                                         <option value="pickup">🏪 Retirada na Loja</option>
                                     </select>
                                 </div>
@@ -553,7 +604,7 @@ export default function CatalogCheckout2() {
                                             <div className="flex-1">
                                                 <p className="text-gray-300 font-medium mb-1">Endereço para retirada:</p>
                                                 <p className="text-white text-sm leading-relaxed">
-                                                    Estrada do Pontal, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ, 22790877
+                                                    {pickupAddress}
                                                 </p>
                                             </div>
                                         </div>
@@ -700,7 +751,7 @@ export default function CatalogCheckout2() {
                                     <div className="flex-1">
                                         <h3 className="text-white font-medium text-sm mb-1 line-clamp-2">{product.description}</h3>
                                         <p className="text-green-400 text-lg font-bold">
-                                            R$ {product.price_catalog?.toFixed(2)}
+                                            R$ {fmtBR(product.price_catalog)}
                                         </p>
                                     </div>
                                 </div>
@@ -710,7 +761,7 @@ export default function CatalogCheckout2() {
                             <div className="space-y-3 pt-4 border-t border-gray-700">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Total de itens (1 itens)</span>
-                                    <span className="text-white font-semibold">R$ {product.price_catalog?.toFixed(2)}</span>
+                                    <span className="text-white font-semibold">R$ {fmtBR(product.price_catalog)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Valor do frete</span>
@@ -718,7 +769,7 @@ export default function CatalogCheckout2() {
                                 </div>
                                 <div className="flex justify-between pt-3 border-t border-gray-700">
                                     <span className="text-white font-bold text-base">Valor total</span>
-                                    <span className="text-green-400 font-bold text-xl">R$ {product.price_catalog?.toFixed(2)}</span>
+                                    <span className="text-green-400 font-bold text-xl">R$ {fmtBR(product.price_catalog)}</span>
                                 </div>
                             </div>
 
@@ -759,7 +810,7 @@ export default function CatalogCheckout2() {
                                     
                                     {/* PIX selecionado */}
                                     <div className="p-3 rounded-lg border-2 border-green-500 bg-green-500/10 mb-4">
-                                        <p className="text-white font-semibold">💚 PIX</p>
+                                        <p className="text-white font-semibold flex items-center gap-2"><QrCode className="w-4 h-4 text-green-400" /> PIX</p>
                                         <p className="text-gray-400 text-xs">Aprovação imediata</p>
                                     </div>
 
@@ -794,7 +845,7 @@ export default function CatalogCheckout2() {
                                     {/* Mensagem cartão de crédito → WhatsApp */}
                                     <div className="mt-4 bg-gray-700/40 border border-gray-600 rounded-lg p-4 text-center">
                                         <p className="text-gray-300 text-sm mb-3">
-                                            💳 Quer pagar no <strong className="text-white">cartão de crédito</strong>?
+                                            Quer pagar no <strong className="text-white">cartão de crédito</strong>?
                                         </p>
                                         <a
                                             href="https://wa.me/5521984072064?text=Ol%C3%A1!%20Quero%20pagar%20com%20cart%C3%A3o%20de%20cr%C3%A9dito.%20Pode%20me%20ajudar%3F"
@@ -824,7 +875,7 @@ export default function CatalogCheckout2() {
                                             </p>
                                             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                                                 <p className="text-green-300 text-sm font-semibold">🎉 Compra concluída!</p>
-                                                <p className="text-gray-400 text-xs mt-1">Valor: R$ {product?.price_catalog?.toFixed(2)}</p>
+                                                <p className="text-gray-400 text-xs mt-1">Valor: R$ {fmtBR(product?.price_catalog)}</p>
                                             </div>
                                             <button
                                                 onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
@@ -836,7 +887,7 @@ export default function CatalogCheckout2() {
                                     ) : (
                                         // QR CODE PIX (aguardando pagamento)
                                         <>
-                                            <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                            <h3 className="text-lg font-bold text-green-400 text-center flex items-center justify-center gap-2"><QrCode className="w-5 h-5" /> Pague com PIX</h3>
                                             <div className="bg-white rounded-lg p-4">
                                                 <img
                                                     src={pixData.pix_qr_code}
@@ -850,14 +901,11 @@ export default function CatalogCheckout2() {
                                             </div>
                                             <p className="text-xs text-orange-400 text-center">⏱️ Este código expira em 15 minutos</p>
                                             <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(pixData.pix_payload);
-                                                    toast.success('Código PIX copiado!');
-                                                }}
-                                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                                                onClick={() => copiarPix(pixData.pix_payload)}
+                                                className={`w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${pixCopiado ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}
                                             >
-                                                <Copy className="w-5 h-5" />
-                                                Copiar Código PIX
+                                                {pixCopiado ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                                {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                                             </button>
                                             <div className="bg-gray-700/50 rounded-lg p-3">
                                                 <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>

@@ -1,13 +1,13 @@
 // createAdesaoPayment — compra de CARGO (upgrade interno). Valor SEMPRE da tabela career_levels.
 // gateway: 'pix' (Mercado Pago) | 'card' (Stripe Checkout). Marca a venda como kind='adesao'.
 import crypto from 'crypto';
+import { oid } from '../_lib/oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
-const oid = () => crypto.randomBytes(12).toString('hex');
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {

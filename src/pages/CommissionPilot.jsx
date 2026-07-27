@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Calculator, AlertTriangle } from 'lucide-react';
+import { Search, Calculator, AlertTriangle, Cloud, FolderOpen } from 'lucide-react';
 import { base44 as base44Client } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { calculateExpectedCommission } from '@/utils/CommissionAuditRules';
@@ -240,14 +241,14 @@ export default function CommissionPilot() {
                                         onClick={() => setAuditMode('api')}
                                         className={auditMode === 'api' ? "bg-blue-600" : "text-gray-400 border-gray-600"}
                                     >
-                                        ☁️ Online (API)
+                                        <Cloud className="w-4 h-4 mr-2" />Online (API)
                                     </Button>
                                     <Button
                                         variant={auditMode === 'file' ? "default" : "outline"}
                                         onClick={() => setAuditMode('file')}
                                         className={auditMode === 'file' ? "bg-green-600" : "text-gray-400 border-gray-600"}
                                     >
-                                        📂 Offline (Snapshot)
+                                        <FolderOpen className="w-4 h-4 mr-2" />Offline (Snapshot)
                                     </Button>
                                 </div>
 
@@ -340,7 +341,7 @@ export default function CommissionPilot() {
                                                 <tr key={i} className="border-b border-gray-700 hover:bg-gray-700/50">
                                                     <td className="px-4 py-3">{new Date(res.sale.created_date).toLocaleDateString()}</td>
                                                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{res.sale.id.slice(0, 8)}...</td>
-                                                    <td className="px-4 py-3 text-white">R$ {parseFloat(res.sale.total_amount).toFixed(2)}</td>
+                                                    <td className="px-4 py-3 text-white">R$ {fmtBR(parseFloat(res.sale.total_amount))}</td>
                                                     <td className="px-4 py-3">
                                                         {res.status === 'ok' && <span className="text-green-400 font-bold text-xs bg-green-400/10 px-2 py-1 rounded">OK</span>}
                                                         {res.status === 'divergent' && <span className="text-red-400 font-bold text-xs bg-red-400/10 px-2 py-1 rounded flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> DIVERGENTE</span>}
@@ -415,14 +416,14 @@ export default function CommissionPilot() {
                                             <tr key={i} className="border-b border-gray-700/50">
                                                 <td className="py-2 pl-2 text-gray-300">{a.role} <span className="text-xs text-gray-600">({a.percent}%)</span></td>
                                                 <td className="py-2 text-white font-medium">{a.user_name}</td>
-                                                <td className="py-2 text-right text-green-400 font-bold">R$ {a.amount.toFixed(2)}</td>
+                                                <td className="py-2 text-right text-green-400 font-bold">R$ {fmtBR(a.amount)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t border-gray-600 bg-gray-900/50">
                                             <td colSpan={2} className="py-2 pl-2 text-right font-bold text-white">TOTAL DISTRIBUÍDO:</td>
-                                            <td className="py-2 text-right font-bold text-blue-400">R$ {result.simulation.total_distributed.toFixed(2)}</td>
+                                            <td className="py-2 text-right font-bold text-blue-400">R$ {fmtBR(result.simulation.total_distributed)}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -450,7 +451,7 @@ export default function CommissionPilot() {
                                             <tr key={i} className="border-b border-gray-700/50">
                                                 <td className="py-2 pl-2 text-gray-300">{r.role} <span className="text-xs text-gray-600">({r.percent}%)</span></td>
                                                 <td className="py-2 text-white font-medium">{r.user_name}</td>
-                                                <td className="py-2 text-right text-green-400 font-bold">R$ {r.amount.toFixed(2)}</td>
+                                                <td className="py-2 text-right text-green-400 font-bold">R$ {fmtBR(r.amount)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -458,7 +459,7 @@ export default function CommissionPilot() {
                                         <tr className="border-t border-gray-600 bg-gray-900/50">
                                             <td colSpan={2} className="py-2 pl-2 text-right font-bold text-white">TOTAL PAGO:</td>
                                             <td className="py-2 text-right font-bold text-green-400">
-                                                R$ {result.actual_records.reduce((s, x) => s + x.amount, 0).toFixed(2)}
+                                                R$ {fmtBR(result.actual_records.reduce((s, x) => s + x.amount, 0))}
                                             </td>
                                         </tr>
                                     </tfoot>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
-  Trash2, RotateCcw, RefreshCw, ArrowLeft
+  Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert
 } from 'lucide-react';
 
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
@@ -131,15 +132,18 @@ export default function ProductManagement() {
 
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
+        // busca de mercado REAL por produto (média das lojas → venda = média − 20%). Igual ao individual.
         const response = await calculateProductPricing({ product_ids: batch });
-        const batchProducts = response.data?.products || [];
+        const batchProducts = response?.products || response?.data?.products || [];
         allResults.push(...batchProducts);
+        // pausa entre lotes pra não estourar o limite da busca de mercado
+        if (i + BATCH_SIZE < ids.length) await new Promise((r) => setTimeout(r, 700));
       }
 
       setPricingPreviewData(allResults);
       setShowPricingPreview(true);
     } catch (error) {
-      alert('❌ Erro ao buscar preços: ' + error.message);
+      alert('Erro ao buscar preços: ' + error.message);
     } finally {
       setIsPricingLoading(false);
     }
@@ -152,16 +156,16 @@ export default function ProductManagement() {
       const response = await calculateProductPricing({
         product_ids: [product.id]
       });
-      const data = response.data?.products || [];
+      const data = response?.products || response?.data?.products || [];
       const item = data[0];
 
       if (!item) {
-        alert('⚠️ Nenhum resultado encontrado');
+        alert('Nenhum resultado encontrado');
         return;
       }
 
       if (item.status !== 'success') {
-        alert('⚠️ Preço de mercado não encontrado para este produto');
+        alert('Preço de mercado não encontrado para este produto');
         return;
       }
 
@@ -172,15 +176,15 @@ export default function ProductManagement() {
       const newPrice = item.selling_price_retail;
 
       const msg =
-        `📊 Confirmar Precificação?\n\n` +
+        `Confirmar Precificação?\n\n` +
         `Produto: ${item.description}\n\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `P. MERCADO:\n` +
         `  Antes:  ${prevMarket > 0 ? 'R$ ' + prevMarket.toFixed(2) : '—'}\n` +
-        `  Depois: R$ ${newMarket.toFixed(2)}\n\n` +
+        `  Depois: R$ ${fmtBR(newMarket)}\n\n` +
         `P. VENDA (-20%):\n` +
         `  Antes:  ${prevPrice > 0 ? 'R$ ' + prevPrice.toFixed(2) : '—'}\n` +
-        `  Depois: R$ ${newPrice.toFixed(2)}\n` +
+        `  Depois: R$ ${fmtBR(newPrice)}\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +
         `Aplicar nova precificação?`;
 
@@ -188,10 +192,10 @@ export default function ProductManagement() {
         return;
       }
 
-      const updateData = { selling_price_retail: newPrice };
+      const updateData = { selling_price_retail: newPrice, price_catalog: newPrice, market_value: newMarket };
       if (item.source_url) updateData.source_url = item.source_url;
-      updateData.market_value = newMarket;
-      await base44.entities.Product.update(item.id, updateData);
+      const _save = await base44.functions.invoke('saveProductPricing', { items: [{ id: item.id, selling_price_retail: newPrice, market_price: newMarket, source_url: item.source_url }] });
+      if (!_save?.success) { alert('Não salvou o preço: ' + (_save?.error || 'falha')); return; }
 
       // ✅ Atualiza estado local IMEDIATAMENTE
       const updater = (list) => list.map(p => p.id === item.id ? { ...p, ...updateData } : p);
@@ -201,25 +205,27 @@ export default function ProductManagement() {
       sessionStorage.removeItem('products_cache_v3');
       sessionStorage.removeItem('products_cache_time_v3');
 
-      alert('✅ Precificação aplicada!');
+      alert('Precificação aplicada!');
     } catch (error) {
-      alert('❌ Erro: ' + error.message);
+      alert('Erro: ' + error.message);
     } finally {
       setIsPricingLoading(false);
     }
   };
 
-  // 🆕 Confirmar precificação e salvar
+  // 🆕 Confirmar precificação e salvar (via service_role — anon não persiste)
   const handleConfirmPricing = async (toUpdate) => {
     setIsPricingLoading(true);
     try {
-      for (const item of toUpdate) {
-        const updateData = { selling_price_retail: item.selling_price_retail };
-        if (item.source_url) updateData.source_url = item.source_url;
-        if (item.market_price) updateData.market_value = item.market_price;
-        await base44.entities.Product.update(item.id, updateData);
-      }
-      alert(`✅ ${toUpdate.length} produto(s) precificado(s)!`);
+      const items = toUpdate.map((item) => ({
+        id: item.id,
+        selling_price_retail: item.selling_price_retail,
+        market_price: item.market_price,
+        source_url: item.source_url,
+      }));
+      const r = await base44.functions.invoke('saveProductPricing', { items });
+      if (!r?.success) { alert('Erro ao salvar preços: ' + (r?.error || 'falha')); return; }
+      alert(`${r.saved} produto(s) precificado(s)!`);
       setShowPricingPreview(false);
       setPricingPreviewData(null);
       clearSelection();
@@ -227,7 +233,7 @@ export default function ProductManagement() {
       sessionStorage.removeItem('products_cache_time_v3');
       setTimeout(() => loadData(), 500);
     } catch (error) {
-      alert('❌ Erro ao salvar: ' + error.message);
+      alert('Erro ao salvar: ' + error.message);
     } finally {
       setIsPricingLoading(false);
     }
@@ -289,7 +295,7 @@ export default function ProductManagement() {
         const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
           (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
         if (!podeProduto) {
-          alert("❌ Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
+          alert("Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
           navigate(createPageUrl('Home'));
           return;
         }
@@ -302,7 +308,7 @@ export default function ProductManagement() {
       if (cachedProducts && cacheTime && retryCount === 0) {
         const age = Date.now() - parseInt(cacheTime);
         if (age < 60000) { // 1 minuto
-          console.log('⚡ Usando cache de produtos');
+          console.log('Usando cache de produtos');
           const cached = JSON.parse(cachedProducts);
           setProducts(cached);
           setFilteredProducts(cached);
@@ -327,12 +333,12 @@ export default function ProductManagement() {
       if (error.message?.includes('Rate limit')) {
         const cachedProducts = sessionStorage.getItem('products_cache_v3');
         if (cachedProducts) {
-          console.log('⚡ Usando cache antigo devido a rate limit');
+          console.log('Usando cache antigo devido a rate limit');
           const cached = JSON.parse(cachedProducts);
           setProducts(cached);
           setFilteredProducts(cached);
         } else {
-          alert('⚠️ Muitas requisições. Por favor, aguarde 30 segundos e recarregue a página.');
+          alert('Muitas requisições. Por favor, aguarde 30 segundos e recarregue a página.');
         }
       }
     } finally {
@@ -359,15 +365,15 @@ export default function ProductManagement() {
   const getProductAlerts = (product) => {
     const alerts = [];
     if (!product.selling_price_retail || product.selling_price_retail === 0) {
-      alerts.push({ label: '🔴 Sem Preço', cls: 'bg-red-900/40 text-red-400 border border-red-700/40' });
+      alerts.push({ label: 'Sem Preço', cls: 'bg-red-900/40 text-red-400 border border-red-700/40' });
     }
     if ((product.quantity || 0) < 0) {
-      alerts.push({ label: '💥 ERRO', cls: 'bg-red-900/60 text-red-300 border border-red-500/60' });
+      alerts.push({ label: 'ERRO', cls: 'bg-red-900/60 text-red-300 border border-red-500/60' });
     }
     if (product.created_date) {
       const daysSince = Math.floor((Date.now() - new Date(product.created_date)) / 86400000);
       if (daysSince > 60 && (!product.quantity_sold || product.quantity_sold === 0)) {
-        alerts.push({ label: '🐌 Parado', cls: 'bg-orange-900/40 text-orange-400 border border-orange-700/40' });
+        alerts.push({ label: 'Parado', cls: 'bg-orange-900/40 text-orange-400 border border-orange-700/40' });
       }
     }
     return alerts;
@@ -490,11 +496,13 @@ export default function ProductManagement() {
       };
 
       if (editingProduct) {
-        await base44.entities.Product.update(editingProduct.id, dataToSave);
-        alert('✅ Produto atualizado!');
+        const _r = await base44.functions.invoke('productAdminAction', { action: 'update', actorId: currentUser?.id, productId: editingProduct.id, fields: dataToSave });
+        if (!_r?.success) { alert('Não atualizou: ' + (_r?.error || 'falha')); return; }
+        alert('Produto atualizado!');
       } else {
-        await base44.entities.Product.create(dataToSave);
-        alert('✅ Produto cadastrado!');
+        const _c = await base44.functions.invoke('bulkImportProducts', { actorId: currentUser?.id, publish: false, items: [{ name: dataToSave.description, price: dataToSave.selling_price_retail, cost: dataToSave.cost_price, quantity: dataToSave.quantity, sku: dataToSave.lot }] });
+        if (!_c?.success) { alert('Não cadastrou: ' + (_c?.error || 'falha')); return; }
+        alert('Produto cadastrado!');
       }
 
       setFormData({
@@ -524,7 +532,7 @@ export default function ProductManagement() {
 
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert("❌ Erro ao salvar produto: " + (error?.message || JSON.stringify(error)));
+      alert("Erro ao salvar produto: " + (error?.message || JSON.stringify(error)));
     }
   };
 
@@ -602,11 +610,11 @@ export default function ProductManagement() {
                     try {
                       setIsLoading(true);
                       const result = await base44.functions.invoke('groupDuplicateProducts', {});
-                      alert(`✅ ${result.data.grupos_processados} grupos | ${result.data.produtos_deletados} removidos`);
+                      alert(`${result.data.grupos_processados} grupos | ${result.data.produtos_deletados} removidos`);
                       sessionStorage.removeItem('products_cache_v3');
                       sessionStorage.removeItem('products_cache_time_v3');
                       await loadData();
-                    } catch { alert('❌ Erro ao agrupar'); } finally { setIsLoading(false); }
+                    } catch { alert('Erro ao agrupar'); } finally { setIsLoading(false); }
                   }}
                   className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
                 >
@@ -626,11 +634,22 @@ export default function ProductManagement() {
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    alert(`✅ ${filteredProducts.length} produtos exportados!`);
+                    alert(`${filteredProducts.length} produtos exportados!`);
                   }}
                   className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
                 >
                   <Download className="w-4 h-4 mr-2 text-yellow-400" /> Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = '/api/functions/exportBaixas';
+                    a.download = 'baixas-estoque.csv';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  }}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <Download className="w-4 h-4 mr-2 text-orange-400" /> Relatório de Baixas (Excel)
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -674,9 +693,6 @@ export default function ProductManagement() {
           >
             <option value="all">Depósito</option>
             <option value="Bangu">Bangu</option>
-            <option value="Oficina">Oficina</option>
-            <option value="Recreio">Recreio</option>
-            <option value="Shopmix">Shopmix (Catálogo)</option>
           </select>
           <select
             value={classFilter}
@@ -789,7 +805,7 @@ export default function ProductManagement() {
                   if (ids.length === 1) {
                     navigate(createPageUrl("AddCatalogProduct"), { state: { sourceProduct: products.find(p => p.id === ids[0]) } });
                   } else {
-                    alert('⚠️ Selecione apenas 1 produto para colocar no Catálogo');
+                    alert('Selecione apenas 1 produto para colocar no Catálogo');
                   }
                 }}
                 className="bg-violet-600 hover:bg-violet-500 text-white border-0 h-7 text-xs px-3"
@@ -808,7 +824,7 @@ export default function ProductManagement() {
                     {isPricingLoading ? (
                       <><span className="w-3.5 h-3.5 mr-1.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Buscando...</>
                     ) : (
-                      <>⚡ Precificar Auto ▾</>
+                      <><Zap className="w-3.5 h-3.5 mr-1.5" />Precificar Auto</>
                     )}
                   </Button>
                 </DropdownMenuTrigger>
@@ -817,19 +833,19 @@ export default function ProductManagement() {
                     onClick={() => handleBatchPrice(Array.from(selectedIds).slice(0, 1))}
                     className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white text-xs"
                   >
-                    ⚡ Precificar 1 produto
+                    <Zap className="w-3.5 h-3.5 mr-2" />Precificar 1 produto
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleBatchPrice(Array.from(selectedIds).slice(0, 10))}
                     className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white text-xs"
                   >
-                    ⚡ Precificar 10 produtos
+                    <Zap className="w-3.5 h-3.5 mr-2" />Precificar 10 produtos
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleBatchPrice(Array.from(selectedIds))}
                     className="cursor-pointer hover:bg-gray-800 text-emerald-400 hover:text-emerald-300 text-xs font-semibold"
                   >
-                    ⚡ Precificar todos ({selectedIds.size})
+                    <Zap className="w-3.5 h-3.5 mr-2" />Precificar todos ({selectedIds.size})
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -856,9 +872,9 @@ export default function ProductManagement() {
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider" style={{width:'220px'}}>Produto</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'100px'}}>Publicado</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Depósito</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>✅ Perf.</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-yellow-500 uppercase tracking-wider whitespace-nowrap" style={{width:'60px'}}>🟡 Bom</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-orange-500 uppercase tracking-wider whitespace-nowrap" style={{width:'70px'}}>🔧 Ofic.</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Perf.</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-yellow-500 uppercase tracking-wider whitespace-nowrap" style={{width:'60px'}}>Bom</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-orange-500 uppercase tracking-wider whitespace-nowrap" style={{width:'70px'}}>Ofic.</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wider" style={{width:'130px'}}>Obs.</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>C. Total</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'80px'}}>C. Unit.</th>
@@ -906,10 +922,10 @@ export default function ProductManagement() {
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-col gap-0.5">
                         {product.catalog_active && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 whitespace-nowrap">🛒 Loja</span>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 whitespace-nowrap inline-flex items-center gap-1"><ShoppingCart className="w-2.5 h-2.5" />Loja</span>
                         )}
                         {(product.linked_auctions?.length > 0) && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">🔨 Leilão ({product.linked_auctions.length})</span>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap inline-flex items-center gap-1"><Gavel className="w-2.5 h-2.5" />Leilão ({product.linked_auctions.length})</span>
                         )}
                         {!product.catalog_active && !(product.linked_auctions?.length > 0) && (
                           <span className="text-[10px] text-gray-700">—</span>
@@ -946,28 +962,28 @@ export default function ProductManagement() {
                         <span className="text-blue-600 text-xs ml-1">{expandedNotes[product.id] ? '▲' : '▼'}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.cost_price || 0))}</td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       R$ {(() => { const tq = (product.quantity || 0) + (product.quantity_sold || 0); return tq > 0 ? ((product.cost_price || 0) / tq).toFixed(2) : (product.cost_price || 0).toFixed(2); })()}
                     </td>
                     <td className="px-3 py-2.5 text-right text-purple-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       {(product.market_value || 0) > 0
-                        ? <span>R$ {product.market_value.toFixed(2)}</span>
+                        ? <span>R$ {fmtBR(product.market_value)}</span>
                         : <span className="text-gray-600">—</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       {(product.selling_price_retail || 0) > 0
-                        ? <span className="text-gray-300">R$ {product.selling_price_retail.toFixed(2)}</span>
-                        : <span className="text-yellow-500 text-xs">⚠ S/ preço</span>}
+                        ? <span className="text-gray-300">R$ {fmtBR(product.selling_price_retail)}</span>
+                        : <span className="text-yellow-500 text-xs inline-flex items-center gap-1"><TriangleAlert className="w-3 h-3" />S/ preço</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className="font-bold text-white">{(product.quantity || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
-                    <td className="px-3 py-2.5 text-right text-sky-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right text-sky-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.sold_amount || 0))}</td>
                     <td className="px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className={(product.profit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                        R$ {(product.profit || 0).toFixed(2)}
+                        R$ {fmtBR((product.profit || 0))}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-center">
@@ -978,7 +994,7 @@ export default function ProductManagement() {
                           className="w-7 h-7 rounded-lg bg-yellow-600/20 hover:bg-yellow-600 text-yellow-400 hover:text-white flex items-center justify-center transition-all disabled:opacity-50"
                           title="Precificar automaticamente (Google Shopping)"
                         >
-                          ⚡
+                          <Zap className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setShowCalculator(true); }}
@@ -1169,7 +1185,10 @@ export default function ProductManagement() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white">
-                    {editingProduct ? '✏️ Editar Produto' : '➕ Novo Produto'}
+                    <span className="inline-flex items-center gap-2">
+                      {editingProduct ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+                    </span>
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -1308,7 +1327,7 @@ export default function ProductManagement() {
                         value={(() => {
                           const totalQty = (parseInt(formData.quantity) || 0) + (editingProduct?.quantity_sold || 0);
                           const unitCost = totalQty > 0 ? (parseFloat(formData.cost_price) || 0) / totalQty : (parseFloat(formData.cost_price) || 0);
-                          return `R$ ${unitCost.toFixed(2)}`;
+                          return `R$ ${fmtBR(unitCost)}`;
                         })()}
                         className="bg-gray-600 text-white"
                         disabled
@@ -1362,8 +1381,8 @@ export default function ProductManagement() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm('Retirar este produto da Loja Virtual?')) return;
-                                await base44.entities.Product.update(editingProduct.id, { catalog_active: false });
-                                alert('✅ Produto retirado da Loja Virtual!');
+                                { const _r = await base44.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { catalog_active: false } }); if (!_r?.success) { alert('Falha: ' + (_r?.error || '')); return; } }
+                                alert('Produto retirado da Loja Virtual!');
                                 sessionStorage.removeItem('products_cache_v3');
                                 sessionStorage.removeItem('products_cache_time_v3');
                                 setShowAddForm(false);
@@ -1372,7 +1391,7 @@ export default function ProductManagement() {
                               }}
                               className="bg-violet-700 hover:bg-violet-800"
                             >
-                              🛒 Retirar da Loja
+                              <ShoppingCart className="w-4 h-4 mr-2" />Retirar da Loja
                             </Button>
                           )}
 
@@ -1382,8 +1401,8 @@ export default function ProductManagement() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm('Limpar os leilões vinculados a este produto?')) return;
-                                await base44.entities.Product.update(editingProduct.id, { linked_auctions: [] });
-                                alert('✅ Produto desvinculado dos leilões!');
+                                { const _r = await base44.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { linked_auctions: [] } }); if (!_r?.success) { alert('Falha: ' + (_r?.error || '')); return; } }
+                                alert('Produto desvinculado dos leilões!');
                                 sessionStorage.removeItem('products_cache_v3');
                                 sessionStorage.removeItem('products_cache_time_v3');
                                 setShowAddForm(false);
@@ -1392,7 +1411,7 @@ export default function ProductManagement() {
                               }}
                               className="bg-blue-700 hover:bg-blue-800"
                             >
-                              🔨 Retirar do Leilão
+                              <Gavel className="w-4 h-4 mr-2" />Retirar do Leilão
                             </Button>
                           )}
 
@@ -1483,7 +1502,10 @@ export default function ProductManagement() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-white">
-                  {operationType === 'zerar_estoque' ? '🔄 Zerar Estoque' : '🗑️ Excluir Produto'}
+                  <span className="inline-flex items-center gap-2">
+                    {operationType === 'zerar_estoque' ? <RotateCcw className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                    {operationType === 'zerar_estoque' ? 'Zerar Estoque' : 'Excluir Produto'}
+                  </span>
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -1523,34 +1545,19 @@ export default function ProductManagement() {
                   <Button
                     onClick={async () => {
                       if (!operationData.operatorName || !operationData.reason) {
-                        alert('⚠️ Preencha todos os campos');
+                        alert('Preencha todos os campos');
                         return;
                       }
 
                       try {
-                        // Registra a operação
-                        await base44.entities.ProductOperation.create({
-                          product_id: editingProduct.id,
-                          product_description: editingProduct.description,
-                          operation_type: operationType,
-                          operator_name: operationData.operatorName,
-                          reason: operationData.reason,
-                          operation_date: new Date().toISOString()
-                        });
-
                         if (operationType === 'zerar_estoque') {
-                          // Zera APENAS a quantidade total (quantity = 0)
-                          await base44.entities.Product.update(editingProduct.id, {
-                            quantity: 0,
-                            qty_perfeito: 0,
-                            qty_bom: 0,
-                            qty_oficina: 0
-                          });
-                          alert('✅ Estoque zerado com sucesso!');
+                          const _z = await base44.functions.invoke('productAdminAction', { action: 'zerarEstoque', actorId: currentUser?.id, productId: editingProduct.id, operator_name: operationData.operatorName, reason: operationData.reason });
+                          if (!_z?.success) { alert('Não zerou: ' + (_z?.error || 'falha')); return; }
+                          alert('Estoque zerado com sucesso!');
                         } else {
-                          // Exclui o produto
-                          await base44.entities.Product.delete(editingProduct.id);
-                          alert('✅ Produto excluído com sucesso!');
+                          const _d = await base44.functions.invoke('productAdminAction', { action: 'delete', actorId: currentUser?.id, productId: editingProduct.id });
+                          if (!_d?.success) { alert('Não excluiu: ' + (_d?.error || 'falha')); return; }
+                          alert('Produto excluído com sucesso!');
                         }
 
                         sessionStorage.removeItem('products_cache_v3');
@@ -1562,7 +1569,7 @@ export default function ProductManagement() {
                         setTimeout(() => loadData(), 1000);
                       } catch (error) {
                         console.error('Erro:', error);
-                        alert('❌ Erro ao realizar operação');
+                        alert('Erro ao realizar operação');
                       }
                     }}
                     className="flex-1 bg-green-600 hover:bg-green-700"

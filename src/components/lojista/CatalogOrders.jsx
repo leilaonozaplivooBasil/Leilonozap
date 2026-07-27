@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fmtBR } from '@/lib/money';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ export default function CatalogOrders({ catalogSales = [] }) {
       {/* Filtros */}
       <Card className="bg-gray-800 border-gray-700">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -109,7 +110,7 @@ export default function CatalogOrders({ catalogSales = [] }) {
                           </Badge>
                         </td>
                         <td className="px-4 py-4 text-right font-semibold text-green-400">
-                          R$ {(order.total_amount || 0).toFixed(2)}
+                          R$ {fmtBR((order.total_amount || 0))}
                         </td>
                         <td className="px-4 py-4 text-center">
                           <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white">

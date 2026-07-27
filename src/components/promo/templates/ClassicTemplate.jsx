@@ -1,6 +1,7 @@
 import React from "react";
+import { fmtBR } from '@/lib/money';
 
-const LOGO_URL = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+const LOGO_URL = "/brand/icon-3d.webp";
 
 export default function ClassicTemplate({ displayTitle, displayImage, displayBadge, displayCta, whatsappNumber, price, marketPrice, discount, accent, template, renderProductImage, logoUrl }) {
   const WhatsAppBadge = () => whatsappNumber ? (
@@ -60,12 +61,12 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 60%, transparent 100%)", padding: "52px 24px 20px", zIndex: 10 }}>
         <p style={{ color: "white", fontSize: 16, fontWeight: 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, textDecoration: "line-through" }}>R$ {fmtBR(marketPrice)}</span>}
           <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, fontWeight: 600 }}>R$</span>
           <span style={{ color: "white", fontSize: 38, fontWeight: 900, lineHeight: 1, textShadow: `0 0 20px ${template.accentGlow}` }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: accent, fontSize: 20, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
+        {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {fmtBR((price / 12))}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />

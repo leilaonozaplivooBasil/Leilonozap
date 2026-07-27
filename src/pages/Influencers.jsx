@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fmtBR } from '@/lib/money';
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -207,7 +208,7 @@ export default function Influencers() {
             <div className="bg-green-50 rounded-lg p-6 mb-4 text-center">
               <p className="text-sm text-gray-600 mb-2">Saldo em Dinheiro</p>
               <p className="text-5xl font-bold text-green-600 mb-2">
-                R$ {(currentUser?.commission_balance || 0).toFixed(2)}
+                R$ {fmtBR((currentUser?.commission_balance || 0))}
               </p>
               <p className="text-sm text-gray-500">3% de comissão a cada compra</p>
             </div>
@@ -243,7 +244,7 @@ export default function Influencers() {
             <CardContent className="p-6 text-center">
               <DollarSign className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
               <p className="text-4xl font-bold text-gray-900 mb-2">
-                R$ {stats.totalRevenue.toFixed(2)}
+                R$ {fmtBR(stats.totalRevenue)}
               </p>
               <p className="text-gray-600">Volume Total Gerado</p>
             </CardContent>
@@ -268,7 +269,7 @@ export default function Influencers() {
                         {lead.lead_name || lead.lead_email}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {lead.total_purchases || 0} compras · R$ {(lead.total_spent || 0).toFixed(2)}
+                        {lead.total_purchases || 0} compras · R$ {fmtBR((lead.total_spent || 0))}
                       </p>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -327,7 +328,7 @@ export default function Influencers() {
                 <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                   <p className="text-sm text-gray-600 mb-1">Saldo Disponível:</p>
                   <p className="text-3xl font-bold text-purple-600">
-                    R$ {(currentUser?.commission_balance || 0).toFixed(2)}
+                    R$ {fmtBR((currentUser?.commission_balance || 0))}
                   </p>
                 </div>
 

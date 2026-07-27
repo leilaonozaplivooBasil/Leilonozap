@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 📱 Fix do "toque duplo" no iOS Safari: sem touch-action, o navegador segura o
+   primeiro toque esperando um possível double-tap-zoom — o usuário acha que não
+   clicou e toca de novo. manipulation mantém scroll/pinch e dispara o clique
+   imediatamente no primeiro toque. Sem efeito visual em desktop. */
+button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
+  touch-action: manipulation;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -84,5 +92,53 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* 🛡️ Guarda anti-overflow horizontal no mobile: nenhum elemento largo demais
+     deve permitir scroll lateral nem cortar conteúdo na borda direita. */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* 🩹 Anti-"tremida" ao navegar: reserva sempre o espaço da barra de rolagem
+     vertical, pra o conteúdo centralizado (mx-auto) não pular ~15px de lado
+     entre páginas curtas (sem scroll) e longas (com scroll). */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  /* ⚡ CLIQUE ÚNICO EM TODO BOTÃO (pedido Gabriel 25/07): nada de tocar/clicar
+     duas vezes, no celular ou no desktop.
+     1) touch-action: manipulation mata o atraso de ~300ms e o "duplo toque pra
+        zoom" que fazia o 1º toque ser engolido no celular. */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  .cursor-pointer {
+    touch-action: manipulation;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 2) Em telas de toque, controle que só aparece/ativa no hover fica SEMPRE
+        visível — senão o 1º toque vira "hover" e só o 2º executa o clique. */
+  @media (hover: none), (pointer: coarse) {
+    [class*="group-hover:opacity-100"] {
+      opacity: 1 !important;
+    }
+    [class*="hover:opacity-100"] {
+      opacity: 1 !important;
+    }
+    [class*="group-hover:pointer-events-auto"] {
+      pointer-events: auto !important;
+    }
   }
 }

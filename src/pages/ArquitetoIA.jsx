@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Sparkles, Loader2, Trash2, Copy, CheckCircle, MessageCircle } from "lucide-react";
+import { Send, Sparkles, Loader2, Trash2, Copy, CheckCircle, MessageCircle, Rocket, ChartColumn, Brain, Code, Search, Shield, Lightbulb, Zap, Bell, RefreshCw, TriangleAlert, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from 'react-markdown';
 
@@ -98,7 +98,7 @@ export default function ArquitetoIA() {
   };
 
   const clearConversation = async () => {
-    if (!confirm("🗑️ Limpar toda a conversa?")) return;
+    if (!confirm("Limpar toda a conversa?")) return;
     
     try {
       const conversation = await base44.agents.createConversation({
@@ -110,7 +110,7 @@ export default function ArquitetoIA() {
       });
       setConversationId(conversation.id);
       setMessages([]);
-      toast.success("✅ Conversa reiniciada!");
+      toast.success("Conversa reiniciada!");
     } catch (error) {
       toast.error("Erro ao reiniciar");
     }
@@ -150,7 +150,7 @@ export default function ArquitetoIA() {
         });
       }
       
-      toast.success("✅ Análise iniciada!");
+      toast.success("Análise iniciada!");
     } catch (error) {
       console.error("Erro na análise:", error);
       toast.error("Erro ao analisar sistema");
@@ -163,7 +163,7 @@ export default function ArquitetoIA() {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedId(id);
-      toast.success("📋 Copiado!");
+      toast.success("Copiado!");
       setTimeout(() => setCopiedId(null), 2000);
     } catch (error) {
       toast.error("Erro ao copiar");
@@ -243,14 +243,14 @@ export default function ArquitetoIA() {
                   <div className="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
                     <Sparkles className="w-10 h-10 text-purple-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">🚀 Arquiteto Base44 TURBINADO</h3>
+                  <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2"><Rocket className="w-5 h-5 text-purple-400" />Arquiteto Base44 TURBINADO</h3>
                   <p className="text-gray-400 max-w-md mb-4">
                     Análise preditiva, otimização autônoma, geração de código executável e diagnóstico em tempo real.
                   </p>
                   
                   {systemHealth && (
                     <div className="mb-6 p-4 bg-gray-800/50 rounded-lg border border-purple-500/30 max-w-md mx-auto">
-                      <h4 className="text-sm font-bold text-purple-300 mb-3">📊 Status do Sistema</h4>
+                      <h4 className="text-sm font-bold text-purple-300 mb-3 flex items-center gap-2"><ChartColumn className="w-4 h-4" />Status do Sistema</h4>
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div className="bg-green-900/30 p-2 rounded border border-green-500/30">
                           <div className="text-green-400 font-bold">{systemHealth.activeAuctions}</div>
@@ -287,19 +287,19 @@ export default function ArquitetoIA() {
                   <div className="mt-6 space-y-2 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                      <span>🧠 Análise preditiva e proativa</span>
+                      <span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" />Análise preditiva e proativa</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span>💻 Geração de código executável</span>
+                      <span className="flex items-center gap-1.5"><Code className="w-3.5 h-3.5" />Geração de código executável</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span>🔍 Diagnóstico em tempo real</span>
+                      <span className="flex items-center gap-1.5"><Search className="w-3.5 h-3.5" />Diagnóstico em tempo real</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span>🛡️ Proteção contra bugs 24/7</span>
+                      <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" />Proteção contra bugs 24/7</span>
                     </div>
                   </div>
                 </div>
@@ -387,7 +387,7 @@ export default function ArquitetoIA() {
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                💡 Dica: Pressione Enter para enviar, Shift+Enter para nova linha
+                <span className="inline-flex items-center gap-1.5"><Lightbulb className="w-3 h-3" />Dica: Pressione Enter para enviar, Shift+Enter para nova linha</span>
               </p>
             </div>
           </CardContent>
@@ -402,36 +402,36 @@ export default function ArquitetoIA() {
           
           <div className="grid md:grid-cols-2 gap-3">
             <Card className="bg-gradient-to-br from-purple-900/30 to-purple-900/10 border-purple-500/30 hover:border-purple-500/60 transition-all cursor-pointer hover:scale-105"
-                  onClick={() => setInput("🔍 ANÁLISE COMPLETA DO SISTEMA:\n\n1. Analise TODOS os logs de erro dos últimos 7 dias\n2. Identifique leilões travados ou com problemas\n3. Detecte queries lentas e gargalos de performance\n4. Verifique integridade de dados entre entities\n5. Liste top 10 problemas por criticidade\n6. Gere comandos executáveis para correção\n\nQuero relatório DETALHADO com código pronto.")}>
+                  onClick={() => setInput("ANÁLISE COMPLETA DO SISTEMA:\n\n1. Analise TODOS os logs de erro dos últimos 7 dias\n2. Identifique leilões travados ou com problemas\n3. Detecte queries lentas e gargalos de performance\n4. Verifique integridade de dados entre entities\n5. Liste top 10 problemas por criticidade\n6. Gere comandos executáveis para correção\n\nQuero relatório DETALHADO com código pronto.")}>
               <CardContent className="p-4">
-                <div className="text-3xl mb-2">🧠</div>
+                <Brain className="w-8 h-8 text-purple-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Diagnóstico Completo</h4>
                 <p className="text-xs text-purple-300">Análise profunda de saúde do sistema</p>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-green-900/30 to-green-900/10 border-green-500/30 hover:border-green-500/60 transition-all cursor-pointer hover:scale-105"
-                  onClick={() => setInput("⚡ OTIMIZAÇÃO DE PERFORMANCE:\n\n1. Analise pages/Home, pages/AuctionRoom e pages/SaiDeBaixo\n2. Identifique queries ineficientes (usando .list em vez de .filter)\n3. Detecte re-renders desnecessários\n4. Encontre código duplicado\n5. Sugira melhorias de cache\n\nGere código EXECUTÁVEL para as 5 otimizações de MAIOR impacto.")}>
+                  onClick={() => setInput("OTIMIZAÇÃO DE PERFORMANCE:\n\n1. Analise pages/Home, pages/AuctionRoom e pages/SaiDeBaixo\n2. Identifique queries ineficientes (usando .list em vez de .filter)\n3. Detecte re-renders desnecessários\n4. Encontre código duplicado\n5. Sugira melhorias de cache\n\nGere código EXECUTÁVEL para as 5 otimizações de MAIOR impacto.")}>
               <CardContent className="p-4">
-                <div className="text-3xl mb-2">⚡</div>
+                <Zap className="w-8 h-8 text-green-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Boost de Performance</h4>
                 <p className="text-xs text-green-300">Top 5 otimizações de maior impacto</p>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-blue-900/30 to-blue-900/10 border-blue-500/30 hover:border-blue-500/60 transition-all cursor-pointer hover:scale-105"
-                  onClick={() => setInput("🛡️ AUDITORIA DE SEGURANÇA:\n\n1. Verifique todas as pages admin (sem proteção de role)\n2. Analise RLS de todas as entities\n3. Identifique functions sem validação de user.role\n4. Detecte possíveis XSS ou SQL injection\n5. Verifique exposição de dados sensíveis\n\nListe vulnerabilidades por criticidade + código de correção.")}>
+                  onClick={() => setInput("AUDITORIA DE SEGURANÇA:\n\n1. Verifique todas as pages admin (sem proteção de role)\n2. Analise RLS de todas as entities\n3. Identifique functions sem validação de user.role\n4. Detecte possíveis XSS ou SQL injection\n5. Verifique exposição de dados sensíveis\n\nListe vulnerabilidades por criticidade + código de correção.")}>
               <CardContent className="p-4">
-                <div className="text-3xl mb-2">🔒</div>
+                <Shield className="w-8 h-8 text-blue-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Auditoria de Segurança</h4>
                 <p className="text-xs text-blue-300">Detectar vulnerabilidades críticas</p>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-orange-900/30 to-orange-900/10 border-orange-500/30 hover:border-orange-500/60 transition-all cursor-pointer hover:scale-105"
-                  onClick={() => setInput("📊 ANÁLISE DE UX E CONVERSÃO:\n\n1. Identifique pontos de fricção na jornada do usuário\n2. Analise taxa de abandono em checkout/pagamento\n3. Sugira melhorias de copywriting e CTAs\n4. Recomende features de gamificação\n5. Proponha A/B tests\n\nGere plano de ação com impacto estimado em conversão.")}>
+                  onClick={() => setInput("ANÁLISE DE UX E CONVERSÃO:\n\n1. Identifique pontos de fricção na jornada do usuário\n2. Analise taxa de abandono em checkout/pagamento\n3. Sugira melhorias de copywriting e CTAs\n4. Recomende features de gamificação\n5. Proponha A/B tests\n\nGere plano de ação com impacto estimado em conversão.")}>
               <CardContent className="p-4">
-                <div className="text-3xl mb-2">📈</div>
+                <TrendingUp className="w-8 h-8 text-orange-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Otimização de Conversão</h4>
                 <p className="text-xs text-orange-300">Aumentar engajamento e vendas</p>
               </CardContent>
@@ -442,7 +442,7 @@ export default function ArquitetoIA() {
             <Card className="bg-gray-800/50 border-purple-500/30 hover:border-purple-500/60 transition-colors cursor-pointer"
                   onClick={() => setInput("Crie um sistema de notificações push quando alguém der lance em um leilão que estou participando. Gere o código COMPLETO pronto para usar.")}>
               <CardContent className="p-4">
-                <div className="text-2xl mb-2">🔔</div>
+                <Bell className="w-6 h-6 text-purple-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Notificações Push</h4>
                 <p className="text-xs text-gray-400">Código completo + integração</p>
               </CardContent>
@@ -451,7 +451,7 @@ export default function ArquitetoIA() {
             <Card className="bg-gray-800/50 border-yellow-500/30 hover:border-yellow-500/60 transition-colors cursor-pointer"
                   onClick={() => setInput("Analise TODOS os componentes e identifique código duplicado que pode ser refatorado em componentes reutilizáveis. Gere os novos componentes.")}>
               <CardContent className="p-4">
-                <div className="text-2xl mb-2">🔄</div>
+                <RefreshCw className="w-6 h-6 text-yellow-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Refatoração Inteligente</h4>
                 <p className="text-xs text-gray-400">Eliminar duplicação de código</p>
               </CardContent>
@@ -460,7 +460,7 @@ export default function ArquitetoIA() {
             <Card className="bg-gray-800/50 border-red-500/30 hover:border-red-500/60 transition-colors cursor-pointer"
                   onClick={() => setInput("Identifique TODOS os leilões travados, pagamentos pendentes suspeitos, ou dados inconsistentes. Gere scripts de correção automática.")}>
               <CardContent className="p-4">
-                <div className="text-2xl mb-2">🚨</div>
+                <TriangleAlert className="w-6 h-6 text-red-400 mb-2" />
                 <h4 className="font-bold text-white text-sm mb-1">Correção de Dados</h4>
                 <p className="text-xs text-gray-400">Resolver inconsistências</p>
               </CardContent>

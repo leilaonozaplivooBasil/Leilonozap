@@ -5,6 +5,12 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/c/:cargo", "destination": "/api/convite?cargo=:cargo" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/p/:id", "destination": "/api/produto?id=:id" },
+    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/functions/syncNexusSheet", "schedule": "0 2 * * *" },
+    { "path": "/api/functions/finalizeExpiredAuctions", "schedule": "* * * * *" },
+    { "path": "/api/functions/activateScheduledAuctions", "schedule": "* * * * *" }
   ]
 }

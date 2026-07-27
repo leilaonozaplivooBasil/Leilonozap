@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fmtBR } from '@/lib/money';
 import { AppUser } from '@/entities/AppUser';
 import { Auction } from '@/entities/Auction';
 import { AuctionMessage } from '@/entities/AuctionMessage';
@@ -580,10 +581,10 @@ export default function TesteLeilaoPage() {
                                         </p>
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             <Badge className="bg-green-600 text-white">
-                                                💰 Preço: R$ {testEnvironment.auctions[0].current_price.toFixed(2)}
+                                                💰 Preço: R$ {fmtBR(testEnvironment.auctions[0].current_price)}
                                             </Badge>
                                             <Badge className="bg-blue-600 text-white">
-                                                ⚡ Incremento: R$ {testEnvironment.auctions[0].increment.toFixed(2)}
+                                                ⚡ Incremento: R$ {fmtBR(testEnvironment.auctions[0].increment)}
                                             </Badge>
                                             <Badge className={testEnvironment.auctions[0].status === 'active' ? 'bg-orange-600 text-white animate-pulse' : 'bg-gray-600 text-white'}>
                                                 {testEnvironment.auctions[0].status === 'active' ? '🔴 ATIVO' : '⚫ ENCERRADO'}

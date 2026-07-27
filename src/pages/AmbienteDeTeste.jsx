@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,10 +180,10 @@ export default function AmbienteDeTeste() {
         direction: "credit",
         amount: amount,
         status: "confirmed",
-        description: `Teste de carteira - Saldo adicionado: R$ ${amount.toFixed(2)}`
+        description: `Teste de carteira - Saldo adicionado: R$ ${fmtBR(amount)}`
       });
 
-      setWalletMessage(`✅ Saldo de R$ ${amount.toFixed(2)} adicionado para ${selectedUser.full_name}`);
+      setWalletMessage(`✅ Saldo de R$ ${fmtBR(amount)} adicionado para ${selectedUser.full_name}`);
       setWalletUserId("");
       setWalletAmount(100);
       setTimeout(() => setShowWalletTest(false), 2000);
@@ -201,7 +202,7 @@ export default function AmbienteDeTeste() {
      
   }, [anchorUser?.id, saleValue]);
 
-  const percentOk = totalPercent <= 26 + 0.0001;
+  const percentOk = totalPercent <= 30 + 0.0001;
 
   const roleLabel = (role) => ({
     licenciado_catalogo: "Licenciado Catálogo",
@@ -372,10 +373,10 @@ export default function AmbienteDeTeste() {
                   Resultado em tempo real
                   {percentOk ? (
                     <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Dentro do limite (≤ 26%)
+                      <CheckCircle2 className="w-3 h-3" /> Dentro do limite (≤ 30%)
                     </Badge>
                   ) : (
-                    <Badge className="bg-red-500/20 text-red-300 border border-red-500/40">Excede 26% • {totalPercent.toFixed(2)}%</Badge>
+                    <Badge className="bg-red-500/20 text-red-300 border border-red-500/40">Excede 30% • {totalPercent.toFixed(2)}%</Badge>
                   )}
                 </CardTitle>
               </CardHeader>
