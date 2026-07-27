@@ -25,16 +25,22 @@ export default async function handler(req, res) {
 
     const uid = encodeURIComponent(userId);
     const saleCols = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name';
-    const [salesR, mySalesR, commsR, wdR] = await Promise.all([
+    const [salesR, mySalesR, commsR, recordsR, wdR] = await Promise.all([
       sb(`catalog_sales?select=${saleCols}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`),
       // vendas em que o usuário é o VENDEDOR (admin/lojista): o que vendeu, pra quem e quanto
       sb(`catalog_sales?select=${saleCols}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`),
-      sb(`commission_ledger?select=created_at,role_in_sale,pct,amount,beneficiary_level&beneficiary_id=eq.${uid}&order=created_at.desc&limit=100`),
+      // ATENÇÃO: são DUAS tabelas de comissão. commission_records é a das vendas de
+      // LOJA (motor arvoreOficial) e commission_ledger é a dos demais tipos. Lendo só
+      // o ledger, o extrato mostrava "Comissões R$ 0,00" para quem tinha recebido de
+      // verdade — foi o que o Gabriel viu no painel dele em 27/07/2026.
+      sb(`commission_ledger?select=created_at,role_in_sale,pct,amount,beneficiary_level,sale_id&beneficiary_id=eq.${uid}&order=created_at.desc&limit=100`),
+      sb(`commission_records?select=created_date,role,percent,amount,sale_id,product_title,sale_amount,status&user_id=eq.${uid}&order=created_date.desc&limit=200`),
       sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`),
     ]);
     const sales = await salesR.json();
     const mySales = await mySalesR.json();
     const comms = await commsR.json();
+    const records = await recordsR.json();
     const wds = await wdR.json();
 
     const transactions = [];
@@ -76,12 +82,60 @@ export default async function handler(req, res) {
       });
     }
 
+    // De quem foi a compra que gerou cada comissão. Sem isso o extrato dizia só
+    // "Comissão recebida (5%)", e não dava para conferir de qual venda veio.
+    const idsVenda = [...new Set([
+      ...(Array.isArray(records) ? records : []).map((r) => r.sale_id),
+      ...(Array.isArray(comms) ? comms : []).map((c) => c.sale_id),
+    ].filter(Boolean))].slice(0, 200);
+    const vendasDaComissao = {};
+    if (idsVenda.length) {
+      try {
+        const inList = idsVenda.map((i) => `"${encodeURIComponent(i)}"`).join(',');
+        const vr = await (await sb(`catalog_sales?select=id,product_title,buyer_name,buyer_id,total_amount&id=in.(${inList})`)).json();
+        for (const v of Array.isArray(vr) ? vr : []) vendasDaComissao[v.id] = v;
+      } catch { /* sem o detalhe, a linha ainda aparece com o que tem */ }
+    }
+    const nomeDoComprador = (v) => (v?.buyer_name || '').trim();
+
+    const PAPEL = {
+      influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado',
+      parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física',
+      distribuidor: 'Distribuidor', executivo: 'Sócio Executivo', ceo: 'CEO',
+      livoo_live: 'Livoo Live', embaixador: 'Embaixador', conselheiro: 'Conselheiro',
+      fundador: 'Fundador', diretoria_executiva: 'Diretoria Executiva',
+      diretoria_operacao: 'Diretoria de Operação', empresa_rollup: 'Empresa',
+      venda_direta: 'Venda direta', override: 'Rede',
+    };
+
+    // comissões das vendas de LOJA
+    for (const r of Array.isArray(records) ? records : []) {
+      const v = vendasDaComissao[r.sale_id];
+      const produto = r.product_title || v?.product_title || 'Venda';
+      const comprador = nomeDoComprador(v);
+      const papel = PAPEL[r.role] || r.role || 'Rede';
+      transactions.push({
+        id: `rec-${r.sale_id}-${r.role}-${r.amount}`,
+        type: 'commission',
+        title: `Comissão ${papel}${r.percent ? ` (${r.percent}%)` : ''} — ${produto}`,
+        source: comprador ? `compra de ${comprador}` : 'Rede',
+        amount: Number(r.amount) || 0,
+        status: r.status === 'confirmed' ? 'paid' : (r.status || 'paid'),
+        date: r.created_date,
+      });
+    }
+
+    // comissões dos demais tipos (adesão, carteira…)
     for (const c of Array.isArray(comms) ? comms : []) {
+      const v = vendasDaComissao[c.sale_id];
+      const produto = v?.product_title || '';
+      const comprador = nomeDoComprador(v);
+      const papel = PAPEL[c.role_in_sale] || c.role_in_sale || 'Rede';
       transactions.push({
         id: `comm-${c.created_at}-${c.amount}`,
         type: 'commission',
-        title: `Comissão recebida${c.pct ? ` (${c.pct}%)` : ''}`,
-        source: c.role_in_sale || 'Rede',
+        title: `Comissão ${papel}${c.pct ? ` (${c.pct}%)` : ''}${produto ? ` — ${produto}` : ''}`,
+        source: comprador ? `compra de ${comprador}` : 'Rede',
         amount: Number(c.amount) || 0,
         status: c.status || 'paid',
         date: c.created_at,

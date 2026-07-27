@@ -54,7 +54,11 @@ async function executiveColumnExists() {
   return _execColumnExists;
 }
 
-function foldExecutiveIntoContext(payload) {
+// MESCLA a carteira executiva no contexto que já existe. Substituir o objeto
+// inteiro (como fazia antes) apagava o resto do conteúdo — inclusive
+// { enabled: true }, a chave que abria o painel de alavancagem. Em 27/07/2026 isso
+// derrubou o painel de 12 pessoas de uma vez.
+function foldExecutiveIntoContext(payload, contextoAtual) {
   const ctx = {};
   for (const f of EXECUTIVE_FIELDS) {
     if (f in payload) {
@@ -63,9 +67,29 @@ function foldExecutiveIntoContext(payload) {
     }
   }
   if (Object.keys(ctx).length === 0) return payload;
-  payload.licenciado_context = JSON.stringify(ctx);
+
+  let base = {};
+  const bruto = contextoAtual ?? payload.licenciado_context;
+  if (bruto) {
+    try {
+      const p = typeof bruto === 'string' ? JSON.parse(bruto) : bruto;
+      if (p && typeof p === 'object' && !Array.isArray(p)) base = p;
+    } catch { /* contexto ilegível: não dá para preservar, segue só com a carteira */ }
+  }
+  payload.licenciado_context = JSON.stringify({ ...base, ...ctx });
   return payload;
 }
+
+// lê o licenciado_context que está gravado hoje, para não perder o que há dentro
+async function lerContextoAtual(userId) {
+  try {
+    const r = await (await sb(`app_users?select=licenciado_context&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    return Array.isArray(r) && r[0] ? r[0].licenciado_context : null;
+  } catch {
+    return null;
+  }
+}
+
 
 // Cargos que existem no plano (espelha src/lib/careerLevels.js). Qualquer id fora
 // desta lista é descartado na gravação — sem isso, editar um cadastro com a tela
@@ -176,7 +200,7 @@ export default async function handler(req, res) {
     // Sem a coluna dedicada, os campos da carteira executiva já vão dobrados
     // no campo de compatibilidade — nada de PATCH que quebra o save inteiro.
     if (EXECUTIVE_FIELDS.some((f) => f in payload) && !(await executiveColumnExists())) {
-      foldExecutiveIntoContext(payload);
+      foldExecutiveIntoContext(payload, await lerContextoAtual(userId));
     }
 
     let upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
@@ -197,7 +221,7 @@ export default async function handler(req, res) {
     const semColuna = !upd.ok && erroDeColuna && EXECUTIVE_FIELDS.some((f) => f in payload);
     if (semColuna) _execColumnExists = false;
     if (semColuna) {
-      const alt = foldExecutiveIntoContext({ ...payload });
+      const alt = foldExecutiveIntoContext({ ...payload }, await lerContextoAtual(userId));
       upd = await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, {
         method: 'PATCH',
         headers: { Prefer: 'return=representation' },

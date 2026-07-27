@@ -138,27 +138,53 @@ function derivePanelsFromLegacyFields(user) {
     panels.add("parceiro_compra");
   }
 
-  // Licenciado (via role OU career_level)
+  // 🌳 PAINEL DE ALAVANCAGEM pela ÁRVORE OFICIAL (27/07/2026).
+  // Antes, o painel só abria por cargo ANTIGO (licenciado_aplicativo,
+  // licenciado_catalogo) ou por licenciado_context.enabled. Os dois sumiram no
+  // saneamento desta madrugada — os cargos velhos eram resíduo da loja antiga e
+  // foram apagados, e a gravação da carteira executiva sobrescreveu o contexto.
+  // Resultado: 12 pessoas com cargo de verdade ficaram sem o painel, entre elas a
+  // Eloá (distribuidora/fundadora/diretora) e o Gabriel (influenciador).
+  //
+  // A regra agora é a do plano, não a do cadastro legado: DO INFLUENCIADOR PARA
+  // CIMA todo mundo participa da distribuição e enxerga a própria alavancagem.
+  // Quem tem cargo de topo (governança/gestão) também, porque recebe pelo cargo.
+  const REDE_COM_ALAVANCAGEM = [
+    "influenciador", "vendedor", "licenciado", "parceiro",
+    "ponto_retirada", "loja_fisica", "distribuidor",
+  ];
+  const CARGOS_DE_TOPO = [
+    "ceo", "livoo_live", "embaixador", "conselheiro", "fundador",
+    "diretoria_executiva", "diretoria_operacao", "executivo_conta", "trainee_diretor",
+  ];
+  const temAlgum = (ids) => ids.some((c) => careerLevels.includes(c));
+
   if (
     role === "licensee" ||
-    careerLevels.includes("licenciado_aplicativo") ||
+    careerLevels.includes("licenciado_aplicativo") || // legado: contas antigas ainda válidas
     careerLevels.includes("licenciado_catalogo") ||
-    user.licenciado_context?.enabled === true
+    user.licenciado_context?.enabled === true ||
+    temAlgum(REDE_COM_ALAVANCAGEM) ||
+    temAlgum(CARGOS_DE_TOPO)
   ) {
     panels.add("licenciado");
   }
 
-  // Lojista (career_level específico)
+  // Lojista: quem tem loja própria de verdade — distribuidor, loja física e ponto
+  // de retirada operam estoque. O restante da rede vende pelo link, não por loja.
   if (
     careerLevels.includes("plano_lojista") ||
     careerLevels.includes("plano_lider") ||
-    careerLevels.includes("distribuidor")
+    careerLevels.includes("distribuidor") ||
+    careerLevels.includes("loja_fisica") ||
+    careerLevels.includes("ponto_retirada")
   ) {
     panels.add("lojista");
   }
 
-  // Vendedor recrutado
-  if (user.is_seller === true) {
+  // Vendedor: painel próprio. Ele é nível de entrada da rede — o forte dele é o
+  // Rank Premiado, por isso o painel existe mesmo sem is_seller marcado no cadastro.
+  if (user.is_seller === true || careerLevels.includes("vendedor")) {
     panels.add("vendedor");
   }
 
@@ -195,11 +221,15 @@ export function resolveUserPanels(user) {
   //    (mas super_admin sempre recebe todos, mesmo com enabled_panels vazio/parcial)
   const explicitPanels = Array.isArray(user.enabled_panels) ? user.enabled_panels : [];
 
+  // enabled_panels SOMA, não limita (27/07/2026). Antes ele substituía a derivação:
+  // quem tinha uma lista salva ficava preso a ela e o cargo era ignorado — o
+  // DISTRIBUIDOR BANGU, com cargo de distribuidor, não via nem a loja nem a
+  // alavancagem porque a lista antiga só tinha dois painéis. A marcação manual do
+  // super admin passa a ser o que sempre foi na prática: liberação EXTRA, por cima
+  // do que o cargo já garante. Ninguém perde acesso; quem tinha cargo passa a ver.
   let keys = isSuperAdmin
     ? Object.keys(PANEL_METADATA)
-    : explicitPanels.length > 0
-    ? explicitPanels
-    : derivePanelsFromLegacyFields(user);
+    : [...explicitPanels, ...derivePanelsFromLegacyFields(user)];
 
   // Remove duplicados e filtra apenas chaves conhecidas
   keys = Array.from(new Set(keys)).filter((k) => !!PANEL_METADATA[k]);

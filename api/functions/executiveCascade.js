@@ -127,7 +127,18 @@ export default async function handler(req, res) {
     let ok = 0;
     const falhas = [];
     for (const c of correcoes) {
+      // MESCLA: escrever o objeto inteiro apagava o resto do contexto — foi assim
+      // que 38 cadastros perderam { enabled: true } e 12 pessoas ficaram sem painel.
+      let base = {};
+      const atual = byId.get(c.id)?.licenciado_context;
+      if (atual) {
+        try {
+          const p = typeof atual === 'string' ? JSON.parse(atual) : atual;
+          if (p && typeof p === 'object' && !Array.isArray(p)) base = p;
+        } catch { /* ilegível: segue só com a carteira */ }
+      }
       const ctx = JSON.stringify({
+        ...base,
         executive_owner_id: c.para_id,
         executive_owner_pinned: false,
         executive_owner_since: new Date().toISOString(),
