@@ -11,6 +11,7 @@ import {
   ShoppingCart, Search, Plus, Minus, Trash2, X, Loader2, Store as StoreIcon,
   ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package,
 } from 'lucide-react';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const firstImg = (images) => {
   if (Array.isArray(images)) return images[0] || '';
@@ -221,6 +222,7 @@ export default function LojaVitrine() {
 
 // ---------- CHECKOUT ----------
 function Checkout({ slug, store, cartItems, total, onClose, onPaid }) {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const [form, setForm] = useState({ name: '', phone: '', email: '', cep: '', address: '' });
   const [gateway, setGateway] = useState('pix');
   const [step, setStep] = useState('form'); // form | pix
@@ -276,7 +278,7 @@ function Checkout({ slug, store, cartItems, total, onClose, onPaid }) {
             <p className="text-emerald-400 font-semibold">💚 Escaneie ou copie o código PIX</p>
             {pix.qr_code_base64 && <img src={`data:image/png;base64,${pix.qr_code_base64}`} alt="QR PIX" className="w-56 h-56 mx-auto bg-white rounded-xl p-2" />}
             <div className="text-3xl font-black text-emerald-400">{money(pix.amount)}</div>
-            <button onClick={() => { navigator.clipboard?.writeText(pix.pix_code || ''); toast.success('Código PIX copiado!'); }} className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold flex items-center justify-center gap-2"><Copy className="w-4 h-4" /> Copiar código PIX</button>
+            <button onClick={() => copiarPix(pix.pix_code || '')} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${pixCopiado ? 'bg-emerald-500' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{pixCopiado ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {pixCopiado ? 'Código PIX copiado!' : 'Copiar código PIX'}</button>
             <p className="text-[12px] text-gray-400">Pedido <b className="text-emerald-300">{pix.tracking}</b>. Assim que o pagamento cair, a loja recebe e prepara o envio. Você pode fechar esta tela.</p>
             <a href={`https://wa.me/55${(store.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Acabei de fazer o pedido ' + pix.tracking + ' na sua loja.')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-emerald-300"><MessageCircle className="w-4 h-4" /> Falar com a loja</a>
             <button onClick={onPaid} className="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm">Concluir</button>

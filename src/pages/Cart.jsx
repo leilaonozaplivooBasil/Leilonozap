@@ -36,9 +36,11 @@ import {
   Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { getReferral } from '@/lib/referral';
 
 export default function Cart() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -1339,14 +1341,11 @@ export default function Cart() {
                       </p>
                     </div>
                     <Button
-                      onClick={() => {
-                        navigator.clipboard.writeText(pixData.pix_payload);
-                        toast.success('Código PIX copiado!');
-                      }}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold mb-3"
+                      onClick={() => copiarPix(pixData.pix_payload)}
+                      className={`w-full text-white font-bold mb-3 transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}
                     >
-                      <Copy className="w-5 h-5 mr-2" />
-                      Copiar Código PIX
+                      {pixCopiado ? <Check className="w-5 h-5 mr-2" /> : <Copy className="w-5 h-5 mr-2" />}
+                      {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                     </Button>
                     <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
                       <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>

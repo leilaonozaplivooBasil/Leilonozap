@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { getReferral } from '@/lib/referral';
 
@@ -14,6 +15,7 @@ const Auction = base44.entities.Auction;
 const CatalogSale = base44.entities.CatalogSale;
 
 export default function CatalogCheckout2() {
+    const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     // Endereço do CD (galpão do distribuidor) — vem do cadastro, não fica chumbado no código
@@ -899,14 +901,11 @@ export default function CatalogCheckout2() {
                                             </div>
                                             <p className="text-xs text-orange-400 text-center">⏱️ Este código expira em 15 minutos</p>
                                             <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(pixData.pix_payload);
-                                                    toast.success('Código PIX copiado!');
-                                                }}
-                                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                                                onClick={() => copiarPix(pixData.pix_payload)}
+                                                className={`w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${pixCopiado ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}
                                             >
-                                                <Copy className="w-5 h-5" />
-                                                Copiar Código PIX
+                                                {pixCopiado ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                                {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                                             </button>
                                             <div className="bg-gray-700/50 rounded-lg p-3">
                                                 <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>

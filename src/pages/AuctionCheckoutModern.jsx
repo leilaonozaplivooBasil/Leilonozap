@@ -23,10 +23,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PaymentErrorModal from '@/components/payment/PaymentErrorModal';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const Auction = base44.entities.Auction;
 
 export default function AuctionCheckoutModern() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const location = useLocation();
   const [isWalletDeposit, setIsWalletDeposit] = useState(false);
@@ -972,14 +974,11 @@ export default function AuctionCheckoutModern() {
                         </div>
 
                         <Button
-                          onClick={() => {
-                            navigator.clipboard.writeText(pixData.pix_payload);
-                            toast.success('Código PIX copiado!');
-                          }}
-                          className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                          onClick={() => copiarPix(pixData.pix_payload)}
+                          className={`w-full h-12 text-white font-bold transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'}`}
                         >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copiar Código PIX
+                          {pixCopiado ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                          {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                         </Button>
 
                         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">

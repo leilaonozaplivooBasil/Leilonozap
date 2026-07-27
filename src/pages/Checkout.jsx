@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ShoppingCart, Copy } from 'lucide-react';
+import { Loader2, ShoppingCart, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const Auction = base44.entities.Auction;
 
 export default function CheckoutPage() {
+    const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
@@ -551,14 +553,11 @@ export default function CheckoutPage() {
                                         />
                                     </div>
                                     <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(pixData.pix_payload);
-                                            toast.success('Código PIX copiado!');
-                                        }}
-                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                                        onClick={() => copiarPix(pixData.pix_payload)}
+                                        className={`w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${pixCopiado ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}
                                     >
-                                        <Copy className="w-5 h-5" />
-                                        Copiar Código PIX
+                                        {pixCopiado ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                        {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                                     </button>
                                     <div className="bg-gray-700/50 rounded-lg p-3">
                                         <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>

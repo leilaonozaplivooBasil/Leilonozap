@@ -1,5 +1,9 @@
 import React, { Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
+// O app inteiro chama `toast` do sonner (85 arquivos), mas o container do sonner
+// nunca foi montado — só o Toaster do shadcn, que responde a outro hook. Resultado:
+// nenhum toast aparecia em lugar nenhum. Os dois convivem: o de baixo é o do sonner.
+import { Toaster as SonnerToaster } from "sonner"
 import { Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -410,6 +414,7 @@ function App() {
           </div>
         </Router>
         <Toaster />
+        <SonnerToaster position="top-center" richColors closeButton theme="dark" />
       </QueryClientProvider>
     </AuthProvider>
   )

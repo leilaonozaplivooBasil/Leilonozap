@@ -7,6 +7,7 @@ import {
   Loader2, Check, ArrowRight, Package, Users, TrendingUp, ShieldCheck,
   Gavel, Copy, CheckCircle2, Mail, Lock, User as UserIcon, Phone, Hash, ArrowLeft
 } from 'lucide-react';
+import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -27,6 +28,7 @@ function getParam(name) {
 }
 
 export default function Cadastro() {
+  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const cargo = (getParam('cargo') || getParam('as') || 'licenciado').trim();
   const refCode = (getParam('ref') || '').trim();
@@ -268,7 +270,7 @@ export default function Cadastro() {
               <p className="text-green-400 font-semibold">💚 Pague com PIX para ativar</p>
               {pix.qr_code_base64 && <img src={`data:image/png;base64,${pix.qr_code_base64}`} alt="QR PIX" className="w-56 h-56 mx-auto bg-white rounded-xl p-2" />}
               <div className="text-2xl font-black text-green-400">{money(pix.amount)}</div>
-              <button onClick={() => { navigator.clipboard.writeText(pix.pix_code || ''); toast.success('Código PIX copiado!'); }} className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 font-bold flex items-center justify-center gap-2"><Copy className="w-4 h-4" /> Copiar código PIX</button>
+              <button onClick={() => copiarPix(pix.pix_code || '')} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${pixCopiado ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'}`}>{pixCopiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {pixCopiado ? 'Código PIX copiado!' : 'Copiar código PIX'}</button>
               <p className="text-[11px] text-gray-500">Assim que o pagamento cair, seu cargo ativa sozinho. Você já pode acessar seu painel.</p>
               <button onClick={() => navigate('/painel')} className="text-sm text-green-400 underline">Ir pro meu painel</button>
             </div>
