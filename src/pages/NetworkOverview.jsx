@@ -33,6 +33,7 @@ import {
   buildExecutiveUpdate,
   descendantsOf,
   readExecutiveOwner,
+  resolveEffectiveExecutive,
 } from "@/lib/executiveStructure";
 
 function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit, onDelete }) {
@@ -1031,10 +1032,34 @@ export default function NetworkOverview() {
         }
       }
 
-      const base44Client = (await import('@/api/base44Client')).base44;
       await saveUserFields(draggedId, { referred_by_id: targetId });
-      toast.success('Vínculo atualizado!');
+
+      // Mudar de lugar na árvore muda a ESTRUTURA a que a pessoa pertence.
+      // Sem isto, ela levava junto a carteira executiva do lugar antigo — foi o que
+      // aconteceu com o Gabriel: movido para a linha do Ribeiro, continuou na
+      // carteira do Luiz, e o 1% da venda iria para o executivo errado.
+      try {
+        const byId = new Map(allUsers.map(u => [u.id, u]));
+        const novoPai = byId.get(targetId);
+        const efetivo = novoPai ? resolveEffectiveExecutive(novoPai, byId) : null;
+        const movido = byId.get(draggedId);
+        if (efetivo?.executiveId && movido && !readExecutiveOwner(movido).pinned) {
+          const equipe = [movido, ...descendantsOf(draggedId, allUsers)]
+            .filter(u => !readExecutiveOwner(u).pinned);
+          for (const membro of equipe) {
+            await saveUserFields(membro.id, buildExecutiveUpdate(efetivo.executiveId, { pinned: false }));
+          }
+          const nomeExec = allUsers.find(u => u.id === efetivo.executiveId)?.full_name || 'executivo';
+          toast.success(`Vínculo atualizado — estrutura agora é de ${nomeExec} (${equipe.length} cadastro(s)).`);
+        } else {
+          toast.success('Vínculo atualizado!');
+        }
+      } catch {
+        toast.success('Vínculo atualizado! (confira a estrutura executiva)');
+      }
+
       await fetchData();
+      await loadAudit();
     } catch (error) {
       toast.error('Erro ao mover: ' + error.message);
     }

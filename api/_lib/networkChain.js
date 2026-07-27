@@ -37,16 +37,21 @@ const levelsOf = (u) => {
  * @param levelsById  { id: { venda_direta_pct } } vindo da tabela career_levels
  */
 export function bestSellingLevel(user, levelsById = {}) {
+  // A cadeia de 20% é do bloco REDE (usuário → distribuidor). Cargo do topo
+  // (CEO, Fundador, Sócio Executivo…) NÃO define percentual de venda direta —
+  // esses recebem pela fatia de 10%. Sem esta trava, o Sócio Executivo Ribeiro
+  // (parceiro, 15%) receberia 20% como se fosse distribuidor.
   const candidatos = new Set(levelsOf(user));
   if (user?.primary_career_level) candidatos.add(user.primary_career_level);
-  if (!candidatos.size) return { level: user?.primary_career_level || 'usuario', pct: 0 };
 
-  let melhor = user?.primary_career_level || 'usuario';
-  let melhorPct = Number(levelsById[melhor]?.venda_direta_pct || 0);
+  let melhor = null;
+  let melhorPct = 0;
   for (const c of candidatos) {
+    if (!REDE.includes(c)) continue;              // só cargos de rede
     const pct = Number(levelsById[c]?.venda_direta_pct || 0);
-    if (pct > melhorPct) { melhor = c; melhorPct = pct; }
+    if (melhor === null || pct > melhorPct) { melhor = c; melhorPct = pct; }
   }
+  if (melhor === null) return { level: user?.primary_career_level || 'usuario', pct: 0 };
   return { level: melhor, pct: melhorPct };
 }
 

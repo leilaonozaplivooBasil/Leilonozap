@@ -67,6 +67,26 @@ function foldExecutiveIntoContext(payload) {
   return payload;
 }
 
+// Cargos que existem no plano (espelha src/lib/careerLevels.js). Qualquer id fora
+// desta lista é descartado na gravação — sem isso, editar um cadastro com a tela
+// aberta antes da limpeza fazia o cargo antigo (licenciado_catalogo etc.) voltar.
+const CARGOS_VALIDOS = new Set([
+  'usuario', 'influenciador', 'vendedor', 'licenciado', 'parceiro',
+  'ponto_retirada', 'loja_fisica', 'distribuidor',
+  'trainee_diretor', 'executivo_conta', 'diretoria_operacao',
+  'diretoria_executiva', 'ceo', 'livoo_live', 'embaixador', 'conselheiro', 'fundador',
+]);
+const RENOMEAR_CARGO = { influencer: 'influenciador', user: 'usuario', trainee: 'trainee_diretor' };
+
+function sanearCargos(lista) {
+  const out = new Set();
+  for (const c of Array.isArray(lista) ? lista : []) {
+    if (CARGOS_VALIDOS.has(c)) out.add(c);
+    else if (RENOMEAR_CARGO[c]) out.add(RENOMEAR_CARGO[c]);
+  }
+  return out.size ? [...out] : ['usuario'];
+}
+
 // Auditoria: registra QUEM fez O QUÊ com QUEM. Guardado em system_logs
 // (tabela genérica de logs que já existe), no campo jsonb raw_base44.
 // Nunca derruba a operação principal — se o log falhar, só avisa no console.
@@ -125,6 +145,13 @@ export default async function handler(req, res) {
     // Monta payload só com campos permitidos
     const payload = {};
     for (const k of ALLOWED) if (k in updates) payload[k] = updates[k];
+
+    // cargos: descarta ids que não existem mais no plano
+    if ('career_levels' in payload) payload.career_levels = sanearCargos(payload.career_levels);
+    if ('primary_career_level' in payload && payload.primary_career_level) {
+      const p = payload.primary_career_level;
+      payload.primary_career_level = CARGOS_VALIDOS.has(p) ? p : (RENOMEAR_CARGO[p] || 'usuario');
+    }
     if (Object.keys(payload).length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum campo válido para atualizar' });
     }
