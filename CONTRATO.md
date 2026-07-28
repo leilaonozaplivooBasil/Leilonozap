@@ -1,7 +1,7 @@
 # 📘 CONTRATO — Leilão NoZap
 
 > **Este é o mapa-mestre do projeto.** Se você chegou agora (time do front), **comece por aqui.**
-> Documento em português. Última revisão: 28/07/2026.
+> Documento em português. Última revisão: 28/07/2026 (adicionado o índice das funções).
 
 ---
 
@@ -113,7 +113,113 @@ Assim qualquer dev do front abre a função e entende em segundos.
 
 ---
 
-## 🛡️ 6. Regra de Ouro (para todos)
+## 📚 6. Índice das funções do backend (o que cada peça faz)
+
+> Lista das principais funções agrupadas por área. É a "etiqueta" de cada ferramenta.
+> Para chamar qualquer uma: `await base44.functions.invoke('nomeDaFuncao', { ...dados })`.
+> ⚠️ As de área 🔴 (dinheiro/estoque/auth) só devem ser tocadas pelo time de backend.
+
+### 💳 Pagamentos e Cobrança 🔴
+| Função | O que faz |
+|--------|-----------|
+| `createAsaasPayment` | Cria uma cobrança PIX/boleto no ASAAS |
+| `asaasWebhook` | Recebe o aviso do ASAAS quando um pagamento é confirmado |
+| `checkPaymentStatus` | Consulta se um pagamento já foi pago |
+| `createMPPayment` / `createMPPreference` | Cria pagamento no Mercado Pago |
+| `mercadoPagoWebhook` | Recebe o aviso do Mercado Pago quando pagam |
+| `payOrderWithWallet` | Paga um pedido usando o saldo da carteira |
+| `manualPaymentApproval` | Admin aprova um pagamento manualmente |
+| `createPartnerPlanPix` | Gera o PIX pra ativar um plano de parceiro |
+
+### 💰 Carteira e Saldo 🔴
+| Função | O que faz |
+|--------|-----------|
+| `getDigitalWalletBalance` | Mostra quanto tem na carteira do usuário |
+| `getDigitalWalletHistory` | Mostra o extrato (entradas e saídas) da carteira |
+| `debitWalletBalance` | Desconta valor da carteira (ex: ao dar um lance) |
+| `getAllWalletBalances` | Lista o saldo de todos os usuários (admin) |
+| `resyncUserBalances` | Recalcula/corrige o saldo de um usuário |
+| `allocateInvestorCapital` | Reserva capital do investidor pra um lote |
+
+### 🔨 Leilões e Lances 🔴
+| Função | O que faz |
+|--------|-----------|
+| `submitAtomicBid` | Registra um lance de forma segura (sem duplicar) |
+| `persistBidAuthorization` | Salva a autorização de lance do usuário |
+| `finalizeAuction` / `endAuctionSafe` | Encerra um leilão e define o vencedor |
+| `processAuctionSale` | Processa a venda do leilão vencido |
+| `reactivateAuction` / `autoReactivateAuctions` | Reabre leilões |
+| `closeExpiredAuctions` | Fecha leilões que passaram do horário |
+| `createTestAuction` | Cria leilão de teste (uso interno) |
+| `notifyFavoriteBid` | Avisa quem favoritou que houve lance |
+
+### 🧾 Comissões (rede de indicação) 🔴
+| Função | O que faz |
+|--------|-----------|
+| `distributeAuctionCommissions` | Divide a comissão de um leilão pela rede |
+| `processCatalogCommission` | Divide a comissão de uma venda do catálogo |
+| `previewCatalogCommission` | Simula a comissão antes de efetivar |
+| `getSaleCommissions` | Lista as comissões de uma venda |
+| `auditUserCommissions` / `diagnoseUserCommissions` | Confere/audita comissões de um usuário |
+| `requestWithdrawal` | Usuário pede saque da comissão |
+| `approveWithdrawal` / `rejectWithdrawal` | Admin aprova/recusa o saque |
+
+### 📦 Estoque e Lotes 🔴
+| Função | O que faz |
+|--------|-----------|
+| `gerarProdutosDoLote` | Cria os produtos no estoque a partir de um lote |
+| `extractBatchReceipt` | Lê a nota fiscal e extrai os lotes |
+| `updateBatchProducts` | Atualiza os produtos de um lote |
+| `reserveLot` / `releaseExpiredReservations` | Reserva/libera lotes |
+
+### 🛒 Catálogo (loja virtual) 🟡
+| Função | O que faz |
+|--------|-----------|
+| `getCatalogOrders` / `getMyCatalogOrders` | Lista os pedidos do catálogo |
+| `getCatalogOrderById` | Detalhes de um pedido específico |
+| `createManualCatalogSale` | Registra uma venda manual do catálogo |
+| `syncCatalogPrices` | Atualiza os preços do catálogo |
+| `calculateShipping` | Calcula o frete de um pedido |
+| `trackCatalogSale` | Rastreia/registra uma venda |
+
+### 👤 Usuários e Vendedores 🟡
+| Função | O que faz |
+|--------|-----------|
+| `registerSeller` / `updateSeller` / `deleteSeller` | Cadastra/edita/remove vendedor |
+| `generateSellerAccessToken` | Gera o link de primeiro acesso do vendedor |
+| `adminUpdateUser` / `updateUserData` | Admin edita dados de um usuário |
+| `updateUserPassword` | Troca a senha do usuário |
+| `sendPasswordResetEmail` | Manda o e-mail de recuperação de senha |
+| `getSellerDashboardData` / `getLicenseeDashboardData` | Dados do painel do vendedor/licenciado |
+| `linkOrphanUsers` / `mergeAppUsers` | Corrige/junta usuários duplicados |
+
+### 🖼️ Imagens e Produtos (buscadores) 🟢
+| Função | O que faz |
+|--------|-----------|
+| `searchGoogleShopping` / `searchMercadoLivre` | Busca produto/preço na internet |
+| `extractMLImages` / `getMLImagesFromAPI` | Pega imagens do Mercado Livre |
+| `extractGoogleImageUrls` / `getImagesFromGoogleSearch` | Pega imagens do Google |
+| `analyzeProductImage` | Analisa a imagem de um produto com IA |
+| `calculateProductPricing` | Calcula o preço de venda de um produto |
+| `precificaVivo` | Precificação automática ao vivo |
+
+### 📊 Relatórios e Sistema 🟢
+| Função | O que faz |
+|--------|-----------|
+| `dailyReport` | Gera o relatório do dia |
+| `aggregateMetrics` / `forceSyncStats` | Junta/atualiza as estatísticas |
+| `getPDVData` / `pdvAction` | Dados e ações do PDV (ponto de venda) |
+| `systemHealthCheck` | Confere se o sistema está saudável |
+| `getServerTime` | Retorna a hora oficial do servidor |
+| `sendBulkMessages` | Envia mensagens em massa |
+| `generateContractPDF` | Gera o PDF do contrato |
+
+> 📌 Existem outras funções auxiliares (teste, migração, depuração) no diretório `api/functions/`.
+> Estas acima são as que o front normalmente precisa conhecer.
+
+---
+
+## 🛡️ 7. Regra de Ouro (para todos)
 
 1. **Nunca quebrar o que já funciona em produção.** Tem dinheiro real, usuário real, transação real.
 2. **Backend** (funções, banco, integrações financeiras) → mexe o time de backend.
@@ -123,7 +229,7 @@ Assim qualquer dev do front abre a função e entende em segundos.
 
 ---
 
-## 🚦 7. Fluxo de entrega (resumo)
+## 🚦 8. Fluxo de entrega (resumo)
 
 1. Backend é codado e documentado aqui.
 2. A mudança é registrada no `MUDANCAS.md`.

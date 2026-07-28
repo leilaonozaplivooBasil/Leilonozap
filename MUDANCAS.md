@@ -20,6 +20,17 @@
 
 ---
 
+## 28/07/2026 — Índice das funções no CONTRATO
+
+- **O que mudou:** adicionado ao `CONTRATO.md` um índice das principais funções do backend,
+  agrupado por área (pagamentos, carteira, leilões, comissões, estoque, catálogo, usuários,
+  imagens, relatórios), cada uma com explicação em português e marcação de risco (🟢/🟡/🔴).
+- **Arquivos:** `CONTRATO.md`
+- **Impacto no front:** só documentação — ajuda o time a saber o que cada função faz.
+- **Risco:** 🟢 Baixo.
+
+---
+
 ## 28/07/2026 — Criação da documentação-base do projeto
 
 - **O que mudou:** criados os arquivos `CONTRATO.md` (mapa-mestre do projeto) e `MUDANCAS.md`
