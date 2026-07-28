@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 // Escrita segura de LoteRecebido para o painel de Estoque de Lotes.
 // A entidade tem RLS write = admin-only, mas o app usa login custom (AppUser via
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
         try {
             const user = await base44.auth.me();
-            if (user && user.role === 'admin') {
+            if (user && (user.role === 'admin' || user.role === 'super_admin')) {
                 isAuthorized = true;
             }
         } catch (_) {
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
         if (!isAuthorized && caller_email) {
             const appUsers = await base44.asServiceRole.entities.AppUser.filter({ email: caller_email });
-            if (appUsers && appUsers.length > 0 && appUsers[0].role === 'admin') {
+            if (appUsers && appUsers.length > 0 && (appUsers[0].role === 'admin' || appUsers[0].role === 'super_admin')) {
                 isAuthorized = true;
             }
         }
