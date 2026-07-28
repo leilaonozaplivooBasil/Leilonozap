@@ -40,8 +40,11 @@
       "type": "string",
       "enum": [
         "recebido",
+        "em_analise",
         "comprado",
-        "enviado_ao_estoque"
+        "convertido",
+        "enviado_ao_estoque",
+        "cancelado"
       ],
       "default": "recebido",
       "description": "Status do lote"
@@ -73,6 +76,47 @@
       "type": "number",
       "default": 0,
       "description": "Valor de mercado total do lote"
+    },
+    "valor_arremate": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor pago no arremate do lote"
+    },
+    "custo_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo total do lote (arremate + taxa + frete + outros)"
+    },
+    "taxa_pct": {
+      "type": "number",
+      "default": 0,
+      "description": "Percentual da taxa do marketplace/leil\u00e3o (ex: 7 para 7%)"
+    },
+    "frete": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo de frete do lote"
+    },
+    "outros": {
+      "type": "number",
+      "default": 0,
+      "description": "Outros custos adicionais do lote"
+    },
+    "local_coleta": {
+      "type": "string",
+      "description": "Local de coleta/carregamento do lote"
+    },
+    "origem": {
+      "type": "string",
+      "description": "Origem do lote (Mercado Livre, Casa e V\u00eddeo, etc)"
+    },
+    "categorias_json": {
+      "type": "string",
+      "description": "JSON com resumo de categorias do lote"
+    },
+    "grades_json": {
+      "type": "string",
+      "description": "JSON com a distribui\u00e7\u00e3o de grades A/B/C/D/E/U do lote"
     },
     "produtos_gerados": {
       "type": "boolean",
