@@ -61,42 +61,11 @@ export default function EstoqueLotes() {
 
   const navigate = useNavigate();
 
-  // 🔐 Email do admin logado (login custom via localStorage) — a função backend
-  // valida a permissão por esse email, já que a RLS de LoteRecebido é admin-only
-  // e o SDK do navegador não carrega sessão de auth real no login custom.
-  const getCallerEmail = () => {
-    try {
-      const ls = JSON.parse(localStorage.getItem('currentUser') || 'null')?.email;
-      if (ls) return ls;
-    } catch { /* ignora storage inválido */ }
-    try {
-      const ss = JSON.parse(sessionStorage.getItem('currentUser') || 'null')?.email;
-      if (ss) return ss;
-    } catch { /* ignora storage inválido */ }
-    return null;
-  };
-
-  // ✍️ Escrita de LoteRecebido via chamada HTTP direta ao endpoint da função backend.
-  // NÃO usamos base44.functions.invoke — o invoke retorna 'not_implemented' no preview/
-  // sandbox. O fetch direto ao endpoint /api/apps/{appId}/functions/loteRecebidoWrite
-  // roda no preview E na produção. O backend valida admin (por caller_email) e escreve
-  // com service role, respeitando a RLS admin-only da entidade.
-  const APP_ID = '68d536db3c26ff51f79c4137';
-  const chamarLoteWrite = async (payload) => {
-    const url = `${window.location.origin}/api/apps/${APP_ID}/functions/loteRecebidoWrite`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ ...payload, caller_email: getCallerEmail() }),
-    });
-    let json = {};
-    try { json = await resp.json(); } catch { /* corpo vazio */ }
-    if (!resp.ok || json?.error) {
-      throw new Error(json?.error || `Falha na operação (HTTP ${resp.status})`);
-    }
-    return json?.data;
-  };
+  // ✍️ Escrita de LoteRecebido pelo adapter Supabase (base44.entities.LoteRecebido).
+  // O app foi migrado do Base44 para o Supabase (tabela lotes_recebidos). Quando o
+  // usuário é admin/super_admin, o adapter roteia automaticamente as escritas
+  // (create/update/delete) para /api/functions/entityWrite (service_role no Supabase).
+  // É EXATAMENTE o mesmo caminho que todas as outras páginas do app usam.
 
   useEffect(() => { loadLotes(); }, []);
 
@@ -118,13 +87,10 @@ export default function EstoqueLotes() {
       return;
     }
     try {
-      await chamarLoteWrite({
-        method: 'create',
-        data: {
-          ...form,
-          data_recebimento: new Date().toISOString(),
-          status: 'recebido',
-        },
+      await base44.entities.LoteRecebido.create({
+        ...form,
+        data_recebimento: new Date().toISOString(),
+        status: 'recebido',
       });
       setShowModal(false);
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
@@ -138,7 +104,7 @@ export default function EstoqueLotes() {
     const cfg = STATUS_CONFIG[lote.status];
     if (!cfg?.next) return;
     try {
-      await chamarLoteWrite({ method: 'update', id: lote.id, data: { status: cfg.next } });
+      await base44.entities.LoteRecebido.update(lote.id, { status: cfg.next });
       await loadLotes();
     } catch (e) {
       alert('Erro: ' + e.message);
@@ -153,18 +119,15 @@ export default function EstoqueLotes() {
     const custoTotal = valorArremate + taxaValor + arrematarForm.frete + arrematarForm.outros;
     setIsSavingArremate(true);
     try {
-      await chamarLoteWrite({
-        method: 'update', id: arrematarLote.id,
-        data: {
-          status: 'comprado',
-          valor_lote: custoTotal,
-          valor_arremate: valorArremate,
-          custo_total: custoTotal,
-          taxa_pct: arrematarForm.taxaPct || 0,
-          frete: arrematarForm.frete || 0,
-          outros: arrematarForm.outros || 0,
-          observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
-        },
+      await base44.entities.LoteRecebido.update(arrematarLote.id, {
+        status: 'comprado',
+        valor_lote: custoTotal,
+        valor_arremate: valorArremate,
+        custo_total: custoTotal,
+        taxa_pct: arrematarForm.taxaPct || 0,
+        frete: arrematarForm.frete || 0,
+        outros: arrematarForm.outros || 0,
+        observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
       });
       setArrematarLote(null);
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
@@ -179,7 +142,7 @@ export default function EstoqueLotes() {
   const handleDelete = async (id) => {
     if (!confirm('Excluir este lote?')) return;
     try {
-      await chamarLoteWrite({ method: 'delete', id });
+      await base44.entities.LoteRecebido.delete(id);
       await loadLotes();
     } catch (e) {
       alert('Erro: ' + e.message);
