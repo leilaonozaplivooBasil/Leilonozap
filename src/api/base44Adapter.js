@@ -178,17 +178,8 @@ async function _routeWrite(table, action, id, payload) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ actorId: op.id, table, action, id, payload }),
     });
-    // Preview-sandbox (Base44) NÃO tem a rota Vercel: o POST cai no rewrite do
-    // index.html e volta como HTML (404/405). Nesse caso a rota "não existe" →
-    // _skip:true faz o adapter escrever DIRETO no Supabase (anon), igual usuário
-    // comum. Em produção (Vercel) a rota existe e responde JSON antes de chegar aqui.
-    const ct = resp.headers.get('content-type') || '';
-    if (!resp.ok || !ct.includes('application/json')) return { _skip: true };
     return await resp.json();
-  } catch (e) {
-    // Falha de rede / rota ausente → fallback pro Supabase direto (não trava o preview)
-    return { _skip: true };
-  }
+  } catch (e) { return { success: false, error: String(e?.message || e) }; }
 }
 
 function entityProxy(entity) {
