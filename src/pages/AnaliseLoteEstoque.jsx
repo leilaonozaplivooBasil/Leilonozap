@@ -329,25 +329,28 @@ function AnaliseLoteEstoque() {
         setIsSaving(true);
         try {
             await base44.entities.LoteRecebido.create({
-                nome_lote: loteAtual.nomeLote,
+                nome_lote: loteAtual.nomeLote || loteAtual.nomePlanilha || 'Lote sem nome',
                 marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
                 valor_lote: calculations?.custoTotal || 0,
-                observacoes: JSON.stringify({
-                    origem: loteAtual.origem,
-                    valorMercado: loteAtual.valorMercadoTotal,
-                    quantidadeTotal: loteAtual.quantidadeTotal,
-                    valorArremate: calculations?.valorArrematado || 0,
-                    taxaPct,
-                    frete,
-                    outros,
-                    localColeta: loteAtual.localColeta,
-                    lot_categories_json: loteAtual.resumoCategorias?.length > 0 ? JSON.stringify(loteAtual.resumoCategorias) : null,
-                    lot_items_json: Object.keys(loteAtual.subItemsByCategory || {}).length > 0 ? JSON.stringify(loteAtual.subItemsByCategory) : null,
-                    lot_grades_json: loteAtual.gradesData ? JSON.stringify(loteAtual.gradesData) : null,
-                    lot_raw_items_json: loteAtual.rawItemsByGrade?.length > 0 ? JSON.stringify(loteAtual.rawItemsByGrade) : null,
-                }),
-                data_recebimento: new Date().toISOString(),
                 status: 'recebido',
+                data_recebimento: new Date().toISOString(),
+                itens_json: JSON.stringify(loteAtual.rawItemsByGrade || []),
+                quantidade_total: loteAtual.quantidadeTotal || 0,
+                valor_mercado_total: loteAtual.valorMercadoTotal || 0,
+                deposito_destino: 'Recreio',
+                // Campos SEM coluna própria na entidade LoteRecebido — preservados em observacoes
+                // (JSON) para não perder dado. Se virarem colunas no schema, migrar para campos diretos.
+                observacoes: JSON.stringify({
+                    valor_arremate: calculations?.valorArrematado || 0,
+                    custo_total: calculations?.custoTotal || 0,
+                    taxa_pct: taxaPct || 7,
+                    frete: frete || 0,
+                    outros: outros || 0,
+                    local_coleta: loteAtual.localColeta || '',
+                    origem: loteAtual.origem || 'Mercado Livre',
+                    categorias_json: JSON.stringify(loteAtual.resumoCategorias || []),
+                    grades_json: JSON.stringify(loteAtual.gradesData || {}),
+                }),
             });
             const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
             setLotesImportados(newLotes);
