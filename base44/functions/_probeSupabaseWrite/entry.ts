@@ -1,15 +1,13 @@
 // SONDA TEMPORÁRIA — apagar depois. Confirma se a function Base44 consegue
 // ler os secrets do Supabase e escrever/apagar na tabela real via service_role REST.
 Deno.serve(async () => {
-  const url =
-    Deno.env.get('SUPABASE_URL') ||
-    Deno.env.get('VITE_SUPABASE_URL') ||
-    Deno.env.get('PUBLIC_SUPABASE_URL') || null;
+  const url = Deno.env.get('SUPABASE_URL') || null;
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || null;
 
   const report: Record<string, unknown> = {
     has_url: !!url,
-    url_preview: url ? url.replace(/^(https?:\/\/[^.]+).*/, '$1...') : null,
+    url_full: url,
+    url_len: url ? url.length : 0,
     has_service_key: !!key,
   };
 
@@ -33,9 +31,13 @@ Deno.serve(async () => {
       headers,
       body: JSON.stringify({ nome_lote: 'ZZZ PROBE (apagar)', marketplace: 'Outros', status: 'recebido' }),
     });
-    const insBody = await insResp.json().catch(() => null);
+    const insText = await insResp.text().catch(() => '');
+    let insBody = null;
+    try { insBody = JSON.parse(insText); } catch { /* não-JSON */ }
     report.insert_status = insResp.status;
     report.insert_ok = insResp.ok;
+    report.insert_body = insText.slice(0, 300);
+    report.target_url = base;
     const newId = Array.isArray(insBody) && insBody[0]?.id ? insBody[0].id : null;
     report.inserted_id = newId;
 
