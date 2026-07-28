@@ -64,9 +64,22 @@ export default function EstoqueLotes() {
   // 🔐 Email do admin logado (login custom via localStorage) — enviado pra função
   // backend validar a permissão, já que a RLS de LoteRecebido é admin-only e o
   // SDK do navegador não carrega sessão de auth real.
-  const getCallerEmail = () => {
-    try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.email || null; }
-    catch { return null; }
+  const getCallerEmail = async () => {
+    // Cascata: localStorage → sessionStorage → sessão da plataforma.
+    // Para na primeira fonte que tiver um email válido; null se nenhuma tiver.
+    try {
+      const ls = JSON.parse(localStorage.getItem('currentUser') || 'null')?.email;
+      if (ls) return ls;
+    } catch { /* ignora storage inválido */ }
+    try {
+      const ss = JSON.parse(sessionStorage.getItem('currentUser') || 'null')?.email;
+      if (ss) return ss;
+    } catch { /* ignora storage inválido */ }
+    try {
+      const me = await base44.auth.me();
+      if (me?.email) return me.email;
+    } catch { /* sessão da plataforma pode não existir no login custom */ }
+    return null;
   };
 
   useEffect(() => { loadLotes(); }, []);
@@ -91,7 +104,7 @@ export default function EstoqueLotes() {
     try {
       const res = await base44.functions.invoke('loteRecebidoWrite', {
         method: 'create',
-        caller_email: getCallerEmail(),
+        caller_email: await getCallerEmail(),
         data: {
           ...form,
           data_recebimento: new Date().toISOString(),
@@ -112,7 +125,7 @@ export default function EstoqueLotes() {
     if (!cfg?.next) return;
     try {
       const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'update', id: lote.id, caller_email: getCallerEmail(),
+        method: 'update', id: lote.id, caller_email: await getCallerEmail(),
         data: { status: cfg.next },
       });
       if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
@@ -131,7 +144,7 @@ export default function EstoqueLotes() {
     setIsSavingArremate(true);
     try {
       const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'update', id: arrematarLote.id, caller_email: getCallerEmail(),
+        method: 'update', id: arrematarLote.id, caller_email: await getCallerEmail(),
         data: {
           status: 'comprado',
           valor_lote: custoTotal,
@@ -158,7 +171,7 @@ export default function EstoqueLotes() {
     if (!confirm('Excluir este lote?')) return;
     try {
       const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'delete', id, caller_email: getCallerEmail(),
+        method: 'delete', id, caller_email: await getCallerEmail(),
       });
       if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       await loadLotes();
