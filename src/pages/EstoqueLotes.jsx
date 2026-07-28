@@ -148,7 +148,22 @@ export default function EstoqueLotes() {
     if (!loteParaExcluir) return;
     setIsDeleting(true);
     try {
-      await base44.entities.LoteRecebido.delete(loteParaExcluir.id);
+      // A exclusão passa pela função backend loteRecebidoWrite (service_role, valida
+      // admin via caller_email). O delete direto pelo adapter dependia da rota Vercel
+      // /api/functions/entityWrite, que NÃO existe no preview-sandbox — por isso o
+      // botão vinha falhando com "Falha ao excluir (servidor)".
+      let callerEmail = null;
+      try { callerEmail = JSON.parse(localStorage.getItem('currentUser') || 'null')?.email || null; } catch { /* ignora */ }
+
+      const res = await base44.functions.invoke('loteRecebidoWrite', {
+        method: 'delete',
+        id: loteParaExcluir.id,
+        caller_email: callerEmail,
+      });
+      // A função retorna { data: { deleted: true } } em sucesso, ou { error } em falha
+      if (res?.error || res?.ok === false) {
+        throw new Error(res.error || 'Falha no servidor');
+      }
       toast.success('Lote excluído com sucesso.');
       setLoteParaExcluir(null);
       await loadLotes();
