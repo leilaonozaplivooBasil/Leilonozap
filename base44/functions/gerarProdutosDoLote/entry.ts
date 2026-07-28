@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
@@ -90,14 +90,23 @@ Deno.serve(async (req) => {
       lot: lote.nome_lote
     }, '-created_date', 5000);
 
-    // Cria um mapa de "já existe" por chave descricao+grade
+    // Cria um mapa de "já existe" por chave descricao+grade.
+    // A grade ORIGINAL (A/B/C/D/E/U) é lida do marcador [grade:X] gravado em notes.
+    // Antes reconstituíamos a grade dos qty_* — mas B/C caem ambos em qty_bom e D/E
+    // ambos em qty_ruim, então C virava B e E virava D, quebrando o match na retomada.
     const chavesExistentes = new Map();
     for (const p of (produtosExistentes || [])) {
-      // reconstitui a "grade" a partir dos qty_* pra fazer match com o item da planilha
-      let grade = 'A';
-      if ((p.qty_bom || 0) > 0) grade = 'B';
-      else if ((p.qty_ruim || 0) > 0) grade = 'D';
-      else if ((p.qty_oficina || 0) > 0) grade = 'U';
+      const m = String(p.notes || '').match(/\[grade:([ABCDEU])\]/);
+      let grade;
+      if (m) {
+        grade = m[1]; // grade original preservada
+      } else {
+        // Fallback para produtos antigos (sem marcador): reconstitui aproximado
+        grade = 'A';
+        if ((p.qty_bom || 0) > 0) grade = 'B';
+        else if ((p.qty_ruim || 0) > 0) grade = 'D';
+        else if ((p.qty_oficina || 0) > 0) grade = 'U';
+      }
       const chave = `${String(p.description || '').trim().toLowerCase()}|${grade}`;
       chavesExistentes.set(chave, (chavesExistentes.get(chave) || 0) + 1);
     }
@@ -107,11 +116,9 @@ Deno.serve(async (req) => {
     let puladosJaExistentes = 0;
     for (const item of itens) {
       const grade = String(item.grade || 'A').toUpperCase();
-      // Normaliza grade pra casar com a reconstituição (B/C -> B, D/E -> D)
-      let gradeNormalizada = grade;
-      if (grade === 'C') gradeNormalizada = 'B';
-      if (grade === 'E') gradeNormalizada = 'D';
-      const chave = `${String(item.desc || '').trim().toLowerCase()}|${gradeNormalizada}`;
+      // Grade original preservada — o match agora usa o marcador [grade:X] em notes,
+      // então NÃO colapsamos mais C->B nem E->D (evita pular/duplicar item errado).
+      const chave = `${String(item.desc || '').trim().toLowerCase()}|${grade}`;
       if (chavesExistentes.has(chave) && chavesExistentes.get(chave) > 0) {
         chavesExistentes.set(chave, chavesExistentes.get(chave) - 1);
         puladosJaExistentes++;
@@ -153,7 +160,7 @@ Deno.serve(async (req) => {
         status: 'ESTOQUE',
         catalog_active: false,
         deposit_name: depositoDestino,
-        notes: `Gerado automaticamente do lote: ${lote.nome_lote} (${lote.marketplace})`
+        notes: `[grade:${String(item.grade || 'A').toUpperCase()}] Gerado automaticamente do lote: ${lote.nome_lote} (${lote.marketplace})`
       };
       base[campo] = qtd;
       return base;
