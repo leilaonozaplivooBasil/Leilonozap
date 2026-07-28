@@ -18,9 +18,12 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
   const [selectedMargin, setSelectedMargin] = useState(null);
   const [profitPercentage, setProfitPercentage] = useState(null);
 
+  // Só carrega fórmulas quando o modal realmente abre — antes rodava na montagem
+  // (com o modal fechado) e, se a leitura falhasse, jogava um toast de erro na
+  // tela do usuário que nem tinha aberto a calculadora.
   useEffect(() => {
-    loadFormulas();
-  }, []);
+    if (isOpen) loadFormulas();
+  }, [isOpen]);
 
   useEffect(() => {
     if (product) {
@@ -42,8 +45,9 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
       const allFormulas = await base44.entities.PricingFormula.filter({ is_active: true });
       setFormulas(allFormulas);
     } catch (error) {
+      // Não bloqueia o uso da calculadora (o cálculo usa tabela de margens fixa,
+      // não estas fórmulas) — só registra no console, sem toast na cara do usuário.
       console.error('Erro ao carregar fórmulas:', error);
-      toast.error('Erro ao carregar fórmulas');
     }
   };
 
