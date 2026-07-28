@@ -208,7 +208,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
 
             toast.success(`Usuário atualizado!\nCargos: ${levelNames}\nPrincipal: ${primaryName}`);
-            onSuccess(result.user);
+            onSuccess(confirmed);
             onClose();
         } catch (error) {
             console.error("Failed to update user:", error);

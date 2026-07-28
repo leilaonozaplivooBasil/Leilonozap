@@ -633,7 +633,7 @@ export default function EditAuction() {
                 utcEndTimeString = new Date(formData.end_time).toISOString();
             }
 
-            console.log(`📅 [SAVE] BRT Input: ${brtDateTimeString}`);
+            console.log(`📅 [SAVE] BRT Input: ${formData.end_time}`);
             console.log(`📅 [SAVE] UTC Output: ${utcEndTimeString}`);
 
             const now = new Date();

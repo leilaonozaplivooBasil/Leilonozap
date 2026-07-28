@@ -47,6 +47,7 @@ const MeuEstoque = React.lazy(() => import('@/pages/MeuEstoque'));
 const ImageOptimizer = React.lazy(() => import('@/pages/ImageOptimizer'));
 const VisualizarLote = React.lazy(() => import('@/pages/VisualizarLote'));
 const SentinelNoZap = React.lazy(() => import('@/pages/SentinelNoZap'));
+const HeloimIA = React.lazy(() => import('@/pages/HeloimIA'));
 const PrecificaVivoPainel = React.lazy(() => import('@/pages/PrecificaVivoPainel'));
 const ParceiroLotes = React.lazy(() => import('@/pages/ParceiroLotes'));
 const AcessoArrematante = React.lazy(() => import('@/pages/AcessoArrematante'));
@@ -268,6 +269,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="SentinelNoZap">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <SentinelNoZap />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      <Route path="/HeloimIA" element={
+        <LayoutWrapper currentPageName="HeloimIA">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <HeloimIA />
           </RequireRole>
         </LayoutWrapper>
       } />

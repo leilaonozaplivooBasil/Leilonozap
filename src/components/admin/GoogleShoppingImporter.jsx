@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { fmtBR } from '@/lib/money';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Check, Image as ImageIcon } from "lucide-react";
+import { Loader2, Search, Check, Image as ImageIcon, Star } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 

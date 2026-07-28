@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { money, addMoney, mulMoney, gteMoney } from "@/lib/money";
+import { money, addMoney, mulMoney, gteMoney, fmtBR } from "@/lib/money";
 import { Eye, ShoppingBag, ChevronLeft, ChevronRight, Zap, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

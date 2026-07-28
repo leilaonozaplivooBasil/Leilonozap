@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Zap } from "lucide-react";
-import { money, addMoney, mulMoney, gtMoney, gteMoney } from "@/lib/money";
+import { money, addMoney, mulMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 
 export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow }) {
   const [bidAmount, setBidAmount] = useState("");

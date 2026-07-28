@@ -1,10 +1,11 @@
-
 /**
  * CommissionAuditRules.js
  * 
  * Regras de Ouro para Auditoria de Comissões.
  * Executa no cliente (navegador) consumindo dados exportados da API Segura.
  */
+
+import { fmtBR } from '@/lib/money';
 
 const ROLE_ORDER = [
     { id: 'licenciado_catalogo', percent: 13.0 },

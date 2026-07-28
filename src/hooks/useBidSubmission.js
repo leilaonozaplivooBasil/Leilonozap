@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
-import { money, addMoney, gtMoney, gteMoney } from "@/lib/money";
+import { money, addMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 
 const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;

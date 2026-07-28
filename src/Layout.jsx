@@ -796,45 +796,6 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // 🛡️ ADMIN LAYOUT — Sidebar profissional para painéis internos
-  if (isAdminPage) {
-    return (
-      <ErrorBoundary>
-        <GlobalMonitor />
-        <AdminLayout
-          currentUser={currentUser}
-          currentPageName={currentPageName}
-          onLogout={handleLogout}
-        >
-          {children}
-        </AdminLayout>
-
-        {/* Modais críticos preservados no contexto admin */}
-        {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
-        {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-        {showShareModal && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} context="default" />}
-        {showLoginModal && (
-          <LoginModal
-            onClose={() => setShowLoginModal(false)}
-            onSuccess={(user) => {
-              setCurrentUser(user);
-              setShowLoginModal(false);
-              setTimeout(() => triggerPanelSelector(user), 150);
-            }}
-            onSwitchToRegister={() => {
-              setShowLoginModal(false);
-              navigate(createPageUrl("Register"));
-            }}
-          />
-        )}
-        <PainelSelector />
-        <PaymentConfirmationPopup />
-        <TransactionToasts />
-        <GlobalWalletDrawer />
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <GlobalMonitor />
