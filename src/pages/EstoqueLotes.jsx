@@ -54,6 +54,8 @@ export default function EstoqueLotes() {
   const [isSavingArremate, setIsSavingArremate] = useState(false);
   const [loteParaExcluir, setLoteParaExcluir] = useState(null); // lote no modal de confirmação de exclusão
   const [isDeleting, setIsDeleting] = useState(false);
+  const [loteParaGerar, setLoteParaGerar] = useState(null); // lote no modal de confirmação de geração de produtos
+  const [isGerando, setIsGerando] = useState(false);
 
   const [form, setForm] = useState({
     nome_lote: '',
@@ -86,7 +88,7 @@ export default function EstoqueLotes() {
 
   const handleSave = async () => {
     if (!form.nome_lote || !form.marketplace) {
-      alert('Informe o nome do lote e o marketplace.');
+      toast.error('Informe o nome do lote e o marketplace.');
       return;
     }
     try {
@@ -99,7 +101,7 @@ export default function EstoqueLotes() {
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
       await loadLotes();
     } catch (e) {
-      alert('Erro ao salvar: ' + e.message);
+      toast.error('Erro ao salvar: ' + e.message);
     }
   };
 
@@ -110,14 +112,14 @@ export default function EstoqueLotes() {
       await base44.entities.LoteRecebido.update(lote.id, { status: cfg.next });
       await loadLotes();
     } catch (e) {
-      alert('Erro: ' + e.message);
+      toast.error('Erro: ' + e.message);
     }
   };
 
   const handleConfirmarArremate = async () => {
     if (!arrematarLote) return;
     const valorArremate = parseFloat(arrematarForm.valorArremate) || 0;
-    if (!valorArremate) { alert('Informe o valor de arremate.'); return; }
+    if (!valorArremate) { toast.error('Informe o valor de arremate.'); return; }
     const taxaValor = valorArremate * (arrematarForm.taxaPct / 100);
     const custoTotal = valorArremate + taxaValor + arrematarForm.frete + arrematarForm.outros;
     setIsSavingArremate(true);
@@ -136,7 +138,7 @@ export default function EstoqueLotes() {
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
       await loadLotes();
     } catch (e) {
-      alert('Erro: ' + e.message);
+      toast.error('Erro: ' + e.message);
     } finally {
       setIsSavingArremate(false);
     }
@@ -158,37 +160,33 @@ export default function EstoqueLotes() {
     }
   };
 
-  const handleGerarProdutos = async (lote) => {
+  const handleGerarProdutos = (lote) => {
     if (!lote.itens_json) {
-      alert('Este lote não possui itens detalhados salvos. Só é possível gerar produtos em lotes importados via planilha.');
+      toast.error('Este lote não possui itens detalhados salvos. Só é possível gerar produtos em lotes importados via planilha.');
       return;
     }
-    const qtd = lote.quantidade_total || 0;
-    const jaGerados = lote.produtos_gerados_count || 0;
-    const msgRetomada = jaGerados > 0 && !lote.produtos_gerados
-      ? `\n\nATENÇÃO: Este lote já tem ${jaGerados} produtos criados anteriormente. Esta ação vai retomar e criar apenas os que faltam (não duplica).`
-      : '';
-    const confirmacao = confirm(
-      `Gerar produtos no estoque para o lote "${lote.nome_lote}"?\n\n` +
-      `• Quantidade total: ${qtd} unidades\n` +
-      `• Custo total do lote: R$ ${fmtBR((lote.valor_lote || 0))}\n` +
-      `• Custo unitário médio: R$ ${qtd > 0 ? ((lote.valor_lote || 0) / qtd).toFixed(2) : '0.00'}\n` +
-      `• Depósito destino: ${lote.deposito_destino || 'Bangu'}${msgRetomada}\n\n` +
-      `Esta ação cria os produtos na "Posição de Estoque".`
-    );
-    if (!confirmacao) return;
+    setLoteParaGerar(lote);
+  };
+
+  const handleConfirmarGeracao = async () => {
+    const lote = loteParaGerar;
+    if (!lote) return;
+    setIsGerando(true);
     try {
       const res = await gerarProdutosDoLote({ lote_id: lote.id });
       const data = res?.data || res;
       if (data?.status === 'success' || data?.status === 'partial') {
         const msg = data.mensagem || `${data.produtos_criados} produtos criados.`;
-        alert(`${data.status === 'success' ? '' : ''} ${msg}\n\nCriados agora: ${data.produtos_criados}\nJá existiam: ${data.ja_existentes || 0}\nTotal no lote: ${data.total_acumulado || data.produtos_criados}\nCusto unitário: R$ ${fmtBR(data.custo_unitario_medio)}`);
+        toast.success(`${msg} (Criados agora: ${data.produtos_criados} · Já existiam: ${data.ja_existentes || 0} · Total no lote: ${data.total_acumulado || data.produtos_criados})`);
+        setLoteParaGerar(null);
         await loadLotes();
       } else {
-        alert(`Erro: ${data?.error || 'Resposta inesperada'}`);
+        toast.error(`Erro: ${data?.error || 'Resposta inesperada'}`);
       }
     } catch (e) {
-      alert(`Erro ao gerar produtos: ${e.message}`);
+      toast.error(`Erro ao gerar produtos: ${e.message}`);
+    } finally {
+      setIsGerando(false);
     }
   };
 
@@ -443,6 +441,79 @@ export default function EstoqueLotes() {
           </Card>
         </div>
       )}
+
+      {/* MODAL CONFIRMAR GERAÇÃO DE PRODUTOS */}
+      {loteParaGerar && (() => {
+        const qtd = loteParaGerar.quantidade_total || 0;
+        const jaGerados = loteParaGerar.produtos_gerados_count || 0;
+        const isRetomada = jaGerados > 0 && !loteParaGerar.produtos_gerados;
+        return (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <Card className="bg-gray-800 border-emerald-700/50 max-w-md w-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <PackagePlus className="text-emerald-400 w-5 h-5" /> Gerar Produtos no Estoque
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => !isGerando && setLoteParaGerar(null)}
+                    disabled={isGerando}
+                    className="border-gray-600 text-gray-400"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-gray-400 text-sm mt-1">{loteParaGerar.nome_lote}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between text-gray-300">
+                    <span>Quantidade total</span><span className="font-semibold text-white">{qtd} unidades</span>
+                  </div>
+                  <div className="flex justify-between text-gray-300">
+                    <span>Custo total do lote</span><span className="font-semibold text-green-400">R$ {fmtBR(loteParaGerar.valor_lote || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-300">
+                    <span>Custo unitário médio</span><span className="font-semibold text-white">R$ {qtd > 0 ? ((loteParaGerar.valor_lote || 0) / qtd).toFixed(2) : '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-300">
+                    <span>Depósito destino</span><span className="font-semibold text-white">{loteParaGerar.deposito_destino || 'Bangu'}</span>
+                  </div>
+                </div>
+                {isRetomada && (
+                  <p className="text-amber-300 text-xs bg-amber-900/20 border border-amber-700/40 rounded-lg p-3">
+                    Este lote já tem {jaGerados} produtos criados anteriormente. Esta ação retoma e cria apenas os que faltam (não duplica).
+                  </p>
+                )}
+                <p className="text-gray-400 text-xs">Esta ação cria os produtos na "Posição de Estoque".</p>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    onClick={handleConfirmarGeracao}
+                    disabled={isGerando}
+                    className="bg-emerald-600 hover:bg-emerald-500 flex-1 font-bold min-h-[44px]"
+                  >
+                    {isGerando ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
+                    ) : (
+                      <><PackagePlus className="w-4 h-4 mr-2" /> {isRetomada ? 'Retomar Geração' : 'Gerar Produtos'}</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLoteParaGerar(null)}
+                    disabled={isGerando}
+                    className="border-gray-600 text-gray-300 min-h-[44px]"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* MODAL ARREMATAMOS */}
       {arrematarLote && (
