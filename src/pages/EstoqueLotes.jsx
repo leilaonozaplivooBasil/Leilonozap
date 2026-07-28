@@ -61,6 +61,14 @@ export default function EstoqueLotes() {
 
   const navigate = useNavigate();
 
+  // 🔐 Email do admin logado (login custom via localStorage) — enviado pra função
+  // backend validar a permissão, já que a RLS de LoteRecebido é admin-only e o
+  // SDK do navegador não carrega sessão de auth real.
+  const getCallerEmail = () => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.email || null; }
+    catch { return null; }
+  };
+
   useEffect(() => { loadLotes(); }, []);
 
   const loadLotes = async () => {
@@ -81,11 +89,16 @@ export default function EstoqueLotes() {
       return;
     }
     try {
-      await base44.entities.LoteRecebido.create({
-        ...form,
-        data_recebimento: new Date().toISOString(),
-        status: 'recebido',
+      const res = await base44.functions.invoke('loteRecebidoWrite', {
+        method: 'create',
+        caller_email: getCallerEmail(),
+        data: {
+          ...form,
+          data_recebimento: new Date().toISOString(),
+          status: 'recebido',
+        },
       });
+      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       setShowModal(false);
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
       await loadLotes();
@@ -98,7 +111,11 @@ export default function EstoqueLotes() {
     const cfg = STATUS_CONFIG[lote.status];
     if (!cfg?.next) return;
     try {
-      await base44.entities.LoteRecebido.update(lote.id, { status: cfg.next });
+      const res = await base44.functions.invoke('loteRecebidoWrite', {
+        method: 'update', id: lote.id, caller_email: getCallerEmail(),
+        data: { status: cfg.next },
+      });
+      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       await loadLotes();
     } catch (e) {
       alert('Erro: ' + e.message);
@@ -113,16 +130,20 @@ export default function EstoqueLotes() {
     const custoTotal = valorArremate + taxaValor + arrematarForm.frete + arrematarForm.outros;
     setIsSavingArremate(true);
     try {
-      await base44.entities.LoteRecebido.update(arrematarLote.id, {
-        status: 'comprado',
-        valor_lote: custoTotal,
-        valor_arremate: valorArremate,
-        custo_total: custoTotal,
-        taxa_pct: arrematarForm.taxaPct || 0,
-        frete: arrematarForm.frete || 0,
-        outros: arrematarForm.outros || 0,
-        observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
+      const res = await base44.functions.invoke('loteRecebidoWrite', {
+        method: 'update', id: arrematarLote.id, caller_email: getCallerEmail(),
+        data: {
+          status: 'comprado',
+          valor_lote: custoTotal,
+          valor_arremate: valorArremate,
+          custo_total: custoTotal,
+          taxa_pct: arrematarForm.taxaPct || 0,
+          frete: arrematarForm.frete || 0,
+          outros: arrematarForm.outros || 0,
+          observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
+        },
       });
+      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       setArrematarLote(null);
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
       await loadLotes();
@@ -136,7 +157,10 @@ export default function EstoqueLotes() {
   const handleDelete = async (id) => {
     if (!confirm('Excluir este lote?')) return;
     try {
-      await base44.entities.LoteRecebido.delete(id);
+      const res = await base44.functions.invoke('loteRecebidoWrite', {
+        method: 'delete', id, caller_email: getCallerEmail(),
+      });
+      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       await loadLotes();
     } catch (e) {
       alert('Erro: ' + e.message);

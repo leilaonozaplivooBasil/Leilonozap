@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     // Cálculo do Custo Médio Ponderado (CMV)
     const quantidadeTotal = lote.quantidade_total || itens.reduce((s, i) => s + (i.qtd || 1), 0);
-    const custoTotal = lote.valor_lote || 0;
+    const custoTotal = lote.custo_total || lote.valor_lote || 0;
     const custoUnitarioMedio = quantidadeTotal > 0 ? custoTotal / quantidadeTotal : 0;
 
     // Mapeia grade -> campo qty_*
@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
     const completoAgora = erros.length === 0 && criados === produtosParaCriar.length;
 
     await base44.asServiceRole.entities.LoteRecebido.update(lote.id, {
-      produtos_gerados: completoAgora,
+      status: completoAgora ? 'convertido' : lote.status,
       produtos_gerados_em: new Date().toISOString(),
       produtos_gerados_count: totalCriadoAcumulado
     });
