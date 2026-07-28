@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,8 @@ export default function EstoqueLotes() {
   const [arrematarLote, setArrematarLote] = useState(null); // lote em processo de arremate
   const [arrematarForm, setArrematarForm] = useState({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
   const [isSavingArremate, setIsSavingArremate] = useState(false);
+  const [loteParaExcluir, setLoteParaExcluir] = useState(null); // lote no modal de confirmação de exclusão
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [form, setForm] = useState({
     nome_lote: '',
@@ -139,13 +142,19 @@ export default function EstoqueLotes() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Excluir este lote?')) return;
+  const handleConfirmarExclusao = async () => {
+    if (!loteParaExcluir) return;
+    setIsDeleting(true);
     try {
-      await base44.entities.LoteRecebido.delete(id);
+      await base44.entities.LoteRecebido.delete(loteParaExcluir.id);
+      toast.success('Lote excluído com sucesso.');
+      setLoteParaExcluir(null);
       await loadLotes();
     } catch (e) {
-      alert('Erro: ' + e.message);
+      // Nunca ficar mudo: mostra o erro real e mantém o modal aberto pra nova tentativa
+      toast.error('Não foi possível excluir: ' + (e?.message || 'erro desconhecido'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -368,8 +377,9 @@ export default function EstoqueLotes() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDelete(lote.id)}
-                          className="border-red-600 text-red-400 hover:bg-red-900/20"
+                          onClick={() => setLoteParaExcluir(lote)}
+                          className="border-red-600 text-red-400 hover:bg-red-900/20 min-h-[40px] min-w-[40px]"
+                          title="Excluir lote"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -382,6 +392,57 @@ export default function EstoqueLotes() {
           </div>
         )}
       </div>
+
+      {/* MODAL CONFIRMAR EXCLUSÃO */}
+      {loteParaExcluir && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <Card className="bg-gray-800 border-red-700/50 max-w-md w-full">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Trash2 className="text-red-400 w-5 h-5" /> Excluir Lote
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => !isDeleting && setLoteParaExcluir(null)}
+                  disabled={isDeleting}
+                  className="border-gray-600 text-gray-400"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-300 text-sm">
+                Tem certeza que deseja excluir o lote{' '}
+                <span className="font-bold text-white">{loteParaExcluir.nome_lote}</span>? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  onClick={handleConfirmarExclusao}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-500 flex-1 font-bold min-h-[44px]"
+                >
+                  {isDeleting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Excluindo...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4 mr-2" /> Excluir</>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setLoteParaExcluir(null)}
+                  disabled={isDeleting}
+                  className="border-gray-600 text-gray-300 min-h-[44px]"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* MODAL ARREMATAMOS */}
       {arrematarLote && (
