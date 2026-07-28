@@ -74,6 +74,25 @@ export default function EstoqueLotes() {
 
   useEffect(() => { loadLotes(); }, []);
 
+  // Email do admin logado — usado pela função backend loteRecebidoWrite para validar
+  // a autorização (o app usa login custom, sem sessão Base44/Supabase).
+  const getCallerEmail = () => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.email || null; } catch { return null; }
+  };
+
+  // Escreve LoteRecebido SEMPRE pela função backend loteRecebidoWrite (service_role → Supabase
+  // real). É o único caminho que funciona no preview E no publicado: o adapter direto cai na
+  // rota Vercel (inexistente no preview) e a escrita anon é bloqueada por RLS.
+  const writeLote = async (method, { id, data } = {}) => {
+    const res = await base44.functions.invoke('loteRecebidoWrite', {
+      method, id, data, caller_email: getCallerEmail(),
+    });
+    if (res?.error || res?.ok === false) {
+      throw new Error(res.error || res.details || 'Falha no servidor');
+    }
+    return res?.data ?? res;
+  };
+
   const loadLotes = async () => {
     setIsLoading(true);
     try {
@@ -92,10 +111,8 @@ export default function EstoqueLotes() {
       return;
     }
     try {
-      await base44.entities.LoteRecebido.create({
-        ...form,
-        data_recebimento: new Date().toISOString(),
-        status: 'recebido',
+      await writeLote('create', {
+        data: { ...form, data_recebimento: new Date().toISOString(), status: 'recebido' },
       });
       setShowModal(false);
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
@@ -109,7 +126,7 @@ export default function EstoqueLotes() {
     const cfg = STATUS_CONFIG[lote.status];
     if (!cfg?.next) return;
     try {
-      await base44.entities.LoteRecebido.update(lote.id, { status: cfg.next });
+      await writeLote('update', { id: lote.id, data: { status: cfg.next } });
       await loadLotes();
     } catch (e) {
       toast.error('Erro: ' + e.message);
@@ -124,15 +141,18 @@ export default function EstoqueLotes() {
     const custoTotal = valorArremate + taxaValor + arrematarForm.frete + arrematarForm.outros;
     setIsSavingArremate(true);
     try {
-      await base44.entities.LoteRecebido.update(arrematarLote.id, {
-        status: 'comprado',
-        valor_lote: custoTotal,
-        valor_arremate: valorArremate,
-        custo_total: custoTotal,
-        taxa_pct: arrematarForm.taxaPct || 0,
-        frete: arrematarForm.frete || 0,
-        outros: arrematarForm.outros || 0,
-        observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
+      await writeLote('update', {
+        id: arrematarLote.id,
+        data: {
+          status: 'comprado',
+          valor_lote: custoTotal,
+          valor_arremate: valorArremate,
+          custo_total: custoTotal,
+          taxa_pct: arrematarForm.taxaPct || 0,
+          frete: arrematarForm.frete || 0,
+          outros: arrematarForm.outros || 0,
+          observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
+        },
       });
       setArrematarLote(null);
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
@@ -148,22 +168,9 @@ export default function EstoqueLotes() {
     if (!loteParaExcluir) return;
     setIsDeleting(true);
     try {
-      // A exclusão passa pela função backend loteRecebidoWrite (service_role, valida
-      // admin via caller_email). O delete direto pelo adapter dependia da rota Vercel
-      // /api/functions/entityWrite, que NÃO existe no preview-sandbox — por isso o
-      // botão vinha falhando com "Falha ao excluir (servidor)".
-      let callerEmail = null;
-      try { callerEmail = JSON.parse(localStorage.getItem('currentUser') || 'null')?.email || null; } catch { /* ignora */ }
-
-      const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'delete',
-        id: loteParaExcluir.id,
-        caller_email: callerEmail,
-      });
-      // A função retorna { data: { deleted: true } } em sucesso, ou { error } em falha
-      if (res?.error || res?.ok === false) {
-        throw new Error(res.error || 'Falha no servidor');
-      }
+      // Exclusão pela função backend loteRecebidoWrite (service_role → Supabase real),
+      // único caminho que funciona no preview E no publicado.
+      await writeLote('delete', { id: loteParaExcluir.id });
       toast.success('Lote excluído com sucesso.');
       setLoteParaExcluir(null);
       await loadLotes();
