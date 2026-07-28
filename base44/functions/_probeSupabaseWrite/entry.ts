@@ -16,7 +16,9 @@ Deno.serve(async () => {
     return Response.json(report);
   }
 
-  const base = `${url}/rest/v1/lotes_recebidos`;
+  // Normaliza: remove /rest/v1 e barras finais para evitar duplicação de caminho
+  const baseUrl = url.replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+  const base = `${baseUrl}/rest/v1/lotes_recebidos`;
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
