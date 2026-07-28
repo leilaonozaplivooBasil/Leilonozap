@@ -116,6 +116,11 @@ export default function EstoqueLotes() {
       await base44.entities.LoteRecebido.update(arrematarLote.id, {
         status: 'comprado',
         valor_lote: custoTotal,
+        valor_arremate: valorArremate,
+        custo_total: custoTotal,
+        taxa_pct: arrematarForm.taxaPct || 0,
+        frete: arrematarForm.frete || 0,
+        outros: arrematarForm.outros || 0,
         observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
       });
       setArrematarLote(null);
