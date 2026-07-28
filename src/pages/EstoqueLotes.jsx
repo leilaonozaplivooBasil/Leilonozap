@@ -61,12 +61,10 @@ export default function EstoqueLotes() {
 
   const navigate = useNavigate();
 
-  // 🔐 Email do admin logado (login custom via localStorage) — enviado pra função
-  // backend validar a permissão, já que a RLS de LoteRecebido é admin-only e o
-  // SDK do navegador não carrega sessão de auth real.
-  const getCallerEmail = async () => {
-    // Cascata: localStorage → sessionStorage → sessão da plataforma.
-    // Para na primeira fonte que tiver um email válido; null se nenhuma tiver.
+  // 🔐 Email do admin logado (login custom via localStorage) — a função backend
+  // valida a permissão por esse email, já que a RLS de LoteRecebido é admin-only
+  // e o SDK do navegador não carrega sessão de auth real no login custom.
+  const getCallerEmail = () => {
     try {
       const ls = JSON.parse(localStorage.getItem('currentUser') || 'null')?.email;
       if (ls) return ls;
@@ -75,11 +73,29 @@ export default function EstoqueLotes() {
       const ss = JSON.parse(sessionStorage.getItem('currentUser') || 'null')?.email;
       if (ss) return ss;
     } catch { /* ignora storage inválido */ }
-    try {
-      const me = await base44.auth.me();
-      if (me?.email) return me.email;
-    } catch { /* sessão da plataforma pode não existir no login custom */ }
     return null;
+  };
+
+  // ✍️ Escrita de LoteRecebido via chamada HTTP direta ao endpoint da função backend.
+  // NÃO usamos base44.functions.invoke — o invoke retorna 'not_implemented' no preview/
+  // sandbox. O fetch direto ao endpoint /api/apps/{appId}/functions/loteRecebidoWrite
+  // roda no preview E na produção. O backend valida admin (por caller_email) e escreve
+  // com service role, respeitando a RLS admin-only da entidade.
+  const APP_ID = '68d536db3c26ff51f79c4137';
+  const chamarLoteWrite = async (payload) => {
+    const url = `${window.location.origin}/api/apps/${APP_ID}/functions/loteRecebidoWrite`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ ...payload, caller_email: getCallerEmail() }),
+    });
+    let json = {};
+    try { json = await resp.json(); } catch { /* corpo vazio */ }
+    if (!resp.ok || json?.error) {
+      throw new Error(json?.error || `Falha na operação (HTTP ${resp.status})`);
+    }
+    return json?.data;
   };
 
   useEffect(() => { loadLotes(); }, []);
@@ -102,16 +118,14 @@ export default function EstoqueLotes() {
       return;
     }
     try {
-      const res = await base44.functions.invoke('loteRecebidoWrite', {
+      await chamarLoteWrite({
         method: 'create',
-        caller_email: await getCallerEmail(),
         data: {
           ...form,
           data_recebimento: new Date().toISOString(),
           status: 'recebido',
         },
       });
-      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       setShowModal(false);
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
       await loadLotes();
@@ -124,11 +138,7 @@ export default function EstoqueLotes() {
     const cfg = STATUS_CONFIG[lote.status];
     if (!cfg?.next) return;
     try {
-      const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'update', id: lote.id, caller_email: await getCallerEmail(),
-        data: { status: cfg.next },
-      });
-      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
+      await chamarLoteWrite({ method: 'update', id: lote.id, data: { status: cfg.next } });
       await loadLotes();
     } catch (e) {
       alert('Erro: ' + e.message);
@@ -143,8 +153,8 @@ export default function EstoqueLotes() {
     const custoTotal = valorArremate + taxaValor + arrematarForm.frete + arrematarForm.outros;
     setIsSavingArremate(true);
     try {
-      const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'update', id: arrematarLote.id, caller_email: await getCallerEmail(),
+      await chamarLoteWrite({
+        method: 'update', id: arrematarLote.id,
         data: {
           status: 'comprado',
           valor_lote: custoTotal,
@@ -156,7 +166,6 @@ export default function EstoqueLotes() {
           observacoes: `Arremate: R$ ${fmtBR(valorArremate)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${fmtBR(taxaValor)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${fmtBR(custoTotal)}\n${arrematarLote.observacoes || ''}`,
         },
       });
-      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
       setArrematarLote(null);
       setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
       await loadLotes();
@@ -170,10 +179,7 @@ export default function EstoqueLotes() {
   const handleDelete = async (id) => {
     if (!confirm('Excluir este lote?')) return;
     try {
-      const res = await base44.functions.invoke('loteRecebidoWrite', {
-        method: 'delete', id, caller_email: await getCallerEmail(),
-      });
-      if (res?.data?.error || res?.error) throw new Error(res?.data?.error || res?.error);
+      await chamarLoteWrite({ method: 'delete', id });
       await loadLotes();
     } catch (e) {
       alert('Erro: ' + e.message);
