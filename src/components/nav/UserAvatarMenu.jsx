@@ -265,42 +265,6 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
           </div>
         )}
 
-        {/* ===== Acessar como... ===== */}
-        {panels.length > 0 && (
-          <div className="p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 px-2 pb-2">
-              {redeMeta ? "Também acessar como..." : "Acessar como..."}
-            </p>
-            <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
-              {panels.map((panel) => {
-                const accent = PANEL_ACCENT[panel.key] || PANEL_ACCENT.arrematante;
-                const Icon = ICON_MAP[panel.iconName] || UserIcon;
-                // Subtitle customizado para Lojista (mostra nome da loja)
-                let subtitle = panel.description;
-                if (panel.key === "lojista" && effectiveUser.store_name) {
-                  subtitle = `Loja: ${effectiveUser.store_name}`;
-                }
-                return (
-                  <button
-                    key={panel.key}
-                    onClick={() => {
-                      navigate(panel.route);
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border ${accent.border} ${accent.bg} transition-all duration-200 text-left group`}
-                    style={{ background: "rgba(255,255,255,0.02)" }}
-                  >
-                    <Icon className={`w-5 h-5 ${accent.icon} flex-shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold ${accent.text} truncate`}>{panel.title}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{subtitle}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         <DropdownMenuSeparator className="bg-white/5 my-0" />
 
         {/* ===== Ações pessoais ===== */}
