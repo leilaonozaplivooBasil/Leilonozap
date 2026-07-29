@@ -72,13 +72,24 @@ export default function RegisterBatches() {
 
   const loadBatches = async () => {
     try {
-      const [batchAdmin, loteAdmin] = await Promise.all([
-        _readAdmin('batch_registrations', { method: 'list', sort_by: '-created_date', limit: 100 }),
-        _readAdmin('lotes_recebidos', { method: 'filter', filter: { status: { $in: ['enviado_ao_estoque', 'convertido'] } }, limit: 500 }),
+      // Cada leitura é isolada: se uma falhar, NÃO derruba a outra (antes o Promise.all
+      // rejeitava inteiro quando batch_registrations dava erro e zerava a tela toda).
+      // A coluna de data real no Supabase é created_at (não created_date).
+      const [allBatches, allLotes] = await Promise.all([
+        (async () => {
+          try {
+            const admin = await _readAdmin('batch_registrations', { method: 'list', sort_by: '-created_at', limit: 100 });
+            return admin ?? await base44.entities.BatchRegistration.list('-created_at', 100);
+          } catch (e) { console.error('Falha ao carregar batch_registrations:', e); return []; }
+        })(),
+        (async () => {
+          try {
+            const admin = await _readAdmin('lotes_recebidos', { method: 'filter', filter: { status: { $in: ['enviado_ao_estoque', 'convertido'] } }, limit: 500 });
+            return admin ?? await base44.entities.LoteRecebido.filter({ status: { $in: ['enviado_ao_estoque', 'convertido'] } });
+          } catch (e) { console.error('Falha ao carregar lotes_recebidos:', e); return []; }
+        })(),
       ]);
-      const allBatches = batchAdmin ?? await base44.entities.BatchRegistration.list('-created_date', 100);
-      const allLotes = loteAdmin ?? await base44.entities.LoteRecebido.filter({ status: { $in: ['enviado_ao_estoque', 'convertido'] } });
-      setBatches(allBatches);
+      setBatches(allBatches || []);
       setLotesRecebidos(allLotes || []);
 
       // Atualiza mapa local de códigos (code -> descrição) com histórico
