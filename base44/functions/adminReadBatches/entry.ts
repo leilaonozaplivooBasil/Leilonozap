@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+// v1.1 - forçar sync (marca arquivo como modificado para o próximo build incluir esta function)
 
 // Lê BatchRegistration + LoteRecebido com service_role (ignora RLS), só para admin.
 // Motivo: o RLS do Supabase nega leitura dessas duas tabelas para a chave do app,
