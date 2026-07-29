@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { buildAdminMenu } from "@/lib/adminMenu";
-import { X, ZoomIn, ZoomOut, Maximize2, Map, Sparkles } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Maximize2, Maximize, Minimize2, Map, Sparkles } from "lucide-react";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.2;
@@ -32,6 +32,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.85 });
   const [isDragging, setIsDragging] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startTX: 0, startTY: 0, moved: false });
   const pinchRef = useRef({ startDist: 0, startScale: 1 });
   const containerRef = useRef(null);
@@ -176,7 +177,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     >
       {/* Modal container */}
       <div
-        className={`relative w-full max-w-[1600px] h-[94vh] max-h-[920px] rounded-2xl overflow-hidden flex flex-col ${
+        className={`relative ${isFullscreen ? "w-screen h-screen max-w-none max-h-none rounded-none" : "w-full max-w-[1600px] h-[95vh] max-h-[940px] rounded-2xl"} overflow-hidden flex flex-col ${
           closing ? "animate-out zoom-out-95 duration-180" : "animate-in zoom-in-95 duration-200"
         }`}
         style={{
@@ -380,6 +381,14 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
               title="Ver tudo"
             >
               <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+            <div className="w-px h-5 bg-white/10 mx-0.5" />
+            <button
+              onClick={() => setIsFullscreen((v) => !v)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+              title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
