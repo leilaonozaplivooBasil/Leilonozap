@@ -14,6 +14,7 @@ import { brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/com
 import BatchCard from '@/components/batches/BatchCard';
 import BatchLoteDetail from '@/components/batches/BatchLoteDetail';
 import LoteAnalysisView from '@/components/lotes/LoteAnalysisView';
+import { adminReadBatches } from '@/functions/adminReadBatches';
 
 export default function RegisterBatches() {
   const [batches, setBatches] = useState([]);
@@ -56,21 +57,12 @@ export default function RegisterBatches() {
 
   const loadBatches = async () => {
     try {
-      // Leitura direta pelo adapter (mesmo caminho do resto do painel admin).
-      // Cada leitura é isolada: se uma falhar, NÃO derruba a outra.
-      // TODOS os lotes recebidos entram (o lixo de teste __QA_BACKEND_FN é filtrado abaixo).
-      const [allBatches, allLotes] = await Promise.all([
-        (async () => {
-          try {
-            return await base44.entities.BatchRegistration.list('-created_date', 200);
-          } catch (e) { console.error('Falha ao carregar batch_registrations:', e); return []; }
-        })(),
-        (async () => {
-          try {
-            return await base44.entities.LoteRecebido.list('-created_date', 200);
-          } catch (e) { console.error('Falha ao carregar lotes_recebidos:', e); return []; }
-        })(),
-      ]);
+      // Leitura via backend function com service_role (adminReadBatches).
+      // Motivo: o RLS do Supabase nega leitura de batch_registrations e lotes_recebidos
+      // para a chave do app (retornava 0). A function devolve os dados reais (admin-only).
+      const resp = await adminReadBatches({});
+      const allBatches = resp?.data?.batches || [];
+      const allLotes = resp?.data?.lotes || [];
       setBatches(allBatches || []);
       // Remove o registro de teste técnico (__QA_BACKEND_FN) — nunca deve aparecer na lista real
       setLotesRecebidos((allLotes || []).filter(l => l.nome_lote !== '__QA_BACKEND_FN'));
