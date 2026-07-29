@@ -28,7 +28,7 @@ import {
   Target,
   Image as ImageIcon,
   Wallet as WalletIcon,
-  Map,
+  Map as MapIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -222,7 +222,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
               className="w-full flex items-center gap-3 p-3 rounded-lg border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/15 hover:to-teal-500/15 transition-all duration-200 text-left group"
             >
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/20 text-emerald-300 flex-shrink-0 group-hover:scale-110 transition-transform">
-                <Map className="w-4 h-4" />
+                <MapIcon className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-extrabold text-emerald-300 truncate">Visão Geral</p>
