@@ -24,9 +24,22 @@ function buildQuery(table, { filter, sort_by, limit } = {}) {
   const params = [];
   if (filter && typeof filter === 'object') {
     for (const [k, v] of Object.entries(filter)) {
-      if (v === null || v === undefined) params.push(`${encodeURIComponent(k)}=is.null`);
-      else if (Array.isArray(v)) params.push(`${encodeURIComponent(k)}=in.(${v.map((x) => encodeURIComponent(x)).join(',')})`);
-      else params.push(`${encodeURIComponent(k)}=eq.${encodeURIComponent(v)}`);
+      const key = encodeURIComponent(k);
+      if (v === null || v === undefined) params.push(`${key}=is.null`);
+      else if (Array.isArray(v)) params.push(`${key}=in.(${v.map((x) => encodeURIComponent(x)).join(',')})`);
+      // Operadores estilo Base44/Mongo: { $in: [...] }, { $gt: 5 }, { $lte: 10 }, { $ne: 'x' }
+      else if (typeof v === 'object') {
+        for (const [op, ov] of Object.entries(v)) {
+          if (op === '$in' && Array.isArray(ov)) params.push(`${key}=in.(${ov.map((x) => encodeURIComponent(x)).join(',')})`);
+          else if (op === '$gt') params.push(`${key}=gt.${encodeURIComponent(ov)}`);
+          else if (op === '$gte') params.push(`${key}=gte.${encodeURIComponent(ov)}`);
+          else if (op === '$lt') params.push(`${key}=lt.${encodeURIComponent(ov)}`);
+          else if (op === '$lte') params.push(`${key}=lte.${encodeURIComponent(ov)}`);
+          else if (op === '$ne') params.push(`${key}=neq.${encodeURIComponent(ov)}`);
+          else params.push(`${key}=eq.${encodeURIComponent(ov)}`);
+        }
+      }
+      else params.push(`${key}=eq.${encodeURIComponent(v)}`);
     }
   }
   if (sort_by) {
