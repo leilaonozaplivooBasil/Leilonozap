@@ -29,10 +29,10 @@ const SECTION_LAYOUT = [
 
 export default function MiniCanvasOverview({ onClose, currentPageName }) {
   const navigate = useNavigate();
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.85 });
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1.17 });
   const [isDragging, setIsDragging] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const dragRef = useRef({ startX: 0, startY: 0, startTX: 0, startTY: 0, moved: false });
   const pinchRef = useRef({ startDist: 0, startScale: 1 });
   const containerRef = useRef(null);
@@ -141,7 +141,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     setTransform((prev) => ({ ...prev, scale: Math.max(MIN_SCALE, prev.scale / 1.25) }));
   }, []);
   const fitToScreen = useCallback(() => {
-    setTransform({ x: 0, y: 0, scale: 0.85 });
+    setTransform({ x: 0, y: 0, scale: 1.17 });
   }, []);
 
   // --- Esc to close ---
