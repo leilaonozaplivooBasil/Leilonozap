@@ -29,7 +29,7 @@ const SECTION_LAYOUT = [
 
 export default function MiniCanvasOverview({ onClose, currentPageName }) {
   const navigate = useNavigate();
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1.17 });
+  const [transform, setTransform] = useState({ x: 0, y: -40, scale: 1.17 });
   const [isDragging, setIsDragging] = useState(false);
   const [closing, setClosing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(true);
@@ -141,7 +141,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     setTransform((prev) => ({ ...prev, scale: Math.max(MIN_SCALE, prev.scale / 1.25) }));
   }, []);
   const fitToScreen = useCallback(() => {
-    setTransform({ x: 0, y: 0, scale: 1.17 });
+    setTransform({ x: 0, y: -40, scale: 1.17 });
   }, []);
 
   // --- Esc to close ---
