@@ -8,10 +8,10 @@ import { Gift, Users, Radio } from 'lucide-react';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-// Extrai um horário legível da config ("hoje 20h", "20:00"...) — fallback 20h.
+// Horário do sorteio = horário da live (18h). O sorteio acontece na live.
 function horarioSorteio(config) {
   const raw = String(config?.live_horario || '').trim();
-  if (!raw) return '20h';
+  if (!raw) return '18h';
   const m = raw.match(/(\d{1,2})(?::(\d{2}))?\s*h?/);
   if (!m) return raw;
   return m[2] && m[2] !== '00' ? `${m[1]}h${m[2]}` : `${m[1]}h`;

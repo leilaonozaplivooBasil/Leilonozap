@@ -15,7 +15,7 @@ function parseAlvo(config) {
       if (h >= 0 && h <= 23 && min >= 0 && min <= 59) return { h, min };
     }
   }
-  return { h: 20, min: 0 };
+  return { h: 18, min: 0 };
 }
 
 function agoraSP() {

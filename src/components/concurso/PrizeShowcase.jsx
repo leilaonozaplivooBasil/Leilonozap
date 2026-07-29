@@ -8,14 +8,21 @@ import { Gift, Trophy, ShoppingBag, ExternalLink } from 'lucide-react';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-// Badge da posição: 1º dourado, 2º prata, 3º bronze — sempre "LUGAR" com troféu
+// Badge da posição: 1º dourado, 2º prata, 3º bronze — troféu + número, design premium
 function PosTag({ pos }) {
-  const bg = pos === 1 ? 'linear-gradient(90deg,#f5c451,#e0a920)' : pos === 2 ? 'linear-gradient(90deg,#cbd5d8,#94a3b8)' : 'linear-gradient(90deg,#d0894c,#a96d36)';
-  const fg = pos === 1 ? '#052e16' : '#1a1205';
+  const cores = {
+    1: { grad: 'linear-gradient(135deg,#fde68a,#f5c451,#e0a920)', glow: 'rgba(245,196,81,.45)', text: '#3d2a05' },
+    2: { grad: 'linear-gradient(135deg,#f1f5f9,#cbd5d8,#94a3b8)', glow: 'rgba(203,213,216,.35)', text: '#1e293b' },
+    3: { grad: 'linear-gradient(135deg,#f0c89e,#d0894c,#a96d36)', glow: 'rgba(208,137,76,.35)', text: '#3b1f0e' },
+  };
+  const c = cores[pos] || cores[3];
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: bg, color: fg }}>
-      <Trophy className="w-3 h-3" />
-      {pos}º LUGAR
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wide"
+      style={{ background: c.grad, color: c.text, boxShadow: `0 4px 14px ${c.glow}, inset 0 1px 0 rgba(255,255,255,.4)`, border: '1px solid rgba(255,255,255,.25)' }}
+    >
+      <Trophy className="w-3.5 h-3.5" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.2))' }} />
+      {pos}º Lugar
     </span>
   );
 }
@@ -49,10 +56,6 @@ function ProductCard({ item, pos }) {
         <div className="absolute top-2 left-2">
           <PosTag pos={pos} />
         </div>
-        {/* Selo GRÁTIS no canto */}
-        <span className="absolute top-2 right-2 text-[9px] font-black px-2 py-0.5 rounded-full text-[#052e16]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>
-          GRÁTIS
-        </span>
       </div>
 
       {/* Info do produto */}

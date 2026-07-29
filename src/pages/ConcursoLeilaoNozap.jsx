@@ -828,7 +828,7 @@ export default function ConcursoLeilaoNozap() {
             {[
               [UserPlus, '1. Gere seu link', 'Cadastro grátis em 30s'],
               [Share2, '2. Compartilhe', 'Mande pros seus contatos'],
-              [Trophy, '3. Concorra', 'Prêmio todo dia às 20h'],
+              [Trophy, '3. Concorra', 'Prêmio todo dia às 18h'],
             ].map(([Ic, t, d], i) => (
               <div key={i} className="rounded-2xl px-2.5 py-3 text-center" style={CARD}>
                 <span className="inline-grid place-items-center w-9 h-9 rounded-xl mb-1.5" style={{ background: 'rgba(245,196,81,.12)', border: '1px solid rgba(245,196,81,.35)' }}>
