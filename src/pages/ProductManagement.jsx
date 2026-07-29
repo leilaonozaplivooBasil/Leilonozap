@@ -430,7 +430,11 @@ export default function ProductManagement() {
     }
 
     if (hideZeroStock) {
-      filtered = filtered.filter(p => (p.quantity || 0) > 0);
+      filtered = filtered.filter(p =>
+        (p.qty_perfeito || 0) > 0 ||
+        (p.qty_bom || 0) > 0 ||
+        (p.qty_oficina || 0) > 0
+      );
     }
 
     setFilteredProducts(filtered);
@@ -665,25 +669,25 @@ export default function ProductManagement() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        const comEstoque = filteredProducts.filter(p => (p.quantity || 0) > 0);
+                        const comEstoque = filteredProducts.filter(p => (p.qty_perfeito || 0) > 0 || (p.qty_bom || 0) > 0 || (p.qty_oficina || 0) > 0);
                         if (comEstoque.length === 0) { alert('Nenhum produto com estoque para exportar'); return; }
                         exportCSV(comEstoque, 'com-estoque');
                       }}
                       className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
                     >
                       <Download className="w-4 h-4 mr-2 text-emerald-400" /> Apenas com estoque
-                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.filter(p => (p.quantity || 0) > 0).length}</span>
+                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.filter(p => (p.qty_perfeito || 0) > 0 || (p.qty_bom || 0) > 0 || (p.qty_oficina || 0) > 0).length}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        const zerados = filteredProducts.filter(p => (p.quantity || 0) === 0);
+                        const zerados = filteredProducts.filter(p => (p.qty_perfeito || 0) === 0 && (p.qty_bom || 0) === 0 && (p.qty_oficina || 0) === 0);
                         if (zerados.length === 0) { alert('Nenhum produto zerado para exportar'); return; }
                         exportCSV(zerados, 'zerados');
                       }}
                       className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
                     >
                       <Download className="w-4 h-4 mr-2 text-red-400" /> Apenas zerados
-                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.filter(p => (p.quantity || 0) === 0).length}</span>
+                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.filter(p => (p.qty_perfeito || 0) === 0 && (p.qty_bom || 0) === 0 && (p.qty_oficina || 0) === 0).length}</span>
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
