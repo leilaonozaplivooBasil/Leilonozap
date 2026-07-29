@@ -181,9 +181,12 @@ export default async function handler(req, res) {
       const uid = (body.user_id || '').toString();
       if (uid) {
         try {
-          const u = await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(uid)}&limit=1`)).json();
+          let u = await (await sb(`app_users?select=id,cpf&base44_id=eq.${encodeURIComponent(uid)}&limit=1`)).json();
+          if (!Array.isArray(u) || !u[0]) {
+            u = await (await sb(`app_users?select=id,cpf&id=eq.${encodeURIComponent(uid)}&limit=1`)).json();
+          }
           if (Array.isArray(u) && u[0] && !digits(u[0].cpf)) {
-            await sb(`app_users?id=eq.${encodeURIComponent(uid)}&cpf=is.null`, { method: 'PATCH', body: JSON.stringify({ cpf }) });
+            await sb(`app_users?id=eq.${encodeURIComponent(u[0].id)}&cpf=is.null`, { method: 'PATCH', body: JSON.stringify({ cpf }) });
           }
         } catch { /* vínculo é best-effort; cadastro do concurso segue normal */ }
       }
@@ -373,13 +376,7 @@ export default async function handler(req, res) {
 
     // ---------- ADMIN: config (produto do dia, live, propaganda, prêmios por período) ----------
     if (action === 'save_config') {
-      if (!(await isAdmin(body.user_id))) {
-        // DEBUG temporário: vê o que o isAdmin encontrou
-        const uid = encodeURIComponent(body.user_id);
-        const d1 = await (await sb(`app_users?select=role,base44_id,id,email&base44_id=eq.${uid}&limit=3`)).json();
-        const d2 = await (await sb(`app_users?select=role,base44_id,id,email&limit=3`)).json();
-        return jset(res, 403, { error: 'Sem permissão.', debug: { uid: body.user_id, byBase44: d1, anyUsers: d2 } });
-      }
+      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
       const c = body.config || {};
       const patch = {};
       // Colunas que EXISTEM na tabela concurso_config do Supabase.
