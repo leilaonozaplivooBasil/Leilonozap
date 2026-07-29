@@ -1268,8 +1268,13 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                     <p className="text-sm text-gray-500 mb-4">
                       Arraste as fotos na ordem que quiser e defina a que será a principal do seu produto.
                       {' '}
-                      <button type="button" className="text-purple-600 hover:text-purple-700">
-                        Buscar fotos
+                      <button
+                        type="button"
+                        onClick={() => autoFetchImages(formData)}
+                        disabled={isAutoImporting}
+                        className="text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                      >
+                        {isAutoImporting ? 'Buscando...' : 'Buscar fotos'}
                       </button>
                     </p>
                     
