@@ -113,7 +113,8 @@ export default async function handler(req, res) {
       const periodo = (req.query?.periodo || 'geral').toString();
       const ranking = await rankingPeriodo(['dia', 'semana', 'mes', 'geral'].includes(periodo) ? periodo : 'geral');
       const p = await sb('concurso_premios?select=posicao,premio,produto_foto,produto_valor,produto_link&order=posicao');
-      const premios = (await p.json().catch(() => [])) || [];
+      const premiosRaw = (await p.json().catch(() => [])) || [];
+      const premios = Array.isArray(premiosRaw) ? premiosRaw : [];
       const config = await getConfig();
       return jset(res, 200, { ranking, premios, config, group_link: GROUP_LINK, total: ranking.length, periodo });
     }

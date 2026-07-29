@@ -92,7 +92,7 @@ export default function PrizeShowcase({ config, premios }) {
 
   // Prêmios do pódio (1º, 2º, 3º)
   const posMap = {};
-  (premios || []).forEach((p) => { if (p.premio) posMap[p.posicao] = p; });
+  (Array.isArray(premios) ? premios : []).forEach((p) => { if (p.premio) posMap[p.posicao] = p; });
   for (const pos of [1, 2, 3]) {
     const p = posMap[pos];
     if (p && p.produto_link) {

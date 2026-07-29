@@ -155,7 +155,7 @@ export default function ConcursoLeilaoNozap() {
       const j = await r.json();
       setData(j);
       setCfg(j.config || {});
-      const pe = {}; (j.premios || []).forEach((p) => { pe[p.posicao] = { premio: p.premio || '', produto_foto: p.produto_foto || '', produto_valor: p.produto_valor || 0, produto_link: p.produto_link || '' }; }); setPremiosEdit(pe);
+      const pe = {}; (Array.isArray(j.premios) ? j.premios : []).forEach((p) => { pe[p.posicao] = { premio: p.premio || '', produto_foto: p.produto_foto || '', produto_valor: p.produto_valor || 0, produto_link: p.produto_link || '' }; }); setPremiosEdit(pe);
     } catch { /* */ } finally { setLoaded(true); }
   }, [periodo]);
 
@@ -277,7 +277,7 @@ export default function ConcursoLeilaoNozap() {
   const CARD = { background: 'rgba(255,255,255,.045)', border: '1px solid rgba(245,196,81,.26)' };
   const rankingVisible = rankExpanded ? data.ranking.slice(0, 50) : data.ranking.slice(0, 5);
   // Prêmio por posição (pódio top 10) — agora visível pro público: cria desejo de subir
-  const premioPos = {}; (data.premios || []).forEach((p) => { if (p.premio) premioPos[p.posicao] = p.premio; });
+  const premioPos = {}; (Array.isArray(data.premios) ? data.premios : []).forEach((p) => { if (p.premio) premioPos[p.posicao] = p.premio; });
   // Pódio visual só quando existe top 3 completo; o restante segue em lista
   const podio = data.ranking.length >= 3 ? rankingVisible.slice(0, 3) : [];
   const listaAposPodio = podio.length === 3 ? rankingVisible.slice(3) : rankingVisible;
