@@ -647,6 +647,21 @@ export default function Home() {
       setTimeout(() => loadCurrentUser(), 2000);
       setTimeout(() => loadProductStock(), 6000);
 
+      // ⚡ PRELOAD IMEDIATO DO BANNER: se já sabemos a URL da visita anterior
+      // (localStorage), injeta <link rel="preload"> no <head> AGORA — antes do
+      // fetch do banco. O browser começa a baixar a imagem em paralelo com a
+      // query, então o banner aparece instantâneo em TODOS os SOs (Mac/Win).
+      const lastBannerUrl = localStorage.getItem('home_banner_first_url');
+      if (lastBannerUrl && !document.querySelector('link[data-banner-preload]')) {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = lastBannerUrl;
+        link.setAttribute('fetchPriority', 'high');
+        link.setAttribute('data-banner-preload', '1');
+        document.head.appendChild(link);
+      }
+
       // Banners: cache de 10 minutos (raramente mudam)
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
@@ -655,9 +670,22 @@ export default function Home() {
         setBanners(JSON.parse(cachedBanners));
       } else {
         // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
-        // O cache de 10min garante que visitas seguintes sejam instantâneas.
         base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
           const sortedBanners = (bannerData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+          // Salva a URL da primeira imagem pra preload na próxima visita
+          if (sortedBanners[0]?.image_url) {
+            localStorage.setItem('home_banner_first_url', sortedBanners[0].image_url);
+            // Injeta preload agora também (primeira visita) — não espera re-render
+            if (!document.querySelector('link[data-banner-preload]')) {
+              const link = document.createElement('link');
+              link.rel = 'preload';
+              link.as = 'image';
+              link.href = sortedBanners[0].image_url;
+              link.setAttribute('fetchPriority', 'high');
+              link.setAttribute('data-banner-preload', '1');
+              document.head.appendChild(link);
+            }
+          }
           setBanners(sortedBanners);
           sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
           sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
