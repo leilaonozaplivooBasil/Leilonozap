@@ -254,7 +254,24 @@ export default function ConcursoLeilaoNozap() {
   };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
 
-  const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
+  const saveConfig = async () => {
+    setSavingCfg(true);
+    try {
+      const r = await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) {
+        setMsg(`Erro ao salvar: ${j.error || j.detail || 'falha desconhecida'}`);
+        setTimeout(() => setMsg(''), 6000);
+        return;
+      }
+      await load(periodo);
+      setMsg('Config salva!');
+      setTimeout(() => setMsg(''), 3000);
+    } catch {
+      setMsg('Erro de conexão ao salvar.');
+      setTimeout(() => setMsg(''), 5000);
+    } finally { setSavingCfg(false); }
+  };
   const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, p]) => ({ posicao: Number(posicao), premio: typeof p === 'string' ? p : (p.premio || ''), produto_foto: typeof p === 'object' ? (p.produto_foto || '') : '', produto_valor: typeof p === 'object' ? (p.produto_valor || 0) : 0, produto_link: typeof p === 'object' ? (p.produto_link || '') : '' })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
   const realizarSorteio = async (per) => {
     if (!window.confirm(`Realizar sorteio do período "${per}"? Coroa quem trouxe mais gente.`)) return;
