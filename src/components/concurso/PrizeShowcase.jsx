@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gift, Crown, ShoppingBag, ExternalLink } from 'lucide-react';
+import { Gift, Trophy, ShoppingBag, ExternalLink } from 'lucide-react';
 
 // PrizeShowcase — vitrine dos produtos que estão sendo sorteados.
 // Mostra o prêmio do dia + 1º, 2º, 3º lugar como cards clicáveis que levam pra Loja Virtual.
@@ -8,17 +8,14 @@ import { Gift, Crown, ShoppingBag, ExternalLink } from 'lucide-react';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-// Badge da posição: produtos do dia (verde), 1º dourado, 2º prata, 3º bronze
+// Badge da posição: 1º dourado, 2º prata, 3º bronze — sempre "LUGAR" com troféu
 function PosTag({ pos }) {
-  const isDay = typeof pos === 'string' && pos.startsWith('dia');
-  const dayNum = isDay ? pos.slice(3) : null;
-  const bg = isDay ? 'linear-gradient(90deg,#22c55e,#16a34a)' : pos === 1 ? 'linear-gradient(90deg,#f5c451,#e0a920)' : pos === 2 ? 'linear-gradient(90deg,#cbd5d8,#94a3b8)' : 'linear-gradient(90deg,#d0894c,#a96d36)';
-  const fg = isDay || pos === 1 ? '#052e16' : '#1a1205';
-  const label = isDay ? `${dayNum}º PRODUTO DO DIA` : `${pos}º LUGAR`;
+  const bg = pos === 1 ? 'linear-gradient(90deg,#f5c451,#e0a920)' : pos === 2 ? 'linear-gradient(90deg,#cbd5d8,#94a3b8)' : 'linear-gradient(90deg,#d0894c,#a96d36)';
+  const fg = pos === 1 ? '#052e16' : '#1a1205';
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: bg, color: fg }}>
-      {isDay ? <Gift className="w-3 h-3" /> : <Crown className="w-3 h-3" />}
-      {label}
+      <Trophy className="w-3 h-3" />
+      {pos}º LUGAR
     </span>
   );
 }
@@ -84,7 +81,7 @@ export default function PrizeShowcase({ config, premios }) {
     const p = diaArr[i];
     if (p && p.nome && p.link) {
       items.push({
-        pos: `dia${i + 1}`,
+        pos: i + 1,
         item: {
           nome: p.nome,
           produto_foto: p.foto || '',

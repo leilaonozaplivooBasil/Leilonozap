@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gift, Users } from 'lucide-react';
+import { Gift, Users, Radio } from 'lucide-react';
 
 // FEATURE 7 — Prêmio do dia ANTES do cadastro.
 // Mostra foto + nome + valor do prêmio no topo da página pra criar desejo antes de pedir dados.
@@ -31,7 +31,7 @@ export default function HeroDailyPrize({ config, registered, total }) {
   const cta = () => scrollTo(registered ? 'meu-painel' : 'cadastro-form');
 
   return (
-    <section className="mt-6 rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(245,196,81,.35)', background: 'linear-gradient(160deg, rgba(245,196,81,.10), rgba(34,197,94,.05) 40%, rgba(0,0,0,.25))' }}>
+    <section className="rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(245,196,81,.35)', background: 'linear-gradient(160deg, rgba(245,196,81,.10), rgba(34,197,94,.05) 40%, rgba(0,0,0,.25))' }}>
       <div className="grid md:grid-cols-2 gap-6 items-center p-5 sm:p-8">
         {/* Texto + CTA */}
         <div className="space-y-4 min-w-0">
@@ -51,6 +51,11 @@ export default function HeroDailyPrize({ config, registered, total }) {
           <p className="text-green-100/85 text-sm">
             {config.produto_desc ? `${config.produto_desc} ` : 'Quem traz mais gente pro grupo concorre. '}
             Sorteio hoje às <b className="text-white">{hora}</b>.
+          </p>
+
+          <p className="text-green-100/75 text-xs flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+            Para receber o produto, entre na live — <b className="text-white">todo dia às 18h</b>
           </p>
 
           <div className="flex flex-wrap gap-3 items-stretch">
@@ -76,9 +81,10 @@ export default function HeroDailyPrize({ config, registered, total }) {
           )}
         </div>
 
-        {/* Card do produto */}
+        {/* Card do produto — produto principal do sorteio */}
         <div className="flex justify-center">
           <div className="relative w-full max-w-xs rounded-3xl p-5 transition-transform hover:scale-[1.02]" style={{ background: 'rgba(0,0,0,.35)', border: '1px solid rgba(245,196,81,.3)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-yellow-300/80 mb-2 text-center">Produto principal do sorteio</p>
             <span className="absolute -top-3 -right-2 rotate-12 text-[11px] font-black px-3.5 py-1.5 rounded-full text-[#052e16]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>GRÁTIS</span>
             <div className="h-52 sm:h-60 grid place-items-center">
               {foto ? (

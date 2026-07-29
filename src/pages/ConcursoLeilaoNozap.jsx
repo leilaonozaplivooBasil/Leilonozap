@@ -810,15 +810,14 @@ export default function ConcursoLeilaoNozap() {
 
         {msg && <div className="mt-4 text-center text-sm bg-white/10 rounded-lg py-2 px-3">{msg}</div>}
 
-        {/* FEATURE 7 — prêmio do dia em destaque ANTES do cadastro */}
-        <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
+        {/* FEATURE 7 — prêmio do dia em destaque + LIVE ao lado (compacta) */}
+        <div className="mt-6 grid lg:grid-cols-[1.5fr_1fr] gap-4 items-stretch">
+          <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
+          <LivooLiveCard audiencia={config.live_audiencia || 0} produto={config.live_produto || null} compact />
+        </div>
 
-        {/* 🛍️ VITRINE DE PRODUTOS — prêmio do dia + 1º, 2º, 3º como cards clicáveis da loja */}
+        {/* 🛍️ VITRINE DE PRODUTOS — 1º, 2º, 3º lugar como cards clicáveis da loja */}
         <PrizeShowcase config={config} premios={data.premios || []} />
-
-        {/* LIVOO LIVE — janela 16:9 que acende sozinha quando o perfil da Leilão NoZap
-            entra ao vivo na Livoo (o backend lê o status real do perfil, sem admin marcar) */}
-        <LivooLiveCard audiencia={config.live_audiencia || 0} produto={config.live_produto || null} />
 
         {/* FEATURE 1 — contador regressivo do sorteio (FOMO) */}
         <CountdownTimer config={config} />
