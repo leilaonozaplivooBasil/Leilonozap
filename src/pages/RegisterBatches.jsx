@@ -54,12 +54,30 @@ export default function RegisterBatches() {
     loadBatches();
   }, []);
 
+  // Leitura admin via service_role (rota Vercel) — batch_registrations e lotes_recebidos têm RLS de
+  // admin, que bloqueia o SELECT anônimo do adapter e devolvia []. Passa o actorId do usuário logado;
+  // se a rota não existir (preview) ou falhar, cai no adapter anônimo padrão.
+  const _readAdmin = async (table, { method = 'list', filter, sort_by, limit } = {}) => {
+    try {
+      const actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id;
+      if (!actorId) return null;
+      const resp = await fetch('/api/functions/adminReadEntity', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actorId, table, method, filter, sort_by, limit }),
+      });
+      const json = await resp.json();
+      return json?.success && Array.isArray(json.rows) ? json.rows : null;
+    } catch { return null; }
+  };
+
   const loadBatches = async () => {
     try {
-      const [allBatches, allLotes] = await Promise.all([
-        base44.entities.BatchRegistration.list('-created_date', 100),
-        base44.entities.LoteRecebido.filter({ status: 'enviado_ao_estoque' })
+      const [batchAdmin, loteAdmin] = await Promise.all([
+        _readAdmin('batch_registrations', { method: 'list', sort_by: '-created_date', limit: 100 }),
+        _readAdmin('lotes_recebidos', { method: 'filter', filter: { status: 'enviado_ao_estoque' }, limit: 500 }),
       ]);
+      const allBatches = batchAdmin ?? await base44.entities.BatchRegistration.list('-created_date', 100);
+      const allLotes = loteAdmin ?? await base44.entities.LoteRecebido.filter({ status: 'enviado_ao_estoque' });
       setBatches(allBatches);
       setLotesRecebidos(allLotes || []);
 
