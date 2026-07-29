@@ -10,12 +10,13 @@ import ChancesCalculator from '@/components/concurso/ChancesCalculator';
 import DailyMission from '@/components/concurso/DailyMission';
 import WinnersFeed from '@/components/concurso/WinnersFeed';
 import PrizeShowcase from '@/components/concurso/PrizeShowcase';
+import ProductPicker from '@/components/concurso/ProductPicker';
 import InstallPwaPrompt from '@/components/common/InstallPwaPrompt';
 // A página é standalone (fora do Layout), então o modal de login precisa ser dela
 import LoginModal from '@/components/common/LoginModal';
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
-  Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award,
+  Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award, ShoppingBag,
   Maximize2, Minimize2, Save, Settings2, ArrowLeft,
   Copy, Check, MessageCircle, BarChart3, UserPlus, Share2, LogOut, LogIn,
 } from 'lucide-react';
@@ -97,6 +98,8 @@ export default function ConcursoLeilaoNozap() {
     } catch { /* */ }
   };
   const [savingCfg, setSavingCfg] = useState(false);
+  // Slot que está sendo preenchido pelo seletor de produtos da loja (0, 1 ou 2)
+  const [pickingSlot, setPickingSlot] = useState(null);
   const [rankExpanded, setRankExpanded] = useState(false);
   const [adminExpanded, setAdminExpanded] = useState(false);
   const [adminTab, setAdminTab] = useState('insights');
@@ -227,6 +230,15 @@ export default function ConcursoLeilaoNozap() {
   const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ } };
   // Admin: anexar foto do produto do dispositivo (converte em data URL leve, sem depender de URL externa)
   const handleProdutoFoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setCfg((s) => ({ ...s, produto_foto: url })); } catch { /* */ } };
+  // Admin: produto escolhido da Loja Virtual preenche o slot automaticamente
+  const handlePickProduct = (idx, prod) => {
+    setCfg((s) => {
+      const arr = Array.isArray(s.produtos_dia) ? [...s.produtos_dia] : [];
+      while (arr.length < 3) arr.push({ nome: '', foto: '', valor: 0, link: '' });
+      arr[idx] = { ...(arr[idx] || {}), nome: prod.nome, foto: prod.foto, valor: prod.valor, link: prod.link };
+      return { ...s, produtos_dia: arr };
+    });
+  };
   // Admin: anexar foto de um dos 3 produtos do dia (1º/2º/3º) — idx 0..2
   const handleProdutoDiaFoto = async (idx, e) => {
     const f = e.target.files?.[0]; if (!f) return;
@@ -556,6 +568,14 @@ export default function ConcursoLeilaoNozap() {
                   <div className="flex items-center gap-2 mb-2">
                     <PosBadge pos={pos} size={22} />
                     <span className="text-xs font-bold text-yellow-200/90">{pos}º produto do dia</span>
+                    <button
+                      type="button"
+                      onClick={() => setPickingSlot(idx)}
+                      className="ml-auto text-[11px] font-bold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 text-emerald-100 transition-colors hover:bg-emerald-500/25"
+                      style={{ border: '1px solid rgba(16,185,129,.45)', background: 'rgba(16,185,129,.12)' }}
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" /> Escolher da loja
+                    </button>
                   </div>
                   <div className="space-y-2 pl-7">
                     <input value={p.nome || ''} onChange={(e) => setP('nome', e.target.value)} placeholder={`Nome do ${pos}º produto`} className={inp} />
@@ -893,6 +913,14 @@ export default function ConcursoLeilaoNozap() {
               )}
             </div>
           </div>
+        )}
+
+        {/* 🛍️ SELETOR DE PRODUTOS DA LOJA VIRTUAL — abre quando o admin clica em "Escolher da loja" */}
+        {pickingSlot !== null && (
+          <ProductPicker
+            onSelect={(prod) => handlePickProduct(pickingSlot, prod)}
+            onClose={() => setPickingSlot(null)}
+          />
         )}
 
         <p className="text-center text-[11px] text-green-300/40 mt-10 flex items-center justify-center gap-1.5"><Users className="w-3 h-3" /> A contagem é por pessoas que entram no grupo pelo seu link.</p>
