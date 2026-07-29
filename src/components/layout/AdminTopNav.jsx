@@ -12,7 +12,9 @@ import {
   CornerDownLeft,
   ArrowUp,
   ArrowDown,
+  Map,
 } from "lucide-react";
+import CanvasOverview from "@/components/admin/CanvasOverview";
 
 /**
  * AdminTopNav — Barra de comando do Painel de Controle (Admin / Super Admin)
@@ -35,6 +37,7 @@ export default function AdminTopNav({ config, currentPageName }) {
   const [openSection, setOpenSection] = useState(null); // título da categoria aberta
   const [showAll, setShowAll] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
   const rootRef = useRef(null);
 
   const { title, items, categorized } = config || {};
@@ -149,6 +152,16 @@ export default function AdminTopNav({ config, currentPageName }) {
             )}
 
             <div className="flex-1" />
+
+            <button
+              type="button"
+              onClick={() => setShowCanvas(true)}
+              className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[12px] text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors flex-shrink-0"
+              title="Visão Canvas — mapa do painel"
+            >
+              <Map className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Visão Canvas</span>
+            </button>
 
             <button
               type="button"
@@ -304,6 +317,11 @@ export default function AdminTopNav({ config, currentPageName }) {
       {/* ---------- Paleta de busca (Cmd+K) ---------- */}
       {paletteOpen && (
         <CommandPalette items={allItems} onClose={() => setPaletteOpen(false)} onSelect={go} />
+      )}
+
+      {/* ---------- Visão Canvas (mapa mental do painel) ---------- */}
+      {showCanvas && (
+        <CanvasOverview onClose={() => setShowCanvas(false)} currentPageName={currentPageName} />
       )}
     </>
   );

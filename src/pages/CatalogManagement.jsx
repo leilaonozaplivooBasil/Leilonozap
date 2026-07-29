@@ -13,6 +13,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
 import PlanilhaImport from '@/components/catalog/PlanilhaImport';
+import PageFullscreen from "@/components/admin/PageFullscreen";
 
 export default function CatalogManagement() {
   const navigate = useNavigate();
@@ -242,6 +243,7 @@ export default function CatalogManagement() {
   }
 
   return (
+    <PageFullscreen>
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
         <PortalPageHeader
@@ -830,6 +832,7 @@ export default function CatalogManagement() {
         )}
       </div>
     </div>
+    </PageFullscreen>
   );
 }
 

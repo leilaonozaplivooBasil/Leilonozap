@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import PageFullscreen from "@/components/admin/PageFullscreen";
 
 export default function ProductManagement() {
   const [products, setProducts] = useState([]);
@@ -553,6 +554,7 @@ export default function ProductManagement() {
   };
 
   return (
+    <PageFullscreen>
     <div className="min-h-screen bg-gray-950 text-white">
 
       {/* ═══ HEADER FAIXA ═══ */}
@@ -1609,5 +1611,6 @@ export default function ProductManagement() {
         </div>
       )}
     </div>
+    </PageFullscreen>
   );
 }

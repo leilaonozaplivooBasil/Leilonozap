@@ -15,6 +15,7 @@ import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import PaymentModal from "@/components/financial/PaymentModal";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { DollarSign } from "lucide-react";
+import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const FinancialExpense = base44.entities.FinancialExpense;
 
@@ -164,6 +165,7 @@ export default function Financial() {
   };
 
   return (
+    <PageFullscreen>
     <div className="min-h-screen bg-gray-900 p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
@@ -309,5 +311,6 @@ export default function Financial() {
       <FinancialPDFGenerator open={showPDF} onClose={() => setShowPDF(false)} expenses={expenses} />
       <PaymentModal open={!!paymentExpense} onClose={() => setPaymentExpense(null)} expense={paymentExpense} onConfirm={handlePaymentConfirm} />
     </div>
+    </PageFullscreen>
   );
 }

@@ -15,6 +15,7 @@ import { gerarProdutosDoLote } from '@/functions/gerarProdutosDoLote';
 import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const MARKETPLACES = [
   'Mercado Livre', 'Shopee', 'Magazine Luiza', 'Casas Bahia', 'Extra',
@@ -217,6 +218,7 @@ export default function EstoqueLotes() {
   };
 
   return (
+    <PageFullscreen>
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
 
@@ -681,5 +683,6 @@ export default function EstoqueLotes() {
         </div>
       )}
     </div>
+    </PageFullscreen>
   );
 }

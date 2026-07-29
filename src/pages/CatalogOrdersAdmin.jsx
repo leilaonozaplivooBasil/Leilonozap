@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const CatalogSale = base44.entities.CatalogSale;
 
@@ -113,6 +114,7 @@ export default function CatalogOrdersAdmin() {
   };
 
   return (
+    <PageFullscreen>
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
@@ -298,5 +300,6 @@ export default function CatalogOrdersAdmin() {
         </div>
       )}
     </div>
+    </PageFullscreen>
   );
 }

@@ -26,6 +26,7 @@ import { CheckCircle, XCircle, RotateCcw, Eye, Filter, Trash2, ShoppingCart, Ale
 import { toast } from "sonner";
 import AddToCatalogModal from "@/components/admin/AddToCatalogModal";
 import LiveMetrics from "@/components/admin/LiveMetrics";
+import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const Auction = base44.entities.Auction;
 const Payment = base44.entities.Payment;
@@ -264,6 +265,7 @@ export default function AuctionControl() {
   };
 
   return (
+    <PageFullscreen>
     <div className="min-h-screen bg-gray-900 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
@@ -569,5 +571,6 @@ export default function AuctionControl() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageFullscreen>
   );
 }
