@@ -28,6 +28,7 @@ import {
   Target,
   Image as ImageIcon,
   Wallet as WalletIcon,
+  Map,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -212,6 +213,25 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             {badge.label}
           </div>
         </div>
+
+        {/* ===== Visão Geral (admin) — mini visão canvas ===== */}
+        {["admin", "super_admin"].includes(roleKey) && (
+          <div className="p-3 pb-0">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("openMiniCanvas"))}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/15 hover:to-teal-500/15 transition-all duration-200 text-left group"
+            >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/20 text-emerald-300 flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Map className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-extrabold text-emerald-300 truncate">Visão Geral</p>
+                <p className="text-[11px] text-gray-400 truncate">Mapa de todo o painel — abra num clique</p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-emerald-400/60 flex-shrink-0 rotate-[-90deg] group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
+        )}
 
         {/* ===== Funcionário de PDV (destaque) ===== */}
         {isPdvOperator && (

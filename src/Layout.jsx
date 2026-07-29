@@ -36,6 +36,7 @@ const User = { me: () => base44.auth.me() };
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
 const ComparaiFloatingButton = React.lazy(() => import("@/components/comparai/ComparaiFloatingButton"));
+const MiniCanvasOverview = React.lazy(() => import("@/components/admin/MiniCanvasOverview"));
 import { Menu, ShoppingCart as CartIcon } from "lucide-react";
 
 
@@ -93,6 +94,14 @@ export default function Layout({ children, currentPageName }) {
   const [referrerName, setReferrerName] = useState('');
   const [cartCount, setCartCount] = useState(0);
   const [showCartPopup, setShowCartPopup] = useState(false);
+  const [showMiniCanvas, setShowMiniCanvas] = useState(false);
+
+  // 🆕 Mini Visão Canvas — overlay global disparado pelo botão "Visão Geral" no dropdown do admin
+  useEffect(() => {
+    const openMini = () => setShowMiniCanvas(true);
+    window.addEventListener("openMiniCanvas", openMini);
+    return () => window.removeEventListener("openMiniCanvas", openMini);
+  }, []);
 
   // 🆕 Rastreamento de sessão ativa
   useActiveSession(currentUser);
@@ -1020,6 +1029,16 @@ export default function Layout({ children, currentPageName }) {
 
         {/* 🆕 FASE 2: Seletor global de painéis (escuta evento 'panelSelectorRequested') */}
         <PainelSelector />
+
+        {/* 🗺️ Mini Visão Canvas — overlay global (admin) */}
+        {showMiniCanvas && (
+          <React.Suspense fallback={null}>
+            <MiniCanvasOverview
+              onClose={() => setShowMiniCanvas(false)}
+              currentPageName={currentPageName}
+            />
+          </React.Suspense>
+        )}
 
         {/* Cart Popup */}
         <CartPopup
