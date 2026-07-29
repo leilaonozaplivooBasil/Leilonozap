@@ -1183,10 +1183,26 @@ export default function ProductManagement() {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
             <Card className="bg-gray-800 border-gray-700 max-w-4xl w-full my-8">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-white">
-                    <span className="inline-flex items-center gap-2">
-                      {editingProduct ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    <span className="inline-flex items-center gap-3">
+                      {editingProduct ? (
+                        (() => {
+                          const imgUrl = (editingProduct.image_urls || [])[0];
+                          return imgUrl ? (
+                            <img
+                              src={imgUrl}
+                              alt={editingProduct.description || 'Produto'}
+                              className="w-12 h-12 rounded-lg object-cover border border-gray-600 flex-shrink-0"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
+                              <Package className="w-5 h-5 text-gray-500" />
+                            </div>
+                          );
+                        })()
+                      ) : <Plus className="w-4 h-4" />}
                       {editingProduct ? 'Editar Produto' : 'Novo Produto'}
                     </span>
                   </CardTitle>
