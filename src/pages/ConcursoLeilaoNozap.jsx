@@ -154,7 +154,17 @@ export default function ConcursoLeilaoNozap() {
     try { const r = await fetch(`${API}?action=me&code=${encodeURIComponent(myCode)}`, { cache: 'no-store' }); setMe(await r.json()); } catch { /* */ }
   }, [myCode]);
 
-  useEffect(() => { if (!ref) { load(periodo); loadMe(); const t = setInterval(() => { load(periodo); loadMe(); }, 15000); return () => clearInterval(t); } }, [load, loadMe, periodo, ref]);
+  useEffect(() => {
+    if (ref) return;
+    load(periodo); loadMe();
+    const t = setInterval(() => { load(periodo); loadMe(); }, 15000);
+    // 📱 Mobile-safe: setInterval pausa em background. Ao voltar pra aba,
+    // re-sincroniza imediatamente (não espera o próximo tick de 15s).
+    const onVisible = () => { if (document.visibilityState === 'visible') { load(periodo); loadMe(); } };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('focus', onVisible); };
+  }, [load, loadMe, periodo, ref]);
 
   // 🔗 Conta da plataforma e concurso são UM SÓ (pedido do Gabriel 26/07):
   // logado → o painel pessoal é SEMPRE o da conta (action=mycode valida pelo CPF).
@@ -525,6 +535,11 @@ export default function ConcursoLeilaoNozap() {
               <input value={(cfg.produto_foto || '').startsWith('data:') ? '' : (cfg.produto_foto || '')} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder={(cfg.produto_foto || '').startsWith('data:') ? 'Foto anexada ✓ — ou cole uma URL aqui' : 'ou cole a URL da foto do produto'} className={inp} />
             </div>
             <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className={inp} />
+            <div className="rounded-lg border border-white/10 bg-black/25 p-2.5">
+              <label className="text-[11px] text-purple-200/70 font-bold uppercase tracking-wide block mb-1.5">Horário do sorteio (contador regressivo)</label>
+              <input value={cfg.sorteio_horario || ''} onChange={(e) => setCfg({ ...cfg, sorteio_horario: e.target.value })} placeholder="Ex: 20:00 ou 20h" className={inp} />
+              <p className="text-[10px] text-purple-200/50 mt-1.5">O contador regressivo no topo da página usa este horário. Formato: 20:00 ou 20h. Padrão: 20h.</p>
+            </div>
             <textarea value={cfg.propaganda || ''} onChange={(e) => setCfg({ ...cfg, propaganda: e.target.value })} placeholder="Texto de propaganda / destaque do dia" rows={3} className={`${inp} resize-none`} />
           </div>
         </div>
