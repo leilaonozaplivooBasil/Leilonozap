@@ -8,12 +8,13 @@ import { Gift, Crown, ShoppingBag, ExternalLink } from 'lucide-react';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-// Badge da posição: 1º dourado, 2º prata, 3º bronze, DIA verde
+// Badge da posição: produtos do dia (verde), 1º dourado, 2º prata, 3º bronze
 function PosTag({ pos }) {
-  const isDay = pos === 'dia';
+  const isDay = typeof pos === 'string' && pos.startsWith('dia');
+  const dayNum = isDay ? pos.slice(3) : null;
   const bg = isDay ? 'linear-gradient(90deg,#22c55e,#16a34a)' : pos === 1 ? 'linear-gradient(90deg,#f5c451,#e0a920)' : pos === 2 ? 'linear-gradient(90deg,#cbd5d8,#94a3b8)' : 'linear-gradient(90deg,#d0894c,#a96d36)';
   const fg = isDay || pos === 1 ? '#052e16' : '#1a1205';
-  const label = isDay ? 'PRÊMIO DO DIA' : `${pos}º LUGAR`;
+  const label = isDay ? `${dayNum}º PRODUTO DO DIA` : `${pos}º LUGAR`;
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: bg, color: fg }}>
       {isDay ? <Gift className="w-3 h-3" /> : <Crown className="w-3 h-3" />}
@@ -74,23 +75,27 @@ function ProductCard({ item, pos }) {
 }
 
 export default function PrizeShowcase({ config, premios }) {
-  // Monta a lista de produtos: prêmio do dia + 1º, 2º, 3º
+  // Monta a lista de produtos: 3 produtos do dia (1º/2º/3º) + prêmios do pódio (1º/2º/3º lugar)
   const items = [];
 
-  // Prêmio do dia (da config)
-  if (config?.produto_nome && config?.produto_link) {
-    items.push({
-      pos: 'dia',
-      item: {
-        nome: config.produto_nome,
-        produto_foto: config.produto_foto || '',
-        produto_valor: config.produto_valor || 0,
-        produto_link: config.produto_link,
-      },
-    });
+  // 3 produtos do dia (da config.produtos_dia) — o admin configura na aba "Sorteio do dia"
+  const diaArr = Array.isArray(config?.produtos_dia) ? config.produtos_dia : [];
+  for (let i = 0; i < 3; i++) {
+    const p = diaArr[i];
+    if (p && p.nome && p.link) {
+      items.push({
+        pos: `dia${i + 1}`,
+        item: {
+          nome: p.nome,
+          produto_foto: p.foto || '',
+          produto_valor: p.valor || 0,
+          produto_link: p.link,
+        },
+      });
+    }
   }
 
-  // Prêmios do pódio (1º, 2º, 3º)
+  // Prêmios do pódio (1º, 2º, 3º lugar) — da tabela concurso_premios
   const posMap = {};
   (Array.isArray(premios) ? premios : []).forEach((p) => { if (p.premio) posMap[p.posicao] = p; });
   for (const pos of [1, 2, 3]) {
@@ -118,7 +123,7 @@ export default function PrizeShowcase({ config, premios }) {
         <h2 className="font-black text-sm uppercase tracking-wide text-green-100">Produtos sendo sorteados</h2>
         <span className="text-[10px] text-green-300/60">toque pra ver na loja</span>
       </div>
-      <div className={`grid gap-3 ${items.length === 1 ? 'grid-cols-1 max-w-[200px] mx-auto' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'}`}>
+      <div className={`grid gap-3 ${items.length === 1 ? 'grid-cols-1 max-w-[200px] mx-auto' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
         {items.map(({ pos, item }) => (
           <ProductCard key={pos} item={item} pos={pos} />
         ))}

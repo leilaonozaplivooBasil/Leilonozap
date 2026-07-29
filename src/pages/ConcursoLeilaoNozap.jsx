@@ -227,6 +227,19 @@ export default function ConcursoLeilaoNozap() {
   const handleFormPhoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f); setForm((s) => ({ ...s, foto: url })); } catch { /* */ } };
   // Admin: anexar foto do produto do dispositivo (converte em data URL leve, sem depender de URL externa)
   const handleProdutoFoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setCfg((s) => ({ ...s, produto_foto: url })); } catch { /* */ } };
+  // Admin: anexar foto de um dos 3 produtos do dia (1º/2º/3º) — idx 0..2
+  const handleProdutoDiaFoto = async (idx, e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    try {
+      const url = await fileToSmallDataUrl(f, 400, 0.75);
+      setCfg((s) => {
+        const arr = Array.isArray(s.produtos_dia) ? [...s.produtos_dia] : [];
+        while (arr.length < 3) arr.push({ nome: '', foto: '', valor: 0, link: '' });
+        arr[idx] = { ...(arr[idx] || {}), foto: url };
+        return { ...s, produtos_dia: arr };
+      });
+    } catch { /* */ }
+  };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
 
   const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
@@ -524,28 +537,49 @@ export default function ConcursoLeilaoNozap() {
   const AdmDestaque = (
         <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
           <SecHead icon={Gift}>Destaque / Sorteio do dia</SecHead>
-          <div className="space-y-2.5">
-            <input value={cfg.produto_nome || ''} onChange={(e) => setCfg({ ...cfg, produto_nome: e.target.value })} placeholder="Nome do produto do sorteio" className={inp} />
-            {/* Foto do produto: anexar do dispositivo OU colar uma URL */}
-            <div className="rounded-lg border border-white/10 bg-black/25 p-2.5 space-y-2">
-              <div className="flex items-center gap-2.5">
-                {cfg.produto_foto ? (
-                  <div className="relative shrink-0">
-                    <img src={cfg.produto_foto} alt="Prévia do produto" className="w-14 h-14 rounded-lg object-cover border border-white/15" />
-                    <button type="button" onClick={() => setCfg({ ...cfg, produto_foto: '' })} title="Remover foto" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full grid place-items-center bg-black/80 border border-white/20 text-white/90 text-xs leading-none hover:bg-red-600">×</button>
+          <div className="space-y-3">
+            <p className="text-[11px] text-purple-200/60 -mt-1">Configure os 3 produtos do sorteio do dia. Eles aparecem como cards clicáveis na vitrine pública do Rank Premiado.</p>
+            {[1, 2, 3].map((pos) => {
+              const idx = pos - 1;
+              const arr = Array.isArray(cfg.produtos_dia) ? cfg.produtos_dia : [];
+              const p = arr[idx] || { nome: '', foto: '', valor: 0, link: '' };
+              const setP = (field, value) => {
+                setCfg((s) => {
+                  const a = Array.isArray(s.produtos_dia) ? [...s.produtos_dia] : [];
+                  while (a.length < 3) a.push({ nome: '', foto: '', valor: 0, link: '' });
+                  a[idx] = { ...(a[idx] || {}), [field]: value };
+                  return { ...s, produtos_dia: a };
+                });
+              };
+              return (
+                <div key={pos} className="rounded-xl p-3 border border-yellow-400/30 bg-yellow-400/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <PosBadge pos={pos} size={22} />
+                    <span className="text-xs font-bold text-yellow-200/90">{pos}º produto do dia</span>
                   </div>
-                ) : (
-                  <span className="w-14 h-14 rounded-lg grid place-items-center bg-black/40 border border-dashed border-white/20 shrink-0"><Gift className="w-6 h-6 text-white/40" /></span>
-                )}
-                <label className="flex-1 cursor-pointer">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleProdutoFoto} />
-                  <span className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-purple-100 border border-purple-400/40 bg-purple-500/15 hover:bg-purple-500/25 transition-colors"><Camera className="w-4 h-4" /> {cfg.produto_foto ? 'Trocar foto' : 'Anexar foto do dispositivo'}</span>
-                </label>
-              </div>
-              <input value={(cfg.produto_foto || '').startsWith('data:') ? '' : (cfg.produto_foto || '')} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder={(cfg.produto_foto || '').startsWith('data:') ? 'Foto anexada ✓ — ou cole uma URL aqui' : 'ou cole a URL da foto do produto'} className={inp} />
-            </div>
-            <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className={inp} />
-            <input value={cfg.produto_link || ''} onChange={(e) => setCfg({ ...cfg, produto_link: e.target.value })} placeholder="Link do produto na loja (ex: /Loja-Virtual?produto=123)" className={inp} />
+                  <div className="space-y-2 pl-7">
+                    <input value={p.nome || ''} onChange={(e) => setP('nome', e.target.value)} placeholder={`Nome do ${pos}º produto`} className={inp} />
+                    <div className="flex items-center gap-2.5">
+                      {p.foto ? (
+                        <div className="relative shrink-0">
+                          <img src={p.foto} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/15" />
+                          <button type="button" onClick={() => setP('foto', '')} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full grid place-items-center bg-black/80 border border-white/20 text-white/90 text-xs leading-none hover:bg-red-600">×</button>
+                        </div>
+                      ) : (
+                        <span className="w-12 h-12 rounded-lg grid place-items-center bg-black/40 border border-dashed border-white/20 shrink-0"><Gift className="w-5 h-5 text-white/40" /></span>
+                      )}
+                      <label className="flex-1 cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleProdutoDiaFoto(idx, e)} />
+                        <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-purple-100 border border-purple-400/40 bg-purple-500/15 hover:bg-purple-500/25 transition-colors"><Camera className="w-3.5 h-3.5" /> {p.foto ? 'Trocar foto' : 'Foto do produto'}</span>
+                      </label>
+                    </div>
+                    <input value={(p.foto || '').startsWith('data:') ? '' : (p.foto || '')} onChange={(e) => setP('foto', e.target.value)} placeholder={(p.foto || '').startsWith('data:') ? 'Foto anexada ✓ — ou cole uma URL aqui' : 'ou cole a URL da foto do produto'} className={inp} />
+                    <input value={p.valor || ''} onChange={(e) => setP('valor', Number(e.target.value) || 0)} inputMode="numeric" placeholder="Preço na loja (R$)" className={inp} />
+                    <input value={p.link || ''} onChange={(e) => setP('link', e.target.value)} placeholder="Link na loja (ex: /Loja-Virtual?produto=123)" className={inp} />
+                  </div>
+                </div>
+              );
+            })}
             <div className="rounded-lg border border-white/10 bg-black/25 p-2.5">
               <label className="text-[11px] text-purple-200/70 font-bold uppercase tracking-wide block mb-1.5">Horário do sorteio (contador regressivo)</label>
               <input value={cfg.sorteio_horario || ''} onChange={(e) => setCfg({ ...cfg, sorteio_horario: e.target.value })} placeholder="Ex: 20:00 ou 20h" className={inp} />

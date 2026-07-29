@@ -365,7 +365,7 @@ export default async function handler(req, res) {
       const patch = {};
       // sorteio_horario: aguardando a coluna na concurso_config (ALTER TABLE pendente) —
       // o painel só passa a enviar essa chave quando o input for liberado no admin.
-      const campos = ['produto_nome', 'produto_foto', 'produto_valor', 'produto_desc', 'produto_link', 'propaganda', 'live_ativa', 'live_url', 'live_horario', 'live_produto', 'live_meta', 'live_audiencia', 'premio_dia', 'premio_semana', 'premio_mes', 'sorteio_horario'];
+      const campos = ['produto_nome', 'produto_foto', 'produto_valor', 'produto_desc', 'produto_link', 'produtos_dia', 'propaganda', 'live_ativa', 'live_url', 'live_horario', 'live_produto', 'live_meta', 'live_audiencia', 'premio_dia', 'premio_semana', 'premio_mes', 'sorteio_horario'];
       for (const k of campos) if (k in c) patch[k] = c[k];
       patch.updated_at = new Date().toISOString();
       await sb('concurso_config?id=eq.main', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });

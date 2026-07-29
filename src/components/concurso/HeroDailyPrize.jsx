@@ -18,7 +18,14 @@ function horarioSorteio(config) {
 }
 
 export default function HeroDailyPrize({ config, registered, total }) {
-  if (!config?.produto_nome) return null;
+  // Fallback: se o admin preencheu os 3 produtos do dia (produtos_dia) mas não o
+  // produto_nome avulso, o hero usa o 1º produto do dia pra não ficar vazio.
+  const diaArr = Array.isArray(config?.produtos_dia) ? config.produtos_dia : [];
+  const primeiroDia = diaArr[0];
+  const nome = config?.produto_nome || primeiroDia?.nome || '';
+  const foto = config?.produto_foto || primeiroDia?.foto || '';
+  const valor = config?.produto_valor || primeiroDia?.valor || 0;
+  if (!nome) return null;
   const hora = horarioSorteio(config);
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   const cta = () => scrollTo(registered ? 'meu-painel' : 'cadastro-form');
@@ -47,10 +54,10 @@ export default function HeroDailyPrize({ config, registered, total }) {
           </p>
 
           <div className="flex flex-wrap gap-3 items-stretch">
-            {config.produto_valor > 0 && (
+            {valor > 0 && (
               <div className="px-4 py-2.5 rounded-2xl" style={{ background: 'rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.12)' }}>
                 <span className="block text-[10px] uppercase tracking-wide text-green-300/70 font-mono">Valor do prêmio</span>
-                <span className="text-xl font-black text-yellow-300">{money(config.produto_valor)}</span>
+                <span className="text-xl font-black text-yellow-300">{money(valor)}</span>
               </div>
             )}
             <button
@@ -74,14 +81,14 @@ export default function HeroDailyPrize({ config, registered, total }) {
           <div className="relative w-full max-w-xs rounded-3xl p-5 transition-transform hover:scale-[1.02]" style={{ background: 'rgba(0,0,0,.35)', border: '1px solid rgba(245,196,81,.3)' }}>
             <span className="absolute -top-3 -right-2 rotate-12 text-[11px] font-black px-3.5 py-1.5 rounded-full text-[#052e16]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>GRÁTIS</span>
             <div className="h-52 sm:h-60 grid place-items-center">
-              {config.produto_foto ? (
-                <img src={config.produto_foto} alt={config.produto_nome} className="max-h-full max-w-full object-contain drop-shadow-2xl" />
+              {foto ? (
+                <img src={foto} alt={nome} className="max-h-full max-w-full object-contain drop-shadow-2xl" />
               ) : (
                 <Gift className="w-20 h-20 text-yellow-300/70" />
               )}
             </div>
             <div className="mt-4 text-center">
-              <h3 className="font-extrabold text-lg leading-snug">{config.produto_nome}</h3>
+              <h3 className="font-extrabold text-lg leading-snug">{nome}</h3>
               <p className="text-xs text-green-300/70 mt-1">Sorteio hoje às {hora} · ao vivo</p>
             </div>
           </div>
