@@ -219,22 +219,53 @@ export default function ConcursoLeilaoNozap() {
   const shareZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   const config = data.config || {};
   // Hero: compartilha no WhatsApp com a FOTO do produto do dia (Web Share API com files — mobile).
-  // Sem suporte a files (desktop), cai no wa.me só com texto.
+  // Data URL (admin anexou foto) → converte direto sem CORS. URL remota → fetch com CORS.
+  // Cadeia de fallback: share com foto+texto → share só texto → wa.me (texto só).
   const shareHero = async () => {
     if (!myLink) return;
     const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
     const foto = config.produto_foto || diaArr[0]?.foto || '';
+
+    // 1. Tenta share com FOTO + texto (mobile — abre a share sheet nativa com a imagem)
     if (foto && navigator.share) {
+      setMsg('Preparando imagem do produto...');
       try {
-        const resp = await fetch(foto);
-        const blob = await resp.blob();
-        const file = new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' });
-        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+        let blob;
+        if (foto.startsWith('data:')) {
+          const [meta, base64] = foto.split(',');
+          const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+          const bin = atob(base64);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          blob = new Blob([arr], { type: mime });
+        } else {
+          const resp = await fetch(foto, { mode: 'cors' });
+          blob = await resp.blob();
+        }
+        if (blob) {
+          const file = new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' });
+          setMsg('');
           await navigator.share({ files: [file], text: shareZapText });
           return;
         }
-      } catch { /* cancelou ou sem suporte → cai no wa.me */ }
+      } catch (e) {
+        if (e && e.name === 'AbortError') { setMsg(''); return; } // usuário cancelou o share
+        // share com files falhou → tenta só com texto
+      }
+      setMsg('');
     }
+
+    // 2. Fallback: share só texto (sem imagem — abre a share sheet com o texto visível)
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareZapText });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+
+    // 3. Último fallback: wa.me (texto só, abre WhatsApp direto)
     window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   };
   const liveOn = !!config.live_ativa;
