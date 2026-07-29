@@ -130,6 +130,10 @@ Deno.serve(async (req) => {
         const mlProduct = shoppingProducts.find(p => p.mercadolivre_url);
         const sourceUrl = mlProduct?.mercadolivre_url || null;
 
+        // PONTO 56: Captura a melhor imagem do resultado (prioriza ML, depois primeiro com imagem)
+        const bestImageProduct = mlProduct || shoppingProducts.find(p => p.image) || null;
+        const imageUrl = bestImageProduct?.image || null;
+
         // Monta payload de atualização
         const updateData = {
           market_value: newMarket,
@@ -137,6 +141,13 @@ Deno.serve(async (req) => {
           last_dynamic_update: new Date().toISOString(),
           ...(sourceUrl && { source_url: sourceUrl })
         };
+
+        // PONTO 56: Salva a imagem do Google Shopping SÓ se o produto ainda não tem imagens
+        // (guard anti-sobrescrita — não destrói uploads manuais)
+        const hasExistingImages = Array.isArray(product.image_urls) && product.image_urls.length > 0;
+        if (imageUrl && !hasExistingImages) {
+          updateData.image_urls = [imageUrl];
+        }
 
         // ─── PROPAGAÇÃO PARA LOJA VIRTUAL (Opção 3 com guard) ───
         // Só atualiza price_catalog SE:

@@ -289,6 +289,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     setAutoImportStatus('🔍 Buscando imagens automaticamente...');
     setCurrentSection('fotos');
 
+    // PONTO 56: Se produto já tem imagens salvas (do precificaVivo/Google Shopping), usa diretamente
+    // — não re-busca por nome (que traz fotos erradas via Bing)
+    const existingImages = Array.isArray(product.image_urls) ? product.image_urls : [];
+    if (existingImages.length > 0) {
+      setFormData(prev => ({ ...prev, image_urls: existingImages }));
+      setAutoImportStatus(`✅ ${existingImages.length} imagens já importadas do Google Shopping!`);
+      setTimeout(() => setAutoImportStatus(''), 3000);
+      setIsAutoImporting(false);
+      return;
+    }
+
     try {
       // Tenta ML primeiro se tiver source_url
       const sourceUrl = product.source_url || '';
