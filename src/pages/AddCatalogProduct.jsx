@@ -34,6 +34,7 @@ export default function AddCatalogProduct() {
   const [editingSubcategory, setEditingSubcategory] = useState(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   
   const [formData, setFormData] = useState({
     // Informações Gerais
@@ -572,21 +573,11 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
     }));
   };
   
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.title || !formData.price) {
-      alert('Por favor, preencha o título e o preço do produto');
-      return;
-    }
-
-    if (formData.catalog_active && formData.image_urls.length === 0) {
-      alert('Por favor, adicione pelo menos uma imagem ao produto');
-      return;
-    }
-
+  // Salva de fato o produto (criar ou editar) com o catalog_active final decidido.
+  // Extraído pra poder chamar tanto no fluxo direto quanto após a guarda de publicação.
+  const performSave = async (catalogActive) => {
     setIsSubmitting(true);
-
+    setShowPublishConfirm(false);
     try {
       const productData = {
         description: formData.title,
@@ -595,7 +586,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         price_catalog: parseFloat(formData.price) || 0,
         cost_price: parseFloat(formData.cost_price) || 0,
         market_value: parseFloat(formData.compare_price) || 0,
-        catalog_active: formData.catalog_active,
+        catalog_active: catalogActive,
         is_featured: formData.is_featured,
         quantity: parseInt(formData.quantity) || 1,
         peso: parseFloat(formData.weight) || 0,
@@ -625,6 +616,30 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.title || !formData.price) {
+      alert('Por favor, preencha o título e o preço do produto');
+      return;
+    }
+
+    if (formData.catalog_active && formData.image_urls.length === 0) {
+      alert('Por favor, adicione pelo menos uma imagem ao produto');
+      return;
+    }
+
+    // 🛡️ GUARDA DE PUBLICAÇÃO (Ponto 52): produto pronto (título + preço + foto) mas
+    // catalog_active desligado → pergunta antes de salvar. Evita o "salvei mas não
+    // apareceu na loja" (o switch fica escondido na aba Preço e defaulta false).
+    if (!formData.catalog_active && formData.title && formData.price && formData.image_urls.length > 0) {
+      setShowPublishConfirm(true);
+      return;
+    }
+
+    await performSave(formData.catalog_active);
   };
   
   const handleDelete = async () => {
@@ -1482,6 +1497,52 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         </div>
       </div>
       
+      {/* 🛡️ Guarda de publicação (Ponto 52): produto pronto mas INATIVO → pergunta antes de salvar */}
+      {showPublishConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xl">⚠️</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Publicar na Loja Virtual?</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Este produto está pronto (título, preço e foto) mas está <strong>INATIVO</strong>.
+                  Se salvar assim, ele <strong>não aparecerá na loja</strong> para compra.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => performSave(true)}
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700 text-white w-full"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                🏬 Publicar na Loja Virtual
+              </Button>
+              <Button
+                onClick={() => performSave(false)}
+                disabled={isSubmitting}
+                variant="outline"
+                className="w-full"
+              >
+                Salvar como rascunho (inativo)
+              </Button>
+              <Button
+                onClick={() => setShowPublishConfirm(false)}
+                disabled={isSubmitting}
+                variant="ghost"
+                className="w-full text-gray-500"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Gerenciar Categorias */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
