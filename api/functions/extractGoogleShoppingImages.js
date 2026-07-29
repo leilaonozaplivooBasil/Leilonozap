@@ -1,42 +1,41 @@
-// extractGoogleShoppingImages — busca fotos do produto (Bing Images, grátis, sem chave).
-// Robusto: timeout + try/catch + filtro de URLs válidas. Retorna { success, images: [...] }.
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
-
-function valid(u) {
-  if (!u || !/^https?:\/\//i.test(u)) return false;
-  if (u.length > 700) return false;
-  if (/\.svg(\?|$)/i.test(u)) return false;
-  if (/(sprite|logo|icon|placeholder|blank)\b/i.test(u)) return false;
-  return true;
-}
-
-async function bingImages(query, max) {
-  const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
-  const resp = await fetch(url, { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': UA, 'Accept-Language': 'pt-BR,pt;q=0.9' } });
-  if (!resp.ok) return [];
-  const html = await resp.text();
-  const out = []; const seen = new Set();
-  const re = /murl&quot;:&quot;(.*?)&quot;/g; let m;
-  while ((m = re.exec(html)) && out.length < max) {
-    const u = m[1].replace(/\\u002f/g, '/').replace(/\\\//g, '/');
-    if (valid(u) && !seen.has(u)) { seen.add(u); out.push(u); }
-  }
-  return out;
-}
+// extractGoogleShoppingImages — busca fotos do produto via Google Shopping (SerpAPI).
+// PONTO 56: Trocou Bing Image Search (genérico, trazia fotos erradas) pelo MESMO motor
+// do Compare Aqui (api/_lib/marketSearch.js), que usa SerpAPI Google Shopping e filtra
+// por relevância (2+ palavras do título batendo). Retorna { success, images: [...] }.
+import { searchMarket } from '../_lib/marketSearch.js';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   try {
-    let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+    let body = req.body;
+    if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const q = String(body?.productName || body?.q || '').trim();
     if (!q) return res.status(400).json({ success: false, error: 'productName obrigatório', images: [] });
-    let images = [];
-    try { images = await bingImages(q.slice(0, 90), 8); } catch { images = []; }
-    // fallback: tenta um termo mais curto se não achou
-    if (images.length === 0) {
-      try { images = await bingImages(q.split(' ').slice(0, 4).join(' '), 8); } catch { images = []; }
+
+    // Usa o MESMO sistema do Compare Aqui: Google Shopping via SerpAPI
+    // searchMarket filtra por relevância (2+ palavras do título batendo) e retorna
+    // results com .image (thumbnail real do produto no Google Shopping)
+    const mk = await searchMarket(q, null); // null = sem imagem para busca por Lens
+
+    if (!mk.found || !mk.results || mk.results.length === 0) {
+      return res.status(200).json({ success: false, images: [], error: 'Nenhum produto encontrado no Google Shopping' });
     }
-    return res.status(200).json({ success: images.length > 0, images, source: 'bing' });
+
+    // Extrai as imagens (thumbnails) dos resultados relevantes
+    const images = mk.results
+      .map(r => r.image)
+      .filter(u => u && /^https?:\/\//i.test(u) && !/\.svg(\?|$)/i.test(u))
+      .slice(0, 6);
+
+    // Deduplica
+    const unique = [...new Set(images)];
+
+    return res.status(200).json({
+      success: unique.length > 0,
+      images: unique,
+      source: mk.source,
+      count: mk.count
+    });
   } catch (e) {
     return res.status(200).json({ success: false, images: [], error: String(e?.message || e) });
   }
