@@ -112,6 +112,8 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
     return null;
   }, [currentUser]);
 
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
   // ===== VISITANTE — não logado =====
   if (!effectiveUser || !effectiveUser.email) {
     return (
@@ -155,7 +157,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
   const BadgeIcon = badge.icon;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <button
           className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full transition-all duration-300 hover:bg-white/5"
@@ -218,7 +220,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
         {["admin", "super_admin"].includes(roleKey) && (
           <div className="p-3 pb-0">
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent("openMiniCanvas"))}
+              onClick={() => { setMenuOpen(false); window.dispatchEvent(new CustomEvent("openMiniCanvas")); }}
               className="w-full flex items-center gap-3 p-3 rounded-lg border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/15 hover:to-teal-500/15 transition-all duration-200 text-left group"
             >
               <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/20 text-emerald-300 flex-shrink-0 group-hover:scale-110 transition-transform">

@@ -177,7 +177,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     >
       {/* Modal container */}
       <div
-        className={`relative ${isFullscreen ? "w-screen h-screen max-w-none max-h-none rounded-none" : "w-full max-w-[1600px] h-[95vh] max-h-[940px] rounded-2xl"} overflow-hidden flex flex-col ${
+        className={`relative ${isFullscreen ? "w-screen h-screen max-w-none max-h-none rounded-none" : "w-[95vw] h-[95vh] max-w-none max-h-none rounded-2xl"} overflow-hidden flex flex-col ${
           closing ? "animate-out zoom-out-95 duration-180" : "animate-in zoom-in-95 duration-200"
         }`}
         style={{
