@@ -654,18 +654,17 @@ export default function Home() {
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
         setBanners(JSON.parse(cachedBanners));
       } else {
-        // Carrega com delay grande para não competir
-        setTimeout(() => {
-          base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
-            const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
-            setBanners(sortedBanners);
-            sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
-            sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
-          }).catch(() => {
-            const oldBanners = sessionStorage.getItem('home_banners_cache');
-            if (oldBanners) setBanners(JSON.parse(oldBanners));
-          });
-        }, 8000);
+        // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
+        // O cache de 10min garante que visitas seguintes sejam instantâneas.
+        base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
+          const sortedBanners = (bannerData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+          setBanners(sortedBanners);
+          sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
+          sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
+        }).catch(() => {
+          const oldBanners = sessionStorage.getItem('home_banners_cache');
+          if (oldBanners) setBanners(JSON.parse(oldBanners));
+        });
       }
     };
 
