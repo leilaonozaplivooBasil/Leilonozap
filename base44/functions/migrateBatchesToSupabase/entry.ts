@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
     // estão armazenados no Supabase, pra copiar o padrão (provavelmente raw_base44).
     const probeLotesR = await sb('lotes_recebidos?select=*&limit=1', { method: 'GET' });
     const probeBatchesR = await sb('batch_registrations?select=*&limit=1', { method: 'GET' });
+    // Testa coluna de negócio específica: 200/[] = existe; 400 PGRST204 = não existe.
+    const colTestR = await sb('batch_registrations?select=numero_leilao&limit=1', { method: 'GET' });
+    const colTest = colTestR.ok ? await colTestR.json() : { _error: colTestR.status, t: await colTestR.text().catch(()=> '') };
     const probeLotes = probeLotesR.ok ? await probeLotesR.json() : [{ _error: probeLotesR.status, t: await probeLotesR.text().catch(()=> '') }];
     const probeBatches = probeBatchesR.ok ? await probeBatchesR.json() : [{ _error: probeBatchesR.status, t: await probeBatchesR.text().catch(()=> '') }];
 
@@ -45,7 +48,7 @@ Deno.serve(async (req) => {
     let body: any = {};
     try { body = await req.json(); } catch { body = {}; }
     if (body?.probe_only) {
-      return Response.json({ probeLotes, probeBatches });
+      return Response.json({ colTest });
     }
 
     // 1) Lê TODOS os BatchRegistration do store Base44
