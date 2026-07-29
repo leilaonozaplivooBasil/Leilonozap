@@ -34,23 +34,6 @@ Deno.serve(async (req) => {
         },
       });
 
-    // PROBE: mostra como o "lote relogio estoque" (lotes_recebidos) e batch_registrations
-    // estão armazenados no Supabase, pra copiar o padrão (provavelmente raw_base44).
-    const probeLotesR = await sb('lotes_recebidos?select=*&limit=1', { method: 'GET' });
-    const probeBatchesR = await sb('batch_registrations?select=*&limit=1', { method: 'GET' });
-    // Testa coluna de negócio específica: 200/[] = existe; 400 PGRST204 = não existe.
-    const colTestR = await sb('batch_registrations?select=numero_leilao&limit=1', { method: 'GET' });
-    const colTest = colTestR.ok ? await colTestR.json() : { _error: colTestR.status, t: await colTestR.text().catch(()=> '') };
-    const probeLotes = probeLotesR.ok ? await probeLotesR.json() : [{ _error: probeLotesR.status, t: await probeLotesR.text().catch(()=> '') }];
-    const probeBatches = probeBatchesR.ok ? await probeBatchesR.json() : [{ _error: probeBatchesR.status, t: await probeBatchesR.text().catch(()=> '') }];
-
-    // Modo probe-only: devolve só o formato das tabelas, sem migrar.
-    let body: any = {};
-    try { body = await req.json(); } catch { body = {}; }
-    if (body?.probe_only) {
-      return Response.json({ colTest });
-    }
-
     // 1) Lê TODOS os BatchRegistration do store Base44
     const allBatches = await base44.asServiceRole.entities.BatchRegistration.list('-created_date', 500);
     const list = Array.isArray(allBatches) ? allBatches : [];
@@ -110,7 +93,7 @@ Deno.serve(async (req) => {
       pulados,
       erros,
       ids_inseridos,
-      _debug: { raw_url: RAW_URL, normalized_url: SUPABASE_URL, probeLotes, probeBatches },
+      _debug: { raw_url: RAW_URL, normalized_url: SUPABASE_URL },
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
