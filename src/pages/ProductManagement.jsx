@@ -21,6 +21,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
@@ -42,6 +45,7 @@ export default function ProductManagement() {
   const [classFilter, setClassFilter] = useState('all');
   const [ignoreDepositFilter, setIgnoreDepositFilter] = useState('all');
   const [alertFilter, setAlertFilter] = useState('all');
+  const [hideZeroStock, setHideZeroStock] = useState(false);
   const [viewMode, setViewMode] = useState('currentStock');
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -425,13 +429,17 @@ export default function ProductManagement() {
       filtered = filtered.filter(p => (p.quantity || 0) < 0);
     }
 
+    if (hideZeroStock) {
+      filtered = filtered.filter(p => (p.quantity || 0) > 0);
+    }
+
     setFilteredProducts(filtered);
-  }, [debouncedSearchTerm, products, classFilter, depositNameFilter, alertFilter]);
+  }, [debouncedSearchTerm, products, classFilter, depositNameFilter, alertFilter, hideZeroStock]);
 
   // Reset page only when filters change (not when products reload)
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, classFilter, depositNameFilter, alertFilter, itemsPerPage]);
+  }, [debouncedSearchTerm, classFilter, depositNameFilter, alertFilter, hideZeroStock, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -548,6 +556,24 @@ export default function ProductManagement() {
     );
   }
 
+  // 📤 Exporta CSV com filtro opcional por quantidade
+  const exportCSV = (items, tipo) => {
+    if (items.length === 0) { alert('Nenhum produto para exportar'); return; }
+    const headers = ['SKU', 'Produto', 'Depósito Empresa', 'Nome Depósito', 'Perfeito', 'Bom', 'Oficina', 'Custo Unit.', 'Preço Venda', 'Estoque Atual', 'Qtd Vendidos', 'Lucro'];
+    const rows = items.map(p => [p.lot || 'N/A', p.description || '', p.purchase_order || 'Empresa 3', p.deposit_name || 'Bangu', (p.qty_perfeito || 0).toString(), (p.qty_bom || 0).toString(), ((p.qty_oficina || 0) + (p.qty_ruim || 0)).toString(), (p.cost_price || 0).toFixed(2), (p.selling_price_retail || 0).toFixed(2), (p.quantity || 0).toString(), (p.quantity_sold || 0).toString(), (p.profit || 0).toFixed(2)]);
+    const csvContent = [headers.join(';'), ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.setAttribute('href', URL.createObjectURL(blob));
+    const sufixo = tipo === 'com-estoque' ? '_com_estoque' : tipo === 'zerados' ? '_zerados' : '';
+    link.setAttribute('download', `posicao_estoque${sufixo}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    alert(`${items.length} produto(s) exportado(s)!`);
+  };
+
   const depositBadge = (dep) => {
     const map = { Bangu: 'bg-blue-500/15 text-blue-300 border border-blue-500/30', Oficina: 'bg-orange-500/15 text-orange-300 border border-orange-500/30', Recreio: 'bg-purple-500/15 text-purple-300 border border-purple-500/30', Shopmix: 'bg-pink-500/15 text-pink-300 border border-pink-500/30' };
     return map[dep] || 'bg-gray-700 text-gray-300';
@@ -622,26 +648,45 @@ export default function ProductManagement() {
                 >
                   <Package className="w-4 h-4 mr-2 text-orange-400" /> Agrupar Duplicados
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (products.length === 0) { alert('Nenhum produto para exportar'); return; }
-                    const headers = ['SKU', 'Produto', 'Depósito Empresa', 'Nome Depósito', 'Perfeito', 'Bom', 'Oficina', 'Custo Unit.', 'Preço Venda', 'Estoque Atual', 'Qtd Vendidos', 'Lucro'];
-                    const rows = filteredProducts.map(p => [p.lot || 'N/A', p.description || '', p.purchase_order || 'Empresa 3', p.deposit_name || 'Bangu', (p.qty_perfeito || 0).toString(), (p.qty_bom || 0).toString(), ((p.qty_oficina || 0) + (p.qty_ruim || 0)).toString(), (p.cost_price || 0).toFixed(2), (p.selling_price_retail || 0).toFixed(2), (p.quantity || 0).toString(), (p.quantity_sold || 0).toString(), (p.profit || 0).toFixed(2)]);
-                    const csvContent = [headers.join(';'), ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))].join('\n');
-                    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.setAttribute('href', URL.createObjectURL(blob));
-                    link.setAttribute('download', `posicao_estoque_${new Date().toISOString().split('T')[0]}.csv`);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    alert(`${filteredProducts.length} produtos exportados!`);
-                  }}
-                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
-                >
-                  <Download className="w-4 h-4 mr-2 text-yellow-400" /> Exportar CSV
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                    <Download className="w-4 h-4 mr-2 text-yellow-400" /> Exportar CSV
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-gray-900 border-gray-700 text-white shadow-xl min-w-[220px]">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (products.length === 0) { alert('Nenhum produto para exportar'); return; }
+                        exportCSV(filteredProducts, 'todos');
+                      }}
+                      className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                    >
+                      <Download className="w-4 h-4 mr-2 text-gray-400" /> Todos os itens
+                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.length}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const comEstoque = filteredProducts.filter(p => (p.quantity || 0) > 0);
+                        if (comEstoque.length === 0) { alert('Nenhum produto com estoque para exportar'); return; }
+                        exportCSV(comEstoque, 'com-estoque');
+                      }}
+                      className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                    >
+                      <Download className="w-4 h-4 mr-2 text-emerald-400" /> Apenas com estoque
+                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.filter(p => (p.quantity || 0) > 0).length}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const zerados = filteredProducts.filter(p => (p.quantity || 0) === 0);
+                        if (zerados.length === 0) { alert('Nenhum produto zerado para exportar'); return; }
+                        exportCSV(zerados, 'zerados');
+                      }}
+                      className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                    >
+                      <Download className="w-4 h-4 mr-2 text-red-400" /> Apenas zerados
+                      <span className="ml-auto text-xs text-gray-500">{filteredProducts.filter(p => (p.quantity || 0) === 0).length}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem
                   onClick={() => {
                     const a = document.createElement('a');
@@ -718,6 +763,18 @@ export default function ProductManagement() {
             <option value="stopped">Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
             <option value="error">Erro Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
           </select>
+          <button
+            onClick={() => setHideZeroStock(!hideZeroStock)}
+            className={`text-xs rounded-lg px-2.5 py-1.5 border transition-colors flex items-center gap-1.5 flex-shrink-0 ${
+              hideZeroStock
+                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
+                : 'bg-gray-900 border-gray-700/60 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+            }`}
+            title={hideZeroStock ? 'Mostrar produtos zerados' : 'Ocultar produtos com estoque zero'}
+          >
+            {hideZeroStock ? <TriangleAlert className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
+            {hideZeroStock ? 'Mostrar zerados' : 'Ocultar zerados'}
+          </button>
         </div>
 
         {/* ═══ CARDS TOPO — 4 KPIs ═══ */}
