@@ -74,10 +74,10 @@ export default function RegisterBatches() {
     try {
       const [batchAdmin, loteAdmin] = await Promise.all([
         _readAdmin('batch_registrations', { method: 'list', sort_by: '-created_date', limit: 100 }),
-        _readAdmin('lotes_recebidos', { method: 'filter', filter: { status: 'enviado_ao_estoque' }, limit: 500 }),
+        _readAdmin('lotes_recebidos', { method: 'filter', filter: { status: { $in: ['enviado_ao_estoque', 'convertido'] } }, limit: 500 }),
       ]);
       const allBatches = batchAdmin ?? await base44.entities.BatchRegistration.list('-created_date', 100);
-      const allLotes = loteAdmin ?? await base44.entities.LoteRecebido.filter({ status: 'enviado_ao_estoque' });
+      const allLotes = loteAdmin ?? await base44.entities.LoteRecebido.filter({ status: { $in: ['enviado_ao_estoque', 'convertido'] } });
       setBatches(allBatches);
       setLotesRecebidos(allLotes || []);
 
