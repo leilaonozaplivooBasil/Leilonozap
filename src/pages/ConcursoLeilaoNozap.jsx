@@ -156,6 +156,13 @@ export default function ConcursoLeilaoNozap() {
     try {
       const r = await fetch(`${API}?periodo=${per || periodo}`, { cache: 'no-store' });
       const j = await r.json();
+      // Client-side fallback: se a API (Vercel antiga no preview) não mapeou
+      // premios_produtos → produtos_dia, faz aqui. O Base44 function saveConcursoConfig
+      // salva em premios_produtos; a Vercel function nova (produção) mapeia no getConfig.
+      // No preview (Vercel antiga), o getConfig não mapeia — este fallback cobre.
+      if (j.config && j.config.premios_produtos !== undefined && j.config.produtos_dia === undefined) {
+        j.config.produtos_dia = j.config.premios_produtos;
+      }
       setData(j);
       setCfg(j.config || {});
       const pe = {}; (Array.isArray(j.premios) ? j.premios : []).forEach((p) => { pe[p.posicao] = { premio: p.premio || '', produto_foto: p.produto_foto || '', produto_valor: p.produto_valor || 0, produto_link: p.produto_link || '' }; }); setPremiosEdit(pe);

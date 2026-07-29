@@ -94,7 +94,12 @@ async function criarContaPlataforma(host, nome, cpf, whatsapp) {
 
 async function isAdmin(userId) {
   if (!userId) return false;
-  const u = await (await sb(`app_users?select=role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+  // O SDK do Base44 retorna o base44_id (não o id UUID do Supabase).
+  // Tenta por base44_id primeiro; se não achar, cai no id (UUID legacy).
+  let u = await (await sb(`app_users?select=role&base44_id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+  if (!Array.isArray(u) || !u[0]) {
+    u = await (await sb(`app_users?select=role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+  }
   const role = Array.isArray(u) && u[0] ? u[0].role : null;
   return role === 'admin' || role === 'super_admin';
 }
@@ -151,7 +156,10 @@ export default async function handler(req, res) {
     if (action === 'mycode') {
       const userId = (req.query?.user_id || body.user_id || '').toString();
       if (!userId) return jset(res, 400, { error: 'user_id' });
-      const u = await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+      let u = await (await sb(`app_users?select=cpf&base44_id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+      if (!Array.isArray(u) || !u[0]) {
+        u = await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+      }
       const cpf = digits(Array.isArray(u) && u[0] ? u[0].cpf : '');
       if (!cpf) return jset(res, 200, { code: null });
       const p = await (await sb(`concurso_participantes?select=code&cpf=eq.${cpf}&limit=1`)).json();
@@ -365,7 +373,13 @@ export default async function handler(req, res) {
 
     // ---------- ADMIN: config (produto do dia, live, propaganda, prêmios por período) ----------
     if (action === 'save_config') {
-      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      if (!(await isAdmin(body.user_id))) {
+        // DEBUG temporário: vê o que o isAdmin encontrou
+        const uid = encodeURIComponent(body.user_id);
+        const d1 = await (await sb(`app_users?select=role,base44_id,id,email&base44_id=eq.${uid}&limit=3`)).json();
+        const d2 = await (await sb(`app_users?select=role,base44_id,id,email&limit=3`)).json();
+        return jset(res, 403, { error: 'Sem permissão.', debug: { uid: body.user_id, byBase44: d1, anyUsers: d2 } });
+      }
       const c = body.config || {};
       const patch = {};
       // Colunas que EXISTEM na tabela concurso_config do Supabase.
