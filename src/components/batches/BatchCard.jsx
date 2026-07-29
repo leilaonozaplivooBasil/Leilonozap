@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   ChevronDown, ChevronUp, FileImage, Edit, Trash2, ArrowRight,
-  Package, Calendar, DollarSign, Hash, Layers, Pencil, Check
+  Package, Clock, DollarSign, Hash, Layers, Pencil, Check
 } from 'lucide-react';
 
 const MARKETPLACE_ICONS = {
@@ -171,7 +171,7 @@ export default function BatchCard({
             <div className="flex flex-wrap items-center gap-3">
               {prettyDate && (
                 <div className="flex items-center gap-1.5 text-gray-400">
-                  <Calendar className="w-3.5 h-3.5" />
+                  <Clock className="w-3.5 h-3.5" />
                   <span className="text-xs">{dateLabel || 'Lançado em'}: <span className="text-gray-300 font-medium">{prettyDate}</span></span>
                 </div>
               )}
