@@ -215,9 +215,28 @@ export default function ConcursoLeilaoNozap() {
     try { await navigator.clipboard.writeText(myLink); } catch { /* */ }
     setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500);
   };
-  const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}`;
+  const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
   const shareZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   const config = data.config || {};
+  // Hero: compartilha no WhatsApp com a FOTO do produto do dia (Web Share API com files — mobile).
+  // Sem suporte a files (desktop), cai no wa.me só com texto.
+  const shareHero = async () => {
+    if (!myLink) return;
+    const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
+    const foto = config.produto_foto || diaArr[0]?.foto || '';
+    if (foto && navigator.share) {
+      try {
+        const resp = await fetch(foto);
+        const blob = await resp.blob();
+        const file = new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text: shareZapText });
+          return;
+        }
+      } catch { /* cancelou ou sem suporte → cai no wa.me */ }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
+  };
   const liveOn = !!config.live_ativa;
   const liveLink = config.live_url || LIVOO_VENDEDOR;
 
@@ -812,7 +831,7 @@ export default function ConcursoLeilaoNozap() {
 
         {/* FEATURE 7 — prêmio do dia em destaque + LIVE ao lado (compacta) */}
         <div className="mt-6 grid lg:grid-cols-[1.5fr_1fr] gap-4 items-stretch">
-          <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
+          <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} onShare={shareHero} />
           <LivooLiveCard audiencia={config.live_audiencia || 0} produto={config.live_produto || null} compact />
         </div>
 

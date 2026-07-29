@@ -17,7 +17,7 @@ function horarioSorteio(config) {
   return m[2] && m[2] !== '00' ? `${m[1]}h${m[2]}` : `${m[1]}h`;
 }
 
-export default function HeroDailyPrize({ config, registered, total }) {
+export default function HeroDailyPrize({ config, registered, total, onShare }) {
   // Fallback: se o admin preencheu os 3 produtos do dia (produtos_dia) mas não o
   // produto_nome avulso, o hero usa o 1º produto do dia pra não ficar vazio.
   const diaArr = Array.isArray(config?.produtos_dia) ? config.produtos_dia : [];
@@ -28,7 +28,10 @@ export default function HeroDailyPrize({ config, registered, total }) {
   if (!nome) return null;
   const hora = horarioSorteio(config);
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  const cta = () => scrollTo(registered ? 'meu-painel' : 'cadastro-form');
+  const cta = () => {
+    if (registered && onShare) { onShare(); return; }
+    scrollTo(registered ? 'meu-painel' : 'cadastro-form');
+  };
 
   return (
     <section className="rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(245,196,81,.35)', background: 'linear-gradient(160deg, rgba(245,196,81,.10), rgba(34,197,94,.05) 40%, rgba(0,0,0,.25))' }}>
