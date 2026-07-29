@@ -154,8 +154,9 @@ const AuthenticatedApp = () => {
   return (
     <ChunkErrorBoundary>
     <Suspense fallback={
-      <div className="fixed inset-0 flex items-center justify-center bg-gray-900">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="fixed top-0 left-0 right-0 z-[9999] h-[3px] overflow-hidden" aria-hidden="true" style={{ background: "rgba(16,185,129,0.12)" }}>
+        <div className="h-full w-1/3 route-loading-bar" style={{ background: "linear-gradient(90deg, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.7)" }} />
+        <style>{`@keyframes routeLoadingMove{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}.route-loading-bar{animation:routeLoadingMove 1s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.route-loading-bar{animation:none}}`}</style>
       </div>
     }>
     <Routes>
