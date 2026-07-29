@@ -281,11 +281,14 @@ export default function CreateAuction() {
           ...prev,
           title: product.description,
           description: product.description + (product.notes ? `\n\n${product.notes}` : ''),
-          starting_price: (product.selling_price_retail || product.cost_price * 1.5 || 0).toFixed(2),
+          starting_price: product.selling_price_retail ? Number(product.selling_price_retail).toFixed(2) : '',
           product_id: product.id,
           source_url: product.source_url || '',
           image_urls: productImages.length > 0 ? finalImages : prev.image_urls
         }));
+        if (!product.selling_price_retail || Number(product.selling_price_retail) <= 0) {
+          toast.warning('⚠️ Produto sem preço — rode a precificação no estoque antes de publicar no leilão.');
+        }
 
         // 2. Se já tem imagens no estoque → aplica direto
         if (productImages.length > 0) {
@@ -891,6 +894,9 @@ export default function CreateAuction() {
       const finalImageUrls = formData.image_urls.filter(url => url && url.trim() !== "");
       const Product = base44.entities.Product;
       let createdAuction = null;
+      // Preço da Loja Virtual = valor digitado pelo admin (já com −20% do mercado real).
+      // Sem esse preço, NÃO publicamos nem no leilão nem no catálogo — não há fallback automático.
+      const lojaVirtual = parseFloat(formData.starting_price) || 0;
 
       // 1. Criar no Leilão
       if (includeAuction) {
@@ -904,7 +910,12 @@ export default function CreateAuction() {
         // Loja Virtual = starting_price (o próprio valor)
         // Lance inicial = starting_price × 0.80 (−20% da loja)
         // Arremate Agora = preço da Loja Virtual
-        const lojaVirtual = parseFloat(formData.starting_price) || 0;
+        if (lojaVirtual <= 0) {
+          toast.error('❌ Preço da Loja Virtual inválido. Defina um preço de mercado válido (ou rode a precificação no estoque) antes de publicar o leilão.');
+          setIsSubmittingBid(false);
+          setShowConfirmModal(false);
+          return;
+        }
         const finalCatalogPriceForAuction = catalogPrice || lojaVirtual;
         const auctionStartingPrice = parseFloat((lojaVirtual * 0.80).toFixed(2));
         const auctionBuyNowPrice = parseFloat(finalCatalogPriceForAuction.toFixed(2));
@@ -950,7 +961,15 @@ export default function CreateAuction() {
 
       // 2. Publicar na Loja Virtual
       if (includeCatalog) {
-        const finalCatalogPrice = catalogPrice || parseFloat(formData.starting_price) * 1.5;
+        // Preço do catálogo = catalogPrice explícito OU preço da Loja Virtual (starting_price).
+        // Sem mercado real (catalogPrice vazio E lojaVirtual <= 0) → NÃO ativa, avisa o admin.
+        const finalCatalogPrice = catalogPrice || (lojaVirtual > 0 ? lojaVirtual : 0);
+        if (!finalCatalogPrice || finalCatalogPrice <= 0) {
+          toast.error('❌ Sem preço de mercado para publicar na Loja Virtual. Precifique o produto no estoque antes de ativar no catálogo.');
+          setIsSubmittingBid(false);
+          setShowConfirmModal(false);
+          return;
+        }
 
         if (formData.product_id) {
           // Produto já existe no estoque → atualiza com catalog_active

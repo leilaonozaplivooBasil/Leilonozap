@@ -170,24 +170,81 @@ Deno.serve(async (req) => {
     const CHUNK_SIZE = 25;
     let criados = 0;
     const erros = [];
+    const createdIds = [];
+    const notesByCreatedId = new Map();
 
     for (let i = 0; i < produtosParaCriar.length; i += CHUNK_SIZE) {
       const chunk = produtosParaCriar.slice(i, i + CHUNK_SIZE);
       try {
-        await base44.asServiceRole.entities.Product.bulkCreate(chunk);
+        const inserted = await base44.asServiceRole.entities.Product.bulkCreate(chunk);
         criados += chunk.length;
+        if (Array.isArray(inserted)) for (const p of inserted) if (p?.id) { createdIds.push(p.id); notesByCreatedId.set(p.id, p.notes || ''); }
       } catch (err) {
         erros.push({ chunk_start: i, error: err.message });
         // Fallback: tenta individualmente
         for (const p of chunk) {
           try {
-            await base44.asServiceRole.entities.Product.create(p);
+            const one = await base44.asServiceRole.entities.Product.create(p);
             criados += 1;
+            if (one?.id) { createdIds.push(one.id); notesByCreatedId.set(one.id, one.notes || p.notes || ''); }
           } catch (e) {
             erros.push({ item: p.description, error: e.message });
           }
         }
       }
+    }
+
+    // ── PRECIFICAÇÃO AUTOMÁTICA ──────────────────────────────────
+    // Após criar os produtos, chama calculateProductPricing em batches de 5
+    // (limite do motor Deno) e grava selling_price_retail + market_value.
+    // Se a busca não achar mercado real, marca [needs_review] em notes —
+    // NÃO inventa preço (pilar do negócio).
+    const MAX_PRICING = 50; // teto de produtos por execução p/ não estourar timeout
+    const idsParaPrecificar = createdIds.slice(0, MAX_PRICING);
+    const idsRestantes = createdIds.slice(MAX_PRICING);
+    let precificados = 0;
+    let marcadosReview = 0;
+
+    for (let i = 0; i < idsParaPrecificar.length; i += 5) {
+      const batch = idsParaPrecificar.slice(i, i + 5);
+      try {
+        const res = await base44.asServiceRole.functions.invoke('calculateProductPricing', { product_ids: batch });
+        const prods = Array.isArray(res?.products) ? res.products : [];
+        for (const p of prods) {
+          try {
+            if (p.status === 'success' && p.calculated_price > 0) {
+              await base44.asServiceRole.entities.Product.update(p.id, {
+                selling_price_retail: Number(p.calculated_price),
+                market_value: Number(p.market_price || 0),
+              });
+              precificados++;
+            } else {
+              // Sem mercado real — marca p/ revisão manual. Não inventa preço.
+              const origNotes = notesByCreatedId.get(p.id) || '';
+              await base44.asServiceRole.entities.Product.update(p.id, {
+                notes: `[needs_review] ${origNotes}`.substring(0, 500),
+              });
+              marcadosReview++;
+            }
+          } catch (e) {
+            erros.push({ item: p.id, error: `pricing update: ${e.message}` });
+          }
+        }
+      } catch (e) {
+        erros.push({ pricing_batch: i, error: e.message });
+      }
+      // Rate-limit entre batches (motor de busca)
+      await new Promise((r) => setTimeout(r, 400));
+    }
+
+    // Produtos além do teto — marcar p/ retomar depois (não ficam sem sinal)
+    for (const id of idsRestantes) {
+      try {
+        await base44.asServiceRole.entities.Product.update(id, {
+          notes: `[needs_review:auto] ${lote.nome_lote}`.substring(0, 500),
+        });
+        marcadosReview++;
+      } catch { /* não-fatal */ }
     }
 
     // Marca o lote como produtos_gerados SOMENTE se criou tudo com sucesso
@@ -211,9 +268,11 @@ Deno.serve(async (req) => {
       custo_total: custoTotal,
       quantidade_total: quantidadeTotal,
       deposito: depositoDestino,
+      precificados,
+      marcados_review: marcadosReview,
       erros: erros.length > 0 ? erros : undefined,
       mensagem: completoAgora
-        ? 'Todos os produtos foram criados com sucesso.'
+        ? `Produtos criados e precificados: ${precificados}. Revisão: ${marcadosReview}.`
         : `Criados ${criados}/${produtosParaCriar.length}. Restam ${produtosParaCriar.length - criados} itens. Clique novamente em "Gerar Produtos no Estoque" para retomar.`
     });
   } catch (error) {

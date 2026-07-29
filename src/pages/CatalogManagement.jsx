@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store, Palette, ChartColumn, FileText, CheckCircle, Ban, Pencil, Ruler } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star, Store, Palette, ChartColumn, FileText, CheckCircle, Ban, Pencil, Ruler, Power } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
@@ -35,6 +35,29 @@ export default function CatalogManagement() {
   const [editingFeaturedProduct, setEditingFeaturedProduct] = useState(null);
   const [catalogSettings, setCatalogSettings] = useState(null);
   const [editingSettings, setEditingSettings] = useState(false);
+  const [ativandoId, setAtivandoId] = useState(null);
+
+  // Ativa produto na Loja Virtual: só liga catalog_active se tiver selling_price_retail > 0
+  // (preço de mercado real). Sem preço → botão desabilitado. Reaproveita _ew (service_role).
+  const ativarNaLoja = async (product) => {
+    const preco = Number(product.selling_price_retail) || 0;
+    if (preco <= 0) return; // botão já desabilitado; dupla proteção
+    setAtivandoId(product.id);
+    try {
+      await _ew('Product', 'update', product.id, {
+        catalog_active: true,
+        price_catalog: preco,
+        selling_price_wholesale: preco,
+      });
+      toast.success('Produto ativado na Loja Virtual!');
+      loadProducts();
+    } catch (e) {
+      console.error('Erro ao ativar:', e);
+      toast.error('Erro ao ativar produto');
+    } finally {
+      setAtivandoId(null);
+    }
+  };
 
   const loadBanners = async () => {
     try {
@@ -400,6 +423,25 @@ export default function CatalogManagement() {
                                 <span className="text-xs bg-gray-700 px-2 py-1 rounded">
                                   {product.seller_name}
                                 </span>
+                              )}
+                            </div>
+                            <div className="mt-3 flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={!(Number(product.selling_price_retail) > 0) || ativandoId === product.id}
+                                onClick={(e) => { e.stopPropagation(); ativarNaLoja(product); }}
+                                title={Number(product.selling_price_retail) > 0 ? 'Ativar na Loja Virtual' : 'Precifique o produto antes de ativar'}
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-500 text-white"
+                              >
+                                {ativandoId === product.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Power className="w-3.5 h-3.5" />
+                                )}
+                                Ativar na Loja
+                              </button>
+                              {!(Number(product.selling_price_retail) > 0) && (
+                                <span className="text-[10px] text-amber-400">sem preço</span>
                               )}
                             </div>
                           </div>

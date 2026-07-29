@@ -108,9 +108,8 @@ Deno.serve(async (req) => {
           ? validPrices[mid]
           : (validPrices[mid - 1] + validPrices[mid]) / 2;
 
-        // Calcula custo unitário
-        const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
-        const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
+        // cost_price JÁ é unitário (CMV gravado por gerarProdutosDoLote) — não dividir de novo.
+        const unitCost = Number(product.cost_price) || 0;
 
         // REGRA: MAX(mercado × 0.80, custo × 1.3)
         const idealPrice = newMarket * 0.80;
