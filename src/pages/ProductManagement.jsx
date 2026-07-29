@@ -45,7 +45,7 @@ export default function ProductManagement() {
   const [classFilter, setClassFilter] = useState('all');
   const [ignoreDepositFilter, setIgnoreDepositFilter] = useState('all');
   const [alertFilter, setAlertFilter] = useState('all');
-  const [hideZeroStock, setHideZeroStock] = useState(false);
+  const [hideZeroStock, setHideZeroStock] = useState(true);
   const [viewMode, setViewMode] = useState('currentStock');
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -770,7 +770,7 @@ export default function ProductManagement() {
                 ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
                 : 'bg-gray-900 border-gray-700/60 text-gray-400 hover:border-gray-600 hover:text-gray-200'
             }`}
-            title={hideZeroStock ? 'Mostrar produtos zerados' : 'Ocultar produtos com estoque zero'}
+            title={hideZeroStock ? 'Mostrar zerados' : 'Ocultar zerados'}
           >
             {hideZeroStock ? <TriangleAlert className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
             {hideZeroStock ? 'Mostrar zerados' : 'Ocultar zerados'}
