@@ -1,7 +1,5 @@
 import React from "react";
 import { fmtBR } from '@/lib/money';
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Wallet } from "lucide-react";
 
@@ -10,10 +8,9 @@ export default function LowBalanceModal({
   currentBalance, 
   requiredAmount, 
   onWatchAsSpectator,
+  onAddFunds,
   onClose 
 }) {
-  const navigate = useNavigate();
-
   if (!isOpen) return null;
 
   const deficit = requiredAmount - currentBalance;
@@ -67,10 +64,8 @@ export default function LowBalanceModal({
           {/* Add Funds */}
           <Button
             onClick={() => {
-              navigate(createPageUrl("AddFunds"), {
-                state: { returnTo: window.location.pathname + window.location.search }
-              });
               onClose();
+              if (onAddFunds) onAddFunds();
             }}
             className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-base shadow-lg"
           >

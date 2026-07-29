@@ -1244,6 +1244,10 @@ export default function AuctionRoom() {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);
         }}
+        onAddFunds={() => {
+          setShowLowBalanceModal(false);
+          setWalletOpen(true);
+        }}
         onClose={() => setShowLowBalanceModal(false)}
       />
 
