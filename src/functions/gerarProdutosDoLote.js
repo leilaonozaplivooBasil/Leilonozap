@@ -1,5 +1,38 @@
 import { base44 } from '@/api/base44Client';
 
+// Escrita direta na rota segura entityWrite (service_role) — MESMO caminho da exclusão
+// de lote que já funciona em produção. Evita o fallback anon do adapter (bloqueado por RLS),
+// que era a causa dos lotes ficarem pela metade. Faz 1 retry por chunk pra soluços de rede.
+// A permissão é validada NO SERVIDOR pelo actorId (a rota consulta app_users), então aqui
+// só enviamos o id do usuário logado — sem barrar no cliente por role local dessincronizado.
+function _actorId() {
+  try {
+    const u = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    return u?.id || null;
+  } catch { return null; }
+}
+
+async function _bulkCreateSeguro(rows) {
+  const actorId = _actorId();
+  if (!actorId) throw new Error('Você precisa estar logado para gerar produtos.');
+  const call = async () => {
+    const resp = await fetch('/api/functions/entityWrite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actorId, table: 'products', action: 'bulkCreate', payload: rows }),
+    });
+    return resp.json();
+  };
+  let out = await call();
+  if (!out?.success) {
+    // 1 retry pra soluço de rede/timeout — NUNCA cai no anon
+    await new Promise((r) => setTimeout(r, 600));
+    out = await call();
+  }
+  if (!out?.success) throw new Error(out?.error || out?.details || 'Falha ao salvar (servidor)');
+  return out.rows || [];
+}
+
 /**
  * Gera produtos (entidade Product) a partir de um LoteRecebido.
  *
@@ -142,7 +175,7 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
     return base;
   });
 
-  // Cria em chunks de 25 (fallback individual em caso de erro)
+  // Cria em chunks de 25 pela rota segura entityWrite (service_role) com retry.
   const CHUNK_SIZE = 25;
   let criados = 0;
   const erros = [];
@@ -150,18 +183,10 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
   for (let i = 0; i < produtosParaCriar.length; i += CHUNK_SIZE) {
     const chunk = produtosParaCriar.slice(i, i + CHUNK_SIZE);
     try {
-      await base44.entities.Product.bulkCreate(chunk);
-      criados += chunk.length;
+      const rows = await _bulkCreateSeguro(chunk);
+      criados += (rows.length || chunk.length);
     } catch (err) {
       erros.push({ chunk_start: i, error: err?.message || String(err) });
-      for (const p of chunk) {
-        try {
-          await base44.entities.Product.create(p);
-          criados += 1;
-        } catch (e) {
-          erros.push({ item: p.description, error: e?.message || String(e) });
-        }
-      }
     }
   }
 
@@ -169,12 +194,31 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
   const totalCriadoAcumulado = (lote.produtos_gerados_count || 0) + criados;
   const completoAgora = erros.length === 0 && criados === produtosParaCriar.length;
 
-  await base44.entities.LoteRecebido.update(lote.id, {
-    status: completoAgora ? 'convertido' : lote.status,
-    produtos_gerados: completoAgora ? true : (lote.produtos_gerados || false),
-    produtos_gerados_em: new Date().toISOString(),
-    produtos_gerados_count: totalCriadoAcumulado,
-  });
+  // Atualiza o lote pela MESMA rota segura (entityWrite/update) — robusta a mismatch.
+  // Uma falha aqui não descarta os produtos já criados.
+  try {
+    const actorId = _actorId();
+    const resp = await fetch('/api/functions/entityWrite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actorId,
+        table: 'lotes_recebidos',
+        action: 'update',
+        id: lote.id,
+        payload: {
+          status: completoAgora ? 'convertido' : lote.status,
+          produtos_gerados: completoAgora ? true : (lote.produtos_gerados || false),
+          produtos_gerados_em: new Date().toISOString(),
+          produtos_gerados_count: totalCriadoAcumulado,
+        },
+      }),
+    });
+    const out = await resp.json();
+    if (!out?.success) erros.push({ update_lote: out?.error || out?.details || 'falha ao atualizar lote' });
+  } catch (e) {
+    erros.push({ update_lote: e?.message || String(e) });
+  }
 
   return {
     data: {
