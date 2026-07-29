@@ -54,38 +54,20 @@ export default function RegisterBatches() {
     loadBatches();
   }, []);
 
-  // Leitura admin via service_role (rota Vercel) — batch_registrations e lotes_recebidos têm RLS de
-  // admin, que bloqueia o SELECT anônimo do adapter e devolvia []. Passa o actorId do usuário logado;
-  // se a rota não existir (preview) ou falhar, cai no adapter anônimo padrão.
-  const _readAdmin = async (table, { method = 'list', filter, sort_by, limit } = {}) => {
-    try {
-      const actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id;
-      if (!actorId) return null;
-      const resp = await fetch('/api/functions/adminReadEntity', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actorId, table, method, filter, sort_by, limit }),
-      });
-      const json = await resp.json();
-      return json?.success && Array.isArray(json.rows) ? json.rows : null;
-    } catch { return null; }
-  };
-
   const loadBatches = async () => {
     try {
-      // Cada leitura é isolada: se uma falhar, NÃO derruba a outra (antes o Promise.all
-      // rejeitava inteiro quando batch_registrations dava erro e zerava a tela toda).
-      // A coluna de data real no Supabase é created_at (não created_date).
+      // Leitura direta pelo adapter (mesmo caminho do resto do painel admin).
+      // Cada leitura é isolada: se uma falhar, NÃO derruba a outra.
+      // TODOS os lotes recebidos entram (o lixo de teste __QA_BACKEND_FN é filtrado abaixo).
       const [allBatches, allLotes] = await Promise.all([
         (async () => {
           try {
-            const admin = await _readAdmin('batch_registrations', { method: 'list', sort_by: '-created_at', limit: 100 });
-            return admin ?? await base44.entities.BatchRegistration.list('-created_at', 100);
+            return await base44.entities.BatchRegistration.list('-created_date', 200);
           } catch (e) { console.error('Falha ao carregar batch_registrations:', e); return []; }
         })(),
         (async () => {
           try {
-            const admin = await _readAdmin('lotes_recebidos', { method: 'filter', filter: { status: { $in: ['enviado_ao_estoque', 'convertido'] } }, limit: 500 });
-            return admin ?? await base44.entities.LoteRecebido.filter({ status: { $in: ['enviado_ao_estoque', 'convertido'] } });
+            return await base44.entities.LoteRecebido.list('-created_date', 200);
           } catch (e) { console.error('Falha ao carregar lotes_recebidos:', e); return []; }
         })(),
       ]);
