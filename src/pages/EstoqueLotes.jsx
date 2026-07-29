@@ -74,23 +74,15 @@ export default function EstoqueLotes() {
 
   useEffect(() => { loadLotes(); }, []);
 
-  // Email do admin logado — usado pela função backend loteRecebidoWrite para validar
-  // a autorização (o app usa login custom, sem sessão Base44/Supabase).
-  const getCallerEmail = () => {
-    try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.email || null; } catch { return null; }
-  };
-
-  // Escreve LoteRecebido SEMPRE pela função backend loteRecebidoWrite (service_role → Supabase
-  // real). É o único caminho que funciona no preview E no publicado: o adapter direto cai na
-  // rota Vercel (inexistente no preview) e a escrita anon é bloqueada por RLS.
+  // Escrita de LoteRecebido pelo adapter de entidade (base44.entities.LoteRecebido).
+  // O adapter roteia automaticamente create/update/delete de admin/super_admin para a rota
+  // Vercel /api/functions/entityWrite (service_role → tabela lotes_recebidos), que JÁ existe
+  // em produção e é o mesmo caminho usado por todas as outras páginas do painel.
   const writeLote = async (method, { id, data } = {}) => {
-    const res = await base44.functions.invoke('loteRecebidoWrite', {
-      method, id, data, caller_email: getCallerEmail(),
-    });
-    if (res?.error || res?.ok === false) {
-      throw new Error(res.error || res.details || 'Falha no servidor');
-    }
-    return res?.data ?? res;
+    if (method === 'create') return base44.entities.LoteRecebido.create(data || {});
+    if (method === 'update') return base44.entities.LoteRecebido.update(id, data || {});
+    if (method === 'delete') return base44.entities.LoteRecebido.delete(id);
+    throw new Error(`Método '${method}' não suportado`);
   };
 
   const loadLotes = async () => {
