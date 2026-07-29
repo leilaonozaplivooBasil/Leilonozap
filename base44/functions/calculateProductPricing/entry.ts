@@ -11,13 +11,19 @@ Deno.serve(async (req) => {
     }
 
     // Busca produtos via service role (funciona dentro e fora do Base44)
-    const allProducts = await base44.asServiceRole.entities.Product.list();
+    // Caminho por ID: busca direta via $in — NÃO depende de paginação do .list()
+    // (antes carregava só ~50 e filtrava, o que perdia produtos fora do range).
     let productsToPrice = [];
 
-    if (product_ids && Array.isArray(product_ids)) {
-      productsToPrice = allProducts.filter(p => product_ids.includes(p.id));
-    } else if (product_names && Array.isArray(product_names)) {
-      productsToPrice = allProducts.filter(p => 
+    if (product_ids && Array.isArray(product_ids) && product_ids.length > 0) {
+      productsToPrice = await base44.asServiceRole.entities.Product.filter({
+        id: { $in: product_ids }
+      });
+    } else if (product_names && Array.isArray(product_names) && product_names.length > 0) {
+      // Caminho por nome mantém o match por includes() — busca direta não suporta
+      // substring, então mantém o .list() com limite amplo aqui.
+      const allProducts = await base44.asServiceRole.entities.Product.list('-created_date', 5000);
+      productsToPrice = allProducts.filter(p =>
         product_names.some(name => p.description?.toLowerCase().includes(name.toLowerCase()))
       );
     }
