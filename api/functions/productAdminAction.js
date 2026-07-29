@@ -62,8 +62,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Ação inválida' });
     }
 
-    const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
+    const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) });
     if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: t.slice(0, 200) }); }
+    // 🔴 zerarEstoque: PostgREST devolve 200/204 MESMO quando 0 linhas casam com o filtro,
+    // e um trigger/constraint pode reverter o quantity. Validar a linha retornada antes de
+    // confirmar sucesso — senão o frontend mostra "zerado" sem o estoque ter sido zerado.
+    if (action === 'zerarEstoque') {
+      let rows = [];
+      try { rows = await r.json(); } catch (_) { rows = []; }
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (!row) return res.status(200).json({ success: false, error: 'Produto não encontrado (0 linhas afetadas)' });
+      if (Number(row.quantity) !== 0) return res.status(200).json({ success: false, error: 'Estoque não foi zerado (trigger/constraint bloqueou)', details: `quantity=${row.quantity}` });
+    }
 
     // 🏬 PROPAGA PRA VITRINE. A vitrine lê store_inventory.price (COALESCE com o produto), e esse
     // preço é um snapshot gravado quando o item entrou na loja. Sem reescrever aqui, mudar o
