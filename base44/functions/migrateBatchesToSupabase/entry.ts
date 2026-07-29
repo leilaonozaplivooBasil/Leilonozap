@@ -34,6 +34,9 @@ Deno.serve(async (req) => {
         },
       });
 
+    // Limpeza do registro de teste __QA_BACKEND_FN no Supabase (não é dado real).
+    await sb(`lotes_recebidos?id=eq.6a694020631efadfa479cc40`, { method: 'DELETE' }).catch(() => {});
+
     // Probe de colunas do Supabase (devolve as chaves reais das tabelas).
     let body: any = {};
     try { body = await req.json(); } catch { body = {}; }
@@ -104,7 +107,7 @@ Deno.serve(async (req) => {
     // ── LoteRecebido ──────────────────────────────────────────────
     // Mesma lógica: copia do store Base44 pra lotes_recebidos (Supabase), pulando existentes.
     const allLotes = await base44.asServiceRole.entities.LoteRecebido.list('-created_date', 500);
-    const lList = Array.isArray(allLotes) ? allLotes : [];
+    const lList = (Array.isArray(allLotes) ? allLotes : []).filter((l: any) => l.nome_lote !== '__QA_BACKEND_FN');
 
     let l_inseridos = 0;
     let l_pulados = 0;
