@@ -61,8 +61,22 @@ export default function RegisterBatches() {
       // Motivo: o RLS do Supabase nega leitura de batch_registrations e lotes_recebidos
       // para a chave do app (retornava 0). A function devolve os dados reais (admin-only).
       const resp = await adminReadBatches({});
-      const allBatches = resp?.data?.batches || [];
-      const allLotes = resp?.data?.lotes || [];
+      let allBatches = resp?.data?.batches || [];
+      let allLotes = resp?.data?.lotes || [];
+      // 🔄 FALLBACK: no preview sandbox a rota Vercel adminReadBatches não existe
+      // (devolve {error:'not_implemented'}). Lê direto pelas entidades, que funcionam aqui.
+      // Em produção a rota responde normalmente e o fallback não dispara.
+      const needFallback = (!resp?.data || (!allBatches.length && !allLotes.length && (resp.data.error === 'not_implemented' || resp.data.ok === false)));
+      if (needFallback) {
+        try {
+          const [bList, lList] = await Promise.all([
+            base44.entities.BatchRegistration.list(),
+            base44.entities.LoteRecebido.list(),
+          ]);
+          allBatches = Array.isArray(bList) ? bList : [];
+          allLotes = Array.isArray(lList) ? lList : [];
+        } catch (e) { console.debug('fallback entidades falhou:', e?.message); }
+      }
       setBatches(allBatches || []);
       // Remove o registro de teste técnico (__QA_BACKEND_FN) — nunca deve aparecer na lista real
       setLotesRecebidos((allLotes || []).filter(l => l.nome_lote !== '__QA_BACKEND_FN'));
