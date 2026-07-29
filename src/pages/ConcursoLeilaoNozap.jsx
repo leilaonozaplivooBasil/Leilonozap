@@ -9,6 +9,7 @@ import AdminInsights from '@/components/concurso/AdminInsights';
 import ChancesCalculator from '@/components/concurso/ChancesCalculator';
 import DailyMission from '@/components/concurso/DailyMission';
 import WinnersFeed from '@/components/concurso/WinnersFeed';
+import PrizeShowcase from '@/components/concurso/PrizeShowcase';
 import InstallPwaPrompt from '@/components/common/InstallPwaPrompt';
 // A página é standalone (fora do Layout), então o modal de login precisa ser dela
 import LoginModal from '@/components/common/LoginModal';
@@ -86,6 +87,15 @@ export default function ConcursoLeilaoNozap() {
   const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'super_admin');
   const [cfg, setCfg] = useState({});
   const [premiosEdit, setPremiosEdit] = useState({});
+  // Foto do produto do pódio (anexar do dispositivo → data URL leve)
+  const handlePremioFoto = async (pos, e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const url = await fileToSmallDataUrl(f, 400, 0.75);
+      setPremiosEdit((s) => ({ ...s, [pos]: { ...(s[pos] || {}), produto_foto: url } }));
+    } catch { /* */ }
+  };
   const [savingCfg, setSavingCfg] = useState(false);
   const [rankExpanded, setRankExpanded] = useState(false);
   const [adminExpanded, setAdminExpanded] = useState(false);
@@ -145,7 +155,7 @@ export default function ConcursoLeilaoNozap() {
       const j = await r.json();
       setData(j);
       setCfg(j.config || {});
-      const pe = {}; (j.premios || []).forEach((p) => { pe[p.posicao] = p.premio || ''; }); setPremiosEdit(pe);
+      const pe = {}; (j.premios || []).forEach((p) => { pe[p.posicao] = { premio: p.premio || '', produto_foto: p.produto_foto || '', produto_valor: p.produto_valor || 0, produto_link: p.produto_link || '' }; }); setPremiosEdit(pe);
     } catch { /* */ } finally { setLoaded(true); }
   }, [periodo]);
 
@@ -220,7 +230,7 @@ export default function ConcursoLeilaoNozap() {
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
 
   const saveConfig = async () => { setSavingCfg(true); try { await fetch(`${API}?action=save_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, config: cfg }) }); await load(periodo); setMsg('Config salva!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } finally { setSavingCfg(false); } };
-  const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, premio]) => ({ posicao: Number(posicao), premio })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
+  const savePremios = async () => { try { const premios = Object.entries(premiosEdit).map(([posicao, p]) => ({ posicao: Number(posicao), premio: typeof p === 'string' ? p : (p.premio || ''), produto_foto: typeof p === 'object' ? (p.produto_foto || '') : '', produto_valor: typeof p === 'object' ? (p.produto_valor || 0) : 0, produto_link: typeof p === 'object' ? (p.produto_link || '') : '' })); await fetch(`${API}?action=prizes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, premios }) }); await load(periodo); setMsg('Prêmios do pódio salvos!'); setTimeout(() => setMsg(''), 3000); } catch { /* */ } };
   const realizarSorteio = async (per) => {
     if (!window.confirm(`Realizar sorteio do período "${per}"? Coroa quem trouxe mais gente.`)) return;
     try { const r = await fetch(`${API}?action=sorteio`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: currentUser.id, periodo: per }) }); const j = await r.json(); setMsg(j.ok ? `Vencedor: ${j.vencedor.nome} (${j.vencedor.pontos})` : (j.error || 'Erro')); setTimeout(() => setMsg(''), 6000); } catch { /* */ }
@@ -535,6 +545,7 @@ export default function ConcursoLeilaoNozap() {
               <input value={(cfg.produto_foto || '').startsWith('data:') ? '' : (cfg.produto_foto || '')} onChange={(e) => setCfg({ ...cfg, produto_foto: e.target.value })} placeholder={(cfg.produto_foto || '').startsWith('data:') ? 'Foto anexada ✓ — ou cole uma URL aqui' : 'ou cole a URL da foto do produto'} className={inp} />
             </div>
             <input value={cfg.produto_valor || ''} onChange={(e) => setCfg({ ...cfg, produto_valor: Number(e.target.value) || 0 })} inputMode="numeric" placeholder="Valor (R$)" className={inp} />
+            <input value={cfg.produto_link || ''} onChange={(e) => setCfg({ ...cfg, produto_link: e.target.value })} placeholder="Link do produto na loja (ex: /Loja-Virtual?produto=123)" className={inp} />
             <div className="rounded-lg border border-white/10 bg-black/25 p-2.5">
               <label className="text-[11px] text-purple-200/70 font-bold uppercase tracking-wide block mb-1.5">Horário do sorteio (contador regressivo)</label>
               <input value={cfg.sorteio_horario || ''} onChange={(e) => setCfg({ ...cfg, sorteio_horario: e.target.value })} placeholder="Ex: 20:00 ou 20h" className={inp} />
@@ -571,14 +582,40 @@ export default function ConcursoLeilaoNozap() {
 
         <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
           <SecHead icon={Crown}>Prêmios do pódio (top 10)</SecHead>
-          <p className="text-[11px] text-purple-200/60 -mt-1 mb-3">Estes aparecem no ranking público, ao lado de cada posição.</p>
-          <div className="grid sm:grid-cols-2 gap-2">
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => (
-              <div key={pos} className="flex items-center gap-2">
-                <PosBadge pos={pos} size={22} />
-                <input value={premiosEdit[pos] ?? ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: e.target.value })} placeholder={`Prêmio do ${pos}º`} className={`flex-1 min-w-0 ${inp}`} />
-              </div>
-            ))}
+          <p className="text-[11px] text-purple-200/60 -mt-1 mb-3">Nome + foto + preço + link da loja. As 3 primeiras posições viram cards clicáveis na página pública.</p>
+          <div className="space-y-3">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((pos) => {
+              const pe = typeof premiosEdit[pos] === 'object' ? premiosEdit[pos] : { premio: premiosEdit[pos] || '', produto_foto: '', produto_valor: 0, produto_link: '' };
+              const destaque = pos <= 3;
+              return (
+                <div key={pos} className={`rounded-xl p-3 border ${destaque ? 'border-yellow-400/30 bg-yellow-400/5' : 'border-white/10 bg-black/20'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <PosBadge pos={pos} size={22} />
+                    <input value={pe.premio} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: { ...pe, premio: e.target.value } })} placeholder={`Prêmio do ${pos}º`} className={`flex-1 min-w-0 ${inp}`} />
+                  </div>
+                  {destaque && (
+                    <div className="space-y-2 pl-7">
+                      <div className="flex items-center gap-2.5">
+                        {pe.produto_foto ? (
+                          <div className="relative shrink-0">
+                            <img src={pe.produto_foto} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/15" />
+                            <button type="button" onClick={() => setPremiosEdit({ ...premiosEdit, [pos]: { ...pe, produto_foto: '' } })} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full grid place-items-center bg-black/80 border border-white/20 text-white/90 text-xs leading-none hover:bg-red-600">×</button>
+                          </div>
+                        ) : (
+                          <span className="w-12 h-12 rounded-lg grid place-items-center bg-black/40 border border-dashed border-white/20 shrink-0"><Gift className="w-5 h-5 text-white/40" /></span>
+                        )}
+                        <label className="flex-1 cursor-pointer">
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePremioFoto(pos, e)} />
+                          <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-purple-100 border border-purple-400/40 bg-purple-500/15 hover:bg-purple-500/25 transition-colors"><Camera className="w-3.5 h-3.5" /> {pe.produto_foto ? 'Trocar foto' : 'Foto do produto'}</span>
+                        </label>
+                      </div>
+                      <input value={pe.produto_valor || ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: { ...pe, produto_valor: Number(e.target.value) || 0 } })} inputMode="numeric" placeholder="Preço na loja (R$)" className={inp} />
+                      <input value={pe.produto_link || ''} onChange={(e) => setPremiosEdit({ ...premiosEdit, [pos]: { ...pe, produto_link: e.target.value } })} placeholder="Link na loja (ex: /Loja-Virtual?produto=123)" className={inp} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <button onClick={savePremios} className="mt-3 w-full py-3 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-700 text-sm flex items-center justify-center gap-2 transition-colors"><Save className="w-4 h-4" /> Salvar prêmios do pódio</button>
         </div>
@@ -697,6 +734,9 @@ export default function ConcursoLeilaoNozap() {
 
         {/* FEATURE 7 — prêmio do dia em destaque ANTES do cadastro */}
         <HeroDailyPrize config={config} registered={!!myCode} total={data.total || 0} />
+
+        {/* 🛍️ VITRINE DE PRODUTOS — prêmio do dia + 1º, 2º, 3º como cards clicáveis da loja */}
+        <PrizeShowcase config={config} premios={data.premios || []} />
 
         {/* LIVOO LIVE — janela 16:9 que acende sozinha quando o perfil da Leilão NoZap
             entra ao vivo na Livoo (o backend lê o status real do perfil, sem admin marcar) */}

@@ -112,7 +112,7 @@ export default async function handler(req, res) {
     if ((req.method === 'GET' && !action) || action === 'ranking') {
       const periodo = (req.query?.periodo || 'geral').toString();
       const ranking = await rankingPeriodo(['dia', 'semana', 'mes', 'geral'].includes(periodo) ? periodo : 'geral');
-      const p = await sb('concurso_premios?select=posicao,premio&order=posicao');
+      const p = await sb('concurso_premios?select=posicao,premio,produto_foto,produto_valor,produto_link&order=posicao');
       const premios = (await p.json().catch(() => [])) || [];
       const config = await getConfig();
       return jset(res, 200, { ranking, premios, config, group_link: GROUP_LINK, total: ranking.length, periodo });
@@ -340,13 +340,19 @@ export default async function handler(req, res) {
       });
     }
 
-    // ---------- ADMIN: prêmios do pódio (1..10) ----------
+    // ---------- ADMIN: prêmios do pódio (1..10) — agora com foto, preço e link da loja ----------
     if (action === 'prizes') {
       if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
       const premios = Array.isArray(body.premios) ? body.premios : [];
       for (const it of premios) {
         const pos = parseInt(it.posicao, 10);
-        if (pos >= 1 && pos <= 10) await sb(`concurso_premios?posicao=eq.${pos}`, { method: 'PATCH', body: JSON.stringify({ premio: (it.premio || '').toString().slice(0, 200) }) });
+        if (pos >= 1 && pos <= 10) {
+          const patch = { premio: (it.premio || '').toString().slice(0, 200) };
+          if ('produto_foto' in it) patch.produto_foto = (it.produto_foto || '').toString().slice(0, 2000);
+          if ('produto_valor' in it) patch.produto_valor = Number(it.produto_valor) || 0;
+          if ('produto_link' in it) patch.produto_link = (it.produto_link || '').toString().slice(0, 500);
+          await sb(`concurso_premios?posicao=eq.${pos}`, { method: 'PATCH', body: JSON.stringify(patch) });
+        }
       }
       return jset(res, 200, { ok: true });
     }
@@ -358,7 +364,7 @@ export default async function handler(req, res) {
       const patch = {};
       // sorteio_horario: aguardando a coluna na concurso_config (ALTER TABLE pendente) —
       // o painel só passa a enviar essa chave quando o input for liberado no admin.
-      const campos = ['produto_nome', 'produto_foto', 'produto_valor', 'produto_desc', 'propaganda', 'live_ativa', 'live_url', 'live_horario', 'live_produto', 'live_meta', 'live_audiencia', 'premio_dia', 'premio_semana', 'premio_mes', 'sorteio_horario'];
+      const campos = ['produto_nome', 'produto_foto', 'produto_valor', 'produto_desc', 'produto_link', 'propaganda', 'live_ativa', 'live_url', 'live_horario', 'live_produto', 'live_meta', 'live_audiencia', 'premio_dia', 'premio_semana', 'premio_mes', 'sorteio_horario'];
       for (const k of campos) if (k in c) patch[k] = c[k];
       patch.updated_at = new Date().toISOString();
       await sb('concurso_config?id=eq.main', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
