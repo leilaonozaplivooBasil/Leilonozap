@@ -90,7 +90,8 @@ export default function RegisterBatches() {
         })(),
       ]);
       setBatches(allBatches || []);
-      setLotesRecebidos(allLotes || []);
+      // Remove o registro de teste técnico (__QA_BACKEND_FN) — nunca deve aparecer na lista real
+      setLotesRecebidos((allLotes || []).filter(l => l.nome_lote !== '__QA_BACKEND_FN'));
 
       // Atualiza mapa local de códigos (code -> descrição) com histórico
       try {
