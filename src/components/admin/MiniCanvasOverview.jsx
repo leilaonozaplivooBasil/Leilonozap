@@ -29,7 +29,7 @@ const SECTION_LAYOUT = [
 
 export default function MiniCanvasOverview({ onClose, currentPageName }) {
   const navigate = useNavigate();
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.5 });
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.85 });
   const [isDragging, setIsDragging] = useState(false);
   const [closing, setClosing] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startTX: 0, startTY: 0, moved: false });
@@ -140,7 +140,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     setTransform((prev) => ({ ...prev, scale: Math.max(MIN_SCALE, prev.scale / 1.25) }));
   }, []);
   const fitToScreen = useCallback(() => {
-    setTransform({ x: 0, y: 0, scale: 0.5 });
+    setTransform({ x: 0, y: 0, scale: 0.85 });
   }, []);
 
   // --- Esc to close ---
@@ -176,7 +176,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     >
       {/* Modal container */}
       <div
-        className={`relative w-full max-w-[1100px] h-[88vh] max-h-[820px] rounded-2xl overflow-hidden flex flex-col ${
+        className={`relative w-full max-w-[1600px] h-[94vh] max-h-[920px] rounded-2xl overflow-hidden flex flex-col ${
           closing ? "animate-out zoom-out-95 duration-180" : "animate-in zoom-in-95 duration-200"
         }`}
         style={{
