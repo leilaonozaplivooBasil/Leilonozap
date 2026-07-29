@@ -70,8 +70,8 @@ export default function RegisterBatches() {
       if (needFallback) {
         try {
           const [bList, lList] = await Promise.all([
-            base44.entities.BatchRegistration.list(),
-            base44.entities.LoteRecebido.list(),
+            base44.asServiceRole.entities.BatchRegistration.list(),
+            base44.asServiceRole.entities.LoteRecebido.list(),
           ]);
           allBatches = Array.isArray(bList) ? bList : [];
           allLotes = Array.isArray(lList) ? lList : [];
