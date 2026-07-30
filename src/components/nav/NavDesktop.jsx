@@ -250,6 +250,9 @@ export default function NavDesktop({
           `}</style>
         </Link>
 
+        {/* === Separador visual: LOJA (rank+carrinho) ↔ PERFIL === */}
+        <div className="w-px h-9 bg-white/10 mx-1" aria-hidden="true" />
+
         {/* === Perfil no canto extremo direito === */}
         <div>
           <UserAvatarMenu
