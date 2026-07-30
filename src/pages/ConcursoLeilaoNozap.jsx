@@ -247,8 +247,10 @@ export default function ConcursoLeilaoNozap() {
             shareableUrl = cached;
           } else {
             const proxyResult = await proxyImage({ imageUrl: foto });
-            if (proxyResult?.data?.file_url) {
-              shareableUrl = proxyResult.data.file_url;
+            // Aceita ambos os formatos: { data: { file_url } } (SDK Base44) e { file_url } (rota Vercel)
+            const proxiedUrl = proxyResult?.data?.file_url || proxyResult?.file_url;
+            if (proxiedUrl) {
+              shareableUrl = proxiedUrl;
               sessionStorage.setItem(cacheKey, shareableUrl);
             }
           }
