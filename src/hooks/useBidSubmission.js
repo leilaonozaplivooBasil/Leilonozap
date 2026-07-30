@@ -82,6 +82,32 @@ export default function useBidSubmission({
       return;
     }
 
+    let wasDebited = false;
+    let debitedAmount = 0;
+
+    // Reembolso automático: se o lance falhar APÓS o débito, devolve o saldo
+    // Usa função backend (creditWalletBalance) porque a DigitalWallet tem RLS write: admin-only
+    const refundBid = async (reason) => {
+      try {
+        const refundResult = await base44.functions.invoke('creditWalletBalance', {
+          user_id: currentUser.id,
+          amount: debitedAmount,
+          auction_id: auctionId,
+          type: 'auction_refund',
+          description: `Reembolso — ${reason}`
+        });
+        const refundData = refundResult?.data || refundResult;
+        if (refundData?.success) {
+          setUserWallet({ balance: refundData.new_balance });
+          console.log(`✅ [BID] Reembolso de R$ ${debitedAmount.toFixed(2)}: ${reason}`);
+        } else {
+          console.error(`❌ [BID] Reembolso falhou:`, refundData?.error || 'resposta inválida');
+        }
+      } catch (refundError) {
+        console.error(`❌ [BID] Erro ao reembolsar R$ ${debitedAmount.toFixed(2)}:`, refundError.message);
+      }
+    };
+
     try {
       isSubmittingRef.current = true;
       setIsSubmittingBid(true);
@@ -129,6 +155,8 @@ export default function useBidSubmission({
           return;
         }
         setUserWallet({ balance: debitData.new_balance });
+        wasDebited = true;
+        debitedAmount = bidAmount;
       } catch (debitError) {
         console.warn("⚠️ Erro ao debitar saldo:", debitError.message);
         setShowLowBalanceModal(true);
@@ -174,6 +202,7 @@ export default function useBidSubmission({
 
       if (gteMoney(revalidatePrice, bidAmount)) {
         alert("Outro lance foi dado!");
+        await refundBid("lance rejeitado (outro lance maior)");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
         setAuction(prev => ({
@@ -209,6 +238,7 @@ export default function useBidSubmission({
 
       if (conflictingBids.length > 0) {
         alert("Lance duplicado!");
+        await refundBid("lance duplicado rejeitado");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
         return;
@@ -279,6 +309,9 @@ export default function useBidSubmission({
 
     } catch (error) {
       console.error("❌ [BID] Erro:", error);
+      if (wasDebited) {
+        await refundBid("erro durante processamento do lance");
+      }
       alert("Erro ao enviar lance.");
     } finally {
       setTimeout(() => {
