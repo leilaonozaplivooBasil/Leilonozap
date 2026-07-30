@@ -227,6 +227,7 @@ export default function ConcursoLeilaoNozap() {
   // 🔗 LÓGICA ÚNICA DE SHARE — cópia FIEL da Loja Virtual (CatalogProductCard.handleShare).
   // 3 níveis: share com imagem → share só texto → abre WhatsApp direto. NUNCA baixa.
   // Se não tem foto, pula o Nível 1 e tenta o Nível 2 (só texto) — igualzinho à loja.
+  // Usa fetch pra TODAS as URLs (fetch suporta data: URLs nativamente — sem branch manual).
   const shareWithImage = async () => {
     if (!myLink) return false;
     const pp = config.produto_principal || {};
@@ -253,30 +254,22 @@ export default function ConcursoLeilaoNozap() {
           }
         }
 
-        // Busca a imagem como blob
-        let blob;
-        if (shareableUrl.startsWith('data:')) {
-          const [meta, base64] = shareableUrl.split(',');
-          const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
-          const bin = atob(base64);
-          const arr = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-          blob = new Blob([arr], { type: mime });
-        } else {
-          const response = await fetch(shareableUrl, { mode: 'cors' });
-          if (!response.ok) throw new Error('fetch falhou');
-          blob = await response.blob();
-        }
+        // fetch pra TODAS as URLs — data: URLs são suportadas nativamente (spec fetch §4).
+        // Mesmo fluxo exato da Loja Virtual: sem branch manual de atob/blob.
+        const response = await fetch(shareableUrl, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          const mimeType = blob.type || 'image/jpeg';
+          const file = new File([blob], 'premio-do-dia.jpg', { type: mimeType });
 
-        const mimeType = blob.type || 'image/jpeg';
-        const file = new File([blob], 'premio-do-dia.jpg', { type: mimeType });
-
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, url: myLink, files: [file] });
-          return true;
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, url: myLink, files: [file] });
+            return true;
+          }
         }
       } catch (err) {
         if (err.name === 'AbortError') return true; // cancelou = já abriu a sheet
+        console.debug('Share com imagem falhou, tentando sem imagem:', err.message);
       }
     }
 
