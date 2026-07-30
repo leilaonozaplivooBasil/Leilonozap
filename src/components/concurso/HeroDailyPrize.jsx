@@ -89,7 +89,7 @@ export default function HeroDailyPrize({ config, registered, total, onShare }) {
           <div className="relative w-full max-w-xs rounded-3xl p-5 transition-transform hover:scale-[1.02]" style={{ background: 'rgba(0,0,0,.35)', border: '1px solid rgba(245,196,81,.3)' }}>
             <p className="text-[10px] font-bold uppercase tracking-wide text-yellow-300/80 mb-2 text-center">Produto principal do sorteio</p>
             <span className="absolute -top-3 -right-2 rotate-12 text-[11px] font-black px-3.5 py-1.5 rounded-full text-[#052e16]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>GRÁTIS</span>
-            <div className="h-52 sm:h-60 grid place-items-center">
+            <div className="h-44 sm:h-52 md:h-60 grid place-items-center">
               {foto ? (
                 <img src={foto} alt={nome} className="max-h-full max-w-full object-contain drop-shadow-2xl" />
               ) : (

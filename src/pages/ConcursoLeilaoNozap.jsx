@@ -229,8 +229,9 @@ export default function ConcursoLeilaoNozap() {
   // Se não tem foto, pula o Nível 1 e tenta o Nível 2 (só texto) — igualzinho à loja.
   const shareWithImage = async () => {
     if (!myLink) return false;
+    const pp = config.produto_principal || {};
     const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
-    const foto = config.produto_foto || diaArr[0]?.foto || '';
+    const foto = pp.foto || config.produto_foto || diaArr[0]?.foto || '';
 
     // NÍVEL 1: Share com imagem via Web Share API (só se tem foto)
     if (foto && navigator.share && navigator.canShare) {

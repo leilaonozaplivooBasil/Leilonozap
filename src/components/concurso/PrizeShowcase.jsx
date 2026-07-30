@@ -44,9 +44,9 @@ function ProductCard({ item, pos }) {
   return (
     <Wrapper {...wrapperProps} className="group block rounded-2xl overflow-hidden transition-transform active:scale-[.98] hover:scale-[1.02] no-underline" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.22)' }}>
       {/* Foto do produto */}
-      <div className="relative aspect-square overflow-hidden bg-black/40">
+      <div className="relative aspect-square overflow-hidden bg-black/50 grid place-items-center">
         {item.produto_foto ? (
-          <img src={item.produto_foto} alt={item.nome} className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+          <img src={item.produto_foto} alt={item.nome} className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105" loading="lazy" />
         ) : (
           <div className="w-full h-full grid place-items-center">
             <Gift className="w-12 h-12 text-white/25" />
