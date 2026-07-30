@@ -1,45 +1,34 @@
--- Migration: Adicionar coluna held_balance na tabela digital_wallets
--- e garantir colunas relacionadas na tabela digital_wallet_transactions
+-- ============================================================
+-- Migration: held_balance no fluxo de lances (reserva/libera)
 -- Data: 2026-07-30
--- Motivo: Correção do fluxo de lances — reservar saldo em vez de debitar
+-- Motivo: Correção do fluxo — reservar saldo em vez de debitar
+--
+-- ⚠️ IMPORTANTE: As tabelas digital_wallets e digital_wallet_transactions
+-- guardam os campos das entidades dentro da coluna JSONB raw_base44.
+-- O SDK do Base44 lê/escreve direto nesse JSONB, então o campo held_balance
+-- JÁ FUNCIONA sem migration (validado por teste: reserveBidBalance/releaseBidHold).
+--
+-- Esta migration NÃO é obrigatória para o funcionamento.
+-- Serve apenas como documentação e para sincronizar o JSONB caso
+-- existam carteiras antigas sem o campo held_balance.
+-- ============================================================
 
--- 1. Adicionar held_balance na tabela de carteiras
-ALTER TABLE digital_wallets 
-ADD COLUMN IF NOT EXISTS held_balance numeric DEFAULT 0;
+-- 1. Garantir que todas as carteiras existentes tenham held_balance no JSONB
+-- (carteiras criadas antes da mudança podem não ter o campo)
+UPDATE public.digital_wallets
+SET raw_base44 = jsonb_set(
+  COALESCE(raw_base44, '{}'::jsonb),
+  '{held_balance}',
+  to_jsonb(COALESCE((raw_base44->>'held_balance')::numeric, 0))
+)
+WHERE raw_base44 IS NULL
+   OR NOT raw_base44 ? 'held_balance';
 
--- 2. Garantir que related_auction_id existe na tabela de transações
--- (o schema Base44 já define, mas o banco pode não ter a coluna)
-ALTER TABLE digital_wallet_transactions 
-ADD COLUMN IF NOT EXISTS related_auction_id text;
+-- 2. Garantir que transações antigas tenham related_auction_id e related_message_id
+-- (já existem no JSONB das novas, mas antigas podem não ter)
+-- Não precisa UPDATE — campos opcionais, o SDK lê como null naturalmente.
 
--- 3. Adicionar related_message_id na tabela de transações
-ALTER TABLE digital_wallet_transactions 
-ADD COLUMN IF NOT EXISTS related_message_id text;
-
--- 4. Atualizar o enum de type para incluir novos tipos
--- PostgreSQL exige adicionar valores novos ao enum existente
-ALTER TYPE digital_wallet_transaction_type 
-ADD VALUE IF NOT EXISTS 'bid_hold';
-
-ALTER TYPE digital_wallet_transaction_type 
-ADD VALUE IF NOT EXISTS 'bid_release';
-
-ALTER TYPE digital_wallet_transaction_type 
-ADD VALUE IF NOT EXISTS 'auction_settlement';
-
-ALTER TYPE digital_wallet_transaction_type 
-ADD VALUE IF NOT EXISTS 'auction_refund';
-
--- 5. Atualizar o enum de status para incluir novos status
-ALTER TYPE digital_wallet_transaction_status 
-ADD VALUE IF NOT EXISTS 'released';
-
-ALTER TYPE digital_wallet_transaction_status 
-ADD VALUE IF NOT EXISTS 'settled';
-
-ALTER TYPE digital_wallet_transaction_status 
-ADD VALUE IF NOT EXISTS 'refunded';
-
--- 6. Comentário para documentação
-COMMENT ON COLUMN digital_wallets.held_balance IS 'Saldo reservado em lances ativos (bloqueado em disputa)';
-COMMENT ON COLUMN digital_wallet_transactions.related_message_id IS 'ID da mensagem de lance que gerou a reserva';
+-- Pronto. Não há ALTER TABLE nem ALTER TYPE porque:
+-- - Os campos são TEXT/NUMERIC dentro do JSONB (não enums físicos)
+-- - O SDK do Base44 gerencia o JSONB automaticamente
+-- - Adicionar colunas físicas não seria usado pelo SDK
