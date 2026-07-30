@@ -71,14 +71,19 @@ async function drawStory(canvas, { nome, posicao, premio, link }) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
-export default function ShareSection({ nome, posicao, premio, link, onCopied }) {
+export default function ShareSection({ nome, posicao, premio, link, onCopied, onShare }) {
   const canvasRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
 
   const texto = `🏆 Tô em ${ordinal(posicao)} no Rank Premiado do Leilão NoZap! Tem sorteio de prêmio todo dia. Entra no grupo pelo meu link e me ajuda a subir:\n${link}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
 
-  const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+  // WhatsApp: usa onShare do parent (3 níveis com imagem do produto) se disponível,
+  // senão cai no wa.me texto (fallback). NUNCA manda só texto quando tem imagem.
+  const whatsapp = async () => {
+    if (onShare) { await onShare(); return; }
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+  };
 
   const story = async () => {
     if (!canvasRef.current || generating) return;

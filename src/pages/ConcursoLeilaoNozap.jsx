@@ -1000,6 +1000,7 @@ export default function ConcursoLeilaoNozap() {
                 posicao={me?.periodos?.dia?.posicao || me?.periodos?.geral?.posicao}
                 premio={config.produto_nome || config.premio_dia}
                 link={myLink}
+                onShare={shareZap}
               />
             )}
           </div>
