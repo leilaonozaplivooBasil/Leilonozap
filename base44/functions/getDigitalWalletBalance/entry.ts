@@ -16,24 +16,10 @@ Deno.serve(async (req) => {
             return Response.json({ balance: 0, wallet_id: null });
         }
 
-        // Soma o saldo de todas as wallets (caso existam duplicatas)
+        // 🛡️ SOMA todos os saldos — NUNCA deleta carteiras em hot-path de leitura.
+        // A consolidação de duplicatas (se necessária) é tarefa admin separada,
+        // nunca dentro de getDigitalWalletBalance (causa race com débitos concorrentes).
         const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
-
-        // Se há múltiplas wallets, consolida em uma só
-        if (wallets.length > 1) {
-            const primary = wallets[0];
-            for (let i = 1; i < wallets.length; i++) {
-                try {
-                    await base44.asServiceRole.entities.DigitalWallet.delete(wallets[i].id);
-                } catch (e) {
-                    console.error('Erro ao remover wallet duplicada:', e.message);
-                }
-            }
-            if (totalBalance !== (primary.balance || 0)) {
-                await base44.asServiceRole.entities.DigitalWallet.update(primary.id, { balance: totalBalance });
-            }
-            return Response.json({ balance: totalBalance, wallet_id: primary.id });
-        }
 
         return Response.json({ balance: totalBalance, wallet_id: wallets[0].id });
 

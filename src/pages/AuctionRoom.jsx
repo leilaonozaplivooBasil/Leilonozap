@@ -181,12 +181,14 @@ export default function AuctionRoom() {
         setCurrentUser(user);
 
         // 🆕 Carrega saldo da carteira digital via backend (contorna RLS)
+        // 🛡️ NÃO sobrescreve para 0 se a função falhar — mantém saldo anterior
         try {
           const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
           const walletData = result?.data || result;
-          const balance = walletData?.balance || 0;
-          setUserWallet({ balance });
-          console.log(`💰 Saldo digital do usuário: R$ ${fmtBR(balance)}`);
+          if (typeof walletData?.balance === 'number') {
+            setUserWallet({ balance: walletData.balance });
+            console.log(`💰 Saldo digital do usuário: R$ ${fmtBR(walletData.balance)}`);
+          }
         } catch (error) {
           console.warn("Erro ao carregar saldo da carteira digital:", error.message);
           // Não bloqueia o lance se não conseguir verificar saldo
@@ -209,7 +211,9 @@ export default function AuctionRoom() {
       const user = JSON.parse(savedUser);
       const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
       const walletData = result?.data || result;
-      setUserWallet({ balance: walletData?.balance || 0 });
+      if (typeof walletData?.balance === 'number') {
+        setUserWallet({ balance: walletData.balance });
+      }
     } catch { /* silencioso */ }
   }, []);
 
@@ -526,8 +530,10 @@ export default function AuctionRoom() {
     try {
       const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
-      const freshBalance = freshData?.balance || 0;
-      setUserWallet({ balance: freshBalance });
+      const freshBalance = typeof freshData?.balance === 'number' ? freshData.balance : (userWallet?.balance ?? 0);
+      if (typeof freshData?.balance === 'number') {
+        setUserWallet({ balance: freshBalance });
+      }
 
       if (freshBalance < buyNowAmount) {
         console.warn(`⚠️ Saldo insuficiente para arremate: R$ ${fmtBR(freshBalance)} < R$ ${fmtBR(buyNowAmount)}`);

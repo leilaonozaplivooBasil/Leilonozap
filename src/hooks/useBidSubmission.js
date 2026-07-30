@@ -44,16 +44,17 @@ export default function useBidSubmission({
       return;
     }
 
-    // Verifica saldo
+    // Verifica saldo — NÃO sobrescreve para 0 se a função falhar
     try {
       const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
-      const freshBalance = freshData?.balance || 0;
-      setUserWallet({ balance: freshBalance });
-
-      if (freshBalance < amount) {
-        setShowLowBalanceModal(true);
-        return;
+      const freshBalance = typeof freshData?.balance === 'number' ? freshData.balance : null;
+      if (freshBalance !== null) {
+        setUserWallet({ balance: freshBalance });
+        if (freshBalance < amount) {
+          setShowLowBalanceModal(true);
+          return;
+        }
       }
     } catch (walletError) {
       console.warn("⚠️ Não foi possível verificar saldo, permitindo lance:", walletError.message);
@@ -195,8 +196,6 @@ export default function useBidSubmission({
         is_system_message: false
       });
 
-      await new Promise(resolve => setTimeout(resolve, 800));
-
       const revalidateAuction = await Auction.filter({ id: auctionId });
       const revalidatePrice = money(revalidateAuction[0].current_price || revalidateAuction[0].starting_price);
 
@@ -214,33 +213,9 @@ export default function useBidSubmission({
         return;
       }
 
-      const recentBids = await AuctionMessage.filter(
-        { auction_id: auctionId, message_type: "bid" },
-        "-created_date",
-        10
-      );
-
       const nowCheckServer = getServerSyncedTime();
       if (nowCheckServer === null) {
         alert("Erro de sincronização.");
-        return;
-      }
-
-      const conflictingBids = recentBids.filter(bid => {
-        const bidTime = new Date(bid.created_date).getTime();
-        const timeDiff = Math.abs(nowCheckServer - bidTime);
-        return (
-          bid.bid_amount === bidAmount &&
-          bid.sender_id !== currentUser.id &&
-          timeDiff < 5000
-        );
-      });
-
-      if (conflictingBids.length > 0) {
-        alert("Lance duplicado!");
-        await refundBid("lance duplicado rejeitado");
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-        lastMessageCountRef.current--;
         return;
       }
 
