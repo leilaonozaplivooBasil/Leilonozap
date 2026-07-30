@@ -6,7 +6,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { admin_user_id } = await req.json();
+        const { admin_user_id, status, begin_date, end_date, limit, compact } = await req.json();
 
         if (!admin_user_id) {
             return Response.json({ error: 'admin_user_id é obrigatório' }, { status: 400 });
@@ -22,9 +22,22 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
         }
 
-        // Busca os últimos pagamentos direto na API do Mercado Pago (fonte real)
+        // Busca os pagamentos direto na API do Mercado Pago (fonte real).
+        // Suporta filtro por status (ex: approved) e por período (date_created).
+        const params = new URLSearchParams({
+            sort: 'date_created',
+            criteria: 'desc',
+            limit: String(limit || 100)
+        });
+        if (status) params.set('status', status);
+        if (begin_date && end_date) {
+            params.set('range', 'date_created');
+            params.set('begin_date', begin_date);
+            params.set('end_date', end_date);
+        }
+
         const mpResponse = await fetch(
-            'https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=50',
+            `https://api.mercadopago.com/v1/payments/search?${params.toString()}`,
             {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             }
@@ -36,7 +49,12 @@ Deno.serve(async (req) => {
             return Response.json({ error: mpData.message || 'Erro ao consultar Mercado Pago', details: mpData }, { status: 400 });
         }
 
-        const payments = (mpData.results || []).map((p) => ({
+        const payments = (mpData.results || []).map((p) => compact ? {
+            id: p.id,
+            status: p.status,
+            amount: p.transaction_amount,
+            date_approved: p.date_approved
+        } : {
             id: p.id,
             status: p.status,
             status_detail: p.status_detail,
@@ -47,7 +65,7 @@ Deno.serve(async (req) => {
             external_reference: p.external_reference,
             date_created: p.date_created,
             date_approved: p.date_approved
-        }));
+        });
 
         const totalApproved = payments
             .filter((p) => p.status === 'approved')
