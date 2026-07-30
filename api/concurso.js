@@ -68,9 +68,19 @@ async function getConfig() {
   const r = await sb('concurso_config?id=eq.main&limit=1');
   const rows = await r.json().catch(() => []);
   const config = (Array.isArray(rows) && rows[0]) || {};
-  // Map premios_produtos → produtos_dia (frontend usa produtos_dia, DB tem premios_produtos)
+  // Map premios_produtos → produtos_dia + produto_principal + sorteio_horario
+  // premios_produtos pode ser: array (formato antigo) ou object (formato novo com 4 slots)
   if (config.premios_produtos !== undefined && config.produtos_dia === undefined) {
-    config.produtos_dia = config.premios_produtos;
+    const pp = config.premios_produtos;
+    if (Array.isArray(pp)) {
+      // Formato antigo: array de 3 produtos
+      config.produtos_dia = pp;
+    } else if (pp && typeof pp === 'object') {
+      // Formato novo: { produtos: [...], principal: {...}, sorteio_horario: "..." }
+      config.produtos_dia = pp.produtos || [];
+      if (!config.produto_principal && pp.principal) config.produto_principal = pp.principal;
+      if (!config.sorteio_horario && pp.sorteio_horario) config.sorteio_horario = pp.sorteio_horario;
+    }
   }
   return config;
 }
@@ -380,20 +390,24 @@ export default async function handler(req, res) {
       const c = body.config || {};
       const patch = {};
       // Colunas que EXISTEM na tabela concurso_config do Supabase.
-      // produtos_dia não existe no DB — mapeamos pra premios_produtos (jsonb, já existe).
-      // produto_link e sorteio_horario também não existem — removidos pra não quebrar o PATCH.
       const campos = ['produto_nome', 'produto_foto', 'produto_valor', 'produto_desc', 'propaganda', 'live_ativa', 'live_url', 'live_horario', 'live_produto', 'live_meta', 'live_audiencia', 'premio_dia', 'premio_semana', 'premio_mes'];
       for (const k of campos) if (k in c) patch[k] = c[k];
-      // Mapeamento: produtos_dia (frontend) → premios_produtos (coluna jsonb no DB)
-      if ('produtos_dia' in c) patch.premios_produtos = c.produtos_dia;
+      // Mapeamento: produtos_dia + produto_principal + sorteio_horario → premios_produtos (jsonb)
+      // Armazena tudo num objeto estruturado pra persistir slots que não têm coluna própria.
+      const pp = {};
+      if ('produtos_dia' in c) pp.produtos = c.produtos_dia;
+      if ('produto_principal' in c) pp.principal = c.produto_principal;
+      if ('sorteio_horario' in c) pp.sorteio_horario = c.sorteio_horario;
+      if (Object.keys(pp).length > 0) patch.premios_produtos = pp;
       patch.updated_at = new Date().toISOString();
       const r = await sb('concurso_config?id=eq.main', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
       if (!r.ok) {
         const txt = await r.text().catch(() => '');
-        // Se a coluna produtos_dia não existe, o PATCH falha — avisa o admin em vez de fingir sucesso
         return jset(res, 500, { ok: false, error: 'Falha ao salvar config', detail: txt.slice(0, 500) });
       }
-      return jset(res, 200, { ok: true });
+      // Retorna a config atualizada pra o client atualizar cfg imediatamente (sem delay)
+      const updatedConfig = await getConfig();
+      return jset(res, 200, { ok: true, config: updatedConfig });
     }
 
     // ---------- ADMIN: realizar sorteio (coroa o 1º do período + registra) ----------

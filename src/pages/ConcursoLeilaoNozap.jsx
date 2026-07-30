@@ -157,12 +157,17 @@ export default function ConcursoLeilaoNozap() {
     try {
       const r = await fetch(`${API}?periodo=${per || periodo}`, { cache: 'no-store' });
       const j = await r.json();
-      // Client-side fallback: se a API (Vercel antiga no preview) não mapeou
-      // premios_produtos → produtos_dia, faz aqui. O Base44 function saveConcursoConfig
-      // salva em premios_produtos; a Vercel function nova (produção) mapeia no getConfig.
-      // No preview (Vercel antiga), o getConfig não mapeia — este fallback cobre.
+      // Client-side fallback: se a API não mapeou premios_produtos, faz aqui.
+      // premios_produtos pode ser array (antigo) ou object (novo com 4 slots).
       if (j.config && j.config.premios_produtos !== undefined && j.config.produtos_dia === undefined) {
-        j.config.produtos_dia = j.config.premios_produtos;
+        const pp = j.config.premios_produtos;
+        if (Array.isArray(pp)) {
+          j.config.produtos_dia = pp;
+        } else if (pp && typeof pp === 'object') {
+          j.config.produtos_dia = pp.produtos || [];
+          if (!j.config.produto_principal && pp.principal) j.config.produto_principal = pp.principal;
+          if (!j.config.sorteio_horario && pp.sorteio_horario) j.config.sorteio_horario = pp.sorteio_horario;
+        }
       }
       setData(j);
       setCfg(j.config || {});
@@ -323,6 +328,10 @@ export default function ConcursoLeilaoNozap() {
   const handleProdutoFoto = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setCfg((s) => ({ ...s, produto_foto: url })); } catch { /* */ } };
   // Admin: produto escolhido da Loja Virtual preenche o slot automaticamente
   const handlePickProduct = (idx, prod) => {
+    if (idx === 'principal') {
+      setCfg((s) => ({ ...s, produto_principal: { nome: prod.nome, foto: prod.foto, valor: prod.valor, link: prod.link } }));
+      return;
+    }
     setCfg((s) => {
       const arr = Array.isArray(s.produtos_dia) ? [...s.produtos_dia] : [];
       while (arr.length < 3) arr.push({ nome: '', foto: '', valor: 0, link: '' });
@@ -355,7 +364,8 @@ export default function ConcursoLeilaoNozap() {
         setTimeout(() => setMsg(''), 6000);
         return;
       }
-      await load(periodo);
+      // Atualiza cfg imediatamente com a config retornada pela API (sem delay)
+      if (j.config) setCfg(j.config);
       setMsg('Config salva!');
       setTimeout(() => setMsg(''), 3000);
     } catch {
@@ -658,7 +668,41 @@ export default function ConcursoLeilaoNozap() {
         <div className="rounded-2xl p-4 bg-black/25 border border-white/10">
           <SecHead icon={Gift}>Destaque / Sorteio do dia</SecHead>
           <div className="space-y-3">
-            <p className="text-[11px] text-purple-200/60 -mt-1">Configure os 3 produtos do sorteio do dia. Eles aparecem como cards clicáveis na vitrine pública do Rank Premiado.</p>
+            <p className="text-[11px] text-purple-200/60 -mt-1">Configure o produto principal do sorteio + os 3 produtos do dia (1º, 2º, 3º lugar). Eles aparecem no Hero e na vitrine pública do Rank Premiado.</p>
+            {/* PRODUTO PRINCIPAL DO SORTEIO — destaque do Hero */}
+            {(() => {
+              const pp = cfg.produto_principal || {};
+              const setPP = (field, value) => setCfg((s) => ({ ...s, produto_principal: { ...(s.produto_principal || {}), [field]: value } }));
+              return (
+                <div className="rounded-xl p-3 border border-yellow-400/50 bg-yellow-400/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-grid place-items-center w-6 h-6 rounded-full font-black text-[#1a1205]" style={{ background: 'linear-gradient(135deg,#fde68a,#f5c451,#e0a920)' }}><Trophy className="w-3.5 h-3.5" /></span>
+                    <span className="text-xs font-bold text-yellow-200/90">PRODUTO PRINCIPAL DO SORTEIO</span>
+                    <button type="button" onClick={() => setPickingSlot('principal')} className="ml-auto text-[11px] font-bold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 text-emerald-100 transition-colors hover:bg-emerald-500/25" style={{ border: '1px solid rgba(16,185,129,.45)', background: 'rgba(16,185,129,.12)' }}><ShoppingBag className="w-3.5 h-3.5" /> Escolher da loja</button>
+                  </div>
+                  <div className="space-y-2 pl-7">
+                    <input value={pp.nome || ''} onChange={(e) => setPP('nome', e.target.value)} placeholder="Nome do produto principal" className={inp} />
+                    <div className="flex items-center gap-2.5">
+                      {pp.foto ? (
+                        <div className="relative shrink-0">
+                          <img src={pp.foto} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/15" />
+                          <button type="button" onClick={() => setPP('foto', '')} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full grid place-items-center bg-black/80 border border-white/20 text-white/90 text-xs leading-none hover:bg-red-600">×</button>
+                        </div>
+                      ) : (
+                        <span className="w-12 h-12 rounded-lg grid place-items-center bg-black/40 border border-dashed border-white/20 shrink-0"><Gift className="w-5 h-5 text-white/40" /></span>
+                      )}
+                      <label className="flex-1 cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const url = await fileToSmallDataUrl(f, 400, 0.75); setPP('foto', url); } catch {} }} />
+                        <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-purple-100 border border-purple-400/40 bg-purple-500/15 hover:bg-purple-500/25 transition-colors"><Camera className="w-3.5 h-3.5" /> {pp.foto ? 'Trocar foto' : 'Foto do produto'}</span>
+                      </label>
+                    </div>
+                    <input value={(pp.foto || '').startsWith('data:') ? '' : (pp.foto || '')} onChange={(e) => setPP('foto', e.target.value)} placeholder={(pp.foto || '').startsWith('data:') ? 'Foto anexada ✓ — ou cole uma URL aqui' : 'ou cole a URL da foto do produto'} className={inp} />
+                    <input value={pp.valor || ''} onChange={(e) => setPP('valor', Number(e.target.value) || 0)} inputMode="numeric" placeholder="Preço na loja (R$)" className={inp} />
+                    <input value={pp.link || ''} onChange={(e) => setPP('link', e.target.value)} placeholder="Link na loja (ex: /Loja-Virtual?produto=123)" className={inp} />
+                  </div>
+                </div>
+              );
+            })()}
             {[1, 2, 3].map((pos) => {
               const idx = pos - 1;
               const arr = Array.isArray(cfg.produtos_dia) ? cfg.produtos_dia : [];

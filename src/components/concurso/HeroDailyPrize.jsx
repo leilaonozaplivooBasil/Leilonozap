@@ -18,13 +18,13 @@ function horarioSorteio(config) {
 }
 
 export default function HeroDailyPrize({ config, registered, total, onShare }) {
-  // Fallback: se o admin preencheu os 3 produtos do dia (produtos_dia) mas não o
-  // produto_nome avulso, o hero usa o 1º produto do dia pra não ficar vazio.
+  // Prioridade: produto_principal (objeto novo) → produto_nome/foto/valor (campos antigos) → 1º produto do dia.
   const diaArr = Array.isArray(config?.produtos_dia) ? config.produtos_dia : [];
   const primeiroDia = diaArr[0];
-  const nome = config?.produto_nome || primeiroDia?.nome || '';
-  const foto = config?.produto_foto || primeiroDia?.foto || '';
-  const valor = config?.produto_valor || primeiroDia?.valor || 0;
+  const pp = config?.produto_principal || {};
+  const nome = pp.nome || config?.produto_nome || primeiroDia?.nome || '';
+  const foto = pp.foto || config?.produto_foto || primeiroDia?.foto || '';
+  const valor = pp.valor || config?.produto_valor || primeiroDia?.valor || 0;
   if (!nome) return null;
   const hora = horarioSorteio(config);
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
