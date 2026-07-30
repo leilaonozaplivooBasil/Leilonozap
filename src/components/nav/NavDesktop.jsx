@@ -151,13 +151,32 @@ export default function NavDesktop({
           Ordem do mockup do Gabriel (26/07): avatar primeiro, carrinho no meio,
           rank no canto. Tudo em items-center no mesmo eixo dos setores centrais. */}
       <div className="flex items-center gap-x-5">
-        <div>
-          <UserAvatarMenu
-            currentUser={currentUser}
-            onLoginClick={onLoginClick}
-            onLogout={onLogout}
+        {/* === RANK PREMIADO — agrupado com a loja, antes do perfil (essência dourada → bege da paleta) === */}
+        <Link
+          to="/rankpremiado"
+          className="flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-xl transition-all hover:scale-[1.04]"
+          style={{
+            background: `linear-gradient(140deg, #2c2d38 0%, ${P.navy} 55%, #191a21 100%)`,
+            border: "1px solid rgba(218,187,152,0.55)",
+            boxShadow: "0 0 18px rgba(218,187,152,0.16), inset 0 1px 0 rgba(255,255,255,0.09), inset 0 -4px 10px rgba(0,0,0,0.35)",
+          }}
+          aria-label="Rank Premiado Leilão NoZap"
+        >
+          <img
+            src="/icons/trophy-3d.png"
+            alt=""
+            className="w-7 h-7 shrink-0 drop-shadow-[0_2px_6px_rgba(218,187,152,0.5)]"
+            aria-hidden="true"
           />
-        </div>
+          <span className="flex flex-col leading-none">
+            <span className="font-slab text-[12.5px] font-extrabold uppercase tracking-[0.08em]" style={{ color: P.beige }}>
+              Rank Premiado
+            </span>
+            <span className="mt-1 text-[7px] tracking-[0.42em]" style={{ color: "rgba(218,187,152,0.75)" }} aria-hidden>
+              ★ ★ ★ ★ ★
+            </span>
+          </span>
+        </Link>
 
         {/* 🛒 Carrinho — liquid glass verde da paleta, com contador vivo:
             todo produto adicionado dispara 'cartUpdated' no Layout → cartCount
@@ -231,32 +250,14 @@ export default function NavDesktop({
           `}</style>
         </Link>
 
-        {/* === RANK PREMIADO — afastado, no canto direito (essência dourada → bege da paleta) === */}
-        <Link
-          to="/rankpremiado"
-          className="ml-4 flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-xl transition-all hover:scale-[1.04]"
-          style={{
-            background: `linear-gradient(140deg, #2c2d38 0%, ${P.navy} 55%, #191a21 100%)`,
-            border: "1px solid rgba(218,187,152,0.55)",
-            boxShadow: "0 0 18px rgba(218,187,152,0.16), inset 0 1px 0 rgba(255,255,255,0.09), inset 0 -4px 10px rgba(0,0,0,0.35)",
-          }}
-          aria-label="Rank Premiado Leilão NoZap"
-        >
-          <img
-            src="/icons/trophy-3d.png"
-            alt=""
-            className="w-7 h-7 shrink-0 drop-shadow-[0_2px_6px_rgba(218,187,152,0.5)]"
-            aria-hidden="true"
+        {/* === Perfil no canto extremo direito === */}
+        <div>
+          <UserAvatarMenu
+            currentUser={currentUser}
+            onLoginClick={onLoginClick}
+            onLogout={onLogout}
           />
-          <span className="flex flex-col leading-none">
-            <span className="font-slab text-[12.5px] font-extrabold uppercase tracking-[0.08em]" style={{ color: P.beige }}>
-              Rank Premiado
-            </span>
-            <span className="mt-1 text-[7px] tracking-[0.42em]" style={{ color: "rgba(218,187,152,0.75)" }} aria-hidden>
-              ★ ★ ★ ★ ★
-            </span>
-          </span>
-        </Link>
+        </div>
       </div>
     </div>
   );
