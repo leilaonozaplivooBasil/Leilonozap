@@ -433,6 +433,19 @@ export default async function handler(req, res) {
       return jset(res, 200, { sorteios: (await r.json().catch(() => [])) || [] });
     }
 
+    // ---------- CHECK-IN DIÁRIO (engajamento ativo = "pixel" realista) ----------
+    // Atualiza last_checkin do participante. Defensivo: se a coluna não existir
+    // (migração não rodou), o PATCH falha mas retornamos ok — não quebra a UX.
+    if (action === 'checkin') {
+      const code = (body.code || '').toString().trim();
+      if (!code) return jset(res, 400, { error: 'code' });
+      const r = await sb(`concurso_participantes?code=eq.${encodeURIComponent(code)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ last_checkin: new Date().toISOString() }),
+      });
+      return jset(res, 200, { ok: true, checkin: new Date().toISOString(), persisted: r.ok });
+    }
+
     // ---------- TROCAR FOTO ----------
     if (action === 'photo') {
       const code = (body.code || '').toString().trim();

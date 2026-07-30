@@ -107,6 +107,11 @@ export default function ConcursoLeilaoNozap() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loaded, setLoaded] = useState(false); // 1º fetch concluído → tira o skeleton
   const [linkCopied, setLinkCopied] = useState(false);
+  // 📅 Check-in diário — "pixel" de engajamento realista (pixel de grupo de WhatsApp é impossível).
+  // Confirmação local por dia (localStorage) + gravação server-side (last_checkin, defensiva).
+  const [checkinToday, setCheckinToday] = useState(() => {
+    try { return localStorage.getItem('concurso_checkin') === new Date().toISOString().slice(0, 10); } catch { return false; }
+  });
 
   // Trava o scroll do fundo enquanto o painel admin está em tela cheia + fecha no ESC.
   useEffect(() => {
@@ -350,6 +355,13 @@ export default function ConcursoLeilaoNozap() {
   };
   const trocarFoto = async (e) => { const f = e.target.files?.[0]; if (!f || !myCode) return; try { const url = await fileToSmallDataUrl(f); await fetch(`${API}?action=photo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode, foto: url }) }); setMsg('Foto atualizada!'); setTimeout(() => setMsg(''), 3000); load(periodo); loadMe(); } catch { /* */ } };
 
+  const doCheckin = async () => {
+    if (!myCode || checkinToday) return;
+    try { await fetch(`${API}?action=checkin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: myCode }) }); } catch { /* */ }
+    try { localStorage.setItem('concurso_checkin', new Date().toISOString().slice(0, 10)); } catch { /* */ }
+    setCheckinToday(true);
+  };
+
   const saveConfig = async () => {
     setSavingCfg(true);
     try {
@@ -508,6 +520,17 @@ export default function ConcursoLeilaoNozap() {
           </div>
         ))}
       </div>
+      {/* 📅 Check-in diário — confirma que ainda está "dentro" (pixel de engajamento). */}
+      <button
+        onClick={doCheckin}
+        disabled={checkinToday}
+        className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm transition-transform active:scale-[.98] disabled:active:scale-100"
+        style={checkinToday
+          ? { background: 'rgba(34,197,94,.18)', border: '1px solid rgba(34,197,94,.45)', color: '#86efac' }
+          : { background: 'linear-gradient(90deg,#22c55e,#16a34a)', color: '#fff' }}
+      >
+        {checkinToday ? <><Check className="w-4 h-4" /> Confirmado hoje — concorrendo!</> : <><Check className="w-4 h-4" /> Confirmar participação de hoje</>}
+      </button>
       {/* Link de divulgação: a AÇÃO nº 1 da página — um toque copia, sem selecionar texto */}
       <button
         onClick={copyMyLink}
