@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
         const payments = (mpData.results || []).map((p) => compact ? {
             id: p.id,
             status: p.status,
+            live_mode: p.live_mode,
             amount: p.transaction_amount,
             date_approved: p.date_approved
         } : {
@@ -70,12 +71,35 @@ Deno.serve(async (req) => {
         const totalApproved = payments
             .filter((p) => p.status === 'approved')
             .reduce((sum, p) => sum + (p.amount || 0), 0);
+        const totalApprovedLive = payments
+            .filter((p) => p.status === 'approved' && p.live_mode === true)
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+        const totalApprovedTest = payments
+            .filter((p) => p.status === 'approved' && p.live_mode === false)
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+        // Top 15 maiores pagamentos aprovados (pra identificar o que está puxando o total)
+        const topMaiores = (mpData.results || [])
+            .filter((p) => p.status === 'approved')
+            .sort((a, b) => (b.transaction_amount || 0) - (a.transaction_amount || 0))
+            .slice(0, 15)
+            .map((p) => ({
+                id: p.id,
+                amount: p.transaction_amount,
+                date_approved: p.date_approved,
+                external_reference: p.external_reference,
+                payer_email: p.payer?.email,
+                description: p.description
+            }));
 
         return Response.json({
             success: true,
             total_encontrado: mpData.paging?.total ?? payments.length,
             total_aprovado_reais: totalApproved,
-            pagamentos: payments
+            total_aprovado_reais_live_mode: totalApprovedLive,
+            total_aprovado_reais_teste: totalApprovedTest,
+            top_15_maiores: topMaiores,
+            pagamentos: compact ? payments : undefined
         });
 
     } catch (error) {

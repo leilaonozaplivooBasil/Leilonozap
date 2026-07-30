@@ -14,31 +14,64 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'ASAAS_API_KEY not configured' }, { status: 500 });
         }
 
-        // Consultar todos os pagamentos no ASAAS (últimos 100)
-        const response = await fetch('https://www.asaas.com/api/v3/payments', {
-            method: 'GET',
-            headers: {
-                'access_token': ASAAS_API_KEY,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Consulta TODOS os pagamentos no ASAAS via paginação, filtrando por status real
+        // (RECEIVED = PIX confirmado, CONFIRMED = cartão confirmado) — não conta PENDING.
+        let body = {};
+        try { body = await req.json(); } catch (_) { /* sem body */ }
+        const onlyReal = body.only_real !== false; // default: true
+        const compact = body.compact === true;
 
-        if (!response.ok) {
-            throw new Error(`ASAAS API error: ${response.status} ${await response.text()}`);
+        let allPayments = [];
+        let offset = 0;
+        const limitPerPage = 100;
+        while (true) {
+            const url = new URL('https://www.asaas.com/api/v3/payments');
+            url.searchParams.set('limit', String(limitPerPage));
+            url.searchParams.set('offset', String(offset));
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    'access_token': ASAAS_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`ASAAS API error: ${response.status} ${await response.text()}`);
+            }
+            const page = await response.json();
+            allPayments = allPayments.concat(page.data || []);
+            if (page.hasMore) {
+                offset += limitPerPage;
+            } else {
+                break;
+            }
+            if (offset > 5000) break; // trava de segurança
         }
 
-        const asaasData = await response.json();
-        
-        // Buscar nossos registros locais
-        const localPayments = await base44.entities.AsaasPayment.list('-created_date', 100);
+        const realStatuses = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
+        const filtered = onlyReal
+            ? allPayments.filter((p) => realStatuses.includes(p.status))
+            : allPayments;
 
-        // Comparar e retornar análise
+        const mapped = filtered.map((p) => compact ? {
+            id: p.id,
+            status: p.status,
+            billing_type: p.billingType,
+            value: p.value,
+            paymentDate: p.paymentDate,
+            externalReference: p.externalReference
+        } : p);
+
+        const totalRealReais = filtered
+            .filter((p) => realStatuses.includes(p.status))
+            .reduce((sum, p) => sum + (p.value || 0), 0);
+
         return Response.json({
             success: true,
-            asaas_total: asaasData.totalCount || asaasData.data?.length || 0,
-            asaas_payments: asaasData.data || [],
-            local_total: localPayments.length,
-            local_payments: localPayments,
+            asaas_total_geral: allPayments.length,
+            asaas_total_filtrado: filtered.length,
+            asaas_total_real_reais: totalRealReais,
+            asaas_payments: mapped,
             timestamp: new Date().toISOString()
         });
 
