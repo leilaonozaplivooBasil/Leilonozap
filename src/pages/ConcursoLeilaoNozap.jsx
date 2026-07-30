@@ -14,6 +14,7 @@ import ProductPicker from '@/components/concurso/ProductPicker';
 import InstallPwaPrompt from '@/components/common/InstallPwaPrompt';
 // A página é standalone (fora do Layout), então o modal de login precisa ser dela
 import LoginModal from '@/components/common/LoginModal';
+import { proxyImage } from "@/functions/proxyImage";
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award, ShoppingBag,
@@ -218,71 +219,88 @@ export default function ConcursoLeilaoNozap() {
   const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
   const config = data.config || {};
 
-  // 🔗 LÓGICA ÚNICA DE SHARE COM IMAGEM — usada por TODOS os botões (sincronia).
-  // Tenta navigator.share com a FOTO do produto. Retorna true se compartilhou (ou cancelou).
-  // Retorna false se não conseguiu (caller faz o fallback dele: download ou wa.me).
+  // 🔗 LÓGICA ÚNICA DE SHARE — cópia fiel da Loja Virtual (CatalogProductCard.handleShare).
+  // 3 níveis: share com imagem → share só texto → abre WhatsApp direto. NUNCA baixa.
   const shareWithImage = async () => {
     if (!myLink) return false;
     const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
     const foto = config.produto_foto || diaArr[0]?.foto || '';
-    if (!foto) return false; // sem foto → caller faz fallback
+    if (!foto) return false; // sem foto → pula pro nível 2 (share texto)
 
-    // Prepara a imagem como blob (data URL direto; URL remota via fetch CORS)
-    let blob;
-    try {
-      if (foto.startsWith('data:')) {
-        const [meta, base64] = foto.split(',');
-        const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
-        const bin = atob(base64);
-        const arr = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-        blob = new Blob([arr], { type: mime });
-      } else {
-        const resp = await fetch(foto, { mode: 'cors' });
-        blob = await resp.blob();
-      }
-    } catch { return false; } // fetch falhou → caller faz fallback
-
-    const file = blob ? new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' }) : null;
-    const canShareFiles = file && navigator.canShare && navigator.canShare({ files: [file] });
-
-    if (canShareFiles && navigator.share) {
+    // NÍVEL 1: Share com imagem via Web Share API
+    if (navigator.share && navigator.canShare) {
       try {
-        await navigator.share({ files: [file], text: shareZapText });
-        return true; // compartilhou (ou usuário escolheu pra onde)
-      } catch (e) {
-        if (e && e.name === 'AbortError') return true; // cancelou = já abriu a sheet
+        // Resolve URL acessível (proxy se for externa — mesmo princípio da loja)
+        let shareableUrl = foto;
+        const isLocalUrl = foto.includes('supabase.co') || foto.includes('base44.app') || foto.startsWith('data:');
+        if (!isLocalUrl) {
+          const cacheKey = `proxy_img_${foto}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            shareableUrl = cached;
+          } else {
+            const proxyResult = await proxyImage({ imageUrl: foto });
+            if (proxyResult?.data?.file_url) {
+              shareableUrl = proxyResult.data.file_url;
+              sessionStorage.setItem(cacheKey, shareableUrl);
+            }
+          }
+        }
+
+        // Busca a imagem como blob
+        let blob;
+        if (shareableUrl.startsWith('data:')) {
+          const [meta, base64] = shareableUrl.split(',');
+          const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+          const bin = atob(base64);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          blob = new Blob([arr], { type: mime });
+        } else {
+          const response = await fetch(shareableUrl, { mode: 'cors' });
+          if (!response.ok) throw new Error('fetch falhou');
+          blob = await response.blob();
+        }
+
+        const mimeType = blob.type || 'image/jpeg';
+        const file = new File([blob], 'premio-do-dia.jpg', { type: mimeType });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ text: shareZapText, url: myLink, files: [file] });
+          return true;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return true; // cancelou = já abriu a sheet
       }
     }
-    return false; // não conseguiu share com imagem
+
+    // NÍVEL 2: Share só texto (sem imagem) — abre a sheet nativa com o link
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareZapText, url: myLink });
+        return true;
+      } catch (err) {
+        if (err.name === 'AbortError') return true;
+      }
+    }
+
+    return false; // caller faz nível 3 (WhatsApp direto)
   };
 
-  // Hero: compartilha a FOTO do produto do dia. Fallback = download + copia texto.
+  // Hero: mesma lógica da loja — 3 níveis, NUNCA baixa imagem.
   const shareHero = async () => {
     if (!myLink) return;
     const ok = await shareWithImage();
     if (ok) return;
-    // Fallback: baixa a imagem + copia o texto (NUNCA wa.me — isso puxa a logo)
-    const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
-    const foto = config.produto_foto || diaArr[0]?.foto || '';
-    if (foto) {
-      try {
-        const resp = foto.startsWith('data:') ? null : await fetch(foto, { mode: 'cors' });
-        if (resp) { const blob = await resp.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'premio-do-dia.jpg'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000); }
-        else if (foto.startsWith('data:')) { const a = document.createElement('a'); a.href = foto; a.download = 'premio-do-dia.jpg'; a.click(); }
-      } catch { /* */ }
-    }
-    try { await navigator.clipboard.writeText(shareZapText); } catch { /* */ }
-    setMsg('Imagem baixada! Cole no WhatsApp com seu link (já copiado).');
-    setTimeout(() => setMsg(''), 5000);
+    // NÍVEL 3: Abre WhatsApp com texto (igualzinho à loja virtual)
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareZapText)}`, '_blank');
   };
 
-  // Botão de baixo / CTA fixo: TENTA share com imagem primeiro (sincronia com o hero).
-  // Se não conseguir, cai no wa.me (comportamento original, intacto).
+  // Botão de baixo / CTA fixo: SINCRONIA total com o hero — mesma lógica, mesmos 3 níveis.
   const shareZap = async () => {
     const ok = await shareWithImage();
     if (ok) return;
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareZapText)}`, '_blank');
   };
   const liveOn = !!config.live_ativa;
   const liveLink = config.live_url || LIVOO_VENDEDOR;
