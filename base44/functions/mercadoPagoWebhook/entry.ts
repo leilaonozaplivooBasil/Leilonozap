@@ -183,6 +183,21 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ✅ PASSO 2.5: Depósito de saldo na Carteira Digital (PIX via Mercado Pago)
+        if (mpPayment.deposit_type === 'digital_wallet' && mpPayment.user_id) {
+            try {
+                await base44.asServiceRole.functions.invoke('creditWalletBalance', {
+                    user_id: mpPayment.user_id,
+                    amount: mpPayment.amount,
+                    type: 'deposit',
+                    description: 'Depósito via PIX (Mercado Pago)'
+                });
+                console.log('✅ Carteira digital creditada via Mercado Pago:', mpPayment.user_id);
+            } catch (creditErr) {
+                console.error('❌ Erro ao creditar carteira (MP):', creditErr.message);
+            }
+        }
+
         // ✅ PASSO 3: Atualizar leilão se for arremate
         if (mpPayment.auction_id) {
             const auctions = await base44.asServiceRole.entities.Auction.filter(

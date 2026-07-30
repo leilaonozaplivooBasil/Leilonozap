@@ -17,18 +17,34 @@ Deno.serve(async (req) => {
             1
         );
 
-        if (!payments || payments.length === 0) {
+        if (payments && payments.length > 0) {
+            const payment = payments[0];
+            return Response.json({
+                found: true,
+                status: payment.status,
+                value: payment.value,
+                payment_date: payment.payment_date,
+                is_wallet_deposit: payment.is_wallet_deposit
+            });
+        }
+
+        // 🔎 Fallback: PIX gerado via Mercado Pago (depósito de carteira)
+        const mpPayments = await base44.asServiceRole.entities.MercadoPagoPayment.filter(
+            { payment_id: String(payment_id) },
+            null,
+            1
+        );
+
+        if (!mpPayments || mpPayments.length === 0) {
             return Response.json({ found: false, status: 'not_found' });
         }
 
-        const payment = payments[0];
-        
+        const mpPayment = mpPayments[0];
         return Response.json({
             found: true,
-            status: payment.status,
-            value: payment.value,
-            payment_date: payment.payment_date,
-            is_wallet_deposit: payment.is_wallet_deposit
+            status: mpPayment.status === 'approved' ? 'confirmed' : mpPayment.status,
+            value: mpPayment.amount,
+            is_wallet_deposit: mpPayment.deposit_type === 'digital_wallet'
         });
 
     } catch (error) {

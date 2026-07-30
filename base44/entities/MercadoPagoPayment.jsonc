@@ -53,6 +53,13 @@
     "buyer_address": {
       "type": "string",
       "description": "Endere\u00e7o completo do comprador"
+    },
+    "deposit_type": {
+      "type": "string",
+      "enum": [
+        "digital_wallet"
+      ],
+      "description": "Marca este pagamento como dep\u00f3sito de saldo na Carteira Digital (n\u00e3o \u00e9 compra de leil\u00e3o/cat\u00e1logo)"
     }
   },
   "required": [

@@ -114,15 +114,12 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     if (effectiveAmount < 5) { toast.error('Valor mínimo: R$ 5,00'); return; }
     setGenerating(true);
     try {
-      const result = await base44.functions.invoke('createAsaasPayment', {
+      const result = await base44.functions.invoke('createMercadoPagoDeposit', {
+        user_id: currentUser.id,
         amount: effectiveAmount,
-        billing_type: 'PIX',
-        deposit_type: 'digital_wallet',
-        buyer_id: currentUser.id,
         buyer_name: currentUser.full_name || 'Cliente',
         buyer_email: currentUser.email,
         buyer_cpf: currentUser.cpf || '',
-        description: 'Depósito na Carteira Digital — Leilão NoZap',
       });
       const data = result?.data || result;
       if (data?.success && data?.pix_payload) {
