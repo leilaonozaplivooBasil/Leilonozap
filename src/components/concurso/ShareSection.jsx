@@ -76,7 +76,7 @@ export default function ShareSection({ nome, posicao, premio, link, onCopied }) 
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  const texto = `🏆 Tô em ${ordinal(posicao)} no Rank Premiado do Leilão NoZap! Tem sorteio de prêmio todo dia. Entra no grupo pelo meu link e me ajuda a subir:\n${link}`;
+  const texto = `🏆 Tô em ${ordinal(posicao)} no Rank Premiado do Leilão NoZap! Tem sorteio de prêmio todo dia. Entra no grupo pelo meu link e me ajuda a subir:\n${link}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
 
   const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
 
