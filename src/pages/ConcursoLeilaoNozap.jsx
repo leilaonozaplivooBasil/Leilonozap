@@ -219,16 +219,16 @@ export default function ConcursoLeilaoNozap() {
   const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
   const config = data.config || {};
 
-  // 🔗 LÓGICA ÚNICA DE SHARE — cópia fiel da Loja Virtual (CatalogProductCard.handleShare).
+  // 🔗 LÓGICA ÚNICA DE SHARE — cópia FIEL da Loja Virtual (CatalogProductCard.handleShare).
   // 3 níveis: share com imagem → share só texto → abre WhatsApp direto. NUNCA baixa.
+  // Se não tem foto, pula o Nível 1 e tenta o Nível 2 (só texto) — igualzinho à loja.
   const shareWithImage = async () => {
     if (!myLink) return false;
     const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
     const foto = config.produto_foto || diaArr[0]?.foto || '';
-    if (!foto) return false; // sem foto → pula pro nível 2 (share texto)
 
-    // NÍVEL 1: Share com imagem via Web Share API
-    if (navigator.share && navigator.canShare) {
+    // NÍVEL 1: Share com imagem via Web Share API (só se tem foto)
+    if (foto && navigator.share && navigator.canShare) {
       try {
         // Resolve URL acessível (proxy se for externa — mesmo princípio da loja)
         let shareableUrl = foto;
@@ -266,7 +266,7 @@ export default function ConcursoLeilaoNozap() {
         const file = new File([blob], 'premio-do-dia.jpg', { type: mimeType });
 
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ text: shareZapText, url: myLink, files: [file] });
+          await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, url: myLink, files: [file] });
           return true;
         }
       } catch (err) {
@@ -277,7 +277,7 @@ export default function ConcursoLeilaoNozap() {
     // NÍVEL 2: Share só texto (sem imagem) — abre a sheet nativa com o link
     if (navigator.share) {
       try {
-        await navigator.share({ text: shareZapText, url: myLink });
+        await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, url: myLink });
         return true;
       } catch (err) {
         if (err.name === 'AbortError') return true;
