@@ -245,10 +245,14 @@ export default function ConcursoLeilaoNozap() {
       }
     } catch { /* fetch falhou → blob fica undefined */ }
 
+    // Verifica se o navegador suporta compartilhar ARQUIVOS (mobile sim, desktop geralmente não).
+    // Sem esta checagem, navigator.share falha silenciosamente no desktop e cai no fallback.
+    const file = blob ? new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' }) : null;
+    const canShareFiles = file && navigator.canShare && navigator.canShare({ files: [file] });
+
     // Share nativo com a FOTO (mobile — abre a share sheet com a imagem, não a logo)
-    if (blob && navigator.share) {
+    if (canShareFiles && navigator.share) {
       try {
-        const file = new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' });
         await navigator.share({ files: [file], text: shareZapText });
         return;
       } catch (e) {
