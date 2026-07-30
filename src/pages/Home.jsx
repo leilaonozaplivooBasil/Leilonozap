@@ -156,6 +156,7 @@ export default function Home() {
   const [userRegion, setUserRegion] = useState(null);
   const [productStockMap, setProductStockMap] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [goToPageInput, setGoToPageInput] = useState('');
   const ITEMS_PER_PAGE = 12;
 
   const { refresh: refreshAuctions } = useRealtimeSync({
@@ -960,6 +961,32 @@ export default function Home() {
                 >
                   Próxima <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
+
+                {/* Ir para — igual ao ProductManagement (só aparece com 5+ páginas) */}
+                {totalPages > 5 && (
+                  <div className="hidden sm:flex items-center gap-1.5 ml-2">
+                    <span className="text-xs text-gray-500">Ir para</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalPages}
+                      value={goToPageInput}
+                      onChange={(e) => setGoToPageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const num = parseInt(goToPageInput);
+                          if (num >= 1 && num <= totalPages) {
+                            setCurrentPage(num);
+                            window.scrollTo({ top: 400, behavior: 'smooth' });
+                            setGoToPageInput('');
+                          }
+                        }
+                      }}
+                      placeholder={String(currentPage)}
+                      className="w-14 bg-white/[0.08] text-white text-xs text-center rounded-lg px-2 py-1.5 border border-white/10 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 hover:border-white/20 transition-colors"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
