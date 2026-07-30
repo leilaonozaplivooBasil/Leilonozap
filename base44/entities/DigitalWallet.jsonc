@@ -9,7 +9,12 @@
     "balance": {
       "type": "number",
       "default": 0,
-      "description": "Saldo atual da carteira digital em reais (usado para leil\u00f5es)"
+      "description": "Saldo LIVRE da carteira digital em reais (dispon\u00edvel para novos lances)"
+    },
+    "held_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo RESERVADO em lances ativos (bloqueado em disputa, devolve se for superado)"
     }
   },
   "required": [

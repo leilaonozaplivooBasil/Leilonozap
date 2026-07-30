@@ -170,6 +170,70 @@ Deno.serve(async (req) => {
       console.log(`⚠️ [END AUCTION] Mensagem de vitória já existe, pulando criação`);
     }
 
+    // 7️⃣.5 SETTLEMENT FINANCEIRO — cobra o vencedor e devolve os perdedores
+    if (winnerId) {
+      try {
+        // Settlement financeiro: cobra o vencedor e devolve os perdedores
+        // Inline (não chama outra function) — opera direto nas entidades com asServiceRole
+        const holdTransactions = await base44.asServiceRole.entities.DigitalWalletTransaction.filter({
+          related_auction_id: auction_id,
+          type: 'bid_hold',
+          status: 'pending'
+        });
+
+        console.log(`🏦 [END AUCTION] Transações bid_hold pending: ${holdTransactions.length}`);
+
+        const byUser = new Map<string, any[]>();
+        for (const tx of holdTransactions) {
+          if (!byUser.has(tx.user_id)) byUser.set(tx.user_id, []);
+          byUser.get(tx.user_id)!.push(tx);
+        }
+
+        for (const [userId, userTxs] of byUser) {
+          const userTotalHeld = userTxs.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+
+          if (userId === winnerId) {
+            const winningTx = userTxs.find((t: any) => t.amount === finalPrice);
+            const previousTxs = winningTx ? userTxs.filter((t: any) => t.id !== winningTx.id) : userTxs;
+
+            if (winningTx) {
+              await base44.asServiceRole.entities.DigitalWallet.updateMany(
+                { user_id: userId, held_balance: { $gte: winningTx.amount } },
+                { $inc: { held_balance: -winningTx.amount } }
+              );
+              try {
+                await base44.asServiceRole.entities.DigitalWalletTransaction.update(winningTx.id, { status: 'settled' });
+              } catch (e) { console.error('Erro ao marcar tx vencedora como settled:', e.message); }
+            }
+
+            const previousTotal = previousTxs.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+            if (previousTotal > 0) {
+              await base44.asServiceRole.entities.DigitalWallet.updateMany(
+                { user_id: userId, held_balance: { $gte: previousTotal } },
+                { $inc: { held_balance: -previousTotal, balance: previousTotal } }
+              );
+              for (const tx of previousTxs) {
+                try { await base44.asServiceRole.entities.DigitalWalletTransaction.update(tx.id, { status: 'released' }); } catch (e) {}
+              }
+            }
+          } else {
+            if (userTotalHeld > 0) {
+              await base44.asServiceRole.entities.DigitalWallet.updateMany(
+                { user_id: userId, held_balance: { $gte: userTotalHeld } },
+                { $inc: { held_balance: -userTotalHeld, balance: userTotalHeld } }
+              );
+              for (const tx of userTxs) {
+                try { await base44.asServiceRole.entities.DigitalWalletTransaction.update(tx.id, { status: 'released' }); } catch (e) {}
+              }
+            }
+          }
+        }
+        console.log(`🏦 [END AUCTION] Settlement concluído`);
+      } catch (settleError) {
+        console.error(`❌ [END AUCTION] Erro no settlement (leilão será finalizado mesmo assim):`, settleError.message);
+      }
+    }
+
     // 8️⃣ PROCESSAR COMISSÃO DO LICENCIADO (se não for plano de investimento)
     if (winnerData && winnerData.referred_by_id && !auction.is_investment_plan) {
       try {

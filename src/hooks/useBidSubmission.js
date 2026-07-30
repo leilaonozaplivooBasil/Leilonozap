@@ -86,26 +86,25 @@ export default function useBidSubmission({
     let wasDebited = false;
     let debitedAmount = 0;
 
-    // Reembolso automático: se o lance falhar APÓS o débito, devolve o saldo
-    // Usa função backend (creditWalletBalance) porque a DigitalWallet tem RLS write: admin-only
-    const refundBid = async (reason) => {
+    // Liberação de reserva: se o lance falhar APÓS a reserva, devolve o saldo
+    // Usa função backend (releaseBidHold) porque a DigitalWallet tem RLS write: admin-only
+    const releaseHold = async (reason) => {
       try {
-        const refundResult = await base44.functions.invoke('creditWalletBalance', {
+        const releaseResult = await base44.functions.invoke('releaseBidHold', {
           user_id: currentUser.id,
-          amount: debitedAmount,
           auction_id: auctionId,
-          type: 'auction_refund',
-          description: `Reembolso — ${reason}`
+          amount: debitedAmount,
+          description: `Liberação — ${reason}`
         });
-        const refundData = refundResult?.data || refundResult;
-        if (refundData?.success) {
-          setUserWallet({ balance: refundData.new_balance });
-          console.log(`✅ [BID] Reembolso de R$ ${debitedAmount.toFixed(2)}: ${reason}`);
+        const releaseData = releaseResult?.data || releaseResult;
+        if (releaseData?.success) {
+          setUserWallet({ balance: releaseData.new_balance });
+          console.log(`✅ [BID] Reserva liberada: R$ ${debitedAmount.toFixed(2)} — ${reason}`);
         } else {
-          console.error(`❌ [BID] Reembolso falhou:`, refundData?.error || 'resposta inválida');
+          console.error(`❌ [BID] Liberação falhou:`, releaseData?.error || 'resposta inválida');
         }
-      } catch (refundError) {
-        console.error(`❌ [BID] Erro ao reembolsar R$ ${debitedAmount.toFixed(2)}:`, refundError.message);
+      } catch (releaseError) {
+        console.error(`❌ [BID] Erro ao liberar reserva R$ ${debitedAmount.toFixed(2)}:`, releaseError.message);
       }
     };
 
@@ -143,23 +142,23 @@ export default function useBidSubmission({
       if (lastBidTime && Date.now() - parseInt(lastBidTime) < 2000) return;
       sessionStorage.setItem(debounceKey, Date.now().toString());
 
-      // Debita saldo
+      // RESERVA saldo (não debita — só move do balance pro held_balance)
       try {
-        const debitResult = await base44.functions.invoke('debitWalletBalance', {
+        const reserveResult = await base44.functions.invoke('reserveBidBalance', {
           user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
-          description: `Lance - R$ ${fmtBR(bidAmount)}`
+          description: `Reserva de lance - R$ ${fmtBR(bidAmount)}`
         });
-        const debitData = debitResult?.data || debitResult;
-        if (!debitData?.success) {
-          setUserWallet({ balance: debitData?.balance || 0 });
+        const reserveData = reserveResult?.data || reserveResult;
+        if (!reserveData?.success) {
+          setUserWallet({ balance: reserveData?.balance || 0 });
           setShowLowBalanceModal(true);
           return;
         }
-        setUserWallet({ balance: debitData.new_balance });
+        setUserWallet({ balance: reserveData.new_balance });
         wasDebited = true;
         debitedAmount = bidAmount;
-      } catch (debitError) {
-        console.warn("⚠️ Erro ao debitar saldo:", debitError.message);
+      } catch (reserveError) {
+        console.warn("⚠️ Erro ao reservar saldo:", reserveError.message);
         setShowLowBalanceModal(true);
         return;
       }
@@ -201,7 +200,7 @@ export default function useBidSubmission({
 
       if (gteMoney(revalidatePrice, bidAmount)) {
         alert("Outro lance foi dado!");
-        await refundBid("lance rejeitado (outro lance maior)");
+        await releaseHold("lance rejeitado (outro lance maior)");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
         setAuction(prev => ({
@@ -234,6 +233,26 @@ export default function useBidSubmission({
         winner_name: currentUser.nickname || currentUser.full_name,
         end_time: newEndTimeISO
       });
+
+      // 🔄 Libera reservas ANTERIORES desse usuário nesse leilão (lances anteriores foram superados)
+      // O lance atual já está reservado; os lances anteriores precisam ser devolvidos.
+      // except_amount = bidAmount garante que a reserva do lance atual NÃO seja liberada.
+      try {
+        await base44.functions.invoke('releaseBidHold', {
+          user_id: currentUser.id,
+          auction_id: auctionId,
+          amount: null, // null = libera TODAS as reservas pending
+          except_amount: bidAmount // exceto a do lance atual (mesmo valor)
+        });
+        // Atualiza saldo exibido com o valor atualizado
+        const balanceRefresh = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+        const balanceData = balanceRefresh?.data || balanceRefresh;
+        if (typeof balanceData?.balance === 'number') {
+          setUserWallet({ balance: balanceData.balance });
+        }
+      } catch (releasePrevError) {
+        console.warn("⚠️ [BID] Erro ao liberar reservas anteriores:", releasePrevError.message);
+      }
 
       setAuction(prev => ({
         ...prev,
@@ -285,7 +304,7 @@ export default function useBidSubmission({
     } catch (error) {
       console.error("❌ [BID] Erro:", error);
       if (wasDebited) {
-        await refundBid("erro durante processamento do lance");
+        await releaseHold("erro durante processamento do lance");
       }
       alert("Erro ao enviar lance.");
     } finally {

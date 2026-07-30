@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fmtBR } from '@/lib/money';
 import { DollarSign } from 'lucide-react';
 
-export default function FloatingBalance({ balance }) {
+export default function FloatingBalance({ balance, heldBalance }) {
   const [imageError, setImageError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   
@@ -32,7 +32,12 @@ export default function FloatingBalance({ balance }) {
               <DollarSign className="w-5 h-5" />
             </div>
           )}
-          <span className="amulet-balance">R$ {fmtBR(balance)}</span>
+          <div className="amulet-text">
+            <span className="amulet-balance">R$ {fmtBR(balance)}</span>
+            {typeof heldBalance === 'number' && heldBalance > 0 && (
+              <span className="amulet-held">Em lances: R$ {fmtBR(heldBalance)}</span>
+            )}
+          </div>
         </div>
       </div>
       <style>{`
@@ -91,12 +96,26 @@ export default function FloatingBalance({ balance }) {
           box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
         }
 
+        .amulet-text {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          line-height: 1.2;
+        }
+
         .amulet-balance {
           color: white;
           font-weight: 700;
           font-size: 18px;
           text-shadow: 0 0 10px #1DB24A, 0 2px 4px rgba(0,0,0,0.5);
           letter-spacing: 0.5px;
+        }
+
+        .amulet-held {
+          color: rgba(251, 191, 36, 0.9);
+          font-weight: 600;
+          font-size: 10px;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
 
         @keyframes enter-amulet {

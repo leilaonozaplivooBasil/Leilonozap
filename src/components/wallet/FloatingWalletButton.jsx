@@ -7,8 +7,9 @@ import useScrollDrift from '@/hooks/useScrollDrift';
  * Botão flutuante da carteira — lateral esquerda, liquid glass em paleta
  * esmeralda uniforme (verde da logo NoZap) com halo pulsante suave.
  */
-export default function FloatingWalletButton({ balance, onClick }) {
+export default function FloatingWalletButton({ balance, heldBalance, onClick }) {
   const hasBalance = typeof balance === 'number' && balance < 999999;
+  const hasHeld = typeof heldBalance === 'number' && heldBalance > 0;
   // 🌊 Drift magnético: contra-movimento suave conforme a página rola
   const driftCls = useScrollDrift();
   return (
@@ -19,6 +20,9 @@ export default function FloatingWalletButton({ balance, onClick }) {
       <span className="fwb-text">
         <span className="fwb-label">Carteira</span>
         <span className="fwb-value">{hasBalance ? `R$ ${fmtBR(balance)}` : '· · ·'}</span>
+        {hasHeld && (
+          <span className="fwb-held">Em lances: R$ {fmtBR(heldBalance)}</span>
+        )}
       </span>
       <style>{`
         .fwb {
@@ -81,6 +85,10 @@ export default function FloatingWalletButton({ balance, onClick }) {
         .fwb-value {
           font-size: 14.5px; font-weight: 800; color: #f2fdf8;
           font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
+        }
+        .fwb-held {
+          font-size: 9px; font-weight: 600; color: rgba(251, 191, 36, 0.85);
+          letter-spacing: 0.02em;
         }
       `}</style>
     </button>

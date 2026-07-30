@@ -186,8 +186,8 @@ export default function AuctionRoom() {
           const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
           const walletData = result?.data || result;
           if (typeof walletData?.balance === 'number') {
-            setUserWallet({ balance: walletData.balance });
-            console.log(`💰 Saldo digital do usuário: R$ ${fmtBR(walletData.balance)}`);
+            setUserWallet({ balance: walletData.balance, held_balance: walletData.held_balance || 0 });
+            console.log(`💰 Saldo digital do usuário: R$ ${fmtBR(walletData.balance)} (reservado: R$ ${fmtBR(walletData.held_balance || 0)})`);
           }
         } catch (error) {
           console.warn("Erro ao carregar saldo da carteira digital:", error.message);
@@ -212,7 +212,7 @@ export default function AuctionRoom() {
       const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
       const walletData = result?.data || result;
       if (typeof walletData?.balance === 'number') {
-        setUserWallet({ balance: walletData.balance });
+        setUserWallet({ balance: walletData.balance, held_balance: walletData.held_balance || 0 });
       }
     } catch { /* silencioso */ }
   }, []);
@@ -826,6 +826,7 @@ export default function AuctionRoom() {
         <>
           <FloatingWalletButton
             balance={userWallet?.balance}
+            heldBalance={userWallet?.held_balance}
             onClick={() => setWalletOpen(true)}
           />
           <WalletDrawer

@@ -20,8 +20,14 @@ Deno.serve(async (req) => {
         // A consolidação de duplicatas (se necessária) é tarefa admin separada,
         // nunca dentro de getDigitalWalletBalance (causa race com débitos concorrentes).
         const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+        const totalHeldBalance = wallets.reduce((sum, w) => sum + (w.held_balance || 0), 0);
 
-        return Response.json({ balance: totalBalance, wallet_id: wallets[0].id });
+        return Response.json({ 
+            balance: totalBalance, 
+            held_balance: totalHeldBalance,
+            total_balance: totalBalance + totalHeldBalance,
+            wallet_id: wallets[0].id 
+        });
 
     } catch (error) {
         console.error('Erro getDigitalWalletBalance:', error.message);
