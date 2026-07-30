@@ -157,6 +157,12 @@ export default function Home() {
   const [productStockMap, setProductStockMap] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [goToPageInput, setGoToPageInput] = useState('');
+  // ?sort=newest — leilão recém-criado no topo (vindo de CreateAuction)
+  const [sortNewest, setSortNewest] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('sort') === 'newest';
+    } catch { return false; }
+  });
   const ITEMS_PER_PAGE = 12;
 
   const { refresh: refreshAuctions } = useRealtimeSync({
@@ -399,12 +405,17 @@ export default function Home() {
       filtered = filtered.filter((a) => a?.category === activeCategory);
     }
 
-    // ORDENAÇÃO OTIMIZADA
-    filtered.sort((a, b) => {
-      if (a.status === 'active' && b.status !== 'active') return -1;
-      if (a.status !== 'active' && b.status === 'active') return 1;
-      return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
-    });
+    // ORDENAÇÃO: ?sort=newest → created_date DESC (leilão recém-criado no topo)
+    // Default → active primeiro + end_time ascendente (comportamento validado em produção)
+    if (sortNewest) {
+      filtered.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    } else {
+      filtered.sort((a, b) => {
+        if (a.status === 'active' && b.status !== 'active') return -1;
+        if (a.status !== 'active' && b.status === 'active') return 1;
+        return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
+      });
+    }
 
     // DEDUPLICAÇÃO POR TÍTULO: mesmo produto listado várias vezes → mantém só o primeiro (ativo tem prioridade pela ordenação acima)
     const seenTitles = new Set();
@@ -414,7 +425,7 @@ export default function Home() {
       seenTitles.add(normalizedTitle);
       return true;
     });
-  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap]);
+  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest]);
 
   // Paginação derivada
   const totalPages = Math.max(1, Math.ceil(filteredAuctions.length / ITEMS_PER_PAGE));
@@ -598,6 +609,14 @@ export default function Home() {
   useEffect(() => {
 
     const loadInitialData = async () => {
+      // 🧹 ?fresh=1 — limpa cache para forçar busca fresca (vindo de CreateAuction)
+      try {
+        if (new URLSearchParams(window.location.search).get('fresh') === '1') {
+          sessionStorage.removeItem('auctions_cache');
+          sessionStorage.removeItem('auctions_cache_time');
+        }
+      } catch (e) {}
+
       // 🧹 LIMPA CACHES CORROMPIDOS: força deduplicação no storage existente
       try {
         const existingCache = sessionStorage.getItem('auctions_cache');

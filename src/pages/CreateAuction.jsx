@@ -1006,7 +1006,7 @@ export default function CreateAuction() {
       toast.success(successMessage);
 
       setTimeout(() => {
-        navigate(createPageUrl("Home")); // Redireciona para a Home após o sucesso
+        navigate(createPageUrl("Home") + "?fresh=1&sort=newest"); // Cache limpo + ordenação por mais recente
       }, 1500);
 
     } catch (error) {
