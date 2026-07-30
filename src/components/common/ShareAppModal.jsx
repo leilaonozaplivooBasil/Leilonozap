@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Share2, Copy, MessageCircle, Mail, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { toast } from "sonner";
+import { base44 } from '@/api/base44Client';
+import { proxyImage } from "@/functions/proxyImage";
 
 export default function ShareAppModal({ isOpen, onClose, context = "default" }) {
   // Obtém dados do usuário logado
@@ -12,6 +14,23 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   })();
+
+  // 🖼️ Imagem de produto em destaque (FeaturedProduct ativo) — usada no share
+  // pra o WhatsApp mostrar o produto e não a logo genérica do app.
+  const [featuredImage, setFeaturedImage] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let alive = true;
+    (async () => {
+      try {
+        const items = await base44.entities.FeaturedProduct.filter({ is_active: true }, 'order', 1);
+        const fp = items && items[0];
+        if (alive && fp && fp.image_url) setFeaturedImage(fp.image_url);
+      } catch { /* sem destaque — segue sem imagem */ }
+    })();
+    return () => { alive = false; };
+  }, [isOpen]);
 
   // Verifica se há um código de licenciado na URL atual
   const urlParams = new URLSearchParams(window.location.search);
@@ -45,10 +64,75 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
     toast.success('Link copiado para a área de transferência!');
   };
 
-  const shareWhatsApp = () => {
-    const text = encodeURIComponent(`${appTitle}\n\n${appDescription}\n\nAcesse: ${appUrl}`);
+  // 🔗 SHARE COM IMAGEM — 3 níveis (igual Loja Virtual): imagem → texto → wa.me.
+  // Tenta anexar a imagem do FeaturedProduct; se não houver ou falhar, cai pro
+  // próximo nível. Nunca mostra a logo genérica quando há imagem disponível.
+  const shareWithImage = async () => {
+    const fullText = `${appTitle}\n\n${appDescription}\n\nAcesse: ${appUrl}`;
+
+    // NÍVEL 1: Web Share API com imagem
+    if (featuredImage && navigator.share && navigator.canShare) {
+      try {
+        let shareableUrl = featuredImage;
+        const isLocalUrl = featuredImage.includes('supabase.co') || featuredImage.includes('base44.app') || featuredImage.startsWith('data:');
+        if (!isLocalUrl) {
+          const cacheKey = `proxy_img_${featuredImage}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            shareableUrl = cached;
+          } else {
+            const proxyResult = await proxyImage({ imageUrl: featuredImage });
+            if (proxyResult?.data?.file_url) {
+              shareableUrl = proxyResult.data.file_url;
+              sessionStorage.setItem(cacheKey, shareableUrl);
+            }
+          }
+        }
+
+        let blob;
+        if (shareableUrl.startsWith('data:')) {
+          const [meta, base64] = shareableUrl.split(',');
+          const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+          const bin = atob(base64);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          blob = new Blob([arr], { type: mime });
+        } else {
+          const response = await fetch(shareableUrl, { mode: 'cors' });
+          if (!response.ok) throw new Error('fetch falhou');
+          blob = await response.blob();
+        }
+
+        const mimeType = blob.type || 'image/jpeg';
+        const file = new File([blob], 'destaque-loja.jpg', { type: mimeType });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ title: appTitle, text: fullText, url: appUrl, files: [file] });
+          toast.success('Compartilhado com sucesso!');
+          return;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') { toast.success('Compartilhado!'); return; }
+      }
+    }
+
+    // NÍVEL 2: Web Share API só texto+url (sem imagem)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: appTitle, text: fullText, url: appUrl });
+        toast.success('Compartilhado com sucesso!');
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // NÍVEL 3: WhatsApp direto (wa.me)
+    const text = encodeURIComponent(fullText);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
+
+  const shareWhatsApp = shareWithImage;
 
   const shareEmail = () => {
     const subject = encodeURIComponent(appTitle);
@@ -69,26 +153,7 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(appUrl)}`, '_blank');
   };
 
-  const shareNative = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: appTitle,
-          text: appDescription,
-          url: appUrl
-        });
-        toast.success('Compartilhado com sucesso!');
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          return;
-        }
-        console.warn('Share nativo falhou, copiando link:', error);
-        copyToClipboard();
-      }
-    } else {
-      copyToClipboard();
-    }
-  };
+  const shareNative = shareWithImage;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

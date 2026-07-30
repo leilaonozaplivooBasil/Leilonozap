@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, MessageCircle, Download, QrCode as QrIcon, Megaphone } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { proxyImage } from "@/functions/proxyImage";
 
 // 📣 Aba DIVULGAR — tudo que o licenciado precisa pra trazer gente, num lugar só.
 // Antes: o link de cadastro vivia perdido na "Visão Geral", o modal de compartilhar era
@@ -45,6 +47,9 @@ function buildLinks(user) {
 export default function DivulgarTab({ user, isSaiDeBaixo = false }) {
   const links = buildLinks(user);
   const [qrs, setQrs] = useState({});
+  // 🖼️ Imagem de produto em destaque (FeaturedProduct ativo) — anexada ao share
+  // do link da LOJA pra o WhatsApp mostrar o produto e não a logo do app.
+  const [featuredImage, setFeaturedImage] = useState('');
 
   useEffect(() => {
     // QR gerado LOCALMENTE (sem depender de serviço externo que pode cair)
@@ -54,6 +59,16 @@ export default function DivulgarTab({ user, isSaiDeBaixo = false }) {
         .catch(() => { /* sem QR, os outros botões seguem funcionando */ });
     });
 
+    // Busca FeaturedProduct ativo (uma vez) pra usar no share da loja
+    let alive = true;
+    (async () => {
+      try {
+        const items = await base44.entities.FeaturedProduct.filter({ is_active: true }, 'order', 1);
+        const fp = items && items[0];
+        if (alive && fp && fp.image_url) setFeaturedImage(fp.image_url);
+      } catch { /* sem destaque — segue sem imagem */ }
+    })();
+    return () => { alive = false; };
   }, [user?.referral_code]);
 
   const card = isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700';
@@ -66,8 +81,70 @@ export default function DivulgarTab({ user, isSaiDeBaixo = false }) {
     ok ? toast.success('Link copiado!') : toast.error('Não consegui copiar — selecione e copie manualmente.');
   };
 
-  const doWhats = (l) => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${l.msg}\n${l.url}`)}`, '_blank', 'noopener');
+  // 🔗 SHARE COM IMAGEM — 3 níveis (igual Loja Virtual): imagem → texto → wa.me.
+  // Só o link da LOJA anexa imagem (FeaturedProduct é representativo da loja).
+  // Cadastro/leilões não têm produto específico honesto → Nível 2 (texto) → Nível 3.
+  const doWhats = async (l) => {
+    const fullText = `${l.msg}\n${l.url}`;
+    const canUseImage = l.key === 'loja' && featuredImage;
+
+    // NÍVEL 1: Web Share API com imagem (só link da loja)
+    if (canUseImage && navigator.share && navigator.canShare) {
+      try {
+        let shareableUrl = featuredImage;
+        const isLocalUrl = featuredImage.includes('supabase.co') || featuredImage.includes('base44.app') || featuredImage.startsWith('data:');
+        if (!isLocalUrl) {
+          const cacheKey = `proxy_img_${featuredImage}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            shareableUrl = cached;
+          } else {
+            const proxyResult = await proxyImage({ imageUrl: featuredImage });
+            if (proxyResult?.data?.file_url) {
+              shareableUrl = proxyResult.data.file_url;
+              sessionStorage.setItem(cacheKey, shareableUrl);
+            }
+          }
+        }
+
+        let blob;
+        if (shareableUrl.startsWith('data:')) {
+          const [meta, base64] = shareableUrl.split(',');
+          const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+          const bin = atob(base64);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          blob = new Blob([arr], { type: mime });
+        } else {
+          const response = await fetch(shareableUrl, { mode: 'cors' });
+          if (!response.ok) throw new Error('fetch falhou');
+          blob = await response.blob();
+        }
+
+        const mimeType = blob.type || 'image/jpeg';
+        const file = new File([blob], 'destaque-loja.jpg', { type: mimeType });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ title: l.title, text: fullText, url: l.url, files: [file] });
+          return;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // NÍVEL 2: Web Share API só texto+url (sem imagem)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: l.title, text: fullText, url: l.url });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // NÍVEL 3: WhatsApp direto (wa.me)
+    window.open(`https://wa.me/?text=${encodeURIComponent(fullText)}`, '_blank', 'noopener');
   };
 
   const baixarQr = (l) => {
