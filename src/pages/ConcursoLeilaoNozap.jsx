@@ -218,55 +218,54 @@ export default function ConcursoLeilaoNozap() {
   const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
   const shareZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   const config = data.config || {};
-  // Hero: compartilha no WhatsApp com a FOTO do produto do dia (Web Share API com files — mobile).
-  // Data URL (admin anexou foto) → converte direto sem CORS. URL remota → fetch com CORS.
-  // Cadeia de fallback: share com foto+texto → share só texto → wa.me (texto só).
+  // Hero: compartilha a FOTO do produto do dia (Web Share API com files — mobile).
+  // NUNCA cai pra wa.me nem share só-texto — isso faz o WhatsApp gerar preview com a LOGO.
+  // Se o share com imagem falhar, baixa a imagem + copia o texto pro usuário colar manualmente.
   const shareHero = async () => {
     if (!myLink) return;
     const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
     const foto = config.produto_foto || diaArr[0]?.foto || '';
 
-    // 1. Tenta share com FOTO + texto (mobile — abre a share sheet nativa com a imagem)
-    if (foto && navigator.share) {
-      setMsg('Preparando imagem do produto...');
-      try {
-        let blob;
-        if (foto.startsWith('data:')) {
-          const [meta, base64] = foto.split(',');
-          const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
-          const bin = atob(base64);
-          const arr = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-          blob = new Blob([arr], { type: mime });
-        } else {
-          const resp = await fetch(foto, { mode: 'cors' });
-          blob = await resp.blob();
-        }
-        if (blob) {
-          const file = new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' });
-          setMsg('');
-          await navigator.share({ files: [file], text: shareZapText });
-          return;
-        }
-      } catch (e) {
-        if (e && e.name === 'AbortError') { setMsg(''); return; } // usuário cancelou o share
-        // share com files falhou → tenta só com texto
-      }
-      setMsg('');
-    }
+    // Sem foto configurada → cai pro botão de baixo (shareZap) que já funciona perfeito
+    if (!foto) { shareZap(); return; }
 
-    // 2. Fallback: share só texto (sem imagem — abre a share sheet com o texto visível)
-    if (navigator.share) {
+    // Prepara a imagem como blob (data URL direto; URL remota via fetch CORS)
+    let blob;
+    try {
+      if (foto.startsWith('data:')) {
+        const [meta, base64] = foto.split(',');
+        const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+        const bin = atob(base64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        blob = new Blob([arr], { type: mime });
+      } else {
+        const resp = await fetch(foto, { mode: 'cors' });
+        blob = await resp.blob();
+      }
+    } catch { /* fetch falhou → blob fica undefined */ }
+
+    // Share nativo com a FOTO (mobile — abre a share sheet com a imagem, não a logo)
+    if (blob && navigator.share) {
       try {
-        await navigator.share({ text: shareZapText });
+        const file = new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' });
+        await navigator.share({ files: [file], text: shareZapText });
         return;
       } catch (e) {
-        if (e && e.name === 'AbortError') return;
+        if (e && e.name === 'AbortError') return; // usuário cancelou
       }
     }
 
-    // 3. Último fallback: wa.me (texto só, abre WhatsApp direto)
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
+    // Fallback: baixa a imagem + copia o texto (NUNCA wa.me — isso puxa a logo)
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'premio-do-dia.jpg'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+    try { await navigator.clipboard.writeText(shareZapText); } catch { /* */ }
+    setMsg('Imagem baixada! Cole no WhatsApp com seu link (já copiado).');
+    setTimeout(() => setMsg(''), 5000);
   };
   const liveOn = !!config.live_ativa;
   const liveLink = config.live_url || LIVOO_VENDEDOR;
