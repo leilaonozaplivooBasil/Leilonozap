@@ -216,18 +216,16 @@ export default function ConcursoLeilaoNozap() {
     setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500);
   };
   const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
-  const shareZap = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   const config = data.config || {};
-  // Hero: compartilha a FOTO do produto do dia (Web Share API com files — mobile).
-  // NUNCA cai pra wa.me nem share só-texto — isso faz o WhatsApp gerar preview com a LOGO.
-  // Se o share com imagem falhar, baixa a imagem + copia o texto pro usuário colar manualmente.
-  const shareHero = async () => {
-    if (!myLink) return;
+
+  // 🔗 LÓGICA ÚNICA DE SHARE COM IMAGEM — usada por TODOS os botões (sincronia).
+  // Tenta navigator.share com a FOTO do produto. Retorna true se compartilhou (ou cancelou).
+  // Retorna false se não conseguiu (caller faz o fallback dele: download ou wa.me).
+  const shareWithImage = async () => {
+    if (!myLink) return false;
     const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
     const foto = config.produto_foto || diaArr[0]?.foto || '';
-
-    // Sem foto configurada → cai pro botão de baixo (shareZap) que já funciona perfeito
-    if (!foto) { shareZap(); return; }
+    if (!foto) return false; // sem foto → caller faz fallback
 
     // Prepara a imagem como blob (data URL direto; URL remota via fetch CORS)
     let blob;
@@ -243,33 +241,48 @@ export default function ConcursoLeilaoNozap() {
         const resp = await fetch(foto, { mode: 'cors' });
         blob = await resp.blob();
       }
-    } catch { /* fetch falhou → blob fica undefined */ }
+    } catch { return false; } // fetch falhou → caller faz fallback
 
-    // Verifica se o navegador suporta compartilhar ARQUIVOS (mobile sim, desktop geralmente não).
-    // Sem esta checagem, navigator.share falha silenciosamente no desktop e cai no fallback.
     const file = blob ? new File([blob], 'premio-do-dia.jpg', { type: blob.type || 'image/jpeg' }) : null;
     const canShareFiles = file && navigator.canShare && navigator.canShare({ files: [file] });
 
-    // Share nativo com a FOTO (mobile — abre a share sheet com a imagem, não a logo)
     if (canShareFiles && navigator.share) {
       try {
         await navigator.share({ files: [file], text: shareZapText });
-        return;
+        return true; // compartilhou (ou usuário escolheu pra onde)
       } catch (e) {
-        if (e && e.name === 'AbortError') return; // usuário cancelou
+        if (e && e.name === 'AbortError') return true; // cancelou = já abriu a sheet
       }
     }
+    return false; // não conseguiu share com imagem
+  };
 
+  // Hero: compartilha a FOTO do produto do dia. Fallback = download + copia texto.
+  const shareHero = async () => {
+    if (!myLink) return;
+    const ok = await shareWithImage();
+    if (ok) return;
     // Fallback: baixa a imagem + copia o texto (NUNCA wa.me — isso puxa a logo)
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'premio-do-dia.jpg'; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    const diaArr = Array.isArray(config.produtos_dia) ? config.produtos_dia : [];
+    const foto = config.produto_foto || diaArr[0]?.foto || '';
+    if (foto) {
+      try {
+        const resp = foto.startsWith('data:') ? null : await fetch(foto, { mode: 'cors' });
+        if (resp) { const blob = await resp.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'premio-do-dia.jpg'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000); }
+        else if (foto.startsWith('data:')) { const a = document.createElement('a'); a.href = foto; a.download = 'premio-do-dia.jpg'; a.click(); }
+      } catch { /* */ }
     }
     try { await navigator.clipboard.writeText(shareZapText); } catch { /* */ }
     setMsg('Imagem baixada! Cole no WhatsApp com seu link (já copiado).');
     setTimeout(() => setMsg(''), 5000);
+  };
+
+  // Botão de baixo / CTA fixo: TENTA share com imagem primeiro (sincronia com o hero).
+  // Se não conseguir, cai no wa.me (comportamento original, intacto).
+  const shareZap = async () => {
+    const ok = await shareWithImage();
+    if (ok) return;
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareZapText)}`, '_blank');
   };
   const liveOn = !!config.live_ativa;
   const liveLink = config.live_url || LIVOO_VENDEDOR;
