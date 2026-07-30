@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { checkLocation } from "@/functions/checkLocation";
 
 import AuctionCard from "../components/auction/AuctionCard";
+import AuctionSearchBar from "../components/auction/AuctionSearchBar";
 const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
@@ -146,6 +147,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [userFavorites, setUserFavorites] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -405,6 +407,16 @@ export default function Home() {
       filtered = filtered.filter((a) => a?.category === activeCategory);
     }
 
+    // BUSCA POR TEXTO (título + descrição, case-insensitive)
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter((a) => {
+        const title = (a?.title || '').toLowerCase();
+        const desc = (a?.description || '').toLowerCase();
+        return title.includes(q) || desc.includes(q);
+      });
+    }
+
     // ORDENAÇÃO: ?sort=newest → created_date DESC (leilão recém-criado no topo)
     // Default → active primeiro + end_time ascendente (comportamento validado em produção)
     if (sortNewest) {
@@ -425,7 +437,7 @@ export default function Home() {
       seenTitles.add(normalizedTitle);
       return true;
     });
-  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest]);
+  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest, searchTerm]);
 
   // Paginação derivada
   const totalPages = Math.max(1, Math.ceil(filteredAuctions.length / ITEMS_PER_PAGE));
@@ -740,7 +752,7 @@ export default function Home() {
   []);
 
   // Reseta página ao trocar filtro
-  useEffect(() => { setCurrentPage(1); }, [activeCategory, activeSourceFilter, showFavoritesOnly]);
+  useEffect(() => { setCurrentPage(1); }, [activeCategory, activeSourceFilter, showFavoritesOnly, searchTerm]);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -827,6 +839,11 @@ export default function Home() {
         {/* Glow Separator */}
         <div className="glow-line mb-8 mx-8" />
 
+        {/* BUSCA — mesma barra da Loja Virtual */}
+        <div className="mb-6">
+          <AuctionSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+        </div>
+
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
             <Suspense fallback={null}>
@@ -895,14 +912,18 @@ export default function Home() {
               </div> :
           filteredAuctions.length === 0 && !loadError ?
           <div className="text-center py-16 glass-card-elevated rounded-3xl mx-auto max-w-md">
-                <div className="text-6xl mb-4">📦</div>
+                <div className="text-6xl mb-4">{searchTerm ? '🔍' : '📦'}</div>
                 <h3 className="text-xl font-semibold mb-2 text-white">
-                  Nenhum leilão ativo nesta categoria
+                  {searchTerm ? 'Nenhum leilão encontrado' : 'Nenhum leilão ativo nesta categoria'}
                 </h3>
                 <p className="text-gray-500 mb-6 px-6">
-                  Tente outra categoria ou volte mais tarde para novos leilões!
+                  {searchTerm ? 'Tente outro termo ou limpe a busca.' : 'Tente outra categoria ou volte mais tarde para novos leilões!'}
                 </p>
-                {currentUser?.role === 'admin' &&
+                {searchTerm ? (
+                  <Button onClick={() => setSearchTerm("")} className="glass-btn-green text-white font-bold rounded-xl border-0 px-6 py-3">
+                    Limpar busca
+                  </Button>
+                ) : currentUser?.role === 'admin' &&
             <Link to={createPageUrl("CreateAuction")}>
                     <Button className="glass-btn-green text-white font-bold rounded-xl border-0 px-6 py-3">
                       Criar Primeiro Leilão
