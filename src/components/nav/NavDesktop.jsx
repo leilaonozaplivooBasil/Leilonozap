@@ -63,7 +63,7 @@ export default function NavDesktop({
       {/* === SETORES CENTRAIS — centralizados no meio da navbar (absolute no header).
           items-center + tile 38px + label colado: o conjunto (~54px) fica centrado
           no h-16 do header, no MESMO eixo do carrinho/avatar/rank. === */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-5">
+      <div className="absolute left-[42%] top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-5">
         {SECTORS.map((s) => {
           const active = sectorActive(s) || openSector === s.key;
           return (
