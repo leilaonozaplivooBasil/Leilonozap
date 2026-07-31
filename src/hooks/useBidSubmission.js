@@ -185,6 +185,34 @@ export default function useBidSubmission({
         }, 100);
       }
 
+      // 🔒 Confirma o lance no leilão via função atômica (trava otimista por version no
+      // Supabase real) — evita a condição de corrida em que dois lances simultâneos
+      // passavam os dois e um sobrescrevia o outro, deixando saldo reservado sem lance
+      // correspondente. Só cria a mensagem de chat DEPOIS de confirmar que este lance venceu.
+      const atomicResult = await base44.functions.invoke('submitAtomicBid', {
+        auction_id: auctionId,
+        amount: bidAmount,
+        bidder_name: currentUser.nickname || currentUser.full_name
+      });
+      const atomicData = atomicResult?.data || atomicResult;
+
+      if (!atomicData?.success) {
+        alert(atomicData?.conflict ? "Outro lance foi dado!" : (atomicData?.message || "Erro ao enviar lance."));
+        await releaseHold("lance rejeitado (outro lance venceu a corrida)");
+        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+        lastMessageCountRef.current--;
+        if (atomicData?.current_state) {
+          setAuction(prev => ({
+            ...prev,
+            current_price: atomicData.current_state.current_price,
+            winner_name: atomicData.current_state.winner_name
+          }));
+        }
+        return;
+      }
+
+      const newEndTimeISO = atomicData.new_state.end_time;
+
       await AuctionMessage.create({
         auction_id: auctionId,
         message_type: "bid",
@@ -193,45 +221,6 @@ export default function useBidSubmission({
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: bidAmount,
         is_system_message: false
-      });
-
-      const revalidateAuction = await Auction.filter({ id: auctionId });
-      const revalidatePrice = money(revalidateAuction[0].current_price || revalidateAuction[0].starting_price);
-
-      if (gteMoney(revalidatePrice, bidAmount)) {
-        alert("Outro lance foi dado!");
-        await releaseHold("lance rejeitado (outro lance maior)");
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-        lastMessageCountRef.current--;
-        setAuction(prev => ({
-          ...prev,
-          current_price: revalidatePrice,
-          winner_id: revalidateAuction[0].winner_id,
-          winner_name: revalidateAuction[0].winner_name
-        }));
-        return;
-      }
-
-      const nowCheckServer = getServerSyncedTime();
-      if (nowCheckServer === null) {
-        alert("Erro de sincronização.");
-        return;
-      }
-
-      const currentEndTime = new Date(freshAuction.end_time).getTime();
-      const timeUntilEnd = Math.floor((currentEndTime - nowCheckServer) / 1000);
-      let newEndTimeISO = freshAuction.end_time;
-
-      if (timeUntilEnd <= COUNTDOWN_DURATION) {
-        const newEndTime = new Date(currentEndTime + (BID_EXTENSION_SECONDS * 1000));
-        newEndTimeISO = newEndTime.toISOString();
-      }
-
-      await Auction.update(auctionId, {
-        current_price: bidAmount,
-        winner_id: currentUser.id,
-        winner_name: currentUser.nickname || currentUser.full_name,
-        end_time: newEndTimeISO
       });
 
       // 🔄 Libera reservas ANTERIORES desse usuário nesse leilão (lances anteriores foram superados)

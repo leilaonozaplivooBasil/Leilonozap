@@ -1,311 +1,143 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+// 🔒 Confirma o lance no leilão com TRAVA OTIMISTA real (version) direto no Supabase.
+// Só existe pra resolver a condição de corrida: dois lances simultâneos não podem mais
+// os dois "passar" e sobrescrever um ao outro — só um vence o PATCH condicionado à version.
+// NUNCA usar base44.asServiceRole.entities.* aqui (aponta pro store interno do Base44,
+// não pro Supabase real que a produção lê).
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
+
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(path: string, method = 'GET', body?: object) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = text; }
+  return { ok: res.ok, status: res.status, data: json };
+}
+
+const COUNTDOWN_DURATION = 142; // 2min22s
+const BID_EXTENSION_SECONDS = 22;
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Não autorizado' }, { status: 401 });
+    const authUser = await base44.auth.me();
+    if (!authUser) {
+      return Response.json({ success: false, message: 'Não autorizado' }, { status: 401 });
     }
 
-    const { auction_id, amount } = await req.json();
-
-    if (!auction_id || !amount) {
-      return Response.json({
-        success: false,
-        message: 'Parâmetros inválidos'
-      }, { status: 400 });
-    }
-
+    const { auction_id, amount, bidder_name } = await req.json();
     const bidAmount = parseFloat(amount);
 
-    // 🔒 VALIDAÇÃO DE SALDO (DigitalWallet)
-    // Busca saldo atual antes de qualquer lógica de leilão
-    const wallets = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id: user.id });
-    const userWallet = wallets && wallets.length > 0 ? wallets[0] : null;
-    const currentBalance = userWallet?.balance || 0;
-
-    if (currentBalance < bidAmount) {
-      console.log(`❌ [ATOMIC BID] Saldo insuficiente. Carteira: R$ ${currentBalance} < Lance: R$ ${bidAmount}`);
-      return Response.json({
-        success: false,
-        message: `Saldo insuficiente (R$ ${currentBalance.toFixed(2)}). Por favor, adicione fundos.`,
-        error_code: 'INSUFFICIENT_FUNDS',
-        current_balance: currentBalance,
-        required_amount: bidAmount
-      }, { status: 400 });
+    if (!auction_id || !bidAmount || bidAmount <= 0) {
+      return Response.json({ success: false, message: 'Parâmetros inválidos' }, { status: 400 });
     }
 
-    // 🔐 OPERAÇÃO ATÔMICA COM SERVICE ROLE
-    console.log(`🔒 [ATOMIC BID] Iniciando lance atômico: R$ ${bidAmount.toFixed(2)}`);
+    const getResp = await sbFetch(`auctions?id=eq.${auction_id}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name`);
+    const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
-    // 1️⃣ LER ESTADO ATUAL DO LEILÃO
-    const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
-
-    if (!auctions || auctions.length === 0) {
-      return Response.json({
-        success: false,
-        message: 'Leilão não encontrado'
-      }, { status: 404 });
+    if (!getResp.ok || !auction) {
+      return Response.json({ success: false, message: 'Leilão não encontrado' }, { status: 404 });
     }
 
-    const auction = auctions[0];
-    const currentVersion = auction.version || 0;
-
-    console.log(`📊 [ATOMIC BID] Estado atual:`);
-    console.log(`   Preço: R$ ${auction.current_price}`);
-    console.log(`   Versão: ${currentVersion}`);
-    console.log(`   Status: ${auction.status}`);
-
-    // 2️⃣ VALIDAÇÕES CRÍTICAS
-
-    // Validar status
     if (auction.status !== 'active') {
-      console.log(`❌ [ATOMIC BID] Leilão não está ativo: ${auction.status}`);
       return Response.json({
         success: false,
         message: 'Leilão não está ativo',
-        current_state: {
-          current_price: auction.current_price,
-          status: auction.status,
-          winner_name: auction.winner_name
-        }
+        current_state: { current_price: auction.current_price, status: auction.status, winner_name: auction.winner_name }
       }, { status: 400 });
     }
 
-    // Validar tempo
     const now = Date.now();
     const endTime = new Date(auction.end_time).getTime();
-
     if (now >= endTime) {
-      console.log(`❌ [ATOMIC BID] Leilão expirado`);
       return Response.json({
         success: false,
         message: 'Leilão já encerrou',
-        current_state: {
-          current_price: auction.current_price,
-          status: auction.status,
-          end_time: auction.end_time
-        }
+        current_state: { current_price: auction.current_price, status: auction.status, end_time: auction.end_time }
       }, { status: 400 });
     }
 
-    // Validar valor do lance
-    const currentPrice = auction.current_price || auction.starting_price;
-    const minBid = currentPrice + auction.increment;
+    const currentPrice = Number(auction.current_price || auction.starting_price);
+    const minBid = currentPrice + Number(auction.increment);
 
     if (bidAmount <= currentPrice) {
-      console.log(`❌ [ATOMIC BID] Lance muito baixo: R$ ${bidAmount} <= R$ ${currentPrice}`);
       return Response.json({
         success: false,
         message: `Lance deve ser maior que R$ ${currentPrice.toFixed(2)}`,
-        current_state: {
-          current_price: currentPrice,
-          min_bid: minBid,
-          winner_name: auction.winner_name
-        }
-      }, { status: 400 });
+        conflict: true,
+        current_state: { current_price: currentPrice, min_bid: minBid, winner_name: auction.winner_name }
+      }, { status: 409 });
     }
 
     if (bidAmount < minBid) {
-      console.log(`❌ [ATOMIC BID] Lance abaixo do mínimo: R$ ${bidAmount} < R$ ${minBid}`);
       return Response.json({
         success: false,
         message: `Lance mínimo: R$ ${minBid.toFixed(2)}`,
-        current_state: {
-          current_price: currentPrice,
-          min_bid: minBid,
-          winner_name: auction.winner_name
-        }
+        current_state: { current_price: currentPrice, min_bid: minBid, winner_name: auction.winner_name }
       }, { status: 400 });
     }
 
-    // 3️⃣ BUSCAR DADOS DO USUÁRIO
-    let bidderData = null;
-    try {
-      const appUsers = await base44.asServiceRole.entities.AppUser.filter({ id: user.id });
-      if (appUsers && appUsers.length > 0) {
-        bidderData = appUsers[0];
-      }
-    } catch (error) {
-      console.warn(`⚠️ [ATOMIC BID] Usuário não encontrado em AppUser:`, error.message);
-    }
-
-    const bidderName = bidderData?.nickname || bidderData?.full_name || user.full_name || 'Anônimo';
-
-    // 4️⃣ CALCULAR NOVA END_TIME (extensão em guerra)
-    const COUNTDOWN_DURATION = 142; // 2min22s
-    const BID_EXTENSION_SECONDS = 22;
-
     const timeUntilEnd = Math.floor((endTime - now) / 1000);
     let newEndTime = auction.end_time;
-
     if (timeUntilEnd <= COUNTDOWN_DURATION) {
-      const extendedEndTime = new Date(endTime + (BID_EXTENSION_SECONDS * 1000));
-      newEndTime = extendedEndTime.toISOString();
-      console.log(`⚡ [ATOMIC BID] GUERRA! +${BID_EXTENSION_SECONDS}s`);
+      newEndTime = new Date(endTime + BID_EXTENSION_SECONDS * 1000).toISOString();
     }
 
-    // 5️⃣ ATUALIZAR LEILÃO COM BLOQUEIO OTIMISTA
-    const updateData = {
-      current_price: bidAmount,
-      winner_id: user.id,
-      winner_name: bidderName,
-      end_time: newEndTime,
-      last_updated: new Date().toISOString(),
-      version: currentVersion + 1
-    };
+    const currentVersion = auction.version || 0;
+    const winnerName = bidder_name || authUser.full_name || 'Anônimo';
 
-    console.log(`🔄 [ATOMIC BID] Atualizando leilão (versão ${currentVersion} → ${currentVersion + 1})`);
+    // PATCH atômico: só aplica se a version ainda for a mesma lida agora (CAS).
+    // Se outro lance já foi commitado entre a leitura e este PATCH, a condição
+    // version=eq.X falha e a resposta vem vazia — SEM sobrescrever o vencedor real.
+    const patchResp = await sbFetch(
+      `auctions?id=eq.${auction_id}&version=eq.${currentVersion}`,
+      'PATCH',
+      {
+        current_price: bidAmount,
+        winner_id: authUser.id,
+        winner_name: winnerName,
+        end_time: newEndTime,
+        version: currentVersion + 1
+      }
+    );
+    const patchedRow = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
 
-    // Tenta atualizar com a versão esperada
-    const updatedAuctions = await base44.asServiceRole.entities.Auction.filter({
-      id: auction_id,
-      version: currentVersion
-    });
-
-    if (!updatedAuctions || updatedAuctions.length === 0) {
-      console.log(`❌ [ATOMIC BID] Conflito de versão! Outro lance foi processado.`);
-
-      // Busca estado atual novamente
-      const currentAuctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
-      const currentAuction = currentAuctions[0];
-
+    if (!patchResp.ok || !patchedRow) {
+      // Conflito de versão: outro lance venceu a corrida. Devolve o estado real atual.
+      const conflictResp = await sbFetch(`auctions?id=eq.${auction_id}&select=current_price,winner_name,version`);
+      const conflictAuction = Array.isArray(conflictResp.data) ? conflictResp.data[0] : null;
       return Response.json({
         success: false,
         message: 'Outro lance foi dado antes. Tente novamente!',
         conflict: true,
-        current_state: {
-          current_price: currentAuction.current_price,
-          winner_name: currentAuction.winner_name,
-          version: currentAuction.version
-        }
+        current_state: conflictAuction || { current_price: currentPrice, winner_name: auction.winner_name, version: currentVersion }
       }, { status: 409 });
     }
-
-    // Atualiza o leilão
-    await base44.asServiceRole.entities.Auction.update(auction_id, updateData);
-
-    console.log(`✅ [ATOMIC BID] Leilão atualizado!`);
-
-    // 6️⃣ REGISTRAR LANCE
-    await base44.asServiceRole.entities.Bid.create({
-      auction_id: auction_id,
-      bidder_name: bidderName,
-      amount: bidAmount,
-      timestamp: new Date().toISOString()
-    });
-
-    console.log(`✅ [ATOMIC BID] Lance registrado!`);
-
-    // 7️⃣ CRIAR MENSAGEM NO CHAT
-    await base44.asServiceRole.entities.AuctionMessage.create({
-      auction_id: auction_id,
-      message_type: "bid",
-      sender_id: user.id,
-      content: `Lance de R$ ${bidAmount.toFixed(2)}`,
-      sender_name: bidderName,
-      bid_amount: bidAmount,
-      is_system_message: false,
-      timestamp: new Date().toISOString()
-    });
-
-    console.log(`✅ [ATOMIC BID] Mensagem criada!`);
-
-    // 8️⃣ ATUALIZAR STATS DO USUÁRIO
-    if (bidderData) {
-      try {
-        await base44.asServiceRole.entities.AppUser.update(user.id, {
-          points: (bidderData.points || 0) + 10,
-          total_bids: (bidderData.total_bids || 0) + 1
-        });
-        console.log(`✅ [ATOMIC BID] Stats do usuário atualizados!`);
-      } catch (error) {
-        console.warn(`⚠️ [ATOMIC BID] Erro ao atualizar stats:`, error.message);
-      }
-    }
-
-    // 9️⃣ CRIAR NARRAÇÃO DA IA (às vezes)
-    const shouldComment = Math.random() < 0.4 || bidAmount % 50 === 0;
-
-    if (shouldComment) {
-      const aiComments = [
-        `🔥 UHULLLL! ${bidderName} MANDOU R$ ${bidAmount.toFixed(2)}!`,
-        `💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`,
-        `⚡ ${bidderName} ON FIRE!`,
-        `🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`,
-        `💥 POW! ${bidderName} não brinca!`,
-        `🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`,
-        `⭐ SHOWWW! ${bidderName}!`,
-        `🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`
-      ];
-
-      const randomComment = aiComments[Math.floor(Math.random() * aiComments.length)];
-
-      setTimeout(async () => {
-        try {
-          await base44.asServiceRole.entities.AuctionMessage.create({
-            auction_id: auction_id,
-            message_type: "ai_narration",
-            content: randomComment,
-            sender_name: "LanceIA",
-            is_system_message: true,
-            timestamp: new Date().toISOString()
-          });
-          console.log(`🎤 [ATOMIC BID] Narração IA criada!`);
-        } catch (error) {
-          console.warn(`⚠️ [ATOMIC BID] Erro ao criar narração:`, error.message);
-        }
-      }, 1500);
-    }
-
-    // 🔟 LOGAR SUCESSO
-    await base44.asServiceRole.entities.SystemLog.create({
-      entity_id: auction_id,
-      component_name: 'submitAtomicBid',
-      step: 'BID_SUCCESS',
-      status: 'success',
-      message: `Lance de R$ ${bidAmount.toFixed(2)} por ${bidderName}`,
-      execution_time_ms: Date.now() - now
-    });
-
-    console.log(`🎉 [ATOMIC BID] SUCESSO TOTAL!`);
 
     return Response.json({
       success: true,
       message: 'Lance registrado com sucesso!',
       new_state: {
-        current_price: bidAmount,
-        winner_name: bidderName,
-        version: currentVersion + 1,
-        end_time: newEndTime
+        current_price: patchedRow.current_price,
+        winner_name: patchedRow.winner_name,
+        version: patchedRow.version,
+        end_time: patchedRow.end_time
       }
     }, { status: 200 });
 
   } catch (error) {
-    console.error("❌ [ATOMIC BID] Erro fatal:", error);
-
-    // Tenta logar o erro
-    try {
-      const base44 = createClientFromRequest(req);
-      await base44.asServiceRole.entities.SystemLog.create({
-        component_name: 'submitAtomicBid',
-        step: 'BID_ERROR',
-        status: 'error',
-        message: error.message,
-        error_details: {
-          stack: error.stack,
-          name: error.name
-        }
-      });
-    } catch (logError) {
-      console.error("❌ Erro ao logar:", logError);
-    }
-
-    return Response.json({
-      success: false,
-      message: 'Erro ao processar lance: ' + error.message
-    }, { status: 500 });
+    console.error('❌ [ATOMIC BID] Erro fatal:', error.message);
+    return Response.json({ success: false, message: 'Erro ao processar lance: ' + error.message }, { status: 500 });
   }
 });
