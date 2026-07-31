@@ -80,7 +80,17 @@ Deno.serve(async (req) => {
         '169794532723','169793431523','170711504564'
       ];
       const orClause = ids.map(id => `mp_payment_id.eq.${id}`).join(',');
-      result.gap_catalog_sales_search = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&or=(${orClause})`);
+      const full = await sb(`catalog_sales?select=kind,total_amount,status,mp_payment_id,created_at&or=(${orClause})&order=created_at.asc`);
+      result.gap_count = Array.isArray(full.body) ? full.body.length : 'error';
+      result.gap_last_5 = { ok: full.ok, status: full.status, body: Array.isArray(full.body) ? full.body.slice(-5) : full.body };
+      result.gap_found_ids = Array.isArray(full.body) ? full.body.map(r => r.mp_payment_id) : [];
+      result.gap_missing_ids = ids.filter(id => !(Array.isArray(full.body) ? full.body.map(r=>r.mp_payment_id) : []).includes(id));
+    }
+
+    if (mode === 'gap_buyers') {
+      const smallIds = ['170639528044','170642481862','169757635409','169794046909','169794532723','169793431523'];
+      const orClause = smallIds.map(id => `mp_payment_id.eq.${id}`).join(',');
+      result.small_tx_buyers = await sb(`catalog_sales?select=buyer_id,buyer_name,buyer_email,kind,total_amount,status,mp_payment_id,product_title,created_at&or=(${orClause})&order=created_at.asc`);
     }
 
     if (mode === 'ribeiro_check') {
