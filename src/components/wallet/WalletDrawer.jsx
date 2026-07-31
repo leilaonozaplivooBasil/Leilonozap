@@ -53,6 +53,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const [customAmount, setCustomAmount] = useState('');
   const [generating, setGenerating] = useState(false);
   const [pixData, setPixData] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(15);
   const pollRef = useRef(null);
 
   const loadWallet = useCallback(async () => {
@@ -78,6 +79,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     if (open) {
       setView('wallet');
       setPixData(null);
+      setVisibleCount(15);
       loadWallet();
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
@@ -290,7 +292,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       <p className="text-gray-500 text-sm text-center py-8">Nenhuma movimentação ainda.</p>
                     ) : (
                       <div className="space-y-2">
-                        {transactions.slice(0, 50).map((tx) => {
+                        {transactions.slice(0, visibleCount).map((tx) => {
                           const style = TX_STYLE[tx.type] || TX_STYLE.purchase;
                           const Icon = style.icon;
                           return (
@@ -321,6 +323,14 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                             </div>
                           );
                         })}
+                        {visibleCount < transactions.length && (
+                          <button
+                            onClick={() => setVisibleCount((c) => c + 15)}
+                            className="w-full text-center text-xs font-semibold text-emerald-300 hover:text-emerald-200 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                          >
+                            Ver mais
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
