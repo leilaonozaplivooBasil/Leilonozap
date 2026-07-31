@@ -2,60 +2,90 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-// Grid de 2 colunas que quebra o empilhamento vertical no fim da vitrine.
-const CARDS = [
+// Fecho da vitrine no formato "faixa de cartazes" (padrão Apple TV):
+// título centralizado e cartões cinematográficos colados, largura total,
+// com scroll lateral no celular. Cada cartaz leva a um destino real.
+const CARTAZES = [
+  {
+    eyebrow: 'Livoo Live',
+    titulo: 'Compre ao vivo, na hora.',
+    linha: 'Ofertas que acabam na frente de todos.',
+    cta: { label: 'Assistir agora', to: '/LiveShopNoZap' },
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a37dd049c_generated_image.png',
+  },
   {
     eyebrow: 'Rank Premiado',
     titulo: 'Suba no ranking. Leve o prêmio.',
     linha: 'Convide, some pontos e concorra aos produtos do dia.',
     cta: { label: 'Participar', to: '/rankpremiado' },
-    fundo: 'linear-gradient(160deg, #FBF6E6 0%, #EDF4EC 60%, #DCEBE0 100%)',
-    icone: '🏆',
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/da7b4dd65_generated_image.png',
   },
   {
-    eyebrow: 'Livoo Live',
-    titulo: 'Compre ao vivo, na hora.',
-    linha: 'Transmissões com ofertas que acabam na frente de todos.',
-    cta: { label: 'Assistir agora', to: '/LiveShopNoZap' },
-    fundo: 'linear-gradient(160deg, #FDF0F6 0%, #F1F5F1 60%, #DDEBE2 100%)',
-    icone: '▶',
+    eyebrow: 'Indique e fature',
+    titulo: 'Mandou o link. Caiu comissão.',
+    linha: 'Mostre o produto pra quem você conhece.',
+    cta: { label: 'Começar a indicar', to: '/Licensing' },
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/69c3da8e0_generated_image.png',
   },
 ];
 
 export default function BlocoEntretenimento() {
   return (
-    <section className="w-full bg-nz-cinza-fundo px-3 pt-[clamp(48px,6vh,72px)] pb-3">
-      <div className="mx-auto grid max-w-[1180px] gap-3 md:grid-cols-2">
-        {CARDS.map((c, i) => (
+    <section className="w-full bg-white pt-[clamp(56px,7vh,88px)]">
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.4 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="px-5 text-center font-semibold leading-[1.05] tracking-[-0.03em] text-nz-tinta"
+        style={{ fontSize: 'clamp(2rem, 5vw, 3.25rem)' }}
+      >
+        Diversão que dá dinheiro.
+      </motion.h2>
+
+      <div className="nz-no-scrollbar mt-[clamp(28px,4vh,44px)] flex snap-x snap-mandatory gap-1 overflow-x-auto md:grid md:grid-cols-3 md:gap-1 md:overflow-visible">
+        {CARTAZES.map((c, i) => (
           <motion.div
             key={c.eyebrow}
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 28 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
+            viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center rounded-2xl px-6 pt-12 pb-14 text-center"
-            style={{ background: c.fundo }}
+            className="group relative min-w-[82vw] snap-center overflow-hidden md:min-w-0"
+            style={{ height: 'clamp(420px, 52vw, 620px)' }}
           >
-            <div className="text-[13px] font-semibold uppercase tracking-[0.1em] text-nz-verde">
-              {c.eyebrow}
-            </div>
-            <h3
-              className="mt-3 font-semibold leading-[1.1] tracking-[-0.02em] text-nz-tinta"
-              style={{ fontSize: 'clamp(1.6rem, 3.4vw, 2.3rem)' }}
-            >
-              {c.titulo}
-            </h3>
-            <p className="mt-3 max-w-[340px] text-[16px] leading-[1.4] text-nz-tinta-fraca">
-              {c.linha}
-            </p>
-            <Link
-              to={c.cta.to}
-              className="mt-7 inline-flex min-h-[44px] items-center rounded-full border border-nz-verde px-[22px] text-[16px] text-nz-verde transition-colors duration-200 hover:bg-nz-verde hover:text-white"
-            >
-              {c.cta.label}
-            </Link>
-            <div className="mt-10 select-none text-6xl opacity-30" aria-hidden="true">
-              {c.icone}
+            <img
+              src={c.img}
+              alt={c.titulo}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]"
+            />
+            {/* véu escuro pra o texto branco ficar sempre legível sobre a foto */}
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(to top, rgba(6,12,9,0.88) 0%, rgba(6,12,9,0.45) 42%, rgba(6,12,9,0.10) 100%)' }}
+              aria-hidden="true"
+            />
+            <div className="absolute inset-x-0 bottom-0 p-6 text-left md:p-8">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-white/70">
+                {c.eyebrow}
+              </div>
+              <h3
+                className="mt-2 font-semibold leading-[1.12] tracking-[-0.02em] text-white"
+                style={{ fontSize: 'clamp(1.5rem, 2.4vw, 2rem)' }}
+              >
+                {c.titulo}
+              </h3>
+              <p className="mt-2 max-w-[300px] text-[15px] leading-[1.4] text-white/75">
+                {c.linha}
+              </p>
+              <Link
+                to={c.cta.to}
+                className="mt-5 inline-flex min-h-[44px] items-center rounded-full bg-white px-[22px] text-[15px] font-medium text-nz-verde-escuro transition-colors duration-200 hover:bg-nz-verde hover:text-white"
+              >
+                {c.cta.label}
+              </Link>
             </div>
           </motion.div>
         ))}
