@@ -4,8 +4,7 @@ import { supabase } from '@/api/supabaseClient';
 import HeroRecepcao from '@/components/recepcao/HeroRecepcao';
 import PersonagensRede from '@/components/recepcao/PersonagensRede';
 import BlocoVitrine from '@/components/recepcao/BlocoVitrine';
-import MidiaFlutuante from '@/components/recepcao/MidiaFlutuante';
-import BlocoAoVivo from '@/components/recepcao/BlocoAoVivo';
+import QuadrantesVitrine from '@/components/recepcao/QuadrantesVitrine';
 import CartaoCarteira from '@/components/recepcao/CartaoCarteira';
 import BlocoRede from '@/components/recepcao/BlocoRede';
 import BlocoEntretenimento from '@/components/recepcao/BlocoEntretenimento';
@@ -69,25 +68,8 @@ export default function Recepcao() {
 
       <div className="h-3 bg-white" />
 
-      {/* 3 — LOJA VIRTUAL */}
-      <BlocoVitrine
-        tema="cinza"
-        titulo="Loja Virtual"
-        subtitulo={`${stats.produtos > 0 ? `${stats.produtos} produtos` : 'Milhares de produtos'} com entrega em todo o Brasil.`}
-        primario={{ label: 'Comprar agora', to: '/Loja-Virtual' }}
-        secundario={{ label: 'Saber mais', to: '/Loja-Virtual' }}
-      >
-        <MidiaFlutuante
-          src={produtos[1]?.image_urls?.[0] || produtos[0]?.image_urls?.[0]}
-          alt={produtos[1]?.description || ''}
-          altura={340}
-        />
-      </BlocoVitrine>
-
-      <div className="h-3 bg-white" />
-
-      {/* 4 — LEILÃO AO VIVO (único bloco escuro) */}
-      <BlocoAoVivo />
+      {/* 3+4 — GRADE 2x2: LOJA, FÁBRICA, AO VIVO (clímax escuro) E COMO FUNCIONA */}
+      <QuadrantesVitrine />
 
       <div className="h-3 bg-white" />
 
