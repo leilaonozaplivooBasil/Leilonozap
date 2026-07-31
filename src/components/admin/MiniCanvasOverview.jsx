@@ -250,7 +250,8 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
                 Visão Geral
                 <Sparkles className="w-3 h-3 text-emerald-400/60" />
               </span>
-              <span className="text-[10px] text-gray-500 hidden sm:inline">
+              {/* Dica só faz sentido onde existe canvas (desktop) */}
+              <span className="text-[10px] text-gray-500 hidden lg:inline">
                 arraste · scroll para zoom · clique para abrir
               </span>
             </div>
