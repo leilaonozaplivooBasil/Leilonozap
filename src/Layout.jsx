@@ -893,6 +893,7 @@ export default function Layout({ children, currentPageName }) {
           onClose={() => setMobileMenuOpen(false)}
           finalMenuItems={finalMenuItems}
           currentPageName={currentPageName}
+          currentUser={currentUser}
           isLoggedIn={isLoggedIn}
           isAdmin={isAdmin}
           isInvestidor={isInvestidor}
