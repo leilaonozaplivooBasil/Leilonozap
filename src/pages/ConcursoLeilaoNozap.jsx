@@ -372,8 +372,12 @@ export default function ConcursoLeilaoNozap() {
         setTimeout(() => setMsg(''), 6000);
         return;
       }
-      // Atualiza cfg imediatamente com a config retornada pela API (sem delay)
-      if (j.config) setCfg(j.config);
+      // Atualiza cfg (form do admin) E data.config (vitrine pública nesta mesma página)
+      // imediatamente com a config retornada pela API — sem esperar o polling de 15s.
+      if (j.config) {
+        setCfg(j.config);
+        setData((d) => ({ ...d, config: j.config }));
+      }
       setMsg('Config salva!');
       setTimeout(() => setMsg(''), 3000);
     } catch {
