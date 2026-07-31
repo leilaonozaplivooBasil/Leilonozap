@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import { X, ZoomIn, ZoomOut, Maximize2, Maximize, Minimize2, Map, Sparkles } from "lucide-react";
-import MiniCanvasList from "@/components/admin/MiniCanvasList";
+import MiniCanvasMobile from "@/components/admin/MiniCanvasMobile";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.2;
@@ -270,8 +270,8 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
           </button>
         </div>
 
-        {/* --- Celular e tablet: mesma estrutura em lista enquadrada --- */}
-        <MiniCanvasList
+        {/* --- Celular e tablet: modo canvas em blocos --- */}
+        <MiniCanvasMobile
           sections={SECTION_LAYOUT.map((s) => getSection(s.title)).filter(Boolean)}
           currentPageName={currentPageName}
           onNavigate={goTo}
