@@ -249,28 +249,41 @@ export default function AuctionCheckoutModern() {
 
       // Para depósito de capital de investidor, passa o auction_id real + flag especial
       const isInvestorCapital = depositType === 'investor_capital';
-      const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
-        auction_id: isInvestorCapital ? auction.id : (isWalletDeposit ? null : auction.id),
-        buyer_id: currentUser?.id || null,
-        buyer_name: firstName.trim(),
-        buyer_email: email.trim(),
-        buyer_cpf: cpf.trim(),
-        buyer_phone: phone.trim(),
-        amount: amount,
-        billing_type: paymentType,
-        description: isWalletDeposit
-          ? (isInvestorCapital
-            ? `Depósito de Capital — Lote de Investimento - R$ ${fmtBR(amount)}`
-            : depositType === 'passaporte'
-              ? `Passaporte de Lances NoZap - R$ ${fmtBR(amount)}`
-              : depositType === 'digital_wallet'
-                ? `Depósito na Carteira Digital - R$ ${fmtBR(amount)}`
-                : `Depósito na Carteira de Comissões - R$ ${fmtBR(amount)}`)
-          : `Arremate - ${auction.title}`,
-        card_data: cardData,
-        deposit_type: depositType,
-        is_investor_capital: isInvestorCapital // flag para o backend reconhecer
-      });
+
+      // 🔒 REGRA FIXA (memória definitiva): PIX de depósito de saldo → Mercado Pago (libera na hora).
+      // Cartão de Crédito continua no ASAAS (aprova na hora, mas retém 30 dias).
+      const isDigitalWalletPix = isWalletDeposit && depositType === 'digital_wallet' && paymentType === 'PIX';
+
+      const paymentResponse = isDigitalWalletPix
+        ? await base44.functions.invoke('createMercadoPagoDeposit', {
+          user_id: currentUser?.id || null,
+          amount: amount,
+          buyer_name: firstName.trim(),
+          buyer_email: email.trim(),
+          buyer_cpf: cpf.trim()
+        })
+        : await base44.functions.invoke('createAsaasPayment', {
+          auction_id: isInvestorCapital ? auction.id : (isWalletDeposit ? null : auction.id),
+          buyer_id: currentUser?.id || null,
+          buyer_name: firstName.trim(),
+          buyer_email: email.trim(),
+          buyer_cpf: cpf.trim(),
+          buyer_phone: phone.trim(),
+          amount: amount,
+          billing_type: paymentType,
+          description: isWalletDeposit
+            ? (isInvestorCapital
+              ? `Depósito de Capital — Lote de Investimento - R$ ${fmtBR(amount)}`
+              : depositType === 'passaporte'
+                ? `Passaporte de Lances NoZap - R$ ${fmtBR(amount)}`
+                : depositType === 'digital_wallet'
+                  ? `Depósito na Carteira Digital - R$ ${fmtBR(amount)}`
+                  : `Depósito na Carteira de Comissões - R$ ${fmtBR(amount)}`)
+            : `Arremate - ${auction.title}`,
+          card_data: cardData,
+          deposit_type: depositType,
+          is_investor_capital: isInvestorCapital // flag para o backend reconhecer
+        });
 
       console.log('📥 Resposta do backend:', paymentResponse);
 
@@ -280,7 +293,7 @@ export default function AuctionCheckoutModern() {
       const responseData = paymentResponse?.data || paymentResponse;
 
       if (responseData?.success === true) {
-        setPixData(responseData);
+        setPixData(isDigitalWalletPix ? { ...responseData, billing_type: 'PIX' } : responseData);
         setStep('payment');
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
 
@@ -1099,7 +1112,7 @@ export default function AuctionCheckoutModern() {
 
                     <p className="text-xs text-center text-gray-500 flex items-center justify-center gap-1">
                       <Lock className="w-3 h-3" />
-                      Pagamento seguro via ASAAS
+                      Pagamento 100% seguro
                     </p>
                   </div>
                 )}
