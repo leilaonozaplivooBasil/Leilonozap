@@ -141,6 +141,9 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       if (data?.success && data?.pix_payload) {
         setPixData(data);
         setView('pix');
+      } else if (data?.error === 'not_implemented' || data?.error === 'network_or_not_implemented') {
+        // Ambiente de preview do Base44 não tem as rotas /api (elas só existem no site publicado).
+        toast.error('Geração de PIX disponível somente no site publicado (leilaonozap.net).');
       } else {
         toast.error(data?.error || 'Não foi possível gerar o PIX. Tente novamente.');
       }
