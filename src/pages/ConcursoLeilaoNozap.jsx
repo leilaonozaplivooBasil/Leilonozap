@@ -222,11 +222,12 @@ export default function ConcursoLeilaoNozap() {
   }, [currentUser?.id, myCode]);
 
   const myLink = myCode ? `${window.location.origin}/rankpremiado?ref=${myCode}` : '';
+  const myGroupLink = myCode ? `${window.location.origin}/concursoleilaonozap?ref=${myCode}` : '';
   const copyMyLink = async () => {
     try { await navigator.clipboard.writeText(myLink); } catch { /* */ }
     setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500);
   };
-  const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n${myLink}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
+  const shareZapText = `🏆 Tem sorteio de prêmio TODO DIA no grupo do Leilão NoZap! Entra pelo meu link e concorre comigo:\n\n1º link grupo de whatsapp\n${myGroupLink}\n\n2º link ranking premiado\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.\n${myLink}`;
   const config = data.config || {};
 
   // 🔗 LÓGICA ÚNICA DE SHARE — cópia FIEL da Loja Virtual (CatalogProductCard.handleShare).
@@ -270,7 +271,7 @@ export default function ConcursoLeilaoNozap() {
           const file = new File([blob], 'premio-do-dia.jpg', { type: mimeType });
 
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, url: myLink, files: [file] });
+            await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, files: [file] });
             return true;
           }
         }
@@ -283,7 +284,7 @@ export default function ConcursoLeilaoNozap() {
     // NÍVEL 2: Share só texto (sem imagem) — abre a sheet nativa com o link
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText, url: myLink });
+        await navigator.share({ title: 'Rank Premiado Leilão NoZap', text: shareZapText });
         return true;
       } catch (err) {
         if (err.name === 'AbortError') return true;
@@ -1022,6 +1023,7 @@ export default function ConcursoLeilaoNozap() {
                 posicao={me?.periodos?.dia?.posicao || me?.periodos?.geral?.posicao}
                 premio={config.produto_nome || config.premio_dia}
                 link={myLink}
+                groupLink={myGroupLink}
                 onShare={shareZap}
               />
             )}

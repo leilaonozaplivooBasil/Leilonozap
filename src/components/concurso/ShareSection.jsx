@@ -71,12 +71,12 @@ async function drawStory(canvas, { nome, posicao, premio, link }) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
-export default function ShareSection({ nome, posicao, premio, link, onCopied, onShare }) {
+export default function ShareSection({ nome, posicao, premio, link, groupLink, onCopied, onShare }) {
   const canvasRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  const texto = `🏆 Tô em ${ordinal(posicao)} no Rank Premiado do Leilão NoZap! Tem sorteio de prêmio todo dia. Entra no grupo pelo meu link e me ajuda a subir:\n${link}\n\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.`;
+  const texto = `🏆 Tô em ${ordinal(posicao)} no Rank Premiado do Leilão NoZap! Tem sorteio de prêmio todo dia. Entra pelo meu link e me ajuda a subir:\n\n1º link grupo de whatsapp\n${groupLink || link}\n\n2º link ranking premiado\n⚠️ Importante: precisa permanecer no grupo. Se sair, será descontado do número de pessoas indicadas.\n${link}`;
 
   // WhatsApp: usa onShare do parent (3 níveis com imagem do produto) se disponível,
   // senão cai no wa.me texto (fallback). NUNCA manda só texto quando tem imagem.
