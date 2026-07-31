@@ -122,10 +122,10 @@ export default function Carteira() {
           {aprovado ? (
             <p className="text-sm text-green-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Tudo certo! Você já pode sacar — o PIX vai pro CPF {w?.cpf}.</p>
           ) : w?.kyc_status === 'em_analise' ? (
-            <p className="text-sm text-yellow-300">📋 Seus documentos estão em análise. Você poderá sacar assim que for aprovado.</p>
+            <p className="text-sm text-yellow-300">Seus documentos estão em análise. Você poderá sacar assim que for aprovado.</p>
           ) : (
             <div className="space-y-3">
-              {w?.kyc_status === 'reprovado' && w?.kyc?.reject_reason && <p className="text-sm text-red-400">❌ Reprovado: {w.kyc.reject_reason}. Reenvie.</p>}
+              {w?.kyc_status === 'reprovado' && w?.kyc?.reject_reason && <p className="text-sm text-red-400">Reprovado: {w.kyc.reject_reason}. Reenvie.</p>}
               <p className="text-sm text-gray-300">Pra sacar com segurança, valide sua identidade. <strong>O saque só vai pro PIX do seu CPF.</strong></p>
               <div>
                 <label className="text-xs text-gray-400">CPF (sua chave PIX de saque)</label>
@@ -151,7 +151,7 @@ export default function Carteira() {
         <div className="bg-gray-800/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg shadow-black/10">
           <h2 className="font-bold flex items-center gap-2 mb-3"><ArrowDownToLine className="w-5 h-5 text-green-400" /> Sacar saldo</h2>
           {!aprovado ? (
-            <p className="text-sm text-gray-400">🔒 Valide sua identidade (acima) para liberar o saque.</p>
+            <p className="text-sm text-gray-400">Valide sua identidade (acima) para liberar o saque.</p>
           ) : (
             <div className="flex gap-2">
               <Input value={valor} onChange={(e) => setValor(e.target.value)} placeholder="Valor a sacar" className="bg-gray-700 border-gray-600" />

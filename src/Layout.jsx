@@ -652,10 +652,10 @@ export default function Layout({ children, currentPageName }) {
   const _hasPainel = _hasCargo(_REDE_CARGOS);
 
   const loggedMenuItems = [
-    ...(_hasPainel ? [{ title: "🏠 Meu Painel", pageName: "painel" }] : []),
-    { title: "💰 Minha Carteira", pageName: "Carteira" },
-    { title: "⬆️ Evoluir Nível", pageName: "Evoluir" },
-    { title: "🛒 Meus Pedidos", pageName: "MyCatalogOrders" },
+    ...(_hasPainel ? [{ title: "Meu Painel", pageName: "painel" }] : []),
+    { title: "Minha Carteira", pageName: "Carteira" },
+    { title: "Evoluir Nível", pageName: "Evoluir" },
+    { title: "Meus Pedidos", pageName: "MyCatalogOrders" },
     { title: "Meus Arremates", pageName: "MyWinnings" },
     { title: "Perfil", pageName: "Profile" },
   ];

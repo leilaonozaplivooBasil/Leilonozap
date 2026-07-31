@@ -167,7 +167,7 @@ export default function Profile() {
       const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
       if (r?.success) {
         setConfirmedIds(prev => new Set(prev).add(order.id));
-        toast({ title: '✅ Recebimento confirmado!', description: 'Pagamento liberado pro vendedor.' });
+        toast({ title: 'Recebimento confirmado!', description: 'Pagamento liberado pro vendedor.' });
       } else {
         toast({ title: 'Não foi possível confirmar agora', description: r?.error || 'Tente novamente.', variant: 'destructive' });
       }
@@ -184,7 +184,7 @@ export default function Profile() {
     try {
       await base44.entities.CatalogSale.delete(order.id);
       setCatalogOrders(prev => prev.filter(o => o.id !== order.id));
-      toast({ title: '🗑️ Pedido excluído' });
+      toast({ title: 'Pedido excluído' });
     } catch (err) {
       console.error('Erro ao excluir:', err);
       toast({ title: 'Erro ao excluir pedido', variant: 'destructive' });
@@ -393,7 +393,7 @@ export default function Profile() {
 
   const handleSave = async () => {
     if (!currentUser || !currentUser.id) {
-      alert("❌ Erro: Sessão inválida. Faça login novamente.");
+      alert("Erro: Sessão inválida. Faça login novamente.");
       navigate(createPageUrl("Home"));
       return;
     }
@@ -454,7 +454,7 @@ export default function Profile() {
       } catch (_) {}
       
       if (passwordData.newPassword) {
-        alert("✅ Senha alterada com sucesso!");
+        alert("Senha alterada com sucesso!");
       }
       
       await loadUserData();
@@ -1277,7 +1277,7 @@ export default function Profile() {
                 onDone={({ saleId, stars, comment }) => {
                   setCatalogOrders(prev => prev.map(o => o.id === saleId ? { ...o, minha_avaliacao: { stars, comment } } : o));
                   setRatingOrder(null);
-                  toast({ title: '⭐ Avaliação enviada!', description: 'Obrigado pelo feedback.' });
+                  toast({ title: 'Avaliação enviada!', description: 'Obrigado pelo feedback.' });
                 }}
               />
             )}

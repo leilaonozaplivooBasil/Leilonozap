@@ -224,7 +224,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
                 <MapIcon className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-emerald-300 truncate">Visão Geral</p>
+                <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-emerald-300 truncate">Visão Geral</p>
                 <p className="text-[11px] text-gray-400 truncate">Mapa de todo o painel — abra num clique</p>
               </div>
               <ChevronDown className="w-4 h-4 text-emerald-400/60 flex-shrink-0 rotate-[-90deg] group-hover:translate-x-0.5 transition-transform" />
@@ -241,7 +241,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             >
               <ShoppingBag className="w-5 h-5 text-green-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-green-300 truncate">PDV — Tirar Pedido</p>
+                <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">PDV — Tirar Pedido</p>
                 <p className="text-[11px] text-gray-400 truncate">Abrir o caixa e registrar vendas</p>
               </div>
             </button>
@@ -257,7 +257,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             >
               <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-green-300 truncate">{redeMeta.title}</p>
+                <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">{redeMeta.title}</p>
                 <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
               </div>
             </button>
@@ -270,21 +270,21 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
         <div className="p-2">
           <DropdownMenuItem
             onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
-            className="cursor-pointer text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
+            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
           >
             <WalletIcon className="w-4 h-4" />
             Carteira
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate(createPageUrl("Profile"))}
-            className="cursor-pointer text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
+            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
           >
             <UserIcon className="w-4 h-4" />
             Meu perfil
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onLogout}
-            className="cursor-pointer text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 hover:text-red-300 rounded-md gap-3 px-3 py-2"
+            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 hover:text-red-300 rounded-md gap-3 px-3 py-2"
           >
             <LogOut className="w-4 h-4" />
             Sair
