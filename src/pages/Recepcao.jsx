@@ -6,7 +6,7 @@ import PersonagensRede from '@/components/recepcao/PersonagensRede';
 import BlocoVitrine from '@/components/recepcao/BlocoVitrine';
 import QuadrantesVitrine from '@/components/recepcao/QuadrantesVitrine';
 import CartaoCarteira from '@/components/recepcao/CartaoCarteira';
-import BlocoRede from '@/components/recepcao/BlocoRede';
+import CenaRede from '@/components/recepcao/CenaRede';
 import BlocoEntretenimento from '@/components/recepcao/BlocoEntretenimento';
 import SetoresClean from '@/components/recepcao/SetoresClean';
 
@@ -90,11 +90,11 @@ export default function Recepcao() {
       <BlocoVitrine
         tema="branco"
         titulo="Indique. Fature."
-        subtitulo="Ganhe comissão em cada venda da sua rede, em todos os níveis."
-        primario={{ label: 'Entrar na rede', to: '/Licensing' }}
+        subtitulo="Mostre o produto pra quem você conhece e ganhe comissão em cada venda da sua estrutura de negócio."
+        primario={{ label: 'Começar a indicar', to: '/Licensing' }}
         secundario={{ label: 'Ver os planos', to: '/Evoluir' }}
       >
-        <BlocoRede />
+        <CenaRede />
       </BlocoVitrine>
 
       {/* 7 — ENTRETENIMENTO (grid 2 colunas) */}
