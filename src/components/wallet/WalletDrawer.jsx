@@ -45,7 +45,7 @@ function formatDate(d) {
   } catch { return ''; }
 }
 
-export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpdated }) {
+export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpdated, startView = 'wallet' }) {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const [view, setView] = useState('wallet'); // 'wallet' | 'recharge' | 'pix' | 'success'
   const [wallet, setWallet] = useState(null);
@@ -80,14 +80,18 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
 
   useEffect(() => {
     if (open) {
-      setView('wallet');
+      // startView='recharge' abre direto na tela de recarga (usado pelo aviso de
+      // saldo insuficiente na sala do leilão — um clique só até o PIX).
+      setView(startView);
+      setRechargeAmount(null);
+      setCustomAmount('');
       setPixData(null);
       setVisibleCount(15);
       setFilterTab('all');
       loadWallet();
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [open, loadWallet]);
+  }, [open, loadWallet, startView]);
 
   // Polling de confirmação do PIX gerado dentro da carteira
   useEffect(() => {

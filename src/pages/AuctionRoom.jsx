@@ -40,6 +40,8 @@ export default function AuctionRoom() {
 
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
   const [walletOpen, setWalletOpen] = useState(false);
+  // 'wallet' = carteira completa | 'recharge' = já na tela de recarga (saldo insuficiente)
+  const [walletStartView, setWalletStartView] = useState('wallet');
   const spectatorModeParam = searchParams.get("spectator") === "true";
 
   const [auction, setAuction] = useState(null);
@@ -829,10 +831,11 @@ export default function AuctionRoom() {
           <FloatingWalletButton
             balance={userWallet?.balance}
             heldBalance={userWallet?.held_balance}
-            onClick={() => setWalletOpen(true)}
+            onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
           />
           <WalletDrawer
             open={walletOpen}
+            startView={walletStartView}
             onClose={() => setWalletOpen(false)}
             currentUser={currentUser}
             onBalanceUpdated={refreshWalletBalance}
@@ -1255,6 +1258,7 @@ export default function AuctionRoom() {
         }}
         onAddFunds={() => {
           setShowLowBalanceModal(false);
+          setWalletStartView('recharge');
           setWalletOpen(true);
         }}
         onClose={() => setShowLowBalanceModal(false)}
