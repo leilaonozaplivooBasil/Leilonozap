@@ -12,7 +12,6 @@ import {
 import {
   User as UserIcon,
   LogOut,
-  Heart,
   ChevronDown,
   ShoppingBag,
   Gavel,
@@ -25,8 +24,6 @@ import {
   Crown,
   Truck,
   MapPin,
-  Target,
-  Image as ImageIcon,
   Wallet as WalletIcon,
   Map as MapIcon,
 } from "lucide-react";
@@ -271,24 +268,6 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
 
         {/* ===== Ações pessoais ===== */}
         <div className="p-2">
-          {["admin", "super_admin"].includes(roleKey) && (
-            <DropdownMenuItem
-              onClick={() => navigate("/Metas")}
-              className="cursor-pointer text-yellow-300 hover:bg-yellow-500/10 focus:bg-yellow-500/10 hover:text-yellow-200 rounded-md gap-3 px-3 py-2"
-            >
-              <Target className="w-4 h-4" />
-              Metas (CEO)
-            </DropdownMenuItem>
-          )}
-          {["admin", "super_admin"].includes(roleKey) && (
-            <DropdownMenuItem
-              onClick={() => navigate(createPageUrl("PainelMidia"))}
-              className="cursor-pointer text-cyan-300 hover:bg-cyan-500/10 focus:bg-cyan-500/10 hover:text-cyan-200 rounded-md gap-3 px-3 py-2"
-            >
-              <ImageIcon className="w-4 h-4" />
-              Painel de Mídia
-            </DropdownMenuItem>
-          )}
           <DropdownMenuItem
             onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
             className="cursor-pointer text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
@@ -302,13 +281,6 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
           >
             <UserIcon className="w-4 h-4" />
             Meu perfil
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => navigate(createPageUrl("Home") + "?favorites=1")}
-            className="cursor-pointer text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
-          >
-            <Heart className="w-4 h-4" />
-            Favoritos
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onLogout}

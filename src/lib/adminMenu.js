@@ -45,6 +45,7 @@ import {
   CircleUser,
   Trophy,
   User,
+  Target,
 } from "lucide-react";
 
 /**
@@ -82,6 +83,7 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Cupons", pageName: "CuponsAdmin", icon: Ticket },
         { title: "Banners", pageName: "BannerManagement", icon: ImageIcon },
         { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
+        { title: "Painel de Mídia", pageName: "PainelMidia", icon: ImageIcon },
       ],
     },
     {
@@ -104,6 +106,7 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Configurar Pagamentos", pageName: "PaymentSettings", icon: CreditCard },
         { title: "Auditoria de Comissões", pageName: "CommissionPilot", icon: ClipboardCheck },
         { title: "Ativar Planos de Parceiros", pageName: "PartnerPlanActivation", icon: Handshake },
+        { title: "Metas (CEO)", pageName: "Metas", icon: Target },
       ],
     },
     {

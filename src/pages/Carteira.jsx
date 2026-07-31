@@ -75,32 +75,46 @@ export default function Carteira() {
   const aprovado = w?.kyc_status === 'aprovado';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-8 px-4">
-      <div className="max-w-3xl mx-auto space-y-5">
-        <div className="flex items-center gap-2"><Wallet className="w-6 h-6 text-green-400" /><h1 className="text-2xl font-black">Minha Carteira</h1></div>
+    <div className="min-h-screen bg-gray-900 text-white py-8 px-4">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Header — cartão de identidade, mesmo estilo do Perfil */}
+        <div
+          className="relative overflow-hidden rounded-2xl border border-white/10 p-6 sm:p-8 shadow-lg shadow-black/20"
+          style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(17,24,39,0.85) 45%, rgba(17,24,39,0.4)), rgba(31,41,55,0.3)' }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-emerald-500/15 ring-2 ring-emerald-400/40 shrink-0">
+              <Wallet className="w-7 h-7 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 mb-1">Financeiro</p>
+              <h1 className="font-slab text-2xl sm:text-3xl font-extrabold leading-tight">Minha Carteira</h1>
+            </div>
+          </div>
+        </div>
 
         {/* Saldo — commission_balance é a fonte de verdade (sacável e usável na loja);
             saldo_a_liberar são vendas em hold (liberam após confirmação do comprador / prazo). */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Disponível (sacar / usar na loja)</div>
-            <div className="text-2xl font-black text-green-400 tabular-nums">{money(w?.commission_balance)}</div>
+          <div className="bg-gradient-to-br from-green-500/15 to-emerald-500/5 border border-green-500/30 rounded-2xl p-5 shadow-lg shadow-black/10">
+            <div className="text-xs text-gray-400 font-medium">Disponível (sacar / usar na loja)</div>
+            <div className="text-2xl sm:text-3xl font-black text-green-400 tabular-nums mt-1">{money(w?.commission_balance)}</div>
           </div>
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">A liberar (suas vendas)</div>
-            <div className="text-2xl font-black text-blue-300 tabular-nums">{money(w?.saldo_a_liberar)}</div>
-            <div className="text-[11px] text-gray-400 mt-1">Libera quando o comprador confirma ou no prazo (PIX 7d · cartão 14d)</div>
+          <div className="bg-gradient-to-br from-blue-500/15 to-blue-500/5 border border-blue-500/30 rounded-2xl p-5 shadow-lg shadow-black/10">
+            <div className="text-xs text-gray-400 font-medium">A liberar (suas vendas)</div>
+            <div className="text-2xl sm:text-3xl font-black text-blue-300 tabular-nums mt-1">{money(w?.saldo_a_liberar)}</div>
+            <div className="text-[11px] text-gray-400 mt-1.5">Libera quando o comprador confirma ou no prazo (PIX 7d · cartão 14d)</div>
           </div>
         </div>
         {Number(w?.saldo_alocado) > 0 && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-            <div className="text-xs text-gray-400">Em saque (aguardando aprovação)</div>
-            <div className="text-2xl font-black text-yellow-400 tabular-nums">{money(w?.saldo_alocado)}</div>
+          <div className="bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 border border-yellow-500/30 rounded-2xl p-5 shadow-lg shadow-black/10">
+            <div className="text-xs text-gray-400 font-medium">Em saque (aguardando aprovação)</div>
+            <div className="text-2xl font-black text-yellow-400 tabular-nums mt-1">{money(w?.saldo_alocado)}</div>
           </div>
         )}
 
         {/* KYC */}
-        <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+        <div className="bg-gray-800/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg shadow-black/10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold flex items-center gap-2"><kyc.Icon className={`w-5 h-5 ${kyc.cor}`} /> Validação de identidade (KYC)</h2>
             <span className={`text-sm font-semibold ${kyc.cor}`}>{kyc.label}</span>
@@ -134,7 +148,7 @@ export default function Carteira() {
         </div>
 
         {/* Saque */}
-        <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+        <div className="bg-gray-800/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg shadow-black/10">
           <h2 className="font-bold flex items-center gap-2 mb-3"><ArrowDownToLine className="w-5 h-5 text-green-400" /> Sacar saldo</h2>
           {!aprovado ? (
             <p className="text-sm text-gray-400">🔒 Valide sua identidade (acima) para liberar o saque.</p>
@@ -151,7 +165,7 @@ export default function Carteira() {
         {/* Extrato */}
         {/* SAQUES */}
         {(w?.withdrawals?.length > 0) && (
-          <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+          <div className="bg-gray-800/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg shadow-black/10">
             <h2 className="font-bold mb-3">Saques</h2>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {(w?.withdrawals || []).map((s, i) => (
