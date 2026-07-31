@@ -114,12 +114,20 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     if (effectiveAmount < 5) { toast.error('Valor mínimo: R$ 5,00'); return; }
     setGenerating(true);
     try {
-      const result = await base44.functions.invoke('createMercadoPagoDeposit', {
-        user_id: currentUser.id,
-        amount: effectiveAmount,
+      // 🔒 createAsaasPayment é a função real publicada na Vercel (gera PIX via Mercado
+      // Pago). "createMercadoPagoDeposit" só existe do lado Base44 e quebrava com
+      // not_implemented no site publicado — mesmo ajuste já feito no checkout do leilão.
+      const result = await base44.functions.invoke('createAsaasPayment', {
+        auction_id: null,
+        buyer_id: currentUser.id,
         buyer_name: currentUser.full_name || 'Cliente',
         buyer_email: currentUser.email,
         buyer_cpf: currentUser.cpf || '',
+        buyer_phone: currentUser.phone || '',
+        amount: effectiveAmount,
+        billing_type: 'PIX',
+        description: `Depósito na Carteira Digital - R$ ${fmtBR(effectiveAmount)}`,
+        deposit_type: 'digital_wallet',
       });
       const data = result?.data || result;
       if (data?.success && data?.pix_payload) {
