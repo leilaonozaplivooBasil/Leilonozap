@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
+import { getStoredUser } from '@/lib/session';
 
 const AppUser = base44.entities.AppUser;
 
@@ -29,18 +30,17 @@ export function useSecureRole(allowedRoles = [], redirectTo = 'Home') {
 
         const verify = async () => {
             try {
-                const savedUserJSON = localStorage.getItem('currentUser');
-                const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+                // 🛡️ SESSÃO PERSISTENTE: a verdade é o localStorage. O marcador de aba
+                // (sessionStorage) morre ao fechar a aba/app e NÃO pode significar logout.
+                const cached = getStoredUser();
 
-                if (!savedUserJSON || !isLoggedIn) {
+                if (!cached) {
                     if (active) {
                         setStatus('unauthenticated');
                         navigate(createPageUrl('Landing'), { replace: true });
                     }
                     return;
                 }
-
-                const cached = JSON.parse(savedUserJSON);
 
                 // SEGURANÇA: Valida a role diretamente no banco de dados.
                 // Isso previne que alguém altere a role no localStorage manualmente.
@@ -66,12 +66,11 @@ export function useSecureRole(allowedRoles = [], redirectTo = 'Home') {
 
                 if (!active) return;
 
+                // ⚠️ Consulta vazia NÃO é prova de que o usuário não existe (pode ser
+                // filtro/permissão/rede). Nunca apagar a sessão aqui — só logout explícito
+                // encerra a sessão. Segue com o cache local.
                 if (!verifiedUser) {
-                    localStorage.removeItem('currentUser');
-                    sessionStorage.removeItem('isLoggedIn');
-                    setStatus('unauthenticated');
-                    navigate(createPageUrl('Landing'), { replace: true });
-                    return;
+                    verifiedUser = cached;
                 }
 
                 const role = verifiedUser.role || 'user';

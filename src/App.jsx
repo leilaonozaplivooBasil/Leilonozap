@@ -14,6 +14,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 // entrada do PWA) ficam no bundle inicial. O resto baixa sob demanda, senão o
 // primeiro carregamento arrasta dezenas de painéis admin que o cliente nunca abre.
 import RequireRole from '@/components/common/RequireRole';
+import HomeGate from '@/components/common/HomeGate';
 import Catalog from '@/pages/Catalog';
 import Recepcao from '@/pages/Recepcao';
 import PageNotFound from './lib/PageNotFound';
@@ -160,11 +161,15 @@ const AuthenticatedApp = () => {
       </div>
     }>
     <Routes>
-    {/* 🆕 RECEPÇÃO — página de chegada na raiz "/" (landing forte com CTA pro leilão) */}
+    {/* 🆕 RECEPÇÃO — página de chegada na raiz "/" (landing forte com CTA pro leilão).
+        Padrão de mercado: visitante vê a Recepção; quem já está logado entra
+        direto nos Leilões (HomeGate decide de forma síncrona, sem flash). */}
     <Route path="/" element={
-      <LayoutWrapper currentPageName="Recepcao">
-        <Recepcao />
-      </LayoutWrapper>
+      <HomeGate>
+        <LayoutWrapper currentPageName="Recepcao">
+          <Recepcao />
+        </LayoutWrapper>
+      </HomeGate>
     } />
     {/* Portal de painéis movido pra /portal */}
     <Route path="/portal" element={

@@ -37,9 +37,9 @@ export default function SellerPanel() {
         const hasValidId = savedUser?.id && /^[a-f0-9]{24}$/.test(savedUser.id);
 
         if (!hasValidId || (!savedUser.is_seller && savedUser.role !== 'admin' && savedUser.role !== 'super_admin')) {
-          // ID inválido ou sem permissão → limpa e mostra login
-          localStorage.removeItem('currentUser');
-          sessionStorage.removeItem('isLoggedIn');
+          // Sem permissão de vendedor → apenas exibe o login de vendedor.
+          // ⚠️ NÃO apagar a sessão: um cliente comum abrindo esta página estava
+          // sendo deslogado do site inteiro. Só logout explícito encerra a sessão.
           setIsLoading(false);
           return;
         }

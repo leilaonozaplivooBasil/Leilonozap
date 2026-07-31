@@ -829,9 +829,9 @@ export default function Layout({ children, currentPageName }) {
                   alt="Leilão NoZap"
                   // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
                   className={`${currentPageName === 'Recepcao' ? 'h-12 sm:h-14' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
-                  // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
-                  // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
-                  onClick={() => navigate("/")}
+                  // 🏠 logo: visitante volta pra abertura ("/"); quem está logado vai
+                  // pros Leilões — cair na Recepção logado passa a impressão de ter deslogado.
+                  onClick={() => navigate(isLoggedIn ? "/leiloes" : "/")}
                   fetchPriority="high"
                   decoding="async"
                   width={440}
