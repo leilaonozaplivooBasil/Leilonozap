@@ -1,13 +1,11 @@
 // leilao — landing server-side dos links de LEILÃO (/l/:id).
-// Espelho fiel de api/produto.js (que já funciona na Loja Virtual):
+// MESMO PROCESSO do api/produto.js (Loja Virtual), que já funciona:
 // (1) emite meta tags OG com a FOTO REAL do leilão (preview no WhatsApp),
-// (2) redireciona o navegador real pra sala do leilão /AuctionRoom?id=...
+// (2) redireciona o navegador real pra sala /AuctionRoom?id=...
 //
-// ⚠️ IMPORTANTE — NÃO QUEBRAR O QUE JÁ FUNCIONA:
-// Esta rota é APENAS leitura + HTML. Ela não dá lance, não mexe em saldo,
-// carteira, comissão ou status do leilão. Se a consulta falhar, cai no
-// fallback (logo) e ainda assim redireciona — o usuário nunca fica preso.
-// Qualquer alteração aqui deve continuar respeitando isso.
+// ⚠️ NÃO QUEBRAR O QUE FUNCIONA: esta rota é APENAS leitura + HTML. Não dá lance,
+// não mexe em saldo, carteira, comissão nem status do leilão. Se a consulta falhar,
+// usa a logo como imagem e AINDA redireciona — o usuário nunca fica preso.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SITE = 'https://leilaonozap.net';
