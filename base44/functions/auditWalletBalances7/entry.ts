@@ -42,11 +42,13 @@ Deno.serve(async (req) => {
             for (const user of users) {
                 const uid = user.id;
 
-                const [deposResp, salesResp, commResp, walletTxResp] = await Promise.all([
+                const [deposResp, salesResp, commResp, walletTxResp, allDeposResp, depositTxResp] = await Promise.all([
                     sbFetch(`asaas_payments?wallet_deposit_user_id=eq.${uid}&status=in.(confirmed,received)&select=id,value,status,payment_date,created_date`),
                     sbFetch(`catalog_sales?buyer_id=eq.${uid}&status=eq.paid&select=id,total_amount,status,payment_confirmed_date`),
                     sbFetch(`commission_records?user_id=eq.${uid}&status=in.(confirmed,paid)&select=id,amount,role,status,sale_id`),
                     sbFetch(`digital_wallet_transactions?user_id=eq.${uid}&type=in.(bid_hold,bid_release)&select=id,type,direction,amount,status,related_auction_id,created_date&order=created_date.asc`),
+                    sbFetch(`asaas_payments?wallet_deposit_user_id=eq.${uid}&select=id,value,status,payment_date,created_date,payment_id,external_reference&order=created_date.asc`),
+                    sbFetch(`digital_wallet_transactions?user_id=eq.${uid}&type=eq.deposit&select=id,amount,status,description,created_date&order=created_date.asc`),
                 ]);
 
                 const deposits = Array.isArray(deposResp.data) ? deposResp.data : [];
@@ -88,6 +90,8 @@ Deno.serve(async (req) => {
                     n_compras: sales.length,
                     n_comissoes: commissions.length,
                     n_lances: walletTx.length,
+                    todos_depositos_asaas_payments: Array.isArray(allDeposResp.data) ? allDeposResp.data : [],
+                    log_deposit_wallet_tx: Array.isArray(depositTxResp.data) ? depositTxResp.data : [],
                 });
             }
         }
