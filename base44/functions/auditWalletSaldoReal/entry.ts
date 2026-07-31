@@ -156,20 +156,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Compacta o resultado: mantém agregados e só as primeiras 5 linhas de cada detalhe (evita resposta gigante)
-    const resultCompact = result.map((r: any) => ({
-      ...r,
-      deposits_detalhe: r.deposits_detalhe.slice(0, 5),
-      commissions_detalhe: r.commissions_detalhe.slice(0, 5),
+    // Resumo apenas com os totais (sem detalhamento linha-a-linha) — evita resposta gigante
+    const resultSummary = result.map((r: any) => ({
+      user_id: r.user_id,
+      nome: r.nome,
+      saldo_atual_banco: r.saldo_atual_banco,
+      saldo_alocado_atual: r.saldo_alocado_atual,
+      deposits_total: r.deposits_total,
+      deposits_count: r.deposits_detalhe.length,
+      commissions_total: r.commissions_total,
       commissions_count: r.commissions_detalhe.length,
-      bid_events_detalhe: r.bid_events_detalhe.slice(0, 8),
-      bid_events_count: r.bid_events_detalhe.length,
+      bid_holds_total: r.bid_holds_total,
+      bid_releases_total: r.bid_releases_total,
+      orphan_holds_total: r.orphan_holds_total,
+      saldo_calculado: r.saldo_calculado,
+      diferenca: r.diferenca,
     }));
 
     return Response.json({
-      catalog_sales_columns: columnNames,
       loja_paid_payment_method_breakdown: paymentMethodBreakdown,
-      resultado: resultCompact,
+      resultado: resultSummary,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
