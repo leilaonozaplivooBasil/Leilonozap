@@ -825,10 +825,10 @@ export default function Layout({ children, currentPageName }) {
                     placa escura discreta atrás, senão o nome simplesmente desaparece. */}
                 <div>
                 <img
-                  src={isRecepcao ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3490cf383_image.png' : logoUrl}
+                  src={isRecepcao ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a4d99a15d_image.png' : logoUrl}
                   alt="Leilão NoZap"
                   // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
-                  className={`${currentPageName === 'Recepcao' ? 'h-9 sm:h-10' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
+                  className={`${currentPageName === 'Recepcao' ? 'h-12 sm:h-14' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
@@ -836,9 +836,7 @@ export default function Layout({ children, currentPageName }) {
                   decoding="async"
                   width={440}
                   height={160}
-                  // 🌿 A logo da recepção vem com um fundo branco/creme chapado no PNG.
-                  // multiply faz esse branco dissolver na barra clara, sem placa visível.
-                  style={isRecepcao ? { mixBlendMode: 'multiply' } : undefined}
+
                 />
                 </div>
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
