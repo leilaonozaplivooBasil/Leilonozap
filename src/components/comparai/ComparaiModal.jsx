@@ -199,7 +199,8 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
     setIsSharing(true);
 
     try {
-      const productUrl = `${window.location.origin}/AuctionRoom?id=${auction.id}`;
+      // /l/:id = rota server-side com a foto real do leilão no preview do WhatsApp
+      const productUrl = `${window.location.origin}/l/${auction.id}`;
       const savings = comparisonData?.savings || 0;
       const savingsPercent = comparisonData?.savingsPercent || 0;
       const currentPrice = localAuction.current_price || localAuction.starting_price;
@@ -265,7 +266,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
       
     } catch (error) {
       if (error.name !== 'AbortError') {
-        const productUrl = `${window.location.origin}/AuctionRoom?id=${auction.id}`;
+        const productUrl = `${window.location.origin}/l/${auction.id}`;
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`🔥 Arremate: ${productUrl}`)}`, '_blank');
       }
     } finally {

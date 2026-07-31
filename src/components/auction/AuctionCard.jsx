@@ -222,7 +222,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
     console.log('🔥 COMPARTILHAR ACIONADO!');
 
-    const productUrl = `${window.location.origin}/AuctionRoom?id=${auction.id}`;
+    // Rota server-side (/l/:id): garante o preview do WhatsApp com a FOTO REAL do
+    // leilão. Ela só emite as meta tags e redireciona pra /AuctionRoom?id=... —
+    // o fluxo de lance segue exatamente o mesmo.
+    const productUrl = `${window.location.origin}/l/${auction.id}`;
     const currentPrice = auction.current_price || auction.starting_price;
 
     if (!auction.id || !displayTitle) {

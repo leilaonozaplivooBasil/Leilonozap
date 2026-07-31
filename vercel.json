@@ -6,6 +6,7 @@
   "rewrites": [
     { "source": "/c/:cargo", "destination": "/api/convite?cargo=:cargo" },
     { "source": "/p/:id", "destination": "/api/produto?id=:id" },
+    { "source": "/l/:id", "destination": "/api/leilao?id=:id" },
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ],
   "crons": [

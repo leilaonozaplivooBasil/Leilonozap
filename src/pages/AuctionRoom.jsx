@@ -707,8 +707,10 @@ export default function AuctionRoom() {
     if (!auction) return;
     setIsShareModalOpen(false);
 
-    // 🎯 LINK DIRETO PARA ESTA PÁGINA DO PRODUTO
-    const productUrl = window.location.href; // Usa a URL atual (já está na página do produto)
+    // 🎯 LINK DE COMPARTILHAMENTO: rota server-side /l/:id — o WhatsApp precisa dela
+    // pra mostrar a FOTO REAL do leilão no preview (a URL da SPA só devolve a logo).
+    // Ela redireciona de volta pra esta mesma sala; nada do fluxo de lance muda.
+    const productUrl = `${window.location.origin}/l/${auction.id}`;
     const currentPrice = auction.current_price || auction.starting_price;
 
     const shareText = `🔥 LEILÃO NOZAP!
