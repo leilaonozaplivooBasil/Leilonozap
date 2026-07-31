@@ -836,6 +836,9 @@ export default function Layout({ children, currentPageName }) {
                   decoding="async"
                   width={440}
                   height={160}
+                  // 🌿 A logo da recepção vem com um fundo branco/creme chapado no PNG.
+                  // multiply faz esse branco dissolver na barra clara, sem placa visível.
+                  style={isRecepcao ? { mixBlendMode: 'multiply' } : undefined}
                 />
                 </div>
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
