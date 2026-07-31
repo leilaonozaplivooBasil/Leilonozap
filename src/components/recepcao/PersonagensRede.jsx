@@ -63,11 +63,11 @@ export default function PersonagensRede() {
             className="mt-[14px] leading-[1.4] text-nz-tinta-fraca"
             style={{ fontSize: 'clamp(1.05rem, 2.2vw, 1.5rem)' }}
           >
-            Lojista, Executivo ou Licenciado — escolha seu papel na rede e comece a faturar com o Leilão NoZap.
+            Lojista, Executivo ou Licenciado — escolha seu modelo de negócio e comece a faturar com o Leilão NoZap.
           </p>
           <div className="mt-8">
             <ParCTA
-              primario={{ label: 'Escolher meu papel', to: '/Licensing' }}
+              primario={{ label: 'Ver modelos de negócio', to: '/Licensing' }}
               secundario={{ label: 'Ver os planos', to: '/Evoluir' }}
             />
           </div>
