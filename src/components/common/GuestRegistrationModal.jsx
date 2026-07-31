@@ -282,21 +282,23 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
           A transparência é nosso maior compromisso.
         </p>
         <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-60 overflow-y-auto text-gray-400 space-y-3 text-sm">
-          <p>Ao participar, você, doravante denominado PARTICIPANTE, declara estar ciente e concordar com os seguintes termos:</p>
+          <p className="font-bold text-white">TERMO DE ADESÃO E PARTICIPAÇÃO — COMPETIÇÃO DE PREÇOS LEILÃO NOZAP</p>
+          <p>Ao participar, você, doravante denominado PARTICIPANTE, declara estar ciente e concordar expressamente com os seguintes termos:</p>
           <ul className="list-disc list-inside space-y-2">
-            <li><strong className="text-orange-400">ESTRATÉGIA COMERCIAL:</strong> O "Leilão NoZap" é uma estratégia de marketing e vendas, não se configurando como um leilão oficial regido por Leiloeiro Público Oficial.</li>
-            <li><strong className="text-white">ORIGEM DOS PRODUTOS:</strong> Nossos produtos são provenientes de arremates de lotes, devoluções de grandes varejistas e itens de mostruário. Todos são rigorosamente testados e 100% funcionais.</li>
-            <li><strong className="text-red-500">SEM GARANTIA DE FÁBRICA:</strong> Os produtos não possuem garantia original do fabricante. O preço imbatível reflete esta condição.</li>
-            <li><strong className="text-red-400">NÃO HÁ DEVOLUÇÃO:</strong> Uma vez arrematado, o produto é seu. Não aceitamos trocas ou devoluções. Esta é a condição para garantir os preços baixos.</li>
-            <li><strong className="text-yellow-400">PAGAMENTO OBRIGATÓRIO:</strong> O pagamento do valor arrematado é obrigatório e deve ser realizado via PIX ou Cartão de Crédito na conta da Leilão NoZap.</li>
-            <li><strong className="text-yellow-500">PRAZO DE PAGAMENTO:</strong> O prazo para pagamento é de <strong className="text-white">1 hora e 30 minutos</strong> após o arremate. O não cumprimento resultará no cancelamento da compra.</li>
-            <li><strong className="text-red-600 font-bold">PENALIDADE POR NÃO PAGAMENTO:</strong> O não pagamento do item arrematado dentro do prazo resultará na <strong className="underline">EXCLUSÃO PERMANENTE E IRREVOGÁVEL</strong> do PARTICIPANTE de todos os canais e futuros leilões do Leilão NoZap.</li>
+            <li><strong className="text-orange-400">1. NATUREZA DA COMPETIÇÃO:</strong> A "Competição de Preços Leilão NoZap" constitui exclusivamente uma estratégia de marketing e vendas operada pela COMPRAS FULL COMÉRCIO LTDA (CNPJ 51.544.091/0001-67), não se configurando como leilão público oficial, não sendo regida pela Lei nº 21.981/2024 nem por qualquer norma que discipline leilões judiciais ou extrajudiciais. O PARTICIPANTE declara compreender e aceitar integralmente essa distinção.</li>
+            <li><strong className="text-white">2. DEPÓSITO DE PARTICIPAÇÃO OBRIGATÓRIO:</strong> Para habilitar-se à Competição, o PARTICIPANTE deve realizar um depósito antecipado mínimo de R$ 100,00 (cem reais), via PIX ou Cartão de Crédito, creditado em carteira digital vinculada à sua conta na plataforma. Referido depósito constitui reserva de intenção de compra.</li>
+            <li><strong className="text-white">3. NATUREZA DO LANCE — INTENÇÃO DE COMPRA:</strong> Cada lance emitido equivale a uma declaração formal de intenção de compra, reconhecendo que sua participação altera dinamicamente o preço do produto disputado. O valor do lance é automaticamente reservado da carteira digital no momento de sua emissão.</li>
+            <li><strong className="text-green-400">4. REGRA DE DESCONTO GARANTIDO:</strong> 4.1. Caso vença: o valor depositado será abatido automaticamente do preço final arrematado. 4.2. Caso não vença: o saldo em carteira poderá ser utilizado na Loja Virtual com desconto garantido de 30% sobre o preço de mercado, de forma automática e sem prazo de validade.</li>
+            <li><strong className="text-red-500">5. ORIGEM DOS PRODUTOS:</strong> Produtos provenientes de arremates de lotes, devoluções e itens de mostruário, testados e 100% funcionais. Não possuem garantia original do fabricante.</li>
+            <li><strong className="text-red-400">6. POLÍTICA DE NÃO DEVOLUÇÃO:</strong> Uma vez concluída a aquisição, não são admitidas trocas ou devoluções, salvo vício oculto nos termos do CDC.</li>
+            <li><strong className="text-yellow-500">7. PRAZO DE PAGAMENTO:</strong> O saldo eventualmente devido após o arremate deve ser quitado em <strong className="text-white">1 (uma) hora e 30 (trinta) minutos</strong>. O não cumprimento implica cancelamento automático e manutenção do crédito em carteira.</li>
+            <li><strong className="text-red-600 font-bold">8. PENALIDADE POR INADIMPLÊNCIA:</strong> O não pagamento resultará na <strong className="underline">SUSPENSÃO PERMANENTE E IRREVOGÁVEL</strong> do PARTICIPANTE de todos os canais e futuras competições da COMPRAS FULL COMÉRCIO LTDA.</li>
           </ul>
         </div>
         <div className="flex items-center space-x-2 pt-2">
           <Checkbox id="terms" checked={termsAccepted} onCheckedChange={setTermsAccepted} className="border-gray-600 data-[state=checked]:bg-green-600"/>
           <label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-300">
-            Li, entendi e concordo com todos os termos.
+            Declaro que li, compreendi e concordo integralmente com todos os termos, reconhecendo que se trata de uma estratégia de marketing e que este não é um leilão oficial.
           </label>
         </div>
       </CardContent>
@@ -304,7 +306,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
         <Button variant="outline" onClick={onClose} className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancelar</Button>
         <Button onClick={() => setStep(2)} disabled={!termsAccepted} className="bg-green-600 hover:bg-green-700">
           <ShieldCheck className="w-4 h-4 mr-2" />
-          Concordo e Quero me Cadastrar
+          Concordo e Quero Participar
         </Button>
       </CardFooter>
     </>
