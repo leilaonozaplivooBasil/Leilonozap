@@ -823,12 +823,12 @@ export default function Layout({ children, currentPageName }) {
                     AdminTopNav (barra no topo), acessível também no mobile. */}
                 {/* A logo tem letreiro branco: na barra clara ela precisa de uma
                     placa escura discreta atrás, senão o nome simplesmente desaparece. */}
-                <div className={isRecepcao ? 'rounded-lg bg-nz-verde-escuro px-2.5 py-1' : undefined}>
+                <div>
                 <img
-                  src={logoUrl}
+                  src={isRecepcao ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2b35c0bd1_image.png' : logoUrl}
                   alt="Leilão NoZap"
                   // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
-                  className={`${currentPageName === 'Recepcao' ? 'h-7' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
+                  className={`${currentPageName === 'Recepcao' ? 'h-9 sm:h-10' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
