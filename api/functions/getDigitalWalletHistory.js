@@ -82,22 +82,39 @@ export default async function handler(req, res) {
     // Título do leilão de cada lance (pra não mostrar "Lance — Leilão" genérico)
     const auctionIds = [...new Set((Array.isArray(bids) ? bids : []).map((b) => b.auction_id).filter(Boolean))].slice(0, 100);
     const auctionTitles = {};
+    const auctionInfo = {};
     if (auctionIds.length) {
       try {
         const inList = auctionIds.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-        const ar = await (await sb(`auctions?select=id,title&id=in.(${inList})`)).json();
-        for (const a of Array.isArray(ar) ? ar : []) auctionTitles[a.id] = a.title;
+        const ar = await (await sb(`auctions?select=id,title,winner_id,current_price,status&id=in.(${inList})`)).json();
+        for (const a of Array.isArray(ar) ? ar : []) {
+          auctionTitles[a.id] = a.title;
+          auctionInfo[a.id] = a;
+        }
       } catch { /* sem o título, a linha ainda aparece como "Leilão" */ }
     }
 
+    // 💚 TRANSPARÊNCIA DO LANCE: no modelo de reserva, o dinheiro fica preso APENAS no
+    // lance que está na frente. Todo lance anterior/superado já teve o valor devolvido.
+    // Aqui o extrato diz isso em português claro, pra ninguém achar que "perdeu" o valor.
+    const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
     for (const b of Array.isArray(bids) ? bids : []) {
+      const a = auctionInfo[b.auction_id];
+      const valor = money2(b.bid_amount);
+      const ehLiderDesteLance = !!a && a.winner_id === userId && money2(a.current_price) === valor;
+      const encerrado = !!a && a.status !== 'active';
+
+      let bid_state = 'superado'; // padrão seguro: valor já devolvido
+      if (ehLiderDesteLance) bid_state = encerrado ? 'arrematado' : 'liderando';
+
       transactions.push({
         id: `bid-${b.id}`,
         type: 'bid',
         title: `Lance — ${auctionTitles[b.auction_id] || 'Leilão'}`,
         source: 'Leilão',
-        amount: Number(b.bid_amount) || 0,
+        amount: valor,
         status: 'info',
+        bid_state,
         date: b.created_date,
       });
     }

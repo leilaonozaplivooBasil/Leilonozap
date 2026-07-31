@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
+import BidStateTag from '@/components/wallet/BidStateTag';
 
 const QUICK_AMOUNTS = [20, 50, 100, 200];
 
@@ -333,6 +334,9 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                                 <p className="text-xs text-gray-400">
                                   {tx.source} · {formatDate(tx.date)}
                                 </p>
+                                {/* Estado do lance embaixo do produto: no celular o texto
+                                    completo cabe aqui sem apertar o valor à direita. */}
+                                {tx.type === 'bid' && <BidStateTag state={tx.bid_state} />}
                               </div>
                               <div className="text-right flex-shrink-0">
                                 {tx.type === 'bid' ? (
