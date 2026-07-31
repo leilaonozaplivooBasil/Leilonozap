@@ -813,9 +813,9 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: isRecepcao ? 'rgba(255, 255, 255, 0.82)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isRecepcao ? '1px solid #DDE4DF' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isRecepcao ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: isRecepcao ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isRecepcao ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isRecepcao ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="relative flex h-14 sm:h-16 justify-between items-center">
+            <div className={`relative flex justify-between items-center ${isRecepcao ? 'h-14' : 'h-14 sm:h-16'}`}>
 
               {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
               <div className="flex items-center gap-2 md:gap-4">
@@ -823,12 +823,12 @@ export default function Layout({ children, currentPageName }) {
                     AdminTopNav (barra no topo), acessível também no mobile. */}
                 {/* A logo tem letreiro branco: na barra clara ela precisa de uma
                     placa escura discreta atrás, senão o nome simplesmente desaparece. */}
-                <div className={isRecepcao ? 'rounded-xl bg-nz-verde-escuro px-3 py-1.5' : undefined}>
+                <div className={isRecepcao ? 'rounded-lg bg-nz-verde-escuro px-2.5 py-1' : undefined}>
                 <img
                   src={logoUrl}
                   alt="Leilão NoZap"
                   // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
-                  className={`${currentPageName === 'Recepcao' ? 'h-8 sm:h-9' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
+                  className={`${currentPageName === 'Recepcao' ? 'h-7' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}
@@ -912,7 +912,7 @@ export default function Layout({ children, currentPageName }) {
           onLogout={handleLogout}
         />
 
-        <main className={isLandingPage ? "" : "pt-14 sm:pt-16"}>
+        <main className={isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")}>
           {/* 26/07 — MENU DO PAINEL NO TOPO (substitui a sidebar lateral de 240px):
               barra de comando sticky com mega-menu por seção, grade completa e
               busca por Cmd+K. Libera a largura inteira da tela para o conteúdo. */}

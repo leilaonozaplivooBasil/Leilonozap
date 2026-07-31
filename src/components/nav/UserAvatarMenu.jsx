@@ -118,11 +118,11 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
     return (
       <Button
         onClick={onLoginClick}
-        className="flex items-center gap-2 text-sm font-semibold text-white rounded-xl border-0 transition-all duration-300 hover:scale-105"
+        className={`flex items-center gap-2 font-medium text-white border-0 transition-all duration-300 hover:scale-105 ${temaClaro ? 'rounded-full text-[13px]' : 'text-sm font-semibold rounded-xl'}`}
         style={temaClaro ? {
-          background: "linear-gradient(135deg, #2E9D63, #1B7A48)",
-          border: "1px solid #1B7A48",
-          boxShadow: "0 4px 14px rgba(27,122,72,0.28)",
+        background: "#1B7A48",
+        border: "1px solid #1B7A48",
+        boxShadow: "none",
         } : {
           background: "linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))",
           border: "1px solid rgba(16,185,129,0.3)",
@@ -164,7 +164,7 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
       <DropdownMenuTrigger asChild>
         <button
           className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full transition-all duration-300 ${temaClaro ? 'hover:bg-black/5' : 'hover:bg-white/5'}`}
-          style={{ border: temaClaro ? "1px solid #DDE4DF" : "1px solid rgba(255,255,255,0.08)" }}
+          style={{ border: temaClaro ? "none" : "1px solid rgba(255,255,255,0.08)" }}
         >
           {/* Avatar */}
           <div
@@ -178,7 +178,7 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
             )}
           </div>
           {/* Nome (truncado, só desktop largo) */}
-          <span className={`hidden lg:inline font-slab text-sm font-normal max-w-[120px] truncate ${temaClaro ? 'text-nz-tinta' : 'text-white'}`}>
+          <span className={`hidden lg:inline font-slab font-normal max-w-[120px] truncate ${temaClaro ? 'text-[13px] text-nz-tinta' : 'text-sm text-white'}`}>
             {fullName.split(" ")[0]} {fullName.split(" ")[1] || ""}
           </span>
           <ChevronDown className={`w-4 h-4 ${temaClaro ? 'text-nz-tinta-fraca' : 'text-gray-400'}`} />

@@ -79,10 +79,13 @@ export default function NavDesktop({
                 target={s.external ? { external: s.external } : s.href}
                 className="flex flex-col items-center gap-[3px] group outline-none"
               >
-                {/* tile 3D na paleta: gradiente sálvia → verde floresta, brilho interno */}
+                {/* Tema claro (Recepção): sem tile, sem relevo — só o ícone em traço fino.
+                    Tema escuro: tile 3D original, intacto. */}
                 <span
-                  className="relative w-[38px] h-[38px] rounded-xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"
-                  style={{
+                  className={temaClaro
+                    ? "relative flex h-[26px] w-[26px] items-center justify-center"
+                    : "relative w-[38px] h-[38px] rounded-xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105"}
+                  style={temaClaro ? undefined : {
                     background: `linear-gradient(150deg, ${P.sage} 0%, ${P.forest} 62%, #3c5a3a 100%)`,
                     border: active ? `1.5px solid ${P.beige}` : "1px solid rgba(255,255,255,0.28)",
                     boxShadow: active
@@ -90,7 +93,15 @@ export default function NavDesktop({
                       : "0 5px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -3px 6px rgba(0,0,0,0.25)",
                   }}
                 >
-                  <s.icon className="w-[19px] h-[19px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+                  {temaClaro ? (
+                    <s.icon
+                      className="h-[18px] w-[18px] transition-colors group-hover:text-nz-verde"
+                      strokeWidth={1.5}
+                      style={{ color: active ? P.forest : '#5C6B62' }}
+                    />
+                  ) : (
+                    <s.icon className="w-[19px] h-[19px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+                  )}
                   {s.live && (
                     <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2" aria-hidden>
                       <span className="animate-ping absolute h-full w-full rounded-full bg-red-500 opacity-75" />
@@ -99,11 +110,19 @@ export default function NavDesktop({
                   )}
                 </span>
                 <span
-                  className="font-slab text-[9.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap leading-none transition-colors"
+                  className={`font-slab font-bold uppercase whitespace-nowrap leading-none transition-colors group-hover:text-nz-verde ${temaClaro ? 'text-[10px] tracking-[0.16em]' : 'text-[9.5px] tracking-[0.14em]'}`}
                   style={{ color: active ? (temaClaro ? P.forest : P.sage) : (temaClaro ? '#5C6B62' : P.gray) }}
                 >
                   {s.title}
                 </span>
+                {/* Ativo no tema claro: um traço fino, no lugar da moldura do tile */}
+                {temaClaro && (
+                  <span
+                    className="mt-[3px] block h-[2px] w-full rounded-full"
+                    style={{ background: active ? '#1B7A48' : 'transparent' }}
+                    aria-hidden="true"
+                  />
+                )}
               </SectorLink>
 
               {openSector === s.key && (
@@ -154,6 +173,19 @@ export default function NavDesktop({
           rank no canto. Tudo em items-center no mesmo eixo dos setores centrais. */}
       <div className="flex items-center gap-x-5">
         {/* === RANK PREMIADO — agrupado com a loja, antes do perfil (essência dourada → bege da paleta) === */}
+        {temaClaro ? (
+          /* Tema claro: sem placa nem troféu — link de texto com um pontinho */
+          <Link
+            to="/rankpremiado"
+            className="group flex items-center gap-2 whitespace-nowrap"
+            aria-label="Rank Premiado Leilão NoZap"
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#E0A82E' }} aria-hidden="true" />
+            <span className="font-slab text-[10px] font-bold uppercase tracking-[0.16em] text-nz-tinta-fraca transition-colors group-hover:text-nz-tinta">
+              Rank Premiado
+            </span>
+          </Link>
+        ) : (
         <Link
           to="/rankpremiado"
           className="flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-xl transition-all hover:scale-[1.04]"
@@ -179,18 +211,25 @@ export default function NavDesktop({
             </span>
           </span>
         </Link>
+        )}
 
         {/* 🛒 Carrinho — liquid glass verde da paleta, com contador vivo:
             todo produto adicionado dispara 'cartUpdated' no Layout → cartCount
             muda → badge pop + balanço do ícone (keys reiniciam as animações). */}
         <Link
           to={createPageUrl("Cart")}
-          className="cart-glass relative w-10 h-10 rounded-xl grid place-items-center group"
-          style={currentPageName === "Cart" ? { borderColor: P.beige } : undefined}
+          className={temaClaro
+            ? "relative grid h-10 w-10 place-items-center rounded-xl group"
+            : "cart-glass relative w-10 h-10 rounded-xl grid place-items-center group"}
+          style={!temaClaro && currentPageName === "Cart" ? { borderColor: P.beige } : undefined}
           aria-label={`Carrinho${cartCount > 0 ? ` (${cartCount} ${cartCount === 1 ? 'item' : 'itens'})` : ''}`}
         >
           <span key={`shake-${cartCount}`} className={cartCount > 0 ? "cart-shake" : undefined}>
-            <CartIcon className="w-[18px] h-[18px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+            {temaClaro ? (
+              <CartIcon className="h-[20px] w-[20px] text-nz-tinta transition-colors group-hover:text-nz-verde" strokeWidth={1.5} />
+            ) : (
+              <CartIcon className="w-[18px] h-[18px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
+            )}
           </span>
           {cartCount > 0 && (
             <span key={`badge-${cartCount}`} className="cart-badge" aria-hidden="true">
@@ -227,13 +266,13 @@ export default function NavDesktop({
               border-radius: 999px;
               display: grid;
               place-items: center;
-              background: linear-gradient(150deg, #ecd3ae, ${P.beige});
-              color: ${P.navy};
+              background: ${temaClaro ? '#1B7A48' : `linear-gradient(150deg, #ecd3ae, ${P.beige})`};
+              color: ${temaClaro ? '#ffffff' : P.navy};
               font-size: 10px;
               font-weight: 800;
               line-height: 1;
-              border: 2px solid #131418;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              border: 2px solid ${temaClaro ? '#ffffff' : '#131418'};
+              box-shadow: ${temaClaro ? 'none' : '0 2px 6px rgba(0,0,0,0.4)'};
               animation: cart-badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
             }
             @keyframes cart-badge-pop {
@@ -254,8 +293,9 @@ export default function NavDesktop({
           `}</style>
         </Link>
 
-        {/* === Separador visual: LOJA (rank+carrinho) ↔ PERFIL === */}
-        <div className={`w-px h-9 mx-1 ${temaClaro ? 'bg-nz-borda' : 'bg-white/10'}`} aria-hidden="true" />
+        {/* === Separador visual: LOJA (rank+carrinho) ↔ PERFIL ===
+            No tema claro a separação é só espaçamento (nada de barrinha). */}
+        {!temaClaro && <div className="w-px h-9 mx-1 bg-white/10" aria-hidden="true" />}
 
         {/* === Perfil no canto extremo direito === */}
         <div>
