@@ -72,6 +72,43 @@ Deno.serve(async (req) => {
       result.cristiano_search = c1;
     }
 
+    if (mode === 'gap_check') {
+      const ids = [
+        '169392882560','168637345371','169970347928','169334162799',
+        '169743354993','170639528044','169794046909','170172301389',
+        '168795341738','168849863424','170642481862','169757635409',
+        '169794532723','169793431523','170711504564'
+      ];
+      const orClause = ids.map(id => `mp_payment_id.eq.${id}`).join(',');
+      result.gap_catalog_sales_search = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&or=(${orClause})`);
+    }
+
+    if (mode === 'ribeiro_check') {
+      result.ribeiro_account = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance,updated_at&id=eq.51a481831dfe95c294dedb41`);
+      result.rest_of_deposits_hoje = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&kind=eq.wallet_deposit&created_at=gte.2026-07-30T00:00:00&created_at=lt.2026-07-31T00:00:00&buyer_id=neq.51a481831dfe95c294dedb41&order=created_at.asc`);
+    }
+
+    if (mode === 'beatriz_luciano') {
+      result.beatriz = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance,updated_at&full_name=ilike.*Damasceno*`);
+      result.beatriz2 = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance,updated_at&full_name=ilike.*Beatriz*`);
+      result.luciano = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance,updated_at&full_name=ilike.*Luciano*Pinheiro*`);
+    }
+
+    if (mode === 'urgente_30_07') {
+      // PERGUNTA 2: catalog_sales de hoje 30/07/2026 kind=wallet_deposit
+      result.pergunta2_catalog_sales_hoje = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&kind=eq.wallet_deposit&created_at=gte.2026-07-30T00:00:00&created_at=lt.2026-07-31T00:00:00&order=created_at.asc`);
+
+      // PERGUNTA 3: WebhookLog (Base44 entity, não Supabase) + qualquer log em SystemLog relacionado
+      // (mpWebhook.js roda na Vercel, não grava log no Supabase - só atualiza catalog_sales/app_users)
+      result.pergunta3_nota = "mpWebhook.js (Vercel) não grava log próprio no Supabase - a única evidência de processamento é o campo status=paid em catalog_sales (pergunta 2) e o saldo atualizado em app_users (pergunta 1).";
+
+    }
+
+    if (mode === 'luiz_check') {
+      result.pergunta4_luiz_saldo_atual = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance,updated_at&id=eq.68db0ff2c19838a827fb6e5f`);
+      result.pergunta4_luiz_deposits = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&buyer_id=eq.68db0ff2c19838a827fb6e5f&kind=eq.wallet_deposit&created_at=gte.2026-07-18T00:00:00&created_at=lt.2026-07-30T00:00:00&order=created_at.asc`);
+    }
+
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
