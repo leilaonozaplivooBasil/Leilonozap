@@ -3,6 +3,8 @@
 // Sem este endpoint a produção sempre caía em "Erro ao enviar lance." DEPOIS de o saldo
 // já ter sido reservado por reserveBidBalance (o adapter devolve not_implemented no 404).
 // Diferença obrigatória: não existe auth.me() aqui — a identidade vem do BODY (user_id).
+import { releaseHold } from '../_lib/bidHold.js';
+
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -149,9 +151,20 @@ export default async function handler(req, res) {
       });
     }
 
+    // 🔓 DEVOLUÇÃO DA RESERVA DO LÍDER ANTERIOR — no servidor, no mesmo instante em que
+    // este lance venceu. Antes isso dependia do navegador de quem dava o próximo lance,
+    // então quem era coberto e não voltava a dar lance ficava com o dinheiro travado.
+    // Libera EXATAMENTE o preço anterior daquele leilão (regra por leilão preservada:
+    // nunca "tudo", para não tocar em reservas de outros leilões do mesmo usuário).
+    let released = null;
+    if (auction.winner_id && currentPrice > 0) {
+      released = await releaseHold(auction.winner_id, currentPrice);
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Lance registrado com sucesso!',
+      released_previous: released,
       new_state: {
         current_price: patchedRow.current_price,
         winner_name: patchedRow.winner_name,

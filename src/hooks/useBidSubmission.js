@@ -224,28 +224,18 @@ export default function useBidSubmission({
         is_system_message: false
       });
 
-      // 🔄 Libera a reserva do lance ANTERIOR deste usuário NESTE MESMO leilão (foi superado
-      // pelo lance atual, que já está reservado). lastBidAmountRef.current ainda guarda esse
-      // valor anterior (só é sobrescrito abaixo) — usamos "amount" explícito (nunca
-      // "except_amount") para liberar SOMENTE esse valor específico deste leilão, sem tocar
-      // na reserva de nenhum OUTRO leilão em que este usuário também esteja com lance ativo.
-      const previousOwnBidThisAuction = lastBidAmountRef.current;
+      // 🔓 A devolução da reserva do líder anterior (seja outro usuário, seja este mesmo
+      // usuário cobrindo o próprio lance) agora acontece NO SERVIDOR, dentro do
+      // submitAtomicBid, no mesmo instante em que o lance vence. Aqui só atualizamos o
+      // saldo exibido. Liberar também pelo navegador causaria DUPLA liberação.
       try {
-        if (previousOwnBidThisAuction && previousOwnBidThisAuction > 0) {
-          await base44.functions.invoke('releaseBidHold', {
-            user_id: currentUser.id,
-            auction_id: auctionId,
-            amount: previousOwnBidThisAuction // libera só o lance anterior DESTE leilão
-          });
-        }
-        // Atualiza saldo exibido com o valor atualizado
         const balanceRefresh = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
         const balanceData = balanceRefresh?.data || balanceRefresh;
         if (typeof balanceData?.saldo_disponivel === 'number') {
           setUserWallet({ balance: balanceData.saldo_disponivel });
         }
-      } catch (releasePrevError) {
-        console.warn("⚠️ [BID] Erro ao liberar reserva anterior:", releasePrevError.message);
+      } catch (balanceError) {
+        console.warn("⚠️ [BID] Erro ao atualizar saldo exibido:", balanceError.message);
       }
 
       setAuction(prev => ({
