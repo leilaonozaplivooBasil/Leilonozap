@@ -412,87 +412,39 @@ Deno.serve(async (req) => {
                     const isDigitalWallet = asaasPayment.external_reference === 'digital-wallet-deposit';
 
                     if (isDigitalWallet) {
-                        // 🛡️ VERIFICAR SE JÁ FOI CREDITADO PELO createAsaasPayment (cartão aprovado instantaneamente)
-                        // Busca por related_payment_id OU por payment_id no AsaasPayment já confirmed + CREDIT_CARD
-                        const existingTxs = await base44.asServiceRole.entities.DigitalWalletTransaction.filter(
-                            { related_payment_id: paymentId },
-                            null,
-                            5
-                        );
-                        const alreadyCredited = existingTxs && existingTxs.some(tx =>
-                            tx.status === 'confirmed' && tx.type === 'deposit' && tx.direction === 'credit'
-                        );
-                        if (alreadyCredited) {
-                            console.log('⏭️ Digital Wallet já creditada para este pagamento (cartão instantâneo):', paymentId, 'Transações encontradas:', existingTxs.length);
-                            // Pula crédito mas continua fluxo
-                        } else {
-                            // CREDITAR DIGITAL WALLET (com retry anti-race-condition)
-                            const MAX_RETRIES = 3;
-                            let credited = false;
+                        // 🔒 COFRE ÚNICO — Supabase (app_users.saldo_disponivel)
+                        // Substitui o antigo crédito em DigitalWallet.balance (Base44/legado).
+                        const MAX_RETRIES = 3;
+                        let credited = false;
 
-                            for (let attempt = 1; attempt <= MAX_RETRIES && !credited; attempt++) {
-                                // Busca TODAS as wallets (pode haver duplicadas criadas pelo frontend)
-                                const allDigitalWallets = await base44.asServiceRole.entities.DigitalWallet.filter(
-                                    { user_id: asaasPayment.wallet_deposit_user_id }
-                                );
+                        for (let attempt = 1; attempt <= MAX_RETRIES && !credited; attempt++) {
+                            try {
+                                const [appUser] = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.wallet_deposit_user_id });
+                                if (!appUser) throw new Error(`AppUser ${asaasPayment.wallet_deposit_user_id} não encontrado`);
 
-                                if (allDigitalWallets && allDigitalWallets.length > 0) {
-                                    // Consolida: soma saldo de todas + novo depósito na primeira, deleta as demais
-                                    const primary = allDigitalWallets[0];
-                                    const currentTotal = allDigitalWallets.reduce((sum, w) => sum + (w.balance || 0), 0);
-                                    const expectedNewBalance = currentTotal + asaasPayment.value;
+                                const expectedSaldo = (appUser.saldo_disponivel || 0) + asaasPayment.value;
+                                await base44.asServiceRole.entities.AppUser.update(appUser.id, {
+                                    saldo_disponivel: expectedSaldo
+                                });
 
-                                    await base44.asServiceRole.entities.DigitalWallet.update(primary.id, {
-                                        balance: expectedNewBalance
-                                    });
-
-                                    // Remove duplicadas
-                                    for (let i = 1; i < allDigitalWallets.length; i++) {
-                                        try {
-                                            await base44.asServiceRole.entities.DigitalWallet.delete(allDigitalWallets[i].id);
-                                            console.log('🗑️ Wallet duplicada removida:', allDigitalWallets[i].id);
-                                        } catch (e) {
-                                            console.warn('⚠️ Erro ao remover wallet duplicada:', e.message);
-                                        }
-                                    }
-
-                                    // 🔒 VERIFICAÇÃO PÓS-ESCRITA: Re-ler e confirmar
-                                    const verify = await base44.asServiceRole.entities.DigitalWallet.filter({ id: primary.id });
-                                    const actualBalance = verify && verify.length > 0 ? verify[0].balance : null;
-
-                                    if (actualBalance !== null && Math.abs(actualBalance - expectedNewBalance) < 0.01) {
-                                        credited = true;
-                                        console.log(`✅ Digital Wallet creditada (tentativa ${attempt}):`, asaasPayment.wallet_deposit_user_id, 'Saldo:', expectedNewBalance);
-                                    } else {
-                                        console.warn(`⚠️ [RETRY ${attempt}/${MAX_RETRIES}] Saldo verificado (${actualBalance}) ≠ esperado (${expectedNewBalance}). Race condition detectada.`);
-                                        if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 200 * attempt));
-                                    }
-                                } else {
-                                    await base44.asServiceRole.entities.DigitalWallet.create({
-                                        user_id: asaasPayment.wallet_deposit_user_id,
-                                        balance: asaasPayment.value
-                                    });
+                                // 🔒 VERIFICAÇÃO PÓS-ESCRITA: Re-ler e confirmar
+                                const [updated] = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.wallet_deposit_user_id });
+                                if (updated && Math.abs((updated.saldo_disponivel || 0) - expectedSaldo) < 0.01) {
                                     credited = true;
-                                    console.log('✅ Digital Wallet criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
+                                    console.log(`✅ Depósito ASAAS creditado no Supabase (tentativa ${attempt}):`, asaasPayment.wallet_deposit_user_id, 'Saldo:', updated.saldo_disponivel);
+                                } else {
+                                    console.warn(`⚠️ [RETRY ${attempt}/${MAX_RETRIES}] Saldo verificado (${updated?.saldo_disponivel}) ≠ esperado (${expectedSaldo}). Race condition detectada.`);
+                                    if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 200 * attempt));
                                 }
+                            } catch (err) {
+                                console.error(`❌ [ASAAS→Supabase] Tentativa ${attempt}/${MAX_RETRIES} falhou:`, err.message);
+                                if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 200 * attempt));
                             }
+                        }
 
-                            if (!credited) {
-                                console.error('❌ FALHA CRÍTICA: Não conseguiu creditar Digital Wallet após', MAX_RETRIES, 'tentativas para user:', asaasPayment.wallet_deposit_user_id);
-                            }
-
-                            const billingLabel = asaasPayment.billing_type === 'CREDIT_CARD' ? 'Cartão de Crédito' : asaasPayment.billing_type || 'PIX';
-                            await base44.asServiceRole.entities.DigitalWalletTransaction.create({
-                                user_id: asaasPayment.wallet_deposit_user_id,
-                                type: 'deposit',
-                                direction: 'credit',
-                                amount: asaasPayment.value,
-                                status: 'confirmed',
-                                related_payment_id: paymentId,
-                                description: `Depósito via ${billingLabel}`
-                            });
-                            console.log('✅ Transação de Digital Wallet registrada');
-                        } // fim do else (não duplicado)
+                        if (!credited) {
+                            console.error('🚨 CRÍTICO: Depósito ASAAS NÃO creditado após', MAX_RETRIES, 'tentativas. user:', asaasPayment.wallet_deposit_user_id, 'valor:', asaasPayment.value);
+                        }
 
                         // 🆕 ATUALIZAR CAIXA DO PDV
                         const openCashes = await base44.asServiceRole.entities.CashRegister.filter(
