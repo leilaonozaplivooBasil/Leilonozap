@@ -821,7 +821,8 @@ export default function Layout({ children, currentPageName }) {
                 <img
                   src={logoUrl}
                   alt="Leilão NoZap"
-                  className="h-11 sm:h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
+                  // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
+                  className={`${currentPageName === 'Recepcao' ? 'h-8 sm:h-9' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
                   // 🏠 logo SEMPRE volta pra abertura ("/"): antes a página de chegada
                   // era um beco sem saída (não havia como voltar a ela de lugar nenhum).
                   onClick={() => navigate("/")}

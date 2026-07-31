@@ -10,6 +10,32 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
   touch-action: manipulation;
 }
 
+/* 🌿 Tokens institucionais da Recepção (verde clean, padrão vitrine) */
+@layer base {
+  :root {
+    --nz-verde: #1B7A48;
+    --nz-verde-fundo: #F1F7F3;
+    --nz-verde-escuro: #0C1F16;
+    --nz-cinza-fundo: #F5F6F5;
+    --nz-tinta: #0D1310;
+    --nz-tinta-fraca: #5C6B62;
+    --nz-borda: #DDE4DF;
+  }
+}
+
+@layer utilities {
+  @keyframes nzFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-9px); }
+  }
+  .nz-float { animation: nzFloat 6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .nz-float { animation: none; }
+  }
+  .nz-no-scrollbar::-webkit-scrollbar { display: none; }
+  .nz-no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
