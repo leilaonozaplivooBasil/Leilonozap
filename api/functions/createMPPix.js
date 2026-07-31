@@ -3,6 +3,7 @@
 // gera o PIX e devolve QR + copia-e-cola. O webhook confirma e paga comissões.
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
+import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -75,6 +76,19 @@ export default async function handler(req, res) {
         if (cr?.valido) { discount_amount = Number(cr.desconto) || 0; total = round2(Number(cr.total_final) || subtotal); coupon_code = cr.code; coupon_id = cr.coupon_id; }
       } catch (_) { /* cupom inválido → ignora, cobra cheio */ }
     }
+    // 🎟️ Cupom Passaporte (crédito de 10% do aporte). Validado e calculado SEMPRE no
+    // servidor: dono do cupom, status liberado e saldo. O PIX exige R$ 1,00 mínimo, então
+    // o abatimento para em R$ 1,00 e o resto do crédito continua guardado no cupom.
+    let passaporte_coupon_id = null, passaporte_desconto = 0;
+    if (body?.use_passaporte === true && buyer?.id) {
+      const abativel = round2(Math.max(0, total - 1));
+      const pc = abativel > 0 ? await calcularDesconto(buyer.id, abativel) : null;
+      if (pc) {
+        passaporte_coupon_id = pc.coupon_id;
+        passaporte_desconto = pc.desconto;
+        total = round2(total - passaporte_desconto);
+      }
+    }
     if (total < 1) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 1,00' });
 
     // cria a venda pendente (com entrega/endereço)
@@ -86,8 +100,8 @@ export default async function handler(req, res) {
       sale_price: total, total_amount: total, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
-      coupon_code, discount_amount: discount_amount || null,
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id },
+      coupon_code, discount_amount: round2(discount_amount + passaporte_desconto) || null,
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_coupon_id, passaporte_desconto },
     }) });
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 
@@ -126,6 +140,7 @@ export default async function handler(req, res) {
       amount: total,
       payment_id: String(pay.id),
       status: pay.status,
+      passaporte_desconto,
       pix_code: td.qr_code || null,            // copia-e-cola
       qr_code_base64: td.qr_code_base64 || null, // imagem QR (base64)
       ticket_url: td.ticket_url || null,        // link hospedado MP

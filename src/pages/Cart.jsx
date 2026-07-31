@@ -38,6 +38,7 @@ import {
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { getReferral } from '@/lib/referral';
+import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 
 export default function Cart() {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
@@ -54,6 +55,9 @@ export default function Cart() {
   const [couponMsg, setCouponMsg] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [observation, setObservation] = useState('');
+  // 🎟️ Cupom Passaporte (crédito de 10% do aporte, liberado após perder o arremate)
+  const [passaporteStatus, setPassaporteStatus] = useState(null);
+  const [usarPassaporte, setUsarPassaporte] = useState(false);
   const [freteOpcoes, setFreteOpcoes] = useState(null); // null=não calculado, []=sem opções
   const [freteMsg, setFreteMsg] = useState('');
   const [calculandoFrete, setCalculandoFrete] = useState(false);
@@ -219,6 +223,16 @@ export default function Cart() {
     loadUserData();
   }, []);
 
+  // 🎟️ Busca a situação do Cupom Passaporte do usuário logado
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let ativo = true;
+    base44.functions.invoke('passaporteCoupon', { user_id: currentUser.id })
+      .then((r) => { if (ativo && r?.success) setPassaporteStatus({ liberado: r.liberado, tem_bloqueado: r.tem_bloqueado }); })
+      .catch(() => { /* sem cupom → carrinho segue normal */ });
+    return () => { ativo = false; };
+  }, [currentUser?.id]);
+
   // ⏱️ Contagem regressiva após detecção do pagamento
   useEffect(() => {
     if (!paymentDetected || countdown <= 0) return;
@@ -330,7 +344,12 @@ export default function Cart() {
 
   // total já com o desconto do cupom aplicado
   const descontoCupom = appliedCoupon?.desconto || 0;
-  const calcularTotalFinal = () => Math.max(0, calculateSubtotal() - descontoCupom);
+  // desconto do Passaporte: limitado ao saldo do cupom (o valor final é sempre
+  // recalculado no servidor no momento do pagamento)
+  const descontoPassaporte = usarPassaporte && passaporteStatus?.liberado
+    ? Math.min(passaporteStatus.liberado.saldo, Math.max(0, calculateSubtotal() - descontoCupom))
+    : 0;
+  const calcularTotalFinal = () => Math.max(0, calculateSubtotal() - descontoCupom - descontoPassaporte);
 
   const aplicarCupom = async () => {
     const code = (coupon || '').trim();
@@ -585,6 +604,7 @@ export default function Cart() {
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
           ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
+          use_passaporte: usarPassaporte,
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
@@ -601,6 +621,7 @@ export default function Cart() {
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
           ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
+          use_passaporte: usarPassaporte,
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
@@ -1161,6 +1182,12 @@ export default function Cart() {
                         <span className="text-green-400 font-medium">− {money(appliedCoupon.desconto)}</span>
                       </div>
                     )}
+                    {descontoPassaporte > 0 && (
+                      <div className="flex justify-between text-base">
+                        <span className="text-gray-400">Desconto Passaporte do Leilão</span>
+                        <span className="text-green-400 font-medium">− {money(descontoPassaporte)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center text-base">
                       <span className="text-gray-400">Valor do frete</span>
                       {freteOpcoes && freteOpcoes.length > 0 ? (
@@ -1190,6 +1217,21 @@ export default function Cart() {
                 </div>
               )}
             </Card>
+
+            {/* 🎟️ Cupom Passaporte — crédito de 10% do aporte no leilão */}
+            {!pixData && !saldoOk && cartItems.length > 0 && (
+              <PassaporteCouponBanner
+                status={passaporteStatus}
+                aplicado={usarPassaporte}
+                desconto={descontoPassaporte}
+                onUsar={() => {
+                  if (paymentType === 'SALDO') { toast.error('O desconto do Passaporte vale para PIX e cartão.'); return; }
+                  setUsarPassaporte(true);
+                  toast.success('Desconto do Passaporte aplicado!');
+                }}
+                onRemover={() => setUsarPassaporte(false)}
+              />
+            )}
 
             {/* Cupom e Observação lado a lado — só com itens no carrinho */}
             {!pixData && !saldoOk && cartItems.length > 0 && (
@@ -1268,7 +1310,7 @@ export default function Cart() {
 
                 {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
                 {saldo > 0 && (
-                  <button type="button" onClick={() => setPaymentType('SALDO')}
+                  <button type="button" onClick={() => { setPaymentType('SALDO'); setUsarPassaporte(false); }}
                     className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
                     <div>
                       <p className="text-white font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-green-400" /> Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>

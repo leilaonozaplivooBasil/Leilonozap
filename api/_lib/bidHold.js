@@ -12,6 +12,7 @@ const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL 
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { liberarCupomPassaporte } from './passaporteCoupon.js';
 
 const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -32,7 +33,7 @@ function sb(path, opts = {}) {
  * Nunca libera mais do que está reservado. Nunca lança erro (o lance já foi
  * confirmado; falha aqui não pode derrubar a resposta do lance).
  */
-export async function releaseHold(userId, amount) {
+export async function releaseHold(userId, amount, auctionId = null) {
   const uid = String(userId || '').trim();
   const valor = money(amount);
   if (!uid || valor <= 0 || !SUPABASE_URL || !SR) {
@@ -72,6 +73,9 @@ export async function releaseHold(userId, amount) {
       const updated = await patch.json().catch(() => []);
       const row = Array.isArray(updated) ? updated[0] : null;
       if (row) {
+        // 🎟️ Foi coberto = disputou e perdeu → libera o Cupom Passaporte dele.
+        // Best effort: nunca pode derrubar a devolução do saldo.
+        try { await liberarCupomPassaporte(uid, auctionId); } catch (_) { /* secundário */ }
         return {
           released: liberar,
           new_balance: money(row.saldo_disponivel),

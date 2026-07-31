@@ -5,6 +5,7 @@ import { bestSellingLevel, overridePct } from '../_lib/networkChain.js';
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+import { debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
@@ -123,7 +124,9 @@ export default async function handler(req, res) {
     }
     if (sale.kind === 'loja') {
       const r = await fulfillStoreOrder(sale);
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+      // 🎟️ crédito do Cupom Passaporte debitado só com o pagamento confirmado
+      const cupom = await debitarCupomDaVenda(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom });
     }
     const commission = await payCommissions(sale);
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });

@@ -7,6 +7,7 @@
 // nunca dupliquem efeitos: só um executa, o outro recebe o consolidado.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { cancelarCuponsBloqueados } from './passaporteCoupon.js';
 
 // tolerância pra deriva de relógio entre cliente e servidor (nunca encerra
 // um leilão com mais de 2s restantes)
@@ -108,6 +109,10 @@ export async function finalizeOneAuction(auction) {
           }),
         });
       } catch (e) { console.warn('[FINALIZE] stats vencedor:', e?.message); }
+
+      // 🎟️ Arrematou = o aporte virou compra → cupons ainda bloqueados são cancelados.
+      // Cupom já LIBERADO (de uma derrota anterior) permanece intacto.
+      try { await cancelarCuponsBloqueados(winnerId); } catch (e) { console.warn('[FINALIZE] cupom passaporte:', e?.message); }
 
       // 💰 Comissão do licenciado: 3% do arremate (regra vigente), saldo de
       // teste ou real conforme is_test_auction. Planos de investimento não comissionam.

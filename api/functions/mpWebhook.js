@@ -6,6 +6,7 @@ import { bestSellingLevel, overridePct } from '../_lib/networkChain.js';
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+import { criarCupomPassaporte, debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -176,12 +177,16 @@ export default async function handler(req, res) {
           }),
         });
       } catch (_) { /* crédito já entrou; registro do passaporte é secundário */ }
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r });
+      // 🎟️ Cupom Passaporte: 10% do aporte, nasce BLOQUEADO (libera só se perder o arremate)
+      const cupom = await criarCupomPassaporte(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r, cupom });
     }
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r });
+      // 🎟️ Cupom Passaporte também no aporte de carteira (>= R$ 100), sempre BLOQUEADO
+      const cupom = sale.kind === 'wallet_deposit' ? await criarCupomPassaporte(sale) : null;
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r, cupom });
     }
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
@@ -189,7 +194,9 @@ export default async function handler(req, res) {
     }
     if (sale.kind === 'loja') {
       const r = await fulfillStoreOrder(sale);
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+      // 🎟️ só agora (pagamento confirmado) o crédito do Cupom Passaporte é debitado
+      const cupom = await debitarCupomDaVenda(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom });
     }
     // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não
     // pagava NADA ao bloco diretor). fulfillStoreOrder aplica a mesma regra de 26%.
