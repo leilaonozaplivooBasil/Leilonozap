@@ -27,11 +27,11 @@ import { useCopiarPix } from '@/hooks/useCopiarPix';
 const QUICK_AMOUNTS = [20, 50, 100, 200];
 
 const TX_STYLE = {
-  deposit: { icon: ArrowDownCircle, color: 'text-green-400', bg: 'bg-green-500/15 border-green-500/30' },
-  purchase: { icon: ArrowUpCircle, color: 'text-red-400', bg: 'bg-red-500/15 border-red-500/30' },
-  sale: { icon: TrendingUp, color: 'text-emerald-300', bg: 'bg-emerald-500/15 border-emerald-500/30' },
-  commission: { icon: Award, color: 'text-amber-400', bg: 'bg-amber-500/15 border-amber-500/30' },
-  withdrawal: { icon: Banknote, color: 'text-blue-400', bg: 'bg-blue-500/15 border-blue-500/30' },
+  deposit: { icon: ArrowDownCircle, grad: 'bg-gradient-to-br from-emerald-400 to-green-600', glow: 'shadow-[0_2px_10px_rgba(16,185,129,0.5)]' },
+  purchase: { icon: ArrowUpCircle, grad: 'bg-gradient-to-br from-red-400 to-rose-600', glow: 'shadow-[0_2px_10px_rgba(239,68,68,0.5)]' },
+  sale: { icon: TrendingUp, grad: 'bg-gradient-to-br from-emerald-300 to-teal-600', glow: 'shadow-[0_2px_10px_rgba(16,185,129,0.5)]' },
+  commission: { icon: Award, grad: 'bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-600', glow: 'shadow-[0_2px_10px_rgba(245,158,11,0.55)]' },
+  withdrawal: { icon: Banknote, grad: 'bg-gradient-to-br from-blue-400 to-indigo-600', glow: 'shadow-[0_2px_10px_rgba(59,130,246,0.5)]' },
 };
 
 function formatDate(d) {
@@ -293,8 +293,8 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                           const Icon = style.icon;
                           return (
                             <div key={tx.id} className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 p-3">
-                              <div className={`flex-shrink-0 p-2 rounded-lg border ${style.bg}`}>
-                                <Icon className={`w-4 h-4 ${style.color}`} />
+                              <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ring-1 ring-white/25 ${style.grad} ${style.glow}`}>
+                                <Icon className="w-4 h-4 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-white truncate">{tx.title}</p>

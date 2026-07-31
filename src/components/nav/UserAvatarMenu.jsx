@@ -70,14 +70,14 @@ const PANEL_ACCENT = {
   super_admin: { text: "text-yellow-300", border: "border-yellow-500/50", bg: "hover:bg-yellow-500/5", icon: "text-yellow-400" },
 };
 
-// Badge da role principal
+// Badge da role principal — pill com gradiente + brilho (acabamento premium)
 const ROLE_BADGE = {
-  super_admin: { label: "SUPER ADMIN", className: "bg-yellow-500/15 text-yellow-300 border-yellow-500/40", icon: Crown },
-  admin: { label: "ADMIN", className: "bg-yellow-500/15 text-yellow-300 border-yellow-500/40", icon: Crown },
-  licensee: { label: "LICENCIADO", className: "bg-blue-500/15 text-blue-300 border-blue-500/40", icon: Briefcase },
-  investidor: { label: "INVESTIDOR", className: "bg-amber-500/15 text-amber-300 border-amber-500/40", icon: TrendingUp },
-  leiloeiro: { label: "LEILOEIRO", className: "bg-red-500/15 text-red-300 border-red-500/40", icon: Hammer },
-  user: { label: "CLIENTE", className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40", icon: UserIcon },
+  super_admin: { label: "SUPER ADMIN", grad: "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.55)]", icon: Crown },
+  admin: { label: "ADMIN", grad: "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.55)]", icon: Crown },
+  licensee: { label: "LICENCIADO", grad: "bg-gradient-to-r from-blue-400 to-indigo-500", text: "text-white", glow: "shadow-[0_2px_10px_rgba(59,130,246,0.45)]", icon: Briefcase },
+  investidor: { label: "INVESTIDOR", grad: "bg-gradient-to-r from-amber-300 to-orange-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.45)]", icon: TrendingUp },
+  leiloeiro: { label: "LEILOEIRO", grad: "bg-gradient-to-r from-red-400 to-rose-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(239,68,68,0.45)]", icon: Hammer },
+  user: { label: "CLIENTE", grad: "bg-gradient-to-r from-emerald-400 to-green-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(16,185,129,0.45)]", icon: UserIcon },
 };
 
 function getInitials(name = "") {
@@ -149,7 +149,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
   // Badge da role principal — cargo de rede tem prioridade visual sobre "CLIENTE"
   const roleKey = effectiveUser.role || "user";
   const badge = (redeMeta && roleKey === "user")
-    ? { label: redeMeta.label, className: "bg-green-500/15 text-green-300 border-green-500/40", icon: redeMeta.icon }
+    ? { label: redeMeta.label, grad: "bg-gradient-to-r from-emerald-400 to-green-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(16,185,129,0.45)]", icon: redeMeta.icon }
     : (ROLE_BADGE[roleKey] || ROLE_BADGE.user);
   const BadgeIcon = badge.icon;
 
@@ -206,7 +206,7 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             <p className="text-xs text-gray-400 truncate">{email}</p>
           </div>
           <div
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge.className} flex-shrink-0`}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-slab font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow} flex-shrink-0`}
           >
             <BadgeIcon className="w-3 h-3" />
             {badge.label}
