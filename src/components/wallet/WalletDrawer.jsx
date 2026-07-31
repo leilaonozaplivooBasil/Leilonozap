@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   Clock,
   Gavel,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
@@ -169,6 +170,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     let deposited = 0, spent = 0, sold = 0, pendingCount = 0;
     for (const t of transactions) {
       if (t.status === 'pending') { pendingCount++; continue; }
+      if (t.status === 'cancelled') { continue; }
       if (t.type === 'deposit') deposited += t.amount;
       else if (t.type === 'purchase') spent += Math.abs(t.amount);
       else if (t.type === 'sale') sold += t.amount;
@@ -341,8 +343,19 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                                   </p>
                                 )}
                                 {tx.status === 'pending' && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-400">
-                                    <Clock className="w-3 h-3" /> pendente
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] text-amber-400"
+                                    title={tx.type === 'deposit' ? 'O PIX desta cobrança ainda não foi gerado/pago.' : 'O PIX desta compra ainda não foi gerado/pago.'}
+                                  >
+                                    <Clock className="w-3 h-3" /> aguardando pagamento
+                                  </span>
+                                )}
+                                {tx.status === 'cancelled' && (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] text-gray-500"
+                                    title="Este PIX não foi pago e a cobrança foi cancelada."
+                                  >
+                                    <XCircle className="w-3 h-3" /> cancelado
                                   </span>
                                 )}
                               </div>
