@@ -1,113 +1,110 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
+// 🔓 Libera saldo reservado de lance direto no Supabase (app_users.saldo_reservado → saldo_disponivel)
+// via REST + service_role. NUNCA usar base44.asServiceRole.entities.* aqui (não aponta pro Supabase real).
+
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(path: string, method = 'GET', body?: object) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        method,
+        headers: {
+            apikey: SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+        },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = text; }
+    return { ok: res.ok, status: res.status, data: json };
+}
 
 Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const { user_id, auction_id, amount, except_amount, description } = await req.json();
-
-    if (!user_id) {
-      return Response.json({ 
-        success: false, 
-        error: 'user_id é obrigatório' 
-      }, { status: 400 });
-    }
-
-    // Se amount não informado, libera TODAS as reservas pendentes desse user+auction
-    // exceto as com except_amount (usado pra não liberar o lance atual ao liberar anteriores)
-    let totalToRelease = 0;
-    let holdTransactions: any[] = [];
-
-    if (!amount) {
-      // Busca todas as transações bid_hold pending desse user+auction
-      const filter: any = { user_id, type: 'bid_hold', status: 'pending' };
-      if (auction_id) filter.related_auction_id = auction_id;
-      
-      holdTransactions = await base44.asServiceRole.entities.DigitalWalletTransaction.filter(filter);
-      
-      // Filtra transações a excluir (except_amount = valor do lance atual que não deve ser liberado)
-      if (typeof except_amount === 'number') {
-        holdTransactions = holdTransactions.filter(t => t.amount !== except_amount);
-      }
-      
-      totalToRelease = holdTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-    } else {
-      totalToRelease = amount;
-    }
-
-    if (totalToRelease <= 0) {
-      return Response.json({
-        success: true,
-        released_amount: 0,
-        message: 'Nenhuma reserva pendente para liberar'
-      });
-    }
-
-    // 1. Lê saldos anteriores
-    const walletsBefore = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id });
-    if (!walletsBefore || walletsBefore.length === 0) {
-      return Response.json({ 
-        success: false, 
-        error: 'Carteira não encontrada' 
-      }, { status: 400 });
-    }
-    const previousBalance = walletsBefore.reduce((sum, w) => sum + (w.balance || 0), 0);
-    const previousHeld = walletsBefore.reduce((sum, w) => sum + (w.held_balance || 0), 0);
-
-    // 2. LIBERAÇÃO ATÔMICA: move do held_balance de volta pro balance
-    await base44.asServiceRole.entities.DigitalWallet.updateMany(
-      { user_id, held_balance: { $gte: totalToRelease } },
-      { $inc: { held_balance: -totalToRelease, balance: totalToRelease } }
-    );
-
-    // 3. Lê saldos novos
-    const walletsAfter = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id });
-    const newBalance = walletsAfter.reduce((sum, w) => sum + (w.balance || 0), 0);
-    const newHeldBalance = walletsAfter.reduce((sum, w) => sum + (w.held_balance || 0), 0);
-
-    // 4. Atualiza as transações bid_hold para status "released"
-    if (holdTransactions.length > 0) {
-      for (const tx of holdTransactions) {
-        try {
-          await base44.asServiceRole.entities.DigitalWalletTransaction.update(tx.id, {
-            status: 'released'
-          });
-        } catch (e) {
-          console.error('Erro ao atualizar transação para released:', e.message);
-        }
-      }
-    }
-
-    // 5. Registra a transação de liberação
     try {
-      await base44.asServiceRole.entities.DigitalWalletTransaction.create({
-        user_id: user_id,
-        type: 'bid_release',
-        direction: 'credit',
-        amount: totalToRelease,
-        related_auction_id: auction_id || null,
-        status: 'confirmed',
-        description: description || `Liberação de reserva — lance superado - R$ ${totalToRelease.toFixed(2)}`
-      });
-    } catch (txError) {
-      console.error('Erro ao registrar transação de liberação (liberação já realizada):', txError.message);
+        const { user_id, amount, except_amount } = await req.json();
+
+        if (!user_id) {
+            return Response.json({ success: false, error: 'user_id é obrigatório' }, { status: 400 });
+        }
+
+        const MAX_RETRIES = 3;
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            // 1. Lê saldo atual
+            const getResp = await sbFetch(`app_users?id=eq.${user_id}&select=id,saldo_disponivel,saldo_reservado`);
+            const user = Array.isArray(getResp.data) ? getResp.data[0] : null;
+
+            if (!getResp.ok || !user) {
+                return Response.json({ success: false, error: 'Usuário não encontrado' }, { status: 400 });
+            }
+
+            const saldoAtual = Number(user.saldo_disponivel) || 0;
+            const reservadoAtual = Number(user.saldo_reservado) || 0;
+
+            // 2. Calcula valor a liberar (mesma lógica de amount/except_amount)
+            //    - amount informado: libera esse valor específico
+            //    - except_amount informado: libera tudo que está reservado, exceto esse valor (lance atual)
+            //    - nenhum dos dois: libera todo o saldo_reservado do usuário
+            let valorLiberar;
+            if (typeof amount === 'number' && amount > 0) {
+                valorLiberar = Math.min(amount, reservadoAtual);
+            } else if (typeof except_amount === 'number') {
+                valorLiberar = Math.max(0, reservadoAtual - except_amount);
+            } else {
+                valorLiberar = reservadoAtual;
+            }
+
+            if (valorLiberar <= 0) {
+                return Response.json({
+                    success: true,
+                    released: 0,
+                    released_amount: 0,
+                    message: 'Nenhuma reserva pendente para liberar'
+                });
+            }
+
+            const novoSaldo = saldoAtual + valorLiberar;
+            const novoReservado = reservadoAtual - valorLiberar;
+
+            // 3. PATCH atômico: só aplica se saldo_reservado ainda cobrir o valor na hora da escrita
+            const patchResp = await sbFetch(
+                `app_users?id=eq.${user_id}&saldo_reservado=gte.${valorLiberar}`,
+                'PATCH',
+                { saldo_disponivel: novoSaldo, saldo_reservado: novoReservado }
+            );
+            const patchedRow = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
+
+            // 4. Verifica que os valores batem
+            if (
+                patchResp.ok && patchedRow &&
+                Math.abs((patchedRow.saldo_disponivel || 0) - novoSaldo) < 0.01 &&
+                Math.abs((patchedRow.saldo_reservado || 0) - novoReservado) < 0.01
+            ) {
+                console.log(`🔓 [RELEASE] user=${user_id}, liberado=R$ ${valorLiberar.toFixed(2)}, disponivel=R$ ${novoSaldo.toFixed(2)}, reservado=R$ ${novoReservado.toFixed(2)} (tentativa ${attempt})`);
+
+                return Response.json({
+                    success: true,
+                    released: valorLiberar,
+                    released_amount: valorLiberar,
+                    new_balance: patchedRow.saldo_disponivel,
+                    new_held_balance: patchedRow.saldo_reservado
+                });
+            }
+
+            console.warn(`⚠️ [RETRY ${attempt}/${MAX_RETRIES}] Liberação não aplicada (condição de corrida). Reavaliando...`);
+            if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 200 * attempt));
+        }
+
+        console.error('🚨 CRÍTICO: Falha ao liberar reserva após', MAX_RETRIES, 'tentativas. user:', user_id);
+        return Response.json({ success: false, error: 'Não foi possível liberar a reserva — tente novamente' }, { status: 409 });
+
+    } catch (error) {
+        console.error('Erro releaseBidHold:', error.message);
+        return Response.json({
+            success: false,
+            error: error.message
+        }, { status: 500 });
     }
-
-    console.log(`🔓 [RELEASE] user=${user_id}, liberado=R$ ${totalToRelease.toFixed(2)}, livre=R$ ${previousBalance.toFixed(2)}→R$ ${newBalance.toFixed(2)}, reservado=R$ ${newHeldBalance.toFixed(2)}`);
-
-    return Response.json({
-      success: true,
-      previous_balance: previousBalance,
-      released_amount: totalToRelease,
-      new_balance: newBalance,
-      new_held_balance: newHeldBalance,
-      wallet_id: walletsAfter[0]?.id
-    });
-
-  } catch (error) {
-    console.error('Erro releaseBidHold:', error.message);
-    return Response.json({ 
-      success: false, 
-      error: error.message 
-    }, { status: 500 });
-  }
 });

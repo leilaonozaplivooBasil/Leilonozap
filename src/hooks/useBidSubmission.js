@@ -46,9 +46,9 @@ export default function useBidSubmission({
 
     // Verifica saldo — NÃO sobrescreve para 0 se a função falhar
     try {
-      const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+      const freshResult = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
-      const freshBalance = typeof freshData?.balance === 'number' ? freshData.balance : null;
+      const freshBalance = typeof freshData?.saldo_disponivel === 'number' ? freshData.saldo_disponivel : null;
       if (freshBalance !== null) {
         setUserWallet({ balance: freshBalance });
         if (freshBalance < amount) {
@@ -245,10 +245,10 @@ export default function useBidSubmission({
           except_amount: bidAmount // exceto a do lance atual (mesmo valor)
         });
         // Atualiza saldo exibido com o valor atualizado
-        const balanceRefresh = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+        const balanceRefresh = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
         const balanceData = balanceRefresh?.data || balanceRefresh;
-        if (typeof balanceData?.balance === 'number') {
-          setUserWallet({ balance: balanceData.balance });
+        if (typeof balanceData?.saldo_disponivel === 'number') {
+          setUserWallet({ balance: balanceData.saldo_disponivel });
         }
       } catch (releasePrevError) {
         console.warn("⚠️ [BID] Erro ao liberar reservas anteriores:", releasePrevError.message);

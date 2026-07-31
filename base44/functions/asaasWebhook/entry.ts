@@ -1,5 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// 🔒 Acesso direto ao Supabase via REST (service_role) — NUNCA usar entities.AppUser para saldo.
+// base44.asServiceRole.entities aponta pro store interno do Base44, não pro Supabase real (confirmado por teste).
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(path: string, method = 'GET', body?: object) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        method,
+        headers: {
+            apikey: SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+        },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = text; }
+    return { ok: res.ok, status: res.status, data: json };
+}
+
 Deno.serve(async (req) => {
     // GET = health check
     if (req.method === 'GET') {
@@ -412,24 +434,27 @@ Deno.serve(async (req) => {
                     const isDigitalWallet = asaasPayment.external_reference === 'digital-wallet-deposit';
 
                     if (isDigitalWallet) {
-                        // 🔒 COFRE ÚNICO — Supabase (app_users.saldo_disponivel)
-                        // Substitui o antigo crédito em DigitalWallet.balance (Base44/legado).
+                        // 🔒 COFRE ÚNICO — Supabase REST direto (app_users.saldo_disponivel)
+                        // entities.AppUser NÃO aponta pro Supabase real (confirmado por teste) — por isso fetch direto.
                         const MAX_RETRIES = 3;
                         let credited = false;
 
                         for (let attempt = 1; attempt <= MAX_RETRIES && !credited; attempt++) {
                             try {
-                                const [appUser] = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.wallet_deposit_user_id });
-                                if (!appUser) throw new Error(`AppUser ${asaasPayment.wallet_deposit_user_id} não encontrado`);
+                                const getResp = await sbFetch(`app_users?id=eq.${asaasPayment.wallet_deposit_user_id}&select=id,saldo_disponivel`);
+                                const appUser = Array.isArray(getResp.data) ? getResp.data[0] : null;
+                                if (!getResp.ok || !appUser) throw new Error(`AppUser ${asaasPayment.wallet_deposit_user_id} não encontrado`);
 
                                 const expectedSaldo = (appUser.saldo_disponivel || 0) + asaasPayment.value;
-                                await base44.asServiceRole.entities.AppUser.update(appUser.id, {
+                                const patchResp = await sbFetch(`app_users?id=eq.${asaasPayment.wallet_deposit_user_id}`, 'PATCH', {
                                     saldo_disponivel: expectedSaldo
                                 });
 
                                 // 🔒 VERIFICAÇÃO PÓS-ESCRITA: Re-ler e confirmar
-                                const [updated] = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.wallet_deposit_user_id });
-                                if (updated && Math.abs((updated.saldo_disponivel || 0) - expectedSaldo) < 0.01) {
+                                const verifyResp = await sbFetch(`app_users?id=eq.${asaasPayment.wallet_deposit_user_id}&select=saldo_disponivel`);
+                                const updated = Array.isArray(verifyResp.data) ? verifyResp.data[0] : null;
+
+                                if (patchResp.ok && updated && Math.abs((updated.saldo_disponivel || 0) - expectedSaldo) < 0.01) {
                                     credited = true;
                                     console.log(`✅ Depósito ASAAS creditado no Supabase (tentativa ${attempt}):`, asaasPayment.wallet_deposit_user_id, 'Saldo:', updated.saldo_disponivel);
                                 } else {
