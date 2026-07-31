@@ -16,6 +16,8 @@ import {
   Shield,
   Crown,
   ChevronDown,
+  ChevronRight,
+  Map,
   Wallet as WalletIcon,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
@@ -185,6 +187,28 @@ export default function NavMobile({
 
           {/* ===== Content ===== */}
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
+            {/* === VISÃO GERAL (mesmo cartão do dropdown do desktop) === */}
+            {userLogged && isAdmin && (
+              <button
+                onClick={() => {
+                  onClose();
+                  window.dispatchEvent(new CustomEvent("openMiniCanvas"));
+                }}
+                className="mb-2 flex min-h-[56px] w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all active:scale-[0.98]"
+                style={{
+                  background: "rgba(16,185,129,0.10)",
+                  border: "1px solid rgba(16,185,129,0.30)",
+                }}
+              >
+                <Map className="h-5 w-5 flex-shrink-0 text-emerald-400" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-extrabold uppercase tracking-wide text-emerald-300">Visão Geral</p>
+                  <p className="truncate text-[11px] text-gray-400">Mapa de todo o painel</p>
+                </div>
+                <ChevronRight className="h-4 w-4 flex-shrink-0 text-emerald-400/70" />
+              </button>
+            )}
+
             {/* === RANK PREMIADO (destaque — primeiro item) === */}
             <Link
               to="/rankpremiado"
