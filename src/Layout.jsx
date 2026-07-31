@@ -825,7 +825,7 @@ export default function Layout({ children, currentPageName }) {
                     placa escura discreta atrás, senão o nome simplesmente desaparece. */}
                 <div>
                 <img
-                  src={isRecepcao ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2b35c0bd1_image.png' : logoUrl}
+                  src={isRecepcao ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3490cf383_image.png' : logoUrl}
                   alt="Leilão NoZap"
                   // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
                   className={`${currentPageName === 'Recepcao' ? 'h-9 sm:h-10' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
