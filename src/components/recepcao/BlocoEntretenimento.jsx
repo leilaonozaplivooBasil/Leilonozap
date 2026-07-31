@@ -11,14 +11,14 @@ const CARTAZES = [
     titulo: 'Compre ao vivo, na hora.',
     linha: 'Ofertas que acabam na frente de todos.',
     cta: { label: 'Assistir agora', to: '/LiveShopNoZap' },
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/50627039c_generated_image.png',
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/21edd6e2e_generated_image.png',
   },
   {
     eyebrow: 'Rank Premiado',
     titulo: 'Suba no ranking. Leve o prêmio.',
     linha: 'Convide, some pontos e concorra aos produtos do dia.',
     cta: { label: 'Participar', to: '/rankpremiado' },
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/616764e6f_generated_image.png',
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/defd4eb65_generated_image.png',
   },
   {
     eyebrow: 'Indique e fature',
