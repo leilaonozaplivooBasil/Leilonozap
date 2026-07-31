@@ -250,19 +250,12 @@ export default function AuctionCheckoutModern() {
       // Para depósito de capital de investidor, passa o auction_id real + flag especial
       const isInvestorCapital = depositType === 'investor_capital';
 
-      // 🔒 REGRA FIXA (memória definitiva): PIX de depósito de saldo → Mercado Pago (libera na hora).
-      // Cartão de Crédito continua no ASAAS (aprova na hora, mas retém 30 dias).
-      const isDigitalWalletPix = isWalletDeposit && depositType === 'digital_wallet' && paymentType === 'PIX';
-
-      const paymentResponse = isDigitalWalletPix
-        ? await base44.functions.invoke('createMercadoPagoDeposit', {
-          user_id: currentUser?.id || null,
-          amount: amount,
-          buyer_name: firstName.trim(),
-          buyer_email: email.trim(),
-          buyer_cpf: cpf.trim()
-        })
-        : await base44.functions.invoke('createAsaasPayment', {
+      // 🔒 PIX (qualquer depósito ou arremate) e Cartão passam pela mesma função
+      // (createAsaasPayment), que já gera PIX via Mercado Pago em produção e credita
+      // o saldo pelo webhook real (mpWebhook → catalog_sales → app_users.saldo_disponivel).
+      // "createMercadoPagoDeposit" é uma função exclusiva do Base44 (não existe na Vercel/produção)
+      // — chamá-la aqui quebrava o depósito fora do preview com erro "not_implemented".
+      const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
           auction_id: isInvestorCapital ? auction.id : (isWalletDeposit ? null : auction.id),
           buyer_id: currentUser?.id || null,
           buyer_name: firstName.trim(),
@@ -293,7 +286,7 @@ export default function AuctionCheckoutModern() {
       const responseData = paymentResponse?.data || paymentResponse;
 
       if (responseData?.success === true) {
-        setPixData(isDigitalWalletPix ? { ...responseData, billing_type: 'PIX' } : responseData);
+        setPixData(responseData);
         setStep('payment');
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
 
