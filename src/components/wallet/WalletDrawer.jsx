@@ -54,6 +54,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const [generating, setGenerating] = useState(false);
   const [pixData, setPixData] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
+  const [filterTab, setFilterTab] = useState('all');
   const pollRef = useRef(null);
 
   const loadWallet = useCallback(async () => {
@@ -80,6 +81,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       setView('wallet');
       setPixData(null);
       setVisibleCount(15);
+      setFilterTab('all');
       loadWallet();
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
@@ -146,6 +148,17 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       setGenerating(false);
     }
   };
+
+  const FILTER_TABS = [
+    { key: 'all', label: 'Todos' },
+    { key: 'deposit', label: 'Depósitos' },
+    { key: 'purchase', label: 'Compras' },
+    { key: 'bid', label: 'Lances' },
+  ];
+  const filteredTransactions = React.useMemo(
+    () => (filterTab === 'all' ? transactions : transactions.filter((t) => t.type === filterTab)),
+    [transactions, filterTab]
+  );
 
   const balance = wallet?.saldo_disponivel ?? 0;
   const hasCommission = (wallet?.commission_balance || 0) > 0;
@@ -286,13 +299,26 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   {/* Extrato */}
                   <div>
                     <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3">Extrato</h3>
+                    <div className="flex gap-1.5 mb-3 overflow-x-auto -mx-0.5 px-0.5">
+                      {FILTER_TABS.map((f) => (
+                        <button
+                          key={f.key}
+                          onClick={() => { setFilterTab(f.key); setVisibleCount(15); }}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${filterTab === f.key
+                            ? 'bg-emerald-500/20 border-emerald-400/60 text-emerald-300'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200'}`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
                     {loading && transactions.length === 0 ? (
                       <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-green-400" /></div>
-                    ) : transactions.length === 0 ? (
+                    ) : filteredTransactions.length === 0 ? (
                       <p className="text-gray-500 text-sm text-center py-8">Nenhuma movimentação ainda.</p>
                     ) : (
                       <div className="space-y-2">
-                        {transactions.slice(0, visibleCount).map((tx) => {
+                        {filteredTransactions.slice(0, visibleCount).map((tx) => {
                           const style = TX_STYLE[tx.type] || TX_STYLE.purchase;
                           const Icon = style.icon;
                           return (
@@ -323,7 +349,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                             </div>
                           );
                         })}
-                        {visibleCount < transactions.length && (
+                        {visibleCount < filteredTransactions.length && (
                           <button
                             onClick={() => setVisibleCount((c) => c + 15)}
                             className="w-full text-center text-xs font-semibold text-emerald-300 hover:text-emerald-200 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
