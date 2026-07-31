@@ -1,5 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// 🔒 Acesso direto ao Supabase via REST (service_role) — NUNCA usar entities.AppUser/DigitalWallet para saldo.
+// base44.asServiceRole.entities aponta pro store interno do Base44, não pro Supabase real (confirmado por teste).
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(path: string, method = 'GET', body?: object) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        method,
+        headers: {
+            apikey: SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+        },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = text; }
+    return { ok: res.ok, status: res.status, data: json };
+}
+
 Deno.serve(async (req) => {
     const startTime = Date.now();
     console.log('⏱️ START createAsaasPayment');
@@ -373,40 +395,42 @@ Deno.serve(async (req) => {
                 console.log('💳 Creditando carteira instantaneamente (cartão aprovado)...');
                 try {
                     if (isDigitalWallet) {
-                        // CREDITAR DIGITAL WALLET
-                        const digitalWallets = await base44.asServiceRole.entities.DigitalWallet.filter(
-                            { user_id: walletDepositUserId },
-                            null,
-                            1
-                        );
+                        // 🔒 COFRE ÚNICO — Supabase REST direto (app_users.saldo_disponivel)
+                        // entities.AppUser/DigitalWallet NÃO apontam pro Supabase real — por isso fetch direto.
+                        const MAX_RETRIES = 3;
+                        let credited = false;
 
-                        let digitalWallet;
-                        if (digitalWallets && digitalWallets.length > 0) {
-                            digitalWallet = digitalWallets[0];
-                            const newBalance = (digitalWallet.balance || 0) + amount;
-                            await base44.asServiceRole.entities.DigitalWallet.update(digitalWallet.id, {
-                                balance: newBalance
-                            });
-                            console.log('✅ Digital Wallet creditada instantaneamente:', newBalance);
-                        } else {
-                            await base44.asServiceRole.entities.DigitalWallet.create({
-                                user_id: walletDepositUserId,
-                                balance: amount
-                            });
-                            console.log('✅ Digital Wallet criada com saldo:', amount);
+                        for (let attempt = 1; attempt <= MAX_RETRIES && !credited; attempt++) {
+                            try {
+                                const getResp = await sbFetch(`app_users?id=eq.${walletDepositUserId}&select=id,saldo_disponivel`);
+                                const appUser = Array.isArray(getResp.data) ? getResp.data[0] : null;
+                                if (!getResp.ok || !appUser) throw new Error(`AppUser ${walletDepositUserId} não encontrado`);
+
+                                const expectedSaldo = (appUser.saldo_disponivel || 0) + amount;
+                                const patchResp = await sbFetch(`app_users?id=eq.${walletDepositUserId}`, 'PATCH', {
+                                    saldo_disponivel: expectedSaldo
+                                });
+
+                                // 🔒 VERIFICAÇÃO PÓS-ESCRITA: Re-ler e confirmar
+                                const verifyResp = await sbFetch(`app_users?id=eq.${walletDepositUserId}&select=saldo_disponivel`);
+                                const updated = Array.isArray(verifyResp.data) ? verifyResp.data[0] : null;
+
+                                if (patchResp.ok && updated && Math.abs((updated.saldo_disponivel || 0) - expectedSaldo) < 0.01) {
+                                    credited = true;
+                                    console.log(`✅ Cartão creditado no Supabase instantaneamente (tentativa ${attempt}):`, walletDepositUserId, 'Saldo:', updated.saldo_disponivel);
+                                } else {
+                                    console.warn(`⚠️ [RETRY ${attempt}/${MAX_RETRIES}] Saldo verificado (${updated?.saldo_disponivel}) ≠ esperado (${expectedSaldo}). Race condition detectada.`);
+                                    if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 200 * attempt));
+                                }
+                            } catch (err) {
+                                console.error(`❌ [Cartão→Supabase] Tentativa ${attempt}/${MAX_RETRIES} falhou:`, err.message);
+                                if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 200 * attempt));
+                            }
                         }
 
-                        // Registrar transação digital
-                        await base44.asServiceRole.entities.DigitalWalletTransaction.create({
-                            user_id: walletDepositUserId,
-                            type: 'deposit',
-                            direction: 'credit',
-                            amount: amount,
-                            status: 'confirmed',
-                            related_payment_id: paymentData.id,
-                            description: `Depósito via Cartão de Crédito`
-                        });
-                        console.log('✅ Transação de Digital Wallet registrada');
+                        if (!credited) {
+                            console.error('🚨 CRÍTICO: Crédito de cartão NÃO aplicado após', MAX_RETRIES, 'tentativas. user:', walletDepositUserId, 'valor:', amount);
+                        }
                     } else {
                         // CREDITAR WALLET DE COMISSÕES
                         const wallets = await base44.asServiceRole.entities.Wallet.filter(
