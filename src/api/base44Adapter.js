@@ -80,6 +80,8 @@ const TABLE_MAP = {
 const FIELD_MAP = {
   BannerImage: { order: 'sort_order' },
   FeaturedProduct: { order: 'sort_order' },
+  // 🩹 Tabela real de saques usa nomes diferentes da entidade/legado
+  WithdrawalRequest: { influencer_id: 'user_id', amount: 'valor', created_date: 'created_at', pix_key_type: 'pix_tipo' },
 };
 
 const INVERSE_FIELD_MAP = Object.fromEntries(
@@ -123,9 +125,12 @@ function parseOrderBy(orderBy) {
   return null;
 }
 
-function applyOrderBy(query, orderBy) {
+function applyOrderBy(query, orderBy, entity) {
   const o = parseOrderBy(orderBy);
-  if (o) query = query.order(o.column, { ascending: o.ascending });
+  if (o) {
+    const fmap = FIELD_MAP[entity] || {};
+    query = query.order(fmap[o.column] || o.column, { ascending: o.ascending });
+  }
   return query;
 }
 
@@ -192,7 +197,7 @@ function entityProxy(entity) {
   return {
     async list(orderBy, limit) {
       let q = supabase.from(table).select('*');
-      q = applyOrderBy(q, orderBy);
+      q = applyOrderBy(q, orderBy, entity);
       if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
@@ -202,7 +207,7 @@ function entityProxy(entity) {
     async filter(filters, orderBy, limit, offset) {
       let q = supabase.from(table).select('*');
       q = applyFilters(q, entity, filters);
-      q = applyOrderBy(q, orderBy);
+      q = applyOrderBy(q, orderBy, entity);
       if (offset != null && limit) q = q.range(offset, offset + limit - 1);
       else if (limit) q = q.limit(limit);
       const { data, error } = await q;
