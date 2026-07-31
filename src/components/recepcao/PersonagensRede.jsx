@@ -16,7 +16,7 @@ const PROD = {
 const PAPEIS = [
   {
     nome: 'Lojista',
-    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2e21e6ec3_generated_image.png',
+    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/4517e824a_generated_image.png',
     produtos: [
       { img: PROD.note, top: '20%', left: '1%', w: '20%', speed: 0.14, delay: 0, rot: -4 },
       { img: PROD.fone, top: '10%', left: '80%', w: '16%', speed: 0.2, delay: 0.6, rot: 5 },
@@ -25,7 +25,7 @@ const PAPEIS = [
   },
   {
     nome: 'Executivo',
-    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/e035ef84c_generated_image.png',
+    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/93e5f52fc_generated_image.png',
     produtos: [
       { img: PROD.note, top: '16%', left: '80%', w: '19%', speed: 0.16, delay: 0.3, rot: 4 },
       { img: PROD.caixa, top: '55%', left: '2%', w: '15%', speed: 0.19, delay: 0.9, rot: -5 },
