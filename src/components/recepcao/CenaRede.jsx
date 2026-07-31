@@ -23,15 +23,15 @@ export default function CenaRede() {
         alt="Pessoas apresentando um produto no tablet e comemorando as comissões"
         loading="lazy"
         decoding="async"
-        className="relative mx-auto w-full object-cover"
+        className="relative mx-auto w-full max-w-[860px] object-contain"
         style={{
-          height: 'clamp(260px, 30vw, 420px)',
-          objectPosition: '50% 34%',
+          height: 'clamp(340px, 44vw, 560px)',
           mixBlendMode: 'multiply',
-          // elipse bem larga: a cena vira faixa e as bordas somem no branco,
-          // sem aquele retângulo cinza de fundo de estúdio aparecendo
-          maskImage: 'radial-gradient(58% 92% at 50% 46%, #000 30%, transparent 84%)',
-          WebkitMaskImage: 'radial-gradient(58% 92% at 50% 46%, #000 30%, transparent 84%)',
+          // cena inteira (contain, ninguém cortado) e as pontas dissolvidas:
+          // a elipse é mais fechada que a foto, então o retângulo cinza do
+          // estúdio desaparece no branco em vez de virar quadrado
+          maskImage: 'radial-gradient(46% 58% at 50% 50%, #000 22%, transparent 97%)',
+          WebkitMaskImage: 'radial-gradient(46% 58% at 50% 50%, #000 22%, transparent 97%)',
         }}
       />
     </div>
