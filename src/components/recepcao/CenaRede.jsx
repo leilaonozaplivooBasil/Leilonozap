@@ -23,12 +23,15 @@ export default function CenaRede() {
         alt="Pessoas apresentando um produto no tablet e comemorando as comissões"
         loading="lazy"
         decoding="async"
-        className="relative mx-auto w-full object-contain"
+        className="relative mx-auto w-full object-cover"
         style={{
-          height: 'clamp(320px, 52vw, 660px)',
+          height: 'clamp(260px, 30vw, 420px)',
+          objectPosition: '50% 34%',
           mixBlendMode: 'multiply',
-          maskImage: 'radial-gradient(72% 76% at 50% 50%, #000 68%, transparent 96%)',
-          WebkitMaskImage: 'radial-gradient(72% 76% at 50% 50%, #000 68%, transparent 96%)',
+          // elipse bem larga: a cena vira faixa e as bordas somem no branco,
+          // sem aquele retângulo cinza de fundo de estúdio aparecendo
+          maskImage: 'radial-gradient(58% 92% at 50% 46%, #000 30%, transparent 84%)',
+          WebkitMaskImage: 'radial-gradient(58% 92% at 50% 46%, #000 30%, transparent 84%)',
         }}
       />
     </div>
