@@ -1,5 +1,6 @@
-// productAdminAction — operações de produto (service_role): update | zerarEstoque | delete | setField.
+// productAdminAction — operações de produto (service_role): create | update | zerarEstoque | delete | setField.
 // Guard: ator admin/super_admin OU cargo de estoque (distribuidor/loja_fisica/ponto_retirada).
+import { oid } from '../_lib/oid.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
     const action = String(body?.action || '');
     const actorId = String(body?.actorId || '').trim();
     const productId = String(body?.productId || '').trim();
-    if (!actorId || !productId || !action) return res.status(400).json({ success: false, error: 'actorId, productId e action obrigatórios' });
+    if (!actorId || !action || (action !== 'create' && !productId)) return res.status(400).json({ success: false, error: 'actorId, productId e action obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config ausente' });
 
     // guard
@@ -30,6 +31,21 @@ export default async function handler(req, res) {
     if (!ok) return res.status(403).json({ success: false, error: 'Sem permissão' });
 
     const now = new Date().toISOString();
+
+    if (action === 'create') {
+      // Cadastro manual de 1 produto (Gestão de Estoque) — grava TODOS os campos do
+      // formulário (inclusive qty_perfeito/bom/oficina e deposit_name), diferente do
+      // bulkImportProducts (feito só pra importação em massa via planilha).
+      const fields = body?.fields || {};
+      const row = { id: oid(), created_date: now, updated_date: now };
+      row.base44_id = row.id;
+      for (const k of Object.keys(fields)) { if (ALLOWED.includes(k)) row[k] = fields[k]; }
+      if (!row.description) return res.status(400).json({ success: false, error: 'Descrição obrigatória' });
+      const r = await sb('products', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) });
+      if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao cadastrar', details: t.slice(0, 200) }); }
+      const created = await r.json();
+      return res.status(200).json({ success: true, action: 'create', product: Array.isArray(created) ? created[0] : created });
+    }
 
     if (action === 'delete') {
       const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });

@@ -513,7 +513,7 @@ export default function ProductManagement() {
         if (!_r?.success) { alert('Não atualizou: ' + (_r?.error || 'falha')); return; }
         alert('Produto atualizado!');
       } else {
-        const _c = await base44.functions.invoke('bulkImportProducts', { actorId: currentUser?.id, publish: false, items: [{ name: dataToSave.description, price: dataToSave.selling_price_retail, cost: dataToSave.cost_price, quantity: dataToSave.quantity, sku: dataToSave.lot }] });
+        const _c = await base44.functions.invoke('productAdminAction', { action: 'create', actorId: currentUser?.id, fields: dataToSave });
         if (!_c?.success) { alert('Não cadastrou: ' + (_c?.error || 'falha')); return; }
         alert('Produto cadastrado!');
       }
