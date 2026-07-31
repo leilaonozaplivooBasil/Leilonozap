@@ -162,6 +162,12 @@ Deno.serve(async (req) => {
       result.luiz_catalog_sales_rest = Array.isArray(allLuiz.body) ? allLuiz.body.slice(8) : allLuiz.body;
     }
 
+    if (mode === 'luiz_dois_leiloes') {
+      result.saldo = await sb(`app_users?select=id,saldo_disponivel,saldo_alocado,saldo_reservado,updated_at&id=eq.68db0ff2c19838a827fb6e5f`);
+      result.leilao_quebracabeca = await sb(`auctions?select=id,title,status,current_price,winner_id,winner_name,version&id=eq.8f141c8881a42229848ae6fd`);
+      result.leilao_carteira = await sb(`auctions?select=id,title,status,current_price,winner_id,winner_name,version&id=eq.75434b1074ad6c51ae2979ba`);
+    }
+
     if (mode === 'luiz_snapshot_now') {
       result.saldo_now = await sb(`app_users?select=id,saldo_disponivel,saldo_alocado,updated_at&id=eq.68db0ff2c19838a827fb6e5f`);
       result.auction_now = await sb(`auctions?select=id,title,status,current_price,winner_id,winner_name,version,end_time&id=eq.8f141c8881a42229848ae6fd`);
