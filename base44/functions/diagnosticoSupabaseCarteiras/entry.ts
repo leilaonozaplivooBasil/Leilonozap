@@ -132,6 +132,36 @@ Deno.serve(async (req) => {
       result.p4_pagamento_170172301389 = await sb(`catalog_sales?select=*&mp_payment_id=eq.170172301389`);
     }
 
+    if (mode === 'cristiano_verify') {
+      result.pagamento_1698 = await sb(`catalog_sales?select=*&mp_payment_id=eq.169793431523`);
+      result.conta_alvo = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance&id=eq.6936dfd7e5b6acb6e80fb945`);
+      result.busca_cristiano_todas_contas = await sb(`app_users?select=id,full_name,email,saldo_disponivel,commission_balance&full_name=ilike.*Cristiano*`);
+    }
+
+    if (mode === 'luiz_rastreio_bids') {
+      const bidTables = ['bids', 'auction_bids', 'lances', 'bid_history'];
+      const bidResults = {};
+      for (const t of bidTables) {
+        const r = await sb(`${t}?select=id,amount,status,auction_id,created_at&user_id=eq.68db0ff2c19838a827fb6e5f&order=created_at.desc&limit=50`);
+        bidResults[t] = r.ok ? { count: Array.isArray(r.body) ? r.body.length : 0, sample: Array.isArray(r.body) ? r.body.slice(0,5) : r.body } : r;
+      }
+      result.luiz_bid_tables = bidResults;
+      const debitTables = ['withdrawals', 'debits', 'wallet_debits'];
+      const debitResults = {};
+      for (const t of debitTables) {
+        const r = await sb(`${t}?select=*&user_id=eq.68db0ff2c19838a827fb6e5f&order=created_at.desc&limit=20`);
+        debitResults[t] = r.ok ? { count: Array.isArray(r.body) ? r.body.length : 0, sample: Array.isArray(r.body) ? r.body.slice(0,5) : r.body } : r;
+      }
+      result.luiz_debit_tables = debitResults;
+      result.luiz_full_user = await sb(`app_users?select=id,full_name,saldo_disponivel,saldo_alocado,commission_balance,held_balance,updated_at&id=eq.68db0ff2c19838a827fb6e5f`);
+    }
+
+    if (mode === 'luiz_rastreio_sales_rest') {
+      const allLuiz = await sb(`catalog_sales?select=id,kind,total_amount,status,mp_payment_id,created_at&buyer_id=eq.68db0ff2c19838a827fb6e5f&order=created_at.desc`);
+      result.luiz_catalog_sales_count = Array.isArray(allLuiz.body) ? allLuiz.body.length : 'error';
+      result.luiz_catalog_sales_rest = Array.isArray(allLuiz.body) ? allLuiz.body.slice(8) : allLuiz.body;
+    }
+
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
