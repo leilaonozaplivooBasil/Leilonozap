@@ -56,7 +56,7 @@ export default function Recepcao() {
       {/* 1 — HERO */}
       <HeroRecepcao
         stats={stats}
-        produtoDestaque={produtos[0]}
+        produtos={produtos}
         q={q}
         setQ={setQ}
         onBuscar={buscar}

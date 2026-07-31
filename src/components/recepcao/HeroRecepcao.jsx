@@ -1,11 +1,11 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import ParCTA from './ParCTA';
-import MidiaFlutuante from './MidiaFlutuante';
+import FilaProdutos from './FilaProdutos';
 
 // Hero da vitrine: eyebrow ao vivo → título → subtítulo → CTAs → busca → produto.
 // A busca é o gesto nº 1 de quem chega numa loja, por isso continua aqui.
-export default function HeroRecepcao({ stats, produtoDestaque, q, setQ, onBuscar }) {
+export default function HeroRecepcao({ stats, produtos = [], q, setQ, onBuscar }) {
   return (
     <section className="w-full overflow-hidden bg-nz-cinza-fundo">
       <div className="px-5 pt-[clamp(56px,8vh,96px)] text-center">
@@ -23,7 +23,10 @@ export default function HeroRecepcao({ stats, produtoDestaque, q, setQ, onBuscar
           >
             Arremate.
             <br />
-            <span className="text-nz-verde">Por uma fração.</span>
+            <span className="text-nz-verde">
+              Por uma fração.
+              <span className="align-super text-[0.42em] font-normal">*</span>
+            </span>
           </h1>
 
           <p
@@ -31,6 +34,11 @@ export default function HeroRecepcao({ stats, produtoDestaque, q, setQ, onBuscar
             style={{ fontSize: 'clamp(1.05rem, 2.2vw, 1.4rem)' }}
           >
             Leilões ao vivo e loja virtual com até 60% de desconto. Dê seu lance, arremate e receba em casa.
+          </p>
+
+          {/* Transparência: exigência de comunicação — visível logo de cara. */}
+          <p className="mt-3 text-[13px] leading-snug text-nz-tinta-fraca">
+            *Leilão não oficial
           </p>
 
           <div className="mt-8">
@@ -68,12 +76,7 @@ export default function HeroRecepcao({ stats, produtoDestaque, q, setQ, onBuscar
         </div>
 
         <div className="mt-14">
-          <MidiaFlutuante
-            src={produtoDestaque?.image_urls?.[0]}
-            alt={produtoDestaque?.description || ''}
-            prioridade
-            altura={400}
-          />
+          <FilaProdutos />
         </div>
       </div>
     </section>

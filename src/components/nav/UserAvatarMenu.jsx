@@ -90,7 +90,9 @@ function getInitials(name = "") {
     .toUpperCase() || "?";
 }
 
-export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) {
+// temaClaro: usado só na Recepção (navbar branca) — garante contraste do botão
+// "Entrar" e do nome do usuário. Sem a prop, o comportamento é o de sempre.
+export default function UserAvatarMenu({ currentUser, temaClaro = false, onLoginClick, onLogout }) {
   const navigate = useNavigate();
 
   // 🛡️ FASE 4.6 — Anti-flash do botão "Entrar":
@@ -117,7 +119,11 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
       <Button
         onClick={onLoginClick}
         className="flex items-center gap-2 text-sm font-semibold text-white rounded-xl border-0 transition-all duration-300 hover:scale-105"
-        style={{
+        style={temaClaro ? {
+          background: "linear-gradient(135deg, #2E9D63, #1B7A48)",
+          border: "1px solid #1B7A48",
+          boxShadow: "0 4px 14px rgba(27,122,72,0.28)",
+        } : {
           background: "linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))",
           border: "1px solid rgba(16,185,129,0.3)",
           boxShadow: "0 4px 16px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
@@ -157,8 +163,8 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full transition-all duration-300 hover:bg-white/5"
-          style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+          className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full transition-all duration-300 ${temaClaro ? 'hover:bg-black/5' : 'hover:bg-white/5'}`}
+          style={{ border: temaClaro ? "1px solid #DDE4DF" : "1px solid rgba(255,255,255,0.08)" }}
         >
           {/* Avatar */}
           <div
@@ -172,10 +178,10 @@ export default function UserAvatarMenu({ currentUser, onLoginClick, onLogout }) 
             )}
           </div>
           {/* Nome (truncado, só desktop largo) */}
-          <span className="hidden lg:inline font-slab text-sm font-normal text-white max-w-[120px] truncate">
+          <span className={`hidden lg:inline font-slab text-sm font-normal max-w-[120px] truncate ${temaClaro ? 'text-nz-tinta' : 'text-white'}`}>
             {fullName.split(" ")[0]} {fullName.split(" ")[1] || ""}
           </span>
-          <ChevronDown className="w-4 h-4 text-gray-400" />
+          <ChevronDown className={`w-4 h-4 ${temaClaro ? 'text-nz-tinta-fraca' : 'text-gray-400'}`} />
         </button>
       </DropdownMenuTrigger>
 

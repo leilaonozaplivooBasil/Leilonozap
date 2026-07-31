@@ -33,6 +33,8 @@ const P = {
 export default function NavDesktop({
   currentPageName,
   currentUser,
+  // 🌿 tema claro: usado somente na Recepção (navbar branca). Sem ele, nada muda.
+  temaClaro = false,
   cartCount = 0,
   onLoginClick,
   onLogout,
@@ -98,7 +100,7 @@ export default function NavDesktop({
                 </span>
                 <span
                   className="font-slab text-[9.5px] font-bold uppercase tracking-[0.14em] whitespace-nowrap leading-none transition-colors"
-                  style={{ color: active ? P.sage : P.gray }}
+                  style={{ color: active ? (temaClaro ? P.forest : P.sage) : (temaClaro ? '#5C6B62' : P.gray) }}
                 >
                   {s.title}
                 </span>
@@ -197,8 +199,10 @@ export default function NavDesktop({
           )}
           <style>{`
             .cart-glass {
-              background: linear-gradient(155deg, rgba(153,193,152,0.30) 0%, rgba(77,114,75,0.45) 55%, rgba(33,34,43,0.6) 100%);
-              border: 1px solid rgba(153,193,152,0.45);
+              background: ${temaClaro
+                ? `linear-gradient(155deg, ${P.sage} 0%, ${P.forest} 62%, #3c5a3a 100%)`
+                : 'linear-gradient(155deg, rgba(153,193,152,0.30) 0%, rgba(77,114,75,0.45) 55%, rgba(33,34,43,0.6) 100%)'};
+              border: 1px solid ${temaClaro ? 'rgba(77,114,75,0.55)' : 'rgba(153,193,152,0.45)'};
               backdrop-filter: blur(14px) saturate(1.3);
               -webkit-backdrop-filter: blur(14px) saturate(1.3);
               box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.3);
@@ -251,12 +255,13 @@ export default function NavDesktop({
         </Link>
 
         {/* === Separador visual: LOJA (rank+carrinho) ↔ PERFIL === */}
-        <div className="w-px h-9 bg-white/10 mx-1" aria-hidden="true" />
+        <div className={`w-px h-9 mx-1 ${temaClaro ? 'bg-nz-borda' : 'bg-white/10'}`} aria-hidden="true" />
 
         {/* === Perfil no canto extremo direito === */}
         <div>
           <UserAvatarMenu
             currentUser={currentUser}
+            temaClaro={temaClaro}
             onLoginClick={onLoginClick}
             onLogout={onLogout}
           />

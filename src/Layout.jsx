@@ -731,6 +731,9 @@ export default function Layout({ children, currentPageName }) {
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';
   const isLandingPage = currentPageName === 'Landing';
+  // 🌿 Na Recepção a barra escura destoava da vitrine clean: só ali ela vira clara.
+  // Em TODAS as outras páginas o cabeçalho continua exatamente como sempre foi.
+  const isRecepcao = currentPageName === 'Recepcao';
 
   const shouldShowLoading = isLoading;
 
@@ -810,7 +813,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: '1px solid rgba(153, 193, 152, 0.10)', boxShadow: '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: isRecepcao ? 'rgba(255, 255, 255, 0.82)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isRecepcao ? '1px solid #DDE4DF' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isRecepcao ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="relative flex h-14 sm:h-16 justify-between items-center">
 
@@ -818,6 +821,9 @@ export default function Layout({ children, currentPageName }) {
               <div className="flex items-center gap-2 md:gap-4">
                 {/* Hambúrguer da sidebar removido: o menu do painel agora é a
                     AdminTopNav (barra no topo), acessível também no mobile. */}
+                {/* A logo tem letreiro branco: na barra clara ela precisa de uma
+                    placa escura discreta atrás, senão o nome simplesmente desaparece. */}
+                <div className={isRecepcao ? 'rounded-xl bg-nz-verde-escuro px-3 py-1.5' : undefined}>
                 <img
                   src={logoUrl}
                   alt="Leilão NoZap"
@@ -831,6 +837,7 @@ export default function Layout({ children, currentPageName }) {
                   width={440}
                   height={160}
                 />
+                </div>
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
               </div>
 
@@ -846,6 +853,7 @@ export default function Layout({ children, currentPageName }) {
                   isCatalogPage={isCatalogPage}
                   adminMenuItems={adminMenuItems}
                   currentUser={currentUser}
+                  temaClaro={isRecepcao}
                   cartCount={cartCount}
                   onShareClick={() => setShowShareModal(true)}
                   onLoginClick={() => setShowLoginModal(true)}
@@ -877,7 +885,7 @@ export default function Layout({ children, currentPageName }) {
                     type="button"
                     aria-label="Abrir menu"
                     {...fastTap(() => setMobileMenuOpen(true))}
-                    className="inline-flex items-center justify-center rounded-md p-2.5 text-gray-400 hover:text-white"
+                    className={`inline-flex items-center justify-center rounded-md p-2.5 ${isRecepcao ? 'text-nz-tinta hover:text-nz-verde' : 'text-gray-400 hover:text-white'}`}
                   >
                     <Menu className="h-6 w-6" />
                   </button>
