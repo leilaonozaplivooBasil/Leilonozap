@@ -1,70 +1,79 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+// 🔒 Debita saldo direto no Supabase (app_users.saldo_disponivel) via REST + service_role,
+// com compare-and-swap (CAS) para evitar corrida entre débitos concorrentes.
+// Espelha api/functions/debitWalletBalance.js (Vercel) — mesma fonte nos dois ambientes.
+// NUNCA usar base44.asServiceRole.entities.DigitalWallet aqui (entidade antiga/morta do Base44,
+// desconectada do saldo real que o app usa em produção — causava "saldo insuficiente" falso
+// no arremate rápido mesmo com saldo real disponível).
+
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(path: string, method = 'GET', body?: object) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        method,
+        headers: {
+            apikey: SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = text; }
+    return { ok: res.ok, status: res.status, data: json };
+}
+
+const money = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 Deno.serve(async (req) => {
     try {
-        const base44 = createClientFromRequest(req);
         const { user_id, amount, auction_id, description } = await req.json();
 
         if (!user_id || !amount || amount <= 0) {
             return Response.json({ error: 'user_id e amount (>0) são obrigatórios' }, { status: 400 });
         }
 
-        // 🛡️ DÉBITO ATÔMICO — updateMany com filtro condicional + $inc
-        // A operação é atômica no banco: só debita se balance >= amount.
-        // Elimina a race condition do read-modify-write anterior.
-        
-        // 1. Lê saldo anterior (para resposta e verificação)
-        const walletsBefore = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id });
-        if (!walletsBefore || walletsBefore.length === 0) {
-            return Response.json({ success: false, error: 'Carteira não encontrada', balance: 0 }, { status: 400 });
-        }
-        const previousBalance = walletsBefore.reduce((sum, w) => sum + (w.balance || 0), 0);
+        const amt = money(amount);
+        const MAX_RETRIES = 5;
 
-        // 2. Débito atômico: só afeta registros onde balance >= amount
-        await base44.asServiceRole.entities.DigitalWallet.updateMany(
-            { user_id, balance: { $gte: amount } },
-            { $inc: { balance: -amount } }
-        );
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            const getResp = await sbFetch(`app_users?id=eq.${user_id}&select=id,saldo_disponivel`);
+            const user = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
-        // 3. Lê saldo novo para confirmar se o débito ocorreu
-        const walletsAfter = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id });
-        const newBalance = walletsAfter.reduce((sum, w) => sum + (w.balance || 0), 0);
+            if (!getResp.ok || !user) {
+                return Response.json({ success: false, error: 'Usuário não encontrado', balance: 0 }, { status: 400 });
+            }
 
-        // 4. Se o saldo não diminuiu, o débito falhou (saldo insuficiente)
-        if (newBalance >= previousBalance) {
-            return Response.json({
-                success: false,
-                error: 'Saldo insuficiente',
-                balance: newBalance,
-                required: amount,
-                deficit: amount - newBalance
-            }, { status: 400 });
-        }
+            const current = money(user.saldo_disponivel);
+            if (current < amt) {
+                return Response.json({ success: false, error: 'Saldo insuficiente', balance: current }, { status: 400 });
+            }
 
-        // 5. Registra a transação APÓS sucesso atômico
-        try {
-            await base44.asServiceRole.entities.DigitalWalletTransaction.create({
-                user_id: user_id,
-                type: 'auction_payment',
-                direction: 'debit',
-                amount: amount,
-                related_auction_id: auction_id || null,
-                status: 'confirmed',
-                description: description || `Débito de lance/arremate - R$ ${amount.toFixed(2)}`
-            });
-        } catch (txError) {
-            console.error('Erro ao registrar transação (débito já realizado):', txError.message);
+            const novo = money(current - amt);
+            // CAS: só aplica se saldo_disponivel ainda for exatamente o valor lido agora
+            const patchResp = await sbFetch(
+                `app_users?id=eq.${user_id}&saldo_disponivel=eq.${current}`,
+                'PATCH',
+                { saldo_disponivel: novo }
+            );
+            const patchedRow = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
+
+            if (patchResp.ok && patchedRow) {
+                console.log(`✅ [DEBIT] user=${user_id}, valor=R$ ${amt.toFixed(2)}, saldo anterior=R$ ${current.toFixed(2)}, novo saldo=R$ ${patchedRow.saldo_disponivel} (${description || ''}, auction=${auction_id || 'n/a'})`);
+                return Response.json({
+                    success: true,
+                    previous_balance: current,
+                    debited: amt,
+                    new_balance: patchedRow.saldo_disponivel,
+                    balance: patchedRow.saldo_disponivel,
+                });
+            }
+            console.warn(`⚠️ [RETRY ${attempt}/${MAX_RETRIES}] Débito não aplicado (saldo mudou/condição de corrida). Reavaliando...`);
         }
 
-        console.log(`✅ Débito atômico: user=${user_id}, valor=R$ ${amount.toFixed(2)}, saldo anterior=R$ ${previousBalance.toFixed(2)}, novo saldo=R$ ${newBalance.toFixed(2)}`);
-
-        return Response.json({
-            success: true,
-            previous_balance: previousBalance,
-            debited: amount,
-            new_balance: newBalance,
-            wallet_id: walletsAfter[0]?.id
-        });
+        return Response.json({ success: false, error: 'Concorrência ao debitar, tente novamente' }, { status: 409 });
 
     } catch (error) {
         console.error('Erro debitWalletBalance:', error.message);

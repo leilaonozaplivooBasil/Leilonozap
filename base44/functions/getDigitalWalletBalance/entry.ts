@@ -1,36 +1,44 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+// 🔒 Lê o saldo direto do Supabase (app_users.saldo_disponivel/saldo_alocado) via REST + service_role.
+// Espelha api/functions/getDigitalWalletBalance.js (Vercel) — mesma fonte nos dois ambientes.
+// NUNCA usar base44.asServiceRole.entities.DigitalWallet aqui (entidade antiga/morta do Base44,
+// desconectada do saldo real que o app usa em produção).
+
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(path: string) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        headers: {
+            apikey: SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    return res.json();
+}
 
 Deno.serve(async (req) => {
     try {
-        const base44 = createClientFromRequest(req);
         const { user_id } = await req.json();
-        
         if (!user_id) {
             return Response.json({ error: 'user_id obrigatório' }, { status: 400 });
         }
 
-        // Usa service role para contornar RLS
-        const wallets = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id });
+        const rows = await sbFetch(`app_users?select=saldo_disponivel,saldo_alocado&id=eq.${encodeURIComponent(user_id)}&limit=1`);
+        const user = Array.isArray(rows) ? rows[0] : null;
 
-        if (!wallets || wallets.length === 0) {
-            return Response.json({ balance: 0, wallet_id: null });
-        }
+        const balance = Number(user?.saldo_disponivel) || 0;
+        const held_balance = Number(user?.saldo_alocado) || 0;
 
-        // 🛡️ SOMA todos os saldos — NUNCA deleta carteiras em hot-path de leitura.
-        // A consolidação de duplicatas (se necessária) é tarefa admin separada,
-        // nunca dentro de getDigitalWalletBalance (causa race com débitos concorrentes).
-        const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
-        const totalHeldBalance = wallets.reduce((sum, w) => sum + (w.held_balance || 0), 0);
-
-        return Response.json({ 
-            balance: totalBalance, 
-            held_balance: totalHeldBalance,
-            total_balance: totalBalance + totalHeldBalance,
-            wallet_id: wallets[0].id 
+        return Response.json({
+            success: true,
+            balance,
+            held_balance,
+            total_balance: balance + held_balance,
         });
 
     } catch (error) {
         console.error('Erro getDigitalWalletBalance:', error.message);
-        return Response.json({ error: error.message }, { status: 500 });
+        return Response.json({ error: error.message, balance: 0 }, { status: 500 });
     }
 });
