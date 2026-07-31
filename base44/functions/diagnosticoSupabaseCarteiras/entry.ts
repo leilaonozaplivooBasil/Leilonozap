@@ -119,6 +119,19 @@ Deno.serve(async (req) => {
       result.pergunta4_luiz_deposits = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&buyer_id=eq.68db0ff2c19838a827fb6e5f&kind=eq.wallet_deposit&created_at=gte.2026-07-18T00:00:00&created_at=lt.2026-07-30T00:00:00&order=created_at.asc`);
     }
 
+    if (mode === 'luiz_full_audit') {
+      // P1: só os wallet_deposit do Luiz (evita truncar) + contagem total de linhas dele
+      result.p1_luiz_wallet_deposits_only = await sb(`catalog_sales?select=id,buyer_id,buyer_name,kind,total_amount,status,mp_payment_id,created_at&buyer_id=eq.68db0ff2c19838a827fb6e5f&kind=eq.wallet_deposit&order=created_at.desc`);
+      const allLuiz = await sb(`catalog_sales?select=id,kind,status,mp_payment_id,created_at&buyer_id=eq.68db0ff2c19838a827fb6e5f&order=created_at.desc`);
+      result.p1_luiz_total_rows_count = Array.isArray(allLuiz.body) ? allLuiz.body.length : 'error';
+      // P2: saldo atual do Luiz
+      result.p2_luiz_saldo = await sb(`app_users?select=id,full_name,saldo_disponivel,commission_balance&id=eq.68db0ff2c19838a827fb6e5f`);
+      // P3: últimos 20 wallet_deposit pagos, qualquer usuário
+      result.p3_ultimos_20_wallet_deposits = await sb(`catalog_sales?select=id,buyer_id,buyer_name,total_amount,mp_payment_id,created_at&kind=eq.wallet_deposit&status=eq.paid&order=created_at.desc&limit=20`);
+      // P4: registro específico do pagamento 170172301389
+      result.p4_pagamento_170172301389 = await sb(`catalog_sales?select=*&mp_payment_id=eq.170172301389`);
+    }
+
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
