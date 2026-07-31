@@ -162,6 +162,32 @@ Deno.serve(async (req) => {
       result.luiz_catalog_sales_rest = Array.isArray(allLuiz.body) ? allLuiz.body.slice(8) : allLuiz.body;
     }
 
+    if (mode === 'luiz_snapshot_now') {
+      result.saldo_now = await sb(`app_users?select=id,saldo_disponivel,saldo_alocado,updated_at&id=eq.68db0ff2c19838a827fb6e5f`);
+      result.auction_now = await sb(`auctions?select=id,title,status,current_price,winner_id,winner_name,version,end_time&id=eq.8f141c8881a42229848ae6fd`);
+      result.deposito_2000_as_1741 = await sb(`catalog_sales?select=id,total_amount,status,mp_payment_id,created_at&mp_payment_id=eq.171329243052`);
+    }
+
+    if (mode === 'luiz_recent_full_2') {
+      result.ultimos_lances = await sb(`auction_messages?select=id,auction_id,bid_amount,created_at&sender_id=eq.68db0ff2c19838a827fb6e5f&message_type=eq.bid&order=created_at.desc&limit=10`);
+      const auctionIds = Array.isArray(result.ultimos_lances.body) ? [...new Set(result.ultimos_lances.body.map(b => b.auction_id))] : [];
+      if (auctionIds.length) {
+        const inList = auctionIds.map(i => `"${encodeURIComponent(i)}"`).join(',');
+        result.auctions_relacionados = await sb(`auctions?select=id,title,status,current_price,winner_id,winner_name,version,end_time&id=in.(${inList})`);
+      }
+    }
+
+    if (mode === 'luiz_recent_full') {
+      result.saldo_atual = await sb(`app_users?select=id,full_name,saldo_disponivel,saldo_alocado,updated_at&id=eq.68db0ff2c19838a827fb6e5f`);
+      result.ultimas_catalog_sales = await sb(`catalog_sales?select=id,kind,product_title,sale_price,total_amount,status,mp_payment_id,created_at&buyer_id=eq.68db0ff2c19838a827fb6e5f&order=created_at.desc&limit=15`);
+      result.ultimos_lances = await sb(`auction_messages?select=id,auction_id,bid_amount,created_at&sender_id=eq.68db0ff2c19838a827fb6e5f&message_type=eq.bid&order=created_at.desc&limit=10`);
+      const auctionIds = Array.isArray(result.ultimos_lances.body) ? [...new Set(result.ultimos_lances.body.map(b => b.auction_id))] : [];
+      if (auctionIds.length) {
+        const inList = auctionIds.map(i => `"${encodeURIComponent(i)}"`).join(',');
+        result.auctions_relacionados = await sb(`auctions?select=id,title,status,current_price,winner_id,winner_name,version,end_time&id=in.(${inList})`);
+      }
+    }
+
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
