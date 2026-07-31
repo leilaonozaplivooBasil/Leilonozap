@@ -192,6 +192,7 @@ export default function useBidSubmission({
       const atomicResult = await base44.functions.invoke('submitAtomicBid', {
         auction_id: auctionId,
         amount: bidAmount,
+        user_id: currentUser.id,
         bidder_name: currentUser.nickname || currentUser.full_name
       });
       const atomicData = atomicResult?.data || atomicResult;
