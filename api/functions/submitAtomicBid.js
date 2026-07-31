@@ -113,9 +113,17 @@ export default async function handler(req, res) {
     const currentVersion = auction.version || 0;
     const winnerName = bidderName || user.nickname || user.full_name || 'Anônimo';
 
+    // ⚠️ CAUSA-RAIZ DO "Erro ao enviar lance": leilões gerados a partir de lotes nascem com
+    // version = NULL. Em SQL, NULL nunca casa com "version=eq.0" — o PATCH atingia ZERO linhas
+    // e todo lance virava falso conflito. Quando version é NULL, a trava usa "version=is.null".
+    const versionFilter =
+      auction.version === null || auction.version === undefined
+        ? 'version=is.null'
+        : `version=eq.${currentVersion}`;
+
     // PATCH atômico: só aplica se a version ainda for a mesma lida agora (CAS).
     const patchResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&version=eq.${currentVersion}`,
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&${versionFilter}`,
       'PATCH',
       {
         current_price: bidAmount,
