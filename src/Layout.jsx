@@ -183,12 +183,6 @@ export default function Layout({ children, currentPageName }) {
   const handleLogout = React.useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
 
-    // 🛡️ Detecta contexto ANTES de limpar dados
-    const urlParams = new URLSearchParams(window.location.search);
-    const isFromCatalog = urlParams.get('from') === 'catalog';
-    const catalogPages = ['Catalog', 'CatalogProductDetails', 'Cart', 'CatalogCheckout', 'MyCatalogOrders', 'CatalogOrderTracking'];
-    const isInCatalogContext = isFromCatalog || catalogPages.includes(currentPageName);
-
     // 🔒 FLAG DE LOGOUT INTENCIONAL — impede re-login automático via User.me()
     sessionStorage.setItem('userLoggedOut', 'true');
 
@@ -205,15 +199,12 @@ export default function Layout({ children, currentPageName }) {
 
     console.log("✅ LOGOUT COMPLETO - Estado limpo!");
 
-    // Redireciona para o contexto correto: Catálogo ou Home
-    if (isInCatalogContext) {
-      // 🔧 Força URL limpa (sem ?ref=) para catálogo após logout
-      window.history.replaceState(null, '', '/Loja-Virtual');
-      navigate(createPageUrl("Catalog"), { replace: true });
-    } else {
-      navigate(createPageUrl("Home"), { replace: true });
-    }
-  }, [navigate, currentPageName]);
+    // 🏠 Ao sair, SEMPRE volta pra vitrine de abertura ("/" = Recepção):
+    // é o sinal mais claro pro usuário de que saiu da conta.
+    // Força URL limpa (sem ?ref=, ?from=) antes de navegar.
+    window.history.replaceState(null, '', '/');
+    navigate("/", { replace: true });
+  }, [navigate]);
 
   const syncUserData = React.useCallback(async () => {
     const savedUserJSON = localStorage.getItem('currentUser');
