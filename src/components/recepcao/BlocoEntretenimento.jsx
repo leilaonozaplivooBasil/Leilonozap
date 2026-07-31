@@ -11,21 +11,21 @@ const CARTAZES = [
     titulo: 'Compre ao vivo, na hora.',
     linha: 'Ofertas que acabam na frente de todos.',
     cta: { label: 'Assistir agora', to: '/LiveShopNoZap' },
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a37dd049c_generated_image.png',
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/50627039c_generated_image.png',
   },
   {
     eyebrow: 'Rank Premiado',
     titulo: 'Suba no ranking. Leve o prêmio.',
     linha: 'Convide, some pontos e concorra aos produtos do dia.',
     cta: { label: 'Participar', to: '/rankpremiado' },
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/da7b4dd65_generated_image.png',
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/616764e6f_generated_image.png',
   },
   {
     eyebrow: 'Indique e fature',
     titulo: 'Mandou o link. Caiu comissão.',
     linha: 'Mostre o produto pra quem você conhece.',
     cta: { label: 'Começar a indicar', to: '/Licensing' },
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/69c3da8e0_generated_image.png',
+    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/95957b962_generated_image.png',
   },
 ];
 
@@ -60,13 +60,13 @@ export default function BlocoEntretenimento() {
               loading="lazy"
               decoding="async"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]"
-              style={{ filter: 'brightness(1.22) saturate(1.04) contrast(0.96)' }}
+              style={{ filter: 'brightness(1.04) saturate(1.02)' }}
             />
             {/* véu leve: só o rodapé escurece pro texto branco ficar legível —
                 o miolo da foto fica aceso pra não brigar com o clean do site */}
             <div
               className="absolute inset-0"
-              style={{ background: 'linear-gradient(to top, rgba(6,12,9,0.74) 0%, rgba(6,12,9,0.30) 34%, rgba(6,12,9,0) 62%)' }}
+              style={{ background: 'linear-gradient(to top, rgba(6,12,9,0.86) 0%, rgba(6,12,9,0.52) 30%, rgba(6,12,9,0.12) 52%, rgba(6,12,9,0) 68%)' }}
               aria-hidden="true"
             />
             {/* degradê do branco entrando na faixa: evita o corte seco no topo */}
