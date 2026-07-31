@@ -223,16 +223,20 @@ export default function useBidSubmission({
         is_system_message: false
       });
 
-      // 🔄 Libera reservas ANTERIORES desse usuário nesse leilão (lances anteriores foram superados)
-      // O lance atual já está reservado; os lances anteriores precisam ser devolvidos.
-      // except_amount = bidAmount garante que a reserva do lance atual NÃO seja liberada.
+      // 🔄 Libera a reserva do lance ANTERIOR deste usuário NESTE MESMO leilão (foi superado
+      // pelo lance atual, que já está reservado). lastBidAmountRef.current ainda guarda esse
+      // valor anterior (só é sobrescrito abaixo) — usamos "amount" explícito (nunca
+      // "except_amount") para liberar SOMENTE esse valor específico deste leilão, sem tocar
+      // na reserva de nenhum OUTRO leilão em que este usuário também esteja com lance ativo.
+      const previousOwnBidThisAuction = lastBidAmountRef.current;
       try {
-        await base44.functions.invoke('releaseBidHold', {
-          user_id: currentUser.id,
-          auction_id: auctionId,
-          amount: null, // null = libera TODAS as reservas pending
-          except_amount: bidAmount // exceto a do lance atual (mesmo valor)
-        });
+        if (previousOwnBidThisAuction && previousOwnBidThisAuction > 0) {
+          await base44.functions.invoke('releaseBidHold', {
+            user_id: currentUser.id,
+            auction_id: auctionId,
+            amount: previousOwnBidThisAuction // libera só o lance anterior DESTE leilão
+          });
+        }
         // Atualiza saldo exibido com o valor atualizado
         const balanceRefresh = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
         const balanceData = balanceRefresh?.data || balanceRefresh;
@@ -240,7 +244,7 @@ export default function useBidSubmission({
           setUserWallet({ balance: balanceData.saldo_disponivel });
         }
       } catch (releasePrevError) {
-        console.warn("⚠️ [BID] Erro ao liberar reservas anteriores:", releasePrevError.message);
+        console.warn("⚠️ [BID] Erro ao liberar reserva anterior:", releasePrevError.message);
       }
 
       setAuction(prev => ({
