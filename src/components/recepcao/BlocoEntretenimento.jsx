@@ -60,11 +60,19 @@ export default function BlocoEntretenimento() {
               loading="lazy"
               decoding="async"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]"
+              style={{ filter: 'brightness(1.22) saturate(1.04) contrast(0.96)' }}
             />
-            {/* véu escuro pra o texto branco ficar sempre legível sobre a foto */}
+            {/* véu leve: só o rodapé escurece pro texto branco ficar legível —
+                o miolo da foto fica aceso pra não brigar com o clean do site */}
             <div
               className="absolute inset-0"
-              style={{ background: 'linear-gradient(to top, rgba(6,12,9,0.88) 0%, rgba(6,12,9,0.45) 42%, rgba(6,12,9,0.10) 100%)' }}
+              style={{ background: 'linear-gradient(to top, rgba(6,12,9,0.74) 0%, rgba(6,12,9,0.30) 34%, rgba(6,12,9,0) 62%)' }}
+              aria-hidden="true"
+            />
+            {/* degradê do branco entrando na faixa: evita o corte seco no topo */}
+            <div
+              className="absolute inset-x-0 top-0 h-24"
+              style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0))' }}
               aria-hidden="true"
             />
             <div className="absolute inset-x-0 bottom-0 p-6 text-left md:p-8">
