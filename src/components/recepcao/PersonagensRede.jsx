@@ -1,39 +1,46 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import ParCTA from './ParCTA';
+import PersonagemParallax from './PersonagemParallax';
 
-// Os 3 papéis da rede em recorte die-cut, flutuando em fases diferentes e com
-// o "spring hover" da Apple (Back to School) — é o bloco que humaniza a vitrine.
-// hoverRot alterna o lado da mola pra o conjunto não parecer robótico.
+// Recortes de produto usados como camadas soltas por cima das figuras
+const PROD = {
+  tenis: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/9bfb69055_generated_image.png',
+  fone: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/25454d868_generated_image.png',
+  note: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/5033bfa19_generated_image.png',
+  caixa: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/53c9d7db0_generated_image.png',
+};
+
+// Os 3 papéis da rede em recorte die-cut. A figura é a camada lenta (só respira)
+// e cada produto listado é uma camada solta que se desloca muito mais no mouse.
 const PAPEIS = [
-  { nome: 'Lojista', img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/245cd16df_generated_image.png', delay: 0, amp: 9, rot: 1.1, hoverRot: 2 },
-  { nome: 'Executivo', img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/85185d522_generated_image.png', delay: 0.5, amp: 7, rot: -0.9, hoverRot: -2 },
-  { nome: 'Licenciado', img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/836fbabfa_generated_image.png', delay: 1, amp: 10, rot: 1.3, hoverRot: 2 },
+  {
+    nome: 'Lojista',
+    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2e21e6ec3_generated_image.png',
+    produtos: [
+      { img: PROD.note, top: '20%', left: '1%', w: '20%', speed: 0.14, delay: 0, rot: -4 },
+      { img: PROD.fone, top: '10%', left: '80%', w: '16%', speed: 0.2, delay: 0.6, rot: 5 },
+      { img: PROD.tenis, top: '52%', left: '82%', w: '17%', speed: 0.17, delay: 1.2, rot: -3 },
+    ],
+  },
+  {
+    nome: 'Executivo',
+    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/e035ef84c_generated_image.png',
+    produtos: [
+      { img: PROD.note, top: '16%', left: '80%', w: '19%', speed: 0.16, delay: 0.3, rot: 4 },
+      { img: PROD.caixa, top: '55%', left: '2%', w: '15%', speed: 0.19, delay: 0.9, rot: -5 },
+    ],
+  },
+  {
+    nome: 'Licenciado',
+    base: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/0393373a9_generated_image.png',
+    produtos: [
+      { img: PROD.tenis, top: '12%', left: '80%', w: '18%', speed: 0.2, delay: 0, rot: 5 },
+      { img: PROD.fone, top: '28%', left: '2%', w: '16%', speed: 0.15, delay: 0.7, rot: -4 },
+      { img: PROD.caixa, top: '60%', left: '83%', w: '15%', speed: 0.18, delay: 1.4, rot: 4 },
+    ],
+  },
 ];
-
-function Personagem({ p }) {
-  // A mola vive no wrapper: o framer-motion escreve transform inline na img
-  // (flutuação), então empilhar o hover nela sobrescreveria um ao outro.
-  return (
-    <div
-      className="nz-spring group relative flex flex-none flex-col items-center snap-center"
-      style={{ '--nz-spring-rot': `${p.hoverRot}deg` }}
-    >
-      <motion.img
-        src={p.img}
-        alt={`${p.nome} do Leilão NoZap`}
-        loading="lazy"
-        decoding="async"
-        className="h-[260px] w-auto object-contain sm:h-[340px] lg:h-[420px] xl:h-[460px]"
-        animate={{ y: [0, -p.amp, 0], rotate: [0, p.rot, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: p.delay }}
-      />
-      <span className="mt-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-nz-tinta-fraca">
-        {p.nome}
-      </span>
-    </div>
-  );
-}
 
 export default function PersonagensRede() {
   return (
@@ -82,23 +89,18 @@ export default function PersonagensRede() {
 
           <div className="nz-no-scrollbar relative flex snap-x snap-mandatory items-end gap-4 overflow-x-auto px-4 pb-0 md:justify-center md:gap-10 md:overflow-visible lg:gap-16">
             {PAPEIS.map((p) => (
-              <Personagem key={p.nome} p={p} />
+              <PersonagemParallax key={p.nome} nome={p.nome} base={p.base} />
             ))}
           </div>
 
-          {/* Spring hover da Apple: sobe, gira e cresce passando levemente do
-              ponto antes de assentar (cubic-bezier elástico). */}
+          {/* Volta elástica das camadas (o quiquezinho da Apple ao sair) */}
           <style>{`
-            .nz-spring {
-              transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-              cursor: pointer;
+            .nz-parallax, .nz-camada {
+              transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
               will-change: transform;
             }
-            .nz-spring:hover {
-              transform: translateY(-8px) rotate(var(--nz-spring-rot, 2deg)) scale(1.05);
-            }
             @media (prefers-reduced-motion: reduce) {
-              .nz-spring, .nz-spring:hover { transition: none; transform: none; }
+              .nz-parallax, .nz-camada { transition: none; transform: none !important; }
             }
           `}</style>
         </div>
