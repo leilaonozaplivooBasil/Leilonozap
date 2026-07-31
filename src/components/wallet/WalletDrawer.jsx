@@ -27,7 +27,7 @@ import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import BidStateTag from '@/components/wallet/BidStateTag';
 
-const QUICK_AMOUNTS = [20, 50, 100, 200];
+const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
 const TX_STYLE = {
   deposit: { icon: ArrowDownCircle, grad: 'bg-gradient-to-br from-emerald-400 to-green-600', glow: 'shadow-[0_2px_10px_rgba(16,185,129,0.5)]' },
@@ -119,7 +119,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const effectiveAmount = rechargeAmount || (parseFloat(customAmount.replace(',', '.')) || 0);
 
   const handleGeneratePix = async () => {
-    if (effectiveAmount < 5) { toast.error('Valor mínimo: R$ 5,00'); return; }
+    if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
     setGenerating(true);
     try {
       // 🔒 createAsaasPayment é a função real publicada na Vercel (gera PIX via Mercado
@@ -409,13 +409,13 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   </div>
                   <Button
                     onClick={handleGeneratePix}
-                    disabled={generating || effectiveAmount < 5}
+                    disabled={generating || effectiveAmount < 100}
                     className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                   >
                     {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
-                    {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 5 ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
+                    {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 100 ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
                   </Button>
-                  <p className="text-xs text-gray-500 text-center">Valor mínimo R$ 5,00 · Pagamento seguro</p>
+                  <p className="text-xs text-gray-500 text-center">Valor mínimo R$ 100,00 · Pagamento seguro</p>
                 </div>
               )}
 
