@@ -145,18 +145,22 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
 
       {/* Indicadores */}
       {filteredBanners.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1">
           {filteredBanners.map((_, index) => (
+            // 📱 o pontinho continua com 8px de desenho, mas o botão tem 44px de
+            // área de toque — no celular era praticamente impossível acertar.
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex
-                  ? 'bg-white w-8'
-                  : 'bg-white/50 hover:bg-white/75'
-              }`}
+              className="grid h-11 w-6 place-items-center"
               aria-label={`Ir para banner ${index + 1}`}
-            />
+            >
+              <span
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'bg-white w-8' : 'w-2 bg-white/50 hover:bg-white/75'
+                }`}
+              />
+            </button>
           ))}
         </div>
       )}

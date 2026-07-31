@@ -819,7 +819,7 @@ export default function Catalog() {
                     <button
                       key={c.id}
                       onClick={() => setSelectedCategory(c.id)}
-                      className={`relative pb-3 pt-1 text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                      className={`relative min-h-[44px] sm:min-h-0 pb-3 pt-1 text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'text-white' : 'text-gray-400 hover:text-gray-200'}`}
                     >
                       {c.name}
                       {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-green-500 rounded-full" />}
@@ -830,7 +830,7 @@ export default function Catalog() {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 aria-label="Filtros"
-                className={`sm:hidden shrink-0 ml-2 mb-1.5 flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-bold transition-colors ${showFilters ? 'bg-green-600 text-white' : 'bg-gray-800 border border-gray-700 text-gray-200'}`}
+                className={`sm:hidden shrink-0 ml-2 mb-1.5 flex items-center gap-1 px-3 h-11 rounded-lg text-xs font-bold transition-colors ${showFilters ? 'bg-green-600 text-white' : 'bg-gray-800 border border-gray-700 text-gray-200'}`}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 Filtros

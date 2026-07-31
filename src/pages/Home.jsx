@@ -951,13 +951,13 @@ export default function Home() {
 
             {/* PAGINAÇÃO */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 mt-10 mb-4">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-10 mb-4">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage === 1}
                   onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
-                  className="rounded-xl border-0 text-white disabled:opacity-30"
+                  className="h-11 sm:h-9 rounded-xl border-0 text-white disabled:opacity-30"
                   style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
@@ -973,7 +973,7 @@ export default function Home() {
                         )}
                         <button
                           onClick={() => { setCurrentPage(p); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
-                          className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${
+                          className={`w-11 h-11 sm:w-9 sm:h-9 rounded-lg text-sm font-bold transition-all ${
                             p === currentPage
                               ? 'text-white'
                               : 'text-gray-400 hover:text-white'
@@ -996,7 +996,7 @@ export default function Home() {
                   size="sm"
                   disabled={currentPage === totalPages}
                   onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
-                  className="rounded-xl border-0 text-white disabled:opacity-30"
+                  className="h-11 sm:h-9 rounded-xl border-0 text-white disabled:opacity-30"
                   style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
                 >
                   Próxima <ChevronRight className="w-4 h-4 ml-1" />

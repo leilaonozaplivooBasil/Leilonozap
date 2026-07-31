@@ -472,7 +472,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
                   e.stopPropagation();
                   setShowComparai(true);
                 }}
-                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
+                className="w-full h-11 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
               >
                 <img
                   src={CompareAquiIcon}
@@ -486,7 +486,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
               <Button
                 onClick={handleWhatsAppOrder}
                 variant="outline"
-                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm border-2 border-emerald-500 text-emerald-500 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent px-2 sm:px-4 transition-shadow duration-300"
+                className="w-full h-11 sm:h-9 text-[10px] sm:text-sm border-2 border-emerald-500 text-emerald-500 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent px-2 sm:px-4 transition-shadow duration-300"
                 style={{ boxShadow: 'inset 0 0 12px rgba(16,185,129,0.4)' }}
                 onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'inset 0 0 18px rgba(16,185,129,0.6)'}
                 onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'inset 0 0 12px rgba(16,185,129,0.4)'}
@@ -502,7 +502,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
                   if (onOpenDetails) { onOpenDetails(product); return; }
                   navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
                 }}
-                className="w-full text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-1 underline underline-offset-2"
+                className="w-full min-h-[44px] sm:min-h-0 text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-2.5 sm:py-1 underline underline-offset-2"
               >
                 MAIS INFORMAÇÕES
               </button>

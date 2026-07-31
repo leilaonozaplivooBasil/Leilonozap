@@ -121,7 +121,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                   <button
                     key={ticket}
                     onClick={() => setSelectedTicket(ticket)}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold ${
+                    className={`min-h-[44px] py-1.5 px-2 rounded-lg text-xs font-bold ${
                       selectedTicket === ticket
                         ? isSaiDeBaixo
                           ? 'bg-gradient-to-r from-red-600 to-red-700 text-white border-2 border-red-500'

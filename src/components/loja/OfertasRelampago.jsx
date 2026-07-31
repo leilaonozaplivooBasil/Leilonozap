@@ -94,7 +94,7 @@ export default function OfertasRelampago({ products = [], onOpenDetails }) {
           <img src={foguinho} alt="" aria-hidden className="w-5 h-5 sm:w-9 sm:h-9 shrink-0 -my-1 object-contain" /> OFERTAS RELÂMPAGO
         </span>
         <span className="flex items-center gap-1 shrink-0"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
-        <button onClick={() => navigate(createPageUrl('Catalog'))} className="ml-auto text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
+        <button onClick={() => navigate(createPageUrl('Catalog'))} className="ml-auto min-h-[44px] sm:min-h-0 -my-2 sm:my-0 px-1 text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>

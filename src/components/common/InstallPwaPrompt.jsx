@@ -73,7 +73,7 @@ export default function InstallPwaPrompt() {
           <Download className="w-3.5 h-3.5" /> Instalar
         </button>
       )}
-      <button onClick={dismiss} aria-label="Fechar" className="shrink-0 p-1.5 text-gray-500">
+      <button onClick={dismiss} aria-label="Fechar" className="shrink-0 grid h-11 w-11 place-items-center text-gray-500">
         <X className="w-4 h-4" />
       </button>
     </div>
