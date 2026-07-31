@@ -1,7 +1,7 @@
 // submitAtomicBid — confirma o lance no leilão com TRAVA OTIMISTA real (CAS por version).
 // Espelho fiel de base44/functions/submitAtomicBid/entry.ts, que NÃO roda na Vercel.
-// Sem este endpoint a produção sempre falhava com "Erro ao enviar lance." DEPOIS de
-// o saldo já ter sido reservado por reserveBidBalance.
+// Sem este endpoint a produção sempre caía em "Erro ao enviar lance." DEPOIS de o saldo
+// já ter sido reservado por reserveBidBalance (o adapter devolve not_implemented no 404).
 // Diferença obrigatória: não existe auth.me() aqui — a identidade vem do BODY (user_id).
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
