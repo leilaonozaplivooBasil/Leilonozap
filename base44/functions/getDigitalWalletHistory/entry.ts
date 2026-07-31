@@ -53,6 +53,8 @@ Deno.serve(async (req) => {
         for (const s of Array.isArray(sales) ? sales : []) {
             const amount = Number(s.total_amount) || Number(s.sale_price) || 0;
             const isDeposit = DEPOSIT_KINDS.includes(s.kind);
+            // Depósito cancelado (PIX que nunca foi pago) não é um depósito confirmado — não exibir.
+            if (isDeposit && s.status === 'cancelled') continue;
             transactions.push({
                 id: s.id,
                 type: isDeposit ? 'deposit' : 'purchase',
@@ -102,6 +104,7 @@ Deno.serve(async (req) => {
         const nomeDoComprador = (v: any) => (v?.buyer_name || '').trim();
 
         for (const r of Array.isArray(records) ? records : []) {
+            if (r.status === 'canceled') continue; // comissão cancelada (reset/teste) — não exibir no extrato
             const v = vendasDaComissao[r.sale_id];
             const produto = r.product_title || v?.product_title || 'Venda';
             const comprador = nomeDoComprador(v);
@@ -118,6 +121,7 @@ Deno.serve(async (req) => {
         }
 
         for (const c of Array.isArray(comms) ? comms : []) {
+            if (c.status === 'canceled') continue; // comissão cancelada (reset/teste) — não exibir no extrato
             const v = vendasDaComissao[c.sale_id];
             const produto = v?.product_title || '';
             const comprador = nomeDoComprador(v);
