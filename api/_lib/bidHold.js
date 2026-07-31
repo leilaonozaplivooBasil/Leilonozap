@@ -52,8 +52,14 @@ export async function releaseHold(userId, amount) {
       const liberar = money(Math.min(valor, reservado));
       if (liberar <= 0) return { released: 0, reason: 'sem_reserva' };
 
+      // 🔒 CAS de verdade: só escreve se saldo_disponivel E saldo_reservado ainda
+      // estiverem EXATAMENTE como foram lidos. Sem o filtro em saldo_disponivel, um
+      // depósito que caísse entre a leitura e a escrita seria APAGADO por este PATCH
+      // (gravaríamos disponivel_antigo + liberar). Se mudou, o laço tenta de novo.
       const patch = await sb(
-        `app_users?id=eq.${encodeURIComponent(uid)}&saldo_reservado=gte.${liberar}`,
+        `app_users?id=eq.${encodeURIComponent(uid)}` +
+          `&saldo_disponivel=eq.${disponivel}` +
+          `&saldo_reservado=eq.${reservado}`,
         {
           method: 'PATCH',
           headers: { Prefer: 'return=representation' },
