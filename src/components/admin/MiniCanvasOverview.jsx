@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import { X, ZoomIn, ZoomOut, Maximize2, Maximize, Minimize2, Map, Sparkles } from "lucide-react";
+import MiniCanvasList from "@/components/admin/MiniCanvasList";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.2;
@@ -140,9 +141,49 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
   const zoomOut = useCallback(() => {
     setTransform((prev) => ({ ...prev, scale: Math.max(MIN_SCALE, prev.scale / 1.25) }));
   }, []);
+  // 📐 Enquadrar de verdade: mede a área visível e o tamanho real do mapa,
+  // então calcula o zoom e o deslocamento que fazem TUDO caber e ficar centrado.
+  // Sem isso, o celular/tablet abria o mapa cortado nas laterais.
   const fitToScreen = useCallback(() => {
-    setTransform({ x: 0, y: -40, scale: 1.17 });
-  }, []);
+    const el = containerRef.current;
+    if (!el) return;
+    const { clientWidth: vw, clientHeight: vh } = el;
+    if (!vw || !vh) return;
+
+    const CARD_W = 208; // w-52
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    SECTION_LAYOUT.forEach((s) => {
+      const data = getSection(s.title);
+      if (!data) return;
+      const h = 52 + (data.items || []).length * 28; // header + itens
+      minX = Math.min(minX, s.x - CARD_W / 2);
+      maxX = Math.max(maxX, s.x + CARD_W / 2);
+      minY = Math.min(minY, s.y - h / 2);
+      maxY = Math.max(maxY, s.y + h / 2);
+    });
+    if (!Number.isFinite(minX)) return;
+
+    const pad = 32;
+    const scale = Math.max(
+      MIN_SCALE,
+      Math.min(1.17, (vw - pad * 2) / (maxX - minX), (vh - pad * 2) / (maxY - minY))
+    );
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    setTransform({ x: -cx * scale, y: -cy * scale, scale });
+  }, [menu]);
+
+  // Enquadra ao abrir e a cada mudança de tamanho/rotação de tela
+  useEffect(() => {
+    const t = setTimeout(fitToScreen, 60);
+    window.addEventListener("resize", fitToScreen);
+    window.addEventListener("orientationchange", fitToScreen);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", fitToScreen);
+      window.removeEventListener("orientationchange", fitToScreen);
+    };
+  }, [fitToScreen, isFullscreen]);
 
   // --- Esc to close ---
   useEffect(() => {
@@ -228,11 +269,18 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
           </button>
         </div>
 
-        {/* --- Canvas area --- */}
+        {/* --- Celular e tablet: mesma estrutura em lista enquadrada --- */}
+        <MiniCanvasList
+          sections={SECTION_LAYOUT.map((s) => getSection(s.title)).filter(Boolean)}
+          currentPageName={currentPageName}
+          onNavigate={goTo}
+        />
+
+        {/* --- Canvas area (desktop) --- */}
         <div
           ref={containerRef}
           data-canvas-bg="true"
-          className="flex-1 relative overflow-hidden select-none"
+          className="hidden lg:block flex-1 relative overflow-hidden select-none"
           style={{
             cursor: isDragging ? "grabbing" : "grab",
             touchAction: "none",
