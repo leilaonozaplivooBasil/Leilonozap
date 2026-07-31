@@ -1,8 +1,10 @@
-// 🔒 Espelho exato de api/functions/getDigitalWalletHistory.js (Vercel) — a versão antiga
-// lia DigitalWalletTransaction (entidade morta do Base44) com um formato de campos
-// totalmente diferente do que o WalletDrawer espera, deixando o extrato vazio/errado
-// no preview. Agora lê catalog_sales/commission_ledger/commission_records/withdrawal_requests
-// direto do Supabase, com o MESMO formato de saída da Vercel.
+// 🔒 Extrato da Carteira Digital do usuário — mostra SOMENTE o que é dele:
+// depósitos reais (PIX confirmado), compras/vendas no catálogo, lances dados
+// em leilões e saques solicitados. Comissões de rede NÃO aparecem aqui —
+// elas têm extrato próprio (ExtratoComissoes, na página Carteira) e foram
+// removidas deste extrato pessoal a pedido do Gabriel (31/07) após o reset
+// de comissões de teste, pra não confundir com o saldo/depósito real.
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -20,16 +22,6 @@ async function sbFetch(path: string) {
 
 const DEPOSIT_KINDS = ['wallet_deposit', 'passaporte', 'commission_deposit'];
 
-const PAPEL: Record<string, string> = {
-    influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado',
-    parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física',
-    distribuidor: 'Distribuidor', executivo: 'Sócio Executivo', ceo: 'CEO',
-    livoo_live: 'Livoo Live', embaixador: 'Embaixador', conselheiro: 'Conselheiro',
-    fundador: 'Fundador', diretoria_executiva: 'Diretoria Executiva',
-    diretoria_operacao: 'Diretoria de Operação', empresa_rollup: 'Empresa',
-    venda_direta: 'Venda direta', override: 'Rede',
-};
-
 Deno.serve(async (req) => {
     try {
         const { user_id } = await req.json();
@@ -40,11 +32,9 @@ Deno.serve(async (req) => {
         const uid = encodeURIComponent(user_id);
         const saleCols = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name';
 
-        const [sales, mySales, comms, records, wds] = await Promise.all([
+        const [sales, mySales, wds] = await Promise.all([
             sbFetch(`catalog_sales?select=${saleCols}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`),
             sbFetch(`catalog_sales?select=${saleCols}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`),
-            sbFetch(`commission_ledger?select=created_at,role_in_sale,pct,amount,beneficiary_level,sale_id&beneficiary_id=eq.${uid}&order=created_at.desc&limit=100`),
-            sbFetch(`commission_records?select=created_date,role,percent,amount,sale_id,product_title,sale_amount,status&user_id=eq.${uid}&order=created_date.desc&limit=200`),
             sbFetch(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`),
         ]);
 
@@ -89,54 +79,6 @@ Deno.serve(async (req) => {
             });
         }
 
-        const idsVenda = [...new Set([
-            ...(Array.isArray(records) ? records : []).map((r: any) => r.sale_id),
-            ...(Array.isArray(comms) ? comms : []).map((c: any) => c.sale_id),
-        ].filter(Boolean))].slice(0, 200);
-        const vendasDaComissao: Record<string, any> = {};
-        if (idsVenda.length) {
-            try {
-                const inList = idsVenda.map((i: any) => `"${encodeURIComponent(i)}"`).join(',');
-                const vr = await sbFetch(`catalog_sales?select=id,product_title,buyer_name,buyer_id,total_amount&id=in.(${inList})`);
-                for (const v of Array.isArray(vr) ? vr : []) vendasDaComissao[v.id] = v;
-            } catch { /* sem o detalhe, a linha ainda aparece com o que tem */ }
-        }
-        const nomeDoComprador = (v: any) => (v?.buyer_name || '').trim();
-
-        for (const r of Array.isArray(records) ? records : []) {
-            if (r.status === 'canceled') continue; // comissão cancelada (reset/teste) — não exibir no extrato
-            const v = vendasDaComissao[r.sale_id];
-            const produto = r.product_title || v?.product_title || 'Venda';
-            const comprador = nomeDoComprador(v);
-            const papel = PAPEL[r.role] || r.role || 'Rede';
-            transactions.push({
-                id: `rec-${r.sale_id}-${r.role}-${r.amount}`,
-                type: 'commission',
-                title: `Comissão ${papel}${r.percent ? ` (${r.percent}%)` : ''} — ${produto}`,
-                source: comprador ? `compra de ${comprador}` : 'Rede',
-                amount: Number(r.amount) || 0,
-                status: r.status === 'confirmed' ? 'paid' : (r.status || 'paid'),
-                date: r.created_date,
-            });
-        }
-
-        for (const c of Array.isArray(comms) ? comms : []) {
-            if (c.status === 'canceled') continue; // comissão cancelada (reset/teste) — não exibir no extrato
-            const v = vendasDaComissao[c.sale_id];
-            const produto = v?.product_title || '';
-            const comprador = nomeDoComprador(v);
-            const papel = PAPEL[c.role_in_sale] || c.role_in_sale || 'Rede';
-            transactions.push({
-                id: `comm-${c.created_at}-${c.amount}`,
-                type: 'commission',
-                title: `Comissão ${papel}${c.pct ? ` (${c.pct}%)` : ''}${produto ? ` — ${produto}` : ''}`,
-                source: comprador ? `compra de ${comprador}` : 'Rede',
-                amount: Number(c.amount) || 0,
-                status: c.status || 'paid',
-                date: c.created_at,
-            });
-        }
-
         for (const w of Array.isArray(wds) ? wds : []) {
             transactions.push({
                 id: `wd-${w.requested_at}-${w.valor}`,
@@ -147,6 +89,40 @@ Deno.serve(async (req) => {
                 status: w.status || 'pending',
                 date: w.requested_at,
             });
+        }
+
+        // 🎯 Lances dados em leilões — vivem na entidade interna AuctionMessage
+        // (message_type: 'bid'), nunca migrada pro Supabase. Aparecem no extrato
+        // como registro informativo (não somam/subtraem do saldo — a reserva/
+        // liberação já é tratada por reserveBidBalance/releaseBidHold).
+        try {
+            const base44 = createClientFromRequest(req);
+            const bidMessages = await base44.asServiceRole.entities.AuctionMessage.filter(
+                { sender_id: user_id, message_type: 'bid' },
+                '-created_date',
+                100
+            );
+            const auctionIds = [...new Set((bidMessages || []).map((m: any) => m.auction_id).filter(Boolean))].slice(0, 60);
+            const auctionTitles: Record<string, string> = {};
+            await Promise.all(auctionIds.map(async (aid: string) => {
+                try {
+                    const as = await base44.asServiceRole.entities.Auction.filter({ id: aid });
+                    if (as && as[0]) auctionTitles[aid] = as[0].title;
+                } catch { /* segue sem o título */ }
+            }));
+            for (const m of Array.isArray(bidMessages) ? bidMessages : []) {
+                transactions.push({
+                    id: `bid-${m.id}`,
+                    type: 'bid',
+                    title: `Lance — ${auctionTitles[m.auction_id] || 'Leilão'}`,
+                    source: 'Leilão',
+                    amount: Number(m.bid_amount) || 0,
+                    status: 'info',
+                    date: m.created_date,
+                });
+            }
+        } catch (e) {
+            console.warn('Não foi possível carregar histórico de lances:', e.message);
         }
 
         transactions.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());

@@ -20,6 +20,7 @@ import {
   Loader2,
   ArrowLeft,
   Clock,
+  Gavel,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
@@ -32,6 +33,7 @@ const TX_STYLE = {
   sale: { icon: TrendingUp, grad: 'bg-gradient-to-br from-emerald-300 to-teal-600', glow: 'shadow-[0_2px_10px_rgba(16,185,129,0.5)]' },
   commission: { icon: Award, grad: 'bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-600', glow: 'shadow-[0_2px_10px_rgba(245,158,11,0.55)]' },
   withdrawal: { icon: Banknote, grad: 'bg-gradient-to-br from-blue-400 to-indigo-600', glow: 'shadow-[0_2px_10px_rgba(59,130,246,0.5)]' },
+  bid: { icon: Gavel, grad: 'bg-gradient-to-br from-slate-400 to-slate-600', glow: 'shadow-[0_2px_10px_rgba(100,116,139,0.4)]' },
 };
 
 function formatDate(d) {
@@ -303,9 +305,13 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                                 </p>
                               </div>
                               <div className="text-right flex-shrink-0">
-                                <p className={`text-sm font-bold ${tx.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                  {tx.amount >= 0 ? '+' : '−'} R$ {fmtBR(Math.abs(tx.amount))}
-                                </p>
+                                {tx.type === 'bid' ? (
+                                  <p className="text-sm font-bold text-gray-300">R$ {fmtBR(Math.abs(tx.amount))}</p>
+                                ) : (
+                                  <p className={`text-sm font-bold ${tx.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {tx.amount >= 0 ? '+' : '−'} R$ {fmtBR(Math.abs(tx.amount))}
+                                  </p>
+                                )}
                                 {tx.status === 'pending' && (
                                   <span className="inline-flex items-center gap-1 text-[10px] text-amber-400">
                                     <Clock className="w-3 h-3" /> pendente
