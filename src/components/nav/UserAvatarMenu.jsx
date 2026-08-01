@@ -24,6 +24,7 @@ import {
   Crown,
   Truck,
   MapPin,
+  Package,
   Wallet as WalletIcon,
   Map as MapIcon,
 } from "lucide-react";
@@ -274,6 +275,13 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
 
         {/* ===== Ações pessoais ===== */}
         <div className="p-2">
+          <DropdownMenuItem
+            onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
+            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
+          >
+            <Package className="w-4 h-4" />
+            Meus Pedidos
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate("/painel-arrematante")}
             className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"

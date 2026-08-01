@@ -13,6 +13,7 @@ const CatalogSale = base44.entities.CatalogSale;
 // Card + configs de status agora são COMPARTILHADOS com a aba "Meus Pedidos" do
 // Profile (extraídos pra components/catalog/CatalogOrderCard.jsx em 25/07).
 import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
+import DetalhesPedidoModal from '@/components/catalog/DetalhesPedidoModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function MyCatalogOrders() {
@@ -128,6 +129,7 @@ export default function MyCatalogOrders() {
 
   const [cancelingId, setCancelingId] = useState(null);
   const [ratingOrder, setRatingOrder] = useState(null);
+  const [detalhesOrder, setDetalhesOrder] = useState(null);
   const [confirmedIds, setConfirmedIds] = useState(new Set());
   const [confirmingId, setConfirmingId] = useState(null);
 
@@ -167,8 +169,9 @@ export default function MyCatalogOrders() {
       setOrders(prev => prev.filter(o => o.id !== order.id));
       toast.success('Pedido excluído');
     } catch (err) {
+      // Mostra o MOTIVO real (antes o toast genérico escondia a causa)
       console.error('Erro ao excluir:', err);
-      toast.error('Erro ao excluir pedido');
+      toast.error(`Não foi possível excluir: ${err?.message || 'erro desconhecido'}`);
     } finally {
       setCancelingId(null);
       setConfirmAction(null);
@@ -316,6 +319,7 @@ export default function MyCatalogOrders() {
                     key={order.id}
                     order={order}
                     onTrackClick={handleTrackClick}
+                    onDetailsClick={setDetalhesOrder}
                     onDeleteClick={handleDeleteOrder}
                     onRateClick={setRatingOrder}
                     onConfirmReceipt={handleConfirmReceipt}
@@ -359,6 +363,10 @@ export default function MyCatalogOrders() {
         onConfirm={doDeleteAll}
         onClose={() => setConfirmAction(null)}
       />
+
+      {detalhesOrder && (
+        <DetalhesPedidoModal order={detalhesOrder} onClose={() => setDetalhesOrder(null)} />
+      )}
 
       {ratingOrder && (
         <AvaliarLojistaModal

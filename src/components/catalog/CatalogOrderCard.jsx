@@ -2,7 +2,7 @@ import React from 'react';
 import { fmtBR } from '@/lib/money';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star } from 'lucide-react';
+import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star, FileText } from 'lucide-react';
 import { Stars } from '@/components/loja/StarRating';
 
 // 🧩 Card de pedido da Loja Virtual — COMPARTILHADO entre MyCatalogOrders e a aba
@@ -27,7 +27,7 @@ export const RATEABLE = ['paid', 'preparando', 'saiu_entrega', 'entregue'];
 // estados em que o comprador já pode confirmar o recebimento (libera o saldo do vendedor)
 export const CONFIRMABLE = ['paid', 'preparando', 'saiu_entrega', 'shipped', 'entregue', 'delivered'];
 
-export default function CatalogOrderCard({ order, onTrackClick, onDeleteClick, onRateClick, onConfirmReceipt, confirmado, confirmando }) {
+export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, onDeleteClick, onRateClick, onConfirmReceipt, confirmado, confirmando }) {
   const config = statusConfig[order.status] || statusConfig.pending_payment;
   const mainImage = order.product_image || "https://via.placeholder.com/150";
   const podeAvaliar = onRateClick && RATEABLE.includes(order.status) && order.seller_id;
@@ -94,6 +94,17 @@ export default function CatalogOrderCard({ order, onTrackClick, onDeleteClick, o
           >
             <Eye className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
             Acompanhar Pedido
+          </button>
+        )}
+
+        {/* VER DETALHES — detalhamento completo do pedido (somente leitura) */}
+        {onDetailsClick && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDetailsClick(order); }}
+            className="mx-4 mb-4 py-2 px-3 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-gray-200 font-semibold text-xs transition-all flex items-center justify-center gap-1.5"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Ver detalhes
           </button>
         )}
 
