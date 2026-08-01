@@ -1234,6 +1234,7 @@ export default function Cart() {
                       calculando={calculandoFrete}
                       mensagem={freteMsg}
                       retirada={deliveryMethod === 'pickup'}
+                      bloqueado={!!pixData || saldoOk}
                     />
                     <div className="flex justify-between items-center text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>

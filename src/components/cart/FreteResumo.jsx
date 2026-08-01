@@ -4,7 +4,7 @@ import React from 'react';
 import { money } from '@/lib/format';
 import { Truck, Check, Loader2 } from 'lucide-react';
 
-export default function FreteResumo({ opcoes, selecionada, onSelecionar, onCalcular, calculando, mensagem, retirada }) {
+export default function FreteResumo({ opcoes, selecionada, onSelecionar, onCalcular, calculando, mensagem, retirada, bloqueado }) {
   if (retirada) {
     return (
       <div className="flex justify-between items-center text-base">
@@ -14,7 +14,9 @@ export default function FreteResumo({ opcoes, selecionada, onSelecionar, onCalcu
     );
   }
 
-  const temOpcoes = Array.isArray(opcoes) && opcoes.length > 0;
+  // 🔒 Depois do PIX/pagamento gerado o frete está travado: mostra só o escolhido.
+  // Deixar a lista aberta ali inflava a página e sugeria que ainda dava pra trocar.
+  const temOpcoes = !bloqueado && Array.isArray(opcoes) && opcoes.length > 0;
 
   return (
     <div className="space-y-2">
