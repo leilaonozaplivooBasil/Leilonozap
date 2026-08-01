@@ -36,6 +36,8 @@ import { precoArremateAgora } from "@/lib/arremateAgora";
 // 📣 PONTO 69 — Modo Chamada (pré-lançamento): lances travados até a abertura
 import SeloChamada from "@/components/auction/SeloChamada";
 import useChamada from "@/hooks/useChamada";
+// 🚚 Frete calculado uma única vez na sala, junto com o lance
+import FreteLanceBanner from "@/components/auction/FreteLanceBanner";
 
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
@@ -74,6 +76,13 @@ export default function AuctionRoom() {
   // 📜 PONTO 67 — Termo de Adesão obrigatório antes do PRIMEIRO lance
   const [showTermoModal, setShowTermoModal] = useState(false);
   const [pendingBidAmount, setPendingBidAmount] = useState(null);
+
+  // 🚚 Frete: calculado UMA VEZ por sessão na sala (nunca por clique de lance) —
+  // depende só do CEP + dimensões do produto, nunca do valor do lance.
+  const [freteValor, setFreteValor] = useState(0);
+  const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep
+  const [freteCep, setFreteCep] = useState('');
+  const freteCalcRef = useRef(false);
 
   const isAndroid = /Android/i.test(navigator.userAgent);
 
@@ -416,7 +425,64 @@ export default function AuctionRoom() {
     setShowLowBalanceModal,
     userWallet,
     setUserWallet,
+    freteValor,
   });
+
+  // 🚚 Cota o frete UMA VEZ (CEP do perfil + dimensões do produto do leilão via
+  // Product vinculado). Nunca recalcula por clique de lance — o frete não
+  // depende do valor do lance, só do CEP e do produto.
+  const calcularFreteLance = useCallback(async (cepInput) => {
+    if (!auction) return;
+    const cep = String(cepInput || '').replace(/\D/g, '');
+    if (cep.length !== 8) {
+      setFreteStatus('needs_cep');
+      return;
+    }
+    setFreteStatus('loading');
+    try {
+      let dims = {};
+      if (auction.product_id) {
+        const prods = await base44.entities.Product.filter({ id: auction.product_id });
+        if (Array.isArray(prods) && prods[0]) dims = prods[0];
+      }
+      const result = await base44.functions.invoke('cotarFrete', {
+        cep,
+        items: [{
+          id: auction.id,
+          peso: dims.peso,
+          altura: dims.altura,
+          largura: dims.largura,
+          comprimento: dims.comprimento,
+          valor: money(auction.current_price || auction.starting_price),
+          quantidade: 1,
+        }],
+      });
+      const data = result?.data || result;
+      if (data?.success && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
+        setFreteValor(money(data.opcoes[0].preco));
+        setFreteStatus('ok');
+      } else {
+        setFreteValor(0);
+        setFreteStatus('error');
+      }
+    } catch (e) {
+      console.warn('⚠️ [FRETE] Erro ao calcular frete do leilão:', e.message);
+      setFreteValor(0);
+      setFreteStatus('error');
+    }
+  }, [auction]);
+
+  useEffect(() => {
+    if (!auction || !currentUser || freteCalcRef.current) return;
+    freteCalcRef.current = true;
+    const cep = currentUser.address_zip_code;
+    if (cep) {
+      setFreteCep(cep);
+      calcularFreteLance(cep);
+    } else {
+      setFreteStatus('needs_cep');
+    }
+  }, [auction, currentUser, calcularFreteLance]);
 
   // 📜 PONTO 67 — GATE DE UI: nenhum lance sai sem o aceite do Termo de Adesão.
   // Nada de financeiro acontece aqui: só decide se chama submitBid ou abre o termo.
@@ -1171,7 +1237,16 @@ export default function AuctionRoom() {
 
       {isAuctionActive && !chamada.emChamada && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} />
+          {currentUser && (
+            <FreteLanceBanner
+              status={freteStatus}
+              freteValor={freteValor}
+              cep={freteCep}
+              onChangeCep={setFreteCep}
+              onCalcular={calcularFreteLance}
+            />
+          )}
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} freteValor={freteValor} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (

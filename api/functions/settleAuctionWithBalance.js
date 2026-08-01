@@ -28,15 +28,21 @@ export default async function handler(req, res) {
     if (!auctionId || !userId) return res.status(400).json({ success: false, error: 'Dados obrigatórios ausentes' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const aRows = await (await sb(`auctions?select=id,title,current_price,winner_id,winner_name,status,order_status,image_urls&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
+    const aRows = await (await sb(`auctions?select=id,title,current_price,winner_id,winner_name,status,order_status,image_urls,frete_reservado_valor&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
     const auction = Array.isArray(aRows) ? aRows[0] : null;
     if (!auction) return res.status(200).json({ success: false, error: 'Leilão não encontrado' });
     if (auction.winner_id !== userId) return res.status(200).json({ success: false, error: 'Usuário não é o vencedor' });
     if (auction.order_status === 'paid') return res.status(200).json({ success: true, already_paid: true });
 
-    const amountCents = cents(auction.current_price);
+    // 🚚 Frete calculado na sala é cobrado junto do produto — mas NUNCA entra na
+    // base de comissão (total_amount da venda continua só o valor do produto).
+    const produtoCents = cents(auction.current_price);
+    const freteCents = cents(auction.frete_reservado_valor || 0);
+    const amountCents = produtoCents + freteCents;
     if (amountCents <= 0) return res.status(200).json({ success: false, error: 'Valor inválido' });
     const amount = fromCents(amountCents);
+    const produtoAmount = fromCents(produtoCents);
+    const freteAmount = fromCents(freteCents);
 
     const uRows = await (await sb(`app_users?select=saldo_disponivel,full_name,email,cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
     const user = Array.isArray(uRows) ? uRows[0] : null;
@@ -95,7 +101,8 @@ export default async function handler(req, res) {
       id: saleId, base44_id: saleId, kind: 'arremate',
       buyer_id: userId, buyer_email: user.email || '', buyer_name: user.full_name || auction.winner_name || 'Vencedor',
       product_title: `Arremate — ${auction.title}`.slice(0, 200),
-      sale_price: amount, total_amount: amount, quantity: 1,
+      // total_amount é a base da comissão — fica só com o produto, frete nunca comissiona.
+      sale_price: produtoAmount, total_amount: produtoAmount, quantity: 1,
       status: 'paid', payment_method: 'saldo',
       tracking_code: 'AR' + saleId.slice(0, 8).toUpperCase(),
       created_date: new Date().toISOString(),
@@ -112,7 +119,7 @@ export default async function handler(req, res) {
       console.warn('settle: comissão falhou (venda segue paga):', e?.message);
     }
 
-    return res.status(200).json({ success: true, paid: true, sale_id: saleId, amount, new_balance: newBalance, commission });
+    return res.status(200).json({ success: true, paid: true, sale_id: saleId, amount, produto_amount: produtoAmount, frete_amount: freteAmount, new_balance: newBalance, commission });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });
   }

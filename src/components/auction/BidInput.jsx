@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Send, Zap } from "lucide-react";
 import { money, addMoney, mulMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 
-export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow }) {
+export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0 }) {
   const [bidAmount, setBidAmount] = useState("");
   const [quickBids, setQuickBids] = useState([]);
 
@@ -55,10 +55,17 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             size="sm"
             onClick={() => handleSubmit(amount)}
             disabled={isLoading}
-            className="items-center gap-1 bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500 min-h-[44px] px-3 sm:px-4"
+            className="flex-col items-center gap-0.5 bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500 min-h-[44px] px-3 sm:px-4 py-1.5"
           >
-            <Zap className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">R$ {fmtBR(amount)}</span>
+            <span className="flex items-center gap-1">
+              <Zap className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">R$ {fmtBR(amount)}</span>
+            </span>
+            {freteValor > 0 && (
+              <span className="text-[10px] text-gray-400 leading-none">
+                + frete R$ {fmtBR(freteValor)} = R$ {fmtBR(addMoney(amount, freteValor))}
+              </span>
+            )}
           </Button>
         ))}
         
@@ -106,6 +113,11 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
       <p className="text-xs sm:text-sm text-center text-gray-500 mt-2">
         Incremento mínimo: + R$ {fmtBR(increment)}
       </p>
+      {freteValor > 0 && bidAmount && !isNaN(parseFloat(bidAmount)) && (
+        <p className="text-xs text-center text-gray-400 mt-1">
+          + frete R$ {fmtBR(freteValor)} = R$ {fmtBR(addMoney(money(parseFloat(bidAmount)), freteValor))} descontado da carteira
+        </p>
+      )}
       
       <style>{`
         @keyframes pulse-glow {

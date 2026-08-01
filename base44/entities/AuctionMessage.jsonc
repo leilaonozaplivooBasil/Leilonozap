@@ -52,6 +52,11 @@
         3
       ],
       "description": "Fase do martelo: 1=primeira, 2=segunda, 3=terceira"
+    },
+    "frete_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor do frete reservado junto com este lance (registro para auditoria \u2014 o lance em si, bid_amount, continua representando s\u00f3 o valor do produto)"
     }
   },
   "required": [

@@ -26,6 +26,7 @@ export default function useBidSubmission({
   setShowLowBalanceModal,
   userWallet,
   setUserWallet,
+  freteValor = 0,
 }) {
   const [isSubmittingBid, setIsSubmittingBid] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -45,13 +46,16 @@ export default function useBidSubmission({
     }
 
     // Verifica saldo — NÃO sobrescreve para 0 se a função falhar
+    // 🚚 Frete calculado uma única vez na sala é somado ao lance: o que trava
+    // na carteira (e o que precisa estar disponível) é lance + frete.
+    const totalComFrete = addMoney(money(parseFloat(amount)), freteValor);
     try {
       const freshResult = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
       const freshBalance = typeof freshData?.saldo_disponivel === 'number' ? freshData.saldo_disponivel : null;
       if (freshBalance !== null) {
         setUserWallet({ balance: freshBalance });
-        if (freshBalance < amount) {
+        if (freshBalance < totalComFrete) {
           setShowLowBalanceModal(true);
           return;
         }
@@ -143,10 +147,12 @@ export default function useBidSubmission({
       sessionStorage.setItem(debounceKey, Date.now().toString());
 
       // RESERVA saldo (não debita — só move do balance pro held_balance)
+      // Reserva lance + frete juntos: é o total que fica travado até alguém superar.
+      const totalReservar = addMoney(bidAmount, freteValor);
       try {
         const reserveResult = await base44.functions.invoke('reserveBidBalance', {
-          user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
-          description: `Reserva de lance - R$ ${fmtBR(bidAmount)}`
+          user_id: currentUser.id, amount: totalReservar, auction_id: auctionId,
+          description: `Reserva de lance - R$ ${fmtBR(bidAmount)}${freteValor > 0 ? ` + frete R$ ${fmtBR(freteValor)}` : ''}`
         });
         const reserveData = reserveResult?.data || reserveResult;
         if (!reserveData?.success) {
@@ -156,7 +162,7 @@ export default function useBidSubmission({
         }
         setUserWallet({ balance: reserveData.new_balance });
         wasDebited = true;
-        debitedAmount = bidAmount;
+        debitedAmount = totalReservar;
       } catch (reserveError) {
         console.warn("⚠️ Erro ao reservar saldo:", reserveError.message);
         setShowLowBalanceModal(true);
@@ -193,7 +199,8 @@ export default function useBidSubmission({
         auction_id: auctionId,
         amount: bidAmount,
         user_id: currentUser.id,
-        bidder_name: currentUser.nickname || currentUser.full_name
+        bidder_name: currentUser.nickname || currentUser.full_name,
+        frete_valor: freteValor
       });
       const atomicData = atomicResult?.data || atomicResult;
 
@@ -221,6 +228,7 @@ export default function useBidSubmission({
         content: `Lance de R$ ${fmtBR(bidAmount)}`,
         sender_name: currentUser.nickname || currentUser.full_name,
         bid_amount: bidAmount,
+        frete_amount: freteValor,
         is_system_message: false
       });
 
@@ -297,7 +305,7 @@ export default function useBidSubmission({
         setIsSubmittingBid(false);
       }, 3000);
     }
-  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet]);
+  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet, freteValor]);
 
   return {
     submitBid,

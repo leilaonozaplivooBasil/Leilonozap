@@ -44,6 +44,8 @@ export default async function handler(req, res) {
     const bidAmount = parseFloat(body?.amount);
     const userId = String(body?.user_id || '').trim();
     const bidderName = body?.bidder_name;
+    // 🚚 Frete calculado uma vez na sala e somado ao lance na reserva de saldo.
+    const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);
 
     if (!auctionId || !bidAmount || bidAmount <= 0 || !userId) {
       return res.status(400).json({ success: false, message: 'Parâmetros inválidos' });
@@ -60,7 +62,7 @@ export default async function handler(req, res) {
     }
 
     const getResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances`
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor`
     );
     const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
@@ -147,6 +149,7 @@ export default async function handler(req, res) {
         winner_name: winnerName,
         end_time: newEndTime,
         version: currentVersion + 1,
+        frete_reservado_valor: freteValor,
       }
     );
     const patchedRow = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
@@ -170,9 +173,12 @@ export default async function handler(req, res) {
     // então quem era coberto e não voltava a dar lance ficava com o dinheiro travado.
     // Libera EXATAMENTE o preço anterior daquele leilão (regra por leilão preservada:
     // nunca "tudo", para não tocar em reservas de outros leilões do mesmo usuário).
+    // 🚚 Libera lance + frete que estavam reservados para o líder anterior
+    // (o frete dele foi lido ANTES deste PATCH sobrescrever com o novo valor).
+    const previousFrete = Number(auction.frete_reservado_valor) || 0;
     let released = null;
-    if (auction.winner_id && currentPrice > 0) {
-      released = await releaseHold(auction.winner_id, currentPrice);
+    if (auction.winner_id && (currentPrice > 0 || previousFrete > 0)) {
+      released = await releaseHold(auction.winner_id, currentPrice + previousFrete);
     }
 
     return res.status(200).json({

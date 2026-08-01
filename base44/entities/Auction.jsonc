@@ -258,6 +258,11 @@
     "reserved_by_name": {
       "type": "string",
       "description": "Nome do investidor que reservou (cache para exibi\u00e7\u00e3o admin)"
+    },
+    "frete_reservado_valor": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor do frete reservado junto com o lance do l\u00edder ATUAL (calculado uma vez por usu\u00e1rio na sala, somado ao lance na reserva de saldo). Usado para devolver o valor exato quando o l\u00edder \u00e9 superado."
     }
   },
   "required": [
