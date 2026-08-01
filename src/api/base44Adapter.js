@@ -309,26 +309,30 @@ async function invokeFunction(name, body, options = {}) {
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
+    const text = await resp.text().catch(() => '');
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch { parsed = null; }
+
+    // 🩹 CAUSA-RAIZ do "Erro ao enviar lance (função indisponível — status 404)":
+    // functions como submitAtomicBid usam 404 de PROPÓSITO pra "leilão não encontrado"
+    // (resposta de negócio real, com JSON válido) — não é rota inexistente na Vercel.
+    // Só trata como "function ainda não existe" quando o corpo NÃO é JSON (página de
+    // erro padrão da Vercel/HTML), senão a mensagem real do servidor é perdida.
     if (resp.status === 404 || resp.status === 405 || resp.status === 501) {
-      // 405 = POST caiu no rewrite do index.html (function ainda não existe como API route)
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
       if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
       return { ok: false, error: 'not_implemented', name, status: resp.status };
     }
-    // 🩹 CAUSA-RAIZ do "Erro ao enviar lance.": as functions (submitAtomicBid,
-    // reserveBidBalance, etc.) já respondem com JSON detalhado (success:false,
-    // conflict, message) mesmo em status 400/401/409/500 — mas aqui isso virava
-    // um throw genérico, perdendo a mensagem real e pulando a lógica de
-    // tratamento (atomicData?.conflict / atomicData?.message) que as telas já têm.
-    // Se o corpo é um JSON válido, devolve ele; só lança erro genérico se não for.
+    // As functions já respondem com JSON detalhado (success:false, conflict, message)
+    // mesmo em status 400/401/409/500 — devolve o JSON real; só lança erro genérico se
+    // o corpo não for JSON válido.
     if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      try {
-        return JSON.parse(text);
-      } catch {
-        throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
-      }
+      if (parsed && typeof parsed === 'object') return parsed;
+      throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
     }
-    return resp.json();
+    return parsed !== null ? parsed : {};
   } catch (err) {
     if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
       if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' fetch falhou — stub`, err.message);
