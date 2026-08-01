@@ -33,6 +33,8 @@ import { proxyImage } from "@/functions/proxyImage";
 // 📣 PONTO 69 — Modo Chamada (pré-lançamento): selo de contagem + lance travado
 import SeloChamada from './SeloChamada';
 import useChamada from '@/hooks/useChamada';
+// 🛡️ PONTO 70 — Compre Já só aparece com preço real (nunca valor residual de R$ 1,00)
+import { precoArremateAgora } from '@/lib/arremateAgora';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
@@ -613,10 +615,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <span>{bidStats?.bids ?? stableRandomBids} lances</span>
               </div>
             </div>
-            {isActive && Number(auction.buy_now_price) > 0 && (
+            {/* 🛡️ PONTO 70 — só mostra Compre Já com preço REAL (acima do lance inicial) */}
+            {isActive && precoArremateAgora(auction) !== null && (
               <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2 py-1">
                 <Zap className="w-3.5 h-3.5" />
-                Compre já: R$ {fmtBR(Number(auction.buy_now_price))}
+                Compre já: R$ {fmtBR(precoArremateAgora(auction))}
               </div>
             )}
           </div>

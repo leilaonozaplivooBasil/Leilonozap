@@ -22,6 +22,7 @@ import { toast } from '@/components/ui/use-toast';
 import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer, Copy, Archive, ArchiveRestore, CalendarClock, ShoppingBag } from 'lucide-react';
 import { capOf, withCap } from '@/lib/fotoLegenda';
 import ModoChamadaCard from '@/components/auction/ModoChamadaCard';
+import { precoArremateAgora, normalizarArremateAgora } from '@/lib/arremateAgora';
 import { supabase } from '@/api/supabaseClient';
 
 // 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
@@ -301,7 +302,7 @@ export default function EditAuction() {
                 supplier_logo_url: formData.supplier_logo_url || null,
                 comparai_mode: formData.comparai_mode || 'google_shopping',
                 manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null,
-                buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null,
+                buy_now_price: normalizarArremateAgora(formData.buy_now_price, formData.starting_price),
             });
             notify.ok('Leilão duplicado', 'Você está na cópia — agende ou reative quando quiser.');
             navigate(createPageUrl('EditAuction') + `?id=${novo.id}`, { replace: false });
@@ -525,7 +526,9 @@ export default function EditAuction() {
               supplier_logo_url: currentAuction.supplier_logo_url || "", // 🆕 CARREGA LOGO
               comparai_mode: currentAuction.comparai_mode || "google_shopping", // 🆕 CARREGA MODO
               manual_market_price: currentAuction.manual_market_price || "", // 🆕 CARREGA PREÇO MANUAL
-              buy_now_price: currentAuction.buy_now_price || "", // CARREGA COMPRE JÁ
+              // 🛡️ PONTO 70 — valor residual (R$ 1,00 / <= lance inicial) entra como vazio:
+              // é "sem arremate imediato", e não um preço real a ser mantido no save.
+              buy_now_price: precoArremateAgora(currentAuction) ?? "",
               // 📣 PONTO 69 — Modo Chamada
               modo_chamada: currentAuction.modo_chamada === true,
               data_abertura_lances: currentAuction.data_abertura_lances
@@ -709,7 +712,8 @@ export default function EditAuction() {
                 supplier_logo_url: formData.supplier_logo_url || null, // 🆕 SALVA LOGO
                 comparai_mode: formData.comparai_mode || "google_shopping", // 🆕 SALVA MODO
                 manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null, // 🆕 SALVA PREÇO MANUAL
-                buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null, // SALVA COMPRE JÁ
+                // 🛡️ PONTO 70 — vazio ou valor residual (<= lance inicial) grava NULL
+                buy_now_price: normalizarArremateAgora(formData.buy_now_price, formData.starting_price),
                 // 📣 PONTO 69 — MODO CHAMADA (data gravada em UTC)
                 modo_chamada: !!formData.modo_chamada,
                 data_abertura_lances: formData.modo_chamada ? aberturaISO : null

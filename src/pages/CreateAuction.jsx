@@ -30,6 +30,7 @@ import ManualImageUpload from "../components/admin/ManualImageUpload";
 import ValidationReportModal from "../components/admin/ValidationReportModal";
 import GoogleShoppingImporter from "../components/admin/GoogleShoppingImporter";
 import PriceSection from "../components/admin/PriceSection";
+import { normalizarArremateAgora } from "@/lib/arremateAgora";
 
 const withRetry = async (fn, max = 3) => {
   let err;
@@ -918,7 +919,13 @@ export default function CreateAuction() {
         }
         const finalCatalogPriceForAuction = catalogPrice || lojaVirtual;
         const auctionStartingPrice = parseFloat((lojaVirtual * 0.80).toFixed(2));
-        const auctionBuyNowPrice = parseFloat(finalCatalogPriceForAuction.toFixed(2));
+        // 🛡️ PONTO 70 — Arremate Agora: respeita o que o operador digitou. Vazio (ou valor
+        // residual <= lance inicial) grava NULL — NUNCA um preço irrisório tipo R$ 1,00,
+        // que permitia arrematar o produto por esse valor.
+        const auctionBuyNowPrice = normalizarArremateAgora(
+          formData.buy_now_price !== '' ? formData.buy_now_price : finalCatalogPriceForAuction,
+          auctionStartingPrice
+        );
 
         const auctionData = {
           title: formData.title,

@@ -30,6 +30,8 @@ import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
 import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
 import { emChamada } from "@/lib/modoChamada";
+// 🛡️ PONTO 70 — Compre Já só com preço real (valor residual de R$ 1,00 é ignorado)
+import { precoArremateAgora } from "@/lib/arremateAgora";
 
 // 📣 PONTO 69 — Modo Chamada (pré-lançamento): lances travados até a abertura
 import SeloChamada from "@/components/auction/SeloChamada";
@@ -570,7 +572,8 @@ export default function AuctionRoom() {
       return;
     }
 
-    if (!auction.buy_now_price || auction.buy_now_price <= 0) {
+    // 🛡️ PONTO 70 — sem preço REAL de arremate imediato, a ação nem começa
+    if (precoArremateAgora(auction) === null) {
       alert("Este leilão não possui preço de compra rápida.");
       return;
     }
@@ -1168,7 +1171,7 @@ export default function AuctionRoom() {
 
       {isAuctionActive && !chamada.emChamada && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (
