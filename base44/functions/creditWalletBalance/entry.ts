@@ -43,9 +43,14 @@ Deno.serve(async (req) => {
             const previousBalance = Number(user.saldo_disponivel) || 0;
             const newBalance = Math.round((previousBalance + amount) * 100) / 100;
 
-            // PATCH atômico: só aplica se saldo_disponivel ainda for o mesmo lido agora (CAS)
+            // PATCH atômico: só aplica se saldo_disponivel ainda for o mesmo lido agora (CAS).
+            // 🔒 CORREÇÃO PONTO 71: coluna nunca inicializada fica NULL, e "eq.0" nunca combina
+            // com NULL — o crédito falhava pra sempre em silêncio pra todo usuário novo.
+            const casFilter = previousBalance === 0
+                ? `or=(saldo_disponivel.eq.0,saldo_disponivel.is.null)`
+                : `saldo_disponivel=eq.${previousBalance}`;
             const patchResp = await sbFetch(
-                `app_users?id=eq.${user_id}&saldo_disponivel=eq.${previousBalance}`,
+                `app_users?id=eq.${user_id}&${casFilter}`,
                 'PATCH',
                 { saldo_disponivel: newBalance }
             );

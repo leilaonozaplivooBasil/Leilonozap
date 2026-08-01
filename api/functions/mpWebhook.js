@@ -27,7 +27,11 @@ async function creditWalletDeposit(sale) {
     if (!user) return { credited: 0, error: 'buyer_notfound' };
     const current = round2(Number(user[col]) || 0);
     const novo = round2(current + amount);
-    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&${col}=eq.${current}`, {
+    // 🔒 CORREÇÃO PONTO 71: coluna nunca inicializada fica NULL no banco, e "col=eq.0"
+    // nunca combina com NULL (NULL = 0 não é verdadeiro no Postgres) — o crédito falhava
+    // pra sempre em silêncio pra todo usuário novo. Se current é 0, aceita NULL também.
+    const casFilter = current === 0 ? `or=(${col}.eq.0,${col}.is.null)` : `${col}=eq.${current}`;
+    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&${casFilter}`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ [col]: novo }),
     });
     const updated = await patch.json().catch(() => []);

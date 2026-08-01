@@ -57,10 +57,12 @@ export async function releaseHold(userId, amount, auctionId = null) {
       // estiverem EXATAMENTE como foram lidos. Sem o filtro em saldo_disponivel, um
       // depósito que caísse entre a leitura e a escrita seria APAGADO por este PATCH
       // (gravaríamos disponivel_antigo + liberar). Se mudou, o laço tenta de novo.
+      // 🔒 CORREÇÃO PONTO 71: coluna nunca inicializada fica NULL, e "eq.0" nunca combina
+      // com NULL — aceita NULL também quando o valor lido é 0.
+      const dispFilter = disponivel === 0 ? `or(saldo_disponivel.eq.0,saldo_disponivel.is.null)` : `saldo_disponivel.eq.${disponivel}`;
+      const resFilter = reservado === 0 ? `or(saldo_reservado.eq.0,saldo_reservado.is.null)` : `saldo_reservado.eq.${reservado}`;
       const patch = await sb(
-        `app_users?id=eq.${encodeURIComponent(uid)}` +
-          `&saldo_disponivel=eq.${disponivel}` +
-          `&saldo_reservado=eq.${reservado}`,
+        `app_users?id=eq.${encodeURIComponent(uid)}&and=(${dispFilter},${resFilter})`,
         {
           method: 'PATCH',
           headers: { Prefer: 'return=representation' },
