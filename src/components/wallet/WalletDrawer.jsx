@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import BidStateTag from '@/components/wallet/BidStateTag';
+import { jaAceitouPassaporte, registrarAceitePassaporte } from '@/lib/passaporteTermo';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -58,6 +59,9 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const [pixData, setPixData] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
   const [filterTab, setFilterTab] = useState('all');
+  // 🔒 PONTO 68: o 1º depósito só é liberado depois do aceite dos termos do crédito.
+  const [aceiteTermos, setAceiteTermos] = useState(false);
+  const precisaAceite = !jaAceitouPassaporte(currentUser);
   const pollRef = useRef(null);
 
   const loadWallet = useCallback(async () => {
@@ -89,6 +93,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       setPixData(null);
       setVisibleCount(15);
       setFilterTab('all');
+      setAceiteTermos(false);
       loadWallet();
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
@@ -125,7 +130,10 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
 
   const handleGeneratePix = async () => {
     if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
+    if (precisaAceite && !aceiteTermos) { toast.error('Aceite os termos do crédito para continuar.'); return; }
     setGenerating(true);
+    // registra o aceite antes de qualquer cobrança (trilha de auditoria no servidor)
+    if (precisaAceite) { try { await registrarAceitePassaporte(currentUser); } catch { /* segue */ } }
     try {
       // 🔒 createAsaasPayment é a função real publicada na Vercel (gera PIX via Mercado
       // Pago). "createMercadoPagoDeposit" só existe do lado Base44 e quebrava com
@@ -395,10 +403,28 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   <div className="rounded-xl border border-green-500/40 bg-green-600/10 p-3.5 flex items-start gap-2.5">
                     <Ticket className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-green-300/90 leading-relaxed">
-                      Depósitos de R$ 100 ou mais geram <strong className="text-green-300">10% de crédito</strong> para usar na Loja Virtual.{' '}
+                      Depósitos de R$ 100 ou mais recebem <strong className="text-green-300">+10% de crédito na hora</strong> (R$ 100 viram R$ 110).{' '}
                       <a href="/passaporte" className="underline font-semibold text-green-300 hover:text-green-200">como funciona</a>
                     </p>
                   </div>
+
+                  {precisaAceite && (
+                    <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/[0.04] p-3.5 cursor-pointer min-h-[44px]">
+                      <input
+                        type="checkbox"
+                        checked={aceiteTermos}
+                        onChange={() => setAceiteTermos((v) => !v)}
+                        className="mt-0.5 w-5 h-5 accent-emerald-500 shrink-0"
+                      />
+                      <span className="text-xs text-gray-300 leading-relaxed">
+                        Declaro que o valor depositado é <strong className="text-white">crédito de consumo</strong> de uso
+                        exclusivo no ecossistema Leilão NoZap, <strong className="text-white">irrestornável</strong> após a
+                        confirmação do pagamento, e que as disputas são uma competição de preços promocional (não leilão
+                        oficial).{' '}
+                        <a href="/passaporte" className="underline font-semibold text-green-300">ler os termos</a>
+                      </span>
+                    </label>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     {QUICK_AMOUNTS.map((v) => (
                       <button
@@ -425,7 +451,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   </div>
                   <Button
                     onClick={handleGeneratePix}
-                    disabled={generating || effectiveAmount < 100}
+                    disabled={generating || effectiveAmount < 100 || (precisaAceite && !aceiteTermos)}
                     className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                   >
                     {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}

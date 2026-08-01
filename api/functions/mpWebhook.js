@@ -6,7 +6,8 @@ import { bestSellingLevel, overridePct } from '../_lib/networkChain.js';
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
-import { criarCupomPassaporte, debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
+import { debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
+import { creditarBonusPassaporte } from '../_lib/passaporteBonus.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -161,32 +162,28 @@ export default async function handler(req, res) {
     }
 
     if (sale.kind === 'passaporte') {
-      // Passaporte de Lances: credita o valor na carteira (saldo_disponivel) E cria o passaporte
-      // (20 acessos + validade 90d saldo / 30d acessos). Sem comissão nem fulfillment.
+      // Passaporte de Lances (modelo A): credita o valor pago + 10% de bônus NA HORA.
+      // Sem acessos e sem validade — o crédito fica na carteira até ser usado.
       const r = await creditWalletDeposit({ ...sale, kind: 'wallet_deposit' });
       try {
-        const now = Date.now();
         await sb('passaportes', {
           method: 'POST', headers: { Prefer: 'return=minimal' },
           body: JSON.stringify({
             user_id: sale.buyer_id, sale_id: sale.id, valor: round2(Number(sale.total_amount) || 0),
-            acessos_total: 20, acessos_restantes: 20,
-            validade_saldo: new Date(now + 90 * 86400000).toISOString(),
-            validade_acessos: new Date(now + 30 * 86400000).toISOString(),
             status: 'ativo',
           }),
         });
       } catch (_) { /* crédito já entrou; registro do passaporte é secundário */ }
-      // 🎟️ Cupom Passaporte: 10% do aporte, nasce BLOQUEADO (libera só se perder o arremate)
-      const cupom = await criarCupomPassaporte(sale);
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r, cupom });
+      // 🎟️ Bônus de 10% creditado na carteira (recolhido se o usuário arrematar)
+      const bonus = await creditarBonusPassaporte(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r, bonus });
     }
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
-      // 🎟️ Cupom Passaporte também no aporte de carteira (>= R$ 100), sempre BLOQUEADO
-      const cupom = sale.kind === 'wallet_deposit' ? await criarCupomPassaporte(sale) : null;
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r, cupom });
+      // 🎟️ Bônus de 10% também no aporte de carteira (>= R$ 100), creditado na hora
+      const bonus = sale.kind === 'wallet_deposit' ? await creditarBonusPassaporte(sale) : null;
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r, bonus });
     }
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
