@@ -48,9 +48,26 @@ export default function FreteLanceBanner({ status, freteValor, cep, onChangeCep,
 
   if (status === "error") {
     return (
-      <div className="flex items-center gap-2 px-4 pt-3 text-xs text-amber-400">
-        Não conseguimos calcular o frete agora — tente novamente.
-        <button type="button" onClick={() => onCalcular(cep)} className="underline font-semibold">Tentar de novo</button>
+      <div className="px-4 pt-3 space-y-2">
+        <p className="text-xs text-amber-400">Não conseguimos calcular o frete para esse CEP — confira e tente outro.</p>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Seu CEP (só números)"
+            value={cep}
+            onChange={(e) => onChangeCep(e.target.value)}
+            maxLength={9}
+            className="flex-1 bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg px-3 py-2 text-sm min-h-[40px]"
+          />
+          <button
+            type="button"
+            onClick={() => onCalcular(cep)}
+            className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg px-3 py-2 min-h-[40px] flex-shrink-0"
+          >
+            Calcular frete
+          </button>
+        </div>
       </div>
     );
   }
