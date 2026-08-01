@@ -1,13 +1,17 @@
 import { base44 } from '@/api/base44Client';
 
-// Versão do texto jurídico vigente (PONTO 67 — 31/07/2026)
-export const TERMO_VERSAO = '2026-07-31';
+// Versão do texto jurídico vigente (PONTO 70 — 01/08/2026: débito e devolução imediatos)
+export const TERMO_VERSAO = '2026-08-01';
 
 const chaveLocal = (user) => `termo_adesao_aceito_${TERMO_VERSAO}_${user?.id || 'anon'}`;
 
 /** Já aceitou o termo vigente? (campo do usuário OU marcação local) */
 export function jaAceitouTermo(user) {
-  if (!user) return false;
+  // Visitante ainda sem conta: vale a marcação local, pra não repetir o termo
+  // a cada item que ele adiciona ao carrinho.
+  if (!user) {
+    try { return localStorage.getItem(chaveLocal(null)) === '1'; } catch { return false; }
+  }
   if (user.terms_accepted === true) return true;
   try {
     return localStorage.getItem(chaveLocal(user)) === '1';
@@ -21,7 +25,11 @@ export function jaAceitouTermo(user) {
  * a persistência no cadastro é tentada em seguida e falha em silêncio se o RLS barrar.
  */
 export async function registrarAceiteTermo(user) {
-  if (!user?.id) return;
+  if (!user?.id) {
+    // Visitante: guarda o aceite local; ao criar conta o gate volta a valer pelo cadastro.
+    try { localStorage.setItem(chaveLocal(null), '1'); } catch { /* storage indisponível */ }
+    return;
+  }
   try { localStorage.setItem(chaveLocal(user), '1'); } catch { /* storage indisponível */ }
   try {
     const salvo = JSON.parse(localStorage.getItem('currentUser') || 'null');

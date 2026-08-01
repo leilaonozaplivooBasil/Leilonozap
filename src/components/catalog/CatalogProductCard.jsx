@@ -12,6 +12,8 @@ import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
 import { Stars } from '../loja/StarRating';
 import { getReferral } from '@/lib/referral';
+import { jaAceitouTermo } from '@/lib/termoAdesao';
+import { exigirAceiteTermo } from '@/lib/termoGate';
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
@@ -55,9 +57,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
   // Soma unidades no carrinho SEM sair da página, respeitando o estoque.
   // openPopup: o ADICIONAR principal abre o popup do carrinho; o botão "+" só soma
   // (permite cliques rápidos em sequência pra levar várias unidades).
-  const addUnit = (e, { openPopup = false } = {}) => {
-    e.stopPropagation();
-
+  const aplicarUnidade = ({ openPopup = false } = {}) => {
     const savedCart = localStorage.getItem('catalogCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
 
@@ -99,6 +99,18 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     if (openPopup) {
       window.dispatchEvent(new Event('openCartPopup'));
     }
+  };
+
+  // 📜 PONTO 70 — o Termo de Adesão entra AQUI: adicionar ao carrinho é a
+  // intenção de compra na Loja Virtual. Aceite uma única vez; cancelar não
+  // adiciona nada. Nenhuma lógica de preço/estoque foi alterada.
+  const addUnit = (e, opts = {}) => {
+    e.stopPropagation();
+    if (!jaAceitouTermo(currentUser)) {
+      exigirAceiteTermo(() => aplicarUnidade(opts));
+      return;
+    }
+    aplicarUnidade(opts);
   };
 
   // Diminui uma unidade direto do card (0 unidades → sai do carrinho)

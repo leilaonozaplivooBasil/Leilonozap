@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from "@/components/ui/checkbox";
-import { User as UserIcon, Sparkles, ShieldCheck, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Sparkles, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { ensureSiteLicensee } from '@/functions/ensureSiteLicensee'; // New import for the ensureSiteLicensee function
 import { getReferral } from '@/lib/referral';
-import TermoAdesaoTexto, { DECLARACAO_CIENCIA } from '@/components/legal/TermoAdesaoTexto';
-import { registrarAceiteTermo } from '@/lib/termoAdesao';
+// 📜 PONTO 70 — este convite NÃO exibe mais o Termo de Adesão: o termo só aparece
+// na intenção de compra (1º lance no leilão / adicionar ao carrinho na loja).
 
 export default function GuestRegistrationModal({ onClose, onSuccess, referrerName }) {
   const [fullName, setFullName] = useState('');
@@ -20,12 +19,10 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
   const [avatarPrompt, setAvatarPrompt] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState(''); // CONFIRMAÇÃO
   const [phone, setPhone] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -228,9 +225,6 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
       }
       console.log("✅ [CADASTRO] Sessão salva localmente");
 
-      // 📜 PONTO 67 — o aceite já foi dado neste modal: registra para não pedir de novo no 1º lance
-      registrarAceiteTermo(createdUser);
-      
       setRegistrationSuccess(true);
       
       setTimeout(() => {
@@ -272,37 +266,6 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
       </div>
     );
   }
-
-  const renderStepOne = () => (
-    <>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3 text-white">
-          <FileText className="w-6 h-6 text-orange-400"/>
-          Termo de Adesão Obrigatório
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-gray-300">
-          Para participar, você deve ler e concordar com nossas regras. 
-          A transparência é nosso maior compromisso.
-        </p>
-        <TermoAdesaoTexto />
-        <div className="flex items-start space-x-2 pt-2">
-          <Checkbox id="terms" checked={termsAccepted} onCheckedChange={setTermsAccepted} className="mt-0.5 border-gray-600 data-[state=checked]:bg-green-600"/>
-          <label htmlFor="terms" className="text-sm font-medium leading-snug text-gray-300 cursor-pointer">
-            {DECLARACAO_CIENCIA}
-          </label>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onClose} className="border-gray-600 text-gray-300 hover:bg-gray-700">Cancelar</Button>
-        <Button onClick={() => setStep(2)} disabled={!termsAccepted} className="bg-green-600 hover:bg-green-700">
-          <ShieldCheck className="w-4 h-4 mr-2" />
-          Concordo e Quero Participar
-        </Button>
-      </CardFooter>
-    </>
-  );
 
   const renderStepTwo = () => (
     <>
@@ -416,15 +379,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button 
-          variant="outline" 
-          onClick={() => setStep(1)} 
-          className="border-gray-600 text-gray-300 hover:bg-gray-700"
-          disabled={isRegistering}
-        >
-          Voltar
-        </Button>
+      <CardFooter className="flex justify-end">
         <Button 
           onClick={handleRegister} 
           disabled={isRegistering || !nickname || !email || !phone || !password || !confirmPassword || !fullName}
@@ -461,7 +416,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
             <span>🎉</span> Você foi convidado por <span style={{ color: '#ff8a5c' }}>{referrerName}</span>
           </div>
         )}
-        {step === 1 ? renderStepOne() : renderStepTwo()}
+        {renderStepTwo()}
       </Card>
     </div>
   );

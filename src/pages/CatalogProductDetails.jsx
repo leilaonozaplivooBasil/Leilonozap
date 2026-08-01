@@ -12,6 +12,8 @@ import { proxyImage } from "@/functions/proxyImage";
 import { supabase } from "@/api/supabaseClient";
 import { Stars, RatingBadge } from "@/components/loja/StarRating";
 import { getReferral } from '@/lib/referral';
+import { jaAceitouTermo } from '@/lib/termoAdesao';
+import { exigirAceiteTermo } from '@/lib/termoGate';
 
 const Product = base44.entities.Product;
 
@@ -159,8 +161,6 @@ export default function CatalogProductDetails() {
 
   const handleBuyNow = () => {
     console.log('🛒 Botão Comprar clicado!');
-    console.log('👤 Current User:', currentUser);
-    console.log('📦 Product:', product);
 
     if (!currentUser) {
       toast.error('Faça login para continuar');
@@ -168,6 +168,15 @@ export default function CatalogProductDetails() {
       return;
     }
 
+    // 📜 PONTO 70 — intenção de compra: termo antes de seguir pro checkout
+    if (!jaAceitouTermo(currentUser)) {
+      exigirAceiteTermo(() => irParaCheckout());
+      return;
+    }
+    irParaCheckout();
+  };
+
+  const irParaCheckout = () => {
     const checkoutUrl = createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`;
     console.log('🔗 Navegando para:', checkoutUrl);
 
@@ -296,7 +305,17 @@ export default function CatalogProductDetails() {
   const images = product.image_urls && Array.isArray(product.image_urls) ? product.image_urls : [];
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
 
+  // 📜 PONTO 70 — adicionar ao carrinho é a intenção de compra na Loja Virtual:
+  // é aqui que o Termo de Adesão entra (uma única vez), nunca na navegação.
   const handleAddToCart = () => {
+    if (!jaAceitouTermo(currentUser)) {
+      exigirAceiteTermo(() => adicionarAoCarrinho());
+      return;
+    }
+    adicionarAoCarrinho();
+  };
+
+  const adicionarAoCarrinho = () => {
     const savedCart = localStorage.getItem('catalogCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
 

@@ -18,6 +18,7 @@ import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import TransactionToasts from "@/components/notifications/TransactionToasts";
 import GlobalWalletDrawer from "@/components/wallet/GlobalWalletDrawer";
+import TermoGateGlobal from "@/components/legal/TermoGateGlobal";
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import { base44 } from '@/api/base44Client';
@@ -1052,6 +1053,8 @@ export default function Layout({ children, currentPageName }) {
         <PaymentConfirmationPopup />
         <TransactionToasts />
         <GlobalWalletDrawer />
+        {/* 📜 PONTO 70 — Termo de Adesão só na intenção de compra (lance / carrinho) */}
+        <TermoGateGlobal />
 
         {/* 🌐 Flutuantes globais — CompareAQUI à esquerda e Fale com a Leila à direita.
             Fora da abertura (Portal/Landing): lá eles poluíam o hero (pedido Gabriel 25/07). */}

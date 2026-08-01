@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { supabase } from "@/api/supabaseClient";
 import { Stars, RatingBadge } from "@/components/loja/StarRating";
 import { getReferral } from '@/lib/referral';
+import { jaAceitouTermo } from '@/lib/termoAdesao';
+import { exigirAceiteTermo } from '@/lib/termoGate';
 import {
   X, ChevronLeft, ChevronRight, ShoppingCart, MessageCircle, Truck, ShieldCheck,
   RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Lock, Maximize2, ExternalLink
@@ -89,11 +91,29 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
       navigate(createPageUrl("Register"));
       return;
     }
+    // 📜 PONTO 70 — intenção de compra: termo antes do checkout
+    if (!jaAceitouTermo(currentUser)) {
+      exigirAceiteTermo(() => irParaCheckout());
+      return;
+    }
+    irParaCheckout();
+  };
+
+  const irParaCheckout = () => {
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
     navigate(createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`);
   };
 
+  // 📜 PONTO 70 — adicionar ao carrinho é a intenção de compra na Loja Virtual
   const handleAddToCart = () => {
+    if (!jaAceitouTermo(currentUser)) {
+      exigirAceiteTermo(() => adicionarAoCarrinho());
+      return;
+    }
+    adicionarAoCarrinho();
+  };
+
+  const adicionarAoCarrinho = () => {
     const savedCart = localStorage.getItem('catalogCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
     const existingIndex = cart.findIndex((item) => item.id === product.id);
