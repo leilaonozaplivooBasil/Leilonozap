@@ -22,6 +22,7 @@ import {
   Clock,
   Gavel,
   XCircle,
+  Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
@@ -390,6 +391,14 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
               {view === 'recharge' && (
                 <div className="p-5 space-y-5">
                   <p className="text-gray-300 text-sm">Escolha o valor da recarga. O saldo cai na hora após o pagamento PIX.</p>
+                  {/* 🎟️ Comunicação do Cupom Passaporte — texto fixo, sem consulta ao servidor */}
+                  <div className="rounded-xl border border-green-500/40 bg-green-600/10 p-3.5 flex items-start gap-2.5">
+                    <Ticket className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-green-300/90 leading-relaxed">
+                      Depósitos de R$ 100 ou mais geram <strong className="text-green-300">10% de crédito</strong> para usar na Loja Virtual.{' '}
+                      <a href="/passaporte" className="underline font-semibold text-green-300 hover:text-green-200">como funciona</a>
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     {QUICK_AMOUNTS.map((v) => (
                       <button

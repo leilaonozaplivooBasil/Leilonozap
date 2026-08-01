@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Wallet, ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
+import PassaporteCard from '@/components/wallet/PassaporteCard';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -112,6 +113,9 @@ export default function Carteira() {
             <div className="text-2xl font-black text-yellow-400 tabular-nums mt-1">{money(w?.saldo_alocado)}</div>
           </div>
         )}
+
+        {/* 🎟️ Cupom Passaporte — só aparece se o usuário tiver crédito */}
+        <PassaporteCard user={user} />
 
         {/* KYC */}
         <div className="bg-gray-800/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg shadow-black/10">

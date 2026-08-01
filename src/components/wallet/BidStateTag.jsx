@@ -11,6 +11,7 @@ const ESTADOS = {
     texto: 'você foi superado — valor devolvido',
     classe: 'text-emerald-400',
     titulo: 'Alguém cobriu seu lance. O valor reservado voltou integralmente para o seu saldo disponível.',
+    extra: 'Seu crédito Passaporte foi liberado para usar na loja',
   },
   liderando: {
     icon: Flame,
@@ -31,12 +32,17 @@ export default function BidStateTag({ state }) {
   if (!info) return null;
   const Icon = info.icon;
   return (
-    <span
-      className={`inline-flex items-center gap-1 text-[10px] leading-tight ${info.classe}`}
-      title={info.titulo}
-    >
-      <Icon className="w-3 h-3 flex-shrink-0" />
-      {info.texto}
+    <span className="flex flex-col gap-0.5">
+      <span
+        className={`inline-flex items-center gap-1 text-[10px] leading-tight ${info.classe}`}
+        title={info.titulo}
+      >
+        <Icon className="w-3 h-3 flex-shrink-0" />
+        {info.texto}
+      </span>
+      {info.extra && (
+        <span className="text-[10px] leading-tight text-gray-400">{info.extra}</span>
+      )}
     </span>
   );
 }
