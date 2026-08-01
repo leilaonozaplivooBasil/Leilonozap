@@ -29,8 +29,26 @@ export const POOLS = [
   { id: 'diretoria_operacao', pct: 0.5, nome: 'Diretoria de Operação' },
 ];
 
-// cadeia: quem ocupa o cargo NA CADEIA da venda (do vendedor pra cima) captura a fatia.
-// Ordem do mais próximo do cliente pro mais alto (só documenta; a captura é por cargo).
+// 🔭 CADEIA TELESCÓPICA (20%) — regra oficial validada em 22/07/2026.
+// Cada nível tem um % de VENDA DIRETA. Quem vende recebe o % CHEIO do próprio cargo;
+// subindo a cadeia, cada upline recebe só o REBATE (a diferença até o nível de baixo).
+//
+// ⚠️ BUG CORRIGIDO EM 01/08/2026: o motor usava a tabela `CADEIA` (abaixo) — que é a
+// coluna de REBATES — como se fossem fatias fixas por cargo. Resultado: venda direta de
+// nível alto pagava só o rebate e o resto vazava pra empresa (Distribuidor levava 1%
+// em vez de 20%). A tabela `CADEIA` fica preservada só como referência de rebate.
+export const NIVEIS = [
+  { id: 'influenciador',  pct: 5.0,  nome: 'Influenciador' },
+  { id: 'vendedor',       pct: 10.0, nome: 'Vendedor' },
+  { id: 'licenciado',     pct: 13.0, nome: 'Licenciado' },
+  { id: 'parceiro',       pct: 15.0, nome: 'Parceiro' },
+  { id: 'ponto_retirada', pct: 16.0, nome: 'Ponto de Retirada' },
+  { id: 'loja_fisica',    pct: 19.0, nome: 'Loja Física' },
+  { id: 'distribuidor',   pct: 20.0, nome: 'Distribuidor' },
+];
+export const CADEIA_TETO = 20.0; // teto rígido do bloco cadeia
+
+// referência de REBATE por cargo (NÃO usar como fatia de pagamento — ver NIVEIS acima)
 export const CADEIA = [
   { id: 'influenciador', pct: 5.0, nome: 'Influenciador' },
   { id: 'vendedor', pct: 5.0, nome: 'Vendedor' },
@@ -163,13 +181,35 @@ export function calcularComissao(sale, users) {
     companyPercent += PCT_EXECUTIVO;
   }
 
-  // 2) OPERAÇÃO + COMERCIAL (20%) — só pela CADEIA daquela venda.
-  //    Ninguém da rede trouxe o cliente → a fatia fica com a empresa (bancar a operação).
-  for (const c of CADEIA) {
-    const dono = chain.find((u) => temCargo(u, c.id));
-    if (!dono) { companyPercent += c.pct; continue; }
-    assignments.push({ role: c.id, user_id: dono.id, user_name: dono.full_name, percent: c.pct, amount: Math.round(valor * c.pct) / 100, tipo: 'cadeia' });
+  // 2) OPERAÇÃO + COMERCIAL (20%) — CADEIA TELESCÓPICA.
+  //    Âncora (quem vendeu) leva o % de venda direta do cargo mais alto que tem.
+  //    Subindo, cada upline leva o REBATE: o % dele MENOS o maior % já pago abaixo.
+  //    Teto rígido de 20%; o que sobrar sem dono fica com a empresa.
+  const nivelDe = (u) => {
+    let melhor = null;
+    for (const n of NIVEIS) if (temCargo(u, n.id) && (!melhor || n.pct > melhor.pct)) melhor = n;
+    return melhor;
+  };
+
+  let pisoPago = 0;   // maior % já pago pra baixo (base do rebate do próximo)
+  let pctCadeia = 0;  // quanto do teto de 20% já foi distribuído
+  for (const u of chain) {
+    if (pctCadeia >= CADEIA_TETO - 0.0001) break;
+    const nivel = nivelDe(u);
+    if (!nivel) continue;                 // sem cargo de rede (ex.: 'usuario') → não recebe
+    const rebate = nivel.pct - pisoPago;  // upline de nível igual ou menor não ganha nada
+    if (rebate <= 0) continue;
+    const fatia = Math.min(rebate, CADEIA_TETO - pctCadeia);
+    assignments.push({
+      role: nivel.id, user_id: u.id, user_name: u.full_name, percent: fatia,
+      amount: Math.round(valor * fatia) / 100,
+      tipo: pisoPago === 0 ? 'venda_direta' : 'rebate',
+    });
+    pisoPago = nivel.pct;
+    pctCadeia += fatia;
   }
+  // fatia da cadeia sem dono (venda orgânica, cadeia curta) → empresa
+  if (pctCadeia < CADEIA_TETO) companyPercent += CADEIA_TETO - pctCadeia;
 
   // 💰 Fechamento em centavos: o que sobrou dos 30% (fatias sem dono + resíduo de arredondamento)
   //    vai INTEGRALMENTE para a empresa. Soma paga + empresa == 30% da venda, sempre.
