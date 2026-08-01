@@ -20,9 +20,10 @@ Deno.serve(async (req) => {
     // 🛡️ Normaliza: o secret já vem com /rest/v1/ incluso — remove pra não duplicar o path
     SUPABASE_URL = SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 
-    async function sb(path) {
+    async function sb(path, opts = {}) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-        headers: { apikey: SR, Authorization: `Bearer ${SR}` }
+        ...opts,
+        headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) }
       });
       const text = await res.text();
       let json;
@@ -244,6 +245,71 @@ Deno.serve(async (req) => {
         const paidDepositsOfNullUsers = await sb(`catalog_sales?select=id,buyer_id,buyer_name,total_amount,mp_payment_id,created_at&kind=eq.wallet_deposit&status=eq.paid&buyer_id=in.(${idsParam})&order=created_at.desc`);
         result.ponto71_afetados_confirmados = paidDepositsOfNullUsers;
       }
+    }
+
+    if (mode === 'ponto71_teste_e2e') {
+      const round2 = (n) => Math.round(n * 100) / 100;
+      const testId = `teste71${Date.now()}`.slice(0, 24);
+      const testEmail = `teste.ponto71.${Date.now()}@apagar.invalido`;
+      const evidencia = { etapas: [] };
+
+      // 1) Cria usuário NOVO real na tabela — sem informar saldo_disponivel,
+      // exatamente como nasce um cadastro real (coluna fica NULL no Postgres).
+      const criarUser = await sb('app_users', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ id: testId, full_name: 'TESTE PONTO71 APAGAR', email: testEmail, phone: '00000000000', password: 'teste-apagar' }),
+      });
+      evidencia.etapas.push({ passo: '1_criar_usuario_novo', ok: criarUser.ok, status: criarUser.status });
+
+      // 2) Confirma que nasceu com saldo_disponivel NULL (replica exatamente o caso real do Alexandre)
+      const antes = await sb(`app_users?select=id,saldo_disponivel&id=eq.${testId}`);
+      evidencia.etapas.push({ passo: '2_saldo_antes_do_deposito', saldo_disponivel: Array.isArray(antes.body) ? antes.body[0]?.saldo_disponivel : undefined });
+
+      // 3) Cria a venda de depósito já PAGA (simula o Mercado Pago confirmando o PIX)
+      const valorDeposito = 37.5;
+      const saleId = `sale71${Date.now()}`.slice(0, 24);
+      const criarSale = await sb('catalog_sales', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ id: saleId, buyer_id: testId, buyer_name: 'TESTE PONTO71 APAGAR', kind: 'wallet_deposit', status: 'paid', total_amount: valorDeposito, sale_price: valorDeposito, mp_payment_id: `TESTE71_${Date.now()}` }),
+      });
+      evidencia.etapas.push({ passo: '3_criar_deposito_pago', ok: criarSale.ok, status: criarSale.status });
+
+      // 4) Roda a MESMA lógica de crédito já corrigida (CAS aceitando NULL como 0)
+      let credited = 0, novo_saldo = null, tentativas = 0, erro = null;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        tentativas = attempt + 1;
+        const r1 = await sb(`app_users?select=saldo_disponivel&id=eq.${testId}&limit=1`);
+        const user = Array.isArray(r1.body) ? r1.body[0] : null;
+        if (!user) { erro = 'buyer_notfound'; break; }
+        const current = round2(Number(user.saldo_disponivel) || 0);
+        const novo = round2(current + valorDeposito);
+        const casFilter = current === 0 ? `or=(saldo_disponivel.eq.0,saldo_disponivel.is.null)` : `saldo_disponivel=eq.${current}`;
+        const patch = await sb(`app_users?id=eq.${testId}&${casFilter}`, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novo }),
+        });
+        if (Array.isArray(patch.body) && patch.body.length) { credited = valorDeposito; novo_saldo = novo; break; }
+      }
+      evidencia.etapas.push({ passo: '4_credito_aplicado', tentativas, credited, novo_saldo, erro });
+
+      // 5) Confirma no banco que o saldo realmente refletiu o depósito
+      const depois = await sb(`app_users?select=id,saldo_disponivel&id=eq.${testId}`);
+      evidencia.etapas.push({ passo: '5_saldo_depois_confirmado_no_banco', saldo_disponivel: Array.isArray(depois.body) ? depois.body[0]?.saldo_disponivel : undefined });
+
+      // 6) Limpeza — remove a venda de teste e o usuário de teste (não fica NADA em produção)
+      const delSale = await sb(`catalog_sales?id=eq.${saleId}`, { method: 'DELETE' });
+      const delUser = await sb(`app_users?id=eq.${testId}`, { method: 'DELETE' });
+      evidencia.etapas.push({ passo: '6_limpeza', venda_removida: delSale.ok, usuario_removido: delUser.ok });
+
+      // 7) Confirma que não sobrou rastro nenhum
+      const confereSale = await sb(`catalog_sales?select=id&id=eq.${saleId}`);
+      const confereUser = await sb(`app_users?select=id&id=eq.${testId}`);
+      evidencia.etapas.push({ passo: '7_confirma_zero_rastro', sales_restantes: Array.isArray(confereSale.body) ? confereSale.body.length : null, users_restantes: Array.isArray(confereUser.body) ? confereUser.body.length : null });
+
+      evidencia.veredito = (novo_saldo === valorDeposito && Array.isArray(confereSale.body) && confereSale.body.length === 0 && Array.isArray(confereUser.body) && confereUser.body.length === 0)
+        ? '✅ CONFIRMADO: depósito de usuário novo (saldo NULL) foi creditado corretamente, e todo o rastro de teste foi apagado.'
+        : '⚠️ Algo não bateu — revisar etapas acima.';
+
+      result.ponto71_teste_e2e = evidencia;
     }
 
     return Response.json(result);
