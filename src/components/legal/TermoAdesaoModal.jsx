@@ -52,7 +52,7 @@ export default function TermoAdesaoModal({ onAccept, onClose, modo = 'aceite', t
               <Button
                 variant="outline"
                 onClick={onClose}
-                className="w-full sm:w-auto min-h-[44px] border-gray-600 text-gray-300 hover:bg-gray-700"
+                className="w-full sm:w-auto min-h-[44px] bg-transparent border-gray-600 text-gray-200 hover:bg-gray-700 hover:text-white"
               >
                 Cancelar
               </Button>
