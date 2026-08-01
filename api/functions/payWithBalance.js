@@ -2,6 +2,28 @@
 // Para vendedores/lojistas redimirem comissão em produtos da plataforma.
 // Toda a validação (preço, estoque, saldo) e a baixa acontecem ATÔMICAS na função SQL comprar_com_saldo.
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+import { resolverFreteDoCheckout } from '../_lib/frete.js';
+
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+// Ajuste ATÔMICO do saldo de comissão (CAS: só grava se o saldo não mudou no meio).
+// Usado pra reservar/devolver o frete sem risco de perder depósito concorrente.
+async function ajustarSaldoCAS(userId, delta) {
+  for (let i = 0; i < 6; i++) {
+    const rows = await (await sb(`app_users?select=commission_balance&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    const u = Array.isArray(rows) ? rows[0] : null;
+    if (!u) return { ok: false, error: 'usuario_nao_encontrado' };
+    const atual = round2(u.commission_balance);
+    const novo = round2(atual + delta);
+    if (novo < 0) return { ok: false, error: 'saldo_insuficiente', saldo: atual };
+    const patch = await sb(`app_users?id=eq.${encodeURIComponent(userId)}&commission_balance=eq.${atual}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ commission_balance: novo }),
+    });
+    const upd = await patch.json().catch(() => []);
+    if (Array.isArray(upd) && upd.length) return { ok: true, saldo: novo };
+  }
+  return { ok: false, error: 'conflito_de_saldo' };
+}
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -43,6 +65,27 @@ export default async function handler(req, res) {
       if (Array.isArray(r) && r[0]) sellerId = r[0].id;
     }
 
+    // 🚚 PONTO 74 — frete RECOTADO no servidor. Reservamos o frete ANTES do RPC (CAS) e
+    // devolvemos se a compra falhar: assim o saldo nunca fica pago pela metade.
+    const fr = await resolverFreteDoCheckout({
+      delivery_type: body?.delivery_type || (body?.buyer_address === 'Retirada' ? 'pickup' : 'delivery'),
+      cep: body?.buyer_cep,
+      items: cleanItems,
+      frete_id: body?.frete_id,
+    });
+    if (!fr.ok) return res.status(200).json({ success: false, error: fr.error });
+    const frete = fr.frete;
+    if (frete.valor > 0) {
+      const rv = await ajustarSaldoCAS(buyerId, -frete.valor);
+      if (!rv.ok) {
+        return res.status(200).json({
+          success: false,
+          error: rv.error === 'saldo_insuficiente' ? 'Saldo insuficiente para cobrir o frete.' : 'Não foi possível reservar o frete agora.',
+          saldo: rv.saldo,
+        });
+      }
+    }
+
     const r = await rpc('comprar_com_saldo', {
       _buyer: buyerId,
       _items: cleanItems,
@@ -57,7 +100,21 @@ export default async function handler(req, res) {
     const data = Array.isArray(out) ? out[0] : out; // rpc retorna o json direto
 
     if (!data || data.ok !== true) {
+      // compra não passou → devolve o frete que havia sido reservado
+      if (frete.valor > 0) await ajustarSaldoCAS(buyerId, frete.valor);
       return res.status(200).json({ success: false, error: data?.error || 'Não foi possível concluir', saldo: data?.saldo, total: data?.total });
+    }
+
+    // registra o frete cobrado na venda (fora de total_amount, que é a base da comissão)
+    if (frete.valor > 0) {
+      try {
+        const cur = await (await sb(`catalog_sales?select=raw_base44,total_amount&id=eq.${encodeURIComponent(data.sale_id)}&limit=1`)).json();
+        const base = (Array.isArray(cur) && cur[0]?.raw_base44) || {};
+        await sb(`catalog_sales?id=eq.${encodeURIComponent(data.sale_id)}`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ raw_base44: { ...base, frete, amount_charged: round2(Number(cur?.[0]?.total_amount || data.total) + frete.valor) } }),
+        });
+      } catch (_) { /* frete já debitado; registro é secundário */ }
     }
 
     // conclui como venda de loja: comissão pro DONO da loja (modelo marketplace) + fulfillment.
@@ -72,7 +129,8 @@ export default async function handler(req, res) {
       }
     } catch (e) { console.error('fulfillStoreOrder (saldo) falhou:', e?.message || e); }
 
-    return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, novo_saldo: data.novo_saldo, tracking: data.tracking, commission });
+    // novo_saldo já vem descontado do frete (a reserva aconteceu ANTES do RPC)
+    return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, shipping: frete.valor, total_cobrado: round2(Number(data.total || 0) + frete.valor), novo_saldo: data.novo_saldo, tracking: data.tracking, commission });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });
   }

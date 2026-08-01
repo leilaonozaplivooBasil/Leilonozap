@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
+import { resolverFreteDoCheckout } from '../_lib/frete.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -91,8 +92,20 @@ export default async function handler(req, res) {
     }
     if (total < 1) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 1,00' });
 
-    // cria a venda pendente (com entrega/endereço)
+    // 🚚 PONTO 74 — frete RECOTADO no servidor (o cliente só manda o ID da transportadora).
+    // total_amount continua sendo SÓ produtos (base da comissão); o frete vai separado.
     const addr = body?.address || {};
+    const fr = await resolverFreteDoCheckout({
+      delivery_type: body?.delivery_type,
+      cep: addr?.zip || body?.cep,
+      items,
+      frete_id: body?.frete_id,
+    });
+    if (!fr.ok) return res.status(200).json({ success: false, error: fr.error });
+    const frete = fr.frete;
+    const totalCobrado = round2(total + frete.valor);
+
+    // cria a venda pendente (com entrega/endereço)
     const saleId = oid();
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
@@ -101,14 +114,14 @@ export default async function handler(req, res) {
       kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       coupon_code, discount_amount: round2(discount_amount + passaporte_desconto) || null,
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_coupon_id, passaporte_desconto },
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado },
     }) });
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 
     // cria o PIX no Mercado Pago
     const [first, ...rest] = String(buyer.name || 'Cliente').trim().split(/\s+/);
     const payBody = {
-      transaction_amount: total,
+      transaction_amount: totalCobrado, // produtos − descontos + frete recotado no servidor
       description: `Loja Virtual - ${main.description}`.slice(0, 200),
       payment_method_id: 'pix',
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
@@ -137,7 +150,10 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       sale_id: saleId,
-      amount: total,
+      amount: totalCobrado,
+      amount_products: total,
+      shipping: frete.valor,
+      shipping_carrier: [frete.empresa, frete.servico].filter(Boolean).join(' ') || null,
       payment_id: String(pay.id),
       status: pay.status,
       passaporte_desconto,

@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { getReferral } from '@/lib/referral';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
+import FreteResumo from '@/components/cart/FreteResumo';
 
 export default function Cart() {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
@@ -59,6 +60,7 @@ export default function Cart() {
   const [passaporteStatus, setPassaporteStatus] = useState(null);
   const [usarPassaporte, setUsarPassaporte] = useState(false);
   const [freteOpcoes, setFreteOpcoes] = useState(null); // null=não calculado, []=sem opções
+  const [freteSel, setFreteSel] = useState(null); // transportadora escolhida (obrigatória p/ entrega)
   const [freteMsg, setFreteMsg] = useState('');
   const [calculandoFrete, setCalculandoFrete] = useState(false);
   const [paymentType, setPaymentType] = useState('PIX');
@@ -349,7 +351,28 @@ export default function Cart() {
   const descontoPassaporte = usarPassaporte && passaporteStatus?.liberado
     ? Math.min(passaporteStatus.liberado.saldo, Math.max(0, calculateSubtotal() - descontoCupom))
     : 0;
-  const calcularTotalFinal = () => Math.max(0, calculateSubtotal() - descontoCupom - descontoPassaporte);
+  // 🚚 PONTO 74 — o frete entra no valor cobrado (por último, depois dos descontos).
+  // O valor final é sempre RECOTADO no servidor no momento do pagamento.
+  const valorFrete = deliveryMethod === 'delivery' ? (Number(freteSel?.preco) || 0) : 0;
+  const calcularTotalProdutos = () => Math.max(0, calculateSubtotal() - descontoCupom - descontoPassaporte);
+  const calcularTotalFinal = () => Math.max(0, calcularTotalProdutos() + valorFrete);
+  // entrega em domicílio exige transportadora escolhida — nunca cobrar frete de carrinho/CEP antigo
+  const freteObrigatorioPendente = deliveryMethod === 'delivery' && !freteSel;
+
+  // 🔄 Trocar CEP, itens, quantidade ou forma de entrega INVALIDA a cotação anterior
+  const invalidarFrete = React.useCallback(() => {
+    setFreteOpcoes(null);
+    setFreteSel(null);
+    setFreteMsg('');
+  }, []);
+  const freteAssinatura = `${(formData.cep || '').replace(/\D/g, '')}|${deliveryMethod}|${cartItems.map((i) => `${i.id}x${i.quantity || 1}`).join(',')}`;
+  const assinaturaAnterior = useRef(freteAssinatura);
+  useEffect(() => {
+    if (assinaturaAnterior.current !== freteAssinatura) {
+      assinaturaAnterior.current = freteAssinatura;
+      invalidarFrete();
+    }
+  }, [freteAssinatura, invalidarFrete]);
 
   const aplicarCupom = async () => {
     const code = (coupon || '').trim();
@@ -395,10 +418,13 @@ export default function Cart() {
       });
       if (r?.success && Array.isArray(r.opcoes)) {
         setFreteOpcoes(r.opcoes);
+        // a mais barata já vem marcada (o cliente pode trocar)
+        setFreteSel(r.opcoes[0] || null);
         if (!r.opcoes.length) setFreteMsg('Sem opções de frete pra esse CEP.');
       } else {
         setFreteOpcoes([]);
-        setFreteMsg(r?.error || 'Frete combinado no WhatsApp da loja.');
+        setFreteSel(null);
+        setFreteMsg(r?.error || 'Não foi possível calcular o frete para esse CEP.');
       }
     } catch (e) {
       setFreteMsg('Não foi possível calcular agora.');
@@ -483,6 +509,11 @@ export default function Cart() {
     if (deliveryMethod === 'delivery') {
       if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
         toast.error('Preencha o endereço completo para entrega');
+        return;
+      }
+      // 🚚 PONTO 74 — sem transportadora escolhida não há frete pra cobrar: não deixa pagar
+      if (!freteSel) {
+        toast.error('Calcule o frete e escolha a transportadora para continuar.');
         return;
       }
     }
@@ -579,6 +610,8 @@ export default function Cart() {
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
           ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
+          delivery_type: deliveryMethod,
+          frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
         });
         toast.dismiss('checkout-loading');
         if (!pay?.success) {
@@ -608,6 +641,7 @@ export default function Cart() {
           ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
+          frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
@@ -625,6 +659,7 @@ export default function Cart() {
           ref_code: getReferral(),
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
+          frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
@@ -1191,24 +1226,15 @@ export default function Cart() {
                         <span className="text-green-400 font-medium">− {money(descontoPassaporte)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between items-center text-base">
-                      <span className="text-gray-400">Valor do frete</span>
-                      {freteOpcoes && freteOpcoes.length > 0 ? (
-                        <span className="text-green-400 font-medium">a partir de {money(Math.min(...freteOpcoes.map(o => o.preco)))}</span>
-                      ) : (
-                        <button onClick={calcularFrete} disabled={calculandoFrete} className="text-green-400 font-medium text-sm underline hover:text-green-300 disabled:opacity-60">
-                          {calculandoFrete ? 'calculando…' : 'Calcular frete'}
-                        </button>
-                      )}
-                    </div>
-                    {freteMsg && <p className="text-gray-500 text-xs -mt-1">{freteMsg}</p>}
-                    {freteOpcoes && freteOpcoes.length > 0 && (
-                      <div className="text-xs text-gray-400 space-y-0.5 -mt-1">
-                        {freteOpcoes.slice(0, 3).map((o) => (
-                          <div key={o.id} className="flex justify-between gap-2"><span className="truncate">{[o.empresa, o.nome].filter(Boolean).join(' ')}{o.prazo ? ` · ${o.prazo} ${o.prazo === 1 ? 'dia útil' : 'dias úteis'}` : ''}</span><span className="text-green-400 shrink-0">{money(o.preco)}</span></div>
-                        ))}
-                      </div>
-                    )}
+                    <FreteResumo
+                      opcoes={freteOpcoes}
+                      selecionada={freteSel}
+                      onSelecionar={setFreteSel}
+                      onCalcular={calcularFrete}
+                      calculando={calculandoFrete}
+                      mensagem={freteMsg}
+                      retirada={deliveryMethod === 'pickup'}
+                    />
                     <div className="flex justify-between items-center text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>
                       <div className="text-right">
@@ -1464,7 +1490,7 @@ export default function Cart() {
               <div className="space-y-3">
                 <Button
                   onClick={handleCheckout}
-                  disabled={isProcessing}
+                  disabled={isProcessing || freteObrigatorioPendente}
                   className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
                 >
                   {isProcessing ? (
@@ -1472,10 +1498,15 @@ export default function Cart() {
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Processando...
                     </>
+                  ) : freteObrigatorioPendente ? (
+                    <>
+                      <Truck className="w-5 h-5 mr-2" />
+                      CALCULE O FRETE PARA CONTINUAR
+                    </>
                   ) : (
                     <>
                       <Lock className="w-5 h-5 mr-2" />
-                      {paymentType === 'CREDIT_CARD' ? 'PAGAR COM CARTÃO' : paymentType === 'SALDO' ? 'PAGAR COM SALDO' : `PAGAR ${money(calcularTotalFinal())} NO PIX`}
+                      {paymentType === 'CREDIT_CARD' ? `PAGAR ${money(calcularTotalFinal())} NO CARTÃO` : paymentType === 'SALDO' ? `PAGAR ${money(calcularTotalFinal())} COM SALDO` : `PAGAR ${money(calcularTotalFinal())} NO PIX`}
                     </>
                   )}
                 </Button>
