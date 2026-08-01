@@ -111,7 +111,13 @@ export default async function handler(req, res) {
     const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
     if (!getResp.ok || !auction) {
-      return res.status(404).json({ success: false, message: 'Leilão não encontrado' });
+      // 🩹 DIAGNÓSTICO: expõe o erro real do Supabase quando a busca falha (ex: formato de
+      // id inválido para a coluna) em vez de só dizer "não encontrado" sem motivo real.
+      return res.status(404).json({
+        success: false,
+        message: getResp.ok ? 'Leilão não encontrado' : 'Erro ao buscar leilão',
+        debug: !getResp.ok ? getResp.data : { auctionId },
+      });
     }
 
     // 📣 PONTO 69 — MODO CHAMADA: leilão visível mas ainda fechado para lances.
