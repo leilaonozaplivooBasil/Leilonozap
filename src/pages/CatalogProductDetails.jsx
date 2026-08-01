@@ -14,6 +14,7 @@ import { Stars, RatingBadge } from "@/components/loja/StarRating";
 import { getReferral } from '@/lib/referral';
 import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
+import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 
 const Product = base44.entities.Product;
 
@@ -402,6 +403,18 @@ export default function CatalogProductDetails() {
 
   const CARD = 'bg-white/[0.04] border border-white/10 rounded-2xl';
 
+  // 🚚 Volume enviado pra cotação: medidas reais do produto × quantidade escolhida.
+  // Sem medidas cadastradas, a função usa a caixa pequena padrão dos Correios.
+  const itensFrete = [{
+    id: product.id,
+    peso: product.peso,
+    altura: product.altura,
+    largura: product.largura,
+    comprimento: product.comprimento,
+    valor: price,
+    quantidade: quantity,
+  }];
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* HEADER */}
@@ -500,9 +513,12 @@ export default function CatalogProductDetails() {
 
               {BuyButtons}
 
+              {/* 🚚 PONTO 72 — frete real (Melhor Envio): simulação antes de comprar */}
+              <CalculadoraFrete items={itensFrete} autoCalcular />
+
               {/* benefícios */}
               <div className="pt-2 space-y-2.5 text-sm">
-                <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — combine o frete no WhatsApp.</span></div>
+                <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — calcule o frete acima pelo seu CEP.</span></div>
                 <div className="flex items-start gap-2.5"><RotateCcw className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Devolução em até 7 dias</b> após o recebimento.</span></div>
                 <div className="flex items-start gap-2.5"><ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Compra garantida</b> — receba o produto ou seu dinheiro de volta.</span></div>
                 <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX, cartão em até 12x ou boleto.</span></div>
