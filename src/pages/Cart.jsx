@@ -676,7 +676,7 @@ export default function Cart() {
         return; // createMPPix já criou a venda — não segue o fluxo antigo (ASAAS stub)
       }
 
-      const paymentRaw = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+      const paymentRaw = await base44.functions.invoke('createMPWalletDeposit', paymentPayload);
       const paymentResponse = paymentRaw?.data || paymentRaw;
 
       toast.dismiss('checkout-loading');
