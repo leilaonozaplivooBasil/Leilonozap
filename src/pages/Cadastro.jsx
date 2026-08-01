@@ -8,6 +8,7 @@ import {
   Gavel, Copy, CheckCircle2, Mail, Lock, User as UserIcon, Phone, Hash, ArrowLeft
 } from 'lucide-react';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
+import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -47,6 +48,9 @@ export default function Cadastro() {
   const [gateway, setGateway] = useState('pix');
   const [pix, setPix] = useState(null);
   const [createdUser, setCreatedUser] = useState(null);
+  // 📜 PONTO 67 — Termo de Adesão obrigatório antes de iniciar o cadastro
+  const [termoAceito, setTermoAceito] = useState(false);
+  const [showTermo, setShowTermo] = useState(false);
 
   useEffect(() => {
     let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
@@ -73,6 +77,8 @@ export default function Cadastro() {
   const alreadyHas = me && Array.isArray(me.career_levels) && me.career_levels.includes(cargo);
 
   const startCadastro = () => {
+    // 📜 PONTO 67 — sem aceite do termo, o funil não começa
+    if (!termoAceito) { setShowTermo(true); return; }
     if (me?.id) {
       // já logado → vai direto pro checkout (cargo pago) ou ativa (grátis via suporte)
       setCreatedUser(me);
@@ -289,6 +295,14 @@ export default function Cadastro() {
 
         <p className="text-center text-xs text-gray-600 mt-6">© 2026 Leilão NoZap · Pagamento 100% seguro</p>
       </div>
+
+      {/* 📜 PONTO 67 — Termo de Adesão obrigatório */}
+      {showTermo && (
+        <TermoAdesaoModal
+          onAccept={() => { setTermoAceito(true); setShowTermo(false); setStep(me?.id ? (isPaid ? 'checkout' : 'landing') : 'form'); if (me?.id) setCreatedUser(me); }}
+          onClose={() => setShowTermo(false)}
+        />
+      )}
     </div>
   );
 }

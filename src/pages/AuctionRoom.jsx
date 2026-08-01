@@ -26,6 +26,10 @@ import WinnerModal from "../components/auction/WinnerModal";
 import LowBalanceModal from "../components/auction/LowBalanceModal";
 import { Wallet } from "lucide-react";
 
+import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
+import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
+import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
+
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
 import useBidSubmission from "@/hooks/useBidSubmission";
@@ -60,6 +64,9 @@ export default function AuctionRoom() {
   const [isSpectatorMode, setIsSpectatorMode] = useState(false);
   const [showLowBalanceModal, setShowLowBalanceModal] = useState(false);
   const [userWallet, setUserWallet] = useState(null);
+  // 📜 PONTO 67 — Termo de Adesão obrigatório antes do PRIMEIRO lance
+  const [showTermoModal, setShowTermoModal] = useState(false);
+  const [pendingBidAmount, setPendingBidAmount] = useState(null);
 
   const isAndroid = /Android/i.test(navigator.userAgent);
 
@@ -400,6 +407,28 @@ export default function AuctionRoom() {
     userWallet,
     setUserWallet,
   });
+
+  // 📜 PONTO 67 — GATE DE UI: nenhum lance sai sem o aceite do Termo de Adesão.
+  // Nada de financeiro acontece aqui: só decide se chama submitBid ou abre o termo.
+  const handleSubmitBidComTermo = useCallback((amount) => {
+    if (currentUser && !jaAceitouTermo(currentUser)) {
+      setPendingBidAmount(amount);
+      setShowTermoModal(true);
+      return;
+    }
+    submitBid(amount);
+  }, [currentUser, submitBid]);
+
+  const aceitarTermoEContinuar = useCallback(async () => {
+    setShowTermoModal(false);
+    if (currentUser) {
+      await registrarAceiteTermo(currentUser);
+      setCurrentUser((prev) => (prev ? { ...prev, terms_accepted: true } : prev));
+    }
+    const amount = pendingBidAmount;
+    setPendingBidAmount(null);
+    if (amount !== null && amount !== undefined) submitBid(amount);
+  }, [currentUser, pendingBidAmount, submitBid]);
 
   const initialLoadData = useCallback(async () => {
     if (!auctionId) return;
@@ -954,6 +983,9 @@ export default function AuctionRoom() {
         </div>
       </header>
 
+      {/* 📜 PONTO 67 — aviso permanente: estratégia de marketing, não é leilão oficial */}
+      <AvisoNaoLeilaoOficial />
+
       <main className="main-content">
         <aside className="auction-sidebar">
           <div className="product-panel">
@@ -1099,7 +1131,7 @@ export default function AuctionRoom() {
 
       {isAuctionActive && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={submitBid} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (
@@ -1171,6 +1203,14 @@ export default function AuctionRoom() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* 📜 PONTO 67 — Termo obrigatório antes do primeiro lance (cancelar = nenhum lance, nenhum saldo tocado) */}
+      {showTermoModal && (
+        <TermoAdesaoModal
+          onAccept={aceitarTermoEContinuar}
+          onClose={() => { setShowTermoModal(false); setPendingBidAmount(null); }}
+        />
       )}
 
       {showGuestModal && <GuestRegistrationModal onClose={() => setShowGuestModal(false)} onSuccess={(user) => { setCurrentUser(user); setShowGuestModal(false); }} />}

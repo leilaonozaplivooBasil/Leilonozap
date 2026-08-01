@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { getReferral } from '@/lib/referral';
+import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
+import { registrarAceiteTermo } from '@/lib/termoAdesao';
 
 const AppUser = base44.entities.AppUser;
 
@@ -32,6 +34,9 @@ export default function Register() {
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState('');
+  // 📜 PONTO 67 — Termo de Adesão obrigatório antes de concluir o cadastro
+  const [termoAceito, setTermoAceito] = useState(false);
+  const [showTermo, setShowTermo] = useState(false);
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
@@ -117,9 +122,17 @@ export default function Register() {
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleRegister = (e) => {
     e.preventDefault();
+    // 📜 PONTO 67 — sem aceite do termo, o cadastro não prossegue
+    if (!termoAceito) {
+      setShowTermo(true);
+      return;
+    }
+    executarCadastro();
+  };
 
+  const executarCadastro = async () => {
     if (!fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode) {
       setErrorMessage("❌ Por favor, preencha todos os campos obrigatórios.");
       return;
@@ -228,6 +241,9 @@ export default function Register() {
 
       localStorage.setItem('currentUser', JSON.stringify(newUser));
       sessionStorage.setItem('isLoggedIn', 'true');
+
+      // 📜 PONTO 67 — registra o aceite dado antes do cadastro
+      registrarAceiteTermo(newUser);
 
       // 🆕 FASE 2: pede ao Layout abrir o seletor de painéis após o reload
       try { sessionStorage.setItem('pendingPanelSelector', '1'); } catch (_) {}
@@ -504,6 +520,15 @@ export default function Register() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 📜 PONTO 67 — Termo de Adesão obrigatório */}
+      {showTermo && (
+        <TermoAdesaoModal
+          textoConfirmar="Concordo e Quero Participar"
+          onAccept={() => { setTermoAceito(true); setShowTermo(false); executarCadastro(); }}
+          onClose={() => setShowTermo(false)}
+        />
+      )}
     </div>
   );
 }
