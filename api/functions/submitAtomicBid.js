@@ -3,7 +3,12 @@
 // Sem este endpoint a produção sempre caía em "Erro ao enviar lance." DEPOIS de o saldo
 // já ter sido reservado por reserveBidBalance (o adapter devolve not_implemented no 404).
 // Diferença obrigatória: não existe auth.me() aqui — a identidade vem do BODY (user_id).
-import { releaseHold } from '../_lib/bidHold.js';
+//
+// 🩹 CAUSA-RAIZ investigada: este era o ÚNICO endpoint de lance com import relativo de
+// 2 níveis (../_lib/bidHold.js → ./passaporteCoupon.js). Os demais (reserveBidBalance,
+// releaseBidHold) são 100% autocontidos e sempre funcionaram. Pra eliminar qualquer
+// dúvida de resolução de módulo no bundling da Vercel, a devolução de reserva do líder
+// anterior (releaseHold) foi trazida pra DENTRO deste arquivo — zero imports relativos.
 
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
@@ -12,6 +17,7 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const COUNTDOWN_DURATION = 142; // 2min22s
 const BID_EXTENSION_SECONDS = 22;
+const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 async function sb(path, method = 'GET', body) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -28,6 +34,42 @@ async function sb(path, method = 'GET', body) {
   let data;
   try { data = JSON.parse(text); } catch { data = text; }
   return { ok: res.ok, status: res.status, data };
+}
+
+// Devolve `amount` de saldo_reservado → saldo_disponivel do usuário (mesma lógica de
+// api/_lib/bidHold.js, inline). Nunca lança erro — falha aqui não pode derrubar o lance.
+async function releaseHold(userId, amount) {
+  const uid = String(userId || '').trim();
+  const valor = money(amount);
+  if (!uid || valor <= 0) return { released: 0, reason: 'parametros_invalidos' };
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const userResp = await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(uid)}&limit=1`);
+      const user = Array.isArray(userResp.data) ? userResp.data[0] : null;
+      if (!user) return { released: 0, reason: 'usuario_nao_encontrado' };
+
+      const disponivel = money(user.saldo_disponivel);
+      const reservado = money(user.saldo_reservado);
+      const liberar = money(Math.min(valor, reservado));
+      if (liberar <= 0) return { released: 0, reason: 'sem_reserva' };
+
+      const dispFilter = disponivel === 0 ? `or(saldo_disponivel.eq.0,saldo_disponivel.is.null)` : `saldo_disponivel.eq.${disponivel}`;
+      const resFilter = reservado === 0 ? `or(saldo_reservado.eq.0,saldo_reservado.is.null)` : `saldo_reservado.eq.${reservado}`;
+      const patchResp = await sb(
+        `app_users?id=eq.${encodeURIComponent(uid)}&and=(${dispFilter},${resFilter})`,
+        'PATCH',
+        { saldo_disponivel: money(disponivel + liberar), saldo_reservado: money(reservado - liberar) }
+      );
+      const row = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
+      if (row) {
+        return { released: liberar, new_balance: money(row.saldo_disponivel), new_held: money(row.saldo_reservado) };
+      }
+      // corrida: alguém mexeu no saldo entre a leitura e a escrita — tenta de novo
+    }
+    return { released: 0, reason: 'corrida' };
+  } catch (e) {
+    return { released: 0, reason: String(e?.message || e) };
+  }
 }
 
 export default async function handler(req, res) {

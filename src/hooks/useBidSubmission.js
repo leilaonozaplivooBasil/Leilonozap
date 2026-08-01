@@ -205,7 +205,15 @@ export default function useBidSubmission({
       const atomicData = atomicResult?.data || atomicResult;
 
       if (!atomicData?.success) {
-        alert(atomicData?.conflict ? "Outro lance foi dado!" : (atomicData?.message || "Erro ao enviar lance."));
+        // 🩹 Diagnóstico: se a function nem respondeu (not_implemented/network), o alerta
+        // genérico escondia isso — agora mostra a causa real pra dar certeza do que houve.
+        const diagMsg = atomicData?.error === 'not_implemented'
+          ? "Erro ao enviar lance (função indisponível no servidor)."
+          : atomicData?.error === 'network_or_not_implemented'
+            ? "Erro ao enviar lance (falha de rede)."
+            : (atomicData?.message || "Erro ao enviar lance.");
+        console.error("❌ [BID] submitAtomicBid falhou:", atomicData);
+        alert(atomicData?.conflict ? "Outro lance foi dado!" : diagMsg);
         await releaseHold("lance rejeitado (outro lance venceu a corrida)");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
