@@ -69,7 +69,13 @@ function PosBadge({ pos, size = 26 }) {
 
 export default function ConcursoLeilaoNozap() {
   const params = new URLSearchParams(window.location.search);
-  const ref = params.get('ref');
+  const refCode = params.get('ref');
+  // 🔗 DOIS LINKS DIFERENTES, MESMO ?ref=:
+  //   /concursoleilaonozap?ref=XXX → 1º link: entrar no grupo do WhatsApp (conta ponto)
+  //   /rankpremiado?ref=XXX        → 2º link: a página do Rank Premiado (cadastro/ranking)
+  // Antes qualquer ?ref= caía no fluxo do grupo, então os dois links iam pro WhatsApp.
+  const isRotaGrupo = /concursoleilaonozap/i.test(window.location.pathname);
+  const ref = isRotaGrupo ? refCode : null;
   const [periodo, setPeriodo] = useState('dia');
   const [data, setData] = useState({ ranking: [], premios: [], config: {}, group_link: GROUP_LINK, total: 0 });
   const [me, setMe] = useState(null);

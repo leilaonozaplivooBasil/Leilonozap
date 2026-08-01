@@ -19,6 +19,7 @@ import Catalog from '@/pages/Catalog';
 import Recepcao from '@/pages/Recepcao';
 import PageNotFound from './lib/PageNotFound';
 import LinkCurtoLeilao from '@/components/common/LinkCurtoLeilao';
+import LinkCurtoProduto from '@/components/common/LinkCurtoProduto';
 import ChunkErrorBoundary from './lib/ChunkErrorBoundary.jsx';
 const CRMInvestidores = React.lazy(() => import('@/pages/CRMInvestidores'));
 const CarteiraInvestidor = React.lazy(() => import('@/pages/CarteiraInvestidor'));
@@ -195,7 +196,11 @@ const AuthenticatedApp = () => {
       <Route path="/Evoluir" element={<Evoluir />} />
       <Route path="/Cadastro" element={<Cadastro />} />
       <Route path="/rankpremiado" element={<ConcursoLeilaoNozap />} />
-      <Route path="/concursoleilaonozap" element={<Navigate to={`/rankpremiado${window.location.search}`} replace />} />
+      {/* ⚠️ /concursoleilaonozap NÃO pode redirecionar pra /rankpremiado: são os DOIS
+          links diferentes do Rank Premiado (1º = entrar no grupo, 2º = página do
+          cadastro). Redirecionar transformava os dois na mesma URL e mandava todo
+          mundo pro grupo do WhatsApp. A própria página distingue pelo caminho. */}
+      <Route path="/concursoleilaonozap" element={<ConcursoLeilaoNozap />} />
       <Route path="/passaporte" element={<PassaporteLances />} />
       <Route path="/Passaporte" element={<PassaporteLances />} />
       {/* 🏪 Vitrine pública por loja da rede (standalone, sem Layout) */}
@@ -383,6 +388,8 @@ const AuthenticatedApp = () => {
       {/* 🔗 Link curto de leilão (/l/:id) — rede de segurança caso o servidor
           entregue o index.html nessa URL: manda direto pra sala, sem 404. */}
       <Route path="/l/:id" element={<LinkCurtoLeilao />} />
+      {/* 🔗 Link curto de produto (/p/:id) — mesma rede de segurança da Loja Virtual. */}
+      <Route path="/p/:id" element={<LinkCurtoProduto />} />
       {/* Antes de 404: tenta resolver como apelido de rota (/loja, /store, /entrar…) */}
       <Route path="*" element={<AliasOrNotFound />} />
     </Routes>
