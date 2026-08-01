@@ -38,6 +38,16 @@
       "format": "datetime-local",
       "description": "Data e hora de t\u00e9rmino do leil\u00e3o"
     },
+    "modo_chamada": {
+      "type": "boolean",
+      "default": false,
+      "description": "PONTO 69: true = pr\u00e9-lan\u00e7amento (vis\u00edvel na vitrine, lances bloqueados at\u00e9 data_abertura_lances)"
+    },
+    "data_abertura_lances": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "PONTO 69: data e hora em que os lances s\u00e3o liberados"
+    },
     "status": {
       "type": "string",
       "enum": [

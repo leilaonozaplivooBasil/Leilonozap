@@ -30,6 +30,9 @@ import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 // 🆕 IMPORT DO MODAL
 import FavoriteButton from '../recommendations/FavoriteButton';
 import { proxyImage } from "@/functions/proxyImage";
+// 📣 PONTO 69 — Modo Chamada (pré-lançamento): selo de contagem + lance travado
+import SeloChamada from './SeloChamada';
+import useChamada from '@/hooks/useChamada';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
@@ -47,6 +50,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
   // 🆕 Hook para navegação
   const navigate = useNavigate();
+
+  // 📣 PONTO 69 — leilão em chamada: aparece na vitrine, mas sem aceitar lances
+  const chamada = useChamada(auction);
 
   // 🆕 VALORES ESTÁVEIS baseados no ID do leilão (não muda a cada render)
   const stableRandomUsers = useMemo(() => {
@@ -564,7 +570,14 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               </p>
             </div>
 
-            {isActive && timeRemaining && timeRemaining.text !== "Encerrado" && (
+            {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." no lugar do "Termina" */}
+            {isActive && chamada.preLancamento && (
+              <div className="text-right flex-shrink-0">
+                <SeloChamada auction={auction} />
+              </div>
+            )}
+
+            {isActive && !chamada.emChamada && timeRemaining && timeRemaining.text !== "Encerrado" && (
               <div className="text-right flex-shrink-0">
                 <div className={`flex items-center gap-1 ${secondaryTextColor} mb-1`}>
                   <Clock className="w-3 h-3" />
@@ -681,20 +694,32 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 Comparar Preços
               </Button>
 
-              {/* Botão de Entrar e Dar Lance com verificação de saldo */}
-              <Button
-                onClick={handleEnterAuction}
-                className={variant === "sai_de_baixo"
-                  ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
-                  : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
-                style={variant !== "sai_de_baixo" ? {
-                  background: 'linear-gradient(135deg, #f59e0b, #ea580c, #dc2626)',
-                  boxShadow: '0 4px 16px rgba(234,88,12,0.4)',
-                } : {}}
-              >
-                <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
-                Entrar e Dar Lance
-              </Button>
+              {/* 📣 PONTO 69 — durante a chamada o lance fica travado (detalhes/favoritar/compartilhar seguem liberados) */}
+              {chamada.emChamada ? (
+                <Button
+                  disabled
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-sky-200 disabled:opacity-100 cursor-not-allowed"
+                  style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.35)' }}
+                >
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  Aguardando abertura
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleEnterAuction}
+                  className={variant === "sai_de_baixo"
+                    ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
+                    : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
+                  style={variant !== "sai_de_baixo" ? {
+                    background: 'linear-gradient(135deg, #f59e0b, #ea580c, #dc2626)',
+                    boxShadow: '0 4px 16px rgba(234,88,12,0.4)',
+                  } : {}}
+                >
+                  <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
+                  Entrar e Dar Lance
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-2 sm:space-y-3">
@@ -772,6 +797,8 @@ export default memo(AuctionCard, (prevProps, nextProps) => {
     prevProps.auction.id === nextProps.auction.id &&
     prevProps.auction.current_price === nextProps.auction.current_price &&
     prevProps.auction.status === nextProps.auction.status &&
+    prevProps.auction.modo_chamada === nextProps.auction.modo_chamada &&
+    prevProps.auction.data_abertura_lances === nextProps.auction.data_abertura_lances &&
     prevProps.isAdmin === nextProps.isAdmin &&
     prevProps.showFavoriteButton === nextProps.showFavoriteButton &&
     prevProps.userId === nextProps.userId

@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import AddToCatalogModal from "@/components/admin/AddToCatalogModal";
 import LiveMetrics from "@/components/admin/LiveMetrics";
 import PageFullscreen from "@/components/admin/PageFullscreen";
+import { estadoLeilao } from "@/lib/modoChamada";
 
 const Auction = base44.entities.Auction;
 const Payment = base44.entities.Payment;
@@ -253,15 +254,19 @@ export default function AuctionControl() {
   const visibleAuctions = React.useMemo(() => auctions.filter(a => !a.is_investment_plan), [auctions]);
 
   const getStatusBadge = (auction) => {
+    // 📣 PONTO 69 — estado derivado por data em tempo real (sem depender de automação)
+    if (estadoLeilao(auction) === 'chamada') {
+      return <Badge className="bg-sky-600">📣 CHAMADA</Badge>;
+    }
     if (isExpiredActive(auction)) {
       return <Badge className="bg-orange-600">⏰ Expirado</Badge>;
     }
     if (auction.status === "active") {
-      return <Badge className="bg-green-600">Ativo</Badge>;
+      return <Badge className="bg-green-600">🔴 AO VIVO</Badge>;
     }
     const paymentStatus = getPaymentStatus(auction.id);
-    if (paymentStatus === "paid") return <Badge className="bg-blue-600">Finalizado - Pago</Badge>;
-    return <Badge className="bg-red-600">Finalizado - Não Pago</Badge>;
+    if (paymentStatus === "paid") return <Badge className="bg-blue-600">✅ Encerrado - Pago</Badge>;
+    return <Badge className="bg-red-600">✅ Encerrado - Não Pago</Badge>;
   };
 
   return (

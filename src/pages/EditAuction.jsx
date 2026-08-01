@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from '@/components/ui/use-toast';
 import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer, Copy, Archive, ArchiveRestore, CalendarClock, ShoppingBag } from 'lucide-react';
 import { capOf, withCap } from '@/lib/fotoLegenda';
+import ModoChamadaCard from '@/components/auction/ModoChamadaCard';
 import { supabase } from '@/api/supabaseClient';
 
 // 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
@@ -77,6 +78,16 @@ function formatBrtLabel(value) {
     return `${d}/${m}/${y}, ${time || ''}`.trim();
 }
 
+// Converte o valor do input datetime-local (BRT) para ISO UTC — mesma régua já usada
+// nos controles de tempo desta página (Brasília = UTC-3).
+function brtLocalParaISO(value) {
+    if (!value) return null;
+    const [d, t] = value.split('T');
+    const [y, m, dd] = d.split('-');
+    const [hh, mm] = (t || '00:00').split(':');
+    return new Date(`${y}-${m}-${dd}T${hh}:${mm}:00-03:00`).toISOString();
+}
+
 // Abre o seletor nativo (calendário/hora) ao clicar em qualquer parte do campo — mais fluido que
 // só o ícone. showPicker() precisa de gesto do usuário (onClick garante); try/catch p/ navegadores antigos.
 function abrirSeletorNativo(e) {
@@ -104,7 +115,9 @@ export default function EditAuction() {
       supplier_logo_url: "", // 🆕 ADICIONA LOGO
       comparai_mode: "google_shopping", // 🆕 Modo padrão: Google Shopping
       manual_market_price: "", // 🆕 Preço manual quando o CompareAQUI não acha
-      buy_now_price: "" // Arremate imediato — aparece como Compre Já na sala
+      buy_now_price: "", // Arremate imediato — aparece como Compre Já na sala
+      modo_chamada: false, // 📣 PONTO 69 — pré-lançamento
+      data_abertura_lances: "" // 📣 PONTO 69 — abertura dos lances (BRT no input)
     });
     const [imageUrls, setImageUrls] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -512,7 +525,12 @@ export default function EditAuction() {
               supplier_logo_url: currentAuction.supplier_logo_url || "", // 🆕 CARREGA LOGO
               comparai_mode: currentAuction.comparai_mode || "google_shopping", // 🆕 CARREGA MODO
               manual_market_price: currentAuction.manual_market_price || "", // 🆕 CARREGA PREÇO MANUAL
-              buy_now_price: currentAuction.buy_now_price || "" // CARREGA COMPRE JÁ
+              buy_now_price: currentAuction.buy_now_price || "", // CARREGA COMPRE JÁ
+              // 📣 PONTO 69 — Modo Chamada
+              modo_chamada: currentAuction.modo_chamada === true,
+              data_abertura_lances: currentAuction.data_abertura_lances
+                ? toBrtLocal(new Date(currentAuction.data_abertura_lances))
+                : ""
             });
             
             setSupplierLogoPreview(currentAuction.supplier_logo_url || ""); // 🆕 PREVIEW
@@ -644,6 +662,25 @@ export default function EditAuction() {
             console.log(`⏰ [SAVE] Término: ${utcEndTimeString}`);
             console.log(`⏰ [SAVE] É futuro?: ${isFuture}`);
 
+            // 📣 PONTO 69 — MODO CHAMADA: validações antes de gravar
+            let aberturaISO = null;
+            if (formData.modo_chamada) {
+                if (!formData.data_abertura_lances) {
+                    notify.aviso('Defina a abertura dos lances', 'Com o Modo Chamada ligado, a data e hora de abertura é obrigatória.');
+                    setIsSaving(false);
+                    return;
+                }
+                aberturaISO = brtLocalParaISO(formData.data_abertura_lances);
+                if (new Date(aberturaISO).getTime() >= endDate.getTime()) {
+                    notify.aviso('Abertura depois do término', 'A abertura dos lances precisa ser ANTES da data de término do leilão.');
+                    setIsSaving(false);
+                    return;
+                }
+                if (new Date(aberturaISO).getTime() <= Date.now()) {
+                    notify.aviso('Abertura já passou', 'Este leilão vai abrir para lances imediatamente.');
+                }
+            }
+
             // 🔧 DEFINE O STATUS BASEADO NA DATA
             let newStatus = auction.status;
             let isReactivating = false;
@@ -672,7 +709,10 @@ export default function EditAuction() {
                 supplier_logo_url: formData.supplier_logo_url || null, // 🆕 SALVA LOGO
                 comparai_mode: formData.comparai_mode || "google_shopping", // 🆕 SALVA MODO
                 manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null, // 🆕 SALVA PREÇO MANUAL
-                buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null // SALVA COMPRE JÁ
+                buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null, // SALVA COMPRE JÁ
+                // 📣 PONTO 69 — MODO CHAMADA (data gravada em UTC)
+                modo_chamada: !!formData.modo_chamada,
+                data_abertura_lances: formData.modo_chamada ? aberturaISO : null
             };
 
             // 🎯 SE REATIVOU, LIMPA VENCEDOR E MENSAGENS
@@ -1264,6 +1304,23 @@ export default function EditAuction() {
                       </div>
                       <p className="text-[10px] text-slate-500 mt-2">Com um valor definido, a sala do leilão mostra o botão Compre Já — quem pagar esse preço leva na hora.</p>
                     </div>
+
+                    {/* 📣 PONTO 69 — MODO CHAMADA (PRÉ-LANÇAMENTO) */}
+                    <ModoChamadaCard
+                      ativo={!!formData.modo_chamada}
+                      dataAbertura={formData.data_abertura_lances}
+                      rotuloData={formatBrtLabel(formData.data_abertura_lances)}
+                      onToggle={(v) => setFormData((prev) => ({
+                        ...prev,
+                        modo_chamada: v,
+                        // liga sem data definida → sugere 1h à frente, pra o campo nunca nascer vazio
+                        data_abertura_lances: v && !prev.data_abertura_lances
+                          ? toBrtLocal(new Date(Date.now() + 60 * 60000))
+                          : prev.data_abertura_lances,
+                      }))}
+                      onChangeData={(v) => handleInputChange('data_abertura_lances', v)}
+                      onAbrirSeletor={abrirSeletorNativo}
+                    />
 
                     <div className="pt-1">
                       <Label htmlFor="end_time" className={`${LABEL_CLS} flex items-center gap-1.5 mb-2`}>

@@ -29,6 +29,11 @@ import { Wallet } from "lucide-react";
 import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
 import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
+import { emChamada } from "@/lib/modoChamada";
+
+// 📣 PONTO 69 — Modo Chamada (pré-lançamento): lances travados até a abertura
+import SeloChamada from "@/components/auction/SeloChamada";
+import useChamada from "@/hooks/useChamada";
 
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
@@ -69,6 +74,9 @@ export default function AuctionRoom() {
   const [pendingBidAmount, setPendingBidAmount] = useState(null);
 
   const isAndroid = /Android/i.test(navigator.userAgent);
+
+  // 📣 PONTO 69 — leilão em chamada: sala aberta, lances bloqueados até a hora marcada
+  const chamada = useChamada(auction);
 
   const chatRef = useRef(null);
 
@@ -411,6 +419,11 @@ export default function AuctionRoom() {
   // 📜 PONTO 67 — GATE DE UI: nenhum lance sai sem o aceite do Termo de Adesão.
   // Nada de financeiro acontece aqui: só decide se chama submitBid ou abre o termo.
   const handleSubmitBidComTermo = useCallback((amount) => {
+    // 📣 PONTO 69 — trava de segurança: nenhum lance sai antes da abertura
+    if (emChamada(auction)) {
+      alert("Este leilão ainda não abriu para lances.");
+      return;
+    }
     if (currentUser && !jaAceitouTermo(currentUser)) {
       setPendingBidAmount(amount);
       setShowTermoModal(true);
@@ -548,6 +561,12 @@ export default function AuctionRoom() {
 
     if (!auction || auction.status !== 'active') {
       alert("Este leilão não está mais ativo.");
+      return;
+    }
+
+    // 📣 PONTO 69 — Compre Já também fica bloqueado durante a chamada
+    if (emChamada(auction)) {
+      alert("Este leilão ainda não abriu para lances.");
       return;
     }
 
@@ -1129,7 +1148,25 @@ export default function AuctionRoom() {
         </div>
       </main>
 
-      {isAuctionActive && !isSpectatorMode && !auction?.is_investment_plan && (
+      {/* 📣 PONTO 69 — MODO CHAMADA: no lugar do campo de lance, contagem para a abertura */}
+      {isAuctionActive && chamada.emChamada && !auction?.is_investment_plan && (
+        <footer className="bid-input-container">
+          <div className="flex flex-col items-center gap-2 px-4 py-4">
+            <SeloChamada auction={auction} />
+            <button
+              type="button"
+              disabled
+              className="w-full max-w-lg min-h-[48px] rounded-xl font-bold text-sky-200 cursor-not-allowed"
+              style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.35)' }}
+            >
+              ⏳ Aguardando abertura
+            </button>
+            <p className="text-xs text-slate-400 text-center">Os lances liberam automaticamente no horário marcado.</p>
+          </div>
+        </footer>
+      )}
+
+      {isAuctionActive && !chamada.emChamada && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
           <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
         </footer>

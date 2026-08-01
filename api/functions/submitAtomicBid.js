@@ -60,12 +60,26 @@ export default async function handler(req, res) {
     }
 
     const getResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name`
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances`
     );
     const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
     if (!getResp.ok || !auction) {
       return res.status(404).json({ success: false, message: 'Leilão não encontrado' });
+    }
+
+    // 📣 PONTO 69 — MODO CHAMADA: leilão visível mas ainda fechado para lances.
+    // Guarda ANTES de qualquer escrita/valor — nada de saldo é tocado aqui.
+    if (auction.modo_chamada && auction.data_abertura_lances) {
+      const abertura = new Date(auction.data_abertura_lances).getTime();
+      if (Number.isFinite(abertura) && Date.now() < abertura) {
+        return res.status(400).json({
+          success: false,
+          message: 'Leilão ainda não aberto para lances',
+          modo_chamada: true,
+          data_abertura_lances: auction.data_abertura_lances,
+        });
+      }
     }
 
     if (auction.status !== 'active') {
