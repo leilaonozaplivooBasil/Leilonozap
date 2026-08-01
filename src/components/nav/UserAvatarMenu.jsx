@@ -275,7 +275,7 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
         {/* ===== Ações pessoais ===== */}
         <div className="p-2">
           <DropdownMenuItem
-            onClick={() => navigate("/portal/arrematante")}
+            onClick={() => navigate("/painel-arrematante")}
             className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
           >
             <Gavel className="w-4 h-4" />

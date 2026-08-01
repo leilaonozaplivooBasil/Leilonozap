@@ -63,6 +63,7 @@ const PortalLojista = React.lazy(() => import('@/pages/portal/PortalLojista'));
 const PortalVendedor = React.lazy(() => import('@/pages/portal/PortalVendedor'));
 const PortalInvestidor = React.lazy(() => import('@/pages/portal/PortalInvestidor'));
 const PortalLeiloeiro = React.lazy(() => import('@/pages/portal/PortalLeiloeiro'));
+const PainelArrematante = React.lazy(() => import('@/pages/PainelArrematante'));
 const PrivacyPolicy = React.lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -305,6 +306,12 @@ const AuthenticatedApp = () => {
       <Route path="/SellerPanel" element={
         <LayoutWrapper currentPageName="SellerPanel">
           <SellerPanel />
+        </LayoutWrapper>
+      } />
+      {/* 🎯 Painel do Arrematante — lances ativos, saldo reservado e mini extrato */}
+      <Route path="/painel-arrematante" element={
+        <LayoutWrapper currentPageName="PainelArrematante">
+          <PainelArrematante />
         </LayoutWrapper>
       } />
       <Route path="/privacy" element={<PrivacyPolicy />} />
