@@ -2,26 +2,29 @@ import React, { useState } from "react";
 import { Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// 📣 PONTO 71 — COMPARTILHAR O PRÓPRIO BLOCO "LEILÕES ATIVOS" COMO IMAGEM.
-// Tira um print real do card (com a contagem do momento) e envia essa imagem
-// no WhatsApp junto com o texto + link. Nada de logo genérica.
+// 📣 PONTO 71 — COMPARTILHAR OS LEILÕES NO WHATSAPP.
+// Agora usa a IMAGEM OFICIAL preparada (nada de print da tela) + texto em negrito
+// com a contagem real de leilões ativos.
 //
 // ⚠️ Só UI: não toca em lance, saldo, carteira, comissão nem status de leilão.
 const LINK = "https://leilaonozap.net/leiloes";
+const IMAGEM = "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/939dc2b63_image.png";
 
 const montarTexto = (count) => {
   const n = Number(count) > 0 ? Number(count) : null;
-  const linha = n
-    ? `🔥 LEILÃO NOZAP — ${n} ${n === 1 ? "leilão ATIVO" : "leilões ATIVOS"} agora!`
-    : "🔥 LEILÃO NOZAP — leilões ativos agora!";
-  return `${linha}
+  const ativos = n
+    ? `*${n} ${n === 1 ? "leilão ATIVO" : "leilões ATIVOS"} agora*`
+    : "*Leilões ATIVOS agora*";
+  return `🔥 *LEILÃO NOZAP*
+${ativos}
 
-Descontos que o mercado nunca viu. Entre na sala e dê seu lance antes que acabe.
+Descontos que o mercado nunca viu.
+Entre na sala e dê seu lance antes que acabe.
 
-⚡ ${LINK}`;
+👉 ${LINK}`;
 };
 
-export default function ShareLeiloesButton({ count = 0, targetId = "hero-leiloes" }) {
+export default function ShareLeiloesButton({ count = 0 }) {
   const [loading, setLoading] = useState(false);
 
   const compartilhar = async () => {
@@ -29,44 +32,22 @@ export default function ShareLeiloesButton({ count = 0, targetId = "hero-leiloes
     const texto = montarTexto(count);
     setLoading(true);
     try {
-      const el = document.getElementById(targetId);
-      if (!el) throw new Error("bloco não encontrado");
+      const resp = await fetch(IMAGEM, { cache: "force-cache" });
+      const blob = await resp.blob();
+      const file = new File([blob], "leilao-nozap.png", { type: blob.type || "image/png" });
 
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(el, {
-        backgroundColor: "#111827",
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        onclone: (doc) => {
-          // Vídeo não entra no print: troca o foguinho por emoji
-          doc.querySelectorAll("video").forEach((v) => {
-            const span = doc.createElement("span");
-            span.textContent = "🔥";
-            span.style.fontSize = "40px";
-            v.replaceWith(span);
-          });
-          // O próprio botão de compartilhar não deve sair na imagem
-          doc.querySelectorAll("[data-share-hide]").forEach((n) => n.remove());
-        },
-      });
-
-      const blob = await new Promise((r) => canvas.toBlob(r, "image/png", 0.95));
-      if (!blob) throw new Error("falha ao gerar imagem");
-      const file = new File([blob], "leiloes-nozap.png", { type: "image/png" });
-
-      // Caminho ideal: compartilhamento nativo COM a imagem (WhatsApp mostra a foto)
+      // Caminho ideal (celular): compartilhamento nativo COM a imagem
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text: texto });
-        toast.success("Imagem pronta para enviar!");
+        toast.success("Pronto para enviar!");
         return;
       }
 
-      // Fallback: baixa a imagem e abre o WhatsApp com o texto pra anexar
+      // Desktop: baixa a imagem e abre o WhatsApp com o texto pra anexar
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "leiloes-nozap.png";
+      a.download = "leilao-nozap.png";
       a.click();
       URL.revokeObjectURL(url);
       window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
@@ -74,7 +55,7 @@ export default function ShareLeiloesButton({ count = 0, targetId = "hero-leiloes
     } catch (e) {
       if (e?.name === "AbortError") return; // usuário cancelou
       window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
-      toast.error("Não deu para gerar a imagem — abri o WhatsApp com o texto.");
+      toast.error("Não deu para anexar a imagem — abri o WhatsApp com o texto.");
     } finally {
       setLoading(false);
     }
@@ -94,7 +75,7 @@ export default function ShareLeiloesButton({ count = 0, targetId = "hero-leiloes
       }}
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-      <span>{loading ? "Gerando imagem..." : "Compartilhar leilões"}</span>
+      <span>{loading ? "Preparando..." : "Compartilhar leilões"}</span>
     </button>
   );
 }
