@@ -29,8 +29,15 @@ export async function registrarAceiteTermo(user) {
       localStorage.setItem('currentUser', JSON.stringify({ ...salvo, terms_accepted: true }));
     }
   } catch { /* ignora */ }
+  // Persistência com trilha de auditoria (data + versão do termo) via rota server-side
+  // dedicada — a escrita direta em AppUser é barrada pelo RLS para usuário comum.
   try {
-    await base44.entities.AppUser.update(user.id, { terms_accepted: true });
+    const r = await base44.functions.invoke('registrarAceiteTermo', {
+      user_id: user.id,
+      email: user.email,
+      termo_versao: TERMO_VERSAO,
+    });
+    if (!r?.ok) throw new Error(r?.error || 'resposta inesperada');
   } catch (e) {
     console.warn('[TERMO] Aceite válido na sessão, mas não persistido no cadastro:', e?.message);
   }
