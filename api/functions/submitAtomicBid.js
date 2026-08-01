@@ -1,3 +1,5 @@
+// [RESYNC 2026-08-01] Forçando este arquivo a entrar no próximo commit/deploy da Vercel —
+// ele não aparecia na lista de Functions do último deploy (sync Base44→GitHub perdido).
 // submitAtomicBid — confirma o lance no leilão com TRAVA OTIMISTA real (CAS por version).
 // Espelho fiel de base44/functions/submitAtomicBid/entry.ts, que NÃO roda na Vercel.
 // Sem este endpoint a produção sempre caía em "Erro ao enviar lance." DEPOIS de o saldo
