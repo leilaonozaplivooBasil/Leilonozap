@@ -75,10 +75,15 @@ Deno.serve(async (req) => {
     }
 
     if (!resp.ok || !Array.isArray(cot)) {
+      // CEP inexistente devolve 422 com erro em postal_code. Sem isso o cliente via
+      // "não conseguimos calcular agora" e ficava sem saber que o CEP dele é que está errado.
+      const cepInvalido = /postal_code|cep_destino/i.test(String(raw));
       return Response.json({
         success: false,
         configured: true,
-        error: "Não conseguimos calcular o frete agora.",
+        error: cepInvalido
+          ? "CEP não encontrado. Confira os números do seu CEP."
+          : "Não conseguimos calcular o frete agora.",
         status: resp.status,
         details: String(raw).slice(0, 400),
       });
