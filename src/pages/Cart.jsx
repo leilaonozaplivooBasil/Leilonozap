@@ -386,16 +386,19 @@ export default function Cart() {
     if (cep.length !== 8) { setFreteMsg('Preencha o CEP pra calcular.'); return; }
     setCalculandoFrete(true); setFreteMsg('');
     try {
-      const r = await base44.functions.invoke('calcularFrete', {
+      // PONTO 73 — cotação real via Melhor Envio (a mesma função usada na página do produto).
+      // Antes chamava 'calcularFrete' (Correios legado, sem credencial) e sempre caía no
+      // "frete combinado no WhatsApp" — era essa a causa de o frete nunca aparecer aqui.
+      const r = await base44.functions.invoke('cotarFrete', {
         cep,
-        items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
+        items: cartItems.map((it) => ({ id: it.id, quantidade: it.quantity || 1, valor: it.price_catalog || it.selling_price_wholesale || 0 })),
       });
-      if (r?.success && r?.configured && Array.isArray(r.opcoes)) {
+      if (r?.success && Array.isArray(r.opcoes)) {
         setFreteOpcoes(r.opcoes);
         if (!r.opcoes.length) setFreteMsg('Sem opções de frete pra esse CEP.');
       } else {
         setFreteOpcoes([]);
-        setFreteMsg(r?.message || 'Frete combinado no WhatsApp da loja.');
+        setFreteMsg(r?.error || 'Frete combinado no WhatsApp da loja.');
       }
     } catch (e) {
       setFreteMsg('Não foi possível calcular agora.');
@@ -1202,7 +1205,7 @@ export default function Cart() {
                     {freteOpcoes && freteOpcoes.length > 0 && (
                       <div className="text-xs text-gray-400 space-y-0.5 -mt-1">
                         {freteOpcoes.slice(0, 3).map((o) => (
-                          <div key={o.id} className="flex justify-between"><span>{o.nome}{o.prazo ? ` · ${o.prazo} dias` : ''}</span><span className="text-green-400">{money(o.preco)}</span></div>
+                          <div key={o.id} className="flex justify-between gap-2"><span className="truncate">{[o.empresa, o.nome].filter(Boolean).join(' ')}{o.prazo ? ` · ${o.prazo} ${o.prazo === 1 ? 'dia útil' : 'dias úteis'}` : ''}</span><span className="text-green-400 shrink-0">{money(o.preco)}</span></div>
                         ))}
                       </div>
                     )}

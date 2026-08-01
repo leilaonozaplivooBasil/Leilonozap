@@ -6,6 +6,7 @@ import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 import { supabase } from "@/api/supabaseClient";
 import { Stars, RatingBadge } from "@/components/loja/StarRating";
+import CalculadoraFrete from "@/components/frete/CalculadoraFrete";
 import { getReferral } from '@/lib/referral';
 import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
@@ -158,6 +159,17 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
     product.largura ? { label: 'Largura', value: `${product.largura} cm` } : null,
     product.comprimento ? { label: 'Profundidade', value: `${product.comprimento} cm` } : null,
   ].filter(Boolean);
+
+  // 🚚 PONTO 73 — dimensões do produto pra cotação de frete (mesma régua da página de detalhes)
+  const freteItems = React.useMemo(() => ([{
+    id: product.id,
+    peso: product.peso,
+    altura: product.altura,
+    largura: product.largura,
+    comprimento: product.comprimento,
+    valor: price,
+    quantidade: quantity,
+  }]), [product.id, product.peso, product.altura, product.largura, product.comprimento, price, quantity]);
 
   const CARD = 'bg-white/[0.04] border border-white/10 rounded-2xl';
 
@@ -330,12 +342,15 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                 </div>
 
                 <div className="pt-2 space-y-2.5 text-sm">
-                  <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — combine o frete no WhatsApp.</span></div>
+                  <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — calcule o frete e o prazo abaixo.</span></div>
                   <div className="flex items-start gap-2.5"><RotateCcw className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Devolução em até 7 dias</b> após o recebimento.</span></div>
                   <div className="flex items-start gap-2.5"><ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Compra garantida</b> — receba o produto ou seu dinheiro de volta.</span></div>
                   <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX, cartão em até 12x ou boleto.</span></div>
                 </div>
               </div>
+
+              {/* 🚚 PONTO 73 — cotação real de frete (Melhor Envio), mesma calculadora da página de detalhes */}
+              <CalculadoraFrete items={freteItems} />
 
               {/* card da loja/vendedor */}
               <div className={`${CARD} p-4 flex items-center gap-3`}>
