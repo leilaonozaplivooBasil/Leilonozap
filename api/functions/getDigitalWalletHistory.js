@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       // vendas em que o usuário é o VENDEDOR (admin/lojista): o que vendeu, pra quem e quanto
       sb(`catalog_sales?select=${saleCols}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`),
       // Lances dados em leilões (não somam/subtraem do saldo — só informativo)
-      sb(`auction_messages?select=id,auction_id,bid_amount,created_date&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`),
+      sb(`auction_messages?select=id,auction_id,bid_amount,frete_amount,created_date&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`),
       sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`),
     ]);
     const sales = await salesR.json();
@@ -100,8 +100,10 @@ export default async function handler(req, res) {
     const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
     for (const b of Array.isArray(bids) ? bids : []) {
       const a = auctionInfo[b.auction_id];
-      const valor = money2(b.bid_amount);
-      const ehLiderDesteLance = !!a && a.winner_id === userId && money2(a.current_price) === valor;
+      const valorLance = money2(b.bid_amount);
+      const freteLance = money2(b.frete_amount);
+      const valor = money2(valorLance + freteLance);
+      const ehLiderDesteLance = !!a && a.winner_id === userId && money2(a.current_price) === valorLance;
       const encerrado = !!a && a.status !== 'active';
 
       let bid_state = 'superado'; // padrão seguro: valor já devolvido
@@ -113,6 +115,7 @@ export default async function handler(req, res) {
         title: `Lance — ${auctionTitles[b.auction_id] || 'Leilão'}`,
         source: 'Leilão',
         amount: valor,
+        frete_amount: freteLance,
         status: 'info',
         bid_state,
         date: b.created_date,

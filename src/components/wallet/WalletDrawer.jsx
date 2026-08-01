@@ -353,6 +353,11 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                                 {/* Estado do lance embaixo do produto: no celular o texto
                                     completo cabe aqui sem apertar o valor à direita. */}
                                 {tx.type === 'bid' && <BidStateTag state={tx.bid_state} />}
+                                {tx.type === 'bid' && tx.frete_amount > 0 && (
+                                  <p className="text-[11px] text-gray-500 mt-0.5">
+                                    inclui frete de R$ {fmtBR(tx.frete_amount)}
+                                  </p>
+                                )}
                               </div>
                               <div className="text-right flex-shrink-0">
                                 {tx.type === 'bid' ? (
