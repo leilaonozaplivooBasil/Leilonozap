@@ -28,7 +28,7 @@ import { saveReferral, getReferral } from "@/lib/referral";
 import AdminTopNav from "@/components/layout/AdminTopNav";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
-import useScrollDrift from "@/hooks/useScrollDrift";
+import FloatingDock from "@/components/common/FloatingDock";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -47,8 +47,7 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   // Logo/favicon gerenciados pelo Painel de Mídia (fallback: assets estáticos)
   const { logoUrl } = useSiteMedia();
-  // 🌊 Drift magnético dos flutuantes: contra-movimento suave conforme o scroll
-  const driftCls = useScrollDrift();
+
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('currentUser');
@@ -919,6 +918,9 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </main>
         <Footer />
+        {/* 🧲 Dock dos flutuantes — define a altura única de ancoragem (sobe nas
+            páginas com barra de ação fixa, pra não cobrir compra/lance) */}
+        <FloatingDock currentPageName={currentPageName} />
         {/* 📱 Voltar ao topo — global, só mobile (liquid glass, centro inferior) */}
         <BackToTopButton />
         {/* 📱 Convite de instalação do PWA — só mobile, dispensável */}
@@ -932,7 +934,7 @@ export default function Layout({ children, currentPageName }) {
             href="https://livoolive.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className={`livoo-live-float ${driftCls} fixed right-3 bottom-[148px] sm:right-4 sm:bottom-[168px] z-50 group`}
+            className="livoo-live-float nz-dock-bottom-2 fixed right-3 sm:right-4 z-50 group"
             title="Livoo Live — Compre ao Vivo"
             aria-label="Livoo Live — Compre ao Vivo"
           >

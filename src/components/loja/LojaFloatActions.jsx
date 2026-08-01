@@ -25,13 +25,10 @@ export default function LojaFloatActions() {
 
   return (
     <>
-      <style>{`
-        @media (max-width: 639px) {
-          .loja-float { bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); }
-        }
-      `}</style>
-      {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07) */}
-      <div className={`loja-float ${driftCls} fixed left-3 bottom-24 sm:left-4 sm:bottom-24 z-50 flex flex-col items-center`}>
+      {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07).
+          Altura vem do FloatingDock (nz-dock-bottom): sobe automaticamente nas páginas
+          com barra de ação fixa, pra nunca cobrir "COMPRAR AGORA" nem o campo de lance. */}
+      <div className={`nz-dock-bottom ${driftCls} fixed left-3 sm:left-4 z-50 flex flex-col items-center`}>
         <button
           onClick={() => window.dispatchEvent(new Event('openComparai'))}
           title="CompareAQUI — compare o preço antes de comprar"
@@ -51,7 +48,7 @@ export default function LojaFloatActions() {
         .leila-bob { animation: leilaBob 2.6s ease-in-out infinite; }
         @media (prefers-reduced-motion:reduce){ .leila-bob{animation:none} }
       `}</style>
-      <div className={`loja-float ${driftCls} fixed right-3 bottom-24 sm:right-4 sm:bottom-24 z-50 flex flex-col items-center gap-3`}>
+      <div className={`nz-dock-bottom ${driftCls} fixed right-3 sm:right-4 z-50 flex flex-col items-center gap-3`}>
         <a href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`} target="_blank" rel="noreferrer" title="Fale com a Leila — Suporte no WhatsApp" className="group flex flex-col items-center">
           <span className="leila-bob relative block">
             {/* anel pulsante verde pra sinalizar que é clicável */}

@@ -9,12 +9,15 @@ import React from 'react';
 // Uso: const drift = useScrollDrift(); → aplicar `drift` no className do
 // elemento `position: fixed`. O CSS é injetado no <head> uma única vez.
 
+// ⚠️ 01/08 — DESLOCAMENTO VERTICAL DESATIVADO. O contra-movimento fazia os
+// flutuantes SUBIREM sozinhos durante a rolagem (chegando perto da metade da tela)
+// e passarem por cima da barra de lance / de compra. Como a ancoragem agora é
+// única (FloatingDock), o drift virou fonte de sobreposição. As classes continuam
+// existindo (a API do hook não muda) mas não movem mais nada verticalmente.
 const CSS = `
-.scroll-drift { transform: translateZ(0); will-change: transform; transition: transform .5s cubic-bezier(.22,.61,.36,1); }
-.scroll-drift--up { transform: translateY(-14px) translateZ(0); }
-.scroll-drift--down { transform: translateY(10px) translateZ(0); }
-@media (prefers-reduced-motion: reduce) {
-  .scroll-drift, .scroll-drift--up, .scroll-drift--down { transition: none; transform: translateZ(0); }
+.scroll-drift, .scroll-drift--up, .scroll-drift--down {
+  transform: translateZ(0);
+  will-change: transform;
 }
 `;
 

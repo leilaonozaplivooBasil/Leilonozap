@@ -37,10 +37,9 @@ export default function BackToTopButton() {
       type="button"
       aria-label="Voltar ao topo"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className={`sm:hidden fixed left-1/2 -translate-x-1/2 z-40 flex items-center justify-center w-10 h-10 rounded-full border border-green-400/30 bg-green-500/15 backdrop-blur-md backdrop-saturate-150 shadow-lg shadow-green-950/50 text-green-100 transition-all duration-150 active:scale-90 ${
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+      className={`nz-dock-bottom sm:hidden fixed left-1/2 -translate-x-1/2 z-40 flex items-center justify-center w-11 h-11 rounded-full border border-green-400/30 bg-green-500/15 backdrop-blur-md backdrop-saturate-150 shadow-lg shadow-green-950/50 text-green-100 transition-opacity duration-150 active:scale-90 ${
+        visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
-      style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
     >
       {/* brilho superior sutil do liquid glass (tom verde da paleta da loja) */}
       <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-green-300/15 bg-gradient-to-b from-green-300/20 to-transparent" />
