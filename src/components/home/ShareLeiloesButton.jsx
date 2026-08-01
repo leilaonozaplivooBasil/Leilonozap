@@ -32,7 +32,11 @@ export default function ShareLeiloesButton({ count = 0 }) {
     const texto = montarTexto(count);
     setLoading(true);
     try {
-      const resp = await fetch(IMAGEM, { cache: "force-cache" });
+      // 🛡️ Nunca deixar o botão travado: se a imagem demorar, cai no texto puro
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const resp = await fetch(IMAGEM, { cache: "force-cache", signal: ctrl.signal });
+      clearTimeout(timer);
       const blob = await resp.blob();
       const file = new File([blob], "leilao-nozap.png", { type: blob.type || "image/png" });
 
