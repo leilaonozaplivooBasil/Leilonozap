@@ -18,6 +18,7 @@ import HomeGate from '@/components/common/HomeGate';
 import Catalog from '@/pages/Catalog';
 import Recepcao from '@/pages/Recepcao';
 import PageNotFound from './lib/PageNotFound';
+import LinkCurtoLeilao from '@/components/common/LinkCurtoLeilao';
 import ChunkErrorBoundary from './lib/ChunkErrorBoundary.jsx';
 const CRMInvestidores = React.lazy(() => import('@/pages/CRMInvestidores'));
 const CarteiraInvestidor = React.lazy(() => import('@/pages/CarteiraInvestidor'));
@@ -379,6 +380,9 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
+      {/* 🔗 Link curto de leilão (/l/:id) — rede de segurança caso o servidor
+          entregue o index.html nessa URL: manda direto pra sala, sem 404. */}
+      <Route path="/l/:id" element={<LinkCurtoLeilao />} />
       {/* Antes de 404: tenta resolver como apelido de rota (/loja, /store, /entrar…) */}
       <Route path="*" element={<AliasOrNotFound />} />
     </Routes>
