@@ -43,12 +43,15 @@ export default function MyCatalogOrders() {
     }
   }, []);
 
+  // Depósitos na carteira não são pedidos de produto — mesma regra já usada em Profile.jsx.
+  const isWalletDeposit = (o) => /dep[óo]sito na carteira/i.test(o?.product_title || '');
+
   const fetchOrders = async (userId) => {
     // Lê direto da tabela catalog_sales (a function getMyCatalogOrders é stub da migração e
     // resolve com {ok:false} sem lançar erro — por isso o fallback antigo nunca rodava).
     try {
       const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
-      const list = Array.isArray(directResult) ? directResult : [];
+      const list = (Array.isArray(directResult) ? directResult : []).filter((o) => !isWalletDeposit(o));
       // anexa as avaliações que o cliente já deu (pra mostrar "Você avaliou")
       try {
         const { data: ratings } = await supabase.from('seller_ratings').select('sale_id,stars,comment').eq('buyer_id', userId);

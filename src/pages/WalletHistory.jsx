@@ -101,10 +101,22 @@ export default function WalletHistory() {
 
   const deposits = transactions.filter(t => t.type === "deposit");
   const walletUsage = transactions.filter(t => t.type === "purchase");
-  const refunds = transactions.filter(t => t.type === "refund");
+  const refunds = transactions.filter(t => t.type === "refund" || t.type === "sale");
 
-  const totalDeposited = deposits.reduce((sum, t) => sum + t.amount, 0);
-  const totalUsed = walletUsage.reduce((sum, t) => sum + t.amount, 0);
+  const totalDeposited = deposits.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+  const totalUsed = walletUsage.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+
+  // Helper: a function real (getDigitalWalletHistory) devolve `date`, não `created_date`,
+  // e não devolve `direction` — deriva do sinal de amount (>=0 = crédito).
+  const txDate = (t) => t.date || t.created_date || null;
+  const txDirection = (t) => (t.amount >= 0 ? 'credit' : 'debit');
+  const txDescription = (t) => t.title || t.description || 'Sem descrição';
+  const fmtDate = (d) => {
+    if (!d) return '';
+    try {
+      return new Date(d + (String(d).endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    } catch { return ''; }
+  };
 
   // Funções de paginação
   const getPaginatedData = (data) => {
@@ -302,21 +314,21 @@ export default function WalletHistory() {
                           <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-green-400/20 rounded-xl hover:border-green-400/50 hover:shadow-sm transition-all duration-300">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-lg ${transaction.direction === 'credit' ? 'bg-green-500/20 border border-green-400/30' : 'bg-red-500/20 border border-red-400/30'}`}>
-                                  {getTransactionIcon(transaction.type, transaction.direction)}
+                                <div className={`p-3 rounded-lg ${txDirection(transaction) === 'credit' ? 'bg-green-500/20 border border-green-400/30' : 'bg-red-500/20 border border-red-400/30'}`}>
+                                  {getTransactionIcon(transaction.type, txDirection(transaction))}
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">{getTypeLabel(transaction.type)}</p>
-                                  <p className="text-green-300/60 text-sm font-light">{(transaction.description || "Sem descrição").replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace(/\s*\(aprovado instantaneamente\)/gi, '')}</p>
+                                  <p className="text-green-300/60 text-sm font-light">{txDescription(transaction).replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace(/\s*\(aprovado instantaneamente\)/gi, '')}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date + (transaction.created_date.endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                                    {fmtDate(txDate(transaction))}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className={`text-lg font-bold ${getTransactionColor(transaction.direction)}`}>
-                                  {transaction.direction === "credit" ? "+" : "-"}R$ {fmtBR(transaction.amount)}
+                                <p className={`text-lg font-bold ${getTransactionColor(txDirection(transaction))}`}>
+                                  {txDirection(transaction) === "credit" ? "+" : "-"}R$ {fmtBR(Math.abs(transaction.amount || 0))}
                                 </p>
                                 {getStatusBadge(transaction.status)}
                               </div>
@@ -373,15 +385,15 @@ export default function WalletHistory() {
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">Depósito Recebido</p>
-                                  <p className="text-green-300/60 text-sm font-light">{(transaction.description || "Crédito em conta").replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace(/\s*\(aprovado instantaneamente\)/gi, '')}</p>
+                                  <p className="text-green-300/60 text-sm font-light">{txDescription(transaction).replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace(/\s*\(aprovado instantaneamente\)/gi, '')}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date + (transaction.created_date.endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                                    {fmtDate(txDate(transaction))}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-green-400">+R$ {fmtBR(transaction.amount)}</p>
+                                <p className="text-lg font-bold text-green-400">+R$ {fmtBR(Math.abs(transaction.amount || 0))}</p>
                                 {getStatusBadge(transaction.status)}
                               </div>
                             </div>
@@ -434,15 +446,15 @@ export default function WalletHistory() {
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">Saldo Utilizado</p>
-                                  <p className="text-green-300/60 text-sm font-light">{(transaction.description || "Utilização em transação").replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace(/\s*\(aprovado instantaneamente\)/gi, '')}</p>
+                                  <p className="text-green-300/60 text-sm font-light">{txDescription(transaction).replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace(/\s*\(aprovado instantaneamente\)/gi, '')}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date + (transaction.created_date.endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                                    {fmtDate(txDate(transaction))}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-red-400">-R$ {fmtBR(transaction.amount)}</p>
+                                <p className="text-lg font-bold text-red-400">-R$ {fmtBR(Math.abs(transaction.amount || 0))}</p>
                                 {getStatusBadge(transaction.status)}
                               </div>
                             </div>
@@ -495,15 +507,15 @@ export default function WalletHistory() {
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">Reembolso Confirmado</p>
-                                  <p className="text-green-300/60 text-sm font-light">{(transaction.description || "Estorno de saldo").replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '')}</p>
+                                  <p className="text-green-300/60 text-sm font-light">{txDescription(transaction).replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '')}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date + (transaction.created_date.endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                                    {fmtDate(txDate(transaction))}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-blue-400">+R$ {fmtBR(transaction.amount)}</p>
+                                <p className="text-lg font-bold text-blue-400">+R$ {fmtBR(Math.abs(transaction.amount || 0))}</p>
                                 {getStatusBadge(transaction.status)}
                               </div>
                             </div>
