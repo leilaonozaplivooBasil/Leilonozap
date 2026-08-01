@@ -208,7 +208,7 @@ export default function useBidSubmission({
         // 🩹 Diagnóstico: se a function nem respondeu (not_implemented/network), o alerta
         // genérico escondia isso — agora mostra a causa real pra dar certeza do que houve.
         const diagMsg = atomicData?.error === 'not_implemented'
-          ? "Erro ao enviar lance (função indisponível no servidor)."
+          ? `Erro ao enviar lance (função indisponível no servidor - status ${atomicData?.status ?? '?'}).`
           : atomicData?.error === 'network_or_not_implemented'
             ? "Erro ao enviar lance (falha de rede)."
             : (atomicData?.message || "Erro ao enviar lance.");

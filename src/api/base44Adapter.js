@@ -312,7 +312,7 @@ async function invokeFunction(name, body, options = {}) {
     if (resp.status === 404 || resp.status === 405 || resp.status === 501) {
       // 405 = POST caiu no rewrite do index.html (function ainda não existe como API route)
       if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
-      return { ok: false, error: 'not_implemented', name };
+      return { ok: false, error: 'not_implemented', name, status: resp.status };
     }
     // 🩹 CAUSA-RAIZ do "Erro ao enviar lance.": as functions (submitAtomicBid,
     // reserveBidBalance, etc.) já respondem com JSON detalhado (success:false,
