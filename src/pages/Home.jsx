@@ -23,6 +23,7 @@ import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
+import ShareLeiloesButton from '../components/home/ShareLeiloesButton';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
@@ -792,7 +793,7 @@ export default function Home() {
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? 'md:-mt-10' : ''}`}>
         {/* Hero Section - Glass */}
         <div className="mb-8">
-          <div className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
+          <div id="hero-leiloes" className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
             <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full orb-1" style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.15) 0%, transparent 70%)' }} />
             <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full orb-2" style={{ background: 'radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 70%)' }} />
 
@@ -829,6 +830,9 @@ export default function Home() {
               </p>
 
               <LiveStats />
+
+              {/* 📣 PONTO 71 — gera a imagem deste bloco e compartilha no WhatsApp */}
+              <ShareLeiloesButton count={activeCount} />
 
               {/* AÇÕES - CARROSSEL CONTÍNUO (mobile e desktop) */}
               <HeroActionsCarousel currentUser={currentUser} />
