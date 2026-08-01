@@ -22,8 +22,9 @@ export default function ShopDropdown() {
       title: "Comparar preços",
       subtitle: "Veja se o preço é bom antes de comprar",
       onClick: () => {
-        // Dispara o mesmo evento global consumido pelo ComparaiFloatingButton
-        window.dispatchEvent(new CustomEvent("openComparaiModal"));
+        // Dispara o mesmo evento global consumido pelo ComparaiFloatingButton/ComparaiButton
+        // (nome precisa ser exatamente "openComparai" — os listeners não escutam "openComparaiModal")
+        window.dispatchEvent(new CustomEvent("openComparai"));
       },
     },
     {

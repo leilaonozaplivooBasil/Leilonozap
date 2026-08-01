@@ -345,6 +345,12 @@ export default function PartnersPage() {
 
 
   const handleLoginClick = () => {
+    // Já está logado (sessão salva em localStorage) — não pedir login de novo,
+    // vai direto pro painel do parceiro (causa do "login não reconhecido" do relatório).
+    if (currentUser) {
+      navigate(createPageUrl("InvestorDashboard"));
+      return;
+    }
     setShowLoginModal(true);
   };
 
