@@ -314,9 +314,19 @@ async function invokeFunction(name, body, options = {}) {
       if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
       return { ok: false, error: 'not_implemented', name };
     }
+    // 🩹 CAUSA-RAIZ do "Erro ao enviar lance.": as functions (submitAtomicBid,
+    // reserveBidBalance, etc.) já respondem com JSON detalhado (success:false,
+    // conflict, message) mesmo em status 400/401/409/500 — mas aqui isso virava
+    // um throw genérico, perdendo a mensagem real e pulando a lógica de
+    // tratamento (atomicData?.conflict / atomicData?.message) que as telas já têm.
+    // Se o corpo é um JSON válido, devolve ele; só lança erro genérico se não for.
     if (!resp.ok) {
       const text = await resp.text().catch(() => '');
-      throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
+      }
     }
     return resp.json();
   } catch (err) {
