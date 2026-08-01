@@ -8,8 +8,6 @@ import { toast } from 'sonner';
 import AvaliarLojistaModal from '@/components/loja/AvaliarLojistaModal';
 import { supabase } from '@/api/supabaseClient';
 
-const CatalogSale = base44.entities.CatalogSale;
-
 // Card + configs de status agora são COMPARTILHADOS com a aba "Meus Pedidos" do
 // Profile (extraídos pra components/catalog/CatalogOrderCard.jsx em 25/07).
 import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
@@ -162,10 +160,21 @@ export default function MyCatalogOrders() {
     }
   };
 
+  // 🔐 A exclusão passa pela rota de servidor 'excluirMeuPedido': a tabela de pedidos é
+  // protegida por RLS (navegador não escreve nela). A rota valida dono + status.
+  const excluirPedido = async (order) => {
+    const uid = currentUser?.id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
+    const r = await base44.functions.invoke('excluirMeuPedido', { user_id: uid, sale_id: order.id });
+    if (r?.success) return true;
+    throw new Error(r?.error === 'not_implemented' || r?.error === 'network_or_not_implemented'
+      ? 'Exclusão indisponível neste ambiente (só funciona no site publicado)'
+      : (r?.error || 'não foi possível excluir'));
+  };
+
   const doDeleteOrder = async (order) => {
     setCancelingId(order.id);
     try {
-      await CatalogSale.delete(order.id);
+      await excluirPedido(order);
       setOrders(prev => prev.filter(o => o.id !== order.id));
       toast.success('Pedido excluído');
     } catch (err) {
@@ -185,16 +194,22 @@ export default function MyCatalogOrders() {
     if (deletableOrders.length === 0) { setConfirmAction(null); return; }
     setIsDeletingAll(true);
     let deleted = 0;
+    let ultimoErro = null;
+    const apagados = new Set();
     for (const order of deletableOrders) {
       try {
-        await CatalogSale.delete(order.id);
+        await excluirPedido(order);
+        apagados.add(order.id);
         deleted++;
       } catch (err) {
-        console.warn('Erro ao excluir:', order.id, err.message);
+        ultimoErro = err?.message || 'erro desconhecido';
+        console.warn('Erro ao excluir:', order.id, ultimoErro);
       }
     }
-    setOrders(prev => prev.filter(o => o.status !== 'pending_payment' && o.status !== 'canceled'));
-    toast.success(`${deleted} pedido(s) excluído(s)`);
+    // Só remove da tela o que REALMENTE foi apagado no banco
+    setOrders(prev => prev.filter(o => !apagados.has(o.id)));
+    if (deleted > 0) toast.success(`${deleted} pedido(s) excluído(s)`);
+    if (ultimoErro) toast.error(`Não foi possível excluir ${deletableOrders.length - deleted}: ${ultimoErro}`);
     setIsDeletingAll(false);
     setConfirmAction(null);
   };
