@@ -7,6 +7,7 @@ import BeneficiosPassaporte from '@/components/passaporte/BeneficiosPassaporte';
 import AvisoLegalPassaporte from '@/components/passaporte/AvisoLegalPassaporte';
 import AceitesPassaporte, { ACEITES_PASSAPORTE } from '@/components/passaporte/AceitesPassaporte';
 import { registrarAceitePassaporte } from '@/lib/passaporteTermo';
+import { obterOrigemDeposito } from '@/lib/origemDeposito';
 
 const VALOR = 100;
 const CREDITO = 110;
@@ -33,8 +34,10 @@ export default function PassaporteLances() {
     // 🔒 O aceite é registrado ANTES de liberar o pagamento (trilha de auditoria).
     await registrarAceitePassaporte(currentUser);
     setEnviando(false);
+    // 🧭 PONTO 69: volta pra ORIGEM real (sala do leilão, loja, home) — nunca
+    // pra esta própria página, senão o usuário paga e cai na tela de pagar de novo.
     navigate(createPageUrl('AuctionCheckoutModern'), {
-      state: { amount: VALOR, depositType: 'passaporte', returnTo: window.location.pathname + window.location.search },
+      state: { amount: VALOR, depositType: 'passaporte', returnTo: obterOrigemDeposito() },
     });
   };
 

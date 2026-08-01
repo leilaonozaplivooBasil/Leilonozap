@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import PaymentErrorModal from '@/components/payment/PaymentErrorModal';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
+import { ehDestinoValido, DESTINO_PADRAO } from '@/lib/origemDeposito';
 
 const Auction = base44.entities.Auction;
 
@@ -383,7 +384,9 @@ export default function AuctionCheckoutModern() {
           setIsWalletDeposit(true);
           setDepositAmount(stateAmount);
           setDepositType(stateDepositType); // Armazena tipo de depósito
-          setReturnTo(location.state?.returnTo || null);
+          // 🧭 PONTO 69: só aceita destino que NÃO seja outra tela de depósito.
+          const origem = location.state?.returnTo;
+          setReturnTo(ehDestinoValido(origem) ? origem : DESTINO_PADRAO);
           const isInvestorCapital = stateDepositType === 'investor_capital';
           setAuction({
             id: isInvestorCapital ? (stateAuctionId || 'investor-deposit') : (stateDepositType === 'digital_wallet' ? 'digital-wallet-deposit' : 'wallet-deposit'),
@@ -495,9 +498,18 @@ export default function AuctionCheckoutModern() {
     // Primeira checagem imediata após 3s
     initialTimeoutRef.current = setTimeout(checkPaymentStatus, 3000);
     intervalRef.current = setInterval(checkPaymentStatus, 5000);
+
+    // 📱 PONTO 69: no celular o setInterval congela enquanto o app do banco está
+    // aberto. Ao voltar pro navegador, checa NA HORA — sem esperar o próximo ciclo.
+    const onWake = () => { if (!document.hidden) checkPaymentStatus(); };
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('focus', onWake);
+
     return () => {
       if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', onWake);
+      window.removeEventListener('focus', onWake);
     };
   }, [step, pixData, paymentConfirmed]);
 
@@ -1005,6 +1017,15 @@ export default function AuctionCheckoutModern() {
                         <h3 className="text-2xl font-bold text-white">Pagamento em Processamento</h3>
                         <p className="text-gray-400">Seu cartão está sendo processado</p>
                         <p className="text-sm text-gray-500">Você receberá uma confirmação em breve</p>
+                        {/* 🧭 PONTO 69: nunca deixar a tela sem saída — o cartão pode
+                            levar minutos e o usuário não pode ficar preso aqui. */}
+                        <Button
+                          onClick={() => navigate(isWalletDeposit ? returnTo || DESTINO_PADRAO : createPageUrl('MyWinnings'), { replace: true })}
+                          className="w-full min-h-[48px] bg-gray-700 hover:bg-gray-600 text-white font-semibold mt-2"
+                        >
+                          <ArrowLeft className="w-4 h-4 mr-2" />
+                          {isWalletDeposit ? 'Voltar para onde eu estava' : 'Ver Meus Arremates'}
+                        </Button>
                       </div>
                     )}
                   </CardContent>
