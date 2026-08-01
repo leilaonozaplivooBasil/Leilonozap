@@ -194,6 +194,58 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (mode === 'ponto71_walenkamp') {
+      const alex = await sb(`app_users?select=id,full_name,email,saldo_disponivel,saldo_alocado&email=eq.alexandrewlk@gmail.com`);
+      const alexId = Array.isArray(alex.body) && alex.body[0] ? alex.body[0].id : null;
+      result.alexandre_user = alex;
+      if (alexId) {
+        result.alexandre_sales = await sb(`catalog_sales?select=id,kind,status,sale_price,total_amount,mp_payment_id,buyer_id,created_at&buyer_id=eq.${alexId}&order=created_at.desc`);
+      }
+    }
+
+    if (mode === 'ponto71_audit_geral') {
+      // todos os depósitos de carteira pagos nos últimos 30 dias
+      const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+      const deposits = await sb(`catalog_sales?select=id,buyer_id,buyer_name,total_amount,status,mp_payment_id,created_at&kind=eq.wallet_deposit&status=eq.paid&created_at=gte.${cutoff}&order=created_at.desc&limit=500`);
+      const rows = Array.isArray(deposits.body) ? deposits.body : [];
+      const buyerIds = [...new Set(rows.map((d) => d.buyer_id).filter(Boolean))];
+      let buyersMap = {};
+      if (buyerIds.length) {
+        const idsParam = buyerIds.join(',');
+        const buyersRes = await sb(`app_users?select=id,full_name,email,saldo_disponivel&id=in.(${idsParam})`);
+        const buyers = Array.isArray(buyersRes.body) ? buyersRes.body : [];
+        buyersMap = Object.fromEntries(buyers.map((b) => [b.id, b]));
+      }
+      const porComprador = {};
+      for (const d of rows) {
+        const bid = d.buyer_id;
+        if (!bid) continue;
+        porComprador[bid] = porComprador[bid] || { buyer_id: bid, nome: buyersMap[bid]?.full_name, email: buyersMap[bid]?.email, saldo_atual: buyersMap[bid]?.saldo_disponivel ?? null, total_depositado_pago: 0, qtd_depositos: 0 };
+        const valor = Math.round((Number(d.total_amount) || 0) * 100) / 100;
+        porComprador[bid].total_depositado_pago = Math.round((porComprador[bid].total_depositado_pago + valor) * 100) / 100;
+        porComprador[bid].qtd_depositos += 1;
+      }
+      const suspeitos = Object.values(porComprador)
+        .filter((u) => u.saldo_atual !== null && u.total_depositado_pago > 0 && Number(u.saldo_atual) < u.total_depositado_pago)
+        .sort((a, b) => (b.total_depositado_pago - b.saldo_atual) - (a.total_depositado_pago - a.saldo_atual));
+      result.ponto71_total_depositos_pagos_30d = rows.length;
+      result.ponto71_suspeitos = suspeitos;
+    }
+
+    if (mode === 'ponto71_null_bug') {
+      // usuários com saldo_disponivel NULL (não inicializado) que já têm depósito PAGO —
+      // são exatamente os afetados pelo bug de CAS (eq.0 nunca combina com NULL)
+      const nullUsers = await sb(`app_users?select=id,full_name,email,saldo_disponivel&saldo_disponivel=is.null`);
+      const nullRows = Array.isArray(nullUsers.body) ? nullUsers.body : [];
+      const nullIds = nullRows.map((u) => u.id);
+      result.ponto71_usuarios_saldo_null_total = nullRows.length;
+      if (nullIds.length) {
+        const idsParam = nullIds.join(',');
+        const paidDepositsOfNullUsers = await sb(`catalog_sales?select=id,buyer_id,buyer_name,total_amount,mp_payment_id,created_at&kind=eq.wallet_deposit&status=eq.paid&buyer_id=in.(${idsParam})&order=created_at.desc`);
+        result.ponto71_afetados_confirmados = paidDepositsOfNullUsers;
+      }
+    }
+
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
