@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
             return Response.json({ success: false, error: 'Usuário obrigatório' }, { status: 400 });
         }
 
-        const users = await sbFetch(`app_users?select=saldo_disponivel,saldo_alocado,commission_balance,kyc_status,cpf,full_name&id=eq.${encodeURIComponent(user_id)}&limit=1`);
+        const users = await sbFetch(`app_users?select=saldo_disponivel,saldo_alocado,saldo_reservado,commission_balance,kyc_status,cpf,full_name&id=eq.${encodeURIComponent(user_id)}&limit=1`);
         const user = Array.isArray(users) ? users[0] : null;
         if (!user) return Response.json({ success: false, error: 'Usuário não encontrado' });
 
@@ -47,6 +47,8 @@ Deno.serve(async (req) => {
             success: true,
             saldo_disponivel: Number(user.saldo_disponivel) || 0,
             saldo_alocado: Number(user.saldo_alocado) || 0,
+            // 💰 travado em lances ativos (coluna usada por reserveBidBalance/releaseHold). Campo ADITIVO.
+            saldo_reservado: Number(user.saldo_reservado) || 0,
             saldo_a_liberar,
             commission_balance: Number(user.commission_balance) || 0,
             kyc_status: user.kyc_status || 'nao_iniciado',

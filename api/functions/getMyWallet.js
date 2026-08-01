@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     if (!userId) return res.status(400).json({ success: false, error: 'Usuário obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const user = (await (await sb(`app_users?select=saldo_disponivel,saldo_alocado,commission_balance,kyc_status,cpf,full_name&id=eq.${encodeURIComponent(userId)}&limit=1`)).json())[0];
+    const user = (await (await sb(`app_users?select=saldo_disponivel,saldo_alocado,saldo_reservado,commission_balance,kyc_status,cpf,full_name&id=eq.${encodeURIComponent(userId)}&limit=1`)).json())[0];
     if (!user) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
     // status/release_at só existem depois da migração de "saldo a liberar" — tenta com, cai pra sem.
     let commissions = await (await sb(`commission_ledger?select=created_at,role_in_sale,pct,amount,beneficiary_level,status,release_at&beneficiary_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=100`)).json();
@@ -35,6 +35,9 @@ export default async function handler(req, res) {
       success: true,
       saldo_disponivel: Number(user.saldo_disponivel) || 0,
       saldo_alocado: Number(user.saldo_alocado) || 0,
+      // 💰 dinheiro travado em lances ativos (mesma coluna usada por reserveBidBalance/releaseHold).
+      // Campo ADITIVO: saldo_alocado continua intacto para quem já o consome (investidor).
+      saldo_reservado: Number(user.saldo_reservado) || 0,
       saldo_a_liberar,
       commission_balance: Number(user.commission_balance) || 0,
       kyc_status: user.kyc_status || 'nao_iniciado',

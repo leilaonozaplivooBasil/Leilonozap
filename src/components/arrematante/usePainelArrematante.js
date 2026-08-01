@@ -35,9 +35,12 @@ export default function usePainelArrematante() {
       ]);
 
       const carteira = carteiraRes?.data || carteiraRes || {};
+      // "Reservado em disputa" = saldo_reservado (coluna do motor de lances).
+      // saldo_alocado é do contexto de investidor e fica 0 pra arrematante — usar
+      // ele aqui era o motivo do cartão mostrar R$ 0,00 com lances liderando.
       setSaldo({
         disponivel: Number(carteira.saldo_disponivel) || 0,
-        alocado: Number(carteira.saldo_alocado) || 0,
+        alocado: Number(carteira.saldo_reservado ?? carteira.saldo_alocado) || 0,
       });
 
       // ===== DISPUTANDO AGORA: meus lances × leilões ativos =====
