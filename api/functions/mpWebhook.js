@@ -61,6 +61,29 @@ async function activateAdesao(sale) {
   return { adesao: true, level: sale.adesao_level, product_credit: sale.total_amount, bonus };
 }
 
+// Ativa o Plano de Parceiro (Lucre Conosco/InvestorDashboard): cria o registro em
+// partner_plan_purchases com o mesmo formato usado pela ativação manual (PartnerPlanActivation.jsx).
+async function activatePartnerPlan(sale) {
+  const id = oid();
+  const activatedAt = new Date().toISOString();
+  const start = new Date();
+  const schedule = [1, 2, 3].map((i) => {
+    const d = new Date(start); d.setDate(d.getDate() + i * 15);
+    return { period: i, date: d.toISOString(), status: 'scheduled' };
+  });
+  await sb('partner_plan_purchases', {
+    method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      id, base44_id: id,
+      user_id: sale.buyer_id, user_name: sale.buyer_name, user_email: sale.buyer_email,
+      plan_name: sale.product_title, plan_amount: round2(Number(sale.total_amount) || 0),
+      activated_at: activatedAt, status: 'active',
+      purchase_periods: schedule, activation_source: 'lucre_conosco',
+    }),
+  });
+  return { partner_plan_activated: true, plan_name: sale.product_title, plan_amount: sale.total_amount };
+}
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -129,6 +152,10 @@ export default async function handler(req, res) {
     }
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
+    if (sale.kind === 'partner_plan') {
+      const r = await activatePartnerPlan(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
     if (sale.kind === 'loja') {
