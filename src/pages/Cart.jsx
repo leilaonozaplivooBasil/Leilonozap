@@ -631,9 +631,9 @@ export default function Cart() {
         return;
       }
 
-      // Cartão via Stripe Checkout (página hospedada e segura) — redireciona pro pagamento
+      // Cartão via Mercado Pago Checkout Pro (página hospedada e segura) — redireciona pro pagamento
       if (paymentType === 'CREDIT_CARD') {
-        const st = await base44.functions.invoke('createStripeCheckout', {
+        const st = await base44.functions.invoke('createMPCatalogCardCheckout', {
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
@@ -645,7 +645,7 @@ export default function Cart() {
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
-        window.location.href = st.url; // checkout hospedado da Stripe
+        window.location.href = st.url; // checkout hospedado do Mercado Pago
         return;
       }
 
@@ -1524,7 +1524,7 @@ export default function Cart() {
                   </div>
                 </div>
                 <p className="text-center text-gray-500 text-[11px]">
-                  Processado por {paymentType === 'CREDIT_CARD' ? 'Stripe' : 'Mercado Pago'} — não armazenamos seus dados de pagamento.
+                  Processado por Mercado Pago — não armazenamos seus dados de pagamento.
                 </p>
               </div>
             )}
