@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import ComparaiModal from '@/components/comparai/ComparaiModal';
+import CompareAquiModal from '@/components/comparai/CompareAquiModal';
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, X, Loader2, Store as StoreIcon,
   ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package,
@@ -208,7 +208,7 @@ export default function LojaVitrine() {
       {checkout && <Checkout slug={slug} store={store} cartItems={cartItems} total={cartTotal} onClose={() => setCheckout(false)} onPaid={() => { setCart({}); setCheckout(false); }} />}
 
       {comparaiItem && (
-        <ComparaiModal
+        <CompareAquiModal
           auction={{ id: comparaiItem.product_id, title: comparaiItem.title, current_price: comparaiItem.price, starting_price: comparaiItem.price, image_urls: comparaiItem.images }}
           isProduct
           onClose={() => setComparaiItem(null)}

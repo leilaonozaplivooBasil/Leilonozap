@@ -24,7 +24,7 @@ import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
-import ComparaiModal from '../comparai/ComparaiModal';
+import CompareAquiModal from '../comparai/CompareAquiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 
 // 🆕 IMPORT DO MODAL
@@ -783,9 +783,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
         </CardContent>
       </Card>
 
-      {/* Modal Comparai */}
+      {/* Modal CompareAQUI */}
       {showComparai && (
-        <ComparaiModal
+        <CompareAquiModal
           auction={auction}
           onClose={() => setShowComparai(false)}
         />

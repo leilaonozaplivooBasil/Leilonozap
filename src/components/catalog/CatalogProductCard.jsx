@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import ComparaiModal from '../comparai/ComparaiModal';
+import CompareAquiModal from '../comparai/CompareAquiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
 import { Stars } from '../loja/StarRating';
@@ -524,9 +524,9 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
       </CardContent>
     </Card>
 
-      {/* Modal Comparai */}
+      {/* Modal CompareAQUI */}
       {showComparai && (
-        <ComparaiModal 
+        <CompareAquiModal 
           auction={{
             id: product.id,
             title: product.description,

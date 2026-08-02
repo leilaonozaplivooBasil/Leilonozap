@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Sparkles, X, Globe, Zap, ShieldCheck, Check } from 'lucide-react';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 
-export default function ComparaiFloatingButton({ auctions, mode = 'home', hideButton = false }) {
+export default function CompareAquiFloatingButton({ auctions, mode = 'home', hideButton = false }) {
   const [showInfo, setShowInfo] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
 

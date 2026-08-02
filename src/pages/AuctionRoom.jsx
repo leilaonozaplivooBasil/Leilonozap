@@ -18,7 +18,7 @@ import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
-import ComparaiButton from '../components/comparai/ComparaiButton';
+import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
 import ViewTracker from "../components/recommendations/ViewTracker";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
@@ -1400,7 +1400,7 @@ export default function AuctionRoom() {
 
       {/* Um único CompareAQUI na sala: o botão visível é o de baixo (LojaFloatActions);
           aqui só o modal com a comparação real do produto deste leilão. */}
-      <ComparaiButton auction={auction} trigger="event" />
+      <CompareAquiButton auction={auction} trigger="event" />
 
       {/* 🆕 Modal de Saldo Baixo */}
       <LowBalanceModal

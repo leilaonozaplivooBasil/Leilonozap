@@ -10,7 +10,7 @@ import { createPageUrl } from "@/utils";
 
 import CountdownTimer from "../components/common/CountdownTimer";
 import FixedAuctionPanel from "../components/auction/FixedAuctionPanel";
-import ComparaiButton from '../components/comparai/ComparaiButton';
+import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 
 export default function AuctionDetails() {
@@ -392,7 +392,7 @@ export default function AuctionDetails() {
 
       {/* BOTÃO COMPARAI */}
       {/* Botão visível é o CompareAQUI global de baixo (LojaFloatActions); aqui só o modal. */}
-      <ComparaiButton auction={auction} trigger="event" />
+      <CompareAquiButton auction={auction} trigger="event" />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import ComparaiModal from './ComparaiModal';
+import CompareAquiModal from './CompareAquiModal';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 
-export default function ComparaiButton({ auction, mode, trigger }) {
+export default function CompareAquiButton({ auction, mode, trigger }) {
   const [showModal, setShowModal] = useState(false);
 
   // trigger="event": NÃO renderiza botão próprio — a sala de leilão usa o botão
@@ -20,7 +20,7 @@ export default function ComparaiButton({ auction, mode, trigger }) {
 
   if (isEventTriggered) {
     return showModal ? (
-      <ComparaiModal
+      <CompareAquiModal
         auction={auction}
         isProduct={mode === 'catalog'}
         onClose={() => setShowModal(false)}
@@ -45,7 +45,7 @@ export default function ComparaiButton({ auction, mode, trigger }) {
       </button>
 
       {showModal && (
-        <ComparaiModal 
+        <CompareAquiModal 
           auction={auction} 
           isProduct={mode === 'catalog'}
           onClose={() => setShowModal(false)} 

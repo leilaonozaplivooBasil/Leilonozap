@@ -36,7 +36,7 @@ const User = { me: () => base44.auth.me() };
 // Flutuantes globais: CompareAQUI (esquerda) + Fale com a Leila (direita) em todas as páginas.
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
-const ComparaiFloatingButton = React.lazy(() => import("@/components/comparai/ComparaiFloatingButton"));
+const CompareAquiFloatingButton = React.lazy(() => import("@/components/comparai/CompareAquiFloatingButton"));
 const MiniCanvasOverview = React.lazy(() => import("@/components/admin/MiniCanvasOverview"));
 import { Menu, ShoppingCart as CartIcon } from "lucide-react";
 
@@ -1065,7 +1065,7 @@ export default function Layout({ children, currentPageName }) {
             {/* Nas páginas de produto/leilão quem atende o evento 'openComparai' é o
                 ComparaiButton da própria página (comparação REAL do produto).
                 Montar o listener global aqui abriria DOIS modais no mesmo clique. */}
-            {!['AuctionRoom', 'AuctionDetails', 'CatalogProductDetails'].includes(currentPageName) && <ComparaiFloatingButton hideButton />}
+            {!['AuctionRoom', 'AuctionDetails', 'CatalogProductDetails'].includes(currentPageName) && <CompareAquiFloatingButton hideButton />}
             <LojaFloatActions />
           </React.Suspense>
         )}

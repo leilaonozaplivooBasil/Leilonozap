@@ -6,7 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2, Truck, ShieldCheck, RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Gavel, Lock } from "lucide-react";
 import { toast } from "sonner";
-import ComparaiButton from "../components/comparai/ComparaiButton";
+import CompareAquiButton from "../components/comparai/CompareAquiButton";
 import { createPageUrl } from "@/utils";
 import { proxyImage } from "@/functions/proxyImage";
 import { supabase } from "@/api/supabaseClient";
@@ -662,7 +662,7 @@ export default function CatalogProductDetails() {
       {/* CompareAQUI: botão visível é o global de baixo (LojaFloatActions);
           aqui só o modal com a comparação real DESTE produto (um botão só, 25/07). */}
       {product && (
-        <ComparaiButton
+        <CompareAquiButton
           auction={{
             id: product.id,
             title: product.description,

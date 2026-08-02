@@ -9,7 +9,7 @@ import { X, Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, Al
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 
-export default function ComparaiModal({ auction, isProduct = false, onClose }) {
+export default function CompareAquiModal({ auction, isProduct = false, onClose }) {
   const [comparisonData, setComparisonData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -18,7 +18,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
   
   const [localAuction, setLocalAuction] = useState(auction);
   
-  console.log('✅ ComparaiModal inicializado com:', { auctionId: auction.id, title: auction.title });
+  console.log('✅ CompareAquiModal inicializado com:', { auctionId: auction.id, title: auction.title });
   
   const [showLogoEditor, setShowLogoEditor] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -40,7 +40,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
 
   // 🔥 VALIDAÇÃO CRÍTICA: Verifica se auction existe (após os hooks)
   if (!auction || !auction.id) {
-    console.error('❌ ComparaiModal: auction inválido!', auction);
+    console.error('❌ CompareAquiModal: auction inválido!', auction);
     return (
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl bg-gray-900 text-white border-red-500/30">
@@ -390,7 +390,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                     </div>
                   </Button>
 
-                  {/* Botão 2: Usar Comparai (igual aba Arremate) */}
+                  {/* Botão 2: Usar CompareAQUI (igual aba Arremate) */}
                   <Button
                     onClick={() => handleCompare(true)}
                     className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white py-6"
