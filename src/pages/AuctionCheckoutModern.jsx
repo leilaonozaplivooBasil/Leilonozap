@@ -27,6 +27,9 @@ import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { ehDestinoValido, DESTINO_PADRAO } from '@/lib/origemDeposito';
 
 const Auction = base44.entities.Auction;
+// 💳 Mesma taxa aplicada no backend (createMPWalletDeposit) — só para exibir o valor
+// cobrado no cartão ANTES de enviar; quem calcula o valor real cobrado é o servidor.
+const CARD_SURCHARGE_RATE = 0.0499;
 
 export default function AuctionCheckoutModern() {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
@@ -609,6 +612,13 @@ export default function AuctionCheckoutModern() {
     addressStreet?.trim() && addressNumber?.trim() && addressCity?.trim() &&
     addressState?.trim() && addressZip?.trim();
 
+  // 💳 Taxa do cartão só se aplica a recarga de carteira (digital_wallet / commission_wallet) —
+  // não incide em passaporte, depósito de capital de investidor nem arremate.
+  const appliesCardSurcharge = isWalletDeposit && (depositType === 'digital_wallet' || depositType === 'commission_wallet') && paymentType === 'CREDIT_CARD';
+  const baseAmount = isWalletDeposit ? depositAmount : auction.current_price;
+  const cardSurchargeAmount = appliesCardSurcharge ? Math.round(baseAmount * CARD_SURCHARGE_RATE * 100) / 100 : 0;
+  const totalWithSurcharge = baseAmount + cardSurchargeAmount;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -1124,8 +1134,8 @@ export default function AuctionCheckoutModern() {
                 {/* Resumo */}
                 <div className="space-y-3 py-4 border-y border-white/10">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white">Valor</span>
-                    <span className="text-white">R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}</span>
+                    <span className="text-white">Valor do depósito</span>
+                    <span className="text-white">R$ {fmtBR(baseAmount)}</span>
                   </div>
                   {!isWalletDeposit && (
                     <div className="flex justify-between text-sm">
@@ -1133,12 +1143,21 @@ export default function AuctionCheckoutModern() {
                       <span className="text-green-400">A combinar</span>
                     </div>
                   )}
+                  {appliesCardSurcharge && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-yellow-300">Taxa do cartão (4,99%)</span>
+                      <span className="text-yellow-300">+ R$ {fmtBR(cardSurchargeAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-base font-bold pt-2">
-                    <span className="text-white">Total</span>
+                    <span className="text-white">Total {appliesCardSurcharge ? 'no cartão' : ''}</span>
                     <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
-                      R$ {fmtBR((isWalletDeposit ? depositAmount : auction.current_price))}
+                      R$ {fmtBR(appliesCardSurcharge ? totalWithSurcharge : baseAmount)}
                     </span>
                   </div>
+                  {appliesCardSurcharge && (
+                    <p className="text-xs text-gray-400">Você recebe R$ {fmtBR(baseAmount)} de saldo na carteira — a taxa cobre o processamento do cartão.</p>
+                  )}
                 </div>
 
                 {/* Métodos de Pagamento */}
@@ -1177,7 +1196,9 @@ export default function AuctionCheckoutModern() {
                             </div>
                             <div>
                               <p className="font-semibold text-white">Cartão de Crédito</p>
-                              <p className="text-xs text-gray-400">Em até 12x</p>
+                              <p className="text-xs text-gray-400">
+                                {isWalletDeposit && (depositType === 'digital_wallet' || depositType === 'commission_wallet') ? 'Em até 12x + taxa de 4,99%' : 'Em até 12x'}
+                              </p>
                             </div>
                           </div>
                         </button>

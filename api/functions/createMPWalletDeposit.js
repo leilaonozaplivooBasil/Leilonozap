@@ -8,6 +8,10 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
+// 💳 Taxa de processamento do cartão em recargas de carteira — cobre o custo cobrado pelo
+// Mercado Pago nesse meio de pagamento. Só é somada ao valor CARREGADO no cartão; o saldo
+// creditado na carteira do usuário continua sendo exatamente o valor que ele escolheu depositar.
+const CARD_SURCHARGE_RATE = 0.0499; // 4,99%
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -55,6 +59,11 @@ export default async function handler(req, res) {
         : (depositType === 'passaporte' ? 'passaporte'
           : depositType === 'commission_wallet' ? 'commission_deposit'
           : 'wallet_deposit');
+      // Recarga de carteira no cartão: soma a taxa de processamento SÓ no valor cobrado no
+      // cartão. O que é gravado/creditado na carteira (sale_price/total_amount) continua
+      // sendo o valor original escolhido pelo usuário — a taxa não entra no saldo dele.
+      const applyCardSurcharge = cardKind === 'wallet_deposit' || cardKind === 'commission_deposit';
+      const chargeAmount = applyCardSurcharge ? money(amount * (1 + CARD_SURCHARGE_RATE)) : amount;
       await sb('catalog_sales', {
         method: 'POST', headers: { Prefer: 'return=minimal' },
         body: JSON.stringify({
@@ -72,7 +81,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': cardSaleId },
         body: JSON.stringify({
-          transaction_amount: amount,
+          transaction_amount: chargeAmount,
           token: cardToken,
           description,
           installments,
@@ -119,6 +128,8 @@ export default async function handler(req, res) {
         billing_type: 'CREDIT_CARD',
         sale_id: cardSaleId,
         amount,
+        charged_amount: chargeAmount,
+        surcharge_amount: applyCardSurcharge ? money(chargeAmount - amount) : 0,
         payment_id: String(cardPay.id),
         status: cardPay.status,
         status_detail: cardPay.status_detail,
