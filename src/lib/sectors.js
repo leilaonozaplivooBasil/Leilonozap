@@ -43,7 +43,8 @@ export const SECTORS = [
     key: 'ganhar',
     title: 'Lucre',
     icon: DollarSign,
-    href: { page: 'Licensing' },
+    href: { page: 'Lucre' },
+    noMenu: true, // 🛡️ vai direto pra página Lucre (Ganhe Dinheiro + Seja um Parceiro), sem dropdown
     blurb: 'Trabalhe com a gente e lucre junto',
     // Escada da rede (career_levels): Influenciador 5% → Vendedor 10% → Licenciado 13% → Parceiro 15%
     items: [
