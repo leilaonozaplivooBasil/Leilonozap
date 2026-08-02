@@ -1329,7 +1329,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                                         <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
                                         <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
                                         <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (3%)</TableHead>
+                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (5%)</TableHead>
                                         <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
                                       </TableRow>
                                     </TableHeader>
@@ -1339,7 +1339,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                                           <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
                                           <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
                                           <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
-                                          <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.03).toFixed(2)}</TableCell>
+                                          <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.05).toFixed(2)}</TableCell>
                                           <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
                                             {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
                                           </TableCell>
@@ -1449,9 +1449,9 @@ const DashboardContent = ({ user, isAdmin }) => {
 
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Seu Link (Influencer) - 3% por arremate</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Seu Link (Influencer) - 5% por arremate</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Ganhe 3% em R$ sobre cada arremate feito pelos seus indicados no App
+                  Ganhe 5% em R$ sobre cada arremate feito pelos seus indicados no App
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1466,7 +1466,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </div>
                 <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
                   <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (5%):</strong> Você ganha 5% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
@@ -1928,7 +1928,7 @@ export default function LicensingPage() {
                     Torne-se um Influenciador
                   </h1>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
+                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>5% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                     Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
@@ -1940,7 +1940,7 @@ export default function LicensingPage() {
                       Você já é um Influenciador!
                     </h1>
                     <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 3% em dinheiro real!</strong>
+                      Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 5% em dinheiro real!</strong>
                     </p>
                     <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                       Continue crescendo sua rede e <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>aumente seus ganhos</strong> com o sistema de alavancagem!
