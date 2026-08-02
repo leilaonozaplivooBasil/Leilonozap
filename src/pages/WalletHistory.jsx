@@ -194,7 +194,7 @@ export default function WalletHistory() {
                   <div className="flex items-baseline gap-2">
                     <p className="text-6xl font-black text-white">R$</p>
                     <p className="text-6xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                      {(wallet?.balance ?? (totalDeposited - totalUsed)).toFixed(2)}
+                      {fmtBR(wallet?.balance ?? (totalDeposited - totalUsed))}
                     </p>
                   </div>
                 </div>

@@ -196,7 +196,7 @@ export default function CatalogProductDetails() {
 
   const buildShareMessage = (isLicensee) => {
     const productUrl = getCanonicalProductUrl();
-    const price = product.price_catalog?.toFixed(2) || '0.00';
+    const price = fmtBR(product.price_catalog || 0);
 
     if (isLicensee) {
       return `Olá! Tenho interesse neste produto da *sua Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`;

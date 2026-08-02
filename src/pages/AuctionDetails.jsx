@@ -330,7 +330,7 @@ export default function AuctionDetails() {
                     <span className="text-sm">{Math.floor(Math.random() * 25) + 5} lances</span>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Incremento: +R$ {auction.increment?.toFixed(2) || '10.00'}
+                    Incremento: +R$ {fmtBR(auction.increment || 10)}
                   </p>
                 </div>
               </div>
