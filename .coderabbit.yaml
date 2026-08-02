@@ -1,0 +1,61 @@
+language: pt-BR
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  auto_review:
+    enabled: true
+  path_instructions:
+    - path: "api/functions/mpWebhook.js"
+      instructions: |
+        🔴 ZONA VERMELHA — arquivo crítico de pagamento (webhook PIX).
+        Bloquear aprovação automática. Exigir revisão humana explícita.
+        Proibido: base44.asServiceRole.entities em contexto de pagamento.
+        Proibido: qualquer função ou import com "Asaas" no nome.
+        Preservar sempre: saldo_disponivel, saldo_reservado, catalog_sales.
+    - path: "api/functions/submitAtomicBid.js"
+      instructions: |
+        🔴 ZONA VERMELHA — lances e reserva de saldo. Bloquear aprovação
+        automática. Exigir revisão humana explícita.
+    - path: "api/functions/reserveBidBalance.js"
+      instructions: |
+        🔴 ZONA VERMELHA — movimentação de carteira. Bloquear aprovação
+        automática. Exigir revisão humana explícita.
+    - path: "api/functions/releaseBidHold.js"
+      instructions: |
+        🔴 ZONA VERMELHA — movimentação de carteira. Bloquear aprovação
+        automática. Exigir revisão humana explícita.
+    - path: "api/functions/settleAuctionBalance.js"
+      instructions: |
+        🔴 ZONA VERMELHA — movimentação de carteira. Bloquear aprovação
+        automática. Exigir revisão humana explícita.
+    - path: "api/functions/createMPWalletDeposit.js"
+      instructions: |
+        🔴 ZONA VERMELHA — geração de PIX de depósito. Bloquear aprovação
+        automática. Exigir revisão humana explícita.
+    - path: "api/functions/createPartnerPlanPix.js"
+      instructions: |
+        🔴 ZONA VERMELHA — Plano de Parceiro. Bloquear aprovação automática.
+        Exigir revisão humana explícita.
+    - path: "api/functions/checkPartnerPlanPayment.js"
+      instructions: |
+        🔴 ZONA VERMELHA — Plano de Parceiro. Bloquear aprovação automática.
+        Exigir revisão humana explícita.
+    - path: "src/pages/**"
+      instructions: |
+        🟡 ZONA AMARELA — página do app. Revisar impacto em UX e navegação
+        antes de aprovar.
+    - path: "src/components/**"
+      instructions: |
+        🟡 ZONA AMARELA — componente do app. Revisar antes de aprovar.
+    - path: "api/functions/**"
+      instructions: |
+        🟡 ZONA AMARELA (padrão) — função de backend. Revisar antes de
+        aprovar, salvo se listada explicitamente como 🔴 acima.
+    - path: "**/*.css"
+      instructions: "🟢 ZONA VERDE — estilo apenas. Pode aprovar direto."
+    - path: "**/*.{png,jpg,jpeg,svg,webp}"
+      instructions: "🟢 ZONA VERDE — asset. Pode aprovar direto."
+    - path: "**/*.md"
+      instructions: "🟢 ZONA VERDE — documentação. Pode aprovar direto."
+chat:
+  auto_reply: true
