@@ -490,7 +490,8 @@ const DashboardContent = ({ user, isAdmin }) => {
     setIsLoadingCommissions(true);
     try {
       await delay(500);
-      const records = await base44.entities.CommissionRecord.filter({ user_id: user.id }, "-created_date", 200);
+      // 🔴 Nunca exibir comissões canceladas (ex: depósitos de carteira via PIX que não geram comissão)
+      const records = await base44.entities.CommissionRecord.filter({ user_id: user.id, status: { $ne: 'canceled' } }, "-created_date", 200);
       setMyCommissionRecords(Array.isArray(records) ? records : []);
     } catch (error) {
       console.error("Erro ao buscar comissões:", error);
