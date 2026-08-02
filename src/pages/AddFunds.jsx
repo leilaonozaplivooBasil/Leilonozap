@@ -162,7 +162,6 @@ export default function AddFunds() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 p-3">
                 {packages.map((pkg) => {
                   const isSelected = selectedAmount === pkg.amount;
-                  const hasBonus = pkg.bonus_percentage > 0;
                   
                   return (
                     <div key={pkg.id} className="relative group">
@@ -180,17 +179,6 @@ export default function AddFunds() {
                         }`}
                       >
                         <CardContent className="p-6 text-center relative">
-                          {hasBonus && (
-                            <div className="absolute -top-2 -right-2 z-10">
-                              <div className="relative">
-                                <div className="absolute inset-0 bg-yellow-500 rounded-full blur-md animate-pulse"></div>
-                                <Badge className="relative bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 font-bold border-0 shadow-lg">
-                                  +{pkg.bonus_percentage}%
-                                </Badge>
-                              </div>
-                            </div>
-                          )}
-                          
                           {isSelected && (
                             <div className="absolute -top-2 -left-2 z-10">
                               <div className="relative">
@@ -214,14 +202,6 @@ export default function AddFunds() {
                               {pkg.label}
                             </p>
                           </div>
-
-                          {hasBonus && (
-                            <div className="mt-4 pt-4 border-t border-white/10">
-                              <p className={`text-xs font-semibold ${isSelected ? "text-yellow-300" : "text-yellow-400/80"}`}>
-                                🎁 Ganhe R$ {fmtBR((pkg.amount * (pkg.bonus_percentage / 100)))}
-                              </p>
-                            </div>
-                          )}
                         </CardContent>
                       </Card>
                     </div>
@@ -292,36 +272,15 @@ export default function AddFunds() {
                             <span className="text-white font-bold text-base">R$ {fmtBR(selectedAmount)}</span>
                           </div>
                           
-                          {(() => {
-                            const matchingPkg = packages.find(p => p.amount === selectedAmount);
-                            const bonus = matchingPkg?.bonus_percentage || 0;
-                            const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
-                            const totalAmount = selectedAmount + bonusAmount;
-                            
-                            return (
-                              <>
-                                {bonus > 0 && (
-                                  <div className="flex items-center justify-between p-2.5 backdrop-blur-sm bg-yellow-500/10 rounded-lg border border-yellow-400/20">
-                                    <span className="text-yellow-300 text-xs flex items-center gap-1.5 font-medium">
-                                      <Gift className="w-3.5 h-3.5" />
-                                      Bônus ({bonus}%)
-                                    </span>
-                                    <span className="text-yellow-300 font-bold text-base">+ R$ {fmtBR(bonusAmount)}</span>
-                                  </div>
-                                )}
-                                
-                                <div className="relative overflow-hidden">
-                                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg"></div>
-                                  <div className="relative p-3 backdrop-blur-sm bg-black/30 rounded-lg border border-green-400/30 flex items-center justify-between">
-                                    <span className="text-white font-bold text-xs">Total:</span>
-                                    <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text font-bold text-lg">
-                                      R$ {fmtBR(totalAmount)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </>
-                            );
-                          })()}
+                          <div className="relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg"></div>
+                            <div className="relative p-3 backdrop-blur-sm bg-black/30 rounded-lg border border-green-400/30 flex items-center justify-between">
+                              <span className="text-white font-bold text-xs">Total:</span>
+                              <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text font-bold text-lg">
+                                R$ {fmtBR(selectedAmount)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
