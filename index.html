@@ -53,6 +53,9 @@
 
     <!-- manifest: injetado automaticamente pelo vite-plugin-pwa (/manifest.json) -->
 
+    <!-- Login com Google (Google Identity Services) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- 🛟 RECUPERAÇÃO DE CACHE (27/07/2026) — o app instalado no celular abria em
          branco. Causa: quem tinha um deploy antigo em cache pedia /assets/<hash-velho>.js;
          a Vercel devolvia o index.html (200) em vez de 404, o navegador recusava o módulo

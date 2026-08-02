@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
@@ -32,6 +32,74 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   const [resetSuccessMessage, setResetSuccessMessage] = useState('');
 
   const isSaiDeBaixo = theme === 'saidebaixo';
+
+  // 🔑 Login com Google (Google Identity Services): carrega o Client ID do backend
+  // e renderiza o botão oficial do Google. No callback, valida o token no servidor
+  // (função googleLogin) e faz o mesmo login local que o fluxo de e-mail/senha usa.
+  const handleGoogleCredential = async (response) => {
+    setErrorMessage('');
+    setIsLogging(true);
+    try {
+      const result = await base44.functions.invoke('googleLogin', { credential: response.credential });
+      if (!result?.success) {
+        setErrorMessage("❌ " + (result?.error || 'Não foi possível entrar com o Google.'));
+        setIsLogging(false);
+        return;
+      }
+      const user = result.user;
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      sessionStorage.setItem('isLoggedIn', 'true');
+
+      setTimeout(() => {
+        if (onSuccess) onSuccess(user);
+        onClose();
+      }, 300);
+    } catch (error) {
+      console.error("[LOGIN GOOGLE] Erro:", error);
+      setErrorMessage("❌ Erro ao entrar com Google. Tente novamente.");
+      setIsLogging(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+
+    const renderGoogleButton = (clientId) => {
+      if (cancelled) return;
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredential
+        });
+        const el = document.getElementById('googleSignInBtn');
+        if (el) {
+          window.google.accounts.id.renderButton(el, {
+            theme: 'outline',
+            size: 'large',
+            width: 320,
+            text: 'continue_with',
+            locale: 'pt-BR'
+          });
+        }
+      } else if (attempts < 20) {
+        attempts += 1;
+        setTimeout(() => renderGoogleButton(clientId), 250);
+      }
+    };
+
+    (async () => {
+      try {
+        const res = await base44.functions.invoke('getGoogleClientId', {});
+        const clientId = res?.clientId;
+        if (clientId) renderGoogleButton(clientId);
+      } catch (error) {
+        console.debug('Login com Google indisponível:', error?.message);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogin = async () => {
     // ✅ VALIDAÇÕES
@@ -570,6 +638,14 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
           >
             Esqueci minha senha
           </button>
+
+          <div className="flex items-center gap-3">
+            <div className={`flex-1 h-px ${isSaiDeBaixo ? 'bg-gray-300' : 'bg-gray-700'}`} />
+            <span className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>ou</span>
+            <div className={`flex-1 h-px ${isSaiDeBaixo ? 'bg-gray-300' : 'bg-gray-700'}`} />
+          </div>
+
+          <div id="googleSignInBtn" className="flex justify-center" />
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4 sm:gap-3">
