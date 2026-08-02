@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
-import { Loader2, ShoppingBag, QrCode, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, ShoppingBag, QrCode, Copy, CheckCircle2, UserPlus, Clock } from "lucide-react";
 import VendedorProductStrip from "@/components/vendedor/VendedorProductStrip";
 import VendedorProductPreviewModal from "@/components/vendedor/VendedorProductPreviewModal";
 
@@ -27,7 +27,7 @@ export default function VendedorCheckout() {
   useEffect(() => {
     (async () => {
       try {
-        const prods = await base44.entities.Product.filter({ catalog_active: true }, "-created_date", 14);
+        const prods = await base44.entities.Product.filter({ catalog_active: true }, "-created_date", 500);
         setProducts(prods || []);
 
         const saved = localStorage.getItem("currentUser");
@@ -150,7 +150,21 @@ export default function VendedorCheckout() {
         </div>
 
         <div className="rounded-2xl border-2 border-nz-verde/30 bg-white mt-6 p-6 text-center">
-          {confirmed ? (
+          {!user ? (
+            <div className="py-2">
+              <UserPlus className="w-9 h-9 text-nz-verde mx-auto mb-2" />
+              <p className="font-bold text-nz-tinta">Cadastre-se primeiro como usuário para concluir sua compra</p>
+              <p className="text-sm text-nz-tinta-fraca mt-1.5 flex items-center justify-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> É rápido, leva menos de um minuto
+              </p>
+              <button
+                onClick={() => window.dispatchEvent(new Event("openLoginModal"))}
+                className="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 transition-colors"
+              >
+                <UserPlus className="w-5 h-5" /> Cadastrar / Entrar
+              </button>
+            </div>
+          ) : confirmed ? (
             <div className="py-4">
               <CheckCircle2 className="w-10 h-10 text-nz-verde mx-auto mb-2" />
               <p className="font-bold text-nz-verde">Pagamento confirmado! Liberando seu saldo…</p>

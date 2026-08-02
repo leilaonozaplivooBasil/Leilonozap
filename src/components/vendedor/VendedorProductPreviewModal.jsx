@@ -12,7 +12,7 @@ export default function VendedorProductPreviewModal({ open, onClose, products = 
           <DialogTitle>Produtos da Loja Virtual</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-nz-tinta-fraca -mt-2 mb-2">
-          Só pra visualizar — depois do pagamento você escolhe os seus.
+          Produtos disponíveis para sua primeira compra. Conclua o pagamento para liberar o carrinho e organizar sua entrega.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" style={{ pointerEvents: "none" }}>
           {products.map((p) => (
