@@ -100,7 +100,7 @@ export default function SellerEarningsCalculator() {
           </div>
           <div>
             <h3 className="font-bold text-nz-tinta">2. Venda dos seus influenciadores</h3>
-            <p className="text-xs text-nz-tinta-fraca">Você ganha 5% em cada venda deles — cadastre quantos quiser, sem limite</p>
+            <p className="text-xs text-nz-tinta-fraca">Você ganha 5% em cada venda deles — sem limite de ganhos</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

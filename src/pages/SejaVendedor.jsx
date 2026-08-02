@@ -19,8 +19,8 @@ const ESCADA = [
 
 const BENEFICIOS = [
   { icon: Wallet, title: '10% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre toda venda pessoal que você fizer.' },
-  { icon: Users, title: '5% com influenciadores', desc: 'Cadastre influenciadores e ganhe 5% em cada venda que eles fizerem — sem limite de quantos.' },
-  { icon: ShoppingBag, title: 'Loja virtual pronta', desc: 'Bilhões de produtos com preços competitivos, bem abaixo do mercado.' },
+  { icon: Users, title: '5% com influenciadores', desc: 'Cadastre influenciadores e ganhe 5% em cada venda que eles fizerem — sem limite de ganhos.' },
+  { icon: ShoppingBag, title: 'Loja virtual pronta', desc: 'Diversos produtos, com preços variados, sempre abaixo do mercado.' },
   { icon: Megaphone, title: 'Material de divulgação exclusivo', desc: 'Link, QR Code e artes prontas pra postar e vender.' },
   { icon: UserCheck, title: 'Suporte de um executivo de contas', desc: 'Alguém da nossa equipe te acompanha e te ajuda a vender mais.' },
   { icon: TrendingUp, title: 'Cresça na carreira', desc: 'Vendendo bem, você evolui para Licenciado e ganha ainda mais.' },
@@ -44,7 +44,7 @@ export default function SejaVendedor() {
           <p className="mt-4 text-nz-tinta-fraca text-base sm:text-lg">
             Você ganha <strong className="text-nz-verde">10% em cada venda pessoal</strong> e ainda mais{' '}
             <strong className="text-nz-verde">5% em cada venda dos influenciadores</strong> que você cadastrar —
-            sem limite de quantos.
+            sem limite de ganhos.
           </p>
         </div>
 
