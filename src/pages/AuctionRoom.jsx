@@ -1576,7 +1576,11 @@ export default function AuctionRoom() {
         .mobile-bottom-sheet__header { display: flex; justify-content: space-between; padding: 8px 8px 8px 16px; border-bottom: 1px solid #374151; flex-shrink: 0; }
         .mobile-bottom-sheet__title-header { font-size: 16px; font-weight: 600; color: white; }
         .mobile-bottom-sheet__content { padding: 16px; overflow-y: auto; height: 100%; }
-        .mobile-bottom-sheet__image { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+        /* 🖼️ PONTO 6 (Relatório de Homologação) — altura fixa + object-fit:cover cortava
+           mal fotos quadradas de produto (a maioria do catálogo), deixando a imagem
+           "desalinhada" na modal. aspect-ratio + object-fit:contain sempre mostra a
+           imagem inteira, centralizada, em qualquer formato (quadrado ou paisagem). */
+        .mobile-bottom-sheet__image { width: 100%; aspect-ratio: 4 / 3; max-height: 220px; object-fit: contain; background: #111827; border-radius: 8px; margin-bottom: 12px; }
         .mobile-bottom-sheet__title { font-size: 18px; font-weight: bold; color: white; margin-bottom: 8px; word-wrap: break-word; overflow-wrap: break-word; }
         .mobile-bottom-sheet__desc { color: #9ca3af; font-size: 14px; margin-bottom: 16px; word-wrap: break-word; overflow-wrap: break-word; }
         .mobile-bottom-sheet__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
