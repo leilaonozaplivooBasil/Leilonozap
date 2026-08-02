@@ -134,16 +134,19 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                  setCommissionRecords([]);
                  setSalesById({});
                  try {
-                     const records = await CommissionRecord.filter(
+                     const rawRecords = await CommissionRecord.filter(
                          { user_id: licensee.id },
                          "-created_date",
                          500
                      );
 
-                     if (!Array.isArray(records)) {
+                     if (!Array.isArray(rawRecords)) {
                          setIsLoading(false);
                          return;
                      }
+
+                     // Exclui comissões revertidas (ex.: comissão indevida de depósito de carteira, cancelada)
+                     const records = rawRecords.filter(r => r.status !== 'canceled');
 
                      const saleIds = Array.from(new Set(records.map(r => r.sale_id).filter(Boolean)));
                      let salesMap = {};
