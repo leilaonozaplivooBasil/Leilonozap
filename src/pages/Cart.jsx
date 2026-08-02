@@ -518,7 +518,7 @@ export default function Cart() {
       }
     }
 
-    // Cartão é coletado na página segura da Stripe — sem validação de cartão inline.
+    // Cartão é coletado na página segura do Mercado Pago — sem validação de cartão inline.
 
     const totalAmount = calcularTotalFinal();
     // PIX/cartão têm mínimo de R$1; saldo (redenção de comissão) não
@@ -1326,7 +1326,7 @@ export default function Cart() {
                   </span>
                 </button>
 
-                {/* Cartão de Crédito (Stripe) */}
+                {/* Cartão de Crédito (Mercado Pago) */}
                 <button type="button" onClick={() => setPaymentType('CREDIT_CARD')}
                   className={`w-full text-left p-3 rounded-lg border-2 transition-colors flex items-center justify-between gap-3 ${paymentType === 'CREDIT_CARD' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'}`}>
                   <div>
