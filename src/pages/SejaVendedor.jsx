@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ShoppingBag, TrendingUp, Users, Wallet, Megaphone, ArrowRight, CheckCircle2, Store, Truck } from 'lucide-react';
+import { ShoppingBag, TrendingUp, Users, Wallet, Megaphone, ArrowRight, CheckCircle2, Store, Truck, UserCheck } from 'lucide-react';
 import SellerEarningsCalculator from '@/components/seller/SellerEarningsCalculator';
 
 // 🛒 SEJA UM VENDEDOR — página de vendas do cargo Vendedor.
@@ -18,9 +18,11 @@ const ESCADA = [
 ];
 
 const BENEFICIOS = [
-  { icon: Wallet, title: '10% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre cada venda direta que você fizer.' },
-  { icon: ShoppingBag, title: 'Catálogo pronto', desc: 'Milhares de produtos com preço de atacado prontos pra revender.' },
-  { icon: Megaphone, title: 'Material de divulgação', desc: 'Link exclusivo, QR Code e artes prontas pra postar e vender.' },
+  { icon: Wallet, title: '10% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre toda venda pessoal que você fizer.' },
+  { icon: Users, title: '5% com influenciadores', desc: 'Cadastre influenciadores e ganhe 5% em cada venda que eles fizerem — sem limite de quantos.' },
+  { icon: ShoppingBag, title: 'Loja virtual pronta', desc: 'Bilhões de produtos com preços competitivos, bem abaixo do mercado.' },
+  { icon: Megaphone, title: 'Material de divulgação exclusivo', desc: 'Link, QR Code e artes prontas pra postar e vender.' },
+  { icon: UserCheck, title: 'Suporte de um executivo de contas', desc: 'Alguém da nossa equipe te acompanha e te ajuda a vender mais.' },
   { icon: TrendingUp, title: 'Cresça na carreira', desc: 'Vendendo bem, você evolui para Licenciado e ganha ainda mais.' },
 ];
 
@@ -39,7 +41,11 @@ export default function SejaVendedor() {
           <h1 className="mt-5 text-3xl sm:text-4xl md:text-5xl font-black leading-tight text-nz-tinta">
             Seja um <span className="text-nz-verde">Vendedor</span> e ganhe <span className="text-yellow-500">10%</span> em cada venda
           </h1>
-          <div className="mt-4" />
+          <p className="mt-4 text-nz-tinta-fraca text-base sm:text-lg">
+            Você ganha <strong className="text-nz-verde">10% em cada venda pessoal</strong> e ainda mais{' '}
+            <strong className="text-nz-verde">5% em cada venda dos influenciadores</strong> que você cadastrar —
+            sem limite de quantos.
+          </p>
         </div>
 
         {/* 🎬 Vídeo — vendedor real, celular na mão, conversando com clientes */}
@@ -73,7 +79,7 @@ export default function SejaVendedor() {
       <section className="px-4 py-14">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-8 text-nz-tinta">Por que ser vendedor?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {BENEFICIOS.map((b) => (
               <div key={b.title} className="rounded-2xl p-6 bg-white border border-nz-borda">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 bg-nz-verde-fundo border border-nz-verde/30">
