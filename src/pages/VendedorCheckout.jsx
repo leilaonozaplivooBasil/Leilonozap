@@ -7,6 +7,7 @@ import { fmtBR } from "@/lib/money";
 import { Loader2, ShoppingBag, QrCode, Copy, CheckCircle2, UserPlus, Clock } from "lucide-react";
 import VendedorProductStrip from "@/components/vendedor/VendedorProductStrip";
 import VendedorProductPreviewModal from "@/components/vendedor/VendedorProductPreviewModal";
+import VendedorAddressForm from "@/components/vendedor/VendedorAddressForm";
 
 const VALOR_ADESAO = 1497;
 
@@ -23,6 +24,8 @@ export default function VendedorCheckout() {
   const [pix, setPix] = useState(null); // { payment_id, pix_qr_code, pix_payload }
   const [confirmed, setConfirmed] = useState(false);
   const pollRef = useRef(null);
+  const [address, setAddress] = useState({ zip: "", number: "", street: "", complement: "", neighborhood: "", city: "", state: "" });
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -40,6 +43,15 @@ export default function VendedorCheckout() {
         const fresh = await base44.entities.AppUser.filter({ id: localUser.id });
         const freshUser = fresh?.[0] || localUser;
         setUser(freshUser);
+        setAddress({
+          zip: freshUser.address_zip_code || "",
+          number: freshUser.address_number || "",
+          street: freshUser.address_street || "",
+          complement: freshUser.address_complement || "",
+          neighborhood: freshUser.address_neighborhood || "",
+          city: freshUser.address_city || "",
+          state: freshUser.address_state || "",
+        });
 
         // Já pagou e tem saldo esperando? Vai direto escolher os produtos.
         if ((freshUser.seller_credit_balance || 0) > 0) {
@@ -56,6 +68,32 @@ export default function VendedorCheckout() {
 
   useEffect(() => () => clearInterval(pollRef.current), []);
 
+  // 📮 Autocompleta rua/bairro/cidade/UF quando o CEP fica completo (igual à nossa página de Checkout)
+  useEffect(() => {
+    const cleanCep = (address.zip || "").replace(/\D/g, "");
+    if (cleanCep.length !== 8) return;
+    let cancelled = false;
+    (async () => {
+      setIsLoadingCep(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await res.json();
+        if (cancelled || data.erro) return;
+        setAddress((prev) => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+        }));
+      } catch (e) { /* silencioso, usuário preenche na mão */ }
+      finally { if (!cancelled) setIsLoadingCep(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [address.zip]);
+
+  const isAddressComplete = address.zip?.trim() && address.number?.trim() && address.street?.trim() && address.city?.trim() && address.state?.trim();
+
   const blockBeforePayment = () => {
     toast.info("Faça seu pagamento para poder escolher seus produtos.");
   };
@@ -65,8 +103,21 @@ export default function VendedorCheckout() {
       window.dispatchEvent(new Event("openLoginModal"));
       return;
     }
+    if (!isAddressComplete) {
+      toast.error("Preencha seu endereço de entrega antes de continuar.");
+      return;
+    }
     setCreating(true);
     try {
+      await base44.entities.AppUser.update(user.id, {
+        address_zip_code: address.zip,
+        address_number: address.number,
+        address_street: address.street,
+        address_complement: address.complement,
+        address_neighborhood: address.neighborhood,
+        address_city: address.city,
+        address_state: address.state,
+      });
       const res = await base44.functions.invoke("createSellerAdhesionPayment", {
         user_id: user.id,
         amount: VALOR_ADESAO,
@@ -149,6 +200,10 @@ export default function VendedorCheckout() {
           </button>
         </div>
 
+        {user && !confirmed && (
+          <VendedorAddressForm address={address} onChange={setAddress} isLoadingCep={isLoadingCep} />
+        )}
+
         <div className="rounded-2xl border-2 border-nz-verde/30 bg-white mt-6 p-6 text-center">
           {!user ? (
             <div className="py-2">
@@ -194,12 +249,15 @@ export default function VendedorCheckout() {
               <p className="text-sm text-nz-tinta-fraca mt-1">Pagamento único via PIX</p>
               <button
                 onClick={handlePagar}
-                disabled={creating}
+                disabled={creating || !isAddressComplete}
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 disabled:opacity-60 transition-colors"
               >
                 {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
                 Pagar e liberar meu saldo
               </button>
+              {!isAddressComplete && (
+                <p className="text-xs text-nz-tinta-fraca mt-2">Preencha seu endereço de entrega acima para continuar.</p>
+              )}
             </div>
           )}
         </div>
