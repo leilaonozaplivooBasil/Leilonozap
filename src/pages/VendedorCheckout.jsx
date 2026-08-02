@@ -158,7 +158,10 @@ export default function VendedorCheckout() {
                 <Clock className="w-3.5 h-3.5" /> É rápido, leva menos de um minuto
               </p>
               <button
-                onClick={() => window.dispatchEvent(new Event("openLoginModal"))}
+                onClick={() => {
+                  sessionStorage.setItem("registerReturnTo", createPageUrl("VendedorCheckout"));
+                  navigate(createPageUrl("Register"));
+                }}
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 transition-colors"
               >
                 <UserPlus className="w-5 h-5" /> Cadastrar / Entrar

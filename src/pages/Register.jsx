@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,75 @@ export default function Register() {
   const [showTermo, setShowTermo] = useState(false);
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
+
+  // 🔀 Pra onde voltar depois do cadastro (ex: quem veio do checkout de Vendedor)
+  const redirectAfterAuth = () => {
+    const returnTo = sessionStorage.getItem('registerReturnTo');
+    if (returnTo) {
+      sessionStorage.removeItem('registerReturnTo');
+      window.location.href = returnTo;
+      return;
+    }
+    const fromPartners = sessionStorage.getItem('registerFromPartners');
+    if (fromPartners === 'true') {
+      sessionStorage.removeItem('registerFromPartners');
+      window.location.href = createPageUrl("InvestorDashboard");
+    } else {
+      window.location.href = createPageUrl("Home");
+    }
+  };
+
+  // 🔑 Cadastro/Login rápido com Google — mesma verificação de token da LoginModal.
+  // O backend googleLogin já cria a conta automaticamente se o e-mail não existir.
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const handleGoogleCredential = async (response) => {
+    setErrorMessage('');
+    setIsGoogleLoading(true);
+    try {
+      const result = await base44.functions.invoke('googleLogin', { credential: response.credential });
+      if (!result?.success) {
+        setErrorMessage("❌ " + (result?.error || 'Não foi possível continuar com o Google.'));
+        setIsGoogleLoading(false);
+        return;
+      }
+      const user = result.user;
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      registrarAceiteTermo(user);
+      setTimeout(redirectAfterAuth, 300);
+    } catch (error) {
+      setErrorMessage("❌ Erro ao continuar com Google. Tente novamente.");
+      setIsGoogleLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+    const renderGoogleButton = (clientId) => {
+      if (cancelled) return;
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({ client_id: clientId, callback: handleGoogleCredential });
+        const el = document.getElementById('googleRegisterBtn');
+        if (el) {
+          window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: 320, text: 'signup_with', locale: 'pt-BR' });
+        }
+      } else if (attempts < 20) {
+        attempts += 1;
+        setTimeout(() => renderGoogleButton(clientId), 250);
+      }
+    };
+    (async () => {
+      try {
+        const res = await base44.functions.invoke('getGoogleClientId', {});
+        const clientId = res?.clientId;
+        if (clientId) renderGoogleButton(clientId);
+      } catch (error) {
+        console.debug('Cadastro com Google indisponível:', error?.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const validatePassword = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(pwd);
 
@@ -250,16 +319,7 @@ export default function Register() {
 
       console.log(`[REGISTER] Registro bem-sucedido: ${newUser.full_name}`);
 
-      setTimeout(() => {
-        // Verifica se veio da página Partners
-        const fromPartners = sessionStorage.getItem('registerFromPartners');
-        if (fromPartners === 'true') {
-          sessionStorage.removeItem('registerFromPartners');
-          window.location.href = createPageUrl("InvestorDashboard");
-        } else {
-          window.location.href = createPageUrl("Home");
-        }
-      }, 500);
+      setTimeout(redirectAfterAuth, 500);
 
     } catch (error) {
       console.error("[REGISTER] Erro no registro:", error);
@@ -290,6 +350,17 @@ export default function Register() {
           </CardHeader>
 
           <CardContent>
+            <div className="mb-5">
+              <div id="googleRegisterBtn" className="flex justify-center" />
+              {isGoogleLoading && (
+                <p className={`text-center text-sm mt-2 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Continuando com o Google…</p>
+              )}
+              <div className="flex items-center gap-3 mt-4">
+                <div className={`flex-1 h-px ${isSaiDeBaixo ? 'bg-gray-300' : 'bg-gray-700'}`} />
+                <span className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>ou preencha seus dados</span>
+                <div className={`flex-1 h-px ${isSaiDeBaixo ? 'bg-gray-300' : 'bg-gray-700'}`} />
+              </div>
+            </div>
             <form onSubmit={handleRegister} className="space-y-5 sm:space-y-6">
               {errorMessage && (
                 <div className={`${isSaiDeBaixo ? 'bg-red-100 border-2 border-red-300' : 'bg-red-900/20 border border-red-500/50'} rounded-lg p-3 flex items-start gap-3`}>
