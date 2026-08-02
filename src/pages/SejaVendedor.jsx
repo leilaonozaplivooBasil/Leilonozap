@@ -11,10 +11,10 @@ import SellerEarningsCalculator from '@/components/seller/SellerEarningsCalculat
 // ⚠️ O vendedor NÃO se auto-cadastra: ele é cadastrado por um LICENCIADO (aba "Meus Vendedores"
 // do Painel de Alavancagem). Por isso o CTA aqui é "falar com um licenciado", não "criar conta".
 const ESCADA = [
-  { cargo: 'Influenciador', pct: '5%', desc: 'Indica e ganha em cada venda e arremate', gratis: true },
-  { cargo: 'Vendedor', pct: '10%', desc: 'Vende direto pelo catálogo, sem comprar estoque', destaque: true },
-  { cargo: 'Licenciado', pct: '13%', desc: 'Tem loja virtual própria e monta equipe — ganha em toda venda da sua rede' },
   { cargo: 'Parceiro', pct: '15%', desc: 'Investe e ganha sobre toda a estrutura abaixo dele' },
+  { cargo: 'Licenciado', pct: '13%', desc: 'Tem loja virtual própria e monta equipe — ganha em toda venda da sua rede' },
+  { cargo: 'Vendedor', pct: '10%', desc: 'Vende direto pelo catálogo, sem comprar estoque', destaque: true },
+  { cargo: 'Influenciador', pct: '5%', desc: 'Indica e ganha em cada venda e arremate', gratis: true },
 ];
 
 const BENEFICIOS = [
@@ -187,7 +187,8 @@ export default function SejaVendedor() {
           </div>
 
           <p className="text-center text-xs text-nz-tinta-fraca mt-5">
-            A escada continua: Ponto de Retirada 1% · Loja Física 3% · Distribuidor 1% — a rede toda divide 30% de cada venda.
+            A escada continua: Ponto de Retirada 18% · Loja Física 19% · Distribuidor 20% na venda direta.
+            Distribuímos 20% da nossa venda para o nosso programa de parceria.
           </p>
         </div>
       </section>
