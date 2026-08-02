@@ -1,14 +1,13 @@
 // createStoreOrder — pedido ONLINE da vitrine de uma loja da rede (/loja/:slug).
 // Público (comprador anônimo). Valida itens contra o store_inventory da loja, cria a venda
-// (kind='loja', seller_id = dono da loja) e gera PIX (Mercado Pago) ou Cartão (Stripe).
-// O estoque só é baixado e a comissão só é paga QUANDO o pagamento confirma (mpWebhook/stripeWebhook).
+// (kind='loja', seller_id = dono da loja) e gera PIX ou Cartão — os dois via Mercado Pago.
+// O estoque só é baixado e a comissão só é paga QUANDO o pagamento confirma (mpWebhook).
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
-const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -74,7 +73,7 @@ export default async function handler(req, res) {
       buyer_address: customer.address || null, buyer_cep: customer.cep || null,
       product_title: String(title).slice(0, 300), sale_price: total, total_amount: total, quantity: totalQty,
       items_json: lines, status: 'pending_payment', tracking_code: tracking,
-      payment_method: gateway === 'card' ? 'card_stripe' : 'pix_mp', created_date: new Date().toISOString(),
+      payment_method: gateway === 'card' ? 'credit_card_mp' : 'pix_mp', created_date: new Date().toISOString(),
     };
     // grava (resiliente: se alguma coluna extra não existir, cai pro mínimo)
     let r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(base) });
@@ -102,24 +101,26 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, gateway: 'pix', sale_id: saleId, amount: total, tracking, payment_id: String(pay.id), pix_code: td.qr_code, qr_code_base64: td.qr_code_base64, ticket_url: td.ticket_url });
     }
 
-    if (!STRIPE_KEY) return res.status(500).json({ success: false, error: 'Cartão indisponível no momento' });
-    const form = new URLSearchParams();
-    form.set('mode', 'payment');
-    form.set('success_url', `${BASE_URL}/loja/${slug}?pago=${tracking}`);
-    form.set('cancel_url', `${BASE_URL}/loja/${slug}`);
-    if (customer.email) form.set('customer_email', customer.email);
-    form.set('client_reference_id', saleId); form.set('metadata[sale_id]', saleId);
-    lines.forEach((ln, i) => {
-      form.set(`line_items[${i}][price_data][currency]`, 'brl');
-      form.set(`line_items[${i}][price_data][product_data][name]`, ln.title || 'Produto');
-      form.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(ln.unit * 100)));
-      form.set(`line_items[${i}][quantity]`, String(ln.qty));
-    });
-    const sr = await fetch('https://api.stripe.com/v1/checkout/sessions', { method: 'POST', headers: { Authorization: `Bearer ${STRIPE_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString() });
-    const sess = await sr.json();
-    if (!sr.ok || !sess?.id) return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (sess?.error?.message || '').slice(0, 200) });
-    await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stripe_session_id: sess.id }) });
-    return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount: total, tracking, url: sess.url });
+    // 💳 Cartão via Mercado Pago Checkout Pro (página hospedada) — substitui a antiga Stripe.
+    if (!MP_TOKEN) return res.status(500).json({ success: false, error: 'Cartão indisponível no momento' });
+    const [cFirst, ...cRest] = String(customer.name).trim().split(/\s+/);
+    const prefBody = {
+      items: lines.map((ln) => ({ title: ln.title || 'Produto', quantity: ln.qty, unit_price: ln.unit, currency_id: 'BRL' })),
+      payer: { email: customer.email || 'comprador@leilaonozap.net', name: cFirst || 'Cliente', surname: cRest.join(' ') || 'NoZap' },
+      external_reference: saleId,
+      notification_url: `${BASE_URL}/api/functions/mpWebhook`,
+      back_urls: { success: `${BASE_URL}/loja/${slug}?pago=${tracking}`, failure: `${BASE_URL}/loja/${slug}`, pending: `${BASE_URL}/loja/${slug}` },
+      auto_return: 'approved',
+      payment_methods: {
+        excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }, { id: 'bank_transfer' }, { id: 'debit_card' }, { id: 'digital_wallet' }],
+        installments: 12,
+      },
+    };
+    const sr = await fetch('https://api.mercadopago.com/checkout/preferences', { method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(prefBody) });
+    const pref = await sr.json();
+    if (!sr.ok || !pref?.id) return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 200) });
+    await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
+    return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount: total, tracking, url: pref.init_point });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao criar pedido', details: String(e?.message || e) });
   }
