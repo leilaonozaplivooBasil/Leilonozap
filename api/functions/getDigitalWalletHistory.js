@@ -1,10 +1,11 @@
-// getDigitalWalletHistory — extrato financeiro PESSOAL do usuário para a carteira.
-// Monta as transações a partir de catalog_sales (depósitos, arremates, compras de loja),
-// auction_messages (lances dados em leilões) e withdrawal_requests (saques).
-// Comissões de rede NÃO aparecem aqui — têm extrato próprio (ExtratoComissoes, em
-// /Carteira) e foram removidas deste extrato pessoal a pedido do Gabriel (31/07).
-// Lido via service_role porque as tabelas financeiras são privadas pra anon.
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+// getDigitalWalletHistory — extrato da Carteira Digital do usuário (versão Vercel).
+// Espelho fiel de base44/functions/getDigitalWalletHistory/entry.ts, que nunca é chamada
+// em produção (base44.functions.invoke roteia para /api/functions/, não pro Deno).
+// Sem este arquivo, a tela "Carteira Digital" (Perfil → Carteira Digital) recebia 404
+// e, dependendo do estado, acabava caindo no ErrorBoundary em loop ("Detectamos um problema").
+const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
+  .replace(/\/rest\/v1\/?$/, '')
+  .replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function sb(path, opts = {}) {
@@ -15,10 +16,11 @@ function sb(path, opts = {}) {
 }
 
 const DEPOSIT_KINDS = ['wallet_deposit', 'passaporte', 'commission_deposit'];
+const SALE_COLS = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
-  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
+  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido', transactions: [] });
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const userId = String(body?.user_id || '').trim();
@@ -26,32 +28,27 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente', transactions: [] });
 
     const uid = encodeURIComponent(userId);
-    const saleCols = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name';
-    const [salesR, mySalesR, bidsR, wdR] = await Promise.all([
-      sb(`catalog_sales?select=${saleCols}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`),
-      // vendas em que o usuário é o VENDEDOR (admin/lojista): o que vendeu, pra quem e quanto
-      sb(`catalog_sales?select=${saleCols}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`),
-      // Lances dados em leilões (não somam/subtraem do saldo — só informativo)
-      sb(`auction_messages?select=id,auction_id,bid_amount,frete_amount,created_date&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`),
-      sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`),
+
+    const [sales, mySales, wds, bidMessages] = await Promise.all([
+      sb(`catalog_sales?select=${SALE_COLS}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`).then(r => r.json()).catch(() => []),
+      sb(`catalog_sales?select=${SALE_COLS}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
+      sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`).then(r => r.json()).catch(() => []),
+      sb(`auction_messages?select=id,auction_id,bid_amount,created_date&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
     ]);
-    const sales = await salesR.json();
-    const mySales = await mySalesR.json();
-    const bids = await bidsR.json();
-    const wds = await wdR.json();
 
     const transactions = [];
 
     for (const s of Array.isArray(sales) ? sales : []) {
       const amount = Number(s.total_amount) || Number(s.sale_price) || 0;
       const isDeposit = DEPOSIT_KINDS.includes(s.kind);
+      if (isDeposit && s.status === 'cancelled') continue;
       transactions.push({
         id: s.id,
         type: isDeposit ? 'deposit' : 'purchase',
         title: isDeposit
           ? (s.kind === 'passaporte' ? 'Passaporte de Lances'
             : s.kind === 'commission_deposit' ? 'Depósito — Carteira de Comissões'
-            : 'Depósito na Carteira')
+              : 'Depósito na Carteira')
           : (s.product_title || 'Compra'),
         source: isDeposit
           ? (s.payment_method === 'pix_mp' ? 'PIX' : (s.payment_method || 'Pagamento'))
@@ -65,7 +62,7 @@ export default async function handler(req, res) {
     }
 
     for (const s of Array.isArray(mySales) ? mySales : []) {
-      if (s.buyer_id === userId) continue; // compra própria já listada acima
+      if (s.buyer_id === userId) continue;
       transactions.push({
         id: `sale-${s.id}`,
         type: 'sale',
@@ -76,49 +73,6 @@ export default async function handler(req, res) {
         status: 'paid',
         tracking_code: s.tracking_code || null,
         date: s.created_date,
-      });
-    }
-
-    // Título do leilão de cada lance (pra não mostrar "Lance — Leilão" genérico)
-    const auctionIds = [...new Set((Array.isArray(bids) ? bids : []).map((b) => b.auction_id).filter(Boolean))].slice(0, 100);
-    const auctionTitles = {};
-    const auctionInfo = {};
-    if (auctionIds.length) {
-      try {
-        const inList = auctionIds.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-        const ar = await (await sb(`auctions?select=id,title,winner_id,current_price,status&id=in.(${inList})`)).json();
-        for (const a of Array.isArray(ar) ? ar : []) {
-          auctionTitles[a.id] = a.title;
-          auctionInfo[a.id] = a;
-        }
-      } catch { /* sem o título, a linha ainda aparece como "Leilão" */ }
-    }
-
-    // 💚 TRANSPARÊNCIA DO LANCE: no modelo de reserva, o dinheiro fica preso APENAS no
-    // lance que está na frente. Todo lance anterior/superado já teve o valor devolvido.
-    // Aqui o extrato diz isso em português claro, pra ninguém achar que "perdeu" o valor.
-    const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-    for (const b of Array.isArray(bids) ? bids : []) {
-      const a = auctionInfo[b.auction_id];
-      const valorLance = money2(b.bid_amount);
-      const freteLance = money2(b.frete_amount);
-      const valor = money2(valorLance + freteLance);
-      const ehLiderDesteLance = !!a && a.winner_id === userId && money2(a.current_price) === valorLance;
-      const encerrado = !!a && a.status !== 'active';
-
-      let bid_state = 'superado'; // padrão seguro: valor já devolvido
-      if (ehLiderDesteLance) bid_state = encerrado ? 'arrematado' : 'liderando';
-
-      transactions.push({
-        id: `bid-${b.id}`,
-        type: 'bid',
-        title: `Lance — ${auctionTitles[b.auction_id] || 'Leilão'}`,
-        source: 'Leilão',
-        amount: valor,
-        frete_amount: freteLance,
-        status: 'info',
-        bid_state,
-        date: b.created_date,
       });
     }
 
@@ -134,7 +88,32 @@ export default async function handler(req, res) {
       });
     }
 
-    transactions.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    // Lances dados em leilões — só informativo (não somam/subtraem do saldo).
+    const bids = Array.isArray(bidMessages) ? bidMessages : [];
+    const auctionIds = [...new Set(bids.map(m => m.auction_id).filter(Boolean))].slice(0, 60);
+    const auctionTitles = {};
+    if (auctionIds.length > 0) {
+      try {
+        const idsList = auctionIds.map(id => encodeURIComponent(id)).join(',');
+        const auctionsData = await (await sb(`auctions?select=id,title&id=in.(${idsList})`)).json();
+        if (Array.isArray(auctionsData)) {
+          for (const a of auctionsData) auctionTitles[a.id] = a.title;
+        }
+      } catch { /* segue sem os títulos */ }
+    }
+    for (const m of bids) {
+      transactions.push({
+        id: `bid-${m.id}`,
+        type: 'bid',
+        title: `Lance — ${auctionTitles[m.auction_id] || 'Leilão'}`,
+        source: 'Leilão',
+        amount: Number(m.bid_amount) || 0,
+        status: 'info',
+        date: m.created_date,
+      });
+    }
+
+    transactions.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
     return res.status(200).json({ success: true, transactions });
   } catch (e) {
