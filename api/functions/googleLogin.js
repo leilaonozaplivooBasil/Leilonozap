@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     }
     const payload = await verifyRes.json();
 
-    const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+    const expectedClientId = (process.env.GOOGLE_CLIENT_ID || '').trim();
     if (!expectedClientId || payload.aud !== expectedClientId) {
       return res.status(401).json({ success: false, error: 'Token do Google não pertence a este app.' });
     }
