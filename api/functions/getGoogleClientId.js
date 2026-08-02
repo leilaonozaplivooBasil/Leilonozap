@@ -13,5 +13,5 @@ export default function handler(req, res) {
     return res.status(500).json({ error: 'GOOGLE_CLIENT_ID not configured' });
   }
 
-  return res.status(200).json({ clientId });
+  return res.status(200).json({ clientId: clientId.trim() });
 }
