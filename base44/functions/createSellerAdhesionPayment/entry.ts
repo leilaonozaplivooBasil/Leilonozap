@@ -7,13 +7,32 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { user_id, amount, buyer_name, buyer_email, buyer_cpf } = await req.json();
+        const { user_id, amount, buyer_name, buyer_email, buyer_cpf, address } = await req.json();
 
         if (!user_id) {
             return Response.json({ error: 'user_id é obrigatório' }, { status: 400 });
         }
         if (!amount || amount < 1497) {
             return Response.json({ error: 'A primeira compra do vendedor é de no mínimo R$ 1.497' }, { status: 400 });
+        }
+
+        // 🔒 Grava o endereço via service role: escrita direta do navegador no AppUser
+        // é bloqueada pelo RLS (usuário custom, sem sessão autenticada no Supabase),
+        // e isso derrubava o pagamento antes mesmo de chegar no Mercado Pago.
+        if (address) {
+            try {
+                await base44.asServiceRole.entities.AppUser.update(user_id, {
+                    address_zip_code: address.zip,
+                    address_number: address.number,
+                    address_street: address.street,
+                    address_complement: address.complement,
+                    address_neighborhood: address.neighborhood,
+                    address_city: address.city,
+                    address_state: address.state,
+                });
+            } catch (addrErr) {
+                console.error('❌ Erro ao salvar endereço da adesão de vendedor:', addrErr.message);
+            }
         }
 
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN')?.trim();

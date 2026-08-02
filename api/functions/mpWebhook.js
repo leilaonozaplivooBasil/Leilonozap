@@ -61,6 +61,27 @@ async function activateAdesao(sale) {
   return { adesao: true, level: sale.adesao_level, product_credit: sale.total_amount, bonus };
 }
 
+// Adesão de Vendedor (primeira compra R$1.497): credita seller_credit_balance de forma
+// atômica (CAS) — o vendedor usa esse crédito pra escolher produtos na Loja Virtual.
+async function creditSellerAdhesion(sale) {
+  const amount = round2(Number(sale.total_amount || sale.sale_price) || 0);
+  if (!sale.buyer_id || amount <= 0) return { credited: 0, skipped: true };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const rows = await (await sb(`app_users?select=seller_credit_balance&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+    const user = Array.isArray(rows) ? rows[0] : null;
+    if (!user) return { credited: 0, error: 'buyer_notfound' };
+    const current = round2(Number(user.seller_credit_balance) || 0);
+    const novo = round2(current + amount);
+    const casFilter = current === 0 ? `or=(seller_credit_balance.eq.0,seller_credit_balance.is.null)` : `seller_credit_balance=eq.${current}`;
+    const patch = await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&${casFilter}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ seller_credit_balance: novo }),
+    });
+    const updated = await patch.json().catch(() => []);
+    if (Array.isArray(updated) && updated.length) return { credited: amount, new_balance: novo };
+  }
+  return { credited: 0, error: 'cas_conflict' };
+}
+
 // Ativa o Plano de Parceiro (Lucre Conosco/InvestorDashboard): cria o registro em
 // partner_plan_purchases com o mesmo formato usado pela ativação manual (PartnerPlanActivation.jsx).
 async function activatePartnerPlan(sale) {
@@ -153,6 +174,10 @@ export default async function handler(req, res) {
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
+    if (sale.kind === 'seller_adhesion') {
+      const r = await creditSellerAdhesion(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, seller_adhesion: true, ...r });
     }
     if (sale.kind === 'partner_plan') {
       const r = await activatePartnerPlan(sale);

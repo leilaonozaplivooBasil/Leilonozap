@@ -109,21 +109,13 @@ export default function VendedorCheckout() {
     }
     setCreating(true);
     try {
-      await base44.entities.AppUser.update(user.id, {
-        address_zip_code: address.zip,
-        address_number: address.number,
-        address_street: address.street,
-        address_complement: address.complement,
-        address_neighborhood: address.neighborhood,
-        address_city: address.city,
-        address_state: address.state,
-      });
       const res = await base44.functions.invoke("createSellerAdhesionPayment", {
         user_id: user.id,
         amount: VALOR_ADESAO,
         buyer_name: user.full_name,
         buyer_email: user.email,
         buyer_cpf: user.cpf,
+        address,
       });
       if (res?.data?.success) {
         setPix(res.data);
