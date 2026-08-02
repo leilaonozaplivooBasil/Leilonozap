@@ -8,7 +8,7 @@ import { resolverFreteDoCheckout } from '../_lib/frete.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
-const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
+const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
 const round2 = (n) => Math.round(n * 100) / 100;
 
 function sb(path, opts = {}) {
