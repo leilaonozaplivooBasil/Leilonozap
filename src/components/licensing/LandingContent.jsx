@@ -25,6 +25,23 @@ export default function LandingContent({ onRegisterClick, onLoginClick }) {
 
   return (
     <>
+      {/* 🎬 Hero — influenciador real gravando conteúdo, reforça a identidade
+          "pessoas reais / foda" usada na página Lucre */}
+      <div className="mb-16 -mt-4 rounded-2xl overflow-hidden border-2 border-green-500/30 shadow-2xl relative">
+        <video
+          src="https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/7d6541982_Vdeo_Hero_Influenciador.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-64 sm:h-80 md:h-96 object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent flex flex-col items-center justify-end pb-6 px-4 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">Seja um Influenciador Leilão NoZap</h2>
+          <p className="text-gray-200 text-sm sm:text-base mt-1 drop-shadow-lg">Grave, indique, ganhe 5% em dinheiro real por cada arremate</p>
+        </div>
+      </div>
+
       <div className="text-center">
         <div className="mb-12">
           <div className="inline-flex flex-col items-center gap-3 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border-2 border-gray-700 hover:border-green-500/50 transition-all duration-300">
