@@ -25,6 +25,7 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
 import ShareLeiloesButton from '../components/home/ShareLeiloesButton';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
+import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
@@ -847,6 +848,9 @@ export default function Home() {
         <div className="mb-6">
           <AuctionSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
         </div>
+
+        {/* 🧭 Setores de leilão que saíram do dropdown da navbar — descoberta pós-clique */}
+        <AuctionSectorLinks />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">

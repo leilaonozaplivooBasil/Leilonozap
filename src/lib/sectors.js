@@ -15,6 +15,7 @@ export const SECTORS = [
     title: 'Comprar',
     icon: ShoppingBag,
     href: { page: 'Catalog' },          // o título também é clicável
+    noMenu: true, // 🛡️ vai direto pra Loja Virtual, sem dropdown (menos fricção no clique)
     blurb: 'Produtos com entrega em todo o Brasil',
     items: [
       { title: 'Loja Virtual', desc: 'Todos os produtos, PIX ou cartão', page: 'Catalog' },
@@ -27,6 +28,7 @@ export const SECTORS = [
     title: 'Leilões',
     icon: Gavel,
     href: { page: 'Home' },
+    noMenu: true, // 🛡️ vai direto pros Leilões Ativos; os outros setores viram chips na própria Home
     blurb: 'Arremate por uma fração do preço',
     items: [
       { title: 'Leilões ativos', desc: 'Entre na sala e dê seu lance', page: 'Home' },

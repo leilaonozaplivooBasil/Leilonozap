@@ -72,7 +72,7 @@ export default function NavDesktop({
             <div
               key={s.key}
               className="relative"
-              onMouseEnter={() => setOpenSector(s.key)}
+              onMouseEnter={() => !s.noMenu && setOpenSector(s.key)}
               onMouseLeave={() => setOpenSector((cur) => (cur === s.key ? null : cur))}
             >
               <SectorLink
@@ -125,7 +125,7 @@ export default function NavDesktop({
                 )}
               </SectorLink>
 
-              {openSector === s.key && (
+              {openSector === s.key && !s.noMenu && (
                 <div
                   className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-72 z-50"
                   // pt-2 mantém o hover vivo na "ponte" entre o botão e o painel

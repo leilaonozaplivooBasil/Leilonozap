@@ -225,6 +225,19 @@ export default function NavMobile({
 
             {/* === SETORES (acordeão — mesma fonte do desktop) === */}
             {SECTORS.map((s) => {
+              if (s.noMenu) {
+                return (
+                  <SectorLink
+                    key={s.key}
+                    target={s.href}
+                    onClick={onClose}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide text-gray-300 hover:text-white transition-all duration-200"
+                  >
+                    {s.icon && <s.icon className="w-5 h-5 text-emerald-300 shrink-0" />}
+                    <span className="flex-1 text-left">{s.title}</span>
+                  </SectorLink>
+                );
+              }
               const open = openSector === s.key;
               return (
                 <div key={s.key}>
