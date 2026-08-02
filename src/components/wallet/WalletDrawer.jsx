@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +17,7 @@ import {
   Banknote,
   Copy,
   QrCode,
+  CreditCard,
   RefreshCw,
   Check,
   Loader2,
@@ -30,6 +33,9 @@ import BidStateTag from '@/components/wallet/BidStateTag';
 import { jaAceitouPassaporte, registrarAceitePassaporte } from '@/lib/passaporteTermo';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
+// 💳 Mesma taxa do cartão aplicada no backend (createMPWalletDeposit) — só para exibir
+// o valor cobrado no cartão antes de seguir para o checkout completo.
+const CARD_SURCHARGE_RATE = 0.0499;
 
 const TX_STYLE = {
   deposit: { icon: ArrowDownCircle, grad: 'bg-gradient-to-br from-emerald-400 to-green-600', glow: 'shadow-[0_2px_10px_rgba(16,185,129,0.5)]' },
@@ -48,8 +54,10 @@ function formatDate(d) {
 }
 
 export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpdated, startView = 'wallet' }) {
+  const navigate = useNavigate();
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const [view, setView] = useState('wallet'); // 'wallet' | 'recharge' | 'pix' | 'success'
+  const [paymentMethod, setPaymentMethod] = useState('PIX'); // 'PIX' | 'CARD'
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -94,6 +102,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       setVisibleCount(15);
       setFilterTab('all');
       setAceiteTermos(false);
+      setPaymentMethod('PIX');
       loadWallet();
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
@@ -127,6 +136,19 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   }, [view]);
 
   const effectiveAmount = rechargeAmount || (parseFloat(customAmount.replace(',', '.')) || 0);
+  const cardChargeAmount = Math.round(effectiveAmount * (1 + CARD_SURCHARGE_RATE) * 100) / 100;
+
+  // 💳 Cartão: fecha a carteira e leva pro checkout completo (mesmo formulário de cartão
+  // já usado nos leilões), que credita exatamente o valor escolhido — a taxa fica só na cobrança.
+  const handlePayWithCard = () => {
+    if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
+    if (precisaAceite && !aceiteTermos) { toast.error('Aceite os termos do crédito para continuar.'); return; }
+    if (precisaAceite) { registrarAceitePassaporte(currentUser).catch(() => { /* segue */ }); }
+    onClose();
+    navigate(createPageUrl('AuctionCheckoutModern'), {
+      state: { amount: effectiveAmount, depositType: 'digital_wallet', returnTo: null },
+    });
+  };
 
   const handleGeneratePix = async () => {
     if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
@@ -454,14 +476,65 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       className="bg-gray-800/50 border-gray-700 text-white h-12 text-lg"
                     />
                   </div>
-                  <Button
-                    onClick={handleGeneratePix}
-                    disabled={generating || effectiveAmount < 100 || (precisaAceite && !aceiteTermos)}
-                    className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
-                  >
-                    {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
-                    {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 100 ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
-                  </Button>
+
+                  {/* Forma de pagamento — PIX ou Cartão */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPaymentMethod('PIX')}
+                      className={`h-14 rounded-xl border-2 flex items-center justify-center gap-2 font-semibold transition-all ${paymentMethod === 'PIX'
+                        ? 'border-green-500 bg-green-500/15 text-green-300'
+                        : 'border-gray-700 bg-gray-800/40 text-white hover:border-green-500/50'}`}
+                    >
+                      <QrCode className="w-4 h-4" /> PIX
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('CARD')}
+                      className={`h-14 rounded-xl border-2 flex items-center justify-center gap-2 font-semibold transition-all ${paymentMethod === 'CARD'
+                        ? 'border-green-500 bg-green-500/15 text-green-300'
+                        : 'border-gray-700 bg-gray-800/40 text-white hover:border-green-500/50'}`}
+                    >
+                      <CreditCard className="w-4 h-4" /> Cartão
+                    </button>
+                  </div>
+
+                  {/* Aviso claro da taxa do cartão — o saldo creditado é sempre o valor escolhido */}
+                  {paymentMethod === 'CARD' && effectiveAmount >= 100 && (
+                    <div className="rounded-xl border border-yellow-500/40 bg-yellow-600/10 p-3.5 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-300">Valor que cai na carteira:</span>
+                        <span className="text-white font-bold">R$ {fmtBR(effectiveAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-300">Taxa do cartão (4,99%):</span>
+                        <span className="text-yellow-300 font-bold">+ R$ {fmtBR(cardChargeAmount - effectiveAmount)}</span>
+                      </div>
+                      <div className="h-px bg-yellow-500/20" />
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-yellow-200 font-semibold">Total cobrado no cartão:</span>
+                        <span className="text-yellow-300 font-bold">R$ {fmtBR(cardChargeAmount)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'PIX' ? (
+                    <Button
+                      onClick={handleGeneratePix}
+                      disabled={generating || effectiveAmount < 100 || (precisaAceite && !aceiteTermos)}
+                      className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
+                    >
+                      {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
+                      {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 100 ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handlePayWithCard}
+                      disabled={effectiveAmount < 100 || (precisaAceite && !aceiteTermos)}
+                      className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
+                    >
+                      <CreditCard className="w-5 h-5 mr-2" />
+                      {effectiveAmount >= 100 ? `Pagar R$ ${fmtBR(cardChargeAmount)} no Cartão` : 'Pagar no Cartão'}
+                    </Button>
+                  )}
                   <p className="text-xs text-gray-500 text-center">Valor mínimo R$ 100,00 · Pagamento seguro</p>
                 </div>
               )}
