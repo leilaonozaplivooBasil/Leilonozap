@@ -4,20 +4,20 @@ import { createPageUrl } from '@/utils';
 import { ShoppingBag, TrendingUp, Users, Wallet, Megaphone, ArrowRight, CheckCircle2, UserPlus } from 'lucide-react';
 
 // 🛒 SEJA UM VENDEDOR — página de vendas do cargo Vendedor.
-// Percentuais da ÁRVORE OFICIAL (api/_lib/arvoreOficial.js, Santana 14/07/2026 — não alterar
-// aqui, só exibir): cada cargo tem a SUA fatia da venda em que está na cadeia.
-//   Influenciador 5% · Vendedor 5% · Licenciado 3% · Parceiro 2% (rede toda: 30%)
+// Percentuais de VENDA DIRETA da ÁRVORE OFICIAL (src/lib/careerLevels.js — fonte única,
+// validada 22/07/2026 — não alterar aqui, só exibir):
+//   Influenciador 5% · Vendedor 10% · Licenciado 13% · Parceiro 15% (venda direta de cada cargo)
 // ⚠️ O vendedor NÃO se auto-cadastra: ele é cadastrado por um LICENCIADO (aba "Meus Vendedores"
 // do Painel de Alavancagem). Por isso o CTA aqui é "falar com um licenciado", não "criar conta".
 const ESCADA = [
   { cargo: 'Influenciador', pct: '5%', desc: 'Indica e ganha em cada venda e arremate', gratis: true },
-  { cargo: 'Vendedor', pct: '5%', desc: 'Vende direto pelo catálogo, sem comprar estoque', destaque: true },
-  { cargo: 'Licenciado', pct: '3%', desc: 'Tem loja virtual própria e monta equipe — ganha em toda venda da sua rede' },
-  { cargo: 'Parceiro', pct: '2%', desc: 'Investe e ganha sobre toda a estrutura abaixo dele' },
+  { cargo: 'Vendedor', pct: '10%', desc: 'Vende direto pelo catálogo, sem comprar estoque', destaque: true },
+  { cargo: 'Licenciado', pct: '13%', desc: 'Tem loja virtual própria e monta equipe — ganha em toda venda da sua rede' },
+  { cargo: 'Parceiro', pct: '15%', desc: 'Investe e ganha sobre toda a estrutura abaixo dele' },
 ];
 
 const BENEFICIOS = [
-  { icon: Wallet, title: '5% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre cada venda direta que você fizer.' },
+  { icon: Wallet, title: '10% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre cada venda direta que você fizer.' },
   { icon: ShoppingBag, title: 'Catálogo pronto', desc: 'Milhares de produtos com preço de atacado. Você não precisa comprar estoque.' },
   { icon: Megaphone, title: 'Material de divulgação', desc: 'Link exclusivo, QR Code e artes prontas pra postar e vender.' },
   { icon: TrendingUp, title: 'Cresça na carreira', desc: 'Vendendo bem, você evolui para Licenciado e ganha ainda mais.' },
@@ -36,11 +36,11 @@ export default function SejaVendedor() {
             <ShoppingBag className="w-4 h-4" /> Programa de Vendedores
           </span>
           <h1 className="mt-5 text-4xl sm:text-5xl font-black leading-tight">
-            Seja um <span className="text-green-400">Vendedor</span> e ganhe <span className="text-yellow-400">5%</span> em cada venda
+            Seja um <span className="text-green-400">Vendedor</span> e ganhe <span className="text-yellow-400">10%</span> em cada venda
           </h1>
           <p className="mt-4 text-gray-300 text-lg">
             Sem comprar estoque, sem investir nada. Você vende os produtos do nosso catálogo e recebe
-            <strong className="text-green-400"> 5% em dinheiro real</strong> sobre cada venda que fizer.
+            <strong className="text-green-400"> 10% em dinheiro real</strong> sobre cada venda que fizer.
           </p>
 
           <div className="mt-8 inline-block rounded-2xl p-5 bg-gray-800/70 border border-gray-700 text-left max-w-md">
@@ -118,7 +118,7 @@ export default function SejaVendedor() {
               'Um Licenciado cadastra você como vendedor e te entrega o seu link exclusivo.',
               'Você divulga os produtos com o seu link (WhatsApp, redes, QR Code).',
               'O cliente compra pelo seu link e nós entregamos — você não toca em estoque.',
-              'Sua comissão de 5% cai na sua carteira. Você saca quando quiser.',
+              'Sua comissão de 10% cai na sua carteira. Você saca quando quiser.',
             ].map((t, i) => (
               <div key={i} className="flex items-start gap-3 rounded-xl p-4 bg-gray-800/50 border border-gray-700">
                 <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
