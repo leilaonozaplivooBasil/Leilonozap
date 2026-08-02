@@ -6,10 +6,10 @@ import ProfessionalJourney from './ProfessionalJourney';
 
 export default function LandingContent({ onRegisterClick, onLoginClick, isSaiDeBaixo: isSaiDeBaixoProp }) {
   const benefits = [
-    { icon: DollarSign, text: "Ganhos em Dinheiro Real", description: "Receba 5% em R$ toda vez que seus indicados arrematarem ou comprarem na Loja Virtual." },
-    { icon: Zap, text: "Comissões Recorrentes", description: "Ganho recorrente: cada nova compra da sua rede gera nova comissão." },
-    { icon: BarChart, text: "Dashboard em Tempo Real", description: "Acompanhe indicados, vendas e comissões ao vivo, sem planilha." },
-    { icon: ShieldCheck, text: "Ganhe com sua Influência", description: "Use as redes sociais do jeito certo: torne-se um especialista e ganhe alavancado com sua rede de indicados." }
+    { icon: DollarSign, text: "Ganhos em Dinheiro Real", description: "Receba 5% toda vez que seus amigos arrematarem ou comprarem na Loja Virtual." },
+    { icon: Zap, text: "Comissões Recorrentes", description: "Ganho recorrente: cada nova compra dos seus amigos gera nova comissão." },
+    { icon: BarChart, text: "Painel em Tempo Real", description: "Acompanhe suas indicações, compras e comissões ao vivo, direto no seu painel." },
+    { icon: ShieldCheck, text: "Ganhe com sua Influência", description: "Use as redes sociais do jeito certo: torne-se um especialista e ganhe com quem te segue e te admira." }
   ];
 
   const isSaiDeBaixo = isSaiDeBaixoProp ?? sessionStorage.getItem('saiDeBaixoContext') === 'true';
@@ -45,9 +45,7 @@ export default function LandingContent({ onRegisterClick, onLoginClick, isSaiDeB
           <TrendingUp className={`w-4 h-4 ${accentText}`} />
           <span className={`font-semibold text-xs ${accentText}`}>Programa de Influenciadores</span>
         </div>
-        <p className="text-sm md:text-base text-nz-tinta-fraca max-w-xl mx-auto mb-5">
-          Indique amigos e ganhe <strong className={accentText}>5% em dinheiro real</strong> em cada arremate ou venda na Loja Virtual que eles fizerem.
-        </p>
+        <div className="mb-6" />
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button size="lg" onClick={onRegisterClick} className={`text-white font-bold px-8 rounded-xl shadow-lg ${accentBtn}`}>
             <Smartphone className="w-5 h-5 mr-2" />Quero me cadastrar
