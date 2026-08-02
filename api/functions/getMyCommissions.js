@@ -37,15 +37,16 @@ export default async function handler(req, res) {
     const limit = Math.min(Math.max(parseInt(body?.limit) || 200, 1), 1000);
     const offset = Math.max(parseInt(body?.offset) || 0, 0);
 
-    // lançamentos do usuário (mais recentes primeiro)
+    // lançamentos do usuário (mais recentes primeiro). status=neq.canceled exclui
+    // comissões revertidas (ex.: comissão indevida de depósito de carteira, cancelada).
     const rows = await (await sb(
-      `commission_records?select=id,sale_id,role,percent,amount,sale_amount,product_title,anchor_user_name,sale_type,status,created_date&user_id=eq.${encodeURIComponent(userId)}&order=created_date.desc&limit=${limit}&offset=${offset}`
+      `commission_records?select=id,sale_id,role,percent,amount,sale_amount,product_title,anchor_user_name,sale_type,status,created_date&user_id=eq.${encodeURIComponent(userId)}&status=neq.canceled&order=created_date.desc&limit=${limit}&offset=${offset}`
     )).json();
     const lista = Array.isArray(rows) ? rows : [];
 
     // total geral e por cargo (sem paginação — o extrato tem que fechar com a carteira)
     const todos = await (await sb(
-      `commission_records?select=role,amount,created_date&user_id=eq.${encodeURIComponent(userId)}&limit=20000`
+      `commission_records?select=role,amount,created_date&user_id=eq.${encodeURIComponent(userId)}&status=neq.canceled&limit=20000`
     )).json();
     const all = Array.isArray(todos) ? todos : [];
     const porCargo = {};
