@@ -38,10 +38,96 @@ export default async function handler(req, res) {
     if (!buyerEmail) return res.status(200).json({ success: false, error: 'E-mail obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
+    // 💳 Cartão de crédito via Mercado Pago (token gerado pelo SDK JS no navegador).
+    // Branch ADITIVO — não reaproveita nem altera nenhuma linha do fluxo PIX abaixo.
+    if (billingType === 'CREDIT_CARD') {
+      if (!MP_TOKEN) return res.status(200).json({ success: false, error: 'Pagamento indisponível no momento' });
+      const cardToken = body?.card_token;
+      const cardPaymentMethodId = body?.payment_method_id;
+      const installments = Math.min(12, Math.max(1, parseInt(body?.installments) || 1));
+      if (!cardToken || !cardPaymentMethodId) {
+        return res.status(200).json({ success: false, error: 'Dados do cartão inválidos. Tente novamente.' });
+      }
+
+      const cardSaleId = oid();
+      const cardKind = !isWalletDeposit
+        ? 'arremate'
+        : (depositType === 'passaporte' ? 'passaporte'
+          : depositType === 'commission_wallet' ? 'commission_deposit'
+          : 'wallet_deposit');
+      await sb('catalog_sales', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          id: cardSaleId, base44_id: cardSaleId, kind: cardKind,
+          buyer_id: buyerId, buyer_email: buyerEmail, buyer_name: buyerName,
+          product_title: description, sale_price: amount, total_amount: amount, quantity: 1,
+          status: 'pending_payment', payment_method: 'credit_card_mp',
+          tracking_code: (isWalletDeposit ? 'DP' : 'AR') + cardSaleId.slice(0, 8).toUpperCase(),
+          created_date: new Date().toISOString(),
+        }),
+      });
+
+      const [cardFirst, ...cardRest] = buyerName.split(/\s+/);
+      const mpCard = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': cardSaleId },
+        body: JSON.stringify({
+          transaction_amount: amount,
+          token: cardToken,
+          description,
+          installments,
+          payment_method_id: cardPaymentMethodId,
+          external_reference: cardSaleId,
+          notification_url: `${BASE_URL}/api/functions/mpWebhook`,
+          payer: {
+            email: buyerEmail,
+            first_name: cardFirst || 'Cliente',
+            last_name: cardRest.join(' ') || 'NoZap',
+            ...(buyerCpf ? { identification: { type: 'CPF', number: buyerCpf } } : {}),
+          },
+        }),
+      });
+      const cardPay = await mpCard.json();
+      if (!mpCard.ok || !cardPay?.id) {
+        return res.status(200).json({ success: false, error: 'Falha ao processar cartão', details: (cardPay?.message || '').slice(0, 200) });
+      }
+      if (cardPay.status === 'rejected') {
+        return res.status(200).json({ success: false, error: 'Pagamento recusado pela operadora do cartão.', details: cardPay.status_detail || null });
+      }
+
+      await sb(`catalog_sales?id=eq.${cardSaleId}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ mp_payment_id: String(cardPay.id) }),
+      });
+
+      // Cartão é síncrono: se já aprovou, dispara a MESMA confirmação que o webhook real
+      // usaria (fulfillStoreOrder, activatePartnerPlan, creditWalletDeposit, etc.) chamando
+      // o próprio endpoint do webhook — reaproveita 100% da regra de negócio sem duplicar
+      // nem tocar em mpWebhook.js. O webhook real do MP também chega depois como rede de segurança.
+      if (cardPay.status === 'approved') {
+        try {
+          await fetch(`${BASE_URL}/api/functions/mpWebhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: { id: cardPay.id } }),
+          });
+        } catch (_) { /* rede de segurança: o webhook do MP também vai chegar */ }
+      }
+
+      return res.status(200).json({
+        success: true,
+        billing_type: 'CREDIT_CARD',
+        sale_id: cardSaleId,
+        amount,
+        payment_id: String(cardPay.id),
+        status: cardPay.status,
+        status_detail: cardPay.status_detail,
+        installments,
+      });
+    }
+
     if (billingType !== 'PIX') {
-      // O checkout manda os dados do cartão inline, mas nenhum gateway de cartão inline está ligado
-      // (Stripe aqui é redirect). Evita falha silenciosa: orienta usar PIX até religarmos o cartão.
-      return res.status(200).json({ success: false, error: 'Pagamento com cartão em manutenção. Use PIX por enquanto.' });
+      return res.status(200).json({ success: false, error: 'Forma de pagamento não suportada.' });
     }
     if (!MP_TOKEN) return res.status(200).json({ success: false, error: 'PIX indisponível no momento' });
 

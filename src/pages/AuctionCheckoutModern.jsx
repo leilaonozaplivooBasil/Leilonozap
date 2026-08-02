@@ -79,6 +79,37 @@ export default function AuctionCheckoutModern() {
   const [cardMonth, setCardMonth] = useState('');
   const [cardYear, setCardYear] = useState('');
   const [cardCvv, setCardCvv] = useState('');
+  const [installments, setInstallments] = useState(1);
+  const mpInstanceRef = useRef(null);
+
+  // 💳 Carrega o SDK JS do Mercado Pago e inicializa com a Public Key (endpoint dedicado,
+  // a chave pública é segura para o navegador). Não interfere em nada do fluxo PIX.
+  useEffect(() => {
+    let cancelled = false;
+    const loadMp = async () => {
+      try {
+        if (!window.MercadoPago) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://sdk.mercadopago.com/js/v2';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+          });
+        }
+        const keyResp = await base44.functions.invoke('getMPPublicKey', {});
+        const publicKey = keyResp?.data?.public_key || keyResp?.public_key;
+        if (!cancelled && window.MercadoPago && publicKey) {
+          mpInstanceRef.current = new window.MercadoPago(publicKey, { locale: 'pt-BR' });
+        }
+      } catch (e) {
+        console.debug('MercadoPago SDK não carregou:', e?.message);
+      }
+    };
+    loadMp();
+    return () => { cancelled = true; };
+  }, []);
 
   // Accordion states
   const [expandedSection, setExpandedSection] = useState('personal');
@@ -233,18 +264,47 @@ export default function AuctionCheckoutModern() {
 
     try {
       const amount = isWalletDeposit ? depositAmount : auction.current_price;
-      const cardData = paymentType === 'CREDIT_CARD' ? {
-        holderName: cardHolder.trim(),
-        number: cardNumber.replace(/\D/g, ''),
-        expiryMonth: parseInt(cardMonth),
-        expiryYear: parseInt(cardYear),
-        ccv: cardCvv.replace(/\D/g, ''),
-        address: {
-          zip_code: addressZip.replace(/\D/g, ''),
-          number: addressNumber,
-          complement: addressComplement
+
+      // 💳 Cartão: tokeniza no navegador via SDK do Mercado Pago — número/CVV NUNCA
+      // saem daqui pro backend (exigência PCI). Só o token e o payment_method_id viajam.
+      let cardToken = null;
+      let cardPaymentMethodId = null;
+      if (paymentType === 'CREDIT_CARD') {
+        const mp = mpInstanceRef.current;
+        if (!mp) {
+          setIsProcessing(false);
+          toast.dismiss('checkout-loading');
+          toast.error('Pagamento com cartão ainda carregando. Tente novamente em instantes.');
+          return;
         }
-      } : null;
+        try {
+          const cleanCardNumber = cardNumber.replace(/\D/g, '');
+          const methods = await mp.getPaymentMethods({ bin: cleanCardNumber.slice(0, 6) });
+          cardPaymentMethodId = methods?.results?.[0]?.id;
+          const tokenResp = await mp.createCardToken({
+            cardNumber: cleanCardNumber,
+            cardholderName: cardHolder.trim(),
+            cardExpirationMonth: cardMonth,
+            cardExpirationYear: cardYear,
+            securityCode: cardCvv.replace(/\D/g, ''),
+            identificationType: 'CPF',
+            identificationNumber: cpf.replace(/\D/g, ''),
+          });
+          cardToken = tokenResp?.id;
+        } catch (tokenError) {
+          console.error('❌ Erro ao tokenizar cartão:', tokenError);
+          setIsProcessing(false);
+          toast.dismiss('checkout-loading');
+          setPaymentError({ show: true, title: 'Cartão Inválido', description: 'Verifique os dados do cartão e tente novamente.', details: null });
+          return;
+        }
+        if (!cardToken || !cardPaymentMethodId) {
+          setIsProcessing(false);
+          toast.dismiss('checkout-loading');
+          setPaymentError({ show: true, title: 'Cartão Inválido', description: 'Não foi possível validar o cartão. Verifique os dados e tente novamente.', details: null });
+          return;
+        }
+      }
 
       console.log('📤 Enviando para backend:', { auction_id: isWalletDeposit ? null : auction.id, amount, billing_type: paymentType });
 
@@ -274,7 +334,9 @@ export default function AuctionCheckoutModern() {
                   ? `Depósito na Carteira Digital - R$ ${fmtBR(amount)}`
                   : `Depósito na Carteira de Comissões - R$ ${fmtBR(amount)}`)
             : `Arremate - ${auction.title}`,
-          card_data: cardData,
+          card_token: cardToken,
+          payment_method_id: cardPaymentMethodId,
+          installments: paymentType === 'CREDIT_CARD' ? installments : undefined,
           deposit_type: depositType,
           is_investor_capital: isInvestorCapital // flag para o backend reconhecer
         });
@@ -916,10 +978,25 @@ export default function AuctionCheckoutModern() {
                         </div>
                       </div>
 
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Parcelas
+                        </label>
+                        <select
+                          value={installments}
+                          onChange={(e) => setInstallments(parseInt(e.target.value))}
+                          className="w-full h-12 bg-gray-800/50 border border-gray-700 rounded-md text-white px-3"
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={n}>{n}x</option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
                         <p className="text-yellow-300 text-sm flex items-start gap-2">
                           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                          Seus dados de cartão são criptografados e processados de forma segura pela ASAAS
+                          Seus dados de cartão são criptografados e processados de forma segura pelo Mercado Pago
                         </p>
                       </div>
                     </CardContent>
