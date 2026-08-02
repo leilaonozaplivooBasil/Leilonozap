@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ShoppingBag, TrendingUp, Users, Wallet, Megaphone, ArrowRight, CheckCircle2, UserPlus } from 'lucide-react';
+import { ShoppingBag, TrendingUp, Users, Wallet, Megaphone, ArrowRight, CheckCircle2, Store, Truck } from 'lucide-react';
+import SellerEarningsCalculator from '@/components/seller/SellerEarningsCalculator';
 
 // 🛒 SEJA UM VENDEDOR — página de vendas do cargo Vendedor.
 // Percentuais de VENDA DIRETA da ÁRVORE OFICIAL (src/lib/careerLevels.js — fonte única,
@@ -18,7 +19,7 @@ const ESCADA = [
 
 const BENEFICIOS = [
   { icon: Wallet, title: '10% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre cada venda direta que você fizer.' },
-  { icon: ShoppingBag, title: 'Catálogo pronto', desc: 'Milhares de produtos com preço de atacado. Você não precisa comprar estoque.' },
+  { icon: ShoppingBag, title: 'Catálogo pronto', desc: 'Milhares de produtos com preço de atacado prontos pra revender.' },
   { icon: Megaphone, title: 'Material de divulgação', desc: 'Link exclusivo, QR Code e artes prontas pra postar e vender.' },
   { icon: TrendingUp, title: 'Cresça na carreira', desc: 'Vendendo bem, você evolui para Licenciado e ganha ainda mais.' },
 ];
@@ -38,10 +39,7 @@ export default function SejaVendedor() {
           <h1 className="mt-5 text-3xl sm:text-4xl md:text-5xl font-black leading-tight text-nz-tinta">
             Seja um <span className="text-nz-verde">Vendedor</span> e ganhe <span className="text-yellow-500">10%</span> em cada venda
           </h1>
-          <p className="mt-4 text-nz-tinta-fraca text-base sm:text-lg">
-            Sem comprar estoque, sem investir nada. Você vende os produtos do nosso catálogo e recebe
-            <strong className="text-nz-verde"> 10% em dinheiro real</strong> sobre cada venda que fizer.
-          </p>
+          <div className="mt-4" />
         </div>
 
         {/* 🎬 Vídeo — vendedor real, celular na mão, conversando com clientes */}
@@ -61,12 +59,9 @@ export default function SejaVendedor() {
         </div>
 
         <div className="max-w-md mx-auto mt-8 rounded-2xl p-5 bg-nz-verde-fundo border border-nz-verde/30 text-left">
-          <p className="flex items-center gap-2 text-sm font-bold text-nz-verde">
-            <UserPlus className="w-4 h-4" /> Como entrar
-          </p>
-          <p className="text-sm text-nz-tinta-fraca mt-2 leading-relaxed">
-            O cadastro de vendedor é feito por um <strong className="text-nz-tinta">Licenciado</strong> — ele te cadastra
-            e te acompanha. Já conhece um licenciado? Fale com ele. Se não, a gente te apresenta:
+          <p className="text-sm text-nz-tinta-fraca leading-relaxed">
+            Você se cadastra, compra o seu <strong className="text-nz-tinta">kit inicial</strong> e nós te indicamos
+            um executivo da sua região para te dar suporte — você também será conectado a um licenciado local.
           </p>
           <a href={whats} target="_blank" rel="noreferrer" className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-white bg-nz-verde hover:bg-nz-verde/90 transition-colors">
             Quero ser vendedor <ArrowRight className="w-4 h-4" />
@@ -88,6 +83,54 @@ export default function SejaVendedor() {
                 <p className="text-nz-tinta-fraca text-sm mt-1 leading-relaxed">{b.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CALCULADORA */}
+      <section className="px-4 py-14 bg-nz-cinza-fundo">
+        <SellerEarningsCalculator />
+      </section>
+
+      {/* KIT INICIAL */}
+      <section className="px-4 py-14">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-black text-center mb-3 text-nz-tinta">Como começar</h2>
+          <p className="text-nz-tinta-fraca text-center mb-8">
+            Na primeira compra, você monta seu <strong className="text-nz-tinta">kit inicial de R$ 1.497 em produtos</strong>,
+            escolhendo direto da nossa Loja Virtual.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <div className="rounded-2xl p-5 border border-nz-borda bg-white flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-nz-verde-fundo border border-nz-verde/30">
+                <Truck className="w-5 h-5 text-nz-verde" />
+              </div>
+              <div>
+                <p className="font-bold text-nz-tinta">Receba em casa</p>
+                <p className="text-sm text-nz-tinta-fraca mt-1">Seu kit chega direto no seu endereço.</p>
+              </div>
+            </div>
+            <div className="rounded-2xl p-5 border border-nz-borda bg-white flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-nz-verde-fundo border border-nz-verde/30">
+                <Store className="w-5 h-5 text-nz-verde" />
+              </div>
+              <div>
+                <p className="font-bold text-nz-tinta">Retire na loja</p>
+                <p className="text-sm text-nz-tinta-fraca mt-1">Prefere buscar? Retire pessoalmente.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-6 border border-nz-verde/30 bg-nz-verde-fundo text-center">
+            <p className="text-sm text-nz-tinta-fraca">
+              Pague com <strong className="text-nz-tinta">PIX ou cartão</strong> pelo Mercado Pago. Depois de vender os
+              produtos do seu kit, você já recupera o valor investido — e a partir daí, toda nova venda te paga
+              <strong className="text-nz-verde"> 10% em dinheiro real</strong> na sua carteira.
+            </p>
+            <button onClick={() => navigate(createPageUrl('Catalog'))} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
+              <ShoppingBag className="w-4 h-4" /> Ver produtos na Loja Virtual
+            </button>
           </div>
         </div>
       </section>
@@ -131,10 +174,10 @@ export default function SejaVendedor() {
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-8 text-nz-tinta">Como funciona na prática</h2>
           <div className="space-y-3">
             {[
-              'Um Licenciado cadastra você como vendedor e te entrega o seu link exclusivo.',
-              'Você divulga os produtos com o seu link (WhatsApp, redes, QR Code).',
-              'O cliente compra pelo seu link e nós entregamos — você não toca em estoque.',
-              'Sua comissão de 10% cai na sua carteira. Você saca quando quiser.',
+              'Você se cadastra e monta seu kit inicial de R$ 1.497 escolhendo produtos da Loja Virtual.',
+              'Pague com PIX ou cartão, e receba em casa ou retire na loja.',
+              'Revenda os produtos do seu kit e recupere o valor investido.',
+              'A partir daí, toda nova venda te paga 10% em dinheiro real, direto na sua carteira.',
             ].map((t, i) => (
               <div key={i} className="flex items-start gap-3 rounded-xl p-4 bg-white border border-nz-borda">
                 <CheckCircle2 className="w-5 h-5 text-nz-verde shrink-0 mt-0.5" />
