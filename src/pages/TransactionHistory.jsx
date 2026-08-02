@@ -33,23 +33,12 @@ export default function TransactionHistory() {
   const loadPayments = async () => {
     setIsLoading(true);
     try {
-      // ✅ Busca AsaasPayment com asServiceRole para bypassar RLS e ver TODOS
-      const data = await base44.functions.invoke('getAsaasTransactions', {});
-      const transactions = data?.transactions || [];
+      const transactions = await base44.entities.AsaasPayment.list('-created_date', 500);
       setPayments(transactions);
       setFilteredPayments(transactions);
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
-      // Fallback: tenta direto via entidade (pode ter limitação de RLS)
-      try {
-        const fallback = await base44.entities.AsaasPayment.list('-created_date', 500);
-        setPayments(fallback);
-        setFilteredPayments(fallback);
-        setLastUpdated(new Date());
-      } catch (e) {
-        console.error("Fallback também falhou:", e);
-      }
     } finally {
       setIsLoading(false);
     }
