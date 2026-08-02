@@ -649,7 +649,7 @@ export default function CatalogCheckout2() {
                                     </button>
 
                                     <p className="text-xs text-gray-500 text-center mt-3">
-                                        Pagamento processado de forma segura via ASAAS
+                                        Pagamento processado de forma segura via Mercado Pago
                                     </p>
 
                                     {/* Mensagem cartão de crédito → WhatsApp */}
