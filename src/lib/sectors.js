@@ -50,7 +50,7 @@ export const SECTORS = [
       { title: 'Seja um Influenciador', desc: 'Grátis: indique e ganhe 5% em cada venda e arremate', page: 'Licensing' },
       { title: 'Seja um Vendedor', desc: 'Ganhe 10% na venda direta (cadastro pelo licenciado)', page: 'SejaVendedor' },
       { title: 'Seja um Licenciado', desc: 'Tenha sua loja virtual e ganhe 13% na venda', page: 'Licensing' },
-      { title: 'Seja um Parceiro', desc: 'Invista conosco e acompanhe seu rendimento', page: 'Partners' },
+      { title: 'Seja um Parceiro', desc: 'Participe da nossa operação e acompanhe seu lucro', page: 'Partners' },
     ],
   },
 ];
