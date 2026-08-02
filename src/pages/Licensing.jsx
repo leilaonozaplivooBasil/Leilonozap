@@ -1899,121 +1899,18 @@ export default function LicensingPage() {
     <>
       <div className={`min-h-screen ${isSaiDeBaixo ?
         'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
-        'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
+        !isLicensee ? 'bg-white text-nz-tinta' : 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
       }>
-        {/* 🛡️ FASE 4.5 — Hero pública SÓ para visitantes (isLicensee=false).
-            Usuário logado (licenciado/admin) vai direto pro Dashboard, sem
-            landing de recrutamento em cima. */}
-        {!isLicensee && (
-        <div className="py-14 sm:py-16 px-4 sm:px-6">
-          <div className="relative max-w-4xl mx-auto text-center bg-white rounded-3xl shadow-xl border border-nz-borda px-6 sm:px-10 py-10 sm:py-12">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}>
-
-              <div className={`inline-flex items-center gap-2 mb-5 px-5 py-2 rounded-full border ${isSaiDeBaixo ?
-                'bg-red-50 border-red-200' :
-                'bg-nz-verde-fundo border-nz-verde/30'}`
-              }>
-                <TrendingUp className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}`} />
-                <span className={`font-semibold text-sm ${isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}`}>Programa de Influenciadores</span>
-              </div>
-
-              {/* TÍTULO DINÂMICO */}
-              {userLevel === 'guest' || userLevel === 'usuario' ?
-                <>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-4 text-nz-tinta">
-                    Torne-se um Influenciador
-                  </h1>
-                  <p className="text-base md:text-lg max-w-2xl mx-auto mb-3 text-nz-tinta-fraca">
-                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}>5% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
-                  </p>
-                  <p className="text-base md:text-lg max-w-2xl mx-auto text-nz-tinta-fraca">
-                    Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
-                  </p>
-                </> :
-                userLevel === 'influencer' ?
-                  <>
-                    <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                      Você já é um Influenciador!
-                    </h1>
-                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 5% em dinheiro real!</strong>
-                    </p>
-                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Continue crescendo sua rede e <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>aumente seus ganhos</strong> com o sistema de alavancagem!
-                    </p>
-                  </> :
-
-                  <>
-                    <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                      Parabéns! Você é {getLevelLabel(userLevel)} 🎉
-                    </h1>
-                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                      {getMotivationalMessage(userLevel)}
-                    </p>
-                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                      Ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
-                    </p>
-                  </>
-              }
-
-              {/* CARD DINÂMICO */}
-              {isLicensee && userLevel === 'influencer' &&
-                <div className="max-w-2xl mx-auto mt-8">
-                  <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-2 border-blue-500/50">
-                    <CardHeader>
-                      <CardTitle className="text-blue-400">🚀 Quero Evoluir no Sistema</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <a
-                        href="https://wa.me/5521966629605?text=Olá,%20quero%20evoluir%20no%20sistema%20de%20alavancagem!"
-                        target="_blank"
-                        rel="noopener noreferrer">
-
-                        <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold">
-                          <MessageCircle className="w-5 h-5 mr-2" />
-                          Falar com Executivo no WhatsApp
-                        </Button>
-                      </a>
-                    </CardContent>
-                  </Card>
-                </div>
-              }
-
-              {isLicensee && ['licenciado_catalogo', 'executivo', 'diretor', 'ceo', 'conselheiro', 'fundador'].includes(userLevel) &&
-                <div className="max-w-2xl mx-auto mt-8">
-                  <Card className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 border-2 border-purple-500/50">
-                    <CardHeader>
-                      <CardTitle className="text-purple-400">👑 Suporte VIP</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <a
-                        href={`https://wa.me/5521966629605?text=Olá,%20sou%20${userLevel}%20e%20preciso%20de%20suporte!`}
-                        target="_blank"
-                        rel="noopener noreferrer">
-
-                        <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold">
-                          <MessageCircle className="w-5 h-5 mr-2" />
-                          Falar com Suporte Executivo
-                        </Button>
-                      </a>
-                    </CardContent>
-                  </Card>
-                </div>
-              }
-            </motion.div>
-          </div>
-        </div>
-        )}
-
+        {/* 🛡️ FASE 4.5 — Hero pública movida para dentro do LandingContent (após o
+            vídeo), para seguir a identidade clean/branca da Lucre. Usuário logado
+            (licenciado/admin) vai direto pro Dashboard, sem landing de recrutamento. */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {isLicensee ?
             <DashboardContent user={currentUser} isAdmin={isAdmin} /> :
 
             <LandingErrorBoundary>
               <LandingContent
+                isSaiDeBaixo={isSaiDeBaixo}
                 onRegisterClick={() => setShowLicenseeRegisterModal(true)}
                 onLoginClick={() => setShowLoginModal(true)} />
             </LandingErrorBoundary>
@@ -2023,12 +1920,12 @@ export default function LicensingPage() {
 
         {/* 🛡️ FASE 4.5 — Rodapé motivacional também é copy pública. Só para visitantes. */}
         {!isLicensee && (
-        <div className={`py-20 px-6 ${isSaiDeBaixo ? 'bg-gray-100/50' : 'bg-gray-800/50'}`}>
+        <div className={`py-20 px-6 ${isSaiDeBaixo ? 'bg-gray-100/50' : 'bg-nz-verde-fundo'}`}>
           <div className="max-w-6xl mx-auto">
-            <h2 className={`text-4xl font-bold text-center mb-4 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+            <h2 className="text-4xl font-bold text-center mb-4 text-nz-tinta">
               Construa Seu Sistema de Alavancagem
             </h2>
-            <p className={`text-center mb-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+            <p className="text-center mb-12 text-nz-tinta-fraca">
               Veja como nossos influenciadores estão crescendo
             </p>
           </div>
