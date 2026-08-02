@@ -66,7 +66,7 @@ export default function SejaVendedor() {
 
         <div className="max-w-md mx-auto mt-8 rounded-2xl p-5 bg-nz-verde-fundo border border-nz-verde/30 text-left">
           <p className="text-sm text-nz-tinta-fraca leading-relaxed">
-            Você se cadastra, compra o seu <strong className="text-nz-tinta">kit inicial</strong> e nós te indicamos
+            Você se cadastra, faz a sua <strong className="text-nz-tinta">primeira compra</strong> e nós te indicamos
             um executivo da sua região para te dar suporte — você também será conectado a um licenciado local.
           </p>
           <a href={whats} target="_blank" rel="noreferrer" className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-white bg-nz-verde hover:bg-nz-verde/90 transition-colors">
@@ -103,8 +103,8 @@ export default function SejaVendedor() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-3 text-nz-tinta">Como começar</h2>
           <p className="text-nz-tinta-fraca text-center mb-8">
-            Na primeira compra, você monta seu <strong className="text-nz-tinta">kit inicial de R$ 1.497 em produtos</strong>,
-            escolhendo direto da nossa Loja Virtual.
+            Você paga <strong className="text-nz-tinta">R$ 1.497</strong> pelo Mercado Pago e escolhe os produtos da
+            sua <strong className="text-nz-tinta">primeira compra</strong> direto na nossa Loja Virtual.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -114,7 +114,7 @@ export default function SejaVendedor() {
               </div>
               <div>
                 <p className="font-bold text-nz-tinta">Receba em casa</p>
-                <p className="text-sm text-nz-tinta-fraca mt-1">Seu kit chega direto no seu endereço.</p>
+                <p className="text-sm text-nz-tinta-fraca mt-1">Sua primeira compra chega direto no seu endereço.</p>
               </div>
             </div>
             <div className="rounded-2xl p-5 border border-nz-borda bg-white flex items-start gap-3">
@@ -130,12 +130,13 @@ export default function SejaVendedor() {
 
           <div className="rounded-2xl p-6 border border-nz-verde/30 bg-nz-verde-fundo text-center">
             <p className="text-sm text-nz-tinta-fraca">
-              Pague com <strong className="text-nz-tinta">PIX ou cartão</strong> pelo Mercado Pago. Depois de vender os
-              produtos do seu kit, você já recupera o valor investido — e a partir daí, toda nova venda te paga
-              <strong className="text-nz-verde"> 10% em dinheiro real</strong> na sua carteira.
+              Pague com <strong className="text-nz-tinta">PIX ou cartão</strong> pelo Mercado Pago agora. Receba os seus
+              produtos em casa e já comece a vender na sua Loja Virtual, com diversos produtos —{' '}
+              <strong className="text-nz-verde">você já ganha 10% em dinheiro real</strong> imediatamente, em cada
+              venda. Vendendo os produtos que você recebeu, você recupera o seu investimento.
             </p>
             <button onClick={() => navigate(createPageUrl('Catalog'))} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
-              <ShoppingBag className="w-4 h-4" /> Ver produtos na Loja Virtual
+              <ShoppingBag className="w-4 h-4" /> Pagar agora e escolher meus produtos
             </button>
           </div>
         </div>
@@ -180,10 +181,10 @@ export default function SejaVendedor() {
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-8 text-nz-tinta">Como funciona na prática</h2>
           <div className="space-y-3">
             {[
-              'Você se cadastra e monta seu kit inicial de R$ 1.497 escolhendo produtos da Loja Virtual.',
-              'Pague com PIX ou cartão, e receba em casa ou retire na loja.',
-              'Revenda os produtos do seu kit e recupere o valor investido.',
-              'A partir daí, toda nova venda te paga 10% em dinheiro real, direto na sua carteira.',
+              'Você se cadastra e paga R$ 1.497 pelo Mercado Pago (PIX ou cartão).',
+              'Escolhe os produtos da sua primeira compra na Loja Virtual e recebe em casa ou retira na loja.',
+              'Já começa a vender na sua Loja Virtual — e ganha 10% em dinheiro real imediatamente, em cada venda.',
+              'Vendendo os produtos que você recebeu, você recupera o valor investido.',
             ].map((t, i) => (
               <div key={i} className="flex items-start gap-3 rounded-xl p-4 bg-white border border-nz-borda">
                 <CheckCircle2 className="w-5 h-5 text-nz-verde shrink-0 mt-0.5" />
