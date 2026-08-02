@@ -1905,35 +1905,31 @@ export default function LicensingPage() {
             Usuário logado (licenciado/admin) vai direto pro Dashboard, sem
             landing de recrutamento em cima. */}
         {!isLicensee && (
-        <div className="relative overflow-hidden py-20 px-6">
-          <div className={`absolute inset-0 bg-gradient-to-r ${isSaiDeBaixo ?
-            'from-red-500/10 to-orange-500/10' :
-            'from-green-500/10 to-blue-500/10'}`
-          }></div>
-          <div className="relative max-w-6xl mx-auto text-center">
+        <div className="py-14 sm:py-16 px-4 sm:px-6">
+          <div className="relative max-w-4xl mx-auto text-center bg-white rounded-3xl shadow-xl border border-nz-borda px-6 sm:px-10 py-10 sm:py-12">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}>
 
-              <div className={`inline-flex items-center gap-3 mb-6 px-6 py-3 rounded-full border ${isSaiDeBaixo ?
-                'bg-red-500/10 border-red-500/30' :
-                'bg-green-500/10 border-green-500/30'}`
+              <div className={`inline-flex items-center gap-2 mb-5 px-5 py-2 rounded-full border ${isSaiDeBaixo ?
+                'bg-red-50 border-red-200' :
+                'bg-nz-verde-fundo border-nz-verde/30'}`
               }>
-                <TrendingUp className={`w-6 h-6 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
-                <span className={`font-semibold ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`}>Programa de Influenciadores</span>
+                <TrendingUp className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}`} />
+                <span className={`font-semibold text-sm ${isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}`}>Programa de Influenciadores</span>
               </div>
 
               {/* TÍTULO DINÂMICO */}
               {userLevel === 'guest' || userLevel === 'usuario' ?
                 <>
-                  <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                  <h1 className="text-3xl md:text-4xl font-bold mb-4 text-nz-tinta">
                     Torne-se um Influenciador
                   </h1>
-                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>5% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
+                  <p className="text-base md:text-lg max-w-2xl mx-auto mb-3 text-nz-tinta-fraca">
+                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}>5% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
-                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                  <p className="text-base md:text-lg max-w-2xl mx-auto text-nz-tinta-fraca">
                     Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
                   </p>
                 </> :

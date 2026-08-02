@@ -63,7 +63,7 @@ export default function LandingContent({ onRegisterClick, onLoginClick }) {
 
       <JourneyAnimation />
 
-      <div className="mb-16 mt-20"><EarningsSimulator /></div>
+      <div className="mb-16 mt-6"><EarningsSimulator /></div>
 
       <div ref={cardsRef} className="mt-16 max-w-2xl mx-auto">
         <Card className="bg-gray-800/80 backdrop-blur-sm border-2 border-green-500/50 shadow-xl">
@@ -79,7 +79,7 @@ export default function LandingContent({ onRegisterClick, onLoginClick }) {
               <p className="text-green-400 font-semibold flex items-center gap-2"><Star className="w-4 h-4" />Benefícios:</p>
               <ul className="space-y-1 text-sm text-gray-300">
                 <li>✅ Link de indicação exclusivo</li>
-                <li>✅ 3% em R$ de cada arremate dos indicados</li>
+                <li>✅ 5% em R$ de cada arremate dos indicados</li>
                 <li>✅ Dashboard com estatísticas em tempo real</li>
                 <li>✅ Sistema de alavancagem para crescimento</li>
               </ul>

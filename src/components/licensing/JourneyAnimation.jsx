@@ -28,7 +28,7 @@ const defaultPhases = [
         title: "4. Você ganha R$!",
         icon: "💰",
         color: "text-green-400",
-        description: "3% em Dinheiro Real"
+        description: "5% em Dinheiro Real"
     }
 ];
 
@@ -52,71 +52,41 @@ export default function JourneyAnimation({ customPhases, journeyTitle, theme = '
             const ctx = audioContextRef.current;
             const now = ctx.currentTime;
 
-            // SOM DE NOTAS SENDO CONTADAS/SACADAS - "SWISH SWISH SWISH"
-
-            // Função para criar som de nota sendo passada
-            const createBillSwipe = (startTime) => {
+            // 🔔 SOM DE CAIXA REGISTRADORA "CHA-CHING" — sino metálico de duas notas
+            // + brilho agudo, som real de dinheiro entrando, sem ruído de papel.
+            const playBell = (freq, startTime, duration = 0.45, peak = 0.32) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-
-                // Adiciona ruído branco para simular papel
-                const noise = ctx.createBufferSource();
-                const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < output.length; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
-                noise.buffer = noiseBuffer;
-
-                const noiseGain = ctx.createGain();
-                noise.connect(noiseGain);
-                noiseGain.connect(ctx.destination);
-
-                // Tom de papel passando
                 osc.connect(gain);
                 gain.connect(ctx.destination);
 
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, startTime);
-                osc.frequency.exponentialRampToValueAtTime(180, startTime + 0.06);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, startTime);
 
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
-
-                noiseGain.gain.setValueAtTime(0, startTime);
-                noiseGain.gain.linearRampToValueAtTime(0.08, startTime + 0.005);
-                noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06);
+                gain.gain.setValueAtTime(0.0001, startTime);
+                gain.gain.exponentialRampToValueAtTime(peak, startTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
                 osc.start(startTime);
-                osc.stop(startTime + 0.08);
-                noise.start(startTime);
-                noise.stop(startTime + 0.06);
+                osc.stop(startTime + duration);
             };
 
-            // Sequência de notas sendo contadas (5 notas rápidas)
-            createBillSwipe(now);
-            createBillSwipe(now + 0.08);
-            createBillSwipe(now + 0.16);
-            createBillSwipe(now + 0.24);
-            createBillSwipe(now + 0.32);
+            // Duas notas do "cha-ching" (E6 -> G6)
+            playBell(1318.51, now, 0.4, 0.3);
+            playBell(1567.98, now + 0.09, 0.5, 0.32);
 
-            // Som final de "pronto!" - nota aguda
-            const finalBell = ctx.createOscillator();
-            const finalGain = ctx.createGain();
-            finalBell.connect(finalGain);
-            finalGain.connect(ctx.destination);
-
-            finalBell.type = 'sine';
-            finalBell.frequency.setValueAtTime(1200, now + 0.45);
-            finalBell.frequency.exponentialRampToValueAtTime(1600, now + 0.5);
-
-            finalGain.gain.setValueAtTime(0, now + 0.45);
-            finalGain.gain.linearRampToValueAtTime(0.3, now + 0.46);
-            finalGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-
-            finalBell.start(now + 0.45);
-            finalBell.stop(now + 0.7);
+            // Brilho metálico por cima, reforça o "ching" de moeda
+            const shimmer = ctx.createOscillator();
+            const shimmerGain = ctx.createGain();
+            shimmer.connect(shimmerGain);
+            shimmerGain.connect(ctx.destination);
+            shimmer.type = 'triangle';
+            shimmer.frequency.setValueAtTime(2400, now);
+            shimmerGain.gain.setValueAtTime(0.0001, now);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+            shimmer.start(now);
+            shimmer.stop(now + 0.55);
 
         } catch (error) {
             console.error("Erro ao tocar som:", error);
@@ -148,7 +118,7 @@ export default function JourneyAnimation({ customPhases, journeyTitle, theme = '
                     ? 'bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent' 
                     : 'bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent'
             }`}>
-                {journeyTitle || "Sistema automático de ganhos recorrentes ✨"}
+                {journeyTitle || "Toda vez que seu cliente comprar, você ganha! 💸"}
             </h2>
 
             {/* LINHA DE PROGRESSO */}

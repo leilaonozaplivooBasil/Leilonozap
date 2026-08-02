@@ -13,7 +13,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
 
   const peopleNum = parseInt(people) || 0;
   const totalSales = peopleNum * selectedTicket;
-  const yourEarnings = totalSales * 0.03;
+  const yourEarnings = totalSales * 0.05;
 
   useEffect(() => {
     setShowResult(false);
@@ -208,7 +208,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                       ? 'bg-orange-500/20 border-orange-500/30' 
                       : 'bg-yellow-500/20 border-yellow-500/30'
                   }`}>
-                    <span className={isSaiDeBaixo ? 'text-orange-600' : 'text-yellow-400'}>3%</span>
+                    <span className={isSaiDeBaixo ? 'text-orange-600' : 'text-yellow-400'}>5%</span>
                   </div>
 
                   <ArrowRight className={`w-5 h-5 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`} />
@@ -267,7 +267,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                     </div>
                   </div>
                   <p className={`text-xs font-bold mt-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                    * Valores calculados com base em 3% de comissão por arremate
+                    * Valores calculados com base em 5% de comissão por arremate
                   </p>
                 </div>
               </div>

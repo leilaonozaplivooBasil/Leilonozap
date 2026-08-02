@@ -150,16 +150,16 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
 
     if (success) {
         return (
-             <div className="fixed inset-0 bg-gray-900/80 flex items-center justify-center z-[2001] p-4 animate-in fade-in-0">
-                <Card className="w-full max-w-md bg-gray-800 border-green-500 text-white relative text-center">
+             <div className="fixed inset-0 bg-nz-tinta/60 flex items-center justify-center z-[2001] p-4 animate-in fade-in-0">
+                <Card className="w-full max-w-md bg-white border-nz-verde text-nz-tinta relative text-center shadow-xl">
                     <CardHeader>
-                        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 bg-nz-verde rounded-full flex items-center justify-center mx-auto mb-4">
                             <CheckCircle className="w-8 h-8 text-white" />
                         </div>
-                        <CardTitle className="text-green-400">Sucesso!</CardTitle>
+                        <CardTitle className="text-nz-verde">Sucesso!</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-gray-300">Sua conta de licenciado foi criada. Você será redirecionado para o seu painel.</p>
+                        <p className="text-nz-tinta-fraca">Sua conta de licenciado foi criada. Você será redirecionado para o seu painel.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -167,24 +167,24 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
     }
     
     return (
-        <div className="fixed inset-0 bg-gray-900/80 flex items-center justify-center z-[2001] p-4 animate-in fade-in-0 overflow-y-auto">
-            <Card className="w-full max-w-lg bg-gray-800 border-gray-700 text-white relative my-8">
+        <div className="fixed inset-0 bg-nz-tinta/60 flex items-center justify-center z-[2001] p-4 animate-in fade-in-0 overflow-y-auto">
+            <Card className="w-full max-w-lg bg-white border-nz-borda text-nz-tinta relative my-8 shadow-xl">
                 <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={onClose} 
-                    className="absolute top-2 right-2 text-gray-400 z-10"
+                    className="absolute top-2 right-2 text-nz-tinta-fraca hover:text-nz-tinta z-10"
                     disabled={isRegistering}
                 >
                     <X className="w-4 h-4" />
                 </Button>
 
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-green-400">
+                    <CardTitle className="flex items-center gap-2 text-nz-verde">
                         <UserIcon className="w-6 h-6" />
                         Cadastro de Licenciado
                     </CardTitle>
-                    <p className="text-gray-400 text-sm mt-2">
+                    <p className="text-nz-tinta-fraca text-sm mt-2">
                         Preencha seus dados para se tornar um Licenciado do Leilão NoZap
                     </p>
                 </CardHeader>
@@ -192,34 +192,34 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                 <form onSubmit={handleRegister}>
                     <CardContent className="space-y-4">
                         {errorMessage && (
-                            <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 flex items-start gap-3">
-                                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                <p className="text-red-300 text-sm">{errorMessage}</p>
+                            <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-red-600 text-sm">{errorMessage}</p>
                             </div>
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <Label htmlFor="fullName" className="text-gray-300">Nome Completo *</Label>
+                                <Label htmlFor="fullName" className="text-nz-tinta-fraca">Nome Completo *</Label>
                                 <Input 
                                     id="fullName" 
                                     value={fullName} 
                                     onChange={(e) => setFullName(e.target.value)} 
                                     placeholder="Seu nome completo" 
-                                    className="bg-gray-700 border-gray-600 text-white"
+                                    className="bg-white border-nz-borda text-nz-tinta"
                                     disabled={isRegistering}
                                     required
                                 />
                             </div>
 
                             <div>
-                                <Label htmlFor="nickname" className="text-gray-300">Apelido *</Label>
+                                <Label htmlFor="nickname" className="text-nz-tinta-fraca">Apelido *</Label>
                                 <Input 
                                     id="nickname" 
                                     value={nickname} 
                                     onChange={(e) => setNickname(e.target.value)} 
                                     placeholder="Como quer ser chamado" 
-                                    className="bg-gray-700 border-gray-600 text-white"
+                                    className="bg-white border-nz-borda text-nz-tinta"
                                     disabled={isRegistering}
                                     required
                                 />
@@ -228,28 +228,28 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <Label htmlFor="email" className="text-gray-300">E-mail *</Label>
+                                <Label htmlFor="email" className="text-nz-tinta-fraca">E-mail *</Label>
                                 <Input 
                                     id="email" 
                                     type="email" 
                                     value={email} 
                                     onChange={(e) => setEmail(e.target.value)} 
                                     placeholder="seu@email.com" 
-                                    className="bg-gray-700 border-gray-600 text-white"
+                                    className="bg-white border-nz-borda text-nz-tinta"
                                     disabled={isRegistering}
                                     required
                                 />
                             </div>
 
                             <div>
-                                <Label htmlFor="phone" className="text-gray-300">Telefone/WhatsApp *</Label>
+                                <Label htmlFor="phone" className="text-nz-tinta-fraca">Telefone/WhatsApp *</Label>
                                 <Input 
                                     id="phone" 
                                     type="tel" 
                                     value={phone} 
                                     onChange={(e) => setPhone(e.target.value)} 
                                     placeholder="(11) 99999-9999" 
-                                    className="bg-gray-700 border-gray-600 text-white"
+                                    className="bg-white border-nz-borda text-nz-tinta"
                                     disabled={isRegistering}
                                     required
                                 />
@@ -257,49 +257,49 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                         </div>
 
                         <div>
-                            <Label htmlFor="password" className="text-gray-300">Crie uma Senha *</Label>
+                            <Label htmlFor="password" className="text-nz-tinta-fraca">Crie uma Senha *</Label>
                             <Input 
                                 id="password" 
                                 type="password" 
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                                 placeholder="Mínimo 6 caracteres" 
-                                className="bg-gray-700 border-gray-600 text-white"
+                                className="bg-white border-nz-borda text-nz-tinta"
                                 disabled={isRegistering}
                                 required
                             />
                         </div>
 
                         <div>
-                            <Label htmlFor="confirmPassword" className="text-gray-300">Confirme a Senha *</Label>
+                            <Label htmlFor="confirmPassword" className="text-nz-tinta-fraca">Confirme a Senha *</Label>
                             <Input 
                                 id="confirmPassword" 
                                 type="password" 
                                 value={confirmPassword} 
                                 onChange={(e) => setConfirmPassword(e.target.value)} 
                                 placeholder="Digite a senha novamente" 
-                                className="bg-gray-700 border-gray-600 text-white"
+                                className="bg-white border-nz-borda text-nz-tinta"
                                 disabled={isRegistering}
                                 required
                             />
                         </div>
 
                         <div>
-                            <Label htmlFor="avatarPrompt" className="text-gray-300">Descreva seu Avatar (Opcional)</Label>
+                            <Label htmlFor="avatarPrompt" className="text-nz-tinta-fraca">Descreva seu Avatar (Opcional)</Label>
                             <div className="flex gap-2">
                                 <Input 
                                     id="avatarPrompt" 
                                     value={avatarPrompt} 
                                     onChange={(e) => setAvatarPrompt(e.target.value)} 
                                     placeholder="Ex: empresário de terno" 
-                                    className="bg-gray-700 border-gray-600 text-white"
+                                    className="bg-white border-nz-borda text-nz-tinta"
                                     disabled={isGenerating || isRegistering}
                                 />
                                 <Button 
                                     type="button" // Important to prevent form submission
                                     onClick={generateAvatar} 
                                     disabled={isGenerating || isRegistering || !avatarPrompt.trim()} 
-                                    className="bg-green-600 hover:bg-green-700"
+                                    className="bg-nz-verde hover:bg-nz-verde-escuro"
                                     size="icon"
                                 >
                                     {isGenerating ? (
@@ -312,8 +312,8 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                         </div>
 
                         {(isGenerating || avatarUrl) && (
-                            <div className="flex justify-center items-center h-24 bg-gray-700 rounded-lg">
-                                {isGenerating && <div className="text-gray-400">Gerando avatar...</div>}
+                            <div className="flex justify-center items-center h-24 bg-nz-verde-fundo rounded-lg">
+                                {isGenerating && <div className="text-nz-tinta-fraca">Gerando avatar...</div>}
                                 {avatarUrl && !isGenerating && <img src={avatarUrl} alt="Avatar" className="w-24 h-24 rounded-lg object-cover" />}
                             </div>
                         )}
@@ -323,7 +323,7 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                         <Button 
                             type="submit" 
                             disabled={isRegistering || !fullName || !nickname || !email || !phone || !password || !confirmPassword}
-                            className="w-full bg-green-600 hover:bg-green-700"
+                            className="w-full text-white"
                             style={{backgroundColor: '#1DB24A'}}
                         >
                             {isRegistering ? (
