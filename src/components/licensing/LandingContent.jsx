@@ -6,10 +6,10 @@ import ProfessionalJourney from './ProfessionalJourney';
 
 export default function LandingContent({ onRegisterClick, onLoginClick, isSaiDeBaixo: isSaiDeBaixoProp }) {
   const benefits = [
-    { icon: DollarSign, text: "Ganhos em Dinheiro Real", description: "Receba 5% em R$ toda vez que seus indicados comprarem ou arrematarem." },
+    { icon: DollarSign, text: "Ganhos em Dinheiro Real", description: "Receba 5% em R$ toda vez que seus indicados arrematarem ou comprarem na Loja Virtual." },
     { icon: Zap, text: "Comissões Recorrentes", description: "Ganho recorrente: cada nova compra da sua rede gera nova comissão." },
     { icon: BarChart, text: "Dashboard em Tempo Real", description: "Acompanhe indicados, vendas e comissões ao vivo, sem planilha." },
-    { icon: ShieldCheck, text: "Sistema de Alavancagem", description: "Construa sua rede de indicados e multiplique seus ganhos." }
+    { icon: ShieldCheck, text: "Ganhe com sua Influência", description: "Use as redes sociais do jeito certo: torne-se um especialista e ganhe alavancado com sua rede de indicados." }
   ];
 
   const isSaiDeBaixo = isSaiDeBaixoProp ?? sessionStorage.getItem('saiDeBaixoContext') === 'true';
@@ -35,19 +35,18 @@ export default function LandingContent({ onRegisterClick, onLoginClick, isSaiDeB
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent flex flex-col items-center justify-end pb-6 px-4 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">Seja um Influenciador Leilão NoZap</h2>
-          <p className="text-gray-100 text-sm sm:text-base mt-1 drop-shadow-lg">Grave, indique, ganhe 5% em dinheiro real por cada arremate</p>
+          <p className="text-gray-100 text-sm sm:text-base mt-1 drop-shadow-lg">Grave, indique, ganhe 5% em dinheiro real por cada arremate e venda na Loja Virtual</p>
         </div>
       </div>
 
-      {/* Título compacto + CTAs inline (cadastro é a ação principal) */}
+      {/* CTAs — sem título repetido, direto ao ponto */}
       <div className="text-center mb-10">
         <div className={`inline-flex items-center gap-2 mb-3 px-4 py-1.5 rounded-full border ${accentBorder} ${accentBg}`}>
           <TrendingUp className={`w-4 h-4 ${accentText}`} />
           <span className={`font-semibold text-xs ${accentText}`}>Programa de Influenciadores</span>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold mb-2 text-nz-tinta">Torne-se um Influenciador</h1>
         <p className="text-sm md:text-base text-nz-tinta-fraca max-w-xl mx-auto mb-5">
-          Indique amigos e ganhe <strong className={accentText}>5% em dinheiro real</strong> em cada compra ou arremate que eles fizerem.
+          Indique amigos e ganhe <strong className={accentText}>5% em dinheiro real</strong> em cada arremate ou venda na Loja Virtual que eles fizerem.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button size="lg" onClick={onRegisterClick} className={`text-white font-bold px-8 rounded-xl shadow-lg ${accentBtn}`}>
@@ -62,27 +61,27 @@ export default function LandingContent({ onRegisterClick, onLoginClick, isSaiDeB
         </div>
       </div>
 
-      {/* Calculadora ao lado dos benefícios — logo após o vídeo/CTA, sem enterrar embaixo */}
-      <div className="grid lg:grid-cols-2 gap-8 items-start">
+      {/* Calculadora com mais ênfase (coluna maior) + benefícios compactos ao lado */}
+      <div className="grid lg:grid-cols-[1.35fr_1fr] gap-8 items-start">
         <EarningsSimulator theme={isSaiDeBaixo ? 'saidebaixo' : 'nozap'} />
 
-        <div className={`rounded-2xl border-2 ${accentBorder} bg-white p-6 lg:p-8 lg:mt-14`}>
-          <h3 className="text-lg font-bold text-nz-tinta mb-5">Por que ser Influenciador</h3>
-          <div className="space-y-4 mb-6">
+        <div className={`rounded-2xl border ${accentBorder} bg-white p-5 lg:mt-14`}>
+          <h3 className="text-base font-bold text-nz-tinta mb-4">Por que ser Influenciador</h3>
+          <div className="space-y-3 mb-4">
             {benefits.map((item) => (
-              <div key={item.text} className="flex items-start gap-3">
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border ${accentBorder} ${accentBg}`}>
-                  <item.icon className={`h-5 w-5 ${accentText}`} />
+              <div key={item.text} className="flex items-start gap-2.5">
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${accentBorder} ${accentBg}`}>
+                  <item.icon className={`h-4 w-4 ${accentText}`} />
                 </div>
                 <div>
-                  <p className="font-semibold text-nz-tinta text-sm">{item.text}</p>
-                  <p className="text-xs text-nz-tinta-fraca mt-0.5">{item.description}</p>
+                  <p className="font-semibold text-nz-tinta text-xs">{item.text}</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5 leading-snug">{item.description}</p>
                 </div>
               </div>
             ))}
           </div>
-          <Button size="lg" onClick={onRegisterClick} className={`w-full text-white font-bold py-6 rounded-xl shadow-lg ${accentBtn}`}>
-            <Smartphone className="w-5 h-5 mr-2" />Quero ser um Influenciador agora!
+          <Button onClick={onRegisterClick} className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm ${accentBtn}`}>
+            <Smartphone className="w-4 h-4 mr-2" />Quero ser um Influenciador agora!
           </Button>
         </div>
       </div>
