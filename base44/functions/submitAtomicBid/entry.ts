@@ -68,10 +68,13 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    // 🩹 CORREÇÃO (validado 02/08): sem lance ainda (winner_id vazio), o primeiro lance
+    // vale o starting_price publicado — o incremento só entra do SEGUNDO lance em diante.
+    const isFirstBid = !auction.winner_id;
     const currentPrice = Number(auction.current_price || auction.starting_price);
-    const minBid = currentPrice + Number(auction.increment);
+    const minBid = isFirstBid ? Number(auction.starting_price) : currentPrice + Number(auction.increment);
 
-    if (bidAmount <= currentPrice) {
+    if (!isFirstBid && bidAmount <= currentPrice) {
       return Response.json({
         success: false,
         message: `Lance deve ser maior que R$ ${currentPrice.toFixed(2)}`,

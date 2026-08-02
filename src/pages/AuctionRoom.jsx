@@ -1246,7 +1246,7 @@ export default function AuctionRoom() {
               onCalcular={calcularFreteLance}
             />
           )}
-          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} freteValor={freteValor} />
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} freteValor={freteValor} isFirstBid={!auction?.winner_id} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (

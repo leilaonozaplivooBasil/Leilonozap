@@ -152,10 +152,15 @@ export default async function handler(req, res) {
       });
     }
 
+    // 🩹 CORREÇÃO (validado 02/08): quando NENHUM lance foi dado ainda (winner_id vazio),
+    // o primeiro lance vale o starting_price publicado — o incremento só entra a partir
+    // do SEGUNDO lance em diante. Antes disso, current_price nasce igual a starting_price
+    // e o motor já exigia +incremento até no primeiro lance, bloqueando o valor anunciado.
+    const isFirstBid = !auction.winner_id;
     const currentPrice = Number(auction.current_price || auction.starting_price);
-    const minBid = currentPrice + Number(auction.increment);
+    const minBid = isFirstBid ? Number(auction.starting_price) : currentPrice + Number(auction.increment);
 
-    if (bidAmount <= currentPrice) {
+    if (!isFirstBid && bidAmount <= currentPrice) {
       return res.status(409).json({
         success: false,
         message: `Lance deve ser maior que R$ ${currentPrice.toFixed(2)}`,

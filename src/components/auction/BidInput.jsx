@@ -4,27 +4,29 @@ import { Input } from "@/components/ui/input";
 import { Send, Zap } from "lucide-react";
 import { money, addMoney, mulMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 
-export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0 }) {
+export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0, isFirstBid = false }) {
   const [bidAmount, setBidAmount] = useState("");
   const [quickBids, setQuickBids] = useState([]);
 
-  // Recalcula os botões em centavos exatos sempre que currentPrice ou increment mudar
+  // 🩹 Sem lance ainda (isFirstBid): o primeiro lance vale o próprio currentPrice
+  // (= starting_price publicado) — o incremento só soma a partir do segundo lance.
+  const minBid = isFirstBid ? money(currentPrice) : addMoney(currentPrice, increment);
+
+  // Recalcula os botões em centavos exatos sempre que currentPrice, increment ou isFirstBid mudar
   useEffect(() => {
-    const calculatedBids = [
-      addMoney(currentPrice, increment),
-      addMoney(currentPrice, mulMoney(increment, 2)),
-      addMoney(currentPrice, mulMoney(increment, 5))
-    ].filter((val, i, self) => self.indexOf(val) === i); // Remove duplicatas
+    const calculatedBids = (isFirstBid
+      ? [currentPrice, addMoney(currentPrice, increment), addMoney(currentPrice, mulMoney(increment, 2))]
+      : [addMoney(currentPrice, increment), addMoney(currentPrice, mulMoney(increment, 2)), addMoney(currentPrice, mulMoney(increment, 5))]
+    ).filter((val, i, self) => self.indexOf(val) === i); // Remove duplicatas
 
     setQuickBids(calculatedBids);
-  }, [currentPrice, increment]);
+  }, [currentPrice, increment, isFirstBid]);
 
   const handleSubmit = React.useCallback((amount = null) => {
     const finalAmount = money(amount || parseFloat(bidAmount));
     if (!finalAmount || isNaN(finalAmount)) return;
 
-    const minBid = addMoney(currentPrice, increment);
-    if (!gtMoney(finalAmount, currentPrice)) {
+    if (!isFirstBid && !gtMoney(finalAmount, currentPrice)) {
       alert(`❌ Seu lance deve ser MAIOR que R$ ${fmtBR(money(currentPrice))}`);
       return;
     }
@@ -36,7 +38,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
 
     onSubmitBid(finalAmount);
     setBidAmount("");
-  }, [bidAmount, currentPrice, increment, onSubmitBid]);
+  }, [bidAmount, currentPrice, increment, onSubmitBid, isFirstBid, minBid]);
 
   const handleKeyPress = React.useCallback((e) => {
     if (e.key === 'Enter' && !isLoading) {
@@ -88,9 +90,9 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             value={bidAmount}
             onChange={(e) => setBidAmount(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={`Mín: R$ ${fmtBR(addMoney(currentPrice, increment))}`}
+            placeholder={`Mín: R$ ${fmtBR(minBid)}`}
             className="bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-400 pr-12 sm:pr-16 rounded-full focus:border-green-500 h-12 sm:h-14 text-base sm:text-lg"
-            min={addMoney(currentPrice, increment)}
+            min={minBid}
             disabled={isLoading}
           />
           <div className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
@@ -99,7 +101,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
         </div>
         <Button
           onClick={() => handleSubmit()}
-          disabled={isLoading || !bidAmount || parseFloat(bidAmount) <= currentPrice}
+          disabled={isLoading || !bidAmount || (isFirstBid ? parseFloat(bidAmount) < currentPrice : parseFloat(bidAmount) <= currentPrice)}
           className="bg-green-600 hover:bg-green-700 rounded-full min-w-[48px] min-h-[48px] sm:w-14 sm:h-14 p-0 flex-shrink-0"
         >
           {isLoading ? (
@@ -111,7 +113,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
       </div>
 
       <p className="text-xs sm:text-sm text-center text-gray-500 mt-2">
-        Incremento mínimo: + R$ {fmtBR(increment)}
+        {isFirstBid ? `Lance inicial: R$ ${fmtBR(money(currentPrice))}` : `Incremento mínimo: + R$ ${fmtBR(increment)}`}
       </p>
       {freteValor > 0 && bidAmount && !isNaN(parseFloat(bidAmount)) && (
         <p className="text-xs text-center text-gray-400 mt-1">

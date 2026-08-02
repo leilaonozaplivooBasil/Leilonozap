@@ -124,10 +124,14 @@ export default function useBidSubmission({
       }
 
       const freshAuction = freshAuctionData[0];
+      // 🩹 Sem lance ainda: o primeiro lance vale o starting_price publicado, sem somar
+      // incremento (mesma regra do submitAtomicBid — evita bloquear quem quer dar o
+      // primeiro lance exatamente no valor anunciado).
+      const isFirstBid = !freshAuction.winner_id;
       const currentPrice = money(freshAuction.current_price || freshAuction.starting_price);
-      const minBid = addMoney(currentPrice, freshAuction.increment);
+      const minBid = isFirstBid ? currentPrice : addMoney(currentPrice, freshAuction.increment);
 
-      if (!gtMoney(bidAmount, currentPrice)) {
+      if (!isFirstBid && !gtMoney(bidAmount, currentPrice)) {
         alert(`❌ Lance maior! Atual: R$ ${fmtBR(currentPrice)}`);
         setAuction(freshAuction);
         return;
