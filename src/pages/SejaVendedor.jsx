@@ -107,7 +107,7 @@ export default function SejaVendedor() {
             sua <strong className="text-nz-tinta">primeira compra</strong> direto na nossa Loja Virtual.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div className="rounded-2xl p-5 border border-nz-borda bg-white flex items-start gap-3">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-nz-verde-fundo border border-nz-verde/30">
                 <Truck className="w-5 h-5 text-nz-verde" />
@@ -126,14 +126,31 @@ export default function SejaVendedor() {
                 <p className="text-sm text-nz-tinta-fraca mt-1">Prefere buscar? Retire pessoalmente.</p>
               </div>
             </div>
+            <div className="rounded-2xl p-5 border border-nz-borda bg-white flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-nz-verde-fundo border border-nz-verde/30">
+                <Wallet className="w-5 h-5 text-nz-verde" />
+              </div>
+              <div>
+                <p className="font-bold text-nz-tinta">Já pode vender online</p>
+                <p className="text-sm text-nz-tinta-fraca mt-1">Assim que o pagamento é feito, seu pedido já é enviado — e você já pode divulgar e vender pela sua Loja Virtual.</p>
+              </div>
+            </div>
+            <div className="rounded-2xl p-5 border border-nz-borda bg-white flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-nz-verde-fundo border border-nz-verde/30">
+                <ShoppingBag className="w-5 h-5 text-nz-verde" />
+              </div>
+              <div>
+                <p className="font-bold text-nz-tinta">Loja virtual com diversos produtos</p>
+                <p className="text-sm text-nz-tinta-fraca mt-1">Sua loja já vem pronta, com produtos variados enviando para todo o Brasil — e você ganha 10% imediatamente em cada venda.</p>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-2xl p-6 border border-nz-verde/30 bg-nz-verde-fundo text-center">
             <p className="text-sm text-nz-tinta-fraca">
-              Pague com <strong className="text-nz-tinta">PIX ou cartão</strong> pelo Mercado Pago agora. Receba os seus
-              produtos em casa e já comece a vender na sua Loja Virtual, com diversos produtos —{' '}
-              <strong className="text-nz-verde">você já ganha 10% em dinheiro real</strong> imediatamente, em cada
-              venda. Vendendo os produtos que você recebeu, você recupera o seu investimento.
+              Quando os produtos chegarem, é só despachar para os seus clientes e recuperar o valor investido.
+              A partir da primeira venda, você já ganha <strong className="text-nz-verde">10% em dinheiro real</strong>,
+              direto na sua carteira.
             </p>
             <button onClick={() => navigate(createPageUrl('Catalog'))} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
               <ShoppingBag className="w-4 h-4" /> Pagar agora e escolher meus produtos
