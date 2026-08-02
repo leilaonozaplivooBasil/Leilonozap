@@ -6,6 +6,7 @@ import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
 import { creditarBonusPassaporte } from '../_lib/passaporteBonus.js';
+import { payDirectCommissions } from '../_lib/commissions.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -62,14 +63,18 @@ async function activateAdesao(sale) {
 }
 
 // Adesão de Vendedor (primeira compra R$1.497): credita seller_credit_balance de forma
-// atômica (CAS) — o vendedor usa esse crédito pra escolher produtos na Loja Virtual.
+// atômica (CAS) — o vendedor usa esse crédito pra escolher produtos na Loja Virtual. Além
+// disso, paga comissão pra cadeia de quem indicou o comprador (referred_by_id), reaproveitando
+// o mesmo motor telescópico/teto 20% já usado nas vendas da loja (payDirectCommissions).
 async function creditSellerAdhesion(sale) {
   const amount = round2(Number(sale.total_amount || sale.sale_price) || 0);
   if (!sale.buyer_id || amount <= 0) return { credited: 0, skipped: true };
+  let referredById = null;
   for (let attempt = 0; attempt < 6; attempt++) {
-    const rows = await (await sb(`app_users?select=seller_credit_balance&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+    const rows = await (await sb(`app_users?select=seller_credit_balance,referred_by_id&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
     const user = Array.isArray(rows) ? rows[0] : null;
     if (!user) return { credited: 0, error: 'buyer_notfound' };
+    referredById = user.referred_by_id || null;
     const current = round2(Number(user.seller_credit_balance) || 0);
     const novo = round2(current + amount);
     const casFilter = current === 0 ? `or=(seller_credit_balance.eq.0,seller_credit_balance.is.null)` : `seller_credit_balance=eq.${current}`;
@@ -77,7 +82,11 @@ async function creditSellerAdhesion(sale) {
       method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ seller_credit_balance: novo }),
     });
     const updated = await patch.json().catch(() => []);
-    if (Array.isArray(updated) && updated.length) return { credited: amount, new_balance: novo };
+    if (Array.isArray(updated) && updated.length) {
+      // 💰 comissão pra quem indicou (best-effort — erro aqui não desfaz o crédito já dado)
+      const commission = referredById ? await payDirectCommissions({ saleId: sale.id, sellerId: referredById, total: amount }) : 0;
+      return { credited: amount, new_balance: novo, commission };
+    }
   }
   return { credited: 0, error: 'cas_conflict' };
 }

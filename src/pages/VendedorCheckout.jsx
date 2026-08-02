@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
-import { Loader2, ShoppingBag, QrCode, Copy, CheckCircle2, UserPlus, Clock } from "lucide-react";
+import { Loader2, ShoppingBag, QrCode, Copy, CheckCircle2, UserPlus, Clock, CreditCard } from "lucide-react";
 import VendedorProductStrip from "@/components/vendedor/VendedorProductStrip";
 import VendedorProductPreviewModal from "@/components/vendedor/VendedorProductPreviewModal";
 import VendedorAddressForm from "@/components/vendedor/VendedorAddressForm";
@@ -26,6 +26,7 @@ export default function VendedorCheckout() {
   const pollRef = useRef(null);
   const [address, setAddress] = useState({ zip: "", number: "", street: "", complement: "", neighborhood: "", city: "", state: "" });
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [gateway, setGateway] = useState("pix"); // "pix" | "card"
 
   useEffect(() => {
     (async () => {
@@ -67,6 +68,19 @@ export default function VendedorCheckout() {
   }, [navigate]);
 
   useEffect(() => () => clearInterval(pollRef.current), []);
+
+  // 💳 Retorno do Checkout Pro (cartão): a Mercado Pago redireciona de volta com
+  // payment_id na URL — retoma o mesmo polling usado no PIX pra confirmar o pagamento.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payId = params.get("payment_id");
+    const payStatus = params.get("status");
+    if (payId && payStatus) {
+      window.history.replaceState(null, "", window.location.pathname);
+      startPolling(payId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 📮 Autocompleta rua/bairro/cidade/UF quando o CEP fica completo (igual à nossa página de Checkout)
   useEffect(() => {
@@ -116,7 +130,12 @@ export default function VendedorCheckout() {
         buyer_email: user.email,
         buyer_cpf: user.cpf,
         address,
+        gateway,
       });
+      if (res?.data?.success && res.data.gateway === "card") {
+        window.location.href = res.data.url;
+        return;
+      }
       if (res?.data?.success) {
         setPix(res.data);
         startPolling(res.data.payment_id);
@@ -238,14 +257,30 @@ export default function VendedorCheckout() {
           ) : (
             <div>
               <p className="text-3xl font-black text-nz-tinta">R$ {fmtBR(VALOR_ADESAO)}</p>
-              <p className="text-sm text-nz-tinta-fraca mt-1">Pagamento único via PIX</p>
+              <p className="text-sm text-nz-tinta-fraca mt-1">Pagamento único</p>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setGateway("pix")}
+                  className={`py-2.5 rounded-lg font-bold text-sm border-2 transition-colors flex items-center justify-center gap-1.5 ${gateway === "pix" ? "border-nz-verde bg-nz-verde-fundo text-nz-verde" : "border-nz-borda text-nz-tinta-fraca"}`}
+                >
+                  <QrCode className="w-4 h-4" /> PIX
+                </button>
+                <button
+                  onClick={() => setGateway("card")}
+                  className={`py-2.5 rounded-lg font-bold text-sm border-2 transition-colors flex items-center justify-center gap-1.5 ${gateway === "card" ? "border-nz-verde bg-nz-verde-fundo text-nz-verde" : "border-nz-borda text-nz-tinta-fraca"}`}
+                >
+                  <CreditCard className="w-4 h-4" /> Cartão (até 12x)
+                </button>
+              </div>
+
               <button
                 onClick={handlePagar}
                 disabled={creating || !isAddressComplete}
-                className="mt-5 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 disabled:opacity-60 transition-colors"
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 disabled:opacity-60 transition-colors"
               >
-                {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
-                Pagar e liberar meu saldo
+                {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : gateway === "card" ? <CreditCard className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
+                {gateway === "card" ? "Ir para pagamento com cartão" : "Pagar e liberar meu saldo"}
               </button>
               {!isAddressComplete && (
                 <p className="text-xs text-nz-tinta-fraca mt-2">Preencha seu endereço de entrega acima para continuar.</p>

@@ -22,7 +22,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-    const { user_id, amount, buyer_name, buyer_email, buyer_cpf, address } = body || {};
+    const { user_id, amount, buyer_name, buyer_email, buyer_cpf, address, gateway } = body || {};
+    const useCard = gateway === 'card';
     if (!user_id) return res.status(200).json({ success: false, error: 'user_id é obrigatório' });
     if (!amount || amount < VALOR_MINIMO) return res.status(200).json({ success: false, error: `A primeira compra do vendedor é de no mínimo R$ ${VALOR_MINIMO}` });
     if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(200).json({ success: false, error: 'Mercado Pago não configurado' });
@@ -47,13 +48,42 @@ export default async function handler(req, res) {
         id: saleId, base44_id: saleId, kind: 'seller_adhesion',
         buyer_id: user_id, buyer_email, buyer_name,
         product_title: 'Adesão Vendedor - Primeira Compra', sale_price: amount, total_amount: amount, quantity: 1,
-        status: 'pending_payment', payment_method: 'pix_mp',
+        status: 'pending_payment', payment_method: useCard ? 'credit_card_mp' : 'pix_mp',
         tracking_code: 'AD' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       }),
     });
 
-    const cleanCpf = String(buyer_cpf || '').replace(/\D/g, '');
     const [first, ...rest] = String(buyer_name || 'Cliente').trim().split(/\s+/);
+
+    // 💳 Cartão parcelado: Mercado Pago Checkout Pro (mesmo padrão de createAdesaoPayment.js) —
+    // a própria página hospedada da MP mostra as parcelas e calcula os juros por bandeira/emissor.
+    if (useCard) {
+      const prefBody = {
+        items: [{ title: 'Adesão Vendedor - Primeira Compra', quantity: 1, unit_price: amount, currency_id: 'BRL' }],
+        payer: { email: buyer_email || 'sem-email@leilaonozap.net', name: first || 'Cliente', surname: rest.join(' ') || 'NoZap' },
+        external_reference: saleId,
+        notification_url: `${BASE_URL}/api/functions/mpWebhook`,
+        back_urls: { success: `${BASE_URL}/VendedorCheckout`, failure: `${BASE_URL}/VendedorCheckout`, pending: `${BASE_URL}/VendedorCheckout` },
+        auto_return: 'approved',
+        payment_methods: {
+          excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }, { id: 'bank_transfer' }, { id: 'debit_card' }, { id: 'digital_wallet' }],
+          installments: 12,
+        },
+      };
+      const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefBody),
+      });
+      const pref = await r.json();
+      if (!r.ok || !pref?.id) {
+        return res.status(200).json({ success: false, error: 'Falha ao criar checkout de cartão', details: (pref?.message || JSON.stringify(pref)).slice(0, 200) });
+      }
+      await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
+      return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount, url: pref.init_point });
+    }
+
+    const cleanCpf = String(buyer_cpf || '').replace(/\D/g, '');
     const mp = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': saleId },
