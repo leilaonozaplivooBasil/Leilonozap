@@ -1,7 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Handshake, ArrowRight, Award } from "lucide-react";
+import { ArrowRight, Award } from "lucide-react";
+
+const PARTNER_IMAGE = "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3debca5db_generated_image.png";
 
 // 💰 Página "Lucre" — identidade visual clara/executiva da Recepção (fundo
 // branco, título preto + palavra verde, selo pill), com cards ilustrados
@@ -88,25 +90,30 @@ export default function Lucre() {
             <span className="w-1.5 h-5 bg-amber-500 rounded-full" />
             Seja um Parceiro
           </h2>
-          <div className="rounded-2xl border border-nz-borda bg-white p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                <Handshake className="w-6 h-6 text-nz-tinta-fraca" />
-              </div>
+          <div className="rounded-2xl border border-nz-borda bg-white overflow-hidden flex flex-col sm:flex-row sm:items-center">
+            <div className="w-full sm:w-56 h-64 sm:h-56 overflow-hidden shrink-0">
+              <img
+                src={PARTNER_IMAGE}
+                alt="Seja um Parceiro"
+                className="w-full h-full object-cover object-top"
+                loading="lazy"
+              />
+            </div>
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-6 sm:p-7">
               <div>
                 <h3 className="font-bold text-nz-tinta mb-1">Seja um Parceiro</h3>
                 <p className="text-sm text-nz-tinta-fraca leading-snug">
                   Participe da nossa operação e acompanhe seu lucro.
                 </p>
               </div>
+              <Link
+                to={createPageUrl("Partners")}
+                className="inline-flex items-center justify-center gap-1.5 bg-nz-verde hover:bg-nz-verde-escuro text-white font-semibold text-sm rounded-lg px-5 py-2.5 transition-colors whitespace-nowrap shrink-0"
+              >
+                Conhecer o plano
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link
-              to={createPageUrl("Partners")}
-              className="inline-flex items-center justify-center gap-1.5 bg-nz-verde hover:bg-nz-verde-escuro text-white font-semibold text-sm rounded-lg px-5 py-2.5 transition-colors whitespace-nowrap shrink-0"
-            >
-              Conhecer o plano
-              <ArrowRight className="w-4 h-4" />
-            </Link>
           </div>
         </div>
       </div>
