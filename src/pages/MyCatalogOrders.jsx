@@ -44,7 +44,10 @@ export default function MyCatalogOrders() {
   }, []);
 
   // Depósitos na carteira não são pedidos de produto — mesma regra já usada em Profile.jsx.
-  const isWalletDeposit = (o) => /dep[óo]sito na carteira/i.test(o?.product_title || '');
+  // Checa o campo "kind" (fonte real gravada por createMPWalletDeposit) e, como rede de
+  // segurança para registros antigos sem "kind", também o texto do título.
+  const DEPOSIT_KINDS = ['wallet_deposit', 'passaporte', 'commission_deposit'];
+  const isWalletDeposit = (o) => DEPOSIT_KINDS.includes(o?.kind) || /dep[óo]sito na carteira/i.test(o?.product_title || '');
 
   const fetchOrders = async (userId) => {
     // Lê direto da tabela catalog_sales (a function getMyCatalogOrders é stub da migração e

@@ -135,7 +135,10 @@ export default function Profile() {
   };
 
   // Depósitos na carteira são transações, não pedidos de produto — cada um tem sua área.
-  const isWalletDeposit = (o) => /dep[óo]sito na carteira/i.test(o?.product_title || '');
+  // Checa o campo "kind" (fonte real gravada por createMPWalletDeposit) e, como rede de
+  // segurança para registros antigos sem "kind", também o texto do título.
+  const DEPOSIT_KINDS = ['wallet_deposit', 'passaporte', 'commission_deposit'];
+  const isWalletDeposit = (o) => DEPOSIT_KINDS.includes(o?.kind) || /dep[óo]sito na carteira/i.test(o?.product_title || '');
   const walletDeposits = catalogOrders.filter(isWalletDeposit);
   const purchaseOrders = catalogOrders.filter(o => !isWalletDeposit(o));
 
