@@ -49,7 +49,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
         <p className="text-sm text-nz-tinta-fraca">Veja quanto você pode ganhar como Influenciador!</p>
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         {/* Card 1: Quantidade de Pessoas */}
         <div className="relative">
           <div className={`bg-gradient-to-br rounded-xl p-4 border-2 ${
