@@ -115,7 +115,7 @@ export default function CheckoutPage() {
             // Criar pagamento ASAAS
             console.log('📤 Criando pagamento ASAAS...');
             
-            const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+            const paymentResponse = await base44.functions.invoke('createMPWalletDeposit', {
                 auction_id: auction.id,
                 buyer_name: firstName.trim(),
                 buyer_email: email.trim(),

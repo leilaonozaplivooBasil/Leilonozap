@@ -135,10 +135,10 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     // registra o aceite antes de qualquer cobrança (trilha de auditoria no servidor)
     if (precisaAceite) { try { await registrarAceitePassaporte(currentUser); } catch { /* segue */ } }
     try {
-      // 🔒 createAsaasPayment é a função real publicada na Vercel (gera PIX via Mercado
+      // 🔒 createMPWalletDeposit é a função real publicada na Vercel (gera PIX via Mercado
       // Pago). "createMercadoPagoDeposit" só existe do lado Base44 e quebrava com
       // not_implemented no site publicado — mesmo ajuste já feito no checkout do leilão.
-      const result = await base44.functions.invoke('createAsaasPayment', {
+      const result = await base44.functions.invoke('createMPWalletDeposit', {
         auction_id: null,
         buyer_id: currentUser.id,
         buyer_name: currentUser.full_name || 'Cliente',
