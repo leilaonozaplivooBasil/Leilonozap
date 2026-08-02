@@ -163,7 +163,7 @@ export default function SejaVendedor() {
       <section className="px-4 py-14 bg-nz-cinza-fundo">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-black text-center text-nz-tinta">Onde o vendedor fica na carreira</h2>
-          <p className="text-nz-tinta-fraca text-center mt-2 mb-8">Cada cargo tem a sua fatia em toda venda da sua rede — subindo de cargo, você ganha na estrutura inteira, não só na venda direta.</p>
+          <p className="text-nz-tinta-fraca text-center mt-2 mb-8">Cada cargo tem a sua fatia em toda venda — subindo de cargo, você ganha na estrutura inteira, não só na venda direta.</p>
 
           <div className="space-y-3">
             {ESCADA.map((n, i) => (
