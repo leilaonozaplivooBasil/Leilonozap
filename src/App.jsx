@@ -56,6 +56,8 @@ const ParceiroLotes = React.lazy(() => import('@/pages/ParceiroLotes'));
 const AcessoArrematante = React.lazy(() => import('@/pages/AcessoArrematante'));
 const AcessoVendedor = React.lazy(() => import('@/pages/AcessoVendedor'));
 const SellerPanel = React.lazy(() => import('@/pages/SellerPanel'));
+const VendedorCheckout = React.lazy(() => import('@/pages/VendedorCheckout'));
+const VendedorEscolherProdutos = React.lazy(() => import('@/pages/VendedorEscolherProdutos'));
 const Portal = React.lazy(() => import('@/pages/Portal'));
 const SuperAdminPanels = React.lazy(() => import('@/pages/SuperAdminPanels'));
 const PortalArrematante = React.lazy(() => import('@/pages/portal/PortalArrematante'));
@@ -313,6 +315,16 @@ const AuthenticatedApp = () => {
       <Route path="/SellerPanel" element={
         <LayoutWrapper currentPageName="SellerPanel">
           <SellerPanel />
+        </LayoutWrapper>
+      } />
+      <Route path="/VendedorCheckout" element={
+        <LayoutWrapper currentPageName="VendedorCheckout">
+          <VendedorCheckout />
+        </LayoutWrapper>
+      } />
+      <Route path="/VendedorEscolherProdutos" element={
+        <LayoutWrapper currentPageName="VendedorEscolherProdutos">
+          <VendedorEscolherProdutos />
         </LayoutWrapper>
       } />
       {/* 🎯 Painel do Arrematante — lances ativos, saldo reservado e mini extrato */}

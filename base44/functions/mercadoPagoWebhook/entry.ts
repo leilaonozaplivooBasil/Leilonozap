@@ -198,6 +198,23 @@ Deno.serve(async (req) => {
             }
         }
 
+        // ✅ PASSO 2.6: Crédito de saldo de ADESÃO DE VENDEDOR (primeira compra R$1.497)
+        if (mpPayment.deposit_type === 'seller_adhesion' && mpPayment.user_id) {
+            try {
+                const sellerUsers = await base44.asServiceRole.entities.AppUser.filter({ id: mpPayment.user_id }, null, 1);
+                if (sellerUsers?.length > 0) {
+                    const seller = sellerUsers[0];
+                    const newBalance = (seller.seller_credit_balance || 0) + (mpPayment.amount || 0);
+                    await base44.asServiceRole.entities.AppUser.update(seller.id, {
+                        seller_credit_balance: newBalance
+                    });
+                    console.log('✅ Saldo de adesão de vendedor creditado:', seller.id, newBalance);
+                }
+            } catch (sellerErr) {
+                console.error('❌ Erro ao creditar saldo de adesão de vendedor:', sellerErr.message);
+            }
+        }
+
         // ✅ PASSO 3: Atualizar leilão se for arremate
         if (mpPayment.auction_id) {
             const auctions = await base44.asServiceRole.entities.Auction.filter(

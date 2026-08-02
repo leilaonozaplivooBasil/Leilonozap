@@ -28,7 +28,6 @@ const BENEFICIOS = [
 
 export default function SejaVendedor() {
   const navigate = useNavigate();
-  const whats = `https://wa.me/5521984072064?text=${encodeURIComponent('Olá! Quero ser VENDEDOR do Leilão NoZap. Como faço?')}`;
 
   return (
     <div className="min-h-screen bg-white text-nz-tinta">
@@ -69,9 +68,9 @@ export default function SejaVendedor() {
             Você se cadastra, faz a sua <strong className="text-nz-tinta">primeira compra</strong> e nós te indicamos
             um executivo da sua região para te dar suporte — você também será conectado a um licenciado local.
           </p>
-          <a href={whats} target="_blank" rel="noreferrer" className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-white bg-nz-verde hover:bg-nz-verde/90 transition-colors">
+          <button onClick={() => navigate(createPageUrl('VendedorCheckout'))} className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-white bg-nz-verde hover:bg-nz-verde/90 transition-colors">
             Quero ser vendedor <ArrowRight className="w-4 h-4" />
-          </a>
+          </button>
         </div>
       </section>
 
@@ -152,7 +151,7 @@ export default function SejaVendedor() {
               A partir da primeira venda, você já ganha <strong className="text-nz-verde">10% em dinheiro real</strong>,
               direto na sua carteira.
             </p>
-            <button onClick={() => navigate(createPageUrl('Catalog'))} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
+            <button onClick={() => navigate(createPageUrl('VendedorCheckout'))} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
               <ShoppingBag className="w-4 h-4" /> Pagar agora e escolher meus produtos
             </button>
           </div>
@@ -212,9 +211,9 @@ export default function SejaVendedor() {
           </div>
 
           <div className="mt-10 text-center">
-            <a href={whats} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 transition-colors shadow-lg">
+            <button onClick={() => navigate(createPageUrl('VendedorCheckout'))} className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 transition-colors shadow-lg">
               <Users className="w-5 h-5" /> Quero ser vendedor
-            </a>
+            </button>
             <p className="text-nz-tinta-fraca text-sm mt-4">
               É Licenciado e quer cadastrar seus vendedores?{' '}
               <button onClick={() => navigate(createPageUrl('Licensing'))} className="text-nz-verde font-semibold hover:underline">
