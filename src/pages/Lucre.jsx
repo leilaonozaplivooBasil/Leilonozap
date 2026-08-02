@@ -11,19 +11,19 @@ const EARN_CARDS = [
   {
     title: "Seja um Influenciador",
     desc: "Grátis: indique e ganhe 5% em cada venda e arremate.",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/075bc2b25_generated_image.png",
+    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png",
     page: "Licensing",
   },
   {
     title: "Seja um Vendedor",
     desc: "Ganhe 10% na venda direta (cadastro pelo licenciado).",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/b66e03ab8_generated_image.png",
+    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2f7400a5d_generated_image.png",
     page: "SejaVendedor",
   },
   {
     title: "Seja um Licenciado",
     desc: "Tenha sua loja virtual e ganhe 13% na venda.",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/bfb11dea6_generated_image.png",
+    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png",
     page: "Licensing",
   },
 ];
@@ -57,12 +57,14 @@ export default function Lucre() {
               key={card.title}
               className="rounded-2xl border border-nz-borda overflow-hidden flex flex-col"
             >
-              <img
-                src={card.image}
-                alt={card.title}
-                className="w-full aspect-square object-cover"
-                loading="lazy"
-              />
+              <div className="w-full h-64 overflow-hidden">
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  className="w-full h-full object-cover object-top"
+                  loading="lazy"
+                />
+              </div>
               <div className="p-5 flex flex-col flex-1">
                 <h3 className="font-bold text-nz-tinta text-lg mb-1.5">{card.title}</h3>
                 <p className="text-sm text-nz-tinta-fraca leading-snug mb-4 flex-1">{card.desc}</p>
