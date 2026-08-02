@@ -251,7 +251,9 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const highestLevelName = careerLevelsMap[highestLevel];
   const primaryLevelName = careerLevelsMap[primaryLevel];
-  const totalAvailable = ((user.commission_balance || 0) + (user.catalog_commission_balance || 0));
+  // 🔴 commission_balance JÁ é o total (App + Catálogo) — catalog_commission_balance é só o
+  // recorte do Catálogo para exibição. Somar os dois duplicava o saldo disponível.
+  const totalAvailable = (user.commission_balance || 0);
 
   const rolesText = highestLevel === primaryLevel ?
     highestLevelName :
@@ -1208,7 +1210,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={BarChart}
           label="Total Comissões (App + Loja Virtual)"
-          value={`R$ ${((user.commission_balance || 0) + (user.catalog_commission_balance || 0)).toFixed(2)}`}
+          value={`R$ ${totalAvailable.toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
@@ -1513,7 +1515,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                         </SelectTrigger>
                         <SelectContent>
                           {licensees.map((lic) => {
-                            const licTotal = ((lic.commission_balance || 0) + (lic.catalog_commission_balance || 0));
+                            const licTotal = (lic.commission_balance || 0);
                             return (
                               <SelectItem key={lic.id} value={lic.id}>
                                 {lic.full_name} - R$ {licTotal.toFixed(2)}
