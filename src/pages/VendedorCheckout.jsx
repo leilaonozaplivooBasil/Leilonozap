@@ -140,7 +140,7 @@ export default function VendedorCheckout() {
         </div>
 
         <div onClick={pix ? undefined : blockBeforePayment} className="rounded-2xl border border-nz-borda bg-nz-cinza-fundo p-3">
-          <VendedorProductStrip products={products} />
+          <VendedorProductStrip products={products.slice(0, 20)} />
           <button
             onClick={(e) => { e.stopPropagation(); pix ? blockBeforePayment() : setShowPreview(true); }}
             className="w-full mt-2 text-sm font-semibold text-nz-verde hover:underline"
