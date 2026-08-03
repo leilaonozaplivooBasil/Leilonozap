@@ -37,7 +37,6 @@ export default async function handler(req, res) {
 
     let total = 0;
     let totalQty = 0;
-    const titles = [];
     let firstProduct = null;
     // 📦 Revalida o estoque REAL no servidor — o carrinho do navegador pode estar desatualizado.
     for (const it of items) {
@@ -50,7 +49,6 @@ export default async function handler(req, res) {
       }
       total += qty * Number(p.price_catalog || 0);
       totalQty += qty;
-      titles.push(p.description);
       if (!firstProduct) firstProduct = p;
     }
     total = Math.round(total * 100) / 100;
@@ -58,26 +56,37 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: 'O total escolhido precisa atingir seu saldo de adesão' });
     }
 
-    const saleId = oid();
     const isDelivery = delivery_method === 'delivery';
-    await sb('catalog_sales', {
-      method: 'POST', headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        id: saleId, base44_id: saleId,
-        product_id: firstProduct.id, product_title: titles.join(', ').slice(0, 250),
-        product_image: firstProduct.image_urls?.[0] || null,
-        sale_price: total, quantity: totalQty, total_amount: total,
-        buyer_id: user.id, buyer_name: user.full_name, buyer_email: user.email, buyer_phone: user.phone,
-        licensee_id: 'site_official', licensee_name: 'Sistema — Adesão Vendedor',
-        status: 'paid', payment_confirmed_date: new Date().toISOString(),
-        carrier: isDelivery ? (carrier || 'A combinar') : 'Retirada na loja',
-        ...(isDelivery ? {
-          buyer_address: [user.address_street, user.address_number, user.address_complement, user.address_neighborhood, user.address_city, user.address_state].filter(Boolean).join(', '),
-          buyer_cep: user.address_zip_code,
-        } : {}),
-        created_date: new Date().toISOString(),
-      }),
-    });
+    const addressFields = isDelivery ? {
+      buyer_address: [user.address_street, user.address_number, user.address_complement, user.address_neighborhood, user.address_city, user.address_state].filter(Boolean).join(', '),
+      buyer_cep: user.address_zip_code,
+    } : {};
+
+    // 🧾 Uma linha em catalog_sales POR PRODUTO do carrinho (antes só o primeiro item gerava
+    // registro — os demais baixavam do estoque sem deixar rastro. Bug corrigido em 03/08/2026).
+    const saleIds = [];
+    for (const it of items) {
+      const p = byId[String(it.product_id)];
+      if (!p) continue;
+      const qty = Math.max(1, Number(it.qty) || 1);
+      const itemSaleId = oid();
+      saleIds.push(itemSaleId);
+      await sb('catalog_sales', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          id: itemSaleId, base44_id: itemSaleId, kind: 'seller_credit_purchase',
+          product_id: p.id, product_title: p.description,
+          product_image: p.image_urls?.[0] || null,
+          sale_price: p.price_catalog || 0, quantity: qty, total_amount: Math.round(qty * Number(p.price_catalog || 0) * 100) / 100,
+          buyer_id: user.id, buyer_name: user.full_name, buyer_email: user.email, buyer_phone: user.phone,
+          licensee_id: 'site_official', licensee_name: 'Sistema — Adesão Vendedor',
+          status: 'paid', payment_confirmed_date: new Date().toISOString(),
+          carrier: isDelivery ? (carrier || 'A combinar') : 'Retirada na loja',
+          ...addressFields,
+          created_date: new Date().toISOString(),
+        }),
+      });
+    }
 
     const careerLevels = Array.from(new Set([...(user.career_levels || []), 'vendedor']));
     await sb(`app_users?id=eq.${encodeURIComponent(user_id)}`, {
@@ -86,18 +95,21 @@ export default async function handler(req, res) {
     });
 
     // 📦 Baixa o estoque real de cada produto (mesma fonte usada na vitrine — Product.quantity).
+    // Erros agora são reportados (não engolidos silenciosamente como antes).
+    const stockErrors = [];
     for (const it of items) {
       const p = byId[String(it.product_id)];
       if (!p) continue;
       const qty = Math.max(1, Number(it.qty) || 1);
       const novaQtd = Math.max(0, Number(p.quantity || 0) - qty);
-      await sb(`products?id=eq.${encodeURIComponent(p.id)}`, {
+      const r = await sb(`products?id=eq.${encodeURIComponent(p.id)}`, {
         method: 'PATCH', headers: { Prefer: 'return=minimal' },
         body: JSON.stringify({ quantity: novaQtd }),
-      }).catch(() => {});
+      }).catch((e) => ({ ok: false, statusText: String(e?.message || e) }));
+      if (!r.ok) stockErrors.push({ product_id: p.id, error: r.statusText || 'Falha ao baixar estoque' });
     }
 
-    return res.status(200).json({ success: true, sale_id: saleId, total, career_levels: careerLevels });
+    return res.status(200).json({ success: true, sale_ids: saleIds, total, career_levels: careerLevels, ...(stockErrors.length ? { stock_errors: stockErrors } : {}) });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao fechar o pedido', details: String(e?.message || e) });
   }
