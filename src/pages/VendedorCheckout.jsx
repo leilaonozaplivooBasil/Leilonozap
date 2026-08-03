@@ -9,12 +9,12 @@ import VendedorProductStrip from "@/components/vendedor/VendedorProductStrip";
 import VendedorProductPreviewModal from "@/components/vendedor/VendedorProductPreviewModal";
 import VendedorAddressForm from "@/components/vendedor/VendedorAddressForm";
 
-// 🆕 Mesmo checkout serve Vendedor (R$1.497) e Licenciado (R$100.000) — só muda o
+// 🆕 Mesmo checkout serve Vendedor (R$1.497) e Licenciado (R$5.000) — só muda o
 // texto e o valor. O tipo vem por ?tipo=licenciado na URL e persiste no
 // sessionStorage pra sobreviver ao redirect de volta do pagamento com cartão.
 const TIPO_CONFIG = {
   vendedor: { label: "Vendedor", valor: 1497 },
-  licenciado: { label: "Licenciado", valor: 100000 },
+  licenciado: { label: "Licenciado", valor: 5000 },
 };
 
 // 💳 ETAPA 1 do fluxo "Seja Vendedor/Licenciado" — pagamento único que libera o
