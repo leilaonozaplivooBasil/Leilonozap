@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Truck, Store } from "lucide-react";
 import VendedorProductPicker from "@/components/vendedor/VendedorProductPicker";
 import VendedorCartBar from "@/components/vendedor/VendedorCartBar";
+import CalculadoraFrete from "@/components/frete/CalculadoraFrete";
 
 // 🛍️ ETAPA 2 do fluxo "Seja Vendedor" — usa o saldo da adesão (já pago) para
 // escolher QUALQUER produto da Loja Virtual. Fecha o pedido só quando o total
@@ -19,6 +20,9 @@ export default function VendedorEscolherProdutos() {
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
   const [done, setDone] = useState(false);
+  // 🚚 Entrega — retirar (sem custo) ou receber em casa (frete calculado pelos produtos escolhidos)
+  const [deliveryMethod, setDeliveryMethod] = useState("pickup");
+  const [freteSel, setFreteSel] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -53,6 +57,12 @@ export default function VendedorEscolherProdutos() {
     [cart]
   );
 
+  const freteItems = useMemo(
+    () => Object.values(cart).map((it) => ({ id: it.product.id, quantidade: it.qty, valor: it.product.price_catalog || 0 })),
+    [cart]
+  );
+  const canClose = !!user && total >= user.seller_credit_balance && total > 0;
+
   const addToCart = (p) => {
     setCart((prev) => ({
       ...prev,
@@ -74,6 +84,10 @@ export default function VendedorEscolherProdutos() {
 
   const handleFecharPedido = async () => {
     if (!user || total < user.seller_credit_balance) return;
+    if (deliveryMethod === "delivery" && !freteSel) {
+      toast.error("Calcule o frete e escolha a transportadora para continuar.");
+      return;
+    }
     setClosing(true);
     try {
       const items = Object.values(cart);
@@ -96,6 +110,13 @@ export default function VendedorEscolherProdutos() {
         licensee_name: "Sistema — Adesão Vendedor",
         status: "paid",
         payment_confirmed_date: new Date().toISOString(),
+        carrier: deliveryMethod === "delivery"
+          ? [freteSel?.empresa, freteSel?.nome].filter(Boolean).join(" ") || "A combinar"
+          : "Retirada na loja",
+        ...(deliveryMethod === "delivery" ? {
+          buyer_address: [user.address_street, user.address_number, user.address_complement, user.address_neighborhood, user.address_city, user.address_state].filter(Boolean).join(", "),
+          buyer_cep: user.address_zip_code,
+        } : {}),
       });
 
       const updatedUser = {
@@ -153,6 +174,31 @@ export default function VendedorEscolherProdutos() {
         </div>
 
         <VendedorProductPicker products={products} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
+
+        {/* 🚚 Entrega — aparece quando o carrinho já bateu o valor da adesão, pronto pra fechar */}
+        {canClose && (
+          <div className="mt-6 rounded-2xl border border-nz-borda bg-nz-cinza-fundo p-4 sm:p-5">
+            <h2 className="font-bold text-nz-tinta mb-3">Como você quer receber seus produtos?</h2>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button
+                onClick={() => setDeliveryMethod("pickup")}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition-colors ${deliveryMethod === "pickup" ? "border-nz-verde bg-nz-verde-fundo text-nz-verde" : "border-nz-borda bg-white text-nz-tinta-fraca"}`}
+              >
+                <Store className="w-4 h-4" /> Retirar
+              </button>
+              <button
+                onClick={() => setDeliveryMethod("delivery")}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition-colors ${deliveryMethod === "delivery" ? "border-nz-verde bg-nz-verde-fundo text-nz-verde" : "border-nz-borda bg-white text-nz-tinta-fraca"}`}
+              >
+                <Truck className="w-4 h-4" /> Receber em casa
+              </button>
+            </div>
+
+            {deliveryMethod === "delivery" && (
+              <CalculadoraFrete items={freteItems} autoCalcular onSelecionar={setFreteSel} titulo="Calcular frete até você" />
+            )}
+          </div>
+        )}
       </div>
 
       <VendedorCartBar total={total} balance={user?.seller_credit_balance || 1497} onClose={handleFecharPedido} closing={closing} />
