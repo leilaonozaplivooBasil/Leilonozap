@@ -72,5 +72,5 @@ export const HOME_SECTOR_CARDS = [
   { title: 'Ao Vivo na Livoo', desc: 'Compre com o vendedor na tela', icon: Radio, icon3d: icoAoVivo, external: LIVOO_FEED, accent: 'red' },
   { title: 'Direto de Fábrica', desc: 'Novos, direto do fabricante', icon: Factory, icon3d: icoFabrica, page: 'DiretoDeFabrica', accent: 'blue' },
   { title: 'Arremate & Devoluções', desc: 'Lotes e devoluções de varejistas', icon: Flame, icon3d: icoFoguinho, page: 'ArremateDevolucoes', accent: 'orange' },
-  { title: 'Lucre', desc: 'Seja licenciado ou parceiro', icon: DollarSign, icon3d: icoDinheiro, page: 'Licensing', accent: 'amber' },
+  { title: 'Lucre', desc: 'Seja licenciado ou parceiro', icon: DollarSign, icon3d: icoDinheiro, page: 'Lucre', accent: 'amber' },
 ];
