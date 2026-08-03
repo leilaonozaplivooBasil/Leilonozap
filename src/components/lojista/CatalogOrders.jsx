@@ -12,13 +12,13 @@ import { Search, Eye } from 'lucide-react';
 const REPORT_CUTOFF_DATE = new Date('2026-07-01T03:00:00.000Z');
 
 const STATUS_COLORS = {
-  pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  pending_payment: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  awaiting_payment: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  paid: 'bg-green-500/20 text-green-300 border-green-500/30',
-  shipped: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  delivered: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  canceled: 'bg-red-500/20 text-red-300 border-red-500/30'
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  pending_payment: 'bg-amber-50 text-amber-700 border-amber-200',
+  awaiting_payment: 'bg-amber-50 text-amber-700 border-amber-200',
+  paid: 'bg-nz-verde-fundo text-nz-verde border-nz-verde/30',
+  shipped: 'bg-nz-marrom-fundo text-nz-marrom border-nz-marrom/30',
+  delivered: 'bg-nz-verde-fundo text-nz-verde border-nz-verde/30',
+  canceled: 'bg-red-50 text-red-600 border-red-200'
 };
 
 const STATUS_LABELS = {
@@ -47,7 +47,7 @@ export default function CatalogOrders({ catalogSales = [], currentUserId }) {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-nz-borda">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
@@ -56,15 +56,15 @@ export default function CatalogOrders({ catalogSales = [], currentUserId }) {
                 placeholder="Buscar cliente ou produto..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-gray-900 border-gray-600 text-white pl-10"
+                className="bg-white border-gray-300 text-gray-900 pl-10"
               />
             </div>
             <div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-gray-900 border-gray-600 text-white">
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-600 text-white">
+                <SelectContent className="bg-white border-gray-300 text-gray-900">
                   <SelectItem value="all">Todos os Status</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="paid">Pago</SelectItem>
@@ -79,13 +79,13 @@ export default function CatalogOrders({ catalogSales = [], currentUserId }) {
       </Card>
 
       {/* Tabela de Pedidos */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-nz-borda">
         <CardContent className="pt-6">
           {filteredOrders.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b border-gray-700">
-                  <tr className="text-gray-400 text-xs font-semibold uppercase">
+                <thead className="border-b border-nz-borda">
+                  <tr className="text-gray-500 text-xs font-semibold uppercase">
                     <th className="px-4 py-3 text-left">Data/Hora</th>
                     <th className="px-4 py-3 text-left">Cliente</th>
                     <th className="px-4 py-3 text-left">Produto</th>
@@ -94,35 +94,35 @@ export default function CatalogOrders({ catalogSales = [], currentUserId }) {
                     <th className="px-4 py-3 text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="divide-y divide-nz-borda">
                   {filteredOrders.map((order) => {
                     const date = new Date(order.created_date);
                     const dateStr = date.toLocaleDateString('pt-BR');
                     const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     
                     return (
-                      <tr key={order.id} className="hover:bg-gray-700/30 transition">
-                        <td className="px-4 py-4 text-gray-300 text-xs">
+                      <tr key={order.id} className="hover:bg-gray-50 transition">
+                        <td className="px-4 py-4 text-gray-600 text-xs">
                           <div>{dateStr}</div>
-                          <div className="text-gray-500 text-xs mt-1">{timeStr}</div>
+                          <div className="text-gray-400 text-xs mt-1">{timeStr}</div>
                         </td>
-                        <td className="px-4 py-4 text-white font-medium">
+                        <td className="px-4 py-4 text-gray-900 font-medium">
                           {order.buyer_name || 'N/A'}
                           {currentUserId && order.buyer_id === currentUserId && (
-                            <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-500/30 border">Compra Pessoal</Badge>
+                            <Badge className="ml-2 bg-nz-marrom-fundo text-nz-marrom border-nz-marrom/30 border">Compra Pessoal</Badge>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-gray-300">{order.product_title || 'Produto'}</td>
+                        <td className="px-4 py-4 text-gray-600">{order.product_title || 'Produto'}</td>
                         <td className="px-4 py-4">
-                          <Badge className={`${STATUS_COLORS[order.status] || 'bg-gray-700 text-gray-300 border-gray-600'} border`}>
+                          <Badge className={`${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600 border-gray-300'} border`}>
                             {STATUS_LABELS[order.status] || order.status}
                           </Badge>
                         </td>
-                        <td className="px-4 py-4 text-right font-semibold text-green-400">
+                        <td className="px-4 py-4 text-right font-semibold text-nz-verde">
                           R$ {fmtBR((order.total_amount || 0))}
                         </td>
                         <td className="px-4 py-4 text-center">
-                          <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white">
+                          <Button size="sm" variant="ghost" className="text-gray-500 hover:text-gray-900">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </td>
@@ -134,7 +134,7 @@ export default function CatalogOrders({ catalogSales = [], currentUserId }) {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-400">Nenhum pedido encontrado</p>
+              <p className="text-gray-500">Nenhum pedido encontrado</p>
             </div>
           )}
         </CardContent>

@@ -13,50 +13,50 @@ export default function MyClientsTab({
   allUsers
 }) {
   return (
-    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+    <Card className="bg-white border-nz-borda">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Clientes Indicados</CardTitle>
+          <CardTitle className="text-gray-900">Clientes Indicados</CardTitle>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Buscar cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'} />
+              className="pl-10 bg-white border-gray-300 text-gray-900" />
           </div>
         </div>
       </CardHeader>
       <CardContent>
         {isLoadingClients ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-nz-verde" />
           </div>
         ) : filteredClients.length > 0 ? (
           <Table>
             <TableHeader>
-              <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Nome</TableHead>
-                <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Email</TableHead>
-                <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Indicado Por</TableHead>
-                <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data de Cadastro</TableHead>
+              <TableRow className="border-nz-borda">
+                <TableHead className="text-gray-500">Nome</TableHead>
+                <TableHead className="text-gray-500">Email</TableHead>
+                <TableHead className="text-gray-500">Indicado Por</TableHead>
+                <TableHead className="text-gray-500">Data de Cadastro</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredClients.map((client) => {
                 const referrer = client.referred_by_id ? allUsers.find((u) => u.id === client.referred_by_id) : null;
                 return (
-                  <TableRow key={client.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                    <TableCell className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{client.full_name}</TableCell>
-                    <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>{client.email}</TableCell>
-                    <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  <TableRow key={client.id} className="border-nz-borda">
+                    <TableCell className="text-gray-900">{client.full_name}</TableCell>
+                    <TableCell className="text-gray-600">{client.email}</TableCell>
+                    <TableCell className="text-gray-600">
                       {referrer ? (
-                        <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>👤 {referrer.full_name}</span>
+                        <span className={isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}>👤 {referrer.full_name}</span>
                       ) : (
-                        <span className={isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'}>Sem indicação</span>
+                        <span className="text-gray-400">Sem indicação</span>
                       )}
                     </TableCell>
-                    <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                    <TableCell className="text-gray-600">
                       {new Date(client.created_date).toLocaleDateString('pt-BR')}
                     </TableCell>
                   </TableRow>

@@ -82,37 +82,37 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card
           onClick={onGoToPedidos}
-          className={`bg-gray-800 border-gray-700 ${onGoToPedidos ? 'cursor-pointer hover:border-green-500/50 transition-colors' : ''}`}>
+          className={`bg-white border-nz-borda ${onGoToPedidos ? 'cursor-pointer hover:border-nz-verde/50 transition-colors' : ''}`}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Últimos Pedidos</p>
-                <p className="text-2xl font-bold text-white mt-2">{stats.totalOrders}</p>
+                <p className="text-gray-500 text-sm">Últimos Pedidos</p>
+                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.totalOrders}</p>
               </div>
-              <ShoppingBag className="w-10 h-10 text-green-400" />
+              <ShoppingBag className="w-10 h-10 text-nz-verde" />
             </div>
           </CardContent>
         </Card>
 
         <Card
           onClick={onGoToComissoes}
-          className={`bg-gray-800 border-gray-700 ${onGoToComissoes ? 'cursor-pointer hover:border-green-500/50 transition-colors' : ''}`}>
+          className={`bg-white border-nz-borda ${onGoToComissoes ? 'cursor-pointer hover:border-nz-marrom/50 transition-colors' : ''}`}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Faturamento</p>
-                <p className="text-2xl font-bold text-green-400 mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-gray-500 text-sm">Faturamento</p>
+                <p className="text-2xl font-bold text-nz-marrom mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
               </div>
-              <TrendingUp className="w-10 h-10 text-green-400" />
+              <TrendingUp className="w-10 h-10 text-nz-marrom" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Gráfico de Visitas */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-nz-borda">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
+          <CardTitle className="flex items-center gap-2 text-gray-900">
             <Eye className="w-5 h-5" />
             Visitas à sua loja virtual
           </CardTitle>
@@ -120,18 +120,18 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
         <CardContent>
           {isLoadingVisits ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-nz-verde" />
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={visitData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" allowDecimals={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', color: '#FFF' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#DDE4DF" />
+                <XAxis dataKey="date" stroke="#5C6B62" />
+                <YAxis stroke="#5C6B62" allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #DDE4DF', color: '#0D1310' }}
                 />
-                <Line type="monotone" dataKey="visits" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                <Line type="monotone" dataKey="visits" stroke="#1B7A48" strokeWidth={2} dot={{ fill: '#1B7A48' }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -139,9 +139,9 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
       </Card>
 
       {/* Últimos pedidos */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-nz-borda">
         <CardHeader>
-          <CardTitle className="text-white">Últimos Pedidos</CardTitle>
+          <CardTitle className="text-gray-900">Últimos Pedidos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -150,16 +150,16 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
                 <div
                   key={idx}
                   onClick={onGoToPedidos}
-                  className={`flex items-center justify-between p-3 bg-gray-700/50 rounded-lg ${onGoToPedidos ? 'cursor-pointer hover:bg-gray-700 transition-colors' : ''}`}>
+                  className={`flex items-center justify-between p-3 bg-nz-cinza-fundo rounded-lg ${onGoToPedidos ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}>
                   <div className="flex-1">
-                    <p className="text-white font-medium text-sm">{order.product_title || 'Produto'}</p>
-                    <p className="text-gray-400 text-xs mt-1">{new Date(order.created_date).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-gray-900 font-medium text-sm">{order.product_title || 'Produto'}</p>
+                    <p className="text-gray-500 text-xs mt-1">{new Date(order.created_date).toLocaleDateString('pt-BR')}</p>
                   </div>
-                  <Badge className="bg-green-500/20 text-green-300">R$ {order.total_amount?.toFixed(2)}</Badge>
+                  <Badge className="bg-nz-verde-fundo text-nz-verde border border-nz-verde/30">R$ {order.total_amount?.toFixed(2)}</Badge>
                 </div>
               ))
             ) : (
-              <p className="text-gray-400 text-center py-8">Nenhum pedido ainda</p>
+              <p className="text-gray-500 text-center py-8">Nenhum pedido ainda</p>
             )}
           </div>
         </CardContent>
