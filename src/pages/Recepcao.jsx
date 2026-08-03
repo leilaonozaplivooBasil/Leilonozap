@@ -78,8 +78,7 @@ export default function Recepcao() {
         tema="verde"
         titulo="Carteira NoZap"
         subtitulo="Seu saldo, seus lances e suas comissões num só lugar. PIX na hora."
-        primario={{ label: 'Abrir carteira', to: '/Carteira' }}
-        secundario={{ label: 'Como funciona', to: '/ComoFunciona' }}
+        primario={{ label: 'Abrir carteira', to: '/ComoFunciona' }}
       >
         <CartaoCarteira nome={nomeUsuario} />
       </BlocoVitrine>
