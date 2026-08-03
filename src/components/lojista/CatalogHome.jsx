@@ -22,7 +22,8 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
   useEffect(() => {
     const realSales = catalogSales.filter((s) => new Date(s.created_date) >= REPORT_CUTOFF_DATE);
     const total = realSales.length;
-    const revenue = realSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    // 🔴 Faturamento = saldo disponível (comissão) do usuário — é o dado real que vale a partir de agora
+    const revenue = user?.commission_balance || 0;
     const recent = realSales.slice(0, 5);
 
     setStats({
@@ -31,7 +32,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
       topProducts: [],
       recentOrders: recent
     });
-  }, [catalogSales]);
+  }, [catalogSales, user]);
 
   // 🆕 Visitas reais da loja virtual (CatalogVisit), últimos 7 dias
   useEffect(() => {
