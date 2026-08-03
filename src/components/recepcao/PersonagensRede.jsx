@@ -66,10 +66,7 @@ export default function PersonagensRede() {
             Lojista, Executivo ou Licenciado — escolha seu modelo de negócio e comece a faturar com o Leilão NoZap.
           </p>
           <div className="mt-8">
-            <ParCTA
-              primario={{ label: 'Ver modelos de negócio', to: '/Lucre' }}
-              secundario={{ label: 'Ver os planos', to: '/Evoluir' }}
-            />
+            <ParCTA primario={{ label: 'Ver modelos de negócio', to: '/Lucre' }} />
           </div>
         </div>
 
