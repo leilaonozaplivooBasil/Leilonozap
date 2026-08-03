@@ -51,7 +51,7 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
           />
         )}
         <div className="-mt-2">
-          <RotatingBanner banners={CATALOG_BANNERS} fit="cover" heightClass="h-56 md:h-72 lg:h-80" />
+          <RotatingBanner banners={CATALOG_BANNERS} fit="cover" heightClass="aspect-[1200/630] h-auto" />
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
