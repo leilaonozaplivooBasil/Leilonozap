@@ -34,7 +34,7 @@ const QUADRANTES = [
     bg: '#F1F7F3',
     escuro: false,
     img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a0135bbdf_generated_image.png',
-    ctas: [{ label: 'Como funciona', to: '/Licensing' }],
+    ctas: [{ label: 'Como funciona', to: '/ComoFunciona' }],
   },
 ];
 

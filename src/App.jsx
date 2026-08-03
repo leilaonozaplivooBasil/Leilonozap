@@ -73,6 +73,7 @@ const PortalLeiloeiro = React.lazy(() => import('@/pages/portal/PortalLeiloeiro'
 const PainelArrematante = React.lazy(() => import('@/pages/PainelArrematante'));
 const PrivacyPolicy = React.lazy(() => import('@/pages/PrivacyPolicy'));
 const Lucre = React.lazy(() => import('@/pages/Lucre'));
+const ComoFunciona = React.lazy(() => import('@/pages/ComoFunciona'));
 const TransferirSaldo = React.lazy(() => import('@/pages/TransferirSaldo'));
 const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -352,6 +353,11 @@ const AuthenticatedApp = () => {
       <Route path="/Lucre" element={
         <LayoutWrapper currentPageName="Lucre">
           <Lucre />
+        </LayoutWrapper>
+      } />
+      <Route path="/ComoFunciona" element={
+        <LayoutWrapper currentPageName="ComoFunciona">
+          <ComoFunciona />
         </LayoutWrapper>
       } />
       <Route path="/TransferirSaldo" element={
