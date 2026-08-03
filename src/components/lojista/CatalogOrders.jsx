@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Eye } from 'lucide-react';
 
+// 🔴 Mesmo corte usado no Relatório (CatalogHome.jsx): pedidos antigos eram de
+// teste. A lista de Pedidos só mostra o que entrou a partir deste corte.
+const REPORT_CUTOFF_DATE = new Date('2026-08-03T04:31:00.000Z');
+
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
   pending_payment: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
@@ -31,7 +35,7 @@ export default function CatalogOrders({ catalogSales = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const filteredOrders = catalogSales.filter(order => {
+  const filteredOrders = catalogSales.filter(order => new Date(order.created_date) >= REPORT_CUTOFF_DATE).filter(order => {
     const matchSearch = !searchTerm || 
       (order.product_title?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.buyer_name?.toLowerCase().includes(searchTerm.toLowerCase()));
