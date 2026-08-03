@@ -7,7 +7,7 @@ import { Zap, Wallet, Clock, Sparkles, ArrowRightLeft } from 'lucide-react';
 // cinza), mantendo o selo digital verde pulsante que já existia.
 export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWithdrawalAmount, isSaiDeBaixo, onUseNow, onWithdraw, onTransfer }) {
   const accentText = isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde';
-  const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-nz-verde-claro to-nz-verde-escuro';
+  const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-nz-verde-claro to-nz-verde';
 
   return (
     <Card ref={cardRef} className="mb-8 bg-white border-gray-200 shadow-sm">
@@ -43,7 +43,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
                 onClick={onUseNow}
                 className={`text-white font-semibold h-11 text-sm shadow-sm flex-1 min-w-[130px] ${isSaiDeBaixo ?
                   'bg-red-600 hover:bg-red-700' :
-                  'bg-nz-verde hover:bg-nz-verde-escuro'}`}>
+                  'bg-nz-verde-claro hover:bg-nz-verde'}`}>
                 <Zap className="w-4 h-4 mr-2" />
                 Usar Agora
               </Button>
@@ -67,7 +67,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
           </div>
 
           {/* Selo digital pulsante */}
-          <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0 mr-1 sm:mr-3 md:mr-4">
+          <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0 mr-2 sm:mr-6 md:mr-8">
             <span className={`absolute inset-0 rounded-full border-2 animate-ping ${isSaiDeBaixo ? 'border-red-300' : 'border-nz-verde/40'}`} style={{ animationDuration: '2.6s' }} />
             <span className={`absolute inset-3 rounded-full border ${isSaiDeBaixo ? 'border-red-200' : 'border-nz-verde/25'}`} />
             <div className={`relative w-24 h-24 rounded-full flex items-center justify-center shadow-xl bg-gradient-to-br ${accentBg}`}>
