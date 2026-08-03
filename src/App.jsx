@@ -20,6 +20,7 @@ import Recepcao from '@/pages/Recepcao';
 import PageNotFound from './lib/PageNotFound';
 import LinkCurtoLeilao from '@/components/common/LinkCurtoLeilao';
 import LinkCurtoProduto from '@/components/common/LinkCurtoProduto';
+import LinkCurtoConvite from '@/components/common/LinkCurtoConvite';
 import ChunkErrorBoundary from './lib/ChunkErrorBoundary.jsx';
 const CRMInvestidores = React.lazy(() => import('@/pages/CRMInvestidores'));
 const CarteiraInvestidor = React.lazy(() => import('@/pages/CarteiraInvestidor'));
@@ -428,6 +429,8 @@ const AuthenticatedApp = () => {
       <Route path="/l/:id" element={<LinkCurtoLeilao />} />
       {/* 🔗 Link curto de produto (/p/:id) — mesma rede de segurança da Loja Virtual. */}
       <Route path="/p/:id" element={<LinkCurtoProduto />} />
+      {/* 🔗 Link de convite por cargo (/c/:cargo) — mesma rede de segurança do link curto de leilão/produto. */}
+      <Route path="/c/:cargo" element={<LinkCurtoConvite />} />
       {/* Antes de 404: tenta resolver como apelido de rota (/loja, /store, /entrar…) */}
       <Route path="*" element={<AliasOrNotFound />} />
     </Routes>

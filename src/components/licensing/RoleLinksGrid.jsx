@@ -60,7 +60,9 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
           const blob = await response.blob();
           const file = new File([blob], `${role.title}.jpg`, { type: blob.type || 'image/jpeg' });
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ title: `${role.title} — Leilão NoZap`, text: fullText, url: role.link, files: [file] });
+            // 🔗 O link já está dentro de fullText — não repetir em `url`, senão apps
+            // como o WhatsApp mostram o link duplicado na mensagem compartilhada.
+            await navigator.share({ title: `${role.title} — Leilão NoZap`, text: fullText, files: [file] });
             return;
           }
         }
@@ -71,7 +73,7 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${role.title} — Leilão NoZap`, text: fullText, url: role.link });
+        await navigator.share({ title: `${role.title} — Leilão NoZap`, text: fullText });
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;
