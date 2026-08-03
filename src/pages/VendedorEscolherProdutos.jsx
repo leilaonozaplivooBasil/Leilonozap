@@ -90,46 +90,29 @@ export default function VendedorEscolherProdutos() {
     }
     setClosing(true);
     try {
-      const items = Object.values(cart);
-      const firstItem = items[0];
-      const titles = items.map((it) => it.product.description).join(", ");
-      const totalQty = items.reduce((s, it) => s + it.qty, 0);
+      const items = Object.values(cart).map((it) => ({ product_id: it.product.id, qty: it.qty }));
+      const carrier = deliveryMethod === "delivery"
+        ? [freteSel?.empresa, freteSel?.nome].filter(Boolean).join(" ") || "A combinar"
+        : "Retirada na loja";
 
-      await base44.entities.CatalogSale.create({
-        product_id: firstItem.product.id,
-        product_title: titles.slice(0, 250),
-        product_image: firstItem.product.image_urls?.[0] || null,
-        sale_price: total,
-        quantity: totalQty,
-        total_amount: total,
-        buyer_id: user.id,
-        buyer_name: user.full_name,
-        buyer_email: user.email,
-        buyer_phone: user.phone,
-        licensee_id: "site_official",
-        licensee_name: "Sistema — Adesão Vendedor",
-        status: "paid",
-        payment_confirmed_date: new Date().toISOString(),
-        carrier: deliveryMethod === "delivery"
-          ? [freteSel?.empresa, freteSel?.nome].filter(Boolean).join(" ") || "A combinar"
-          : "Retirada na loja",
-        ...(deliveryMethod === "delivery" ? {
-          buyer_address: [user.address_street, user.address_number, user.address_complement, user.address_neighborhood, user.address_city, user.address_state].filter(Boolean).join(", "),
-          buyer_cep: user.address_zip_code,
-        } : {}),
+      const res = await base44.functions.invoke("finalizeSellerOrder", {
+        user_id: user.id,
+        items,
+        delivery_method: deliveryMethod,
+        carrier,
       });
+
+      if (!res?.success) {
+        toast.error(res?.error || "Erro ao fechar o pedido. Tente novamente.");
+        return;
+      }
 
       const updatedUser = {
         ...user,
         seller_credit_balance: 0,
         is_seller: true,
-        career_levels: Array.from(new Set([...(user.career_levels || []), "vendedor"])),
+        career_levels: res.career_levels || Array.from(new Set([...(user.career_levels || []), "vendedor"])),
       };
-      await base44.entities.AppUser.update(user.id, {
-        seller_credit_balance: 0,
-        is_seller: true,
-        career_levels: updatedUser.career_levels,
-      });
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
 
       setDone(true);
