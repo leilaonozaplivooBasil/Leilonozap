@@ -194,6 +194,34 @@ export default async function handler(req, res) {
         ? 'version=is.null'
         : `version=eq.${currentVersion}`;
 
+    // 🔴 PONTO 72 — ORDEM CORRIGIDA: o REGISTRO DO LANCE nasce ANTES do preço.
+    // Antes, o preço era gravado aqui e o registro do lance só era criado depois, pelo
+    // NAVEGADOR do usuário. Se aquela criação falhasse (rede/RLS), o dinheiro era
+    // estornado mas o preço já tinha subido — o leilão ficava com preço inflado e um
+    // "vencedor" sem saldo reservado. Agora: grava o lance, e só então o preço.
+    const bidInsertResp = await sb('auction_messages', 'POST', {
+      auction_id: auctionId,
+      message_type: 'bid',
+      sender_id: userId,
+      sender_name: winnerName,
+      bid_amount: bidAmount,
+      frete_amount: freteValor,
+      content: `Lance de R$ ${bidAmount.toFixed(2).replace('.', ',')}`,
+      is_system_message: false,
+    });
+    const bidRow = Array.isArray(bidInsertResp.data) ? bidInsertResp.data[0] : null;
+
+    if (!bidInsertResp.ok || !bidRow) {
+      // Falhou o registro do lance → NADA é tocado: nem preço, nem winner_id, nem
+      // version, nem a reserva do líder anterior. O saldo do usuário é devolvido pelo
+      // caminho de erro do frontend (releaseHold), exatamente como já funcionava.
+      return res.status(500).json({
+        success: false,
+        message: 'Não foi possível registrar o lance. Tente novamente.',
+        debug: bidInsertResp.data,
+      });
+    }
+
     // PATCH atômico: só aplica se a version ainda for a mesma lida agora (CAS).
     const patchResp = await sb(
       `auctions?id=eq.${encodeURIComponent(auctionId)}&${versionFilter}`,
@@ -210,6 +238,10 @@ export default async function handler(req, res) {
     const patchedRow = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
 
     if (!patchResp.ok || !patchedRow) {
+      // 🧹 PONTO 72 — o lance foi gravado mas NÃO venceu a corrida: remove o registro
+      // para o histórico não guardar um lance que nunca valeu (e o preço fica intacto).
+      try { await sb(`auction_messages?id=eq.${encodeURIComponent(bidRow.id)}`, 'DELETE'); } catch (_) { /* best effort */ }
+
       // Conflito de versão: outro lance venceu a corrida. Devolve o estado real atual.
       const conflictResp = await sb(
         `auctions?id=eq.${encodeURIComponent(auctionId)}&select=current_price,winner_name,version`

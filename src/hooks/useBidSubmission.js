@@ -239,16 +239,10 @@ export default function useBidSubmission({
 
       const newEndTimeISO = atomicData.new_state.end_time;
 
-      await AuctionMessage.create({
-        auction_id: auctionId,
-        message_type: "bid",
-        sender_id: currentUser.id,
-        content: `Lance de R$ ${fmtBR(bidAmount)}`,
-        sender_name: currentUser.nickname || currentUser.full_name,
-        bid_amount: bidAmount,
-        frete_amount: freteValor,
-        is_system_message: false
-      });
+      // 🔴 PONTO 72 — o registro do lance agora nasce NO SERVIDOR, dentro do
+      // submitAtomicBid, ANTES da gravação do preço. Criar aqui também duplicaria o
+      // lance no histórico — e era exatamente esta chamada que, ao falhar por rede,
+      // deixava o preço inflado com o dinheiro já estornado.
 
       // 🔓 A devolução da reserva do líder anterior (seja outro usuário, seja este mesmo
       // usuário cobrindo o próprio lance) agora acontece NO SERVIDOR, dentro do

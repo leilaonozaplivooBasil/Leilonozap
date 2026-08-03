@@ -100,6 +100,26 @@ Deno.serve(async (req) => {
     const currentVersion = auction.version || 0;
     const winnerName = bidder_name || authUser.full_name || 'Anônimo';
 
+    // 🔴 PONTO 72 — ORDEM CORRIGIDA: o REGISTRO DO LANCE nasce ANTES do preço.
+    // Se o registro falhar, nada é tocado (preço, winner_id e version ficam intactos).
+    const bidInsertResp = await sbFetch('auction_messages', 'POST', {
+      auction_id,
+      message_type: 'bid',
+      sender_id: authUser.id,
+      sender_name: winnerName,
+      bid_amount: bidAmount,
+      content: `Lance de R$ ${bidAmount.toFixed(2).replace('.', ',')}`,
+      is_system_message: false
+    });
+    const bidRow = Array.isArray(bidInsertResp.data) ? bidInsertResp.data[0] : null;
+
+    if (!bidInsertResp.ok || !bidRow) {
+      return Response.json({
+        success: false,
+        message: 'Não foi possível registrar o lance. Tente novamente.'
+      }, { status: 500 });
+    }
+
     // PATCH atômico: só aplica se a version ainda for a mesma lida agora (CAS).
     // Se outro lance já foi commitado entre a leitura e este PATCH, a condição
     // version=eq.X falha e a resposta vem vazia — SEM sobrescrever o vencedor real.
@@ -117,6 +137,9 @@ Deno.serve(async (req) => {
     const patchedRow = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
 
     if (!patchResp.ok || !patchedRow) {
+      // 🧹 PONTO 72 — lance gravado mas não venceu a corrida: remove o registro.
+      try { await sbFetch(`auction_messages?id=eq.${bidRow.id}`, 'DELETE'); } catch (_) { /* best effort */ }
+
       // Conflito de versão: outro lance venceu a corrida. Devolve o estado real atual.
       const conflictResp = await sbFetch(`auctions?id=eq.${auction_id}&select=current_price,winner_name,version`);
       const conflictAuction = Array.isArray(conflictResp.data) ? conflictResp.data[0] : null;
