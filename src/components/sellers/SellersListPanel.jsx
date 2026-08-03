@@ -197,9 +197,9 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
       )}
 
       {!isLoading && sellers.length === 0 && (
-        <div className="rounded-xl border border-dashed border-nz-marrom/30 bg-nz-marrom-fundo p-8 text-center">
-          <Store className="w-10 h-10 text-nz-marrom/60 mx-auto mb-3" />
-          <p className="text-gray-600">Nenhum vendedor cadastrado ainda.</p>
+        <div className="rounded-xl border border-dashed border-nz-marrom-escuro/40 bg-nz-marrom-escuro p-8 text-center">
+          <Store className="w-10 h-10 text-white/60 mx-auto mb-3" />
+          <p className="text-white/80">Nenhum vendedor cadastrado ainda.</p>
         </div>
       )}
 

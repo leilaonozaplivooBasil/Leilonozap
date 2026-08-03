@@ -50,7 +50,7 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
       {ROLE_LINKS(referralCode).map((role, idx) => (
         <div
           key={role.title}
-          className="rounded-xl border p-3 flex items-center gap-3 bg-nz-marrom-fundo border-nz-marrom/25"
+          className="rounded-xl border p-3 flex items-center gap-3 bg-nz-marrom-escuro border-nz-marrom-escuro"
         >
           <img
             src={role.image}
@@ -59,13 +59,13 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
             loading="lazy"
           />
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-gray-900">{role.title}</p>
-            <p className="text-xs mb-1.5 text-gray-500">{role.desc}</p>
+            <p className="font-bold text-sm text-white">{role.title}</p>
+            <p className="text-xs mb-1.5 text-white/70">{role.desc}</p>
             <div className="flex gap-1.5">
               <input
                 value={role.link}
                 readOnly
-                className="flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-1.5 border truncate bg-white border-nz-marrom/25 text-gray-700"
+                className="flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-1.5 border truncate bg-white border-white/20 text-gray-700"
               />
               <button
                 onClick={() => handleCopy(role.link, idx)}
