@@ -60,6 +60,18 @@ export const CATALOG_BANNERS = [
   { ...b, image_url: mobile, id: `nz-banner-${i}-m`, device_type: 'mobile' },
 ]);
 
+// 🎬 3 vídeos institucionais (Influenciador, Vendedor, Licenciado) entram no
+// carrossel da Loja Virtual, junto com os banners de imagem acima.
+const VIDEO_CATALOG_BANNERS = [
+  { titulo: 'Seja um Influenciador', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/af86d374c_Vdeo_Influenciador.mp4', link_url: createPageUrl('SejaVendedor') },
+  { titulo: 'Seja um Vendedor', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/1e5cd0bf9_Vdeo_Vendedor.mp4', link_url: createPageUrl('SejaVendedor') },
+  { titulo: 'Seja um Licenciado', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/31a58a982_Vdeo_Licenciado.mp4', link_url: createPageUrl('SejaLicenciado') },
+].flatMap(({ titulo, url, link_url }, i) => [
+  { title: titulo, video_url: url, link_url, id: `nz-video-${i}-d`, device_type: 'desktop' },
+  { title: titulo, video_url: url, link_url, id: `nz-video-${i}-m`, device_type: 'mobile' },
+]);
+CATALOG_BANNERS.push(...VIDEO_CATALOG_BANNERS);
+
 // Ícone redondo do rail de categorias (estilo Shopee, cores Leila)
 function RailIcon({ icon: Icon, label, onClick, accent = 'green' }) {
   const bg = accent === 'gold'

@@ -31,6 +31,17 @@ import PagePerformanceTracker from '../components/system/PagePerformanceTracker'
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
+// 🎬 3 vídeos institucionais (Influenciador, Vendedor, Licenciado) entram no
+// carrossel de banners do topo, junto com os banners de imagem cadastrados no admin.
+const VIDEO_BANNERS = [
+  { id: 'video-influenciador', video_url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/af86d374c_Vdeo_Influenciador.mp4', title: 'Seja um Influenciador', link_url: createPageUrl('SejaVendedor'), device_type: 'desktop' },
+  { id: 'video-influenciador-m', video_url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/af86d374c_Vdeo_Influenciador.mp4', title: 'Seja um Influenciador', link_url: createPageUrl('SejaVendedor'), device_type: 'mobile' },
+  { id: 'video-vendedor', video_url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/1e5cd0bf9_Vdeo_Vendedor.mp4', title: 'Seja um Vendedor', link_url: createPageUrl('SejaVendedor'), device_type: 'desktop' },
+  { id: 'video-vendedor-m', video_url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/1e5cd0bf9_Vdeo_Vendedor.mp4', title: 'Seja um Vendedor', link_url: createPageUrl('SejaVendedor'), device_type: 'mobile' },
+  { id: 'video-licenciado', video_url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/31a58a982_Vdeo_Licenciado.mp4', title: 'Seja um Licenciado', link_url: createPageUrl('SejaLicenciado'), device_type: 'desktop' },
+  { id: 'video-licenciado-m', video_url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/31a58a982_Vdeo_Licenciado.mp4', title: 'Seja um Licenciado', link_url: createPageUrl('SejaLicenciado'), device_type: 'mobile' },
+];
+
 // Botão de ação do hero — mesmo visual no mobile e no desktop
 function HeroAction({ icon: Icon, label, sublabel, accent = "green" }) {
   const isPurple = accent === "purple";
@@ -701,11 +712,12 @@ export default function Home() {
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
 
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
-        setBanners(JSON.parse(cachedBanners));
+        setBanners([...VIDEO_BANNERS, ...JSON.parse(cachedBanners)]);
       } else {
         // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
         base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
-          const sortedBanners = (bannerData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        const imageBanners = (bannerData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sortedBanners = [...VIDEO_BANNERS, ...imageBanners];
           // Salva a URL da primeira imagem pra preload na próxima visita
           if (sortedBanners[0]?.image_url) {
             localStorage.setItem('home_banner_first_url', sortedBanners[0].image_url);
@@ -721,7 +733,7 @@ export default function Home() {
             }
           }
           setBanners(sortedBanners);
-          sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
+          sessionStorage.setItem('home_banners_cache', JSON.stringify(imageBanners));
           sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
         }).catch(() => {
           const oldBanners = sessionStorage.getItem('home_banners_cache');

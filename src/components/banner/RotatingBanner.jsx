@@ -61,6 +61,40 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
           const isActive = index === currentIndex;
           const isNext = index === (currentIndex + 1) % filteredBanners.length;
           const shouldEagerLoad = index === 0 || isActive;
+          if (banner.video_url) {
+            return (
+              <div
+                key={banner.id}
+                className={`absolute inset-0 transition-opacity duration-1000 ${
+                  isActive ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                {banner.link_url ? (
+                  <a href={banner.link_url} className="block w-full h-full">
+                    <video
+                      src={banner.video_url}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload={shouldEagerLoad ? 'auto' : 'metadata'}
+                      className="w-full h-full object-cover cursor-pointer"
+                    />
+                  </a>
+                ) : (
+                  <video
+                    src={banner.video_url}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload={shouldEagerLoad ? 'auto' : 'metadata'}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            );
+          }
           return (
           <div
             key={banner.id}
