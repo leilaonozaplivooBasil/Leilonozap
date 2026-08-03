@@ -48,11 +48,35 @@ const DEFAULT_LEVEL = CAREER_LEVELS[0];
 
 const BY_ID = CAREER_LEVELS.reduce((m, l) => { m[l.id] = l; return m; }, {});
 
+// ⚠️ IDs antigos (já gravados em usuários antes desta lista existir) que não
+// existem mais em CAREER_LEVELS. Sem este mapa, um usuário salvo com o id
+// antigo (ex: 'licenciado_catalogo') "some" da tela — o painel admin filtra
+// ids desconhecidos e some com o cargo real dele.
+const LEGACY_ALIASES = {
+  licenciado_aplicativo: 'influenciador',
+  influencer: 'influenciador',
+  licenciado_catalogo: 'licenciado',
+  trainee: 'trainee_diretor',
+  executivo: 'executivo_conta',
+  socio: 'executivo_conta',
+  diretoria: 'diretoria_executiva',
+  diretor: 'diretoria_operacao',
+};
+
+/** Traduz um id antigo para o id atual de CAREER_LEVELS (ou devolve o mesmo se já for atual). */
+export const normalizeLevel = (id) => LEGACY_ALIASES[id] || id;
+
+/** Normaliza um array de career_levels, removendo duplicatas geradas pelo alias. */
+export const normalizeLevels = (ids) => {
+  const arr = Array.isArray(ids) ? ids : (ids ? [ids] : []);
+  return [...new Set(arr.map(normalizeLevel))];
+};
+
 /** Config completa de um nível (com fallback pra Usuário). */
-export const getLevel = (id) => BY_ID[id] || DEFAULT_LEVEL;
+export const getLevel = (id) => BY_ID[normalizeLevel(id)] || DEFAULT_LEVEL;
 
 /** Só a classe de fundo (usada pelo TreeHierarchy). */
-export const levelColor = (id) => (BY_ID[id] || DEFAULT_LEVEL).color;
+export const levelColor = (id) => (BY_ID[normalizeLevel(id)] || DEFAULT_LEVEL).color;
 
 /** Nome amigável. */
-export const levelName = (id) => (BY_ID[id] || DEFAULT_LEVEL).name;
+export const levelName = (id) => (BY_ID[normalizeLevel(id)] || DEFAULT_LEVEL).name;

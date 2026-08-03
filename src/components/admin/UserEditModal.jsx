@@ -10,7 +10,7 @@ import { Loader2, Award, Upload, ClipboardList, UserRound, TrendingUp, Trophy, L
 import { base44 } from '@/api/base44Client';
 import { toast } from "sonner";
 // P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
-import { CAREER_LEVELS } from '@/lib/careerLevels';
+import { CAREER_LEVELS, normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 import {
     listExecutives,
     readExecutiveOwner,
@@ -45,12 +45,15 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             const rawLevels = Array.isArray(user.career_levels) 
                 ? user.career_levels 
                 : (user.career_levels ? [user.career_levels] : ['usuario']);
-            const userLevels = rawLevels.filter(l => validLevelIds.includes(l));
+            // 🩹 Normaliza ids legados (ex: 'licenciado_catalogo' → 'licenciado') antes de
+            // filtrar — sem isso, cargos salvos com o id antigo "somem" da lista.
+            const userLevels = normalizeLevels(rawLevels).filter(l => validLevelIds.includes(l));
             setSelectedLevels(userLevels.length > 0 ? userLevels : ['usuario']);
             
             // Carregar nível principal — só aceita IDs que existem no CAREER_LEVELS
-            const validPrimary = user.primary_career_level && validLevelIds.includes(user.primary_career_level)
-                ? user.primary_career_level
+            const normalizedPrimary = normalizeLevel(user.primary_career_level);
+            const validPrimary = normalizedPrimary && validLevelIds.includes(normalizedPrimary)
+                ? normalizedPrimary
                 : (userLevels[0] || 'usuario');
             setPrimaryLevel(validPrimary);
             

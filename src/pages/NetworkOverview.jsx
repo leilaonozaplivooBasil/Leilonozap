@@ -27,7 +27,7 @@ import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
 import TreeHierarchy from "../components/network/TreeHierarchy";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
-import { CAREER_LEVELS } from "@/lib/careerLevels";
+import { CAREER_LEVELS, normalizeLevel, normalizeLevels } from "@/lib/careerLevels";
 import {
   buildStructureReport,
   buildExecutiveUpdate,
@@ -38,8 +38,8 @@ import {
 
 function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit, onDelete }) {
   const [showDetails, setShowDetails] = useState(false);
-  const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
-  const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
+  const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
+  const primaryLevel = normalizeLevel(user.primary_career_level) || userLevels[0] || 'usuario';
   const primaryLevelConfig = CAREER_LEVELS.find(l => l.id === primaryLevel) || CAREER_LEVELS[0];
   const hasChildren = children && children.length > 0;
 
@@ -288,8 +288,8 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
     const isExpanded = expandedUsers.has(user.id);
     const hasChildren = children.length > 0;
 
-    const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
-    const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
+    const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
+    const primaryLevel = normalizeLevel(user.primary_career_level) || userLevels[0] || 'usuario';
     const primaryLevelConfig = CAREER_LEVELS.find(l => l.id === primaryLevel) || CAREER_LEVELS[0];
 
     const getInitials = (fullName) => {
@@ -656,7 +656,7 @@ export default function NetworkOverview() {
     const byLevel = CAREER_LEVELS.slice().reverse().map(level => ({
       ...level,
       count: allUsers.filter(u => {
-        const userLevels = Array.isArray(u.career_levels) ? u.career_levels : (u.career_levels ? [u.career_levels] : ['usuario']);
+        const userLevels = normalizeLevels(u.career_levels && u.career_levels.length ? u.career_levels : ['usuario']);
         return userLevels.includes(level.id);
       }).length
     }));
@@ -827,9 +827,9 @@ export default function NetworkOverview() {
 
   const handlePromote = (user) => {
     setPromotingUser(user);
-    const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
+    const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
     setSelectedLevels(userLevels);
-    setPrimaryLevel(user.primary_career_level || userLevels[0] || 'usuario');
+    setPrimaryLevel(normalizeLevel(user.primary_career_level) || userLevels[0] || 'usuario');
 
     const nameParts = user.full_name.split(' ').filter(part => part.trim() !== '');
     setDisplayFirstName(user.display_first_name && user.display_first_name.trim() !== '' ? user.display_first_name : (nameParts[0] || ''));
@@ -1738,8 +1738,8 @@ export default function NetworkOverview() {
                                 ? allUsers.find(u => u.id === user.referred_by_id)
                                 : null;
 
-                              const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
-                              const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
+                              const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
+                              const primaryLevel = normalizeLevel(user.primary_career_level) || userLevels[0] || 'usuario';
                               const primaryLevelConfig = CAREER_LEVELS.find(l => l.id === primaryLevel) || CAREER_LEVELS[0];
 
                               return (
@@ -1867,7 +1867,7 @@ export default function NetworkOverview() {
                           {membros.length > 0 && (
                             <div className="mt-2 rounded-lg border border-gray-700/70 divide-y divide-gray-700/50">
                               {membros.map(({ user: m, source }) => {
-                                const lv = CAREER_LEVELS.find(l => l.id === (m.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                                const lv = CAREER_LEVELS.find(l => l.id === normalizeLevel(m.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
                                 const fixado = readExecutiveOwner(m).pinned;
                                 return (
                                   <div key={m.id} className="flex items-center gap-2.5 px-2.5 py-1.5 flex-wrap hover:bg-white/[0.03]">
@@ -1946,7 +1946,7 @@ export default function NetworkOverview() {
                   ) : (
                     <div className="divide-y divide-gray-700/60 max-h-96 overflow-y-auto">
                       {structure.orfaos.map((u) => {
-                        const lv = CAREER_LEVELS.find(l => l.id === (u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                        const lv = CAREER_LEVELS.find(l => l.id === normalizeLevel(u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
                         return (
                           <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 flex-wrap">
                             <div className={`w-8 h-8 rounded-full ${lv.color} flex items-center justify-center text-white text-[10px] font-bold overflow-hidden flex-shrink-0`}>
@@ -1995,7 +1995,7 @@ export default function NetworkOverview() {
                   ) : (
                     <div className="divide-y divide-gray-700/60">
                       {trashedUsers.map((u) => {
-                        const lv = CAREER_LEVELS.find(l => l.id === (u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
+                        const lv = CAREER_LEVELS.find(l => l.id === normalizeLevel(u.primary_career_level || 'usuario')) || CAREER_LEVELS[0];
                         return (
                           <div key={u.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-700/20">
                             <div className={`w-9 h-9 rounded-full ${lv.color} flex items-center justify-center text-white text-[11px] font-bold overflow-hidden flex-shrink-0 opacity-70`}>

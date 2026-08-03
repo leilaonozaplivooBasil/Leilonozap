@@ -44,6 +44,7 @@ import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import DashboardTabsList from '../components/licensing/DashboardTabsList';
+import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 
 const Product = base44.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
@@ -225,19 +226,22 @@ const DashboardContent = ({ user, isAdmin }) => {
     `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
     `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
 
-  const userLevels = Array.isArray(user.career_levels) ? user.career_levels : user.career_levels ? [user.career_levels] : ['usuario'];
-  const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
+  // 🩹 Normaliza ids legados (ex: 'licenciado_catalogo' → 'licenciado') pra bater
+  // com a lista oficial CAREER_LEVELS usada no painel admin — sem isso o cargo
+  // real do usuário nunca é reconhecido aqui.
+  const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
+  const primaryLevel = normalizeLevel(user.primary_career_level) || userLevels[0] || 'usuario';
 
-  const careerLevelsMap = { 'usuario': 'Usuário', 'licenciado_aplicativo': 'Influencer', 'influencer': 'Influencer', 'licenciado_catalogo': 'Licenciado Loja Virtual', 'trainee': 'Trainee', 'executivo': 'Executivo', 'kit_start': 'Kit Start', 'plano_lider': 'Plano Líder', 'plano_lojista': 'Plano Lojista', 'distribuidor': 'Distribuidor', 'diretor': 'Diretor', 'diretoria': 'Diretoria', 'ceo': 'CEO', 'conselheiro': 'Conselheiro', 'fundador': 'Fundador' };
+  const careerLevelsMap = { 'usuario': 'Usuário', 'influenciador': 'Influencer', 'licenciado': 'Licenciado Loja Virtual', 'trainee_diretor': 'Trainee', 'executivo_conta': 'Sócio Executivo', 'distribuidor': 'Distribuidor', 'diretoria_operacao': 'Diretor Operacional', 'diretoria_executiva': 'Diretoria Executiva', 'ceo': 'CEO', 'conselheiro': 'Conselheiro', 'fundador': 'Fundador' };
 
-  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
+  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria_executiva', 'diretoria_operacao', 'executivo_conta', 'licenciado', 'influenciador', 'usuario'];
 
   const highestLevel = careerHierarchy.find((level) => userLevels.includes(level)) || 'usuario';
 
   // 🆕 Só existe UM link de indicação ativo por vez: quem já avançou para
   // Licenciado (ou além, na carreira) ganha pela Loja Virtual, não mais pelo App.
   const hasAdvancedBeyondInfluencer = userLevels.some((l) =>
-    ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor', 'diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].includes(l)
+    ['licenciado', 'trainee_diretor', 'executivo_conta', 'distribuidor', 'diretoria_operacao', 'diretoria_executiva', 'ceo', 'conselheiro', 'fundador'].includes(l)
   );
 
   const shortName = user.display_first_name && user.display_last_name ?
@@ -1227,7 +1231,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
 
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
-        {(userLevels.includes('licenciado_catalogo') || isAdmin) &&
+        {(userLevels.includes('licenciado') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
@@ -1844,12 +1848,10 @@ export default function LicensingPage() {
 
   const isAdmin = currentUser?.role === 'admin';
 
-  // DETECTAR NÍVEL DO USUÁRIO
+  // DETECTAR NÍVEL DO USUÁRIO (normaliza id legado, ex: 'licenciado_catalogo' → 'licenciado')
   const getUserLevel = () => {
     if (!currentUser) return 'guest';
-
-    // Usa o primary_career_level se disponível
-    return currentUser.primary_career_level || 'usuario';
+    return normalizeLevel(currentUser.primary_career_level) || 'usuario';
   };
 
   const userLevel = getUserLevel();
@@ -1858,16 +1860,13 @@ export default function LicensingPage() {
   const getLevelLabel = (level) => {
     const labels = {
       'usuario': 'um Usuário',
-      'influencer': 'um Influencer',
-      'licenciado_catalogo': 'um Licenciado Loja Virtual',
-      'trainee': 'um Trainee',
-      'executivo': 'um Executivo',
-      'kit_start': 'Kit Start',
-      'plano_lider': 'Plano Líder',
-      'plano_lojista': 'Plano Lojista',
+      'influenciador': 'um Influencer',
+      'licenciado': 'um Licenciado Loja Virtual',
+      'trainee_diretor': 'um Trainee',
+      'executivo_conta': 'um Sócio Executivo',
       'distribuidor': 'um Distribuidor',
-      'diretor': 'um Diretor',
-      'diretoria': 'Diretoria',
+      'diretoria_operacao': 'um Diretor Operacional',
+      'diretoria_executiva': 'Diretoria Executiva',
       'ceo': 'CEO',
       'conselheiro': 'um Conselheiro',
       'fundador': 'um Fundador'
@@ -1878,16 +1877,13 @@ export default function LicensingPage() {
   // Mensagens motivacionais por cargo
   const getMotivationalMessage = (level) => {
     const messages = {
-      'influencer': 'Continue evoluindo! O próximo passo é se tornar Licenciado Loja Virtual e desbloquear ainda mais benefícios.',
-      'licenciado_catalogo': 'Você já tem acesso à loja virtual! Cresça sua rede para alcançar os níveis Trainee e Executivo.',
-      'trainee': 'Não sei se te dou parabéns ou pêsames, seja bem vindo a... SIFUDENCIA! Serão 6 meses de extremo desafio, porém se você se formar o céu é o limite. BOA SORTE!',
-      'executivo': 'Ótimo trabalho! Os próximos níveis são Kit Start, Plano Líder e Plano Lojista.',
-      'kit_start': 'Continue crescendo! Avance para Plano Líder e aumente suas comissões.',
-      'plano_lider': 'Muito bem! Próximo objetivo: Plano Lojista e depois Distribuidor.',
-      'plano_lojista': 'Impressionante! Você está perto de se tornar Distribuidor.',
-      'distribuidor': 'Parabéns! Continue para alcançar Diretor e ingressar na liderança.',
-      'diretor': 'Liderança conquistada! Próximos passos: Diretoria e CEO.',
-      'diretoria': 'Você faz parte da alta direção! Avance para CEO.',
+      'influenciador': 'Continue evoluindo! O próximo passo é se tornar Licenciado Loja Virtual e desbloquear ainda mais benefícios.',
+      'licenciado': 'Você já tem acesso à loja virtual! Cresça sua rede para alcançar os próximos níveis.',
+      'trainee_diretor': 'Não sei se te dou parabéns ou pêsames, seja bem vindo a... SIFUDENCIA! Serão 6 meses de extremo desafio, porém se você se formar o céu é o limite. BOA SORTE!',
+      'executivo_conta': 'Ótimo trabalho! Continue crescendo sua estrutura de negócio.',
+      'distribuidor': 'Parabéns! Continue para alcançar a Diretoria e ingressar na liderança.',
+      'diretoria_operacao': 'Liderança conquistada! Próximos passos: Diretoria Executiva e CEO.',
+      'diretoria_executiva': 'Você faz parte da alta direção! Avance para CEO.',
       'ceo': 'Excelente! Você está quase no topo. Próximo nível: Conselheiro.',
       'conselheiro': 'Incrível! Um passo do topo absoluto: Fundador.',
       'fundador': '🏆 Você alcançou o topo absoluto! Como Fundador, você está no nível máximo do sistema. Agora é hora de consolidar seu império e mentorar novos líderes!'

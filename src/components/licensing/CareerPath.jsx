@@ -1,13 +1,14 @@
 import React from 'react';
 import { Award, BookOpen, Briefcase, Star, ArrowUp, Users, Crown, Gem, Trophy, Megaphone, Store, MapPin, Building2, ShieldCheck, Landmark } from 'lucide-react';
 import { cn } from "@/lib/utils"
+import { normalizeLevels, normalizeLevel } from "@/lib/careerLevels";
 
 // Comissão de VENDA DIRETA por cargo (plano de carreira atual — bloco rede).
 // Modelo telescópico: o cargo recebe esse % direto; a diferença pra 20% sobe pra rede.
 const rolePercentages = {
   influenciador: 5,
   vendedor: 10,
-  licenciado_catalogo: 13,
+  licenciado: 13,
   parceiro: 15,
   ponto_retirada: 16,
   loja_fisica: 19,
@@ -68,13 +69,13 @@ const careerSteps = [
   { id: 'ceo', title: 'CEO', icon: Crown,
     achievedDescription: '👑 CEO liderando a expansão da Leilão NoZap.',
     lockedDescription: 'Convidado para se tornar CEO e liderar a expansão da Leilão NoZap em novos estados.' },
-  { id: 'diretoria', title: 'Diretoria Executiva', icon: Landmark,
+  { id: 'diretoria_executiva', title: 'Diretoria Executiva', icon: Landmark,
     achievedDescription: '🏛️ Membro da Diretoria Executiva.',
     lockedDescription: 'Convidado para integrar a Diretoria Executiva e participar das decisões estratégicas do negócio.' },
-  { id: 'diretor', title: 'Diretor Operacional', icon: ShieldCheck,
+  { id: 'diretoria_operacao', title: 'Diretor Operacional', icon: ShieldCheck,
     achievedDescription: '🛡️ Diretor Operacional.',
     lockedDescription: 'Convidado para assumir uma posição na Diretoria Operacional.' },
-  { id: 'socio', title: 'Sócio Executivo', icon: BookOpen,
+  { id: 'executivo_conta', title: 'Sócio Executivo', icon: BookOpen,
     achievedDescription: '📖 Sócio: 1% sobre todo o seu sistema de alavancagem.',
     lockedDescription: 'Convidado para participar da mentoria X-OS (nossa Academia de Desenvolvimento). Ao concluir, torna-se Sócio e ganha 1% sobre todo o seu sistema de alavancagem — ex: se um Distribuidor da sua rede vender R$ 10 milhões, você ganha 1% sobre esse total.' },
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
@@ -89,7 +90,7 @@ const careerSteps = [
   { id: 'parceiro', title: 'Parceiro', icon: Store,
     achievedDescription: '🤝 Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
     lockedDescription: 'Adesão R$ 20.000 (100% em produto). 15% na venda direta.' },
-  { id: 'licenciado_catalogo', title: 'Licenciado', icon: Briefcase,
+  { id: 'licenciado', title: 'Licenciado', icon: Briefcase,
     achievedDescription: '📚 Licenciado. 13% na venda direta pelo seu link.',
     lockedDescription: 'Adesão R$ 5.000 (100% em produto). 13% na venda direta.' },
   { id: 'vendedor', title: 'Vendedor', icon: Award,
@@ -104,14 +105,17 @@ const careerSteps = [
 ];
 
 export default function CareerPath({ currentUser }) {
-    const userLevels = Array.isArray(currentUser?.career_levels) 
+    const rawLevels = Array.isArray(currentUser?.career_levels) 
         ? currentUser.career_levels 
         : (currentUser?.career_levels 
             ? [currentUser.career_levels] 
             : ['usuario']
           );
+    // 🩹 Normaliza ids legados (ex: 'licenciado_catalogo' → 'licenciado') para bater
+    // com os ids atuais desta lista — sem isso o cargo real do usuário nunca acende.
+    const userLevels = normalizeLevels(rawLevels);
     
-    const primaryLevel = currentUser?.primary_career_level || userLevels[0] || 'usuario';
+    const primaryLevel = normalizeLevel(currentUser?.primary_career_level) || userLevels[0] || 'usuario';
 
     // Diretoria: só mostra os cargos institucionais que o usuário realmente tem (destacados em verde).
     const myDirectorSteps = directorSteps.filter((s) => s.match.some((m) => userLevels.includes(m)));
