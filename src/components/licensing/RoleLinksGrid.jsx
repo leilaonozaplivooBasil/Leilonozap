@@ -11,7 +11,7 @@ const ROLE_LINKS = (referralCode) => [
     title: "Influenciador",
     desc: "Grátis · 5% por venda/arremate",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png",
-    link: `https://leilaonozap.net/Home?ref=${referralCode}`,
+    link: `https://leilaonozap.net/Licensing?ref=${referralCode}`,
   },
   {
     title: "Vendedor",

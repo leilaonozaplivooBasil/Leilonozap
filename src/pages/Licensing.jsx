@@ -1289,7 +1289,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <CardHeader>
                     <div>
                       <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
-                      <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua rede.</CardDescription>
+                      <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua estrutura de negócio.</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
