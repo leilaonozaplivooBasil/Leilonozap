@@ -55,6 +55,11 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
 
   return (
     <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
+      <style>{`
+        @keyframes nzCaptionFade { 0%, 100% { opacity: 0; } 15%, 85% { opacity: 1; } }
+        .nz-video-caption { animation: nzCaptionFade 5s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .nz-video-caption { animation: none; opacity: 1; } }
+      `}</style>
       {/* Imagem do Banner */}
       <div className="relative w-full h-full">
         {filteredBanners.map((banner, index) => {
@@ -70,7 +75,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 }`}
               >
                 {banner.link_url ? (
-                  <a href={banner.link_url} className="block w-full h-full">
+                  <a href={banner.link_url} className="relative block w-full h-full">
                     <video
                       src={banner.video_url}
                       autoPlay
@@ -79,18 +84,28 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       playsInline
                       preload={shouldEagerLoad ? 'auto' : 'metadata'}
                       className="w-full h-full object-cover cursor-pointer"
+                      style={{ objectPosition: 'center 65%' }}
                     />
+                    <span className="nz-video-caption absolute bottom-3 right-3 md:bottom-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
+                      Torne-se um <span className="text-nz-verde-claro">Vendedor</span>, <span className="text-nz-verde-claro">Licenciado</span> ou <span className="text-nz-verde-claro">Influencer</span>
+                    </span>
                   </a>
                 ) : (
-                  <video
-                    src={banner.video_url}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload={shouldEagerLoad ? 'auto' : 'metadata'}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative w-full h-full">
+                    <video
+                      src={banner.video_url}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload={shouldEagerLoad ? 'auto' : 'metadata'}
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: 'center 65%' }}
+                    />
+                    <span className="nz-video-caption absolute bottom-3 right-3 md:bottom-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
+                      Torne-se um <span className="text-nz-verde-claro">Vendedor</span>, <span className="text-nz-verde-claro">Licenciado</span> ou <span className="text-nz-verde-claro">Influencer</span>
+                    </span>
+                  </div>
                 )}
               </div>
             );
