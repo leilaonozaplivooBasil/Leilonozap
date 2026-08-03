@@ -90,7 +90,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
               </div>
             </div>
             <p className="text-3xl font-bold text-nz-verde">
-              R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
+              R$ {(user.catalog_commission_balance || 0).toFixed(2)}
             </p>
             <p className="text-xs mt-1 text-gray-500">Total histórico gerado</p>
             <div className="mt-3 pt-3 border-t border-nz-verde/20">
