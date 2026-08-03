@@ -1045,8 +1045,12 @@ const DashboardContent = ({ user, isAdmin }) => {
         <div className="flex flex-col gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Painel de Alavancagem</h1>
-            <p className="text-sm sm:text-base text-gray-500">
-              👋 <strong className="text-gray-900">{shortName}</strong>
+            <p className="text-base sm:text-lg font-slab text-gray-800">
+              {(() => {
+                const h = new Date().getHours();
+                const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+                return `${greeting}, ${shortName}`;
+              })()}
             </p>
           </div>
         </div>

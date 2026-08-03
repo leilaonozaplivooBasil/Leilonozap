@@ -67,7 +67,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
           </div>
 
           {/* Selo digital pulsante */}
-          <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0">
+          <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0 mr-1 sm:mr-3 md:mr-4">
             <span className={`absolute inset-0 rounded-full border-2 animate-ping ${isSaiDeBaixo ? 'border-red-300' : 'border-nz-verde/40'}`} style={{ animationDuration: '2.6s' }} />
             <span className={`absolute inset-3 rounded-full border ${isSaiDeBaixo ? 'border-red-200' : 'border-nz-verde/25'}`} />
             <div className={`relative w-24 h-24 rounded-full flex items-center justify-center shadow-xl bg-gradient-to-br ${accentBg}`}>
