@@ -132,7 +132,7 @@ export default function CareerPath({ currentUser }) {
                                     <s.icon className="h-5 w-5 text-nz-verde" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold flex items-center gap-2 text-black">
+                                    <h4 className="font-bold flex items-center gap-2 flex-wrap text-black">
                                         {s.title}
                                         <span className="ml-1 text-xs px-2 py-0.5 rounded border bg-nz-verde-fundo text-nz-verde border-nz-verde/30">{s.gov}</span>
                                     </h4>
@@ -167,7 +167,7 @@ export default function CareerPath({ currentUser }) {
                                 </div>
                                 <div>
                                     <h4 className={cn(
-                                        "font-bold flex items-center gap-2",
+                                        "font-bold flex items-center gap-2 flex-wrap",
                                         isActive ? "text-black" : "text-gray-400"
                                     )}>
                                         {step.title}

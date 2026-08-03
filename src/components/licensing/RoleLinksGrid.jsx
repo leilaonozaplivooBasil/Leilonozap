@@ -69,11 +69,11 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
               <input
                 value={role.link}
                 readOnly
-                className="flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-1.5 border truncate bg-white border-nz-marrom/25 text-gray-700"
+                className="flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-2 border truncate bg-white border-nz-marrom/25 text-gray-700"
               />
               <button
                 onClick={() => handleCopy(role.link, idx)}
-                className={`shrink-0 rounded-md px-2 flex items-center justify-center transition-colors ${copiedIdx === idx ? 'bg-nz-verde-escuro' : 'bg-nz-verde hover:bg-nz-verde-escuro'} text-white`}
+                className={`shrink-0 rounded-md w-9 h-9 flex items-center justify-center transition-colors ${copiedIdx === idx ? 'bg-nz-verde-escuro' : 'bg-nz-verde hover:bg-nz-verde-escuro'} text-white`}
                 title="Copiar link"
               >
                 {copiedIdx === idx ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
