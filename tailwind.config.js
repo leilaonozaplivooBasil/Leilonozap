@@ -24,7 +24,7 @@ module.exports = {
   				borda: '#DDE4DF',
   				marrom: '#96603E',
   				'marrom-claro': '#B8875F',
-  				'marrom-fundo': '#F7F1EA',
+  				'marrom-fundo': '#F0E2D1',
   				'marrom-escuro': '#5A270F'
   			},
   			background: 'hsl(var(--background))',
