@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { money, addMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
+// 👁️ Só observabilidade: nenhum dado pessoal, nenhuma interferência no lance.
+import { trackEvent } from "@/lib/analytics";
 
 const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;
@@ -143,6 +145,7 @@ export default function useBidSubmission({
       }
 
       playSound('bid');
+      trackEvent('lance_tentativa', { auction_id: auctionId, valor: bidAmount });
 
       // Debounce
       const debounceKey = `bid_debounce_${currentUser.id}`;
@@ -217,6 +220,7 @@ export default function useBidSubmission({
             ? "Erro ao enviar lance (falha de rede)."
             : (atomicData?.message || "Erro ao enviar lance.");
         console.error("❌ [BID] submitAtomicBid falhou:", atomicData);
+        trackEvent('lance_falha', { auction_id: auctionId, valor: bidAmount, erro: atomicData?.error || (atomicData?.conflict ? 'conflict' : 'desconhecido') });
         alert(atomicData?.conflict ? "Outro lance foi dado!" : diagMsg);
         await releaseHold("lance rejeitado (outro lance venceu a corrida)");
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
@@ -230,6 +234,8 @@ export default function useBidSubmission({
         }
         return;
       }
+
+      trackEvent('lance_sucesso', { auction_id: auctionId, valor: bidAmount });
 
       const newEndTimeISO = atomicData.new_state.end_time;
 
@@ -307,6 +313,7 @@ export default function useBidSubmission({
 
     } catch (error) {
       console.error("❌ [BID] Erro:", error);
+      trackEvent('lance_falha', { auction_id: auctionId, valor: money(parseFloat(amount)), erro: error?.message || 'excecao' });
       if (wasDebited) {
         await releaseHold("erro durante processamento do lance");
       }

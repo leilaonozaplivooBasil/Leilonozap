@@ -4,6 +4,12 @@ import App from '@/App.jsx'
 import '@/index.css'
 import { reloadOnceForNewVersion } from '@/lib/ChunkErrorBoundary.jsx'
 import { prefetchHotRoutes } from '@/lib/prefetchHotRoutes.js'
+// 👁️ Observabilidade — só liga em produção e só com as variáveis configuradas.
+import { initSentry } from '@/lib/sentry.js'
+import { initAnalytics } from '@/lib/analytics.js'
+
+initSentry()
+initAnalytics()
 
 // Deploy novo no ar → chunk antigo some do servidor → import dinâmico falha.
 // O Vite avisa por este evento; recarregamos 1x pra pegar a versão nova
