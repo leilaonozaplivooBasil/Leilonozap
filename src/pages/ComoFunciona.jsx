@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Info, Wallet, Gavel, RotateCcw, Clock, Gift, Truck, ShieldCheck } from 'lucide-react';
+import { Info, Wallet, Gavel, RotateCcw, Clock, Gift, Truck, ShieldCheck, Scale, Megaphone, PackageOpen, Factory, Boxes } from 'lucide-react';
 import Lamina from '@/components/comofunciona/Lamina';
 import PassoCard from '@/components/comofunciona/PassoCard';
+import CartaoDemo from '@/components/comofunciona/CartaoDemo';
 
 const PASSOS = [
   { numero: 1, titulo: 'Deposite na Carteira Digital', texto: 'O saldo da carteira é o que libera seus lances. Depósito por PIX, na hora.' },
@@ -38,19 +39,89 @@ export default function ComoFunciona() {
         </div>
       </Lamina>
 
-      {/* LÂMINA 2 — AVISO LEGAL */}
+      {/* LÂMINA 2 — AVISO LEGAL + ESTRATÉGIA DE MARKETING */}
       <Lamina
         eyebrow="Antes de começar"
         titulo="Não somos um leilão oficial."
-        apoio="O Leilão NoZap é uma plataforma privada de vendas em formato de disputa por lances. Não somos leiloeiro oficial, não realizamos leilões judiciais, extrajudiciais nem oficiais de qualquer natureza."
+        apoio="O Leilão NoZap é uma plataforma privada de vendas próprias. Não somos leiloeiro oficial, não realizamos leilões judiciais, extrajudiciais nem oficiais de qualquer natureza. O formato de lances é a nossa estratégia de marketing para vender barato de forma divertida e transparente."
         bg="#FFFFFF"
       >
-        <div className="mx-auto flex max-w-2xl items-start gap-3 rounded-2xl border border-nz-borda bg-nz-cinza-fundo p-5 text-left">
+        <div className="mx-auto max-w-2xl space-y-3 text-left">
+          <div className="flex items-start gap-3 rounded-2xl border border-nz-borda bg-nz-cinza-fundo p-5">
+            <Megaphone className="mt-0.5 h-5 w-5 shrink-0 text-nz-verde" />
+            <p className="text-[0.94rem] leading-[1.55] text-nz-tinta-fraca">
+              É uma <strong className="text-nz-tinta">venda direta com dinâmica de lances</strong>: o produto é nosso, o
+              preço começa baixo e vai para quem fizer o melhor lance dentro do prazo. Usamos a palavra
+              <strong className="text-nz-tinta"> “leilão”</strong> no sentido promocional da disputa — é uma
+              <strong className="text-nz-tinta"> estratégia de marketing</strong>, não um leilão regulamentado.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-2xl border border-nz-borda bg-white p-5">
+            <Scale className="mt-0.5 h-5 w-5 shrink-0 text-nz-verde" />
+            <div>
+              <p className="text-[0.98rem] font-semibold text-nz-tinta">A base legal</p>
+              <p className="mt-1.5 text-[0.93rem] leading-[1.55] text-nz-tinta-fraca">
+                O <strong className="text-nz-tinta">Decreto nº 21.981/1932</strong> regula a atividade do leiloeiro
+                oficial — quem vende bens <em>de terceiros</em> em hasta pública. Aqui não é o caso: vendemos
+                <strong className="text-nz-tinta"> mercadoria própria</strong>, por conta e risco nosso, o que é
+                livre iniciativa garantida pelo <strong className="text-nz-tinta">art. 170 da Constituição
+                Federal</strong>. A venda segue integralmente o
+                <strong className="text-nz-tinta"> Código de Defesa do Consumidor (Lei nº 8.078/1990)</strong>, com
+                nota fiscal, garantia e direito de arrependimento.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Lamina>
+
+      {/* LÂMINA 2.5 — DE ONDE VÊM OS PRODUTOS */}
+      <Lamina
+        eyebrow="Origem dos produtos"
+        titulo="De onde vêm os produtos tão baratos."
+        apoio="Não tem mistério nem pegadinha: são três fontes, todas legítimas, que nos permitem vender muito abaixo do varejo."
+        bg="var(--nz-verde-fundo)"
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-nz-borda bg-white p-5 text-left">
+            <PackageOpen className="mb-3 h-5 w-5 text-nz-verde" />
+            <h3 className="text-[1.02rem] font-semibold text-nz-tinta">1. Devoluções de 7 dias</h3>
+            <p className="mt-1.5 text-[0.92rem] leading-[1.55] text-nz-tinta-fraca">
+              A maior parte do nosso estoque vem de <strong className="text-nz-tinta">devoluções por
+              arrependimento</strong>. Pelo <strong className="text-nz-tinta">art. 49 do Código de Defesa do
+              Consumidor</strong>, quem compra pela internet pode devolver em até <strong className="text-nz-tinta">7
+              dias</strong>, sem precisar justificar. O produto volta ao lojista — e, mesmo novo e funcionando, ele
+              <strong className="text-nz-tinta"> não pode mais ser vendido como “novo lacrado”</strong>.
+              Compramos esses lotes e repassamos com desconto enorme.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-nz-borda bg-white p-5 text-left">
+            <Factory className="mb-3 h-5 w-5 text-nz-verde" />
+            <h3 className="text-[1.02rem] font-semibold text-nz-tinta">2. Direto de fábrica</h3>
+            <p className="mt-1.5 text-[0.92rem] leading-[1.55] text-nz-tinta-fraca">
+              Trabalhamos com <strong className="text-nz-tinta">indústrias e parceiros nossos</strong>, comprando
+              direto da fonte, sem atravessador. Produto novo, com preço de atacado, que chega até você sem a
+              margem de três ou quatro intermediários no meio do caminho.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-nz-borda bg-white p-5 text-left">
+            <Boxes className="mb-3 h-5 w-5 text-nz-verde" />
+            <h3 className="text-[1.02rem] font-semibold text-nz-tinta">3. Estoque próprio negociado</h3>
+            <p className="mt-1.5 text-[0.92rem] leading-[1.55] text-nz-tinta-fraca">
+              Compramos <strong className="text-nz-tinta">antecipadamente e em volume</strong>, pagando à vista e
+              negociando duro. Esse desconto que conquistamos na compra é exatamente o desconto que você encontra
+              aqui na disputa.
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-3 flex max-w-3xl items-start gap-3 rounded-2xl border border-nz-borda bg-white p-5 text-left">
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-nz-verde" />
-          <p className="text-[0.94rem] leading-[1.55] text-nz-tinta-fraca">
-            Os produtos são de estoque próprio ou de parceiros e são vendidos ao participante que fizer o melhor
-            lance dentro do prazo. É uma <strong className="text-nz-tinta">venda direta com dinâmica de lances</strong> — divertida,
-            transparente e com preço abaixo do mercado.
+          <p className="text-[0.92rem] leading-[1.55] text-nz-tinta-fraca">
+            A condição de cada item é sempre informada na descrição do lote — novo, novo de fábrica ou devolução
+            dentro dos 7 dias. <strong className="text-nz-tinta">Transparência total antes do seu lance.</strong>
           </p>
         </div>
       </Lamina>
@@ -77,6 +148,9 @@ export default function ComoFunciona() {
         bg="var(--nz-verde-escuro)"
         escuro
       >
+        <div className="mb-6 sm:mb-8">
+          <CartaoDemo />
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/12 bg-white/[0.05] p-5 text-left">
             <Gavel className="mb-3 h-5 w-5 text-white/80" />
