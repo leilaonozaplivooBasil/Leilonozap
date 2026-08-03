@@ -22,8 +22,8 @@ module.exports = {
   				tinta: '#0D1310',
   				'tinta-fraca': '#5C6B62',
   				borda: '#DDE4DF',
-  				marrom: '#8B5E34',
-  				'marrom-claro': '#B08055',
+  				marrom: '#96603E',
+  				'marrom-claro': '#B8875F',
   				'marrom-fundo': '#F7F1EA'
   			},
   			background: 'hsl(var(--background))',
