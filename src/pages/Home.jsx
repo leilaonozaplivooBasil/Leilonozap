@@ -798,7 +798,7 @@ export default function Home() {
       {/* BANNER FULL-BLEED — estilo Loja Virtual: toma a largura toda da tela, no mobile e no desktop */}
       {banners.length > 0 &&
       <div className="relative w-full z-0">
-          <RotatingBanner banners={banners} heightClass="aspect-[16/10] sm:aspect-[16/7] md:aspect-[16/6] max-h-[420px]" rounded={false} />
+          <RotatingBanner banners={banners} heightClass="aspect-[1344/768] md:aspect-[16/5]" rounded={false} fit="contain" ambient />
           {/* fade na base pro card AO VIVO sobrepor fundindo com o fundo */}
           <div className="absolute inset-x-0 bottom-0 h-24 md:h-44 bg-gradient-to-t from-gray-900 via-gray-900/55 to-transparent pointer-events-none" />
         </div>

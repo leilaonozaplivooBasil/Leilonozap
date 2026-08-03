@@ -92,18 +92,36 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                   isActive ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                {banner.link_url ? (
-                  <a href={banner.link_url} className="relative block w-full h-full">
-                    <video
-                      ref={(el) => { if (el) videoRefs.current[banner.id] = el; }}
-                      src={banner.video_url}
-                      autoPlay
-                      muted
-                      playsInline
-                      preload={shouldEagerLoad ? 'auto' : 'metadata'}
-                      className="w-full h-full object-cover cursor-pointer"
-                      style={{ objectPosition: 'center 20%' }}
-                    />
+                {(() => {
+                  const isContain = fit === 'contain';
+                  const videoFitClass = isContain ? 'object-contain' : 'object-cover';
+                  const videoObjectPosition = isContain ? 'center center' : 'center 20%';
+                  const videoContent = (
+                    <>
+                      {ambient && isContain && (
+                        <video
+                          src={banner.video_url}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          aria-hidden
+                          className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60"
+                        />
+                      )}
+                      <video
+                        ref={(el) => { if (el) videoRefs.current[banner.id] = el; }}
+                        src={banner.video_url}
+                        autoPlay
+                        muted
+                        playsInline
+                        preload={shouldEagerLoad ? 'auto' : 'metadata'}
+                        className={`relative w-full h-full ${videoFitClass} ${banner.link_url ? 'cursor-pointer' : ''}`}
+                        style={{ objectPosition: videoObjectPosition, backgroundColor: isContain ? '#0f172a' : undefined }}
+                      />
+                    </>
+                  );
+                  const caption = (
                     <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-8 sm:pb-9 md:pb-12 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
                       <p className="text-sm sm:text-lg md:text-xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
                         {banner.caption_title || banner.title}
@@ -114,31 +132,19 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                         </p>
                       )}
                     </div>
-                  </a>
-                ) : (
-                  <div className="relative w-full h-full">
-                    <video
-                      ref={(el) => { if (el) videoRefs.current[banner.id] = el; }}
-                      src={banner.video_url}
-                      autoPlay
-                      muted
-                      playsInline
-                      preload={shouldEagerLoad ? 'auto' : 'metadata'}
-                      className="w-full h-full object-cover"
-                      style={{ objectPosition: 'center 20%' }}
-                    />
-                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-8 sm:pb-9 md:pb-12 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
-                      <p className="text-sm sm:text-lg md:text-xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
-                        {banner.caption_title || banner.title}
-                      </p>
-                      {banner.caption_subtitle && (
-                        <p className="mt-1 text-[11px] sm:text-sm md:text-base text-nz-verde-claro font-medium leading-snug max-w-[88%] sm:max-w-[70%]">
-                          {banner.caption_subtitle}
-                        </p>
-                      )}
+                  );
+                  return banner.link_url ? (
+                    <a href={banner.link_url} className="relative block w-full h-full">
+                      {videoContent}
+                      {caption}
+                    </a>
+                  ) : (
+                    <div className="relative w-full h-full">
+                      {videoContent}
+                      {caption}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           }
