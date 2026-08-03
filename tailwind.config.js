@@ -30,7 +30,9 @@ module.exports = {
   			livoo: {
   				rosa: 'var(--livoo-rosa)',
   				'rosa-claro': 'var(--livoo-rosa-claro)',
+  				'rosa-escuro': 'var(--livoo-rosa-escuro)',
   				vinho: 'var(--livoo-vinho)',
+  				'vinho-claro': 'var(--livoo-vinho-claro)',
   				tinta: 'var(--livoo-tinta)'
   			},
   			background: 'hsl(var(--background))',

@@ -14,6 +14,7 @@ import EmCenaAgora from "@/components/liveshop/EmCenaAgora";
 import UltimosLances from "@/components/liveshop/UltimosLances";
 import ProximosNaLive from "@/components/liveshop/ProximosNaLive";
 import SelosLivoo from "@/components/liveshop/SelosLivoo";
+import FundoRosaLive from "@/components/liveshop/FundoRosaLive";
 
 const Auction = base44.entities.Auction;
 const Bid = base44.entities.Bid;
@@ -198,7 +199,8 @@ export default function LiveShopNoZap() {
   };
 
   return (
-    <div className="min-h-screen bg-livoo-vinho">
+    <div className="relative min-h-screen livoo-superficie">
+      <FundoRosaLive />
       <LiveShopHeader
         viewers={viewers}
         aoVivo={!!liveSession?.is_live}
@@ -206,29 +208,31 @@ export default function LiveShopNoZap() {
         onLojaClick={() => navigate("/Loja-Virtual")}
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-5">
+      <div className="relative max-w-7xl mx-auto px-4 py-5">
         {/* 📱 mobile: coluna única em flex — assim o player sticky acompanha TODA a rolagem.
             💻 desktop: duas colunas com posicionamento explícito. */}
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1fr,400px] lg:items-start">
-          <div className="contents lg:block lg:space-y-4 lg:col-start-1 lg:row-start-1">
-            <div className="sticky top-[60px] z-10 lg:static">
-              <LivooPlayer
-                streamUrl={liveSession?.is_live ? liveSession?.stream_url : null}
-                pauseImageUrl={liveSession?.pause_image_url}
-                isPaused={!!(liveSession?.is_live && liveSession?.is_paused)}
-              />
-            </div>
+          {/* sticky nos dois tamanhos: no celular o player acompanha a rolagem;
+              no desktop ele fica ancorado no topo da própria coluna. */}
+          <div className="sticky top-[60px] z-10 lg:col-start-1 lg:row-start-1">
+            <LivooPlayer
+              streamUrl={liveSession?.is_live ? liveSession?.stream_url : null}
+              pauseImageUrl={liveSession?.pause_image_url}
+              isPaused={!!(liveSession?.is_live && liveSession?.is_paused)}
+            />
+          </div>
 
-            <div className="rounded-xl border border-livoo-rosa/20 bg-white/5 p-5">
-              <h2 className="text-lg font-bold text-white">Live Shop Leilão NoZap × Livoo</h2>
-              <p className="mt-1 text-sm text-white/70">
+          <div className="livoo-card rounded-2xl p-5 lg:col-start-1 lg:row-start-2">
+              <h2 className="text-lg font-bold text-white">
+                Live Shop Leilão NoZap <span className="text-livoo-rosa-claro">×</span> Livoo
+              </h2>
+              <p className="mt-1 text-sm text-white/75">
                 Assista à live aqui mesmo e dê seu lance sem sair da página. Arremates e devoluções
                 com preço de disputa — e entrega expressa da malha Livoo.
               </p>
-            </div>
           </div>
 
-          <div className="space-y-4 lg:col-start-2 lg:row-start-1">
+          <div className="space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <EmCenaAgora
               produto={activeProduct ? currentProduct : null}
               bidAmount={bidAmount}
