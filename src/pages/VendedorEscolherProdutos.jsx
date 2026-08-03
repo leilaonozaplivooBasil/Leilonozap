@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
-import { Loader2, CheckCircle2, Truck, Store } from "lucide-react";
+import { Loader2, CheckCircle2, Truck, Store, AlertTriangle } from "lucide-react";
 import VendedorProductPicker from "@/components/vendedor/VendedorProductPicker";
 import VendedorCartBar from "@/components/vendedor/VendedorCartBar";
 import CalculadoraFrete from "@/components/frete/CalculadoraFrete";
@@ -61,7 +61,18 @@ export default function VendedorEscolherProdutos() {
     () => Object.values(cart).map((it) => ({ id: it.product.id, quantidade: it.qty, valor: it.product.price_catalog || 0 })),
     [cart]
   );
-  const canClose = !!user && total >= user.seller_credit_balance && total > 0;
+  // 🚚 A seção de entrega aparece assim que o carrinho bate o saldo da adesão.
+  const showEntrega = !!user && total >= user.seller_credit_balance && total > 0;
+  // 💸 O saldo da adesão cobre os PRODUTOS; o frete de entrega não é coberto por ele.
+  const freteValor = deliveryMethod === "delivery" ? (freteSel?.preco || 0) : 0;
+  const canClose = showEntrega && (deliveryMethod === "pickup" || !!freteSel);
+
+  const freteSectionRef = useRef(null);
+  useEffect(() => {
+    if (showEntrega && freteSectionRef.current) {
+      freteSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showEntrega]);
 
   const addToCart = (p) => {
     setCart((prev) => {
@@ -123,7 +134,7 @@ export default function VendedorEscolherProdutos() {
 
       setDone(true);
       toast.success("Pedido confirmado! Você já é um Vendedor.");
-      setTimeout(() => navigate(createPageUrl("SellerPanel"), { replace: true }), 2000);
+      setTimeout(() => navigate("/Licensing", { replace: true }), 2000);
     } catch (e) {
       toast.error("Erro ao fechar o pedido. Tente novamente.");
     } finally {
@@ -145,7 +156,7 @@ export default function VendedorEscolherProdutos() {
         <div>
           <CheckCircle2 className="w-14 h-14 text-nz-verde mx-auto mb-3" />
           <h1 className="text-2xl font-black text-nz-tinta">Pedido confirmado!</h1>
-          <p className="text-nz-tinta-fraca mt-2">Você já é um Vendedor. Redirecionando para seu painel…</p>
+          <p className="text-nz-tinta-fraca mt-2">Você já é um Vendedor. Redirecionando para o Painel do Licenciado…</p>
         </div>
       </div>
     );
@@ -165,8 +176,8 @@ export default function VendedorEscolherProdutos() {
         <VendedorProductPicker products={products} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
 
         {/* 🚚 Entrega — aparece quando o carrinho já bateu o valor da adesão, pronto pra fechar */}
-        {canClose && (
-          <div className="mt-6 rounded-2xl border border-nz-borda bg-nz-cinza-fundo p-4 sm:p-5">
+        {showEntrega && (
+          <div ref={freteSectionRef} className="mt-6 rounded-2xl border border-nz-borda bg-nz-cinza-fundo p-4 sm:p-5">
             <h2 className="font-bold text-nz-tinta mb-3">Como você quer receber seus produtos?</h2>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <button
@@ -184,7 +195,24 @@ export default function VendedorEscolherProdutos() {
             </div>
 
             {deliveryMethod === "delivery" && (
-              <CalculadoraFrete items={freteItems} autoCalcular onSelecionar={setFreteSel} titulo="Calcular frete até você" />
+              <>
+                <CalculadoraFrete
+                  items={freteItems}
+                  autoCalcular
+                  cepInicial={user?.address_zip_code}
+                  onSelecionar={setFreteSel}
+                  titulo="Calcular frete até você"
+                />
+                {freteValor > 0 && (
+                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <p className="text-xs sm:text-sm text-amber-800">
+                      O frete de <strong>R$ {fmtBR(freteValor)}</strong> não está incluso no saldo da sua primeira compra —
+                      nossa equipe vai combinar com você o pagamento dessa diferença via PIX.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

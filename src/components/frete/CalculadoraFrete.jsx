@@ -8,11 +8,12 @@ import OpcaoFreteCard from './OpcaoFreteCard';
 export default function CalculadoraFrete({
   items = [],
   autoCalcular = false,
+  cepInicial = '',
   onSelecionar,
   titulo = 'Calcular frete e prazo',
   className = '',
 }) {
-  const frete = useFrete({ items, autoCalcular });
+  const frete = useFrete({ items, autoCalcular, cepInicial });
 
   const escolher = (op) => {
     frete.setSelecionada(op);

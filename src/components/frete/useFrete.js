@@ -11,7 +11,7 @@ export function formatarCep(valor) {
   return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 }
 
-export default function useFrete({ items = [], autoCalcular = false } = {}) {
+export default function useFrete({ items = [], autoCalcular = false, cepInicial = '' } = {}) {
   const [cep, setCep] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [opcoes, setOpcoes] = useState([]);
@@ -19,13 +19,17 @@ export default function useFrete({ items = [], autoCalcular = false } = {}) {
   const [erro, setErro] = useState('');
   const [jaCalculou, setJaCalculou] = useState(false);
 
-  // recupera o último CEP usado
+  // recupera o último CEP usado — se não houver, usa o CEP já cadastrado do usuário (cepInicial)
   useEffect(() => {
     try {
       const salvo = localStorage.getItem(CEP_KEY);
       if (salvo) setCep(formatarCep(salvo));
-    } catch (_) { /* storage indisponível */ }
-  }, []);
+      else if (cepInicial) setCep(formatarCep(cepInicial));
+    } catch (_) {
+      if (cepInicial) setCep(formatarCep(cepInicial));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cepInicial]);
 
   const calcular = useCallback(async (cepAlvo) => {
     const limpo = String(cepAlvo ?? cep).replace(/\D/g, '');
