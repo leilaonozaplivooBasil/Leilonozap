@@ -17,6 +17,7 @@ import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import TransactionToasts from "@/components/notifications/TransactionToasts";
+import ReferralSignupToast from "@/components/notifications/ReferralSignupToast";
 import GlobalWalletDrawer from "@/components/wallet/GlobalWalletDrawer";
 import TermoGateGlobal from "@/components/legal/TermoGateGlobal";
 import { useActiveSession } from "@/components/system/useActiveSession";
@@ -1055,6 +1056,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
         <TransactionToasts />
+        <ReferralSignupToast />
         <GlobalWalletDrawer />
         {/* 📜 PONTO 70 — Termo de Adesão só na intenção de compra (lance / carrinho) */}
         <TermoGateGlobal />
