@@ -4,7 +4,7 @@ import { LayoutDashboard, ShoppingBag, Award, Shield } from 'lucide-react';
 
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
-  { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado_catalogo') || ctx.isAdmin },
+  { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado') || ctx.isAdmin },
   { value: 'plano-carreira', label: 'Carreira', icon: Award, show: () => true },
   { value: 'admin', label: 'Admin', icon: Shield, show: (ctx) => ctx.isAdmin },
 ];
