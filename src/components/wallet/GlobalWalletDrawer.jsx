@@ -19,6 +19,14 @@ export default function GlobalWalletDrawer() {
       } catch { /* usuário inválido */ }
     };
     window.addEventListener('openWallet', handler);
+    // Intenção guardada antes do cadastro/login (ex.: botão do /ComoFunciona):
+    // assim que o usuário existe, a carteira abre sozinha.
+    try {
+      if (sessionStorage.getItem('pendingOpenWallet') === '1') {
+        sessionStorage.removeItem('pendingOpenWallet');
+        handler();
+      }
+    } catch { /* storage indisponível */ }
     return () => window.removeEventListener('openWallet', handler);
   }, []);
 

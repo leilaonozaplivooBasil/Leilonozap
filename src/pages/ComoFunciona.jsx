@@ -4,6 +4,7 @@ import { Info, Wallet, Gavel, RotateCcw, Clock, Gift, Truck, ShieldCheck, Scale,
 import Lamina from '@/components/comofunciona/Lamina';
 import PassoCard from '@/components/comofunciona/PassoCard';
 import CartaoDemo from '@/components/comofunciona/CartaoDemo';
+import BotaoCarteiraDigital from '@/components/comofunciona/BotaoCarteiraDigital';
 
 const PASSOS = [
   { numero: 1, titulo: 'Deposite na Carteira Digital', texto: 'O saldo da carteira é o que libera seus lances. Depósito por PIX, na hora.' },
@@ -246,9 +247,7 @@ export default function ComoFunciona() {
           <Link to="/leiloes" className="rounded-full bg-white px-7 py-3 text-sm font-medium text-nz-verde-escuro transition-opacity hover:opacity-85">
             Entrar na sala de leilão
           </Link>
-          <Link to="/Carteira" className="rounded-full border border-white/25 px-7 py-3 text-sm font-medium text-white transition-opacity hover:opacity-70">
-            Minha Carteira Digital
-          </Link>
+          <BotaoCarteiraDigital />
         </div>
       </Lamina>
     </div>
