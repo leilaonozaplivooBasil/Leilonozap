@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Wallet, ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 import PassaporteCard from '@/components/wallet/PassaporteCard';
+import CarteiraDeslogada from '@/components/wallet/CarteiraDeslogada';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -70,7 +71,7 @@ export default function Carteira() {
   };
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando…</div>;
-  if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login para ver sua carteira.</div>;
+  if (!user) return <CarteiraDeslogada />;
 
   const kyc = KYC[w?.kyc_status] || KYC.nao_iniciado;
   const aprovado = w?.kyc_status === 'aprovado';
