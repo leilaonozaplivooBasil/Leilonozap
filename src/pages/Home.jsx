@@ -798,7 +798,7 @@ export default function Home() {
       {/* BANNER FULL-BLEED — estilo Loja Virtual: toma a largura toda da tela, no mobile e no desktop */}
       {banners.length > 0 &&
       <div className="relative w-full z-0">
-          <RotatingBanner banners={banners} heightClass="aspect-[4/3] sm:aspect-[16/9] md:aspect-[16/5] max-h-[640px]" rounded={false} />
+          <RotatingBanner banners={banners} heightClass="aspect-[16/10] sm:aspect-[16/7] md:aspect-[16/6] max-h-[420px]" rounded={false} />
           {/* fade na base pro card AO VIVO sobrepor fundindo com o fundo */}
           <div className="absolute inset-x-0 bottom-0 h-24 md:h-44 bg-gradient-to-t from-gray-900 via-gray-900/55 to-transparent pointer-events-none" />
         </div>
@@ -806,37 +806,37 @@ export default function Home() {
 
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? '-mt-6 md:-mt-10' : ''}`}>
         {/* Hero Section - Glass */}
-        <div className="mb-8">
-          <div id="hero-leiloes" className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
+        <div className="mb-6">
+          <div id="hero-leiloes" className="relative glass-hero rounded-2xl p-4 sm:p-5 text-white glass-shimmer overflow-hidden">
             <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full orb-1" style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.15) 0%, transparent 70%)' }} />
             <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full orb-2" style={{ background: 'radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 70%)' }} />
 
             <div className="relative">
               {/* Selo AO VIVO */}
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-3 py-1.5">
+              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-2.5 py-1">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
                 </span>
-                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Ao vivo agora</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">Ao vivo agora</span>
               </div>
 
-              <h1 className="text-3xl lg:text-5xl font-black mb-3 tracking-tight flex items-center gap-3">
+              <h1 className="text-2xl lg:text-4xl font-black mb-1.5 tracking-tight flex items-center gap-2">
                 <video
                   autoPlay
                   loop
                   muted
                   playsInline
                   aria-hidden="true"
-                  className="w-10 h-10 lg:w-12 lg:h-12 flex-shrink-0 pointer-events-none object-contain">
+                  className="w-7 h-7 lg:w-9 lg:h-9 flex-shrink-0 pointer-events-none object-contain">
                   <source src="/videos/foguinho-animado.mov" type='video/quicktime; codecs="hvc1"' />
                   <source src="/videos/foguinho-animado.webm" type="video/webm" />
-                  <Flame className="w-9 h-9 lg:w-11 lg:h-11 text-orange-400 animate-fire" />
+                  <Flame className="w-6 h-6 lg:w-8 lg:h-8 text-orange-400 animate-fire" />
                 </video>
                 <span>Leilões <span className="text-gradient-green">Ativos</span></span>
               </h1>
 
-              <p className="text-gray-400 mb-6 text-base lg:text-lg font-light max-w-xl">
+              <p className="text-gray-400 mb-3 text-sm lg:text-base font-light max-w-xl">
                 {activeCount > 0 ?
                 <><span className="text-white font-semibold">{activeCount}</span> {activeCount === 1 ? 'leilão rolando' : 'leilões rolando'}. Entre na sala e dê seu lance!</> :
                 <>Novos leilões entram no ar em breve. Fique de olho e garanta seu lance!</>
