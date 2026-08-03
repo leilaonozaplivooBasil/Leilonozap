@@ -6,6 +6,7 @@ import { Search, Loader2, Package } from 'lucide-react';
 import CatalogProductCard from '../catalog/CatalogProductCard';
 import RotatingBanner from '../banner/RotatingBanner';
 import StoreShareLinkCard from './StoreShareLinkCard';
+import { CATALOG_BANNERS } from '../loja/LojaShopeeHeader';
 
 const Product = base44.entities.Product;
 
@@ -13,7 +14,6 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [banners, setBanners] = useState([]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -27,15 +27,6 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
       }
     };
     loadProducts();
-  }, []);
-
-  useEffect(() => {
-    base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' })
-      .then((bannerData) => {
-        const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
-        setBanners(sortedBanners);
-      })
-      .catch(() => {});
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -59,11 +50,9 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
             isSaiDeBaixo={isSaiDeBaixo}
           />
         )}
-        {banners.length > 0 && (
-          <div className="-mt-2">
-            <RotatingBanner banners={banners} fit="contain" heightClass="h-56 md:h-72 lg:h-80" />
-          </div>
-        )}
+        <div className="-mt-2">
+          <RotatingBanner banners={CATALOG_BANNERS} fit="contain" heightClass="h-56 md:h-72 lg:h-80" ambient />
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input

@@ -49,7 +49,7 @@ const LOGO = '/brand/icon-3d.webp';
 // Banners oficiais da loja (rotativos), na paleta oficial da logo (#4d724b/#99c198/
 // #dabb98/#21222b/#9da7b5). Arte dedicada por dispositivo: desktop 1920×600 (16:5,
 // largura total do navegador) e mobile 1344×768. Licenciado (4 e 5) → /Licensing.
-const CATALOG_BANNERS = [
+export const CATALOG_BANNERS = [
   { desktop: banner1Desk, mobile: banner1Mob, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
   { desktop: banner2Desk, mobile: banner2Mob, title: 'Ferramentas Entrega Full — até 85% de desconto' },
   { desktop: banner3Desk, mobile: banner3Mob, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
