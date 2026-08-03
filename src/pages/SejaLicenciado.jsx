@@ -12,15 +12,15 @@ import LicenseeEarningsCalculator from '@/components/licensee/LicenseeEarningsCa
 // diferencial do cargo em relação ao Vendedor.
 const ESCADA = [
   { cargo: 'Parceiro', pct: '15%', desc: 'Investe e ganha sobre toda a estrutura abaixo dele' },
-  { cargo: 'Licenciado', pct: '13%', desc: 'Cadastra Vendedores e Influenciadores e ganha em toda venda deles', destaque: true },
+  { cargo: 'Licenciado', pct: '13%', desc: 'Cadastra Vendedores e Financiadores e ganha de rebate em toda venda deles', destaque: true },
   { cargo: 'Vendedor', pct: '10%', desc: 'Vende direto pelo catálogo, sem comprar estoque' },
   { cargo: 'Influenciador', pct: '5%', desc: 'Indica e ganha em cada venda e arremate', gratis: true },
 ];
 
 const BENEFICIOS = [
   { icon: Wallet, title: '13% em cada venda', desc: 'Comissão em dinheiro real (R$) sobre toda venda pessoal que você fizer.' },
-  { icon: Crown, title: 'Só você pode cadastrar Vendedores', desc: 'Monte sua equipe de Vendedores (10%) — só o Licenciado tem esse acesso.' },
-  { icon: Users, title: 'Cadastre Influenciadores também', desc: 'Ganhe 5% em cada venda de cada Influenciador que você cadastrar — sem limite de ganhos.' },
+  { icon: Crown, title: 'Só você pode cadastrar Vendedores', desc: 'Monte sua equipe de Vendedores — o Vendedor fica com 10% e você recebe 3% de rebate em cada venda dele.' },
+  { icon: Users, title: 'Cadastre Financiadores também', desc: 'O Financiador fica com 5% e você recebe 8% de rebate em cada venda dele — sem limite de ganhos.' },
   { icon: ShoppingBag, title: 'Loja virtual pronta', desc: 'Diversos produtos, com preços variados, sempre abaixo do mercado.' },
   { icon: Megaphone, title: 'Material de divulgação exclusivo', desc: 'Link, QR Code e artes prontas pra postar e vender.' },
   { icon: UserCheck, title: 'Suporte de um executivo de contas', desc: 'Alguém da nossa equipe te acompanha e te ajuda a coordenar sua equipe.' },
@@ -43,8 +43,9 @@ export default function SejaLicenciado() {
             Seja um <span className="text-nz-verde">Licenciado</span> e ganhe <span className="text-yellow-500">13%</span> em cada venda
           </h1>
           <p className="mt-4 text-nz-tinta-fraca text-base sm:text-lg">
-            Você ganha <strong className="text-nz-verde">13% em cada venda pessoal</strong> e ainda mais: só o Licenciado pode{' '}
-            <strong className="text-nz-verde">cadastrar Vendedores (10%) e Influenciadores (5%)</strong> —
+            Seu ponto de negócio é o rebate: você ganha <strong className="text-nz-verde">13% em cada venda pessoal</strong> e
+            ainda mais: só o Licenciado pode{' '}
+            <strong className="text-nz-verde">cadastrar Vendedores (rebate de 3%) e Financiadores (rebate de 8%)</strong> —
             sem limite de ganhos.
           </p>
         </div>
@@ -104,7 +105,7 @@ export default function SejaLicenciado() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-3 text-nz-tinta">Como começar</h2>
           <p className="text-nz-tinta-fraca text-center mb-8">
-            Você paga <strong className="text-nz-tinta">R$ 5.000</strong> pelo Mercado Pago e escolhe os produtos da
+            Você paga <strong className="text-nz-tinta">R$ 100.000</strong> pelo Mercado Pago e escolhe os produtos da
             sua <strong className="text-nz-tinta">primeira compra</strong> direto na nossa Loja Virtual.
           </p>
 
@@ -142,7 +143,7 @@ export default function SejaLicenciado() {
               </div>
               <div>
                 <p className="font-bold text-nz-tinta">Monte sua equipe</p>
-                <p className="text-sm text-nz-tinta-fraca mt-1">Cadastre Vendedores e Influenciadores e ganhe também nas vendas deles.</p>
+                <p className="text-sm text-nz-tinta-fraca mt-1">Cadastre Vendedores e Financiadores e ganhe também de rebate nas vendas deles.</p>
               </div>
             </div>
           </div>
@@ -199,10 +200,10 @@ export default function SejaLicenciado() {
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-8 text-nz-tinta">Como funciona na prática</h2>
           <div className="space-y-3">
             {[
-              'Você se cadastra e paga R$ 5.000 pelo Mercado Pago (PIX ou cartão).',
+              'Você se cadastra e paga R$ 100.000 pelo Mercado Pago (PIX ou cartão).',
               'Escolhe os produtos da sua primeira compra na Loja Virtual e recebe em casa ou retira na loja.',
               'Já começa a vender na sua Loja Virtual — e ganha 13% em dinheiro real imediatamente, em cada venda.',
-              'Cadastra Vendedores e Influenciadores para a sua equipe e ganha também em cada venda deles.',
+              'Cadastra Vendedores e Financiadores para a sua equipe e ganha de rebate também em cada venda deles.',
             ].map((t, i) => (
               <div key={i} className="flex items-start gap-3 rounded-xl p-4 bg-white border border-nz-borda">
                 <CheckCircle2 className="w-5 h-5 text-nz-verde shrink-0 mt-0.5" />

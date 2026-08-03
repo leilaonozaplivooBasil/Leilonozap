@@ -3,8 +3,10 @@ import { Sparkles, ShoppingBag, DollarSign, Users, ShoppingCart } from 'lucide-r
 
 // 🧮 Calculadora do Licenciado com TRÊS ganhos separados e somados:
 // 1) Venda pessoal — 13% sobre o que o próprio licenciado vende.
-// 2) Venda dos vendedores que ele cadastrar — 10%.
-// 3) Venda dos influenciadores que ele cadastrar — 5%.
+// 2) Venda dos Vendedores que ele cadastrar — o Vendedor fica com 10%, o
+//    Licenciado recebe 3% de rebate em cima dessa mesma venda.
+// 3) Venda dos Financiadores que ele cadastrar — o Financiador fica com 5%,
+//    o Licenciado recebe 8% de rebate em cima dessa mesma venda.
 export default function LicenseeEarningsCalculator() {
   const tickets = [80, 120, 150, 200, 300, 500];
 
@@ -24,11 +26,11 @@ export default function LicenseeEarningsCalculator() {
 
   const sellersNum = parseInt(sellers) || 0;
   const salesPerSellerNum = parseInt(salesPerSeller) || 0;
-  const sellerEarnings = sellersNum * salesPerSellerNum * sellerTicket * 0.10;
+  const sellerEarnings = sellersNum * salesPerSellerNum * sellerTicket * 0.03;
 
   const influencersNum = parseInt(influencers) || 0;
   const salesPerInfluencerNum = parseInt(salesPerInfluencer) || 0;
-  const influencerEarnings = influencersNum * salesPerInfluencerNum * influencerTicket * 0.05;
+  const influencerEarnings = influencersNum * salesPerInfluencerNum * influencerTicket * 0.08;
 
   const total = personalEarnings + sellerEarnings + influencerEarnings;
   const hasResult = salesNum > 0 || (sellersNum > 0 && salesPerSellerNum > 0) || (influencersNum > 0 && salesPerInfluencerNum > 0);
@@ -42,9 +44,9 @@ export default function LicenseeEarningsCalculator() {
         </div>
         <h2 className="text-2xl md:text-3xl font-black text-nz-tinta">Calcule Quanto Você Pode Ganhar</h2>
         <p className="text-sm text-nz-tinta-fraca mt-1">
-          Você ganha com as suas <strong className="text-nz-tinta">vendas pessoais</strong>, com os{' '}
-          <strong className="text-nz-tinta">Vendedores</strong> e com os{' '}
-          <strong className="text-nz-tinta">Influenciadores</strong> que você cadastrar
+          Você ganha com as suas <strong className="text-nz-tinta">vendas pessoais</strong> e de rebate com os{' '}
+          <strong className="text-nz-tinta">Vendedores</strong> e{' '}
+          <strong className="text-nz-tinta">Financiadores</strong> que você cadastrar
         </p>
       </div>
 
@@ -109,7 +111,7 @@ export default function LicenseeEarningsCalculator() {
           </div>
           <div>
             <h3 className="font-bold text-nz-tinta">2. Venda dos seus Vendedores</h3>
-            <p className="text-xs text-nz-tinta-fraca">Só o Licenciado pode cadastrar Vendedores — você ganha 10% em cada venda deles</p>
+            <p className="text-xs text-nz-tinta-fraca">Só o Licenciado pode cadastrar Vendedores — o Vendedor fica com 10% e você recebe 3% de rebate em cada venda dele</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -160,7 +162,7 @@ export default function LicenseeEarningsCalculator() {
         </div>
         {sellersNum > 0 && salesPerSellerNum > 0 && (
           <p className="text-center text-sm mt-3 text-nz-tinta-fraca">
-            {sellersNum} vendedor{sellersNum > 1 ? 'es' : ''} × {salesPerSellerNum} vendas × R$ {sellerTicket} — ganho:{' '}
+            {sellersNum} vendedor{sellersNum > 1 ? 'es' : ''} × {salesPerSellerNum} vendas × R$ {sellerTicket} — rebate de 3%:{' '}
             <strong className="text-blue-600">R$ {sellerEarnings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>/mês
           </p>
         )}
@@ -173,13 +175,13 @@ export default function LicenseeEarningsCalculator() {
             <Users className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <h3 className="font-bold text-nz-tinta">3. Venda dos seus Influenciadores</h3>
-            <p className="text-xs text-nz-tinta-fraca">Você ganha 5% em cada venda deles — sem limite de ganhos</p>
+            <h3 className="font-bold text-nz-tinta">3. Venda dos seus Financiadores</h3>
+            <p className="text-xs text-nz-tinta-fraca">O Financiador fica com 5% e você recebe 8% de rebate em cada venda dele — sem limite de ganhos</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-xl p-4 border border-nz-borda bg-amber-50">
-            <p className="text-xs font-bold text-nz-tinta mb-2">Influenciadores</p>
+            <p className="text-xs font-bold text-nz-tinta mb-2">Financiadores</p>
             <input
               type="number"
               min="0"
@@ -225,7 +227,7 @@ export default function LicenseeEarningsCalculator() {
         </div>
         {influencersNum > 0 && salesPerInfluencerNum > 0 && (
           <p className="text-center text-sm mt-3 text-nz-tinta-fraca">
-            {influencersNum} influenciador{influencersNum > 1 ? 'es' : ''} × {salesPerInfluencerNum} vendas × R$ {influencerTicket} — ganho:{' '}
+            {influencersNum} financiador{influencersNum > 1 ? 'es' : ''} × {salesPerInfluencerNum} vendas × R$ {influencerTicket} — rebate de 8%:{' '}
             <strong className="text-amber-600">R$ {influencerEarnings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>/mês
           </p>
         )}
@@ -242,7 +244,7 @@ export default function LicenseeEarningsCalculator() {
             R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-nz-tinta-fraca mt-2">
-            Venda pessoal (13%) + venda dos seus Vendedores (10%) + venda dos seus Influenciadores (5%)
+            Venda pessoal (13%) + rebate dos seus Vendedores (3%) + rebate dos seus Financiadores (8%)
           </p>
         </div>
       )}
