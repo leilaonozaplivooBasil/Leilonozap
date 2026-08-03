@@ -47,6 +47,7 @@ import DashboardTabsList from '../components/licensing/DashboardTabsList';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
+import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 
 const Product = base44.entities.Product;
@@ -139,67 +140,6 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🆕 Estado do cadastro de vendedores (Etapa 5)
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [sellersRefreshCounter, setSellersRefreshCounter] = useState(0);
-
-  // 🎯 FASE 4.7.2 — Rotação de destaque das cédulas Valora
-  // Índices: 0=guardian(R$10) · 1=backBack(R$50) · 2=back(R$100) · 3=side(R$20) · 4=front(R$200)
-  // R$ 200 (índice 4) fica 10s em destaque (protagonismo). Demais ficam 5s cada.
-  const [featuredNoteIndex, setFeaturedNoteIndex] = useState(4); // começa na R$ 200
-  useEffect(() => {
-    let timeoutId = null;
-    let isPaused = false;
-
-    const scheduleNext = () => {
-      if (isPaused || timeoutId) return;
-      // Usa functional setState pra ler o índice atual sem virar dependência
-      setFeaturedNoteIndex((current) => {
-        // Agenda a próxima troca com base no PRÓXIMO índice que vai assumir
-        const nextIndex = (current + 1) % 5;
-        const delayForNext = nextIndex === 4 ? 10000 : 5000; // R$ 200 = 10s
-        timeoutId = setTimeout(() => {
-          timeoutId = null;
-          scheduleNext();
-        }, delayForNext);
-        return nextIndex;
-      });
-    };
-
-    const startCycle = () => {
-      if (isPaused || timeoutId) return;
-      // Primeira troca: R$ 200 começa destacada, então após 10s troca pra R$ 10
-      isPaused = false;
-      timeoutId = setTimeout(() => {
-        timeoutId = null;
-        scheduleNext();
-      }, 10000);
-    };
-
-    const stopCycle = () => {
-      isPaused = true;
-      if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
-    };
-
-    // Só começa a rotação após a entrada completa (~4.5s) pra não sobrepor com a queda escalonada
-    const startTimeout = setTimeout(() => {
-      isPaused = false;
-      startCycle();
-    }, 4500);
-
-    // Pausa quando aba oculta, retoma ao voltar (protocolo multi-dispositivo)
-    const handleVisibility = () => {
-      if (document.hidden) stopCycle();
-      else startCycle();
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', startCycle);
-    window.addEventListener('blur', stopCycle);
-    return () => {
-      clearTimeout(startTimeout);
-      stopCycle();
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', startCycle);
-      window.removeEventListener('blur', stopCycle);
-    };
-  }, []);
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -584,7 +524,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     return [guardianNote, backBackNote, backNote, frontNote, sideNote];
   };
 
-  const [guardianNote, backBackNote, backNote, frontNote, sideNote] = getNoteStack(user.valora_pay_balance || 0);
+  const [, , , frontNote] = getNoteStack(user.valora_pay_balance || 0);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
@@ -1088,109 +1028,14 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className={`mb-8 relative bg-gradient-to-br backdrop-blur-xl border-2 shadow-2xl ${isSaiDeBaixo ?
-        'from-red-950/60 via-red-900/40 to-red-950/60 border-red-500/40 shadow-red-900/30' :
-        'from-emerald-950/70 via-green-900/50 to-emerald-950/70 border-emerald-500/40 shadow-emerald-900/40'}`
-      }>
-        <CardContent className="p-6 md:px-12 md:py-8">
-          <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-20">
-            <div className="w-full md:w-auto">
-              <h3 className={`text-sm font-medium uppercase tracking-widest mb-1 ${isSaiDeBaixo ? 'text-red-300/80' : 'text-emerald-300/80'}`}>Saldo Disponível</h3>
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-5xl font-black text-white tracking-tight drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]">
-                  R$ {totalAvailable.toFixed(2)}
-                </span>
-              </div>
-
-              <div className={`h-px bg-gradient-to-r from-transparent to-transparent my-4 max-w-[280px] ${isSaiDeBaixo ? 'via-red-500/30' : 'via-emerald-500/30'}`} />
-
-              {pendingWithdrawalAmount > 0 &&
-                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4 max-w-[280px]">
-                  <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-yellow-300/70 mt-1">
-                    Aguardando aprovação
-                  </p>
-                </div>
-              }
-              <div className="flex flex-col gap-2 max-w-[280px]">
-                <Button
-                  onClick={() => setIsAuctionSelectionModalOpen(true)}
-                  className={`text-white font-semibold h-10 text-sm shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSaiDeBaixo ?
-                    'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-red-500/20 hover:shadow-red-500/40' :
-                    'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-500 shadow-green-500/20 hover:shadow-green-500/40'}`}>
-
-                  <Zap className="w-4 h-4 mr-2" />
-                  Usar em Leilões
-                </Button>
-                <Button
-                  onClick={() => setShowWithdrawalModal(true)}
-                  className={`bg-gray-800/60 border text-white font-medium h-10 text-sm transition-all duration-300 hover:bg-gray-700 hover:shadow-md ${isSaiDeBaixo ?
-                    'border-gray-600/50 hover:border-red-500/50 hover:shadow-red-500/20' :
-                    'border-gray-600/50 hover:border-emerald-500/50 hover:shadow-emerald-500/20'}`}>
-
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Sacar
-                </Button>
-              </div>
-            </div>
-
-            <div className="relative w-56 h-36 flex items-center justify-center nota-stack-container">
-              {guardianNote && guardianNote.url &&
-                <img
-                  src={guardianNote.url}
-                  alt=""
-                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-guardian nota-entrance-guardian ${featuredNoteIndex === 0 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 0 ? 10 : 0, opacity: featuredNoteIndex === 0 ? 1 : 0.80, backgroundColor: '#f7f3e9' }}
-                  onError={(e) => { e.target.style.display = 'none'; }} />
-
-              }
-
-              {backBackNote && backBackNote.url &&
-                <img
-                  src={backBackNote.url}
-                  alt=""
-                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-backback nota-entrance-backback ${featuredNoteIndex === 1 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 1 ? 10 : 1, opacity: featuredNoteIndex === 1 ? 1 : 0.82, backgroundColor: '#f7f3e9' }}
-                  onError={(e) => { e.target.style.display = 'none'; }} />
-
-              }
-
-              {backNote && backNote.url &&
-                <img
-                  src={backNote.url}
-                  alt=""
-                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-back nota-entrance-back ${featuredNoteIndex === 2 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 2 ? 10 : 2, opacity: featuredNoteIndex === 2 ? 1 : 0.85, backgroundColor: '#f7f3e9' }}
-                  onError={(e) => { e.target.style.display = 'none'; }} />
-
-              }
-
-              {sideNote && sideNote.url &&
-                <img
-                  src={sideNote.url}
-                  alt=""
-                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-side nota-entrance-side ${featuredNoteIndex === 3 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 3 ? 10 : 3, opacity: featuredNoteIndex === 3 ? 1 : 0.90, backgroundColor: '#f7f3e9' }}
-                  onError={(e) => { e.target.style.display = 'none'; }} />
-
-              }
-
-              {frontNote && frontNote.url &&
-                <img
-                  src={frontNote.url}
-                  alt=""
-                  className={`absolute w-48 h-28 rounded-lg shadow-2xl nota-transition nota-pos-front nota-entrance-front ${featuredNoteIndex === 4 ? 'nota-featured' : ''}`}
-                  style={{ zIndex: featuredNoteIndex === 4 ? 10 : 4, opacity: featuredNoteIndex === 4 ? 1 : 0.92, backgroundColor: '#f7f3e9' }}
-                  onError={(e) => { e.target.style.display = 'none'; }} />
-
-              }
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <WalletBalanceCard
+        cardRef={walletCardRef}
+        totalAvailable={totalAvailable}
+        pendingWithdrawalAmount={pendingWithdrawalAmount}
+        isSaiDeBaixo={isSaiDeBaixo}
+        onUseNow={() => setIsAuctionSelectionModalOpen(true)}
+        onWithdraw={() => setShowWithdrawalModal(true)}
+      />
 
       <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -1995,171 +1840,6 @@ export default function LicensingPage() {
           }
         }
 
-        /* ============================================================
-           🛡️ FASE 4.7.2 — CÉDULAS VALORA DO SALDO DISPONÍVEL
-           
-           Refinamento final:
-           • Cédulas caem do TOPO REAL da tela (translates 900–1200px)
-           • Posições finais em "leque aberto" (menos embaralhado)
-           • Opacidades secundárias elevadas (0.80–0.92) → sempre nítidas
-           • Transição suave (0.6s) na troca de destaque
-           • Stagger de entrada: 0/350/700/1050/1400ms
-           • R$ 200 fica 10s em destaque (gerenciado no React state)
-           ============================================================ */
-
-        /* TRANSIÇÃO SUAVE — aplicada em TODAS as .nota-* para que
-           opacity/zIndex mudem de forma animada quando o React troca o
-           featuredNoteIndex a cada 5-10s. Não afeta os keyframes de
-           entrada/float (que usam transform). */
-        .nota-transition {
-          transition: opacity 0.6s ease-out;
-        }
-
-        /* POSIÇÕES FINAIS EM LEQUE ABERTO — R$ 200 domina o centro,
-           demais espalhadas no eixo X (menos sobreposição no meio). */
-
-        /* Guardian (R$ 10) — extremo esquerdo, leve inclinação */
-        .nota-pos-guardian {
-          transform: translate(-46px, -5px) rotate(-14deg);
-        }
-        /* BackBack (R$ 50) — direita-baixo */
-        .nota-pos-backback {
-          transform: translate(42px, 11px) rotate(11deg);
-        }
-        /* Back (R$ 100) — esquerda-baixo, mais pra fora */
-        .nota-pos-back {
-          transform: translate(-30px, 14px) rotate(-6deg);
-        }
-        /* Side (R$ 20) — direita-cima */
-        .nota-pos-side {
-          transform: translate(35px, -11px) rotate(7deg);
-        }
-        /* Front (R$ 200) — CENTRALIZADA, quase reta, dominante */
-        .nota-pos-front {
-          transform: translate(0, 0) rotate(2deg);
-        }
-
-        /* ENTRADA: cada cédula vem de MUITO longe (topo real da tela),
-           rotacionando forte, aterrissa suavemente na posição de leque.
-           Duração 2.0–2.4s, stagger 0/350/700/1050/1400ms. */
-
-        .nota-entrance-guardian {
-          animation:
-            notaEntranceGuardian 2.0s cubic-bezier(0.22, 1, 0.36, 1) 0ms both,
-            notaFloatGuardian 3.4s ease-in-out infinite 3000ms;
-          will-change: transform;
-        }
-        .nota-entrance-backback {
-          animation:
-            notaEntranceBackBack 2.1s cubic-bezier(0.22, 1, 0.36, 1) 350ms both,
-            notaFloatBackBack 3.2s ease-in-out infinite 3200ms;
-          will-change: transform;
-        }
-        .nota-entrance-back {
-          animation:
-            notaEntranceBack 2.2s cubic-bezier(0.22, 1, 0.36, 1) 700ms both,
-            notaFloatBack 3.6s ease-in-out infinite 3400ms;
-          will-change: transform;
-        }
-        .nota-entrance-side {
-          animation:
-            notaEntranceSide 2.0s cubic-bezier(0.22, 1, 0.36, 1) 1050ms both,
-            notaFloatSide 3.0s ease-in-out infinite 3600ms;
-          will-change: transform;
-        }
-        .nota-entrance-front {
-          animation:
-            notaEntranceFront 2.4s cubic-bezier(0.22, 1, 0.36, 1) 1400ms both,
-            notaFloatFront 3.8s ease-in-out infinite 3800ms;
-          will-change: transform;
-        }
-
-        /* Keyframes — cada cédula sai de um ponto distante (topo/cantos
-           da viewport) e termina na sua posição final em leque.
-           Opacity FINAL sincronizada com a opacity base do inline style. */
-
-        @keyframes notaEntranceGuardian {
-          0%   { transform: translate(-900px, -1000px) rotate(-60deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.80; }
-          100% { transform: translate(-46px, -5px) rotate(-14deg) scale(1); opacity: 0.80; }
-        }
-        @keyframes notaEntranceBackBack {
-          0%   { transform: translate(900px, 1000px) rotate(75deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.82; }
-          100% { transform: translate(42px, 11px) rotate(11deg) scale(1); opacity: 0.82; }
-        }
-        @keyframes notaEntranceBack {
-          0%   { transform: translate(-1200px, -800px) rotate(-40deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.85; }
-          100% { transform: translate(-30px, 14px) rotate(-6deg) scale(1); opacity: 0.85; }
-        }
-        @keyframes notaEntranceSide {
-          0%   { transform: translate(1100px, -1100px) rotate(65deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 0.90; }
-          100% { transform: translate(35px, -11px) rotate(7deg) scale(1); opacity: 0.90; }
-        }
-        @keyframes notaEntranceFront {
-          0%   { transform: translate(-200px, -1200px) rotate(-25deg) scale(0.7); opacity: 0; }
-          40%  { opacity: 1; }
-          100% { transform: translate(0, 0) rotate(2deg) scale(1); opacity: 1; }
-        }
-
-        /* Flutuação individualizada — respira em torno da posição de leque */
-
-        @keyframes notaFloatGuardian {
-          0%, 100% { transform: translate(-46px, -5px)  rotate(-14deg); }
-          50%      { transform: translate(-46px, -11px) rotate(-14deg); }
-        }
-        @keyframes notaFloatBackBack {
-          0%, 100% { transform: translate(42px, 11px) rotate(11deg); }
-          50%      { transform: translate(42px, 5px)  rotate(11deg); }
-        }
-        @keyframes notaFloatBack {
-          0%, 100% { transform: translate(-30px, 14px) rotate(-6deg); }
-          50%      { transform: translate(-30px, 8px) rotate(-6deg); }
-        }
-        @keyframes notaFloatSide {
-          0%, 100% { transform: translate(35px, -11px) rotate(7deg); }
-          50%      { transform: translate(35px, -17px) rotate(7deg); }
-        }
-        @keyframes notaFloatFront {
-          0%, 100% { transform: translate(0, 0)  rotate(2deg); }
-          50%      { transform: translate(0, -5px) rotate(2deg); }
-        }
-
-        /* DESTAQUE: cédula em foco brilha e cresce sutilmente */
-        .nota-featured {
-          filter: drop-shadow(0 20px 40px rgba(29, 178, 74, 0.35)) brightness(1.05);
-          animation-play-state: running !important;
-          transform-origin: center center;
-          zoom: 1.08;
-        }
-        /* Fallback pra browsers sem 'zoom' (Firefox) */
-        @supports not (zoom: 1) {
-          .nota-featured {
-            outline: 2px solid rgba(29, 178, 74, 0.4);
-            outline-offset: 4px;
-          }
-        }
-
-        /* Acessibilidade */
-        @media (prefers-reduced-motion: reduce) {
-          .nota-entrance-guardian,
-          .nota-entrance-backback,
-          .nota-entrance-back,
-          .nota-entrance-side,
-          .nota-entrance-front {
-            animation: none !important;
-          }
-          .nota-transition {
-            transition: none !important;
-          }
-          .nota-featured {
-            filter: none;
-            zoom: 1;
-            outline: none;
-          }
-        }
       `}</style>
     </>);
 
