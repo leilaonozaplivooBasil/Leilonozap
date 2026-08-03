@@ -6,30 +6,34 @@ import { toast } from "sonner";
 // cargo (mesmas imagens usadas em Lucre.jsx) + nome + link de indicação já
 // pronto, com botão de copiar do lado. A pessoa clica no link, se cadastra,
 // paga e já entra na rede de quem compartilhou (?ref= do próprio código).
+// 🔗 Links de convite passam pela rota /c/:cargo (api/convite.js), que emite
+// as meta tags OG por cargo (imagem + título + descrição gerados pelo api/og.js)
+// e só então redireciona pro funil real — mesma regra usada nos links de
+// produto/loja virtual, pra o preview do WhatsApp vir bonito e específico.
 const ROLE_LINKS = (referralCode) => [
   {
     title: "Influenciador",
     desc: "Grátis · 5% por venda/arremate",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png",
-    link: `https://leilaonozap.net/Licensing?ref=${referralCode}`,
+    link: `https://leilaonozap.net/c/influenciador?ref=${referralCode}`,
   },
   {
     title: "Vendedor",
     desc: "10% na venda direta",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2f7400a5d_generated_image.png",
-    link: `https://leilaonozap.net/SejaVendedor?ref=${referralCode}`,
+    link: `https://leilaonozap.net/c/vendedor?ref=${referralCode}`,
   },
   {
     title: "Licenciado",
     desc: "Loja virtual própria · 13%",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png",
-    link: `https://leilaonozap.net/SejaLicenciado?ref=${referralCode}`,
+    link: `https://leilaonozap.net/c/licenciado?ref=${referralCode}`,
   },
   {
     title: "Parceiro",
     desc: "Participa da operação",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3debca5db_generated_image.png",
-    link: `https://leilaonozap.net/Partners?ref=${referralCode}`,
+    link: `https://leilaonozap.net/c/parceiro?ref=${referralCode}`,
   },
 ];
 
