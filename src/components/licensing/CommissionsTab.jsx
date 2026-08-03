@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { BarChart, Wallet, Gavel, Package, Loader2 } from 'lucide-react';
 
 export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommissions, myCommissionRecords, onViewHistory }) {
+  // 🔧 Âncora real: Vendedor recebe 10% direto, Licenciado recebe 13% direto —
+  // nada de valor fixo, puxa do cargo real do usuário.
+  const anchorPercent = user?.is_seller ? 10 : 13;
   return (
     <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
       <CardHeader>
@@ -37,15 +40,15 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
             <div className="flex items-start gap-2">
               <span className="text-green-500">🔨</span>
               <div>
-                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Leilão (3%):</strong>
-                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 3% sobre cada arremate feito por quem comprou através do seu link.</span>
+                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Leilão (5%):</strong>
+                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 5% sobre cada arremate feito por quem comprou através do seu link.</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
-              <span className="text-blue-500">🛍️</span>
+              <span className="text-amber-500">🛍️</span>
               <div>
-                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Loja Virtual (26%):</strong>
-                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> 26% de cada venda é distribuído entre os cargos da hierarquia. Você recebe de acordo com seus cargos ativos.</span>
+                <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Loja Virtual (30%):</strong>
+                <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> 30% de cada venda é distribuído entre você e sua estrutura de cargos. Você recebe de acordo com seus cargos ativos.</span>
               </div>
             </div>
           </div>
@@ -60,7 +63,7 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
               </div>
               <div>
                 <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🔨 Leilão</p>
-                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>3% por arremate de quem usou seu link</p>
+                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>5% por arremate de quem usou seu link</p>
               </div>
             </div>
             <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
@@ -70,27 +73,27 @@ export default function CommissionsTab({ user, isSaiDeBaixo, isLoadingCommission
             <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-green-200' : 'border-green-500/30'}`}>
               <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                 ✅ Compartilhe seu link único<br/>
-                ✅ Quando alguém arremata pelo seu link, você ganha 3%
+                ✅ Quando alguém arremata pelo seu link, você ganha 5%
               </p>
             </div>
           </div>
-          <div className={`p-5 rounded-2xl border shadow-lg ${isSaiDeBaixo ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300' : 'bg-gradient-to-br from-blue-900/30 to-indigo-950/40 border-blue-500/30'}`}>
+          <div className={`p-5 rounded-2xl border shadow-lg ${isSaiDeBaixo ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300' : 'bg-gradient-to-br from-amber-900/30 to-yellow-950/40 border-amber-500/30'}`}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-                <Package className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Package className="w-6 h-6 text-amber-400" />
               </div>
               <div>
                 <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🛍️ Loja Virtual</p>
-                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>26% distribuídos na hierarquia</p>
+                <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>30% distribuídos na sua estrutura</p>
               </div>
             </div>
-            <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
+            <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-amber-600' : 'text-amber-400'}`}>
               R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
             </p>
             <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
-            <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-blue-200' : 'border-blue-500/30'}`}>
+            <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-amber-200' : 'border-amber-500/30'}`}>
               <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                ✅ Âncora: 13% direto<br/>
+                ✅ Âncora: {anchorPercent}% direto<br/>
                 ✅ Cargos ativos: bônus extras
               </p>
             </div>
