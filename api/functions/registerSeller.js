@@ -1,21 +1,21 @@
-// registerSeller — o LICENCIADO cadastra um VENDEDOR da equipe dele (service_role, bypassa RLS).
+// registerSeller — cadastra um VENDEDOR na equipe de quem clicou (service_role, bypassa RLS).
 //
-// Pela árvore oficial, o Vendedor ganha 5% na cadeia da venda. Só que essa rota NUNCA EXISTIU:
-// o botão "Cadastrar Vendedor" chamava uma função inexistente, então ninguém no sistema tinha o
-// cargo e os 5% do vendedor iam TODOS pra empresa em toda venda. Agora o fluxo funciona.
-//
-// O vendedor nasce vinculado a quem o cadastrou (referred_by_id), que é o que faz a comissão
-// subir a cadeia: venda do vendedor → licenciado → parceiro → ... → topo.
+// Pela árvore oficial, o Vendedor ganha 10% na cadeia da venda. Regra de negócio (rebate):
+// só quem está ACIMA do Vendedor na linha de REDE pode cadastrá-lo direto (Licenciado pra cima).
+// Se quem clicou em "Cadastrar Vendedor" NÃO tem esse nível (ex: é o próprio Vendedor ou um
+// Influenciador tentando cadastrar), o cadastro NÃO é bloqueado — ele SOBE para a linha
+// ascendente automaticamente, até achar o primeiro cargo que tem permissão (normalmente o
+// Licenciado responsável). Isso evita perder o cadastro e mantém o rebate certo.
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
+import { REDE, bestNetworkLevel } from '../_lib/networkChain.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-// quem pode cadastrar vendedor: licenciado pra cima (+ admin)
-const PODE_CADASTRAR = ['licenciado', 'licenciado_catalogo', 'licenciado_aplicativo', 'parceiro',
-  'ponto_retirada', 'loja_fisica', 'distribuidor', 'ceo', 'fundador', 'conselheiro',
-  'diretoria_executiva', 'diretoria_operacao', 'executivo', 'embaixador'];
+// ordem de carreira na linha de REDE (usuario=0 ... distribuidor=7) — quem cadastra precisa
+// ter ordem MAIOR que a do cargo cadastrado (Vendedor = ordem 2).
+const ORDEM_VENDEDOR = REDE.indexOf('vendedor');
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -49,13 +49,29 @@ export default async function handler(req, res) {
     if (!full_name) return res.status(200).json({ success: false, error: 'Informe o nome do vendedor.' });
     if (!actor_id) return res.status(200).json({ success: false, error: 'Faça login novamente para cadastrar.' });
 
-    // guard: quem cadastra precisa ser licenciado (ou acima) / admin
-    const a = await (await sb(`app_users?select=id,full_name,role,career_levels&id=eq.${encodeURIComponent(actor_id)}&limit=1`)).json();
+    const a = await (await sb(`app_users?select=id,full_name,role,career_levels,primary_career_level,referred_by_id&id=eq.${encodeURIComponent(actor_id)}&limit=1`)).json();
     const actor = Array.isArray(a) ? a[0] : null;
-    const podeAdmin = actor && ['admin', 'super_admin'].includes(actor.role);
-    const podeCargo = actor && Array.isArray(actor.career_levels) && actor.career_levels.some((c) => PODE_CADASTRAR.includes(c));
-    if (!actor || (!podeAdmin && !podeCargo)) {
-      return res.status(200).json({ success: false, error: 'Só um Licenciado (ou acima) pode cadastrar vendedor.' });
+    if (!actor) return res.status(200).json({ success: false, error: 'Faça login novamente para cadastrar.' });
+
+    // 🔼 Resolve quem realmente vai "receber" o vendedor na cadeia: admin cadastra
+    // direto; senão sobe a linha ascendente (referred_by_id) até achar o primeiro
+    // cargo com ordem MAIOR que Vendedor (normalmente o Licenciado responsável).
+    let dono = null;
+    if (['admin', 'super_admin'].includes(actor.role)) {
+      dono = actor;
+    } else {
+      let atual = actor;
+      const visitados = new Set();
+      for (let i = 0; i < 20 && atual && !visitados.has(atual.id); i++) {
+        visitados.add(atual.id);
+        if (REDE.indexOf(bestNetworkLevel(atual)) > ORDEM_VENDEDOR) { dono = atual; break; }
+        if (!atual.referred_by_id) break;
+        const up = await (await sb(`app_users?select=id,full_name,role,career_levels,primary_career_level,referred_by_id&id=eq.${encodeURIComponent(atual.referred_by_id)}&limit=1`)).json();
+        atual = Array.isArray(up) ? up[0] : null;
+      }
+    }
+    if (!dono) {
+      return res.status(200).json({ success: false, error: 'Não foi possível encontrar um Licenciado (ou acima) na sua linha para receber este vendedor.' });
     }
 
     // duplicados
@@ -88,9 +104,9 @@ export default async function handler(req, res) {
     const payload = {
       id, base44_id: id, full_name, email: email || null, password: null, phone: phone || null, cpf: cpf || null,
       role: 'user',
-      career_levels: ['vendedor'], primary_career_level: 'vendedor', // 💰 é o que faz os 5% caírem pra ele
+      career_levels: ['vendedor'], primary_career_level: 'vendedor', // 💰 é o que faz os 10% caírem pra ele
       is_seller: true,
-      referred_by_id: actor.id,                                      // 🔗 amarra na cadeia de quem cadastrou
+      referred_by_id: dono.id,                                       // 🔗 amarra em quem tem permissão (subiu a linha se preciso)
       referral_code, store_name, store_slug, avatar_url,
       terms_accepted: true, commission_balance: 0, saldo_disponivel: 0, saldo_alocado: 0,
       created_date: now, updated_date: now,
@@ -112,6 +128,7 @@ export default async function handler(req, res) {
       seller,
       store_link: `https://leilaonozap.net/loja/${store_slug}`,
       ref_link: `https://leilaonozap.net/Loja-Virtual?ref=${referral_code}`,
+      ...(dono.id !== actor.id ? { subiu_para: dono.full_name } : {}), // aviso opcional: cadastro subiu para outro cargo
     });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao cadastrar vendedor', details: String(e?.message || e) });
