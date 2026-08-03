@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Eye } from 'lucide-react';
 
-// 🔴 Mesmo corte usado no Relatório (CatalogHome.jsx): pedidos antigos eram de
-// teste. A lista de Pedidos só mostra o que entrou a partir deste corte.
-const REPORT_CUTOFF_DATE = new Date('2026-08-03T04:31:00.000Z');
+// 🔴 Mesmo corte usado no Relatório (CatalogHome.jsx): pedidos antigos (antes
+// de julho/2026) eram de teste. Julho e agosto reais permanecem, refletindo o saldo.
+const REPORT_CUTOFF_DATE = new Date('2026-07-01T03:00:00.000Z');
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',

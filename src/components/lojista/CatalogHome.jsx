@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, ShoppingBag, Eye, Loader2 } from 'lucide-react';
 
-// 🔴 Contagem "zerada" a partir daqui: vendas/comissões antigas eram de teste.
-// O relatório só considera pedidos criados a partir deste corte (saldo real).
-const REPORT_CUTOFF_DATE = new Date('2026-08-03T04:31:00.000Z');
+// 🔴 Contagem "zerada" a partir daqui: vendas/comissões antigas (antes de julho/2026)
+// eram de teste. O relatório só considera pedidos criados a partir deste corte
+// (mantém julho e agosto reais, que compõem o saldo disponível).
+const REPORT_CUTOFF_DATE = new Date('2026-07-01T03:00:00.000Z');
 
 export default function CatalogHome({ currentStore, catalogSales = [], user, onGoToPedidos, onGoToComissoes }) {
   const [stats, setStats] = useState({
