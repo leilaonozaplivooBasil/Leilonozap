@@ -44,12 +44,12 @@ import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import DashboardTabsList from '../components/licensing/DashboardTabsList';
+import LicensingSidebar from '../components/licensing/LicensingSidebar';
+import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
-import AnaliseDoMesCard from '../components/licensing/AnaliseDoMesCard';
-import PromoBannersCard from '../components/licensing/PromoBannersCard';
 import SalesTrendChart from '../components/licensing/SalesTrendChart';
 import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
@@ -548,6 +548,11 @@ const DashboardContent = ({ user, isAdmin }) => {
     return { monthlyEntradas: entradas, monthlySaidas: saidas };
   }, [myCommissionRecords, myWithdrawals]);
 
+  // 🔗 Link a compartilhar no banner: Loja Virtual pra quem já é Licenciado+, App pros demais
+  const shareLink = hasAdvancedBeyondInfluencer
+    ? `https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`
+    : referralLink;
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
     toast.success('Link copiado!');
@@ -1002,89 +1007,97 @@ const DashboardContent = ({ user, isAdmin }) => {
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 lg:p-8">
-      <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Painel de Alavancagem
-
-          </h1>
-          <p className="text-sm sm:text-base text-gray-400">
-            👋 <strong className="text-white">{shortName}</strong>
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {isAdmin &&
-            <>
-              <Button
-                onClick={handleForceSync}
-                disabled={isSyncing}
-                variant="outline"
-                className="bg-gray-700 border-green-500 text-green-400 hover:bg-gray-600"
-                size="sm">
-
-                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                Sincronizar
-              </Button>
-              <Button
-                onClick={handleResetTestData}
-                disabled={isResetting}
-                variant="outline"
-                className="bg-gray-700 border-red-500 text-red-400 hover:bg-gray-600"
-                size="sm">
-
-                {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                Reset Teste
-              </Button>
-              <Button
-                onClick={handleResetAllBalances}
-                disabled={isResetting}
-                variant="outline"
-                className="bg-gray-700 border-orange-500 text-orange-400 hover:bg-gray-600"
-                size="sm">
-
-                {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                Zerar Saldos
-              </Button>
-            </>
-          }
-        </div>
-      </div>
-
-      <WalletBalanceCard
-        cardRef={walletCardRef}
-        totalAvailable={totalAvailable}
-        pendingWithdrawalAmount={pendingWithdrawalAmount}
-        isSaiDeBaixo={isSaiDeBaixo}
-        onUseNow={() => setIsAuctionSelectionModalOpen(true)}
-        onWithdraw={() => setShowWithdrawalModal(true)}
-        onTransfer={() => navigate('/TransferirSaldo')}
+    <div className="flex bg-white min-h-screen">
+      <LicensingSidebar
+        user={user}
+        shortName={shortName}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        userLevels={userLevels}
+        isAdmin={isAdmin}
+        isSeller={user.is_seller === true}
       />
 
-      <div className="grid gap-6 mb-8 lg:grid-cols-3">
-        <AnaliseDoMesCard entradas={monthlyEntradas} saidas={monthlySaidas} isSaiDeBaixo={isSaiDeBaixo} />
-        <div className="lg:col-span-2">
-          <PromoBannersCard
-            user={user}
-            isSaiDeBaixo={isSaiDeBaixo}
-            onGoVendedores={() => { setActiveTab('catalogo'); setCatalogSubTab('catalogo-vendedores'); }}
-            onEditStore={() => setActiveTab('minha-loja')}
-          />
+      <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+        {/* 📱 Mobile: sidebar fica escondida, mantém a barra de abas no topo */}
+        <div className="md:hidden mb-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <DashboardTabsList
+              isSaiDeBaixo={isSaiDeBaixo}
+              userLevels={userLevels}
+              isAdmin={isAdmin}
+              isSeller={user.is_seller === true}
+              myClientsCount={myClients.length}
+            />
+          </Tabs>
         </div>
-      </div>
 
-      <div className="grid gap-6 mb-8 lg:grid-cols-2">
-        <SalesTrendChart sales={myCatalogSales} isSaiDeBaixo={isSaiDeBaixo} />
-        <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
-      </div>
+        <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Painel de Alavancagem</h1>
+            <p className="text-sm sm:text-base text-gray-500">
+              👋 <strong className="text-gray-900">{shortName}</strong>
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {isAdmin &&
+              <>
+                <Button
+                  onClick={handleForceSync}
+                  disabled={isSyncing}
+                  variant="outline"
+                  className="bg-white border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  size="sm">
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <DashboardTabsList
+                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Sincronizar
+                </Button>
+                <Button
+                  onClick={handleResetTestData}
+                  disabled={isResetting}
+                  variant="outline"
+                  className="bg-white border-red-300 text-red-600 hover:bg-red-50"
+                  size="sm">
+
+                  {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  Reset Teste
+                </Button>
+                <Button
+                  onClick={handleResetAllBalances}
+                  disabled={isResetting}
+                  variant="outline"
+                  className="bg-white border-orange-300 text-orange-600 hover:bg-orange-50"
+                  size="sm">
+
+                  {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  Zerar Saldos
+                </Button>
+              </>
+            }
+          </div>
+        </div>
+
+        <WalletBalanceCard
+          cardRef={walletCardRef}
+          totalAvailable={totalAvailable}
+          pendingWithdrawalAmount={pendingWithdrawalAmount}
           isSaiDeBaixo={isSaiDeBaixo}
-          userLevels={userLevels}
-          isAdmin={isAdmin}
-          isSeller={user.is_seller === true}
-          myClientsCount={myClients.length}
+          onUseNow={() => setIsAuctionSelectionModalOpen(true)}
+          onWithdraw={() => setShowWithdrawalModal(true)}
+          onTransfer={() => navigate('/TransferirSaldo')}
         />
+
+        <LicensingBanners
+          onCopyLink={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}
+          onShareProducts={() => { setActiveTab('catalogo'); setCatalogSubTab('catalogo-produtos'); }}
+        />
+
+        <div className="grid gap-6 mb-8 lg:grid-cols-2">
+          <SalesTrendChart sales={myCatalogSales} isSaiDeBaixo={isSaiDeBaixo} />
+          <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
         {(userLevels.includes('licenciado') || user.is_seller === true) && !isAdmin &&
           <TabsContent value="minha-loja" className="space-y-6">
@@ -1098,7 +1111,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {(userLevels.includes('licenciado') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
+              <TabsList className={`${'bg-white border-gray-200'} flex-wrap h-auto gap-2 p-2`}>
                 <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Sua Loja Virtual</TabsTrigger>
                 <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
                 <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
@@ -1139,11 +1152,11 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsContent>
 
               <TabsContent value="catalogo-vendedores" className="mt-6">
-                <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                <Card className={'bg-white border-gray-200'}>
                   <CardHeader>
                     <div>
-                      <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
-                      <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua estrutura de negócio.</CardDescription>
+                      <CardTitle className={'text-gray-900'}>Meus Vendedores</CardTitle>
+                      <CardDescription className={'text-gray-500'}>Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua estrutura de negócio.</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1160,7 +1173,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <TabsContent value="catalogo-comissoes" className="mt-6">
                 <Tabs defaultValue="extrato" className="w-full">
-                  <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                  <TabsList className={'bg-white border-gray-200'}>
                     <TabsTrigger value="extrato">Extrato</TabsTrigger>
                     <TabsTrigger value="vendas">Vendas</TabsTrigger>
                   </TabsList>
@@ -1170,10 +1183,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </TabsContent>
 
                   <TabsContent value="vendas" className="mt-4">
-                    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+                    <Card className={'bg-white border-gray-200'}>
                       <CardHeader>
-                        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
-                        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                        <CardTitle className={'text-gray-900'}>Minhas Vendas</CardTitle>
+                        <CardDescription className={'text-gray-500'}>
                           As vendas que geraram suas comissões
                         </CardDescription>
                       </CardHeader>
@@ -1184,7 +1197,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                           </div> :
 
                           <Tabs defaultValue="leilao" className="w-full">
-                            <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
+                            <TabsList className={'bg-gray-100 border-gray-200'}>
                               <TabsTrigger value="leilao">Leilão</TabsTrigger>
                               <TabsTrigger value="catalogo">Loja Virtual</TabsTrigger>
                               {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="equipe">Equipe</TabsTrigger>}
@@ -1192,29 +1205,29 @@ const DashboardContent = ({ user, isAdmin }) => {
 
                             <TabsContent value="leilao" className="mt-4">
                               {myAuctions.length === 0 ?
-                                <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                                <p className={`text-center py-8 ${'text-gray-500'}`}>
                                   Arremates dos indicados: 0
                                 </p> :
 
                                 <div className="overflow-x-auto">
                                   <Table>
                                     <TableHeader>
-                                      <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (5%)</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                                      <TableRow className={'border-gray-200'}>
+                                        <TableHead className={'text-gray-500'}>Produto</TableHead>
+                                        <TableHead className={'text-gray-500'}>Arrematante</TableHead>
+                                        <TableHead className={'text-gray-500'}>Valor</TableHead>
+                                        <TableHead className={'text-gray-500'}>Comissão (5%)</TableHead>
+                                        <TableHead className={'text-gray-500'}>Data</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {myAuctions.map((auction) =>
-                                        <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
+                                        <TableRow key={auction.id} className={'border-gray-200'}>
+                                          <TableCell className={'text-gray-900 text-sm'}>{auction.title}</TableCell>
+                                          <TableCell className={'text-gray-700 text-sm'}>{auction.winner_name}</TableCell>
+                                          <TableCell className={'text-gray-900 font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
                                           <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.05).toFixed(2)}</TableCell>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                          <TableCell className={'text-gray-500 text-sm'}>
                                             {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
                                           </TableCell>
                                         </TableRow>
@@ -1227,29 +1240,29 @@ const DashboardContent = ({ user, isAdmin }) => {
 
                             <TabsContent value="catalogo" className="mt-4">
                               {mySales.length === 0 ?
-                                <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                                <p className={`text-center py-8 ${'text-gray-500'}`}>
                                   Nenhuma venda da loja virtual
                                 </p> :
 
                                 <div className="overflow-x-auto">
                                   <Table>
                                     <TableHeader>
-                                      <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comprador</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Sua Comissão</TableHead>
-                                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                                      <TableRow className={'border-gray-200'}>
+                                        <TableHead className={'text-gray-500'}>Produto</TableHead>
+                                        <TableHead className={'text-gray-500'}>Comprador</TableHead>
+                                        <TableHead className={'text-gray-500'}>Valor</TableHead>
+                                        <TableHead className={'text-gray-500'}>Sua Comissão</TableHead>
+                                        <TableHead className={'text-gray-500'}>Data</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {mySales.map((sale) =>
-                                        <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
+                                        <TableRow key={sale.id} className={'border-gray-200'}>
+                                          <TableCell className={'text-gray-900 text-sm'}>{sale.product_title}</TableCell>
+                                          <TableCell className={'text-gray-700 text-sm'}>{sale.buyer_name}</TableCell>
+                                          <TableCell className={'text-gray-900 font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
                                           <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
-                                          <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                          <TableCell className={'text-gray-500 text-sm'}>
                                             {new Date(sale.created_date).toLocaleDateString('pt-BR')}
                                           </TableCell>
                                         </TableRow>
@@ -1262,7 +1275,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
                             {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
                               <TabsContent value="equipe" className="mt-4">
-                                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                                <div className={`text-center py-12 ${'text-gray-500'}`}>
                                   <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
                                   <p>Seu sistema de alavancagem está crescendo!</p>
                                   <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
@@ -1282,10 +1295,10 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         {/* ABA: PLANO DE CARREIRA */}
         <TabsContent value="plano-carreira" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+          <Card className={'bg-white border-gray-200'}>
             <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+              <CardTitle className={'text-gray-900'}>Seu Plano de Carreira</CardTitle>
+              <CardDescription className={'text-gray-500'}>
                 Veja sua evolução no sistema de alavancagem
               </CardDescription>
             </CardHeader>
@@ -1297,10 +1310,10 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <TabsContent value="visao-geral" className="space-y-6">
           {hasAdvancedBeyondInfluencer ?
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <Card className={'bg-white border-gray-200'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Seu Link (Loja Virtual) - 26% distribuídos</CardTitle>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                <CardTitle className={'text-gray-900'}>🛍️ Seu Link (Loja Virtual) - 26% distribuídos</CardTitle>
+                <CardDescription className={'text-gray-500'}>
                   Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
                 </CardDescription>
               </CardHeader>
@@ -1309,22 +1322,22 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <Input
                     value={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`}
                     readOnly
-                    className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+                    className={'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm'} />
 
                   <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
                   <a href={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
                 </div>
-                <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
-                  <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
+                <Alert className={'bg-blue-50 border-blue-200'}>
+                  <Info className={`w-4 h-4 ${'text-blue-600'}`} />
+                  <AlertDescription className={'text-gray-700'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card> :
 
-            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <Card className={'bg-white border-gray-200'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Seu Link (Influencer) - 5% por arremate</CardTitle>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                <CardTitle className={'text-gray-900'}>🎯 Seu Link (Influencer) - 5% por arremate</CardTitle>
+                <CardDescription className={'text-gray-500'}>
                   Ganhe 5% em R$ sobre cada arremate feito pelos seus indicados no App
                 </CardDescription>
               </CardHeader>
@@ -1333,28 +1346,28 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <Input
                     value={referralLink}
                     readOnly
-                    className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+                    className={'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm'} />
 
                   <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
                   <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
                 </div>
-                <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
-                  <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
-                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}><strong>App (5%):</strong> Você ganha 5% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
+                <Alert className={'bg-green-50 border-green-200'}>
+                  <Info className={`w-4 h-4 ${'text-green-600'}`} />
+                  <AlertDescription className={'text-gray-700'}><strong>App (5%):</strong> Você ganha 5% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
                 </Alert>
               </CardContent>
             </Card>
           }
 
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+          <Card className={'bg-white border-gray-200'}>
             <CardHeader>
-              <CardTitle className={`mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Seu Plano de Carreira</CardTitle>
+              <CardTitle className={`mb-3 ${'text-gray-900'}`}>Seu Plano de Carreira</CardTitle>
               <div className="space-y-1">
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Nível atual: <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{highestLevelName}</strong>
+                <CardDescription className={'text-gray-500'}>
+                  Nível atual: <strong className={'text-gray-900'}>{highestLevelName}</strong>
                 </CardDescription>
-                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  ⭐ Função Principal: <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>{primaryLevelName}</strong>
+                <CardDescription className={'text-gray-500'}>
+                  ⭐ Função Principal: <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-600'}>{primaryLevelName}</strong>
                 </CardDescription>
               </div>
             </CardHeader>
@@ -1369,19 +1382,19 @@ const DashboardContent = ({ user, isAdmin }) => {
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">
             <Accordion type="single" collapsible className="w-full space-y-4">
-              <AccordionItem value="grant" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
-                <AccordionTrigger className="px-6 hover:bg-gray-700/50">
+              <AccordionItem value="grant" className="bg-white border-gray-200 rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-6 hover:bg-gray-50">
                   <div className="flex items-center gap-3">
-                    <DollarSign className="w-5 h-5 text-green-400" />
-                    <span className="text-white font-semibold">Conceder Comissões</span>
+                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                    <span className="text-gray-900 font-semibold">Conceder Comissões</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-gray-300">Selecionar Licenciado</Label>
+                      <Label className="text-gray-600">Selecionar Licenciado</Label>
                       <Select value={selectedLicenseeId} onValueChange={setSelectedLicenseeId}>
-                        <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                        <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                           <SelectValue placeholder="Escolha um licenciado" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1397,18 +1410,18 @@ const DashboardContent = ({ user, isAdmin }) => {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-gray-300">Valor da Comissão (R$)</Label>
+                      <Label className="text-gray-600">Valor da Comissão (R$)</Label>
                       <Input
                         type="number"
                         placeholder="100.00"
                         onChange={(e) => setCommissionAmount(e.target.value)}
-                        className="bg-gray-700 border-gray-600 text-white" />
+                        className="bg-white border-gray-300 text-gray-900" />
 
                     </div>
                     <Button
                       onClick={handleGrantCommission}
                       disabled={isGranting || !selectedLicenseeId || !commissionAmount}
-                      className="w-full bg-green-600 hover:bg-green-700">
+                      className="w-full bg-emerald-600 hover:bg-emerald-700">
 
                       {isGranting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       Conceder Comissão
@@ -1417,19 +1430,19 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="link" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
-                <AccordionTrigger className="px-6 hover:bg-gray-700/50">
+              <AccordionItem value="link" className="bg-white border-gray-200 rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-6 hover:bg-gray-50">
                   <div className="flex items-center gap-3">
-                    <Link2 className="w-5 h-5 text-blue-400" />
-                    <span className="text-white font-semibold">Organizar Alavancagem</span>
+                    <Link2 className="w-5 h-5 text-blue-600" />
+                    <span className="text-gray-900 font-semibold">Organizar Alavancagem</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-gray-300">Vincular a qual licenciado?</Label>
+                      <Label className="text-gray-600">Vincular a qual licenciado?</Label>
                       <Select value={selectedLicenseeForLink} onValueChange={setSelectedLicenseeForLink}>
-                        <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                        <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                           <SelectValue placeholder="Escolha um licenciado" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1442,15 +1455,15 @@ const DashboardContent = ({ user, isAdmin }) => {
                       </Select>
                     </div>
                     {selectedLicenseeForLink &&
-                      <div className="max-h-64 overflow-y-auto bg-gray-700/30 rounded-lg p-4 space-y-2">
+                      <div className="max-h-64 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
                         {availableUsersToLink.map((u) =>
-                          <div key={u.id} className="flex items-center gap-3 p-2 hover:bg-gray-700/50 rounded">
+                          <div key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded">
                             <Checkbox
                               checked={selectedUsersToLink.includes(u.id)}
                               onCheckedChange={() => toggleUserSelection(u.id)} />
 
-                            <span className="text-white">{u.full_name}</span>
-                            <span className="text-gray-400 text-sm ml-auto">{u.email}</span>
+                            <span className="text-gray-900">{u.full_name}</span>
+                            <span className="text-gray-500 text-sm ml-auto">{u.email}</span>
                           </div>
                         )}
                       </div>
@@ -1467,11 +1480,11 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="reorganizar" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
-                <AccordionTrigger className="px-6 hover:bg-gray-700/50">
+              <AccordionItem value="reorganizar" className="bg-white border-gray-200 rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-6 hover:bg-gray-50">
                   <div className="flex items-center gap-3">
-                    <GripVertical className="w-5 h-5 text-purple-400" />
-                    <span className="text-white font-semibold">Reorganizar Hierarquia</span>
+                    <GripVertical className="w-5 h-5 text-purple-600" />
+                    <span className="text-gray-900 font-semibold">Reorganizar Hierarquia</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
@@ -1482,17 +1495,17 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="clean" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
-                <AccordionTrigger className="px-6 hover:bg-gray-700/50">
+              <AccordionItem value="clean" className="bg-white border-gray-200 rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-6 hover:bg-gray-50">
                   <div className="flex items-center gap-3">
-                    <Trash2 className="w-5 h-5 text-red-400" />
-                    <span className="text-white font-semibold">Limpar Duplicatas</span>
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                    <span className="text-gray-900 font-semibold">Limpar Duplicatas</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
-                  <Alert className="bg-red-900/20 border-red-500/30 mb-4">
-                    <AlertCircle className="w-4 h-4 text-red-400" />
-                    <AlertDescription className="text-gray-300">
+                  <Alert className="bg-red-50 border-red-200 mb-4">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <AlertDescription className="text-gray-600">
                       Remove usuários com emails duplicados, mantendo apenas o mais recente.
                     </AlertDescription>
                   </Alert>
@@ -1576,6 +1589,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         onSubmit={handleWithdrawalSubmit}
       />
 
+      </div>
     </div>);
 
 };
@@ -1758,31 +1772,28 @@ export default function LicensingPage() {
     return messages[level] || 'Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.';
   };
 
+  if (isLicensee) {
+    return <DashboardContent user={currentUser} isAdmin={isAdmin} />;
+  }
+
   return (
     <>
       <div className={`min-h-screen ${isSaiDeBaixo ?
         'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
-        !isLicensee ? 'bg-white text-nz-tinta' : 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
+        'bg-white text-nz-tinta'}`
       }>
         {/* 🛡️ FASE 4.5 — Hero pública movida para dentro do LandingContent (após o
-            vídeo), para seguir a identidade clean/branca da Lucre. Usuário logado
-            (licenciado/admin) vai direto pro Dashboard, sem landing de recrutamento. */}
+            vídeo), para seguir a identidade clean/branca da Lucre. */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {isLicensee ?
-            <DashboardContent user={currentUser} isAdmin={isAdmin} /> :
-
-            <LandingErrorBoundary>
-              <LandingContent
-                isSaiDeBaixo={isSaiDeBaixo}
-                onRegisterClick={() => setShowLicenseeRegisterModal(true)}
-                onLoginClick={() => setShowLoginModal(true)} />
-            </LandingErrorBoundary>
-
-          }
+          <LandingErrorBoundary>
+            <LandingContent
+              isSaiDeBaixo={isSaiDeBaixo}
+              onRegisterClick={() => setShowLicenseeRegisterModal(true)}
+              onLoginClick={() => setShowLoginModal(true)} />
+          </LandingErrorBoundary>
         </div>
 
         {/* 🛡️ FASE 4.5 — Rodapé motivacional também é copy pública. Só para visitantes. */}
-        {!isLicensee && (
         <div className={`py-20 px-6 ${isSaiDeBaixo ? 'bg-gray-100/50' : 'bg-nz-verde-fundo'}`}>
           <div className="max-w-6xl mx-auto">
             <h2 className="text-4xl font-bold text-center mb-4 text-nz-tinta">
@@ -1793,7 +1804,6 @@ export default function LicensingPage() {
             </p>
           </div>
         </div>
-        )}
 
       </div>
 
