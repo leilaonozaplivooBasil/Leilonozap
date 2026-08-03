@@ -128,15 +128,15 @@ export default function CareerPath({ currentUser }) {
                     <ul className="space-y-3">
                         {myDirectorSteps.map((s) => (
                             <li key={s.id} className="flex items-start gap-4">
-                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-nz-verde ring-4 ring-nz-verde/20 animate-pulse-subtle">
-                                    <s.icon className="h-5 w-5 text-white" />
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-nz-verde-fundo ring-4 ring-nz-verde/20 animate-pulse-subtle">
+                                    <s.icon className="h-5 w-5 text-nz-verde" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold flex items-center gap-2 text-nz-verde">
+                                    <h4 className="font-bold flex items-center gap-2 text-black">
                                         {s.title}
                                         <span className="ml-1 text-xs px-2 py-0.5 rounded border bg-nz-verde-fundo text-nz-verde border-nz-verde/30">{s.gov}</span>
                                     </h4>
-                                    <p className="mt-1 text-sm text-gray-600">{s.desc}</p>
+                                    <p className="mt-1 text-sm text-black">{s.desc}</p>
                                 </div>
                             </li>
                         ))}
@@ -156,11 +156,11 @@ export default function CareerPath({ currentUser }) {
                             <li key={step.id} className="flex items-start gap-4 relative z-10">
                                 <div className={cn(
                                     "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
-                                    isActive ? "bg-nz-verde ring-4 ring-nz-verde/20 animate-pulse-subtle" : "border-2 border-nz-borda bg-white",
+                                    isActive ? "bg-nz-verde-fundo ring-4 ring-nz-verde/20 animate-pulse-subtle" : "border-2 border-nz-borda bg-white",
                                     isPrimary && "ring-4 ring-nz-marrom/30"
                                 )}>
                                     {isActive ? (
-                                        <ArrowUp className="h-6 w-6 text-white" />
+                                        <ArrowUp className="h-6 w-6 text-nz-verde" />
                                     ) : (
                                         <step.icon className="h-6 w-6 text-gray-400" />
                                     )}
@@ -168,7 +168,7 @@ export default function CareerPath({ currentUser }) {
                                 <div>
                                     <h4 className={cn(
                                         "font-bold flex items-center gap-2",
-                                        isActive ? "text-nz-verde" : "text-gray-400"
+                                        isActive ? "text-black" : "text-gray-400"
                                     )}>
                                         {step.title}
                                         {isPrimary && <span className="text-xs font-normal text-nz-marrom">(Função Principal)</span>}
@@ -187,17 +187,17 @@ export default function CareerPath({ currentUser }) {
                                     </h4>
                                     <p className={cn(
                                         "mt-1 text-sm",
-                                        isActive ? "text-gray-700" : "text-gray-400"
+                                        isActive ? "text-black" : "text-gray-400"
                                     )}>
                                         {isActive ? step.achievedDescription : step.lockedDescription}
                                     </p>
                                     {roleRebate[step.id] ? (
-                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-nz-marrom" : "text-gray-400")}>
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-nz-verde font-semibold" : "text-gray-400")}>
                                         Rebate de {roleRebate[step.id].pct}% sobre {roleRebate[step.id].sobre} (quando alguém da sua rede vende).
                                       </p>
                                     ) : null}
                                     {roleCadastra[step.id] ? (
-                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-gray-500" : "text-gray-400")}>
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-black" : "text-gray-400")}>
                                         {roleCadastra[step.id]}
                                       </p>
                                     ) : null}
