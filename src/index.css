@@ -20,6 +20,9 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --nz-tinta: #0D1310;
     --nz-tinta-fraca: #5C6B62;
     --nz-borda: #DDE4DF;
+    --nz-marrom: #8B5E34;
+    --nz-marrom-claro: #B08055;
+    --nz-marrom-fundo: #F7F1EA;
   }
 }
 

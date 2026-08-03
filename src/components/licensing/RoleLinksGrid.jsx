@@ -50,7 +50,7 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
       {ROLE_LINKS(referralCode).map((role, idx) => (
         <div
           key={role.title}
-          className={`rounded-xl border p-3 flex items-center gap-3 ${isSaiDeBaixo ? 'bg-gray-50 border-gray-200' : 'bg-gray-900/50 border-gray-700'}`}
+          className="rounded-xl border p-3 flex items-center gap-3 bg-white border-nz-borda"
         >
           <img
             src={role.image}
@@ -59,17 +59,17 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
             loading="lazy"
           />
           <div className="flex-1 min-w-0">
-            <p className={`font-bold text-sm ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>{role.title}</p>
-            <p className={`text-xs mb-1.5 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>{role.desc}</p>
+            <p className="font-bold text-sm text-gray-900">{role.title}</p>
+            <p className="text-xs mb-1.5 text-gray-500">{role.desc}</p>
             <div className="flex gap-1.5">
               <input
                 value={role.link}
                 readOnly
-                className={`flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-1.5 border truncate ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-700' : 'bg-gray-800 border-gray-600 text-gray-300'}`}
+                className="flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-1.5 border truncate bg-nz-cinza-fundo border-nz-borda text-gray-700"
               />
               <button
                 onClick={() => handleCopy(role.link, idx)}
-                className={`shrink-0 rounded-md px-2 flex items-center justify-center transition-colors ${copiedIdx === idx ? 'bg-emerald-600' : 'bg-green-600 hover:bg-green-700'} text-white`}
+                className={`shrink-0 rounded-md px-2 flex items-center justify-center transition-colors ${copiedIdx === idx ? 'bg-nz-verde-escuro' : 'bg-nz-verde hover:bg-nz-verde-escuro'} text-white`}
                 title="Copiar link"
               >
                 {copiedIdx === idx ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}

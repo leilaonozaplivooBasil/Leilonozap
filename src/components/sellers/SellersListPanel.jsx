@@ -181,25 +181,25 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
     <div className="w-full">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-green-400" />
-          <h2 className="text-xl font-bold text-gray-100">Meus Vendedores</h2>
+          <Users className="w-5 h-5 text-nz-verde" />
+          <h2 className="text-xl font-bold text-gray-900">Meus Vendedores</h2>
         </div>
-        <span className="text-sm text-gray-400">
+        <span className="text-sm text-gray-500">
           {sellers.length} vendedor(es) cadastrado(s)
         </span>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-12 text-gray-400">
+        <div className="flex items-center justify-center py-12 text-gray-500">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
           Carregando vendedores...
         </div>
       )}
 
       {!isLoading && sellers.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/50 p-8 text-center">
-          <Store className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">Nenhum vendedor cadastrado ainda.</p>
+        <div className="rounded-xl border border-dashed border-nz-borda bg-nz-cinza-fundo p-8 text-center">
+          <Store className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500">Nenhum vendedor cadastrado ainda.</p>
         </div>
       )}
 
@@ -211,7 +211,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
             return (
               <div
                 key={seller.id}
-                className="rounded-xl border border-gray-700 bg-gray-800 p-4 flex flex-col gap-3 relative"
+                className="rounded-xl border border-nz-borda bg-white p-4 flex flex-col gap-3 relative"
               >
                 {/* Botões de ação no canto superior direito */}
                 <div className="absolute top-2 right-2 flex gap-1">
@@ -220,7 +220,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                     onClick={() => setEditingSeller(seller)}
                     title="Editar vendedor"
                     aria-label="Editar vendedor"
-                    className="min-h-[36px] min-w-[36px] h-9 w-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition"
+                    className="min-h-[36px] min-w-[36px] h-9 w-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-nz-verde hover:bg-nz-verde-fundo transition"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -229,7 +229,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                     onClick={() => handleOpenDelete(seller)}
                     title="Excluir vendedor"
                     aria-label="Excluir vendedor"
-                    className="min-h-[36px] min-w-[36px] h-9 w-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
+                    className="min-h-[36px] min-w-[36px] h-9 w-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -240,19 +240,19 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                     <img
                       src={seller.avatar_url}
                       alt={seller.full_name}
-                      className="h-12 w-12 rounded-full object-cover border border-gray-700"
+                      className="h-12 w-12 rounded-full object-cover border border-nz-borda"
                     />
                   ) : (
-                    <div className="h-12 w-12 rounded-full bg-green-600/20 border border-green-600/30 grid place-items-center text-green-300 font-bold">
+                    <div className="h-12 w-12 rounded-full bg-nz-verde-fundo border border-nz-verde/30 grid place-items-center text-nz-verde font-bold">
                       {initials}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="text-gray-100 font-semibold truncate">
+                    <div className="text-gray-900 font-semibold truncate">
                       {seller.full_name || "Sem nome"}
                     </div>
                     {seller.store_name && (
-                      <div className="text-xs text-gray-400 truncate flex items-center gap-1">
+                      <div className="text-xs text-gray-500 truncate flex items-center gap-1">
                         <Store className="w-3 h-3" />
                         {seller.store_name}
                       </div>
@@ -261,13 +261,13 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                 </div>
 
                 {seller.phone && (
-                  <div className="flex items-center gap-2 text-sm text-gray-300">
-                    <Phone className="w-4 h-4 text-gray-500" />
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Phone className="w-4 h-4 text-gray-400" />
                     <span className="truncate">{seller.phone}</span>
                   </div>
                 )}
 
-                <div className="rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-xs text-gray-400 truncate">
+                <div className="rounded-lg bg-nz-cinza-fundo border border-nz-borda px-3 py-2 text-xs text-gray-500 truncate">
                   {storeLink}
                 </div>
 
@@ -276,7 +276,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                     type="button"
                     variant="outline"
                     onClick={() => handleCopyLink(seller.referral_code)}
-                    className="flex-1 min-w-[120px] min-h-[44px] gap-2 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-700"
+                    className="flex-1 min-w-[120px] min-h-[44px] gap-2 bg-white border-nz-borda text-gray-700 hover:bg-nz-cinza-fundo"
                   >
                     <Copy className="w-4 h-4" />
                     Copiar Link
@@ -284,7 +284,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                   <Button
                     type="button"
                     onClick={() => handleOpenStore(seller.referral_code)}
-                    className="flex-1 min-w-[120px] min-h-[44px] gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="flex-1 min-w-[120px] min-h-[44px] gap-2 bg-nz-verde hover:bg-nz-verde-escuro text-white"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Abrir Loja
@@ -293,7 +293,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                     type="button"
                     onClick={() => handleSendAccess(seller)}
                     disabled={sendingAccessId === seller.id}
-                    className="w-full min-h-[44px] gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
+                    className="w-full min-h-[44px] gap-2 bg-nz-marrom hover:bg-nz-marrom-claro text-white"
                     title="Enviar link de acesso ao painel do vendedor via WhatsApp"
                   >
                     {sendingAccessId === seller.id ? (
@@ -304,7 +304,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
                     ) : (
                       <>
                         <MessageCircle className="w-4 h-4" />
-                        📲 Enviar acesso
+                        Enviar acesso
                       </>
                     )}
                   </Button>
@@ -330,13 +330,13 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
 
       {/* Modal de confirmação de exclusão */}
       <Dialog open={!!deletingSeller} onOpenChange={(v) => !v && !isDeleting && setDeletingSeller(null)}>
-        <DialogContent className="sm:max-w-md bg-gray-900 border border-gray-700 text-gray-100 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md bg-white border border-nz-borda text-gray-900 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-gray-100 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
+            <DialogTitle className="text-gray-900 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
               Excluir vendedor {deletingSeller?.full_name || ""}?
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-gray-500">
               {isCheckingSales
                 ? "Verificando histórico de vendas..."
                 : deleteSalesCount > 0
@@ -347,14 +347,14 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
 
           {!isCheckingSales && deleteSalesCount === 0 && (
             <div className="space-y-2">
-              <label className="text-sm text-gray-300">
-                Digite <span className="font-bold text-red-400">EXCLUIR</span> para confirmar:
+              <label className="text-sm text-gray-600">
+                Digite <span className="font-bold text-red-500">EXCLUIR</span> para confirmar:
               </label>
               <Input
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder="EXCLUIR"
-                className="bg-gray-800 border-gray-700 text-gray-100"
+                className="bg-white border-nz-borda text-gray-900"
                 disabled={isDeleting}
               />
             </div>
@@ -366,7 +366,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
               variant="outline"
               onClick={() => setDeletingSeller(null)}
               disabled={isDeleting}
-              className="flex-1 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-800"
+              className="flex-1 bg-white border-nz-borda text-gray-700 hover:bg-nz-cinza-fundo"
             >
               Cancelar
             </Button>

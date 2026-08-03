@@ -61,46 +61,46 @@ const directorSteps = [
 const careerSteps = [
   // Topo → Base (hierarquia de rede atual + escada de convite acima do Distribuidor)
   { id: 'fundador', title: 'Fundador', icon: Trophy,
-    achievedDescription: '🏆 Fundador da Leilão NoZap.',
+    achievedDescription: 'Fundador da Leilão NoZap.',
     lockedDescription: 'Convites abertos apenas até o lançamento oficial da Leilão NoZap, em dezembro de 2026 (pré-lançamento). Após essa data, não haverá mais novos Fundadores.' },
   { id: 'conselheiro', title: 'Conselheiro', icon: Star,
-    achievedDescription: '⭐ Conselheiro da Leilão NoZap.',
+    achievedDescription: 'Conselheiro da Leilão NoZap.',
     lockedDescription: 'Convite exclusivo para se tornar Conselheiro.' },
   { id: 'ceo', title: 'CEO', icon: Crown,
-    achievedDescription: '👑 CEO liderando a expansão da Leilão NoZap.',
+    achievedDescription: 'CEO liderando a expansão da Leilão NoZap.',
     lockedDescription: 'Convidado para se tornar CEO e liderar a expansão da Leilão NoZap em novos estados.' },
   { id: 'diretoria_executiva', title: 'Diretoria Executiva', icon: Landmark,
-    achievedDescription: '🏛️ Membro da Diretoria Executiva.',
+    achievedDescription: 'Membro da Diretoria Executiva.',
     lockedDescription: 'Convidado para integrar a Diretoria Executiva e participar das decisões estratégicas do negócio.' },
   { id: 'diretoria_operacao', title: 'Diretor Operacional', icon: ShieldCheck,
-    achievedDescription: '🛡️ Diretor Operacional.',
+    achievedDescription: 'Diretor Operacional.',
     lockedDescription: 'Convidado para assumir uma posição na Diretoria Operacional.' },
   { id: 'executivo_conta', title: 'Sócio Executivo', icon: BookOpen,
-    achievedDescription: '📖 Sócio: 1% sobre todo o seu sistema de alavancagem.',
+    achievedDescription: 'Sócio: 1% sobre todo o seu sistema de alavancagem.',
     lockedDescription: 'Convidado para participar da mentoria X-OS (nossa Academia de Desenvolvimento). Ao concluir, torna-se Sócio e ganha 1% sobre todo o seu sistema de alavancagem — ex: se um Distribuidor da sua rede vender R$ 10 milhões, você ganha 1% sobre esse total.' },
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
-    achievedDescription: '💎 Topo da rede. Estoque próprio, sobe produtos e recebe 20% na venda direta.',
+    achievedDescription: 'Topo da rede. Estoque próprio, sobe produtos e recebe 20% na venda direta.',
     lockedDescription: 'Adesão R$ 4.000.000 (100% em produto). 20% na venda direta + topo da rede.' },
   { id: 'loja_fisica', title: 'Loja Física', icon: Building2,
-    achievedDescription: '🏬 Loja física com estoque próprio. 19% na venda direta.',
+    achievedDescription: 'Loja física com estoque próprio. 19% na venda direta.',
     lockedDescription: 'Adesão R$ 350.000 (100% em produto). 19% na venda direta.' },
   { id: 'ponto_retirada', title: 'Ponto de Retirada', icon: MapPin,
-    achievedDescription: '📍 Ponto de retirada com estoque próprio. 16% na venda direta.',
+    achievedDescription: 'Ponto de retirada com estoque próprio. 16% na venda direta.',
     lockedDescription: 'Adesão R$ 50.000 (100% em produto). 16% na venda direta.' },
   { id: 'parceiro', title: 'Parceiro', icon: Store,
-    achievedDescription: '🤝 Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
+    achievedDescription: 'Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
     lockedDescription: 'Adesão R$ 20.000 (100% em produto). 15% na venda direta.' },
   { id: 'licenciado', title: 'Licenciado', icon: Briefcase,
-    achievedDescription: '📚 Licenciado. 13% na venda direta pelo seu link.',
+    achievedDescription: 'Licenciado. 13% na venda direta pelo seu link.',
     lockedDescription: 'Adesão R$ 5.000 (100% em produto). 13% na venda direta.' },
   { id: 'vendedor', title: 'Vendedor', icon: Award,
-    achievedDescription: '🛒 Vendedor ativo. 10% na venda direta.',
+    achievedDescription: 'Vendedor ativo. 10% na venda direta.',
     lockedDescription: 'Em breve: torne-se Vendedor e ganhe 10% na venda direta.' },
   { id: 'influenciador', title: 'Influenciador', icon: Megaphone,
-    achievedDescription: '📣 Influenciador. Indique e ganhe 5% nas vendas pelo seu link.',
+    achievedDescription: 'Influenciador. Indique e ganhe 5% nas vendas pelo seu link.',
     lockedDescription: 'Em breve: torne-se Influenciador e ganhe 5%.' },
   { id: 'usuario', title: 'Usuário', icon: Users,
-    achievedDescription: '🎯 Bem-vindo! Você está cadastrado e pronto para evoluir na rede.',
+    achievedDescription: 'Bem-vindo! Você está cadastrado e pronto para evoluir na rede.',
     lockedDescription: 'Nível inicial: cadastro ativo no sistema.' },
 ];
 
@@ -123,20 +123,20 @@ export default function CareerPath({ currentUser }) {
     return (
         <div className="p-6">
             {myDirectorSteps.length > 0 && (
-                <div className="mb-6 pb-6 border-b border-gray-700">
-                    <h3 className="text-sm font-bold text-green-400 mb-3 flex items-center gap-2">🏛️ Seus Cargos de Diretoria</h3>
+                <div className="mb-6 pb-6 border-b border-nz-borda">
+                    <h3 className="text-sm font-bold text-nz-verde mb-3 flex items-center gap-2">Seus Cargos de Diretoria</h3>
                     <ul className="space-y-3">
                         {myDirectorSteps.map((s) => (
                             <li key={s.id} className="flex items-start gap-4">
-                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-500 ring-4 ring-green-500/30">
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-nz-verde ring-4 ring-nz-verde/20 animate-pulse-subtle">
                                     <s.icon className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold flex items-center gap-2 text-green-400">
+                                    <h4 className="font-bold flex items-center gap-2 text-nz-verde">
                                         {s.title}
-                                        <span className="ml-1 text-xs px-2 py-0.5 rounded border bg-green-600/20 text-green-300 border-green-500/30">{s.gov}</span>
+                                        <span className="ml-1 text-xs px-2 py-0.5 rounded border bg-nz-verde-fundo text-nz-verde border-nz-verde/30">{s.gov}</span>
                                     </h4>
-                                    <p className="mt-1 text-sm text-gray-300">{s.desc}</p>
+                                    <p className="mt-1 text-sm text-gray-600">{s.desc}</p>
                                 </div>
                             </li>
                         ))}
@@ -145,7 +145,7 @@ export default function CareerPath({ currentUser }) {
             )}
             <div className="relative">
                 {/* Linha de Conexão - ATRÁS DOS CÍRCULOS */}
-                <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-gray-700 z-0" aria-hidden="true" />
+                <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-nz-borda z-0" aria-hidden="true" />
                 
                 <ul className="space-y-8">
                     {careerSteps.map((step) => {
@@ -156,49 +156,48 @@ export default function CareerPath({ currentUser }) {
                             <li key={step.id} className="flex items-start gap-4 relative z-10">
                                 <div className={cn(
                                     "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
-                                    isActive ? "bg-green-500 ring-4 ring-green-500/30" : "border-2 border-gray-600 bg-gray-800",
-                                    isPrimary && "ring-4 ring-white/50"
+                                    isActive ? "bg-nz-verde ring-4 ring-nz-verde/20 animate-pulse-subtle" : "border-2 border-nz-borda bg-white",
+                                    isPrimary && "ring-4 ring-nz-marrom/30"
                                 )}>
                                     {isActive ? (
                                         <ArrowUp className="h-6 w-6 text-white" />
                                     ) : (
-                                        <step.icon className="h-6 w-6 text-gray-500" />
+                                        <step.icon className="h-6 w-6 text-gray-400" />
                                     )}
                                 </div>
                                 <div>
                                     <h4 className={cn(
                                         "font-bold flex items-center gap-2",
-                                        isActive ? "text-green-400" : "text-gray-500"
+                                        isActive ? "text-nz-verde" : "text-gray-400"
                                     )}>
-                                        {isPrimary && <span className="text-sm">⭐</span>}
                                         {step.title}
-                                        {isPrimary && <span className="text-xs text-gray-400">(Função Principal)</span>}
+                                        {isPrimary && <span className="text-xs font-normal text-nz-marrom">(Função Principal)</span>}
                                         {rolePercentages[step.id] ? (
                                           <span className={cn(
                                             "ml-2 text-xs px-2 py-0.5 rounded border",
-                                            isActive ? "bg-green-600/20 text-green-300 border-green-500/30" : "bg-gray-700/40 text-gray-400 border-gray-600/40"
+                                            isActive ? "bg-nz-verde-fundo text-nz-verde border-nz-verde/30" : "bg-nz-cinza-fundo text-gray-400 border-nz-borda"
                                           )}>{rolePercentages[step.id]}% venda direta</span>
                                         ) : null}
                                         {roleRebate[step.id] ? (
                                           <span className={cn(
                                             "ml-1 text-xs px-2 py-0.5 rounded border",
-                                            isActive ? "bg-amber-600/20 text-amber-300 border-amber-500/30" : "bg-gray-700/40 text-gray-400 border-gray-600/40"
+                                            isActive ? "bg-nz-marrom-fundo text-nz-marrom border-nz-marrom/30" : "bg-nz-cinza-fundo text-gray-400 border-nz-borda"
                                           )}>+{roleRebate[step.id].pct}% rebate</span>
                                         ) : null}
                                     </h4>
                                     <p className={cn(
                                         "mt-1 text-sm",
-                                        isActive ? "text-gray-300" : "text-gray-500"
+                                        isActive ? "text-gray-700" : "text-gray-400"
                                     )}>
                                         {isActive ? step.achievedDescription : step.lockedDescription}
                                     </p>
                                     {roleRebate[step.id] ? (
-                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-amber-300/80" : "text-gray-500")}>
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-nz-marrom" : "text-gray-400")}>
                                         Rebate de {roleRebate[step.id].pct}% sobre {roleRebate[step.id].sobre} (quando alguém da sua rede vende).
                                       </p>
                                     ) : null}
                                     {roleCadastra[step.id] ? (
-                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-gray-400" : "text-gray-600")}>
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-gray-500" : "text-gray-400")}>
                                         {roleCadastra[step.id]}
                                       </p>
                                     ) : null}

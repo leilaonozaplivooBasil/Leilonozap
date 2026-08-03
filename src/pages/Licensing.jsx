@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical } from 'lucide-react';
+import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -1093,12 +1093,12 @@ const DashboardContent = ({ user, isAdmin }) => {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               <TabsList className={`${'bg-white border-gray-200'} flex-wrap h-auto gap-2 p-2`}>
-                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Sua Loja Virtual</TabsTrigger>
-                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
-                <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
-                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Venda Direta ({myClients.length})</TabsTrigger>
-                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm">🤝 Vendedores</TabsTrigger>
-                <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm">💰 Comissões</TabsTrigger>
+                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm flex items-center gap-1.5"><Store className="w-3.5 h-3.5" />Sua Loja Virtual</TabsTrigger>
+                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5" />Relatório</TabsTrigger>
+                <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm flex items-center gap-1.5"><Package className="w-3.5 h-3.5" />Pedidos</TabsTrigger>
+                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />Venda Direta ({myClients.length})</TabsTrigger>
+                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm flex items-center gap-1.5"><Handshake className="w-3.5 h-3.5" />Vendedores</TabsTrigger>
+                <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" />Comissões</TabsTrigger>
               </TabsList>
 
               <TabsContent value="catalogo-home" className="mt-6">
@@ -1160,7 +1160,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </TabsList>
 
                   <TabsContent value="extrato" className="mt-4">
-                    <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
+                    <CommissionsTab user={user} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
                   </TabsContent>
 
                   <TabsContent value="vendas" className="mt-4">

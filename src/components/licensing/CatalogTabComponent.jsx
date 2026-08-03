@@ -36,10 +36,10 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   }, [products, searchTerm]);
 
   return (
-    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+    <Card className="bg-white border-nz-borda">
       <CardHeader>
-        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Loja Virtual de Produtos</CardTitle>
-        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+        <CardTitle className="text-gray-900">Loja Virtual de Produtos</CardTitle>
+        <CardDescription className="text-gray-500">
           Produtos disponíveis para venda - Compartilhe seu link da loja virtual
         </CardDescription>
       </CardHeader>
@@ -59,17 +59,17 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
             placeholder="Buscar produtos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'}
+            className="pl-10 bg-nz-cinza-fundo border-nz-borda text-gray-900"
           />
         </div>
 
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-nz-verde" />
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <Package className="w-16 h-16 mx-auto opacity-50 mb-4" />
+          <div className="text-center py-12 text-gray-500">
+            <Package className="w-16 h-16 mx-auto opacity-40 mb-4" />
             <p>Nenhum produto disponível</p>
           </div>
         ) : (
