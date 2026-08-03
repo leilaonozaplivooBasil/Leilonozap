@@ -67,7 +67,7 @@ export default function PersonagensRede() {
           </p>
           <div className="mt-8">
             <ParCTA
-              primario={{ label: 'Ver modelos de negócio', to: '/Licensing' }}
+              primario={{ label: 'Ver modelos de negócio', to: '/Lucre' }}
               secundario={{ label: 'Ver os planos', to: '/Evoluir' }}
             />
           </div>
