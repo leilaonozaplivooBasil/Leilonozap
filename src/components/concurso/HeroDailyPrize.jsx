@@ -86,11 +86,14 @@ export default function HeroDailyPrize({ config, registered, total, onShare }) {
           <div className="relative w-full max-w-xs rounded-3xl p-5 bg-nz-cinza-fundo border border-nz-borda">
             <p className="text-[10px] font-bold uppercase tracking-wide text-nz-ouro mb-2 text-center">Produto principal do sorteio</p>
             <span className="absolute -top-3 -right-2 rotate-12 text-[11px] font-black px-3.5 py-1.5 rounded-full text-white bg-nz-verde">GRÁTIS</span>
-            <div className="h-44 sm:h-52 md:h-60 grid place-items-center">
+            {/* Moldura quadrada: a foto sempre cabe inteira, sem cortar nem invadir o texto */}
+            <div className="relative w-full aspect-square overflow-hidden rounded-2xl bg-white">
               {foto ? (
-                <img src={foto} alt={nome} className="max-h-full max-w-full object-contain" />
+                <img src={foto} alt={nome} className="absolute inset-0 w-full h-full object-contain p-2" />
               ) : (
-                <Gift className="w-20 h-20 text-nz-ouro-claro" />
+                <div className="absolute inset-0 grid place-items-center">
+                  <Gift className="w-20 h-20 text-nz-ouro-claro" />
+                </div>
               )}
             </div>
             <div className="mt-4 text-center">
