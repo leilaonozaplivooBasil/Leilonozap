@@ -1051,25 +1051,32 @@ const DashboardContent = ({ user, isAdmin }) => {
           </div>
         </div>
 
-        <WalletBalanceCard
-          cardRef={walletCardRef}
-          totalAvailable={totalAvailable}
-          pendingWithdrawalAmount={pendingWithdrawalAmount}
-          isSaiDeBaixo={isSaiDeBaixo}
-          onUseNow={() => setIsAuctionSelectionModalOpen(true)}
-          onWithdraw={() => setShowWithdrawalModal(true)}
-          onTransfer={() => navigate('/TransferirSaldo')}
-        />
+        {/* 🖥️ Estilo Mercado Pago: o resumo (saldo, banner, gráficos) só aparece
+            na Visão Geral. Nas outras abas a página troca por completo, sem
+            arrastar esse bloco pra baixo e forçar rolagem. */}
+        {activeTab === 'visao-geral' &&
+          <>
+            <WalletBalanceCard
+              cardRef={walletCardRef}
+              totalAvailable={totalAvailable}
+              pendingWithdrawalAmount={pendingWithdrawalAmount}
+              isSaiDeBaixo={isSaiDeBaixo}
+              onUseNow={() => setIsAuctionSelectionModalOpen(true)}
+              onWithdraw={() => setShowWithdrawalModal(true)}
+              onTransfer={() => navigate('/TransferirSaldo')}
+            />
 
-        <LicensingBanners
-          onCopyLink={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}
-          shareLink={shareLink}
-        />
+            <LicensingBanners
+              onCopyLink={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}
+              shareLink={shareLink}
+            />
 
-        <div className="grid gap-6 mb-8 lg:grid-cols-2">
-          <SalesTrendChart sales={myCatalogSales} isSaiDeBaixo={isSaiDeBaixo} />
-          <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
-        </div>
+            <div className="grid gap-6 mb-8 lg:grid-cols-2">
+              <SalesTrendChart sales={myCatalogSales} isSaiDeBaixo={isSaiDeBaixo} />
+              <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
+            </div>
+          </>
+        }
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
 
