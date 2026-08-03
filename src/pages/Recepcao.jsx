@@ -90,8 +90,7 @@ export default function Recepcao() {
         tema="branco"
         titulo="Indique. Fature."
         subtitulo="Mostre o produto pra quem você conhece e ganhe comissão em cada venda da sua estrutura de negócio."
-        primario={{ label: 'Começar a indicar', to: '/Licensing' }}
-        secundario={{ label: 'Ver os planos', to: '/Evoluir' }}
+        primario={{ label: 'Começar a indicar', to: '/Lucre' }}
       >
         <CenaRede />
       </BlocoVitrine>
