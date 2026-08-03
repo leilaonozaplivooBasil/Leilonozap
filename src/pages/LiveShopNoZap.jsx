@@ -8,6 +8,12 @@ import { Card } from "@/components/ui/card";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import LiveShopHeader from "@/components/liveshop/LiveShopHeader";
+import LivooPlayer from "@/components/liveshop/LivooPlayer";
+import EmCenaAgora from "@/components/liveshop/EmCenaAgora";
+import UltimosLances from "@/components/liveshop/UltimosLances";
+import ProximosNaLive from "@/components/liveshop/ProximosNaLive";
+import SelosLivoo from "@/components/liveshop/SelosLivoo";
 
 const Auction = base44.entities.Auction;
 const Bid = base44.entities.Bid;
@@ -192,299 +198,59 @@ export default function LiveShopNoZap() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img
-                src="/brand/logo-horizontal-dark.webp"
-                alt="Leilão NoZap"
-                className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => navigate(createPageUrl("Home"))}
+    <div className="min-h-screen bg-livoo-vinho">
+      <LiveShopHeader
+        viewers={viewers}
+        aoVivo={!!liveSession?.is_live}
+        onLogoClick={() => navigate(createPageUrl("Home"))}
+        onLojaClick={() => navigate("/Loja-Virtual")}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 py-5">
+        {/* 📱 mobile: coluna única em flex — assim o player sticky acompanha TODA a rolagem.
+            💻 desktop: duas colunas com posicionamento explícito. */}
+        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1fr,400px] lg:items-start">
+          <div className="contents lg:block lg:space-y-4 lg:col-start-1 lg:row-start-1">
+            <div className="sticky top-[60px] z-10 lg:static">
+              <LivooPlayer
+                streamUrl={liveSession?.is_live ? liveSession?.stream_url : null}
+                pauseImageUrl={liveSession?.pause_image_url}
+                isPaused={!!(liveSession?.is_live && liveSession?.is_paused)}
               />
-              <div>
-                <h1 className="text-xl font-bold text-white">Live Shop</h1>
-                <div className="flex items-center gap-3 text-sm text-gray-400">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="font-semibold">AO VIVO</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Eye className="w-4 h-4" />
-                    <span>{viewers}</span>
-                  </div>
-                </div>
-              </div>
             </div>
-            <Button
-              onClick={() => navigate(createPageUrl("Home"))}
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
-            >
-              Ver Loja
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-[1fr,400px] gap-6">
-
-          <div className="space-y-4">
-            <Card className="bg-black aspect-video rounded-xl overflow-hidden shadow-xl relative">
-              {liveSession?.is_live && liveSession?.is_paused && liveSession?.pause_image_url ? (
-                <div className="w-full h-full relative">
-                  <img
-                    src={liveSession.pause_image_url}
-                    alt="Propaganda"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm px-6 py-3 rounded-full">
-                    <p className="text-white font-bold flex items-center gap-2">
-                      ⏸️ Live pausada - Voltamos em breve
-                    </p>
-                  </div>
-                  <audio autoPlay loop>
-                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg" />
-                  </audio>
-                </div>
-              ) : liveSession?.is_live && liveSession?.stream_url ? (
-                <iframe
-                  src={liveSession.stream_url.includes('youtube.com')
-                    ? liveSession.stream_url.replace('watch?v=', 'embed/')
-                    : liveSession.stream_url}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center text-white space-y-4">
-                    <div className="w-20 h-20 mx-auto bg-green-600 rounded-full flex items-center justify-center">
-                      <div className="w-16 h-16 border-4 border-white rounded-full animate-pulse"></div>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">Live Shop</p>
-                      <p className="text-gray-300 text-sm mt-2">Transmissão em breve...</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            <div className="bg-gray-800 rounded-xl p-6 shadow-md">
-              <h2 className="text-lg font-bold text-white mb-2">Sobre a Live</h2>
-              <p className="text-gray-400">
-                Bem-vindo à Live Shop NoZap! Acompanhe em tempo real as melhores ofertas
-                em arremates e devoluções. Participe do chat e garanta seus produtos favoritos!
+            <div className="rounded-xl border border-livoo-rosa/20 bg-white/5 p-5">
+              <h2 className="text-lg font-bold text-white">Live Shop Leilão NoZap × Livoo</h2>
+              <p className="mt-1 text-sm text-white/70">
+                Assista à live aqui mesmo e dê seu lance sem sair da página. Arremates e devoluções
+                com preço de disputa — e entrega expressa da malha Livoo.
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
-
-            {!activeProduct ? (
-              <Card className="bg-gray-800 rounded-xl overflow-hidden shadow-lg">
-                <div className="p-8 text-center">
-                  <div className="mb-6">
-                    <div className="inline-block animate-bounce">
-                      <Gavel className="w-20 h-20 mx-auto text-green-500" />
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    Fica de olho…
-                  </h3>
-                  <p className="text-lg text-gray-400">
-                    O próximo leilão já já começa! 🎯
-                  </p>
-                  <div className="mt-6 flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <p className="text-sm text-green-500 font-semibold">Aguardando próximo produto</p>
-                  </div>
-                </div>
-              </Card>
-            ) : (
-              <Card className="bg-gray-800 rounded-xl overflow-hidden shadow-lg">
-                <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Lance Agora</h3>
-                    <TrendingUp className="w-5 h-5" />
-                  </div>
-                </div>
-
-                <div className="p-6 bg-gradient-to-br from-gray-700 to-gray-800">
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-gray-400 mb-1">Lance Atual</p>
-                    <p className="text-4xl font-bold text-green-400">
-                      R$ {fmtBR(currentProduct.current_price)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Incremento mínimo: + R$ {fmtBR(currentProduct.increment)}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    {[1, 2, 5].map((mult) => {
-                      const quickAmount = addMoney(currentProduct.current_price, mulMoney(currentProduct.increment, mult));
-                      return (
-                        <Button
-                          key={mult}
-                          onClick={() => handleSubmitBid(quickAmount)}
-                          disabled={isSubmitting || !currentUser}
-                          className="bg-green-600 hover:bg-green-700 text-white flex flex-col items-center py-3 h-auto"
-                        >
-                          <Zap className="w-4 h-4 mb-1" />
-                          <span className="text-xs">R$ {fmtBR(quickAmount)}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={bidAmount}
-                        onChange={(e) => setBidAmount(e.target.value)}
-                        placeholder="Valor personalizado"
-                        disabled={isSubmitting || !currentUser}
-                        className="flex-1 bg-gray-900 border-gray-600 text-white"
-                        min={addMoney(currentProduct.current_price, currentProduct.increment)}
-                      />
-                      <Button
-                        onClick={() => handleSubmitBid()}
-                        disabled={isSubmitting || !bidAmount || !currentUser}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6"
-                      >
-                        {isSubmitting ? "..." : "Dar Lance"}
-                      </Button>
-                    </div>
-                    {!currentUser && (
-                      <p className="text-xs text-gray-500 text-center">
-                        Faça login para participar
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-700">
-                  <div className="px-4 py-2 bg-gray-900">
-                    <p className="text-xs font-semibold text-gray-400">Últimos Lances</p>
-                  </div>
-                  <div className="max-h-[200px] overflow-y-auto">
-                    {recentBids.length === 0 ? (
-                      <div className="text-center py-6 text-gray-500 text-sm">
-                        <p>Seja o primeiro a dar um lance! 🎯</p>
-                      </div>
-                    ) : (
-                      recentBids.slice(0, 3).map((bid) => (
-                        <div key={bid.id} className="px-4 py-2 border-b border-gray-700 hover:bg-gray-700">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                {bid.bidder_name[0].toUpperCase()}
-                              </div>
-                              <span className="text-sm font-medium text-white">
-                                {bid.bidder_name}
-                              </span>
-                            </div>
-                            <span className="text-sm font-bold text-green-400">
-                              R$ {fmtBR(bid.amount)}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {products.length > 0 && currentProduct && (
-              <Card className="bg-gray-800 rounded-xl overflow-hidden shadow-lg">
-                <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 py-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ShoppingBag className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Produtos em Destaque</span>
-                    </div>
-                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                      {currentProductIndex + 1}/{products.length}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="p-4">
-                    <div
-                      className="w-full h-40 bg-gray-700 rounded-lg overflow-hidden mb-3 cursor-pointer"
-                      onClick={() => goToProduct(currentProduct.id)}
-                    >
-                      <img
-                        src={currentProduct.image_urls?.[0] || '/placeholder.jpg'}
-                        alt={currentProduct.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <h3
-                      className="font-bold text-white text-sm mb-2 line-clamp-2 cursor-pointer hover:text-green-400 transition-colors"
-                      onClick={() => goToProduct(currentProduct.id)}
-                    >
-                      {currentProduct.title}
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-400">Lance atual</p>
-                        <p className="text-lg font-bold text-green-400">
-                          R$ {fmtBR(currentProduct.current_price)}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => goToProduct(currentProduct.id)}
-                        className="bg-green-600 hover:bg-green-700 text-sm"
-                      >
-                        Ver Leilão
-                      </Button>
-                    </div>
-                  </div>
-
-                  {products.length > 1 && (
-                    <>
-                      <button
-                        onClick={prevProduct}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-colors"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={nextProduct}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-colors"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex justify-center gap-1 pb-3">
-                  {products.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentProductIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all ${idx === currentProductIndex
-                        ? 'w-6 bg-green-500'
-                        : 'w-1.5 bg-gray-600 hover:bg-gray-500'
-                        }`}
-                    />
-                  ))}
-                </div>
-              </Card>
+          <div className="space-y-4 lg:col-start-2 lg:row-start-1">
+            <EmCenaAgora
+              produto={activeProduct ? currentProduct : null}
+              bidAmount={bidAmount}
+              setBidAmount={setBidAmount}
+              onBid={handleSubmitBid}
+              isSubmitting={isSubmitting}
+              logado={!!currentUser}
+            />
+            {activeProduct && <UltimosLances lances={recentBids} />}
+            {products.length > 0 && (
+              <ProximosNaLive
+                produtos={products}
+                index={currentProductIndex}
+                setIndex={setCurrentProductIndex}
+                onAbrir={goToProduct}
+              />
             )}
           </div>
         </div>
       </div>
+
+      <SelosLivoo />
     </div>
   );
 }

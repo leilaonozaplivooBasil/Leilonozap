@@ -931,7 +931,7 @@ export default function Layout({ children, currentPageName }) {
         {/* 🩷 LIVOO LIVE — logo redonda animada, alinhada logo ACIMA da Leila (canto
             inferior direito). Em TODAS as páginas, menos na raiz "/" (Recepcao).
             Clique abre livoolive.com.br. Cor oficial da logo: #D91674. Pedido Gabriel 26/07. */}
-        {currentPageName !== "Recepcao" && (
+        {!["Recepcao", "LiveShopNoZap"].includes(currentPageName) && (
           <a
             href="https://livoolive.com.br"
             target="_blank"

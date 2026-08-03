@@ -27,6 +27,12 @@ module.exports = {
   				'marrom-fundo': '#F2E6D6',
   				'marrom-escuro': '#5A270F'
   			},
+  			livoo: {
+  				rosa: 'var(--livoo-rosa)',
+  				'rosa-claro': 'var(--livoo-rosa-claro)',
+  				vinho: 'var(--livoo-vinho)',
+  				tinta: 'var(--livoo-tinta)'
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

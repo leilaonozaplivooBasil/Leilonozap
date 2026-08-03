@@ -24,6 +24,17 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --nz-marrom-claro: #B8875F;
     --nz-marrom-fundo: #F2E6D6;
     --nz-marrom-escuro: #5A270F;
+    /* 🩷 Livoo Live — cores oficiais do co-branding (Live Shop NoZap × Livoo) */
+    --livoo-rosa: #D91674;
+    --livoo-rosa-claro: #E3559C;
+    --livoo-vinho: #1A0A14;
+    --livoo-tinta: #0b1018;
+  }
+  .dark {
+    --livoo-rosa: #D91674;
+    --livoo-rosa-claro: #E3559C;
+    --livoo-vinho: #1A0A14;
+    --livoo-tinta: #0b1018;
   }
 }
 
