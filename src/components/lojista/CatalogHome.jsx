@@ -101,7 +101,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Faturamento</p>
-                <p className="text-2xl font-bold text-nz-marrom mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-nz-verde mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
               </div>
               <TrendingUp className="w-10 h-10 text-nz-marrom" />
             </div>
@@ -150,7 +150,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
                 <div
                   key={idx}
                   onClick={onGoToPedidos}
-                  className={`flex items-center justify-between p-3 bg-nz-cinza-fundo rounded-lg ${onGoToPedidos ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}>
+                  className={`flex items-center justify-between p-3 bg-nz-marrom-fundo rounded-lg ${onGoToPedidos ? 'cursor-pointer hover:bg-nz-marrom-fundo/70 transition-colors' : ''}`}>
                   <div className="flex-1">
                     <p className="text-gray-900 font-medium text-sm">{order.product_title || 'Produto'}</p>
                     <p className="text-gray-500 text-xs mt-1">{new Date(order.created_date).toLocaleDateString('pt-BR')}</p>
