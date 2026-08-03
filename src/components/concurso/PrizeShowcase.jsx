@@ -42,14 +42,14 @@ function ProductCard({ item, pos }) {
     : { href };
 
   return (
-    <Wrapper {...wrapperProps} className="group block rounded-2xl overflow-hidden transition-transform active:scale-[.98] hover:scale-[1.02] no-underline" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,196,81,.22)' }}>
+    <Wrapper {...wrapperProps} className="group block rounded-2xl overflow-hidden transition-transform active:scale-[.98] hover:scale-[1.02] no-underline bg-white border border-nz-borda">
       {/* Foto do produto */}
-      <div className="relative aspect-square overflow-hidden bg-black/50 grid place-items-center">
+      <div className="relative aspect-square overflow-hidden bg-nz-cinza-fundo grid place-items-center">
         {item.produto_foto ? (
           <img src={item.produto_foto} alt={item.nome} className="w-full h-full object-contain p-2 transition-transform group-hover:scale-105" loading="lazy" />
         ) : (
           <div className="w-full h-full grid place-items-center">
-            <Gift className="w-12 h-12 text-white/25" />
+            <Gift className="w-12 h-12 text-nz-borda" />
           </div>
         )}
         {/* Badge da posição sobre a foto */}
@@ -60,13 +60,13 @@ function ProductCard({ item, pos }) {
 
       {/* Info do produto */}
       <div className="p-3 space-y-1.5">
-        <p className="font-bold text-sm leading-tight text-white line-clamp-2 min-h-[2.5rem]">{item.nome}</p>
+        <p className="font-bold text-sm leading-snug text-nz-tinta line-clamp-2 overflow-hidden">{item.nome}</p>
         {item.produto_valor > 0 && (
-          <p className="text-xs text-green-300/80">
-            Na loja por <b className="text-yellow-300">{money(item.produto_valor)}</b>
+          <p className="text-xs text-nz-tinta-fraca">
+            Na loja por <b className="text-nz-ouro">{money(item.produto_valor)}</b>
           </p>
         )}
-        <div className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black text-[#052e16]" style={{ background: 'linear-gradient(90deg,#f5c451,#22c55e)' }}>
+        <div className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black text-white bg-nz-verde">
           <ShoppingBag className="w-3.5 h-3.5" /> Ver na loja <ExternalLink className="w-3 h-3 opacity-70" />
         </div>
       </div>
@@ -117,11 +117,11 @@ export default function PrizeShowcase({ config, premios }) {
   if (items.length === 0) return null;
 
   return (
-    <section className="mt-4">
+    <section>
       <div className="flex items-center gap-2 mb-3 px-1">
-        <ShoppingBag className="w-4 h-4 text-yellow-300" />
-        <h2 className="font-black text-sm uppercase tracking-wide text-green-100">Produtos sendo sorteados</h2>
-        <span className="text-[10px] text-green-300/60">toque pra ver na loja</span>
+        <ShoppingBag className="w-4 h-4 text-nz-ouro" />
+        <h2 className="font-black text-sm uppercase tracking-wide text-nz-tinta">Produtos sendo sorteados</h2>
+        <span className="text-[10px] text-nz-tinta-fraca">toque pra ver na loja</span>
       </div>
       <div className={`grid gap-3 ${items.length === 1 ? 'grid-cols-1 max-w-[200px] mx-auto' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
         {items.map(({ pos, item }) => (

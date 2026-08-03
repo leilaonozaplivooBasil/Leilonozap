@@ -36,11 +36,10 @@ export default function LivooLiveCard({ audiencia = 0, produto = null, compact =
   if (compact) {
     return (
       <div
-        className="rounded-2xl overflow-hidden h-full flex flex-col"
+        className="rounded-2xl overflow-hidden h-full flex flex-col bg-white"
         style={{
-          border: live ? '1px solid rgba(233,30,131,.6)' : '1px solid rgba(233,30,131,.3)',
-          background: 'linear-gradient(135deg,rgba(233,30,131,.16),rgba(255,107,53,.08)), #160510',
-          boxShadow: live ? '0 8px 32px rgba(233,30,131,.25)' : 'none',
+          border: live ? '1px solid rgba(233,30,131,.55)' : '1px solid rgba(233,30,131,.20)',
+          boxShadow: live ? '0 8px 28px rgba(233,30,131,.14)' : 'none',
         }}
       >
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -48,15 +47,15 @@ export default function LivooLiveCard({ audiencia = 0, produto = null, compact =
             <span className="w-7 h-7 rounded-lg grid place-items-center text-white" style={{ background: LIVOO_GRAD, boxShadow: '0 4px 12px rgba(233,30,131,.5)' }}>
               <Radio className="w-4 h-4" />
             </span>
-            <b className="text-sm tracking-wide">Livoo <span style={{ color: '#E91E83' }}>Live</span></b>
+            <b className="text-sm tracking-wide text-nz-tinta">Livoo <span style={{ color: '#E91E83' }}>Live</span></b>
           </div>
           <span
             className="text-[10px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1"
             style={live
               ? { background: 'rgba(233,30,131,.95)', color: '#fff' }
-              : { background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.12)' }}
+              : { background: '#F5F6F5', color: '#5C6B62', border: '1px solid #DDE4DF' }}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-white animate-pulse' : ''}`} style={live ? {} : { background: 'rgba(255,255,255,.35)' }} />
+            <span className={`w-1.5 h-1.5 rounded-full ${live ? 'bg-white animate-pulse' : ''}`} style={live ? {} : { background: '#9AA7A0' }} />
             {live ? 'AO VIVO' : 'OFFLINE'}
           </span>
         </div>
@@ -65,8 +64,8 @@ export default function LivooLiveCard({ audiencia = 0, produto = null, compact =
           <span className="inline-grid place-items-center w-14 h-14 rounded-2xl mb-3" style={{ background: 'rgba(233,30,131,.14)', color: '#E91E83' }}>
             <Radio className="w-7 h-7" />
           </span>
-          <p className="font-bold text-sm text-white/90">Live todo dia às <span style={{ color: '#E91E83' }}>18h</span></p>
-          <p className="text-[11px] text-pink-100/60 mt-1.5 leading-tight">É na live que sai o sorteio do prêmio. Entre pra receber!</p>
+          <p className="font-bold text-sm text-nz-tinta">Live todo dia às <span style={{ color: '#E91E83' }}>18h</span></p>
+          <p className="text-[11px] text-nz-tinta-fraca mt-1.5 leading-tight">É na live que sai o sorteio do prêmio. Entre pra receber!</p>
         </div>
 
         <a

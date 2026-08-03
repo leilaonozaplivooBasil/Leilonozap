@@ -24,6 +24,10 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --nz-marrom-claro: #B8875F;
     --nz-marrom-fundo: #F2E6D6;
     --nz-marrom-escuro: #5A270F;
+    /* 🏆 Rank Premiado — dourado do selo do troféu (acento sobre base branca) */
+    --nz-ouro: #A9781C;
+    --nz-ouro-claro: #F5C451;
+    --nz-ouro-fundo: #FDF6E3;
     /* 🩷 Livoo Live — cores oficiais do co-branding (Live Shop NoZap × Livoo) */
     --livoo-rosa: #D91674;
     --livoo-rosa-claro: #E3559C;

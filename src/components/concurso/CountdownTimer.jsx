@@ -53,23 +53,23 @@ export default function CountdownTimer({ config }) {
     { val: seconds, label: 'SEG' },
   ];
   return (
-    <div className="mt-4 rounded-2xl p-5 flex flex-col items-center" style={{ background: 'rgba(255,255,255,.045)', border: isBelowOneHour ? '1px solid rgba(239,68,68,.5)' : '1px solid rgba(245,196,81,.26)' }}>
-      <span className="text-[11px] font-bold uppercase tracking-widest text-green-300/70 mb-3 flex items-center gap-1.5">
+    <div className={`rounded-2xl p-5 flex flex-col items-center bg-white border ${isBelowOneHour ? 'border-red-300' : 'border-nz-borda'}`}>
+      <span className="text-[11px] font-bold uppercase tracking-widest text-nz-tinta-fraca mb-3 flex items-center gap-1.5">
         <Timer className="w-3.5 h-3.5" /> Tempo para o sorteio de hoje
       </span>
-      <div className={`flex items-center gap-2.5 font-black font-mono ${isBelowOneHour ? 'text-red-400 animate-pulse' : 'text-yellow-300'}`} style={{ fontSize: 'clamp(1.6rem,6vw,2.4rem)' }}>
+      <div className={`flex items-center gap-2.5 font-black font-mono ${isBelowOneHour ? 'text-red-600 animate-pulse' : 'text-nz-ouro'}`} style={{ fontSize: 'clamp(1.6rem,6vw,2.4rem)' }}>
         {items.map((item, i) => (
           <React.Fragment key={item.label}>
-            {i > 0 && <span className="text-white/25 pb-5">:</span>}
+            {i > 0 && <span className="text-nz-borda pb-5">:</span>}
             <div className="flex flex-col items-center">
-              <div className="rounded-xl px-3 py-1.5 min-w-[64px] text-center" style={{ background: 'rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.1)' }}>{item.val}</div>
-              <span className="text-[10px] text-green-300/60 font-sans font-bold mt-1.5 tracking-wider">{item.label}</span>
+              <div className="rounded-xl px-3 py-1.5 min-w-[64px] text-center bg-nz-ouro-fundo border border-nz-ouro-claro">{item.val}</div>
+              <span className="text-[10px] text-nz-tinta-fraca font-sans font-bold mt-1.5 tracking-wider">{item.label}</span>
             </div>
           </React.Fragment>
         ))}
       </div>
       {isBelowOneHour && (
-        <p className="text-xs text-red-300 font-bold animate-bounce mt-3 flex items-center gap-1.5">
+        <p className="text-xs text-red-600 font-bold animate-bounce mt-3 flex items-center gap-1.5">
           <AlertTriangle className="w-3.5 h-3.5" /> Sorteio muito próximo! Indique agora!
         </p>
       )}

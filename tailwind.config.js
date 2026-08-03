@@ -25,7 +25,10 @@ module.exports = {
   				marrom: '#96603E',
   				'marrom-claro': '#B8875F',
   				'marrom-fundo': '#F2E6D6',
-  				'marrom-escuro': '#5A270F'
+  				'marrom-escuro': '#5A270F',
+  				ouro: '#A9781C',
+  				'ouro-claro': '#F5C451',
+  				'ouro-fundo': '#FDF6E3'
   			},
   			livoo: {
   				rosa: 'var(--livoo-rosa)',
