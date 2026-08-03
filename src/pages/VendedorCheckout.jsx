@@ -132,15 +132,15 @@ export default function VendedorCheckout() {
         address,
         gateway,
       });
-      if (res?.data?.success && res.data.gateway === "card") {
-        window.location.href = res.data.url;
+      if (res?.success && res.gateway === "card") {
+        window.location.href = res.url;
         return;
       }
-      if (res?.data?.success) {
-        setPix(res.data);
-        startPolling(res.data.payment_id);
+      if (res?.success) {
+        setPix(res);
+        startPolling(res.payment_id);
       } else {
-        toast.error(res?.data?.error || "Não foi possível gerar o pagamento.");
+        toast.error(res?.error || "Não foi possível gerar o pagamento.");
       }
     } catch (e) {
       toast.error("Erro ao gerar pagamento. Tente novamente.");
