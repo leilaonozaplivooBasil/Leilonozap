@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, ShoppingBag, Eye, Loader2 } from 'lucide-react';
 
+// 🔴 Contagem "zerada" a partir daqui: vendas/comissões antigas eram de teste.
+// O relatório só considera pedidos criados a partir deste corte (saldo real).
+const REPORT_CUTOFF_DATE = new Date('2026-08-03T04:31:00.000Z');
+
 export default function CatalogHome({ currentStore, catalogSales = [], user, onGoToPedidos, onGoToComissoes }) {
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -16,9 +20,10 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
   const [isLoadingVisits, setIsLoadingVisits] = useState(true);
 
   useEffect(() => {
-    const total = catalogSales.length;
-    const revenue = catalogSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-    const recent = catalogSales.slice(0, 5);
+    const realSales = catalogSales.filter((s) => new Date(s.created_date) >= REPORT_CUTOFF_DATE);
+    const total = realSales.length;
+    const revenue = realSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    const recent = realSales.slice(0, 5);
 
     setStats({
       totalOrders: total,
