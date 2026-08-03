@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Share2 } from 'lucide-react';
 import { toast } from "sonner";
 
 // 🎯 Grade de links de cadastro por cargo — cada card mostra a fotinho do
@@ -47,6 +47,40 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  // 🔗 Compartilhar cargo — mesmo princípio do share da Loja Virtual/Leilão:
+  // imagem do cargo + título + descrição + link, com fallback em cascata
+  // (imagem nativa → texto nativo → wa.me).
+  const handleShare = async (role) => {
+    const fullText = `${role.title} — Leilão NoZap\n\n${role.desc}\n\nCadastre-se agora:\n${role.link}`;
+
+    if (navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(role.image, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], `${role.title}.jpg`, { type: blob.type || 'image/jpeg' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: `${role.title} — Leilão NoZap`, text: fullText, url: role.link, files: [file] });
+            return;
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${role.title} — Leilão NoZap`, text: fullText, url: role.link });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(fullText)}`, '_blank');
+  };
+
   if (!referralCode) return null;
 
   return (
@@ -77,6 +111,13 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
                 title="Copiar link"
               >
                 {copiedIdx === idx ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+              <button
+                onClick={() => handleShare(role)}
+                className="shrink-0 rounded-md w-9 h-9 flex items-center justify-center transition-colors bg-nz-marrom hover:bg-nz-marrom-escuro text-white"
+                title="Compartilhar"
+              >
+                <Share2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
