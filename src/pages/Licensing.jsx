@@ -1238,7 +1238,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Sua Loja Virtual</TabsTrigger>
                 <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Relatório</TabsTrigger>
                 <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
-                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes ({myClients.length})</TabsTrigger>
+                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Venda Direta ({myClients.length})</TabsTrigger>
                 <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm">🤝 Vendedores</TabsTrigger>
                 <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm">💰 Comissões</TabsTrigger>
               </TabsList>
