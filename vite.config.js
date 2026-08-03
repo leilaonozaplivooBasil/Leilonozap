@@ -3,6 +3,22 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// 🔄 CAMADA 1 — carimbo de versão do deploy.
+// Reescreve /version.json em cada build; o app compara esse valor a cada 60s
+// (e ao voltar do background) e se atualiza sozinho quando o deploy muda.
+const BUILD_VERSION = String(Date.now());
+const versionStampPlugin = () => ({
+  name: 'nozap-version-stamp',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({
+      type: 'asset',
+      fileName: 'version.json',
+      source: JSON.stringify({ version: BUILD_VERSION }),
+    });
+  },
+});
+
 // https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   logLevel: 'error',
@@ -16,6 +32,7 @@ export default defineConfig(({ command }) => ({
       visualEditAgent: true
     }),
     react(),
+    versionStampPlugin(),
     // 📱 PWA: manifest + service worker (o mobile é o espelho instalável do desktop).
     // autoUpdate: nova versão publicada assume sozinha, sem usuário preso em cache velho.
     VitePWA({

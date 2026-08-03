@@ -12,6 +12,7 @@ import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import BackToTopButton from "@/components/common/BackToTopButton";
 import InstallPwaPrompt from "@/components/common/InstallPwaPrompt";
+import AtualizacaoDisponivel from "@/components/system/AtualizacaoDisponivel";
 import NavDesktop from "@/components/nav/NavDesktop";
 import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
@@ -928,6 +929,8 @@ export default function Layout({ children, currentPageName }) {
         <BackToTopButton />
         {/* 📱 Convite de instalação do PWA — só mobile, dispensável */}
         <InstallPwaPrompt />
+        {/* 🔄 Nova versão publicada: avisa e atualiza sem o usuário sair e voltar */}
+        <AtualizacaoDisponivel />
 
         {/* 🩷 LIVOO LIVE — logo redonda animada, alinhada logo ACIMA da Leila (canto
             inferior direito). Em TODAS as páginas, menos na raiz "/" (Recepcao).
