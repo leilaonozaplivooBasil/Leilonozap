@@ -23,6 +23,7 @@ import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
+import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
 import { saveReferral, getReferral } from "@/lib/referral";
 import AdminTopNav from "@/components/layout/AdminTopNav";
@@ -346,7 +347,7 @@ export default function Layout({ children, currentPageName }) {
           try {
             const users = await base44.entities.AppUser.filter({ referral_code: refCode });
             const licensee = users && users[0];
-            if (licensee && (licensee.career_levels || []).includes('licenciado_catalogo')) {
+            if (licensee && normalizeLevels(licensee.career_levels).includes('licenciado')) {
               await base44.entities.CatalogVisit.create({
                 licensee_id: licensee.id,
                 referral_code: refCode,
