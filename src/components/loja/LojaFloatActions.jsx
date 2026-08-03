@@ -16,7 +16,7 @@ const LIVOO_FEED = 'https://livoolive.com.br/app';
 // e o env(safe-area-inset-bottom) mantém os botões acima da home bar do iPhone/PWA.
 export default function LojaFloatActions() {
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
-  const Label = ({ children }) => <span className="text-[9px] sm:text-[10px] text-gray-200 font-semibold mt-0.5 drop-shadow text-center leading-none">{children}</span>;
+  const Label = ({ children }) => <span className="text-[9px] sm:text-[10px] text-white font-semibold mt-1 text-center leading-none bg-[#0b1018] rounded-full px-2 py-0.5 whitespace-nowrap">{children}</span>;
 
   // 🌊 Flutuação magnética com a rolagem (pedido do Gabriel 26/07, TODAS as telas):
   // página descendo → os botões SOBEM; página subindo → eles DESCEM; parou de rolar

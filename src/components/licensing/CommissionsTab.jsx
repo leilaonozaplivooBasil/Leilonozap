@@ -79,23 +79,23 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
               </p>
             </div>
           </div>
-          <div className="p-5 rounded-2xl border bg-nz-marrom-fundo border-nz-marrom/30">
+          <div className="p-5 rounded-2xl border bg-nz-verde-fundo border-nz-verde/30">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-full bg-nz-marrom/15 flex items-center justify-center shrink-0">
-                <ShoppingBag className="w-6 h-6 text-nz-marrom" />
+              <div className="w-12 h-12 rounded-full bg-nz-verde/15 flex items-center justify-center shrink-0">
+                <ShoppingBag className="w-6 h-6 text-nz-verde" />
               </div>
               <div>
                 <p className="font-bold text-gray-900">Loja Virtual</p>
                 <p className="text-xs text-gray-500">30% distribuídos na sua estrutura</p>
               </div>
             </div>
-            <p className="text-3xl font-bold text-nz-marrom">
+            <p className="text-3xl font-bold text-nz-verde">
               R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
             </p>
             <p className="text-xs mt-1 text-gray-500">Total histórico gerado</p>
-            <div className="mt-3 pt-3 border-t border-nz-marrom/20">
+            <div className="mt-3 pt-3 border-t border-nz-verde/20">
               <p className="text-xs text-gray-600 flex items-start gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-nz-marrom mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-nz-verde mt-0.5 shrink-0" />
                 Âncora: {anchorPercent}% direto. Cargos ativos: bônus extras.
               </p>
             </div>
