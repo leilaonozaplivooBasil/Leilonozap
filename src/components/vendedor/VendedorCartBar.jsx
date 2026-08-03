@@ -3,8 +3,8 @@ import { Loader2, ShoppingBag } from "lucide-react";
 import { fmtBR } from "@/lib/money";
 
 // 📊 Barra fixa inferior — saldo usado vs. saldo disponível + botão de fechar pedido.
-export default function VendedorCartBar({ total, balance, onClose, closing }) {
-  const canClose = total >= balance && total > 0;
+export default function VendedorCartBar({ total, balance, onClose, closing, blocked }) {
+  const canClose = total >= balance && total > 0 && !blocked;
   const pct = Math.min(100, (total / balance) * 100);
 
   return (
@@ -25,7 +25,7 @@ export default function VendedorCartBar({ total, balance, onClose, closing }) {
           </div>
           {!canClose && (
             <p className="text-xs text-nz-tinta-fraca mt-1">
-              Escolha produtos até fechar o valor da sua primeira compra.
+              {total >= balance && blocked ? "Pague o frete acima para fechar o pedido." : "Escolha produtos até fechar o valor da sua primeira compra."}
             </p>
           )}
         </div>

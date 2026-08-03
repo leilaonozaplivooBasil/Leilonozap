@@ -192,6 +192,11 @@ export default async function handler(req, res) {
       const r = await activatePartnerPlan(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
+    if (sale.kind === 'seller_freight') {
+      // Frete da Etapa 2 do "Seja Vendedor": o flip acima já marcou como 'paid'.
+      // Sem fulfillment/comissão — a página só espera esse status pra liberar "Fechar pedido".
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, freight: true });
+    }
     if (sale.kind === 'loja') {
       const r = await fulfillStoreOrder(sale);
       // 🎟️ só agora (pagamento confirmado) o crédito do Cupom Passaporte é debitado

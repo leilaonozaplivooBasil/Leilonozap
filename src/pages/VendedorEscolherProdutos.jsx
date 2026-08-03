@@ -4,10 +4,11 @@ import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
-import { Loader2, CheckCircle2, Truck, Store, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle2, Truck, Store } from "lucide-react";
 import VendedorProductPicker from "@/components/vendedor/VendedorProductPicker";
 import VendedorCartBar from "@/components/vendedor/VendedorCartBar";
 import CalculadoraFrete from "@/components/frete/CalculadoraFrete";
+import VendedorFretePagamento from "@/components/vendedor/VendedorFretePagamento";
 
 // 🛍️ ETAPA 2 do fluxo "Seja Vendedor" — usa o saldo da adesão (já pago) para
 // escolher QUALQUER produto da Loja Virtual. Fecha o pedido só quando o total
@@ -23,6 +24,7 @@ export default function VendedorEscolherProdutos() {
   // 🚚 Entrega — retirar (sem custo) ou receber em casa (frete calculado pelos produtos escolhidos)
   const [deliveryMethod, setDeliveryMethod] = useState("pickup");
   const [freteSel, setFreteSel] = useState(null);
+  const [freightPaid, setFreightPaid] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -65,7 +67,10 @@ export default function VendedorEscolherProdutos() {
   const showEntrega = !!user && total >= user.seller_credit_balance && total > 0;
   // 💸 O saldo da adesão cobre os PRODUTOS; o frete de entrega não é coberto por ele.
   const freteValor = deliveryMethod === "delivery" ? (freteSel?.preco || 0) : 0;
-  const canClose = showEntrega && (deliveryMethod === "pickup" || !!freteSel);
+  const canClose = showEntrega && (deliveryMethod === "pickup" || (!!freteSel && (freteValor <= 0 || freightPaid)));
+
+  // Trocou de transportadora ou de método de entrega: precisa pagar o frete de novo.
+  useEffect(() => { setFreightPaid(false); }, [freteSel?.id, deliveryMethod]);
 
   const freteSectionRef = useRef(null);
   useEffect(() => {
@@ -103,6 +108,10 @@ export default function VendedorEscolherProdutos() {
     if (!user || total < user.seller_credit_balance) return;
     if (deliveryMethod === "delivery" && !freteSel) {
       toast.error("Calcule o frete e escolha a transportadora para continuar.");
+      return;
+    }
+    if (deliveryMethod === "delivery" && freteValor > 0 && !freightPaid) {
+      toast.error("Pague o frete via PIX para fechar o pedido.");
       return;
     }
     setClosing(true);
@@ -203,13 +212,20 @@ export default function VendedorEscolherProdutos() {
                   onSelecionar={setFreteSel}
                   titulo="Calcular frete até você"
                 />
-                {freteValor > 0 && (
-                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                    <p className="text-xs sm:text-sm text-amber-800">
-                      O frete de <strong>R$ {fmtBR(freteValor)}</strong> não está incluso no saldo da sua primeira compra —
-                      nossa equipe vai combinar com você o pagamento dessa diferença via PIX.
-                    </p>
+                {freteValor > 0 && !freightPaid && (
+                  <VendedorFretePagamento
+                    amount={freteValor}
+                    cep={user?.address_zip_code}
+                    freteId={freteSel?.id}
+                    items={freteItems}
+                    user={user}
+                    onPaid={() => setFreightPaid(true)}
+                  />
+                )}
+                {freteValor > 0 && freightPaid && (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-nz-verde/30 bg-nz-verde-fundo p-3">
+                    <CheckCircle2 className="w-4 h-4 text-nz-verde shrink-0" />
+                    <p className="text-sm text-nz-verde font-semibold">Frete pago! Já pode fechar o pedido.</p>
                   </div>
                 )}
               </>
@@ -218,7 +234,13 @@ export default function VendedorEscolherProdutos() {
         )}
       </div>
 
-      <VendedorCartBar total={total} balance={user?.seller_credit_balance || 1497} onClose={handleFecharPedido} closing={closing} />
+      <VendedorCartBar
+        total={total}
+        balance={user?.seller_credit_balance || 1497}
+        onClose={handleFecharPedido}
+        closing={closing}
+        blocked={showEntrega && !canClose}
+      />
     </div>
   );
 }
