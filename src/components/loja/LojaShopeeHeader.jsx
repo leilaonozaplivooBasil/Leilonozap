@@ -63,12 +63,12 @@ export const CATALOG_BANNERS = [
 // 🎬 3 vídeos institucionais (Influenciador, Vendedor, Licenciado) entram no
 // carrossel da Loja Virtual, junto com os banners de imagem acima.
 const VIDEO_CATALOG_BANNERS = [
-  { titulo: 'Seja um Influenciador', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/af86d374c_Vdeo_Influenciador.mp4', link_url: createPageUrl('SejaVendedor') },
-  { titulo: 'Seja um Vendedor', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/1e5cd0bf9_Vdeo_Vendedor.mp4', link_url: createPageUrl('SejaVendedor') },
-  { titulo: 'Seja um Licenciado', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/31a58a982_Vdeo_Licenciado.mp4', link_url: createPageUrl('SejaLicenciado') },
-].flatMap(({ titulo, url, link_url }, i) => [
-  { title: titulo, video_url: url, link_url, id: `nz-video-${i}-d`, device_type: 'desktop' },
-  { title: titulo, video_url: url, link_url, id: `nz-video-${i}-m`, device_type: 'mobile' },
+  { titulo: 'Seja um Influenciador', legenda: 'Seja um Influenciador Leilão NoZap', sub: 'Grave, indique, ganhe 5% em dinheiro real por cada arremate e venda na Loja Virtual', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/af86d374c_Vdeo_Influenciador.mp4', link_url: createPageUrl('SejaVendedor') },
+  { titulo: 'Seja um Vendedor', legenda: 'Seja um Vendedor Leilão NoZap', sub: 'Divulgue, venda e ganhe 10% em dinheiro real', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/1e5cd0bf9_Vdeo_Vendedor.mp4', link_url: createPageUrl('SejaVendedor') },
+  { titulo: 'Seja um Licenciado', legenda: 'Seja um Licenciado Leilão NoZap', sub: 'Coordene sua equipe e ganhe 13% em dinheiro real', url: 'https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/31a58a982_Vdeo_Licenciado.mp4', link_url: createPageUrl('SejaLicenciado') },
+].flatMap(({ titulo, legenda, sub, url, link_url }, i) => [
+  { title: titulo, caption_title: legenda, caption_subtitle: sub, video_url: url, link_url, id: `nz-video-${i}-d`, device_type: 'desktop' },
+  { title: titulo, caption_title: legenda, caption_subtitle: sub, video_url: url, link_url, id: `nz-video-${i}-m`, device_type: 'mobile' },
 ]);
 CATALOG_BANNERS.push(...VIDEO_CATALOG_BANNERS);
 

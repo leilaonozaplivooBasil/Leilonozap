@@ -86,9 +86,16 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       className="w-full h-full object-cover cursor-pointer"
                       style={{ objectPosition: 'center 20%' }}
                     />
-                    <span className="nz-video-caption absolute top-3 right-3 md:top-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
-                      Torne-se um <span className="text-nz-verde-claro">Vendedor</span>, <span className="text-nz-verde-claro">Licenciado</span> ou <span className="text-nz-verde-claro">Influencer</span>
-                    </span>
+                    <div className="nz-video-caption absolute top-3 right-3 md:top-6 md:right-6 z-10 max-w-[82%] sm:max-w-[65%] rounded-xl bg-black/70 backdrop-blur-sm px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-right">
+                      <p className="text-sm sm:text-lg font-bold text-white leading-tight">
+                        {banner.caption_title || banner.title}
+                      </p>
+                      {banner.caption_subtitle && (
+                        <p className="mt-1 text-[11px] sm:text-sm text-nz-verde-claro font-medium leading-snug">
+                          {banner.caption_subtitle}
+                        </p>
+                      )}
+                    </div>
                   </a>
                 ) : (
                   <div className="relative w-full h-full">
@@ -102,9 +109,16 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       className="w-full h-full object-cover"
                       style={{ objectPosition: 'center 20%' }}
                     />
-                    <span className="nz-video-caption absolute top-3 right-3 md:top-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
-                      Torne-se um <span className="text-nz-verde-claro">Vendedor</span>, <span className="text-nz-verde-claro">Licenciado</span> ou <span className="text-nz-verde-claro">Influencer</span>
-                    </span>
+                    <div className="nz-video-caption absolute top-3 right-3 md:top-6 md:right-6 z-10 max-w-[82%] sm:max-w-[65%] rounded-xl bg-black/70 backdrop-blur-sm px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-right">
+                      <p className="text-sm sm:text-lg font-bold text-white leading-tight">
+                        {banner.caption_title || banner.title}
+                      </p>
+                      {banner.caption_subtitle && (
+                        <p className="mt-1 text-[11px] sm:text-sm text-nz-verde-claro font-medium leading-snug">
+                          {banner.caption_subtitle}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
