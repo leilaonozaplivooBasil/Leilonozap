@@ -112,6 +112,16 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
   const [activeTab, setActiveTab] = useState(getInitialTab);
+  // 🔗 Mantém a aba ativa refletida em ?tab= na URL — cada aba (Visão Geral,
+  // Central de Vendas, Carreira, Admin, Minha Loja) passa a ter link próprio.
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', tab);
+      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    } catch {}
+  };
   const [catalogSubTab, setCatalogSubTab] = useState('catalogo-produtos');
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -1012,7 +1022,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         user={user}
         shortName={shortName}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         userLevels={userLevels}
         isAdmin={isAdmin}
         isSeller={user.is_seller === true}
@@ -1021,7 +1031,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
         {/* 📱 Mobile: sidebar fica escondida, mantém a barra de abas no topo */}
         <div className="md:hidden mb-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <DashboardTabsList
               isSaiDeBaixo={isSaiDeBaixo}
               userLevels={userLevels}
@@ -1053,7 +1063,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <LicensingBanners
           onCopyLink={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}
-          onShareProducts={() => { setActiveTab('catalogo'); setCatalogSubTab('catalogo-produtos'); }}
+          shareLink={shareLink}
         />
 
         <div className="grid gap-6 mb-8 lg:grid-cols-2">
@@ -1061,7 +1071,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
 
         {(userLevels.includes('licenciado') || user.is_seller === true) && !isAdmin &&
           <TabsContent value="minha-loja" className="space-y-6">
@@ -1273,73 +1283,6 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
-          {hasAdvancedBeyondInfluencer ?
-            <Card className={'bg-white border-gray-200'}>
-              <CardHeader>
-                <CardTitle className={'text-gray-900'}>🛍️ Seu Link (Loja Virtual) - 26% distribuídos</CardTitle>
-                <CardDescription className={'text-gray-500'}>
-                  Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    value={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`}
-                    readOnly
-                    className={'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm'} />
-
-                  <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
-                  <a href={`https://leilaonozap.net/Loja-Virtual?ref=${user.referral_code}`} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-green-600 hover:bg-green-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
-                </div>
-                <Alert className={'bg-blue-50 border-blue-200'}>
-                  <Info className={`w-4 h-4 ${'text-blue-600'}`} />
-                  <AlertDescription className={'text-gray-700'}><strong>Loja Virtual (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.</AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card> :
-
-            <Card className={'bg-white border-gray-200'}>
-              <CardHeader>
-                <CardTitle className={'text-gray-900'}>🎯 Seu Link (Influencer) - 5% por arremate</CardTitle>
-                <CardDescription className={'text-gray-500'}>
-                  Ganhe 5% em R$ sobre cada arremate feito pelos seus indicados no App
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    value={referralLink}
-                    readOnly
-                    className={'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm'} />
-
-                  <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700"><Copy className="w-4 h-4 mr-2" />Copiar</Button>
-                  <a href={referralLink} target="_blank" rel="noopener noreferrer"><Button type="button" className="bg-blue-600 hover:bg-blue-700"><Link2 className="w-4 h-4 mr-2" />Abrir</Button></a>
-                </div>
-                <Alert className={'bg-green-50 border-green-200'}>
-                  <Info className={`w-4 h-4 ${'text-green-600'}`} />
-                  <AlertDescription className={'text-gray-700'}><strong>App (5%):</strong> Você ganha 5% sobre cada arremate dos seus indicados no aplicativo.</AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          }
-
-          <Card className={'bg-white border-gray-200'}>
-            <CardHeader>
-              <CardTitle className={`mb-3 ${'text-gray-900'}`}>Seu Plano de Carreira</CardTitle>
-              <div className="space-y-1">
-                <CardDescription className={'text-gray-500'}>
-                  Nível atual: <strong className={'text-gray-900'}>{highestLevelName}</strong>
-                </CardDescription>
-                <CardDescription className={'text-gray-500'}>
-                  ⭐ Função Principal: <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-600'}>{primaryLevelName}</strong>
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CareerPath currentUser={user} />
-            </CardContent>
-          </Card>
-
           <HowItWorksCard isSaiDeBaixo={isSaiDeBaixo} />
         </TabsContent>
 
