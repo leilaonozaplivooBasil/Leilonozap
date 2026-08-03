@@ -72,6 +72,7 @@ const PortalLeiloeiro = React.lazy(() => import('@/pages/portal/PortalLeiloeiro'
 const PainelArrematante = React.lazy(() => import('@/pages/PainelArrematante'));
 const PrivacyPolicy = React.lazy(() => import('@/pages/PrivacyPolicy'));
 const Lucre = React.lazy(() => import('@/pages/Lucre'));
+const TransferirSaldo = React.lazy(() => import('@/pages/TransferirSaldo'));
 const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -350,6 +351,11 @@ const AuthenticatedApp = () => {
       <Route path="/Lucre" element={
         <LayoutWrapper currentPageName="Lucre">
           <Lucre />
+        </LayoutWrapper>
+      } />
+      <Route path="/TransferirSaldo" element={
+        <LayoutWrapper currentPageName="TransferirSaldo">
+          <TransferirSaldo />
         </LayoutWrapper>
       } />
       <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -48,6 +48,10 @@ import MyStoreTab from '../components/licensing/MyStoreTab';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
+import AnaliseDoMesCard from '../components/licensing/AnaliseDoMesCard';
+import PromoBannersCard from '../components/licensing/PromoBannersCard';
+import SalesTrendChart from '../components/licensing/SalesTrendChart';
+import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 
 const Product = base44.entities.Product;
@@ -525,6 +529,24 @@ const DashboardContent = ({ user, isAdmin }) => {
   };
 
   const [, , , frontNote] = getNoteStack(user.valora_pay_balance || 0);
+
+  // 📊 Entradas x saídas do mês atual (Análise do mês, estilo Mercado Pago)
+  const { monthlyEntradas, monthlySaidas } = useMemo(() => {
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+    const inThisMonth = (dateStr) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      return `${d.getFullYear()}-${d.getMonth()}` === monthKey;
+    };
+    const entradas = myCommissionRecords
+      .filter((r) => inThisMonth(r.created_date))
+      .reduce((sum, r) => sum + (r.amount || 0), 0);
+    const saidas = myWithdrawals
+      .filter((w) => w.status !== 'pending' && inThisMonth(w.created_date))
+      .reduce((sum, w) => sum + (w.amount || 0), 0);
+    return { monthlyEntradas: entradas, monthlySaidas: saidas };
+  }, [myCommissionRecords, myWithdrawals]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
@@ -1035,37 +1057,24 @@ const DashboardContent = ({ user, isAdmin }) => {
         isSaiDeBaixo={isSaiDeBaixo}
         onUseNow={() => setIsAuctionSelectionModalOpen(true)}
         onWithdraw={() => setShowWithdrawalModal(true)}
+        onTransfer={() => navigate('/TransferirSaldo')}
       />
 
-      <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={DollarSign}
-          label="Saldo Disponível"
-          value={`R$ ${totalAvailable.toFixed(2)}`}
-          onClick={() => setIsAuctionSelectionModalOpen(true)}
-          isSaiDeBaixo={isSaiDeBaixo} />
+      <div className="grid gap-6 mb-8 lg:grid-cols-3">
+        <AnaliseDoMesCard entradas={monthlyEntradas} saidas={monthlySaidas} isSaiDeBaixo={isSaiDeBaixo} />
+        <div className="lg:col-span-2">
+          <PromoBannersCard
+            user={user}
+            isSaiDeBaixo={isSaiDeBaixo}
+            onGoVendedores={() => { setActiveTab('catalogo'); setCatalogSubTab('catalogo-vendedores'); }}
+            onEditStore={() => setActiveTab('minha-loja')}
+          />
+        </div>
+      </div>
 
-        <StatCard
-          icon={Users}
-          label="Clientes Indicados"
-          value={realMetrics.indicatedCount !== null ? realMetrics.indicatedCount : '...'}
-          isLoading={realMetrics.indicatedCount === null}
-          isSaiDeBaixo={isSaiDeBaixo} />
-
-        <StatCard
-          icon={TrendingUp}
-          label="Arremates do Sistema de Alavancagem"
-          value={realMetrics.networkBidsCount !== null ? realMetrics.networkBidsCount : '...'}
-          isLoading={realMetrics.networkBidsCount === null}
-          isSaiDeBaixo={isSaiDeBaixo} />
-
-        <StatCard
-          icon={BarChart}
-          label="Total Comissões (App + Loja Virtual)"
-          value={`R$ ${totalAvailable.toFixed(2)}`}
-          onClick={() => setViewingCommissionsFor(user)}
-          isSaiDeBaixo={isSaiDeBaixo} />
-
+      <div className="grid gap-6 mb-8 lg:grid-cols-2">
+        <SalesTrendChart sales={myCatalogSales} isSaiDeBaixo={isSaiDeBaixo} />
+        <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
