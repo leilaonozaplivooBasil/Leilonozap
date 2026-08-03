@@ -26,7 +26,7 @@ const EARN_CARDS = [
     title: "Seja um Licenciado",
     desc: "Tenha sua loja virtual e ganhe 13% na venda.",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png",
-    page: "Licensing",
+    page: "SejaLicenciado",
   },
 ];
 

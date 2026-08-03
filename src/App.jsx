@@ -58,6 +58,7 @@ const AcessoVendedor = React.lazy(() => import('@/pages/AcessoVendedor'));
 const SellerPanel = React.lazy(() => import('@/pages/SellerPanel'));
 const VendedorCheckout = React.lazy(() => import('@/pages/VendedorCheckout'));
 const VendedorEscolherProdutos = React.lazy(() => import('@/pages/VendedorEscolherProdutos'));
+const SejaLicenciado = React.lazy(() => import('@/pages/SejaLicenciado'));
 const AdminCreditoTeste = React.lazy(() => import('@/pages/AdminCreditoTeste'));
 const Portal = React.lazy(() => import('@/pages/Portal'));
 const SuperAdminPanels = React.lazy(() => import('@/pages/SuperAdminPanels'));
@@ -326,6 +327,11 @@ const AuthenticatedApp = () => {
       <Route path="/VendedorEscolherProdutos" element={
         <LayoutWrapper currentPageName="VendedorEscolherProdutos">
           <VendedorEscolherProdutos />
+        </LayoutWrapper>
+      } />
+      <Route path="/SejaLicenciado" element={
+        <LayoutWrapper currentPageName="SejaLicenciado">
+          <SejaLicenciado />
         </LayoutWrapper>
       } />
       <Route path="/AdminCreditoTeste" element={

@@ -9,13 +9,37 @@ import VendedorProductStrip from "@/components/vendedor/VendedorProductStrip";
 import VendedorProductPreviewModal from "@/components/vendedor/VendedorProductPreviewModal";
 import VendedorAddressForm from "@/components/vendedor/VendedorAddressForm";
 
-const VALOR_ADESAO = 1497;
+// 🆕 Mesmo checkout serve Vendedor (R$1.497) e Licenciado (R$5.000) — só muda o
+// texto e o valor. O tipo vem por ?tipo=licenciado na URL e persiste no
+// sessionStorage pra sobreviver ao redirect de volta do pagamento com cartão.
+const TIPO_CONFIG = {
+  vendedor: { label: "Vendedor", valor: 1497 },
+  licenciado: { label: "Licenciado", valor: 5000 },
+};
 
-// 💳 ETAPA 1 do fluxo "Seja Vendedor" — pagamento único de R$1.497 que libera o
+// 💳 ETAPA 1 do fluxo "Seja Vendedor/Licenciado" — pagamento único que libera o
 // saldo pra escolher produtos na Etapa 2 (/VendedorEscolherProdutos). Não é
 // clicável a vitrine de produtos aqui: é só decoração, pra não distrair do pagamento.
 export default function VendedorCheckout() {
   const navigate = useNavigate();
+  const [tipo] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = params.get("tipo");
+      if (fromUrl === "licenciado" || fromUrl === "vendedor") {
+        sessionStorage.setItem("sejaTipo", fromUrl);
+        return fromUrl;
+      }
+      // Retorno do pagamento com cartão (Mercado Pago) traz payment_id na URL, sem
+      // ?tipo= — nesse caso (e só nesse) usa o tipo salvo antes do redirect.
+      if (params.get("payment_id")) {
+        return sessionStorage.getItem("sejaTipo") === "licenciado" ? "licenciado" : "vendedor";
+      }
+      return "vendedor";
+    } catch { return "vendedor"; }
+  });
+  const cfg = TIPO_CONFIG[tipo];
+  const VALOR_ADESAO = cfg.valor;
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -213,9 +237,9 @@ export default function VendedorCheckout() {
       <div className="max-w-xl mx-auto">
         <div className="text-center mb-6">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold border border-nz-verde/30 bg-nz-verde-fundo text-nz-verde">
-            <ShoppingBag className="w-4 h-4" /> Adesão Vendedor
+            <ShoppingBag className="w-4 h-4" /> Adesão {cfg.label}
           </span>
-          <h1 className="mt-4 text-2xl sm:text-3xl font-black">Faça sua primeira compra acima de R$ 1.497</h1>
+          <h1 className="mt-4 text-2xl sm:text-3xl font-black">Faça sua primeira compra acima de R$ {fmtBR(VALOR_ADESAO)}</h1>
           <p className="mt-2 text-nz-tinta-fraca text-sm">
             Pague uma vez e o saldo é liberado na hora pra você escolher seus produtos na Loja Virtual.
           </p>

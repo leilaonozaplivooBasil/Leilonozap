@@ -15,6 +15,19 @@ import VendedorFretePagamento from "@/components/vendedor/VendedorFretePagamento
 // escolhido atinge o saldo disponível.
 export default function VendedorEscolherProdutos() {
   const navigate = useNavigate();
+  // 🆕 Mesma tela serve Vendedor e Licenciado — o tipo vem do checkout (sessionStorage).
+  const [tipo] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = params.get("tipo");
+      if (fromUrl === "licenciado" || fromUrl === "vendedor") {
+        sessionStorage.setItem("sejaTipo", fromUrl);
+        return fromUrl;
+      }
+      return sessionStorage.getItem("sejaTipo") === "licenciado" ? "licenciado" : "vendedor";
+    } catch { return "vendedor"; }
+  });
+  const cargoLabel = tipo === "licenciado" ? "Licenciado" : "Vendedor";
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
@@ -31,7 +44,7 @@ export default function VendedorEscolherProdutos() {
       try {
         const saved = localStorage.getItem("currentUser");
         if (!saved) {
-          navigate(createPageUrl("SejaVendedor"), { replace: true });
+          navigate(createPageUrl(tipo === "licenciado" ? "SejaLicenciado" : "SejaVendedor"), { replace: true });
           return;
         }
         const localUser = JSON.parse(saved);
@@ -152,6 +165,7 @@ export default function VendedorEscolherProdutos() {
         items,
         delivery_method: deliveryMethod,
         carrier,
+        role: tipo,
       });
 
       if (!res?.success) {
@@ -163,13 +177,13 @@ export default function VendedorEscolherProdutos() {
         ...user,
         seller_credit_balance: 0,
         is_seller: true,
-        career_levels: res.career_levels || Array.from(new Set([...(user.career_levels || []), "vendedor"])),
+        career_levels: res.career_levels || Array.from(new Set([...(user.career_levels || []), tipo])),
       };
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
 
       sessionStorage.removeItem("vendedorEscolherState");
       setDone(true);
-      toast.success("Pedido confirmado! Você já é um Vendedor.");
+      toast.success(`Pedido confirmado! Você já é um ${cargoLabel}.`);
       setTimeout(() => navigate("/Licensing", { replace: true }), 2000);
     } catch (e) {
       toast.error("Erro ao fechar o pedido. Tente novamente.");
@@ -192,7 +206,7 @@ export default function VendedorEscolherProdutos() {
         <div>
           <CheckCircle2 className="w-14 h-14 text-nz-verde mx-auto mb-3" />
           <h1 className="text-2xl font-black text-nz-tinta">Pedido confirmado!</h1>
-          <p className="text-nz-tinta-fraca mt-2">Você já é um Vendedor. Redirecionando para o Painel do Licenciado…</p>
+          <p className="text-nz-tinta-fraca mt-2">Você já é um {cargoLabel}. Redirecionando para o Painel do Licenciado…</p>
         </div>
       </div>
     );

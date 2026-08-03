@@ -19,7 +19,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-    const { user_id, items, delivery_method, carrier, address } = body || {};
+    const { user_id, items, delivery_method, carrier, address, role } = body || {};
+    const cargo = role === 'licenciado' ? 'licenciado' : 'vendedor';
     if (!SUPABASE_URL || !SR) return res.status(200).json({ success: false, error: 'Banco não configurado' });
     if (!user_id) return res.status(200).json({ success: false, error: 'user_id é obrigatório' });
     if (!Array.isArray(items) || !items.length) return res.status(200).json({ success: false, error: 'Carrinho vazio' });
@@ -88,7 +89,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const careerLevels = Array.from(new Set([...(user.career_levels || []), 'vendedor']));
+    const careerLevels = Array.from(new Set([...(user.career_levels || []), cargo]));
     await sb(`app_users?id=eq.${encodeURIComponent(user_id)}`, {
       method: 'PATCH', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({ seller_credit_balance: 0, is_seller: true, career_levels: careerLevels }),
