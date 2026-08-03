@@ -24,7 +24,7 @@ export default function VendedorEscolherProdutos() {
   // 🚚 Entrega — retirar (sem custo) ou receber em casa (frete calculado pelos produtos escolhidos)
   const [deliveryMethod, setDeliveryMethod] = useState("pickup");
   const [freteSel, setFreteSel] = useState(null);
-  const [freightPaid, setFreightPaid] = useState(false);
+  const [extraPaid, setExtraPaid] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +46,22 @@ export default function VendedorEscolherProdutos() {
 
         const prods = await base44.entities.Product.filter({ catalog_active: true }, "-created_date", 240);
         setProducts(prods || []);
+
+        // 🔁 Restaura carrinho/entrega salvos (sobrevive ao redirecionamento com recarga total
+        // da página que acontece ao voltar do pagamento com cartão no Mercado Pago).
+        try {
+          const savedState = JSON.parse(sessionStorage.getItem("vendedorEscolherState") || "null");
+          if (savedState?.cartIds?.length) {
+            const byId = Object.fromEntries((prods || []).map((p) => [p.id, p]));
+            const restoredCart = {};
+            savedState.cartIds.forEach(([id, qty]) => {
+              if (byId[id]) restoredCart[id] = { product: byId[id], qty };
+            });
+            if (Object.keys(restoredCart).length) setCart(restoredCart);
+            if (savedState.deliveryMethod) setDeliveryMethod(savedState.deliveryMethod);
+            if (savedState.freteSel) setFreteSel(savedState.freteSel);
+          }
+        } catch (_) { /* estado salvo inválido, ignora */ }
       } catch (e) {
         console.debug("Erro ao carregar escolha de produtos:", e.message);
       } finally {
@@ -65,12 +81,15 @@ export default function VendedorEscolherProdutos() {
   );
   // 🚚 A seção de entrega aparece assim que o carrinho bate o saldo da adesão.
   const showEntrega = !!user && total >= user.seller_credit_balance && total > 0;
-  // 💸 O saldo da adesão cobre os PRODUTOS; o frete de entrega não é coberto por ele.
+  // 💸 O saldo da adesão cobre até o valor da adesão; o que passar disso (complemento) e o
+  // frete de entrega não são cobertos por ele — os dois são cobrados JUNTOS, num só pagamento.
   const freteValor = deliveryMethod === "delivery" ? (freteSel?.preco || 0) : 0;
-  const canClose = showEntrega && (deliveryMethod === "pickup" || (!!freteSel && (freteValor <= 0 || freightPaid)));
+  const complemento = user ? Math.max(0, Math.round((total - user.seller_credit_balance) * 100) / 100) : 0;
+  const extraValor = Math.round((freteValor + complemento) * 100) / 100;
+  const canClose = showEntrega && (deliveryMethod === "pickup" || !!freteSel) && (extraValor <= 0 || extraPaid);
 
-  // Trocou de transportadora ou de método de entrega: precisa pagar o frete de novo.
-  useEffect(() => { setFreightPaid(false); }, [freteSel?.id, deliveryMethod]);
+  // Trocou de transportadora, de método de entrega, ou o carrinho mudou de valor: precisa pagar de novo.
+  useEffect(() => { setExtraPaid(false); }, [freteSel?.id, deliveryMethod, total]);
 
   const freteSectionRef = useRef(null);
   useEffect(() => {
@@ -78,6 +97,13 @@ export default function VendedorEscolherProdutos() {
       freteSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [showEntrega]);
+
+  // 💾 Persiste carrinho/entrega — sobrevive à recarga total da página que acontece
+  // quando o Mercado Pago redireciona de volta após o pagamento com cartão.
+  useEffect(() => {
+    const cartIds = Object.entries(cart).map(([id, it]) => [id, it.qty]);
+    sessionStorage.setItem("vendedorEscolherState", JSON.stringify({ cartIds, deliveryMethod, freteSel }));
+  }, [cart, deliveryMethod, freteSel]);
 
   const addToCart = (p) => {
     setCart((prev) => {
@@ -110,8 +136,8 @@ export default function VendedorEscolherProdutos() {
       toast.error("Calcule o frete e escolha a transportadora para continuar.");
       return;
     }
-    if (deliveryMethod === "delivery" && freteValor > 0 && !freightPaid) {
-      toast.error("Pague o frete via PIX para fechar o pedido.");
+    if (extraValor > 0 && !extraPaid) {
+      toast.error("Pague o frete/complemento para fechar o pedido.");
       return;
     }
     setClosing(true);
@@ -141,6 +167,7 @@ export default function VendedorEscolherProdutos() {
       };
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
 
+      sessionStorage.removeItem("vendedorEscolherState");
       setDone(true);
       toast.success("Pedido confirmado! Você já é um Vendedor.");
       setTimeout(() => navigate("/Licensing", { replace: true }), 2000);
@@ -204,31 +231,32 @@ export default function VendedorEscolherProdutos() {
             </div>
 
             {deliveryMethod === "delivery" && (
-              <>
-                <CalculadoraFrete
-                  items={freteItems}
-                  autoCalcular
-                  cepInicial={user?.address_zip_code}
-                  onSelecionar={setFreteSel}
-                  titulo="Calcular frete até você"
-                />
-                {freteValor > 0 && !freightPaid && (
-                  <VendedorFretePagamento
-                    amount={freteValor}
-                    cep={user?.address_zip_code}
-                    freteId={freteSel?.id}
-                    items={freteItems}
-                    user={user}
-                    onPaid={() => setFreightPaid(true)}
-                  />
-                )}
-                {freteValor > 0 && freightPaid && (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-nz-verde/30 bg-nz-verde-fundo p-3">
-                    <CheckCircle2 className="w-4 h-4 text-nz-verde shrink-0" />
-                    <p className="text-sm text-nz-verde font-semibold">Frete pago! Já pode fechar o pedido.</p>
-                  </div>
-                )}
-              </>
+              <CalculadoraFrete
+                items={freteItems}
+                autoCalcular
+                cepInicial={user?.address_zip_code}
+                onSelecionar={setFreteSel}
+                titulo="Calcular frete até você"
+              />
+            )}
+
+            {(deliveryMethod === "pickup" || !!freteSel) && extraValor > 0 && !extraPaid && (
+              <VendedorFretePagamento
+                freteValor={freteValor}
+                complemento={complemento}
+                deliveryMethod={deliveryMethod}
+                cep={user?.address_zip_code}
+                freteId={freteSel?.id}
+                items={freteItems}
+                user={user}
+                onPaid={() => setExtraPaid(true)}
+              />
+            )}
+            {extraValor > 0 && extraPaid && (
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-nz-verde/30 bg-nz-verde-fundo p-3">
+                <CheckCircle2 className="w-4 h-4 text-nz-verde shrink-0" />
+                <p className="text-sm text-nz-verde font-semibold">Pagamento confirmado! Já pode fechar o pedido.</p>
+              </div>
             )}
           </div>
         )}
