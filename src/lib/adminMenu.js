@@ -42,6 +42,7 @@ import {
   Settings,
   Activity,
   SlidersHorizontal,
+  Wand2,
   CircleUser,
   Trophy,
   User,
@@ -138,6 +139,7 @@ export function buildAdminMenu(isSuperAdmin = false) {
       isCategory: true,
       items: [
         { title: "Diagnóstico do Sistema", pageName: "SystemDiagnostics", icon: Activity },
+        { title: "Creditar Saldo (Teste)", pageName: "AdminCreditoTeste", icon: Wand2 },
         ...(isSuperAdmin
           ? [{ title: "Habilitar Painéis", pageName: "SuperAdminPanels", icon: SlidersHorizontal }]
           : []),
