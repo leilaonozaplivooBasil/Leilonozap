@@ -23,22 +23,31 @@ const PAGINAS_COM_BARRA_INFERIOR = [
   'AuctionDetails',
 ];
 
+// Páginas com um card/hero "colado" perto do fundo (card de estatísticas dos
+// leilões na Home e na Recepção) — os flutuantes precisam de um respiro maior
+// senão caem em cima do card (print Gabriel 03/08).
+const PAGINAS_COM_HERO_INFERIOR = [
+  'Home',
+  'Recepcao',
+];
+
 export default function FloatingDock({ currentPageName }) {
   const temBarra = PAGINAS_COM_BARRA_INFERIOR.includes(currentPageName);
+  const temHero = PAGINAS_COM_HERO_INFERIOR.includes(currentPageName);
   // Base: distância do fundo. Passo: espaço entre um flutuante e o de cima.
-  const base = temBarra ? '10rem' : '1.75rem';
-  const baseSm = temBarra ? '10.5rem' : '2rem';
+  const base = temBarra ? '11.5rem' : temHero ? '3.25rem' : '1.75rem';
+  const baseSm = temBarra ? '12rem' : temHero ? '3.5rem' : '2rem';
 
   return (
     <style>{`
       :root {
         --nz-dock-b: calc(${base} + env(safe-area-inset-bottom, 0px));
-        --nz-dock-step: 4.75rem;
+        --nz-dock-step: 5.25rem;
       }
       @media (min-width: 640px) {
         :root {
           --nz-dock-b: calc(${baseSm} + env(safe-area-inset-bottom, 0px));
-          --nz-dock-step: 5.75rem;
+          --nz-dock-step: 6.25rem;
         }
       }
       .nz-dock-bottom { bottom: var(--nz-dock-b) !important; }
