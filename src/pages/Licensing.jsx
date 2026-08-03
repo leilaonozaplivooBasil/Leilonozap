@@ -1846,7 +1846,7 @@ export default function LicensingPage() {
   const isLicensee = currentUser && currentUser.id;
 
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // DETECTAR NÍVEL DO USUÁRIO (normaliza id legado, ex: 'licenciado_catalogo' → 'licenciado')
   const getUserLevel = () => {
