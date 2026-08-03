@@ -6,15 +6,15 @@ import { Zap, Wallet, Clock, Sparkles, ArrowRightLeft } from 'lucide-react';
 // 💳 Cartão de saldo — estilo Mercado Pago (fundo claro, cards com borda
 // cinza), mantendo o selo digital verde pulsante que já existia.
 export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWithdrawalAmount, isSaiDeBaixo, onUseNow, onWithdraw, onTransfer }) {
-  const accentText = isSaiDeBaixo ? 'text-red-600' : 'text-emerald-600';
-  const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-emerald-400 to-green-600';
+  const accentText = isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde';
+  const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-nz-verde-claro to-nz-verde-escuro';
 
   return (
     <Card ref={cardRef} className="mb-8 bg-white border-gray-200 shadow-sm">
       <CardContent className="relative p-6 md:px-10 md:py-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
           <div className="w-full md:w-auto">
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border mb-3 ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border mb-3 ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-nz-verde border-nz-verde/20 bg-nz-verde-fundo'}`}>
               <Wallet className="w-3 h-3" /> Saldo Disponível
             </span>
             <div className="flex items-baseline gap-3 mb-2">
@@ -22,7 +22,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
                 R$ {totalAvailable.toFixed(2)}
               </span>
             </div>
-            <p className="text-xs mb-4 text-gray-400">
+            <p className="text-xs mb-4 text-gray-500">
               Use em Leilões ou na Loja Virtual — 100% digital, sem burocracia.
             </p>
 
@@ -43,7 +43,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
                 onClick={onUseNow}
                 className={`text-white font-semibold h-11 text-sm shadow-sm flex-1 min-w-[130px] ${isSaiDeBaixo ?
                   'bg-red-600 hover:bg-red-700' :
-                  'bg-emerald-600 hover:bg-emerald-700'}`}>
+                  'bg-nz-verde hover:bg-nz-verde-escuro'}`}>
                 <Zap className="w-4 h-4 mr-2" />
                 Usar Agora
               </Button>
@@ -68,8 +68,8 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
 
           {/* Selo digital pulsante */}
           <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0">
-            <span className={`absolute inset-0 rounded-full border-2 animate-ping ${isSaiDeBaixo ? 'border-red-300' : 'border-emerald-300'}`} style={{ animationDuration: '2.6s' }} />
-            <span className={`absolute inset-3 rounded-full border ${isSaiDeBaixo ? 'border-red-200' : 'border-emerald-200'}`} />
+            <span className={`absolute inset-0 rounded-full border-2 animate-ping ${isSaiDeBaixo ? 'border-red-300' : 'border-nz-verde/40'}`} style={{ animationDuration: '2.6s' }} />
+            <span className={`absolute inset-3 rounded-full border ${isSaiDeBaixo ? 'border-red-200' : 'border-nz-verde/25'}`} />
             <div className={`relative w-24 h-24 rounded-full flex items-center justify-center shadow-xl bg-gradient-to-br ${accentBg}`}>
               <Wallet className="w-10 h-10 text-white drop-shadow-lg" />
               <Sparkles className={`w-5 h-5 absolute -top-1 -right-1 text-white ${isSaiDeBaixo ? '' : 'animate-pulse'}`} />
