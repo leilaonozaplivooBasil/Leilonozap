@@ -76,6 +76,7 @@ export async function cotarOpcoes({ cep, items }) {
       id: String(o.id),
       nome: o.name || '',
       empresa: o.company?.name || '',
+      logo: o.company?.picture || '',
       preco: round2(o.price),
       prazo: Number(o.delivery_time) || null,
     }))

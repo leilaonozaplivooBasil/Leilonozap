@@ -32,17 +32,22 @@ export default async function handler(req, res) {
 
     // 🔒 Recalcula o total no servidor a partir do preço real do produto — não confia no total do cliente.
     const ids = items.map((it) => String(it.product_id)).filter(Boolean);
-    const prods = await (await sb(`products?select=id,description,price_catalog,image_urls&id=in.(${ids.map(encodeURIComponent).join(',')})`)).json();
+    const prods = await (await sb(`products?select=id,description,price_catalog,image_urls,quantity&id=in.(${ids.map(encodeURIComponent).join(',')})`)).json();
     const byId = Object.fromEntries((Array.isArray(prods) ? prods : []).map((p) => [p.id, p]));
 
     let total = 0;
     let totalQty = 0;
     const titles = [];
     let firstProduct = null;
+    // 📦 Revalida o estoque REAL no servidor — o carrinho do navegador pode estar desatualizado.
     for (const it of items) {
       const p = byId[String(it.product_id)];
       const qty = Math.max(1, Number(it.qty) || 1);
       if (!p) continue;
+      const stock = Math.max(0, Number(p.quantity) || 0);
+      if (qty > stock) {
+        return res.status(200).json({ success: false, error: `Estoque insuficiente para "${p.description}" (disponível: ${stock}).` });
+      }
       total += qty * Number(p.price_catalog || 0);
       totalQty += qty;
       titles.push(p.description);
@@ -79,6 +84,18 @@ export default async function handler(req, res) {
       method: 'PATCH', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({ seller_credit_balance: 0, is_seller: true, career_levels: careerLevels }),
     });
+
+    // 📦 Baixa o estoque real de cada produto (mesma fonte usada na vitrine — Product.quantity).
+    for (const it of items) {
+      const p = byId[String(it.product_id)];
+      if (!p) continue;
+      const qty = Math.max(1, Number(it.qty) || 1);
+      const novaQtd = Math.max(0, Number(p.quantity || 0) - qty);
+      await sb(`products?id=eq.${encodeURIComponent(p.id)}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ quantity: novaQtd }),
+      }).catch(() => {});
+    }
 
     return res.status(200).json({ success: true, sale_id: saleId, total, career_levels: careerLevels });
   } catch (e) {

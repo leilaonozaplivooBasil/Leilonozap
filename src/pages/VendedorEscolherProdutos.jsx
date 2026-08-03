@@ -64,10 +64,16 @@ export default function VendedorEscolherProdutos() {
   const canClose = !!user && total >= user.seller_credit_balance && total > 0;
 
   const addToCart = (p) => {
-    setCart((prev) => ({
-      ...prev,
-      [p.id]: { product: p, qty: (prev[p.id]?.qty || 0) + 1 },
-    }));
+    setCart((prev) => {
+      const current = prev[p.id]?.qty || 0;
+      const stock = Math.max(0, Number(p.quantity) || 0);
+      // 📦 Nunca deixa reservar mais do que o estoque real do produto.
+      if (current >= stock) {
+        toast.error(stock <= 0 ? "Produto sem estoque." : `Estoque disponível: ${stock}`);
+        return prev;
+      }
+      return { ...prev, [p.id]: { product: p, qty: current + 1 } };
+    });
   };
 
   const removeFromCart = (p) => {
