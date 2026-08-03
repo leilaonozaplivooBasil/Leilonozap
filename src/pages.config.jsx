@@ -55,7 +55,6 @@ const ErrorReport = React.lazy(() => import('./pages/ErrorReport'));
 const Financial = React.lazy(() => import('./pages/Financial'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const Home = React.lazy(() => import('./pages/Home'));
-const Influencers = React.lazy(() => import('./pages/Influencers'));
 const InfluencersDashboard = React.lazy(() => import('./pages/InfluencersDashboard'));
 const InvestorDashboard = React.lazy(() => import('./pages/InvestorDashboard'));
 const Landing = React.lazy(() => import('./pages/Landing'));
@@ -169,7 +168,6 @@ export const PAGES = {
     "Financial": Financial,
     "ForgotPassword": ForgotPassword,
     "Home": Home,
-    "Influencers": Influencers,
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
