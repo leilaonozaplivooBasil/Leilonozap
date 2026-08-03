@@ -13,6 +13,7 @@ const DESTINO_DEDICADO = {
   influenciador: '/Licensing',
   vendedor: '/SejaVendedor',
   licenciado: '/SejaLicenciado',
+  parceiro: '/Partners',
 };
 
 export default function LinkCurtoConvite() {
