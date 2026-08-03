@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ambient: preenche as laterais/sobras do container com a própria arte desfocada
@@ -18,20 +18,38 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const filteredBanners = !Array.isArray(banners) ? [] : banners.filter(banner => {
-    const deviceType = banner.device_type || 'desktop';
-    return deviceType === (isMobile ? 'mobile' : 'desktop');
-  });
+  const filteredBanners = useMemo(() => {
+    if (!Array.isArray(banners)) return [];
+    return banners.filter(banner => {
+      const deviceType = banner.device_type || 'desktop';
+      return deviceType === (isMobile ? 'mobile' : 'desktop');
+    });
+  }, [banners, isMobile]);
 
+  const videoRefs = useRef({});
+
+  // ⏱️ Banners de imagem trocam no intervalo fixo de 10s. Banners de vídeo
+  // avançam exatamente quando o próprio vídeo termina — sem loop reiniciando
+  // sozinho no meio da exibição (sensação de "travada"/duplicado).
   useEffect(() => {
     if (filteredBanners.length === 0) return;
 
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % filteredBanners.length);
-    }, 10000);
+    const activeBanner = filteredBanners[currentIndex];
+    const advance = () => setCurrentIndex((prev) => (prev + 1) % filteredBanners.length);
 
-    return () => clearInterval(interval);
-  }, [filteredBanners.length]);
+    if (activeBanner?.video_url) {
+      const videoEl = videoRefs.current[activeBanner.id];
+      if (videoEl) {
+        videoEl.currentTime = 0;
+        videoEl.play().catch(() => {});
+        videoEl.addEventListener('ended', advance);
+        return () => videoEl.removeEventListener('ended', advance);
+      }
+    }
+
+    const timer = setTimeout(advance, 10000);
+    return () => clearTimeout(timer);
+  }, [currentIndex, filteredBanners]);
 
   useEffect(() => {
     setCurrentIndex(0);
@@ -77,9 +95,9 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 {banner.link_url ? (
                   <a href={banner.link_url} className="relative block w-full h-full">
                     <video
+                      ref={(el) => { if (el) videoRefs.current[banner.id] = el; }}
                       src={banner.video_url}
                       autoPlay
-                      loop
                       muted
                       playsInline
                       preload={shouldEagerLoad ? 'auto' : 'metadata'}
@@ -100,9 +118,9 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 ) : (
                   <div className="relative w-full h-full">
                     <video
+                      ref={(el) => { if (el) videoRefs.current[banner.id] = el; }}
                       src={banner.video_url}
                       autoPlay
-                      loop
                       muted
                       playsInline
                       preload={shouldEagerLoad ? 'auto' : 'metadata'}

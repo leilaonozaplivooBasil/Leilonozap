@@ -22,6 +22,7 @@ const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import RotatingBanner from '../components/banner/RotatingBanner';
+import { interleaveBanners } from '@/lib/interleaveBanners';
 import LiveStats from '../components/home/LiveStats';
 import ShareLeiloesButton from '../components/home/ShareLeiloesButton';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
@@ -712,12 +713,12 @@ export default function Home() {
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
 
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
-        setBanners([...VIDEO_BANNERS, ...JSON.parse(cachedBanners)]);
+        setBanners(interleaveBanners(JSON.parse(cachedBanners), VIDEO_BANNERS));
       } else {
         // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
         base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
         const imageBanners = (bannerData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
-        const sortedBanners = [...VIDEO_BANNERS, ...imageBanners];
+        const sortedBanners = interleaveBanners(imageBanners, VIDEO_BANNERS);
           // Salva a URL da primeira imagem pra preload na próxima visita
           if (sortedBanners[0]?.image_url) {
             localStorage.setItem('home_banner_first_url', sortedBanners[0].image_url);

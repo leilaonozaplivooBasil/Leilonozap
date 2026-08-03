@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
+import { interleaveBanners } from '@/lib/interleaveBanners';
 // 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
 // imediata em produção. Artes novas (25/07) em 1376×768 (~16:9) — mostrados com
 // fit=contain + fundo ambiente desfocado, sem cortar nada.
@@ -49,7 +50,7 @@ const LOGO = '/brand/icon-3d.webp';
 // Banners oficiais da loja (rotativos), na paleta oficial da logo (#4d724b/#99c198/
 // #dabb98/#21222b/#9da7b5). Arte dedicada por dispositivo: desktop 1920×600 (16:5,
 // largura total do navegador) e mobile 1344×768. Licenciado (4 e 5) → /Licensing.
-export const CATALOG_BANNERS = [
+const IMAGE_CATALOG_BANNERS = [
   { desktop: banner1Desk, mobile: banner1Mob, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
   { desktop: banner2Desk, mobile: banner2Mob, title: 'Ferramentas Entrega Full — até 85% de desconto' },
   { desktop: banner3Desk, mobile: banner3Mob, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
@@ -70,7 +71,7 @@ const VIDEO_CATALOG_BANNERS = [
   { title: titulo, caption_title: legenda, caption_subtitle: sub, video_url: url, link_url, id: `nz-video-${i}-d`, device_type: 'desktop' },
   { title: titulo, caption_title: legenda, caption_subtitle: sub, video_url: url, link_url, id: `nz-video-${i}-m`, device_type: 'mobile' },
 ]);
-CATALOG_BANNERS.push(...VIDEO_CATALOG_BANNERS);
+export const CATALOG_BANNERS = interleaveBanners(IMAGE_CATALOG_BANNERS, VIDEO_CATALOG_BANNERS);
 
 // Ícone redondo do rail de categorias (estilo Shopee, cores Leila)
 function RailIcon({ icon: Icon, label, onClick, accent = 'green' }) {
