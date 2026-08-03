@@ -1039,42 +1039,6 @@ const DashboardContent = ({ user, isAdmin }) => {
               👋 <strong className="text-gray-900">{shortName}</strong>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {isAdmin &&
-              <>
-                <Button
-                  onClick={handleForceSync}
-                  disabled={isSyncing}
-                  variant="outline"
-                  className="bg-white border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                  size="sm">
-
-                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                  Sincronizar
-                </Button>
-                <Button
-                  onClick={handleResetTestData}
-                  disabled={isResetting}
-                  variant="outline"
-                  className="bg-white border-red-300 text-red-600 hover:bg-red-50"
-                  size="sm">
-
-                  {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                  Reset Teste
-                </Button>
-                <Button
-                  onClick={handleResetAllBalances}
-                  disabled={isResetting}
-                  variant="outline"
-                  className="bg-white border-orange-300 text-orange-600 hover:bg-orange-50"
-                  size="sm">
-
-                  {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                  Zerar Saldos
-                </Button>
-              </>
-            }
-          </div>
         </div>
 
         <WalletBalanceCard
@@ -1382,6 +1346,49 @@ const DashboardContent = ({ user, isAdmin }) => {
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">
             <Accordion type="single" collapsible className="w-full space-y-4">
+              <AccordionItem value="maintenance" className="bg-white border-gray-200 rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-6 hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <RefreshCw className="w-5 h-5 text-emerald-600" />
+                    <span className="text-gray-900 font-semibold">Manutenção do Sistema</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <Button
+                      onClick={handleForceSync}
+                      disabled={isSyncing}
+                      variant="outline"
+                      className="bg-white border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                      size="sm">
+
+                      {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                      Sincronizar
+                    </Button>
+                    <Button
+                      onClick={handleResetTestData}
+                      disabled={isResetting}
+                      variant="outline"
+                      className="bg-white border-red-300 text-red-600 hover:bg-red-50"
+                      size="sm">
+
+                      {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                      Reset Teste
+                    </Button>
+                    <Button
+                      onClick={handleResetAllBalances}
+                      disabled={isResetting}
+                      variant="outline"
+                      className="bg-white border-orange-300 text-orange-600 hover:bg-orange-50"
+                      size="sm">
+
+                      {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                      Zerar Saldos
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
               <AccordionItem value="grant" className="bg-white border-gray-200 rounded-lg overflow-hidden">
                 <AccordionTrigger className="px-6 hover:bg-gray-50">
                   <div className="flex items-center gap-3">
