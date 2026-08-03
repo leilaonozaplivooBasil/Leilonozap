@@ -178,6 +178,24 @@ function _operatorActor() {
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
   if (!op) return { _skip: true };
+  // 🩹 app_users tem rota dedicada (adminUpdateUser) — entityWrite recusa essa tabela
+  // de propósito (dados sensíveis de usuário/cargo). create continua no fallback
+  // anon/Supabase direto, pois adminUpdateUser não cobre criação.
+  if (table === 'app_users') {
+    if (action === 'create') return { _skip: true };
+    if (action === 'update') {
+      try {
+        const resp = await fetch('/api/functions/adminUpdateUser', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: id, updates: payload, actorId: op.id }),
+        });
+        const j = await resp.json();
+        if (j.success) return { success: true, rows: [j.user] };
+        return { success: false, error: j.error, details: j.details };
+      } catch (e) { return { success: false, error: String(e?.message || e) }; }
+    }
+    // delete: mantém o comportamento atual (fora de escopo desta correção)
+  }
   try {
     const resp = await fetch('/api/functions/entityWrite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
