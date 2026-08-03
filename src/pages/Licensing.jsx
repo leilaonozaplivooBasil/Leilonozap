@@ -1092,13 +1092,13 @@ const DashboardContent = ({ user, isAdmin }) => {
         {(userLevels.includes('licenciado') || isAdmin) &&
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <TabsList className={`${'bg-white border-gray-200'} flex-wrap h-auto gap-2 p-2`}>
-                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm flex items-center gap-1.5"><Store className="w-3.5 h-3.5" />Sua Loja Virtual</TabsTrigger>
-                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5" />Relatório</TabsTrigger>
-                <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm flex items-center gap-1.5"><Package className="w-3.5 h-3.5" />Pedidos</TabsTrigger>
-                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />Venda Direta ({myClients.length})</TabsTrigger>
-                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm flex items-center gap-1.5"><Handshake className="w-3.5 h-3.5" />Vendedores</TabsTrigger>
-                <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" />Comissões</TabsTrigger>
+              <TabsList className="bg-white border border-nz-marrom/20 flex-wrap h-auto gap-2 p-2">
+                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Store className="w-3.5 h-3.5" />Sua Loja Virtual</TabsTrigger>
+                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><BarChart3 className="w-3.5 h-3.5" />Relatório</TabsTrigger>
+                <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Package className="w-3.5 h-3.5" />Pedidos</TabsTrigger>
+                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Users className="w-3.5 h-3.5" />Venda Direta ({myClients.length})</TabsTrigger>
+                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Handshake className="w-3.5 h-3.5" />Vendedores</TabsTrigger>
+                <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Wallet className="w-3.5 h-3.5" />Comissões</TabsTrigger>
               </TabsList>
 
               <TabsContent value="catalogo-home" className="mt-6">
@@ -1154,9 +1154,9 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <TabsContent value="catalogo-comissoes" className="mt-6">
                 <Tabs defaultValue="extrato" className="w-full">
-                  <TabsList className={'bg-white border-gray-200'}>
-                    <TabsTrigger value="extrato">Extrato</TabsTrigger>
-                    <TabsTrigger value="vendas">Vendas</TabsTrigger>
+                  <TabsList className="bg-white border border-nz-marrom/20">
+                    <TabsTrigger value="extrato" className="border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40">Extrato</TabsTrigger>
+                    <TabsTrigger value="vendas" className="border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40">Vendas</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="extrato" className="mt-4">

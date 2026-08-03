@@ -36,7 +36,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
         </div>
 
         {/* Explicação dos Canais */}
-        <div className="p-4 rounded-lg bg-nz-cinza-fundo">
+        <div className="p-4 rounded-lg bg-nz-marrom-fundo/50 border border-nz-marrom/15">
           <h4 className="font-semibold mb-3 text-gray-900">Como funcionam suas comissões</h4>
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">
@@ -133,7 +133,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
                 </TableHeader>
                 <TableBody>
                   {myCommissionRecords.map((rec) => (
-                    <TableRow key={rec.id} className="border-nz-borda">
+                    <TableRow key={rec.id} className="border-nz-marrom/15 hover:bg-nz-marrom-fundo/30">
                       <TableCell className="text-gray-700 text-sm">{new Date(rec.created_date).toLocaleString('pt-BR')}</TableCell>
                       <TableCell className="text-gray-700 text-sm">{rec.sale_type === 'catalog' ? 'Loja Virtual' : 'Leilão'}</TableCell>
                       <TableCell className="text-gray-700 text-sm">{rec.role}</TableCell>

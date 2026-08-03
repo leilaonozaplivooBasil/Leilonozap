@@ -50,7 +50,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
               <Button
                 onClick={onWithdraw}
                 variant="outline"
-                className="border-gray-300 text-gray-700 font-medium h-11 text-sm flex-1 min-w-[130px] hover:bg-gray-50">
+                className="border-nz-marrom/30 text-gray-700 font-medium h-11 text-sm flex-1 min-w-[130px] hover:bg-nz-marrom-fundo/40">
                 <Wallet className="w-4 h-4 mr-2" />
                 Sacar
               </Button>
@@ -58,7 +58,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
                 <Button
                   onClick={onTransfer}
                   variant="outline"
-                  className="border-gray-300 text-gray-700 font-medium h-11 text-sm w-full hover:bg-gray-50">
+                  className="border-nz-marrom/30 text-gray-700 font-medium h-11 text-sm w-full hover:bg-nz-marrom-fundo/40">
                   <ArrowRightLeft className="w-4 h-4 mr-2" />
                   Transferir Saldo
                 </Button>

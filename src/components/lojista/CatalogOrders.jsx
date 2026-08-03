@@ -94,14 +94,14 @@ export default function CatalogOrders({ catalogSales = [], currentUserId }) {
                     <th className="px-4 py-3 text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-nz-borda">
+                <tbody className="divide-y divide-nz-marrom/15">
                   {filteredOrders.map((order) => {
                     const date = new Date(order.created_date);
                     const dateStr = date.toLocaleDateString('pt-BR');
                     const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     
                     return (
-                      <tr key={order.id} className="hover:bg-gray-50 transition">
+                      <tr key={order.id} className="hover:bg-nz-marrom-fundo/30 transition">
                         <td className="px-4 py-4 text-gray-600 text-xs">
                           <div>{dateStr}</div>
                           <div className="text-gray-400 text-xs mt-1">{timeStr}</div>

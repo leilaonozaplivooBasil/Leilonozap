@@ -18,7 +18,7 @@ export default function LicensingSidebar({ user, shortName, activeTab, onTabChan
 
   return (
     <aside className="hidden md:flex flex-col items-center w-20 shrink-0 bg-white border-r border-gray-200 py-5 gap-1 sticky top-0 h-screen overflow-y-auto">
-      <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm mb-1 overflow-hidden shrink-0">
+      <div className="w-10 h-10 rounded-full bg-nz-verde text-white flex items-center justify-center font-bold text-sm mb-1 overflow-hidden shrink-0">
         {user?.avatar_url ? (
           <img src={user.avatar_url} alt={shortName} className="w-full h-full object-cover" />
         ) : (initials || '?')}
@@ -35,7 +35,7 @@ export default function LicensingSidebar({ user, shortName, activeTab, onTabChan
               type="button"
               title={item.label}
               onClick={() => onTabChange(item.value)}
-              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl transition-colors ${active ? 'bg-emerald-50 text-emerald-600' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-colors ${active ? 'bg-nz-verde-fundo text-nz-verde border-nz-verde/30' : 'text-gray-400 border-nz-marrom/15 hover:bg-nz-marrom-fundo/40 hover:text-gray-600'}`}
             >
               <Icon className="w-5 h-5" />
               <span className="text-[9px] font-medium leading-none text-center px-1">{item.label}</span>
