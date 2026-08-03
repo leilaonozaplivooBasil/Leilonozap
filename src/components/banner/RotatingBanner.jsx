@@ -84,9 +84,9 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       playsInline
                       preload={shouldEagerLoad ? 'auto' : 'metadata'}
                       className="w-full h-full object-cover cursor-pointer"
-                      style={{ objectPosition: 'center 65%' }}
+                      style={{ objectPosition: 'center 20%' }}
                     />
-                    <span className="nz-video-caption absolute bottom-3 right-3 md:bottom-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
+                    <span className="nz-video-caption absolute top-3 right-3 md:top-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
                       Torne-se um <span className="text-nz-verde-claro">Vendedor</span>, <span className="text-nz-verde-claro">Licenciado</span> ou <span className="text-nz-verde-claro">Influencer</span>
                     </span>
                   </a>
@@ -100,9 +100,9 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       playsInline
                       preload={shouldEagerLoad ? 'auto' : 'metadata'}
                       className="w-full h-full object-cover"
-                      style={{ objectPosition: 'center 65%' }}
+                      style={{ objectPosition: 'center 20%' }}
                     />
-                    <span className="nz-video-caption absolute bottom-3 right-3 md:bottom-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
+                    <span className="nz-video-caption absolute top-3 right-3 md:top-5 md:right-5 z-10 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold tracking-wide max-w-[75%] text-right">
                       Torne-se um <span className="text-nz-verde-claro">Vendedor</span>, <span className="text-nz-verde-claro">Licenciado</span> ou <span className="text-nz-verde-claro">Influencer</span>
                     </span>
                   </div>
