@@ -103,7 +103,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
                 <p className="text-gray-500 text-sm">Faturamento</p>
                 <p className="text-2xl font-bold text-nz-verde mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
               </div>
-              <TrendingUp className="w-10 h-10 text-nz-marrom" />
+              <TrendingUp className="w-10 h-10 text-nz-verde" />
             </div>
           </CardContent>
         </Card>
