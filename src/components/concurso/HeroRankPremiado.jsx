@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users } from 'lucide-react';
-import SeloTrofeu from '@/components/concurso/SeloTrofeu';
+import PlacaRankPremiado from '@/components/concurso/PlacaRankPremiado';
 
 // Banner de topo do Rank Premiado — full-width, claro, no estilo "premiação".
 // Só apresentação: o botão rola pra seção que já existe na página.
@@ -13,10 +13,8 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
   return (
     <section className="w-full bg-white border-b border-nz-borda">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-20 text-center">
-        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-nz-ouro-fundo border border-nz-ouro-claro">
-          <SeloTrofeu size={26} />
-          <span className="text-[11px] sm:text-xs font-black uppercase tracking-[.2em] text-nz-ouro">Rank Premiado</span>
-        </div>
+        {/* Selo oficial — exatamente a placa da barra de navegação */}
+        <PlacaRankPremiado escala={1.15} />
 
         <h1 className="mt-6 font-black tracking-tight text-nz-tinta" style={{ fontSize: 'clamp(2rem,6vw,4rem)', lineHeight: 1.05 }}>
           Suba no ranking.<br className="hidden sm:block" /> Leve o prêmio.
