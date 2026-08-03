@@ -31,7 +31,13 @@ export default async function handler(req, res) {
       : `Cadastro grátis! Comissão de ${pct}% nas suas vendas. Faça parte da rede da Leilão NoZap.`;
 
     const ogImage = `${SITE}/api/og?cargo=${encodeURIComponent(cargo)}`;
-    const destino = `${SITE}/Cadastro?cargo=${encodeURIComponent(cargo)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`;
+    // 🎯 Cargos com página de vendas dedicada vão direto pra ela; os demais
+    // (ex: parceiro, que não tem página própria) mantêm o funil /Cadastro.
+    const DESTINO_DEDICADO = { influenciador: '/Licensing', vendedor: '/SejaVendedor', licenciado: '/SejaLicenciado' };
+    const refQS = ref ? `ref=${encodeURIComponent(ref)}` : '';
+    const destino = DESTINO_DEDICADO[cargo]
+      ? `${SITE}${DESTINO_DEDICADO[cargo]}${refQS ? `?${refQS}` : ''}`
+      : `${SITE}/Cadastro?cargo=${encodeURIComponent(cargo)}${refQS ? `&${refQS}` : ''}`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600');

@@ -6,11 +6,24 @@ import { Navigate, useParams } from 'react-router-dom';
 // qualquer motivo o navegador receber o index.html nessa URL (rewrite fora do ar,
 // cache antigo, deploy defasado), o app ANTES caía no 404 — o usuário via "Página não
 // encontrada" ao clicar no link. Agora entra aqui e vai direto pro funil de cadastro.
+// 🎯 Cargos com página de vendas dedicada — vão direto pra ela em vez do funil
+// genérico /Cadastro. Parceiro (e qualquer outro cargo) não tem página própria,
+// então mantém o comportamento antigo.
+const DESTINO_DEDICADO = {
+  influenciador: '/Licensing',
+  vendedor: '/SejaVendedor',
+  licenciado: '/SejaLicenciado',
+};
+
 export default function LinkCurtoConvite() {
   const { cargo } = useParams();
   const busca = new URLSearchParams(window.location.search);
   const ref = busca.get('ref');
   if (!cargo) return <Navigate to="/" replace />;
-  const destino = `/Cadastro?cargo=${encodeURIComponent(cargo)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`;
+  const refQS = ref ? `ref=${encodeURIComponent(ref)}` : '';
+  const dedicado = DESTINO_DEDICADO[cargo];
+  const destino = dedicado
+    ? `${dedicado}${refQS ? `?${refQS}` : ''}`
+    : `/Cadastro?cargo=${encodeURIComponent(cargo)}${refQS ? `&${refQS}` : ''}`;
   return <Navigate to={destino} replace />;
 }
