@@ -104,12 +104,12 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       className="w-full h-full object-cover cursor-pointer"
                       style={{ objectPosition: 'center 20%' }}
                     />
-                    <div className="nz-video-caption absolute top-3 right-3 md:top-6 md:right-6 z-10 max-w-[82%] sm:max-w-[65%] rounded-xl bg-black/70 backdrop-blur-sm px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-right">
-                      <p className="text-sm sm:text-lg font-bold text-white leading-tight">
+                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-8 sm:pb-9 md:pb-12 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
+                      <p className="text-sm sm:text-lg md:text-xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
                         {banner.caption_title || banner.title}
                       </p>
                       {banner.caption_subtitle && (
-                        <p className="mt-1 text-[11px] sm:text-sm text-nz-verde-claro font-medium leading-snug">
+                        <p className="mt-1 text-[11px] sm:text-sm md:text-base text-nz-verde-claro font-medium leading-snug max-w-[88%] sm:max-w-[70%]">
                           {banner.caption_subtitle}
                         </p>
                       )}
@@ -127,12 +127,12 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                       className="w-full h-full object-cover"
                       style={{ objectPosition: 'center 20%' }}
                     />
-                    <div className="nz-video-caption absolute top-3 right-3 md:top-6 md:right-6 z-10 max-w-[82%] sm:max-w-[65%] rounded-xl bg-black/70 backdrop-blur-sm px-3.5 py-2.5 sm:px-5 sm:py-3.5 text-right">
-                      <p className="text-sm sm:text-lg font-bold text-white leading-tight">
+                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-8 sm:pb-9 md:pb-12 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
+                      <p className="text-sm sm:text-lg md:text-xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
                         {banner.caption_title || banner.title}
                       </p>
                       {banner.caption_subtitle && (
-                        <p className="mt-1 text-[11px] sm:text-sm text-nz-verde-claro font-medium leading-snug">
+                        <p className="mt-1 text-[11px] sm:text-sm md:text-base text-nz-verde-claro font-medium leading-snug max-w-[88%] sm:max-w-[70%]">
                           {banner.caption_subtitle}
                         </p>
                       )}
@@ -226,7 +226,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
 
       {/* Indicadores */}
       {filteredBanners.length > 1 && (
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1">
+        <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
           {filteredBanners.map((_, index) => (
             // 📱 o pontinho continua com 8px de desenho, mas o botão tem 44px de
             // área de toque — no celular era praticamente impossível acertar.
