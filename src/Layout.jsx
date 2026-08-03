@@ -726,7 +726,8 @@ export default function Layout({ children, currentPageName }) {
   const isLandingPage = currentPageName === 'Landing';
   // 🌿 Na Recepção a barra escura destoava da vitrine clean: só ali ela vira clara.
   // Em TODAS as outras páginas o cabeçalho continua exatamente como sempre foi.
-  const isRecepcao = currentPageName === 'Recepcao';
+  // Barra clara também na Live Shop (tema branco co-branded com a Livoo).
+  const isRecepcao = currentPageName === 'Recepcao' || currentPageName === 'LiveShopNoZap';
 
   const shouldShowLoading = isLoading;
 
