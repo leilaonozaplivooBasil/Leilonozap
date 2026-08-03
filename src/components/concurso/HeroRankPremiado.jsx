@@ -31,7 +31,7 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
         </button>
 
         {total > 0 && (
-          <p className="mt-5 text-xs text-nz-tinta-fraca inline-flex items-center gap-1.5 justify-center">
+          <p className="mt-5 text-xs text-nz-tinta-fraca flex items-center gap-1.5 justify-center">
             <Users className="w-3.5 h-3.5" /> {total} pessoas já estão concorrendo
           </p>
         )}
