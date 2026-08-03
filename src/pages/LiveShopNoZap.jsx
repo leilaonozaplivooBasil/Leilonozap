@@ -223,10 +223,10 @@ export default function LiveShopNoZap() {
           </div>
 
           <div className="livoo-card rounded-2xl p-5 lg:col-start-1 lg:row-start-2">
-              <h2 className="text-lg font-bold text-white">
-                Live Shop Leilão NoZap <span className="text-livoo-rosa-claro">×</span> Livoo
+              <h2 className="text-lg font-bold text-nz-tinta">
+                Live Shop Leilão NoZap <span className="text-livoo-rosa">×</span> Livoo
               </h2>
-              <p className="mt-1 text-sm text-white/75">
+              <p className="mt-1 text-sm text-nz-tinta-fraca">
                 Assista à live aqui mesmo e dê seu lance sem sair da página. Arremates e devoluções
                 com preço de disputa — e entrega expressa da malha Livoo.
               </p>

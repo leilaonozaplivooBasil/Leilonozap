@@ -26,7 +26,7 @@ export default function LivooPlayer({ streamUrl, pauseImageUrl, isPaused }) {
   const podeTocar = !!embed && !falhou && !isPaused;
 
   return (
-    <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-livoo-vinho border border-livoo-rosa/40 livoo-brilho-forte">
+    <div className="relative w-full aspect-video overflow-hidden rounded-2xl bg-nz-cinza-fundo border border-livoo-rosa/25 livoo-brilho-forte">
       {podeTocar && (
         <iframe
           src={embed}
@@ -48,10 +48,10 @@ export default function LivooPlayer({ streamUrl, pauseImageUrl, isPaused }) {
           <div className="relative flex flex-col items-center gap-4">
             <LivooMarca halo />
             <div>
-              <p className="text-white font-bold text-lg">
+              <p className="text-nz-tinta font-bold text-lg">
                 {isPaused ? "Live pausada — voltamos em breve" : "Preparando a transmissão…"}
               </p>
-              <p className="text-white/70 text-sm mt-1">
+              <p className="text-nz-tinta-fraca text-sm mt-1">
                 {isPaused
                   ? "Fica de olho: já retomamos os arremates."
                   : "A live aparece aqui mesmo, sem sair do Leilão NoZap."}
@@ -62,7 +62,7 @@ export default function LivooPlayer({ streamUrl, pauseImageUrl, isPaused }) {
                 asChild
                 variant="outline"
                 size="sm"
-                className="min-h-[44px] bg-transparent border-livoo-rosa-claro/40 text-white/70 hover:bg-livoo-rosa hover:text-white"
+                className="min-h-[44px] bg-white border-livoo-rosa/40 text-livoo-rosa hover:bg-livoo-rosa hover:text-white"
               >
                 <a href={LIVOO_LIVE} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4" /> Ver na Livoo Live

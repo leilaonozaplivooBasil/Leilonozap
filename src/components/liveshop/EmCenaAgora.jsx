@@ -11,9 +11,9 @@ export default function EmCenaAgora({ produto, bidAmount, setBidAmount, onBid, i
   if (!produto) {
     return (
       <Card className="livoo-card rounded-2xl p-8 text-center">
-        <Gavel className="w-16 h-16 mx-auto text-livoo-rosa-claro animate-bounce" />
-        <h3 className="mt-4 text-xl font-bold text-white">Fica de olho…</h3>
-        <p className="text-white/70">O próximo leilão já já começa.</p>
+        <Gavel className="w-16 h-16 mx-auto text-livoo-rosa animate-bounce" />
+        <h3 className="mt-4 text-xl font-bold text-nz-tinta">Fica de olho…</h3>
+        <p className="text-nz-tinta-fraca">O próximo leilão já já começa.</p>
       </Card>
     );
   }
@@ -27,11 +27,11 @@ export default function EmCenaAgora({ produto, bidAmount, setBidAmount, onBid, i
         <Gavel className="h-4 w-4 text-white" />
       </div>
       <div className="p-5">
-        <p className="line-clamp-2 text-sm font-semibold text-white">{produto.title}</p>
-        <div className="mt-4 rounded-xl bg-livoo-vinho/70 py-4 text-center">
-          <p className="text-xs text-white/70">Lance atual</p>
-          <p className="text-4xl font-bold text-nz-verde-claro">R$ {fmtBR(produto.current_price)}</p>
-          <p className="mt-1 text-[11px] text-white/60">Incremento mínimo: + R$ {fmtBR(produto.increment)}</p>
+        <p className="line-clamp-2 text-sm font-semibold text-nz-tinta">{produto.title}</p>
+        <div className="mt-4 rounded-xl bg-nz-cinza-fundo border border-nz-borda py-4 text-center">
+          <p className="text-xs text-nz-tinta-fraca">Lance atual</p>
+          <p className="text-4xl font-bold text-nz-verde">R$ {fmtBR(produto.current_price)}</p>
+          <p className="mt-1 text-[11px] text-nz-tinta-fraca">Incremento mínimo: + R$ {fmtBR(produto.increment)}</p>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           {[1, 2, 5].map((mult) => {
@@ -58,7 +58,7 @@ export default function EmCenaAgora({ produto, bidAmount, setBidAmount, onBid, i
             onChange={(e) => setBidAmount(e.target.value)}
             placeholder="Valor personalizado"
             disabled={isSubmitting || !logado}
-            className="min-h-[44px] flex-1 border-livoo-rosa/40 bg-livoo-vinho/70 text-white placeholder:text-white/50"
+            className="min-h-[44px] flex-1 border-livoo-rosa/30 bg-white text-nz-tinta placeholder:text-nz-tinta-fraca"
           />
           <Button
             onClick={() => onBid()}
@@ -68,7 +68,7 @@ export default function EmCenaAgora({ produto, bidAmount, setBidAmount, onBid, i
             {isSubmitting ? "..." : "Dar Lance"}
           </Button>
         </div>
-        {!logado && <p className="mt-2 text-center text-xs text-white/60">Faça login para participar</p>}
+        {!logado && <p className="mt-2 text-center text-xs text-nz-tinta-fraca">Faça login para participar</p>}
       </div>
     </Card>
   );

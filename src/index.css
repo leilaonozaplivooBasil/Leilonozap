@@ -51,22 +51,33 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
   }
   /* 🩷 Live Shop co-branded — degradês e brilhos rosa Livoo × verde NoZap.
      Ficam em utilities pra o JSX usar classe (nada de cor chumbada no componente). */
+  /* ☀️ Tema CLARO da Live Shop (padrão da Recepção): fundo branco/cinza-claro,
+     com o rosa Livoo entrando só como destaque — nada de preto por baixo. */
   .livoo-superficie {
     background:
-      linear-gradient(160deg, rgba(217, 22, 116, 0.18) 0%, rgba(26, 10, 20, 0) 55%),
-      linear-gradient(0deg, var(--livoo-vinho), var(--livoo-vinho));
+      linear-gradient(160deg, rgba(217, 22, 116, 0.07) 0%, rgba(255, 255, 255, 0) 55%),
+      linear-gradient(0deg, var(--nz-cinza-fundo), #ffffff);
   }
   .livoo-card {
-    background: linear-gradient(150deg, rgba(217, 22, 116, 0.16), rgba(255, 255, 255, 0.05));
-    border: 1px solid rgba(227, 85, 156, 0.28);
+    background: #ffffff;
+    border: 1px solid rgba(217, 22, 116, 0.18);
+    box-shadow: 0 6px 20px rgba(217, 22, 116, 0.07);
   }
   .livoo-faixa {
     background: linear-gradient(90deg, var(--livoo-rosa-escuro), var(--livoo-rosa) 55%, var(--livoo-rosa-claro));
   }
-  .livoo-brilho { box-shadow: 0 12px 40px rgba(217, 22, 116, 0.35); }
-  .livoo-brilho-forte { box-shadow: 0 0 0 1px rgba(227, 85, 156, 0.35), 0 18px 60px rgba(217, 22, 116, 0.45); }
+  .livoo-brilho { box-shadow: 0 10px 30px rgba(217, 22, 116, 0.14); }
+  .livoo-brilho-forte { box-shadow: 0 0 0 1px rgba(217, 22, 116, 0.18), 0 16px 44px rgba(217, 22, 116, 0.16); }
   .livoo-veu {
-    background: linear-gradient(0deg, rgba(11, 16, 24, 0.85), rgba(11, 16, 24, 0.25));
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.7));
+  }
+  /* 🔗 Linha pontilhada que "conecta" Leilão NoZap e Livoo no cabeçalho */
+  @keyframes livooFluxo {
+    to { stroke-dashoffset: -24; }
+  }
+  .livoo-fluxo { animation: livooFluxo 1.1s linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .livoo-fluxo { animation: none; }
   }
   .nz-no-scrollbar::-webkit-scrollbar { display: none; }
   .nz-no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
