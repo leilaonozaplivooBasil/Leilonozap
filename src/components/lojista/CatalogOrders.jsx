@@ -31,7 +31,7 @@ const STATUS_LABELS = {
   canceled: 'Cancelado'
 };
 
-export default function CatalogOrders({ catalogSales = [] }) {
+export default function CatalogOrders({ catalogSales = [], currentUserId }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -106,7 +106,12 @@ export default function CatalogOrders({ catalogSales = [] }) {
                           <div>{dateStr}</div>
                           <div className="text-gray-500 text-xs mt-1">{timeStr}</div>
                         </td>
-                        <td className="px-4 py-4 text-white font-medium">{order.buyer_name || 'N/A'}</td>
+                        <td className="px-4 py-4 text-white font-medium">
+                          {order.buyer_name || 'N/A'}
+                          {currentUserId && order.buyer_id === currentUserId && (
+                            <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-500/30 border">Compra Pessoal</Badge>
+                          )}
+                        </td>
                         <td className="px-4 py-4 text-gray-300">{order.product_title || 'Produto'}</td>
                         <td className="px-4 py-4">
                           <Badge className={`${STATUS_COLORS[order.status] || 'bg-gray-700 text-gray-300 border-gray-600'} border`}>
