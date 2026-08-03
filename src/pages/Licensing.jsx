@@ -46,6 +46,7 @@ import SellersListPanel from '../components/sellers/SellersListPanel';
 import DashboardTabsList from '../components/licensing/DashboardTabsList';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
+import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 
 const Product = base44.entities.Product;
@@ -1288,16 +1289,11 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <CardHeader>
                     <div>
                       <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
-                      <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Compartilhe o link abaixo — a pessoa se cadastra, paga e já entra na sua rede (10% por venda).</CardDescription>
+                      <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua rede.</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {user.referral_code &&
-                      <StoreShareLinkCard
-                        storeLink={`https://leilaonozap.net/SejaVendedor?ref=${user.referral_code}`}
-                        isSaiDeBaixo={isSaiDeBaixo}
-                      />
-                    }
+                    <RoleLinksGrid referralCode={user.referral_code} isSaiDeBaixo={isSaiDeBaixo} />
                     <div className="flex justify-end">
                       <Button onClick={() => setShowSellerModal(true)} variant="outline" size="sm" className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-600 text-gray-300'}>
                         Cadastro manual (avançado)
