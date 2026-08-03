@@ -44,6 +44,8 @@ import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import DashboardTabsList from '../components/licensing/DashboardTabsList';
+import MyStoreTab from '../components/licensing/MyStoreTab';
+import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 
 const Product = base44.entities.Product;
@@ -97,7 +99,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     try {
       const params = new URLSearchParams(window.location.search);
       const t = params.get('tab');
-      const VALID_TABS = ['visao-geral', 'catalogo', 'plano-carreira', 'admin'];
+      const VALID_TABS = ['visao-geral', 'catalogo', 'minha-loja', 'plano-carreira', 'admin'];
       return VALID_TABS.includes(t) ? t : 'visao-geral';
     } catch {
       return 'visao-geral';
@@ -1225,8 +1227,15 @@ const DashboardContent = ({ user, isAdmin }) => {
           isSaiDeBaixo={isSaiDeBaixo}
           userLevels={userLevels}
           isAdmin={isAdmin}
+          isSeller={user.is_seller === true}
           myClientsCount={myClients.length}
         />
+
+        {(userLevels.includes('licenciado') || user.is_seller === true) && !isAdmin &&
+          <TabsContent value="minha-loja" className="space-y-6">
+            <MyStoreTab user={user} isSaiDeBaixo={isSaiDeBaixo} />
+          </TabsContent>
+        }
 
 
 
@@ -1277,15 +1286,23 @@ const DashboardContent = ({ user, isAdmin }) => {
               <TabsContent value="catalogo-vendedores" className="mt-6">
                 <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
                   <CardHeader>
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
-                        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Cadastre vendedores que vão vender pela sua rede (10% por venda).</CardDescription>
-                      </div>
-                      <Button onClick={() => setShowSellerModal(true)} className="bg-green-600 hover:bg-green-700 text-white min-h-[44px]">+ Cadastrar Vendedor</Button>
+                    <div>
+                      <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Meus Vendedores</CardTitle>
+                      <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Compartilhe o link abaixo — a pessoa se cadastra, paga e já entra na sua rede (10% por venda).</CardDescription>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
+                    {user.referral_code &&
+                      <StoreShareLinkCard
+                        storeLink={`https://leilaonozap.net/SejaVendedor?ref=${user.referral_code}`}
+                        isSaiDeBaixo={isSaiDeBaixo}
+                      />
+                    }
+                    <div className="flex justify-end">
+                      <Button onClick={() => setShowSellerModal(true)} variant="outline" size="sm" className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-600 text-gray-300'}>
+                        Cadastro manual (avançado)
+                      </Button>
+                    </div>
                     <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
                   </CardContent>
                 </Card>

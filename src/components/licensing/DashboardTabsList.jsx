@@ -1,16 +1,17 @@
 import React from 'react';
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, ShoppingBag, Award, Shield } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Store } from 'lucide-react';
 
 const TAB_ITEMS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
   { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado') || ctx.isAdmin },
+  { value: 'minha-loja', label: 'Minha Loja', icon: Store, show: (ctx) => (ctx.userLevels.includes('licenciado') || ctx.isSeller) && !ctx.isAdmin },
   { value: 'plano-carreira', label: 'Carreira', icon: Award, show: () => true },
   { value: 'admin', label: 'Admin', icon: Shield, show: (ctx) => ctx.isAdmin },
 ];
 
-export default function DashboardTabsList({ isSaiDeBaixo, userLevels, isAdmin, myClientsCount }) {
-  const ctx = { userLevels, isAdmin, myClientsCount };
+export default function DashboardTabsList({ isSaiDeBaixo, userLevels, isAdmin, isSeller, myClientsCount }) {
+  const ctx = { userLevels, isAdmin, isSeller, myClientsCount };
 
   return (
     <div className={`rounded-xl border p-1.5 shadow-lg bg-gradient-to-r from-gray-900 ${isSaiDeBaixo ? 'via-red-950/10 border-red-500/20' : 'via-emerald-950/10 border-emerald-500/20'} to-gray-900`}>

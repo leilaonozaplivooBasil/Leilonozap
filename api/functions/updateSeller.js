@@ -32,10 +32,15 @@ export default async function handler(req, res) {
 
     const ehAdmin = ['admin', 'super_admin'].includes(actor.role);
     const ehDono = seller.referred_by_id === actor.id;
-    if (!ehAdmin && !ehDono) return res.status(200).json({ success: false, error: 'Você só edita os vendedores que cadastrou.' });
+    const ehProprio = sellerId === actor.id;
+    if (!ehAdmin && !ehDono && !ehProprio) return res.status(200).json({ success: false, error: 'Você só edita os vendedores que cadastrou.' });
+
+    // 🏪 Auto-edição ("Minha Loja"): o próprio vendedor/licenciado só pode alterar
+    // nome e foto da loja — nunca e-mail, telefone, CPF ou nome de cadastro.
+    const camposPermitidos = ehProprio && !ehAdmin && !ehDono ? ['store_name', 'avatar_url'] : CAMPOS;
 
     const patch = {};
-    for (const k of CAMPOS) {
+    for (const k of camposPermitidos) {
       if (!(k in body)) continue;
       let v = body[k];
       if (k === 'phone' || k === 'cpf') v = String(v || '').replace(/\D/g, '') || null;
