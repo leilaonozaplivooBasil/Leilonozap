@@ -33,7 +33,11 @@ export default async function handler(req, res) {
       sb(`catalog_sales?select=${SALE_COLS}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`).then(r => r.json()).catch(() => []),
       sb(`catalog_sales?select=${SALE_COLS}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
       sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`).then(r => r.json()).catch(() => []),
-      sb(`auction_messages?select=id,auction_id,bid_amount,created_date&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
+      // 🚚 PONTO 85 — frete_amount e timestamp ENTRARAM no select. Causa-raiz do frete
+      // que nunca aparecia: o PostgREST devolve SOMENTE as colunas pedidas, então
+      // m.frete_amount vinha undefined → 0 → a tela nunca tinha o que mostrar.
+      // timestamp serve de data alternativa para lances antigos com created_date nulo.
+      sb(`auction_messages?select=id,auction_id,bid_amount,created_date,timestamp,frete_amount&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
     ]);
 
     const transactions = [];
@@ -132,6 +136,14 @@ export default async function handler(req, res) {
       // auctions.frete_reservado_valor. Lances gravados ANTES da coluna existir voltam
       // 0 e simplesmente não exibem a linha de frete, sem quebrar nada.
       const freteAmount = Number(m.frete_amount) || 0;
+      // 🏷️ PONTO 85 — rótulo do frete conforme o estado do lance. Enviado para a tela
+      // poder explicar ao cliente se o frete está reservado ou se já voltou pro saldo
+      // (a devolução do frete junto do lance já acontece no servidor, no submitAtomicBid).
+      // ⚠️ O WalletDrawer ainda não lê este campo — exibi-lo exige alterar a tela, o que
+      // NÃO foi autorizado neste ponto. Campo extra é inofensivo: quem não lê, ignora.
+      const freteLabel = freteAmount > 0
+        ? (bidState === 'liderando' ? 'reservado' : bidState === 'superado' ? 'devolvido junto' : null)
+        : null;
       transactions.push({
         id: `bid-${m.id}`,
         type: 'bid',
@@ -141,11 +153,19 @@ export default async function handler(req, res) {
         status: 'info',
         bid_state: bidState,
         frete_amount: freteAmount,
-        date: m.created_date,
+        frete_label: freteLabel,
+        // 🕐 PONTO 85 — lances gravados ANTES do PONTO 84 nasceram com created_date nulo
+        // e desapareciam da lista visível. timestamp é a data alternativa real.
+        date: m.created_date || m.timestamp || null,
       });
     }
 
-    transactions.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    // 🕐 PONTO 85 — ordenação à prova de data ausente/inválida. Antes, uma data nula virava
+    // NaN na subtração, e comparador que devolve NaN deixa a ordenação IMPREVISÍVEL: o item
+    // podia parar em qualquer posição e escapar dos 15 primeiros que a tela mostra.
+    // Agora data inválida vale 0 (vai para o fim, de forma determinística).
+    const ts = (d) => { const t = new Date(d || 0).getTime(); return Number.isFinite(t) ? t : 0; };
+    transactions.sort((a, b) => ts(b.date) - ts(a.date));
 
     return res.status(200).json({ success: true, transactions });
   } catch (e) {

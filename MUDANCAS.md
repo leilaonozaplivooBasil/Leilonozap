@@ -8,6 +8,43 @@
 
 ---
 
+## 04/08/2026 — PONTO 85: frete não aparecia (erro meu) + lance que "sumia" do extrato
+
+- **Arquivo único:** `api/functions/getDigitalWalletHistory.js` — **só leitura/exibição**.
+- **🔴 ERRO MEU NA CAMADA 2 DO PONTO 84 (regressão):** troquei a fonte do frete para
+  `m.frete_amount`, mas **esqueci de incluir a coluna no SELECT** da consulta a
+  `auction_messages` (pedia só `id,auction_id,bid_amount,created_date`). O PostgREST devolve
+  **apenas as colunas pedidas**, então `m.frete_amount` vinha `undefined` → `0` → a condição
+  da tela (`tx.frete_amount > 0`, já existente no `WalletDrawer`) nunca era verdadeira.
+  **Foi regressão**, não bug antigo: antes da camada 2 o frete do LÍDER aparecia, porque vinha
+  de `auctions.frete_reservado_valor`, que estava no outro select. **Regra permanente:** trocar
+  a fonte de um campo obriga a conferir o SELECT — no PostgREST, campo fora do select não é
+  erro, é silêncio (`undefined`).
+- **Lance de R$ 1,60 "desaparecido" — não sumiu, afundou:** lances gravados ANTES do deploy do
+  PONTO 84 nasceram com `created_date` NULO. Duas coisas somadas escondiam o item: (1) `new
+  Date(null).getTime()` → `NaN`, e **comparador que devolve NaN torna a ordenação
+  imprevisível** (o item podia parar em qualquer posição); (2) a tela exibe só os **15
+  primeiros**. Correções: `timestamp` entrou no select e virou data alternativa
+  (`created_date || timestamp`), recuperando a data REAL sem escrever nada no banco; e a
+  ordenação passou a tratar data inválida como 0 (vai para o fim de forma determinística).
+- **Rótulo do frete (item 3 do pedido) — PAREI, como combinado:** o servidor passou a enviar
+  `frete_label` (`reservado` / `devolvido junto`), mas **o `WalletDrawer` não foi tocado** e
+  ainda mostra o texto fixo. Exibir o rótulo exige alterar a tela — **aguardando autorização**.
+  Campo extra no JSON é inofensivo: quem não lê, ignora.
+- **A devolução do frete junto do lance JÁ funcionava** no servidor
+  (`releaseHold(currentPrice + previousFrete)` no `submitAtomicBid`) — o que faltava era
+  **mostrar**. Nenhum centavo estava perdido; era exibição.
+- **NÃO foi tocado:** `submitAtomicBid`, `reserveBidBalance`, `releaseBidHold`,
+  `_lib/bidHold.js`, `finalizeAuctionCore`, comissões, checkout, estoque, auth, `WalletDrawer`,
+  e as outras 3 consultas do extrato (vendas, minhas vendas, saques) — intactas.
+- **⚠️ Validação:** `/api/functions/*` **não executa no preview** — não foi testado
+  automaticamente. Validado por releitura: os campos novos estão no select e nenhuma outra
+  consulta mudou. **Teste real em produção:** abrir a carteira → o lance de R$ 1,60 deve
+  aparecer com data, e os lances com frete devem mostrar "inclui frete de R$ X".
+- **Risco:** 🟢 Baixo — leitura pura, nenhuma escrita, nenhum valor recalculado.
+
+---
+
 ## 04/08/2026 — PONTO 84 (CAMADA 2): frete lance a lance + alarme falso do meu diagnóstico
 
 - **O que mudou:** com a coluna `auction_messages.frete_amount` criada em produção, o frete
