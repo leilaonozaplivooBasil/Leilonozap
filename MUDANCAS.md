@@ -8,6 +8,26 @@
 
 ---
 
+## 04/08/2026 — PONTO 74B: descrições regeradas pela IA (22 leilões)
+
+- **Contexto:** depois da limpeza do PONTO 74, esses leilões ficaram com a descrição
+  **igual ao título** (a IA nunca tinha escrito nada). Autorizado por Gabriel em 04/08/2026.
+- **O que mudou:** nova função `regerarDescricoesIA`. Alvo estrito: leilão com descrição
+  **vazia ou idêntica ao título** — nada além disso entra na fila. Para cada um, a IA escreve
+  2 parágrafos + 3 a 5 benefícios, proibida de inventar marca, voltagem, medida, garantia,
+  preço, frete ou prazo (só o que o título permite afirmar). Padrão da função é **prévia**
+  (não grava); gravação só com `modo:'aplicar'`. Se a IA falhar ou devolver texto curto/
+  suspeito, o registro é **pulado** — nunca grava lixo (é o erro que o PONTO 74 corrigiu).
+- **Resultado:** **22 de 22 regerados, 0 falhas** (lotes de 8), textos de ~640 a 930
+  caracteres. Reauditoria: **0 alvos restantes**. Alterado só o campo `description`.
+- **Arquivos:** `base44/functions/regerarDescricoesIA/entry.ts` (nova),
+  `base44/functions/auditarDescricoesIA/entry.ts` (aceita `ids:'todos'` após a prévia).
+- **Impacto no front:** nenhum código de front mudou — os cards e a sala de lance passam a
+  exibir descrição real em vez de repetir o nome do produto.
+- **Risco:** 🟢 Baixo — campo de texto de vitrine, um registro por vez, com prévia obrigatória.
+
+---
+
 ## 04/08/2026 — PONTOS 73/74/75: vitrine de fábrica, trava da IA e limpeza de descrições
 
 - **PONTO 73 (vitrine Direto de Fábrica):** a página lia só os **40 leilões mais recentes**
