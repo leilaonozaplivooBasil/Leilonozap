@@ -11,7 +11,6 @@ import { format } from 'date-fns';
 
 import AIMessage from "../components/chat/AIMessage";
 import BidInput from "../components/auction/BidInput";
-import AdminLiveBar from '../components/auction/AdminLiveBar';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
@@ -29,7 +28,7 @@ import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
 import FaixaCompareAqui from "@/components/auction/FaixaCompareAqui";
 import BarraTempoLeilao from "@/components/auction/BarraTempoLeilao";
-import BadgeStatusLeilao from "@/components/auction/BadgeStatusLeilao";
+import HeaderPrecoTempo from "@/components/auction/HeaderPrecoTempo";
 import ChipParticipantes from "@/components/auction/ChipParticipantes";
 import FeedUltimosLances from "@/components/auction/FeedUltimosLances";
 import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
@@ -970,9 +969,6 @@ export default function AuctionRoom() {
         />
       )}
 
-      {(currentUser?.role === 'admin' || currentUser?.role === 'super_admin') && auction && (
-        <AdminLiveBar auction={auction} setAuction={setAuction} />
-      )}
 
       {currentUser?.role === 'admin' && auction && auction.status === 'ended' && timeRemaining !== null && timeRemaining > 0 && (
         <div className="fixed top-20 left-4 z-[999] bg-orange-600 text-white p-4 rounded-lg shadow-2xl border-2 border-orange-400 animate-pulse">
@@ -1038,22 +1034,13 @@ export default function AuctionRoom() {
         </Button>
 
         <div className="mobile-header__info">
-          <div className="mobile-header__price-row">
-            <span className="mobile-header__price">R$ {fmtBR(currentPrice)}</span>
-            <button className="mobile-header__info-btn" onClick={() => setShowMobilePanel(true)}>
-              <Info className="w-4 h-4 text-green-400" />
-            </button>
-          </div>
-          <div className="mobile-header__timer">
-            <span className={`countdown-live ${!isAuctionActive ? 'text-gray-400' :
-                isWarMode ? 'animate-pulse' : ''
-              }`} style={{
-                color: isWarMode ? '#FF4F00' : undefined
-              }}>
-              {isAuctionActive && <Timer className="w-3 h-3" />}
-              {displayTime}
-            </span>
-          </div>
+          <HeaderPrecoTempo
+            currentPrice={currentPrice}
+            displayTime={displayTime}
+            isAuctionActive={isAuctionActive}
+            isWarMode={isWarMode}
+            onInfo={() => setShowMobilePanel(true)}
+          />
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -1077,9 +1064,8 @@ export default function AuctionRoom() {
       {/* ⏳ PONTO 82 (Fase 3) — barra fina de tempo (usa o timeRemaining já existente) */}
       <BarraTempoLeilao auction={auction} timeRemaining={timeRemaining} />
 
-      {/* 🏷️👥 PONTO 82 (Fase 3) — estado da sala + prova social, uma linha só */}
+      {/* 👥 Prova social — o selo "Ativo" saiu: o relógio do cabeçalho já diz que a sala está viva */}
       <div className="sala-faixa-social">
-        <BadgeStatusLeilao status={auction?.status} timeRemaining={timeRemaining} emChamada={chamada.emChamada} />
         <ChipParticipantes messages={messages} />
       </div>
 
