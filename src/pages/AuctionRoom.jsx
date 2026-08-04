@@ -1060,7 +1060,8 @@ export default function AuctionRoom() {
             />
           )}
           <Button variant="ghost" size="icon" onClick={() => isAndroid ? setIsShareModalOpen(true) : handleShare()} className="text-green-400">
-            <Share2 className="w-5 h-5" />
+            {/* PONTO 90 — compartilhar com a MARCA: a logo do NoZap no lugar do ícone genérico */}
+            <img src="/brand/icon-3d.webp" alt="Compartilhar" className="h-7 w-7 object-contain sm:h-9 sm:w-9" />
           </Button>
         </div>
       </header>

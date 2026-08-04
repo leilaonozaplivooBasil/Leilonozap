@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Timer } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
 
 /**
@@ -28,28 +28,42 @@ export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionA
         </span>
       </div>
 
-      {/* RELÓGIO — direita */}
+      {/* PONTO 90 — CRONÔMETRO DIGITAL: sem "voltinha" de relógio, dígitos
+          grandes estilo display, na cor do fogo da logo (laranja/âmbar). */}
       <div
-        className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1"
+        className="crono flex shrink-0 items-center rounded-xl px-2 py-0.5 sm:px-2.5 sm:py-1"
         style={{
-          background: isWarMode ? 'rgba(239,68,68,0.16)' : 'rgba(245,158,11,0.12)',
-          border: `1px solid ${isWarMode ? 'rgba(248,113,113,0.55)' : 'rgba(245,158,11,0.38)'}`,
-          boxShadow: isWarMode ? '0 0 18px rgba(239,68,68,0.28)' : 'none',
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35))',
+          border: `1px solid ${isWarMode ? 'rgba(248,113,113,0.6)' : 'rgba(249,115,22,0.45)'}`,
+          boxShadow: isWarMode ? '0 0 20px rgba(239,68,68,0.35)' : '0 0 16px rgba(249,115,22,0.22)',
         }}
       >
-        {isAuctionActive && (
-          <Timer
-            className={`h-3 w-3 ${isWarMode ? 'animate-pulse text-red-300' : 'text-amber-300'}`}
-          />
-        )}
         <span
-          className={`font-mono text-[11px] font-bold tabular-nums tracking-wide sm:text-[12px] ${
-            !isAuctionActive ? 'text-slate-400' : isWarMode ? 'animate-pulse text-red-200' : 'text-amber-200'
+          className={`crono-digitos text-base font-black tabular-nums sm:text-2xl ${
+            isAuctionActive && isWarMode ? 'animate-pulse' : ''
           }`}
+          style={{
+            color: !isAuctionActive ? '#94a3b8' : isWarMode ? '#FCA5A5' : '#FB923C',
+            textShadow: !isAuctionActive
+              ? 'none'
+              : isWarMode
+                ? '0 0 10px rgba(239,68,68,0.75), 0 0 26px rgba(239,68,68,0.45)'
+                : '0 0 10px rgba(249,115,22,0.8), 0 0 26px rgba(249,115,22,0.45)',
+          }}
         >
           {displayTime}
         </span>
       </div>
+
+      <style>{`
+        /* fonte de display/cronômetro: monoespaçada e larga, com dígitos travados */
+        .crono-digitos {
+          font-family: "DS-Digital", "Courier New", ui-monospace, monospace;
+          letter-spacing: 0.08em;
+          line-height: 1.1;
+          font-variant-numeric: tabular-nums;
+        }
+      `}</style>
     </div>
   );
 }

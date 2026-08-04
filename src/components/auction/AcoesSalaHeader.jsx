@@ -16,7 +16,7 @@ export default function AcoesSalaHeader() {
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5 sm:gap-2.5">
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event('openComparai'))}
@@ -24,7 +24,7 @@ export default function AcoesSalaHeader() {
         title="Comparar o preço no mercado"
         className="grid h-11 w-11 place-items-center rounded-full active:scale-95"
       >
-        <img src={CompareAquiIcon} alt="CompareAQUI" className="h-8 w-8 rounded-full" loading="lazy" />
+        <img src={CompareAquiIcon} alt="CompareAQUI" className="h-9 w-9 rounded-full sm:h-11 sm:w-11" loading="lazy" />
       </button>
 
       <a
@@ -35,9 +35,9 @@ export default function AcoesSalaHeader() {
         title="Fale com a Leila — Suporte no WhatsApp"
         className="grid h-11 w-11 place-items-center rounded-full active:scale-95"
       >
-        <span className="relative block h-8 w-8">
+        <span className="relative block h-9 w-9 sm:h-11 sm:w-11">
           <span
-            className="block h-8 w-8 overflow-hidden rounded-full border border-green-400"
+            className="block h-full w-full overflow-hidden rounded-full border border-green-400"
             style={{ background: 'radial-gradient(circle at 50% 30%, #14324a, #0b1018)' }}
           >
             <img src={leilaSuporte} alt="Leila — Suporte" className="h-full w-full object-cover object-top" loading="lazy" />
