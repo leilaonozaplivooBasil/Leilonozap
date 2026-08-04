@@ -33,15 +33,20 @@ export default function FreteLanceBanner({ status, freteValor, cep, onChangeCep,
     const falhou = status === "error";
     return (
       <div className="mx-auto mt-3 max-w-lg">
+        {/* PONTO 83 — parado é NEUTRO (vermelho antes do erro faz o usuário achar
+            que travou e desistir); foco vira verde da marca; erro real é ÂMBAR. */}
+        <style>{`
+          .nz-cep-form:focus-within { border-color: #1B7A48 !important; box-shadow: 0 0 0 3px rgba(27,122,72,0.18); }
+        `}</style>
         <form
           onSubmit={(e) => { e.preventDefault(); onCalcular(cep); }}
-          className="flex items-center gap-2 rounded-xl p-1.5"
+          className="nz-cep-form flex items-center gap-2 rounded-xl p-1.5 transition-colors"
           style={{
-            background: falhou ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${falhou ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.10)'}`,
+            background: falhou ? 'rgba(245,158,11,0.07)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${falhou ? 'rgba(245,158,11,0.40)' : 'rgba(255,255,255,0.10)'}`,
           }}
         >
-          <MapPin className={`ml-1.5 h-4 w-4 shrink-0 ${falhou ? 'text-red-300' : 'text-emerald-400'}`} />
+          <MapPin className={`ml-1.5 h-4 w-4 shrink-0 ${falhou ? 'text-amber-400' : 'text-emerald-400'}`} />
           <input
             type="text"
             inputMode="numeric"
@@ -61,7 +66,7 @@ export default function FreteLanceBanner({ status, freteValor, cep, onChangeCep,
           </button>
         </form>
         {falhou && (
-          <p className="mt-1 px-2 text-[11px] text-red-300">CEP não encontrado — confira e tente outro.</p>
+          <p className="mt-1 px-2 text-[11px] text-amber-400">CEP não encontrado — confira e tente outro.</p>
         )}
       </div>
     );

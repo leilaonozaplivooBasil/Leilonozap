@@ -13,7 +13,12 @@ const LIVOO_FEED = 'https://livoolive.com.br/app';
 // subindo junto com o dedo, nunca "parados" num ponto da página. O translateZ(0) força
 // compositing na GPU (iOS Safari engasga o fixed durante o recolhimento da barra de URL)
 // e o env(safe-area-inset-bottom) mantém os botões acima da home bar do iPhone/PWA.
-export default function LojaFloatActions() {
+// PONTO 83 — `posicao="topo"` (usado só na sala de leilão): a Leila sai do rodapé,
+// onde ficava entalada entre o campo de CEP/frete e o botão de lance, e vai pro canto
+// SUPERIOR-DIREITO. Lá não existe nenhum controle — não cobre frete, CEP nem lance
+// em nenhuma largura. Nas demais páginas nada muda (continua no rodapé, com drift).
+export default function LojaFloatActions({ posicao = 'rodape' }) {
+  const noTopo = posicao === 'topo';
   const supTxt = encodeURIComponent('Olá! Preciso de ajuda na Loja Leilão NoZap.');
   const Label = ({ children }) => <span className="text-[9px] sm:text-[10px] text-white font-semibold mt-1 text-center leading-none bg-[#0b1018] rounded-full px-2 py-0.5 whitespace-nowrap">{children}</span>;
 
@@ -32,8 +37,15 @@ export default function LojaFloatActions() {
         @keyframes leilaBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
         .leila-bob { animation: leilaBob 2.6s ease-in-out infinite; }
         @media (prefers-reduced-motion:reduce){ .leila-bob{animation:none} }
+        /* PONTO 83 — ancoragem no topo (sala de leilão): abaixo do cabeçalho da sala,
+           acima da conversa. Zero contato com a área de frete/lance no rodapé. */
+        /* Altura medida em tela real: a 7.5rem ela cobria o "Ver termo" do aviso legal
+           (mobile) e o botão de compartilhar (desktop). Agora fica ABAIXO da faixa do
+           CompareAQUI, no canto vazio do topo da conversa. */
+        .leila-topo { top: calc(16rem + env(safe-area-inset-top, 0px)); }
+        @media (min-width: 1024px) { .leila-topo { top: 16.5rem; } }
       `}</style>
-      <div className={`nz-dock-bottom ${driftCls} fixed right-3 sm:right-4 z-50 flex flex-col items-center gap-3`}>
+      <div className={`${noTopo ? 'leila-topo' : `nz-dock-bottom ${driftCls}`} fixed right-3 sm:right-4 z-50 flex flex-col items-center gap-3`}>
         <a href={`https://wa.me/${SUPORTE_PHONE}?text=${supTxt}`} target="_blank" rel="noreferrer" title="Fale com a Leila — Suporte no WhatsApp" className="group flex flex-col items-center">
           <span className="leila-bob relative block">
             {/* anel pulsante verde pra sinalizar que é clicável */}

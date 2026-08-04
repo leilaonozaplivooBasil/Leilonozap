@@ -18,7 +18,8 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
       case 'winner_announcement':
         return <Crown className="w-4 h-4 text-yellow-300" />;
       case 'ai_narration':
-        return <Zap className="w-4 h-4 text-blue-400" />;
+        // PONTO 83 — verde apagado da marca (o verde vibrante é só do botão de lance)
+        return <Zap className="w-4 h-4" style={{ color: '#2E9D63' }} />;
       default:
         return <Bot className="w-4 h-4 text-green-400" />;
     }
@@ -42,7 +43,9 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
     }
     
     if (message.message_type === 'ai_narration') {
-      return 'bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-900/40 border border-white/15';
+      // PONTO 83 — o degradê roxo/magenta saiu: não existe na identidade e ofuscava
+      // o botão de lance. Agora é vidro fumê neutro (a IA narra, não compete).
+      return 'ai-fume text-slate-100';
     }
     
     return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
@@ -109,13 +112,19 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
   // Se retornou null (winner_announcement sem dados), não renderiza nada
   if (!messageStyle) return null;
 
+  // PONTO 83 — narração ganha formato de FALA: balão estreito, alinhado à esquerda,
+  // padding menor e canto inferior-esquerdo quebrado (leitura de conversa).
+  const narracao = message.message_type === 'ai_narration';
+
   return (
-    <div className="flex justify-center mb-4 animate-slide-in">
-      <div className={`max-w-xs lg:max-w-md px-6 py-4 rounded-2xl ${messageStyle}`}>
+    <div className={`flex mb-4 animate-slide-in ${narracao ? 'justify-start' : 'justify-center'}`}>
+      <div className={narracao
+        ? `ai-balao px-4 py-3 ${messageStyle}`
+        : `max-w-xs lg:max-w-md px-6 py-4 rounded-2xl ${messageStyle}`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             {getMessageIcon()}
-            <span className="text-sm font-bold">
+            <span className="text-sm font-bold" style={narracao ? { color: '#2E9D63' } : undefined}>
               {message.message_type === 'winner_announcement' ? '🏆 LEILÃO NoZap' : 'LanceIA'}
             </span>
           </div>
@@ -130,6 +139,18 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
       </div>
       
       <style>{`
+        /* PONTO 83 — vidro fumê + balão de fala da LanceIA */
+        .ai-fume {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          backdrop-filter: blur(10px) saturate(1.2);
+          -webkit-backdrop-filter: blur(10px) saturate(1.2);
+        }
+        .ai-balao {
+          max-width: 78%;
+          border-radius: 16px 16px 16px 5px;
+        }
+
         @keyframes pulse-slow {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.05); opacity: 0.95; }
