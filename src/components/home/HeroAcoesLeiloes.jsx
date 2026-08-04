@@ -14,7 +14,7 @@ const acao =
 
 export default function HeroAcoesLeiloes({ count = 0 }) {
   return (
-    <div className="mt-3 flex items-center gap-3 overflow-x-auto nz-no-scrollbar sm:gap-5">
+    <div className="mt-4 flex items-center gap-4 overflow-x-auto px-1 nz-no-scrollbar sm:mt-5 sm:gap-6 sm:px-2">
       {/* PONTO 88 — pulso de luz branca da logo do CompareAQUI (local, não vaza pro app) */}
       <style>{`
         .nz-cmp-anel {
@@ -29,8 +29,16 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
           0% { transform: scale(1); opacity: 0.8; }
           100% { transform: scale(1.55); opacity: 0; }
         }
+        .nz-livoo-anel {
+          position: absolute;
+          inset: 0;
+          border-radius: 999px;
+          border: 2px solid rgba(217,22,116,0.75);
+          pointer-events: none;
+          animation: nzCmpAnel 2.2s ease-out infinite;
+        }
         @media (prefers-reduced-motion: reduce) {
-          .nz-cmp-anel { animation: none; }
+          .nz-cmp-anel, .nz-livoo-anel { animation: none; }
         }
       `}</style>
 
@@ -63,17 +71,20 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
         aria-label="Livoo Live — Compre ao Vivo"
         className={acao}
       >
-        <span
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full sm:h-7 sm:w-7"
-          style={{ background: "linear-gradient(135deg, #D91674, #E3559C)" }}
-        >
-          <svg viewBox="0 0 48 48" className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true">
-            <circle cx="24" cy="24" r="19" fill="#ffffff" />
-            <path d="M19 15.5 L34 24 L19 32.5 Z" fill="#D91674" stroke="#D91674" strokeWidth="4" strokeLinejoin="round" />
-            <circle cx="19" cy="15.5" r="3.4" fill="#D91674" />
-          </svg>
+        {/* PONTO 89 — mesmo padrão do CompareAQUI: só a logo, sem rótulo, com pulso rosa */}
+        <span className="relative block h-12 w-12 shrink-0 sm:h-16 sm:w-16">
+          <span className="nz-livoo-anel" aria-hidden="true" />
+          <span
+            className="grid h-full w-full place-items-center rounded-full ring-1 ring-white/60"
+            style={{ background: "linear-gradient(135deg, #D91674, #E3559C)", boxShadow: '0 8px 22px rgba(0,0,0,.45)' }}
+          >
+            <svg viewBox="0 0 48 48" className="h-8 w-8 sm:h-10 sm:w-10" aria-hidden="true">
+              <circle cx="24" cy="24" r="19" fill="#ffffff" />
+              <path d="M19 15.5 L34 24 L19 32.5 Z" fill="#D91674" stroke="#D91674" strokeWidth="4" strokeLinejoin="round" />
+              <circle cx="19" cy="15.5" r="3.4" fill="#D91674" />
+            </svg>
+          </span>
         </span>
-        <span>Ao Vivo</span>
       </a>
 
       {/* Compartilhar — PONTO 86: só o ícone, sem rótulo (handler intacto) */}

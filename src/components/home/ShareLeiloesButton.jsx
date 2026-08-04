@@ -115,11 +115,12 @@ export default function ShareLeiloesButton({ count = 0, compact = false, float =
       }
     >
       {compact ? (
+        // PONTO 89 — quadrado arredondado com o ícone dentro (nada de círculo)
         <span
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white sm:h-7 sm:w-7"
-          style={{ background: "linear-gradient(135deg, #059669, #047857)" }}
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-white sm:h-14 sm:w-14"
+          style={{ background: "linear-gradient(135deg, #059669, #047857)", boxShadow: "0 8px 22px rgba(0,0,0,.45)" }}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+          {loading ? <Loader2 className="h-5 w-5 animate-spin sm:h-6 sm:w-6" /> : <Share2 className="h-5 w-5 sm:h-6 sm:w-6" />}
         </span>
       ) : loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
