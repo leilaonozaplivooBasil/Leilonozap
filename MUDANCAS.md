@@ -28,15 +28,34 @@
 - **⚠️ Achado:** eram **359 produtos** sem texto em `notes` — os 30 do PONTO 79 mais ~329 que
   **nunca tiveram descrição nenhuma**.
 
-**CONCLUSÃO — vitrine inteira coberta (autorizado por Gabriel na mesma sessão):** os **359
-foram regerados**, em blocos, até a fila zerar. Reauditoria final: **0 produtos sem descrição**
-na Loja Virtual. Zero falhas de IA em todos os blocos; textos entre ~630 e ~950 caracteres.
+**EXECUÇÃO (autorizada por Gabriel na mesma sessão):** **359 produtos regerados**, em blocos,
+até a fila da função zerar. Zero falhas de IA; textos entre ~630 e ~950 caracteres.
+
+🔴 **CORREÇÃO DE DUAS AFIRMAÇÕES ERRADAS MINHAS (auditoria de leitura, 04/08):**
+1. **Eu declarei "0 produtos sem descrição" — ERRADO.** Conferi a *fila da função* (que voltou
+   vazia) e chamei isso de "banco limpo". São coisas diferentes: a fila só enxerga produto
+   **com título**. Varredura direta nos **3.618 produtos** mostrou **313 ainda sem texto em
+   `notes`**. Regra permanente: **"fila vazia" ≠ "banco limpo"** — conferir sempre contra a
+   tabela, nunca contra o alvo da própria função.
+2. **Eu declarei "1 produto pulado por não ter título" — também ERRADO.** Não existe **nenhum**
+   produto sem título (0 em 3.618, checado por dois caminhos). O contador `pulados` soma **dois
+   motivos distintos** (sem título **e** texto reprovado na validação) e eu atribuí ao motivo
+   errado sem verificar. O caso real foi texto da IA rejeitado pela trava de qualidade — ou
+   seja, **a trava funcionou**.
+
+**Situação real dos 313 (leitura pura, nada alterado):**
+- **2 registros de TESTE** em produção (`__QA_TESTE_ATIVACAO_LOJA_...`,
+  `[TESTE PONTO45] Produto Publicacao`) — não deveriam estar na tabela de produtos reais.
+- **230 produtos reais com estoque 0** — fora da vitrine, sem urgência.
+- **81 = FILA REAL** (produto real, estoque > 0, sem descrição). ⚠️ Vários com `price_catalog`
+  **nulo** (ex.: "LICENÇA START", "KIT CASA", "MOCHILA CARGUEIRA") — possivelmente itens que
+  nem deveriam estar na Loja Virtual. **Verificar antes de gerar texto.**
 - **⚠️ Ajuste operacional importante para quem rodar isso de novo:** bloco de **30 estoura o
   tempo** do runtime (timeout em ~110s — um bloco morreu no meio e foi reprocessado depois).
   **Use `limite: 15`** (~34s por bloco, estável nos 20+ blocos executados).
-- **1 registro pulado de propósito:** produto sem título — a trava "sem título, sem geração"
-  agiu corretamente (a IA não teria base para escrever nada verdadeiro).
 - **Continua intocado:** preço, estoque, título, imagens, comissões, pagamentos. Só `notes`.
+- **Pendência aberta:** as 81 da fila real (decisão do Gabriel pendente — parte delas pode ser
+  item que não pertence à Loja Virtual) e a limpeza dos 2 registros de teste.
 
 ---
 
