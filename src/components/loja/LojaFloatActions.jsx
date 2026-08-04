@@ -3,7 +3,6 @@ import { MessageCircle } from 'lucide-react';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import leilaSuporte from '@/assets/leila-suporte.webp';
 import useScrollDrift from '@/hooks/useScrollDrift';
-import ShareLeiloesButton from '@/components/home/ShareLeiloesButton';
 
 const SUPORTE_PHONE = '5521984072064';
 // 🔗 Por ora o botão "Ao vivo" leva direto ao feed da Livoo Live.
@@ -38,20 +37,14 @@ export default function LojaFloatActions() {
           title="CompareAQUI — compare o preço antes de comprar"
           className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-transform hover:scale-110 relative"
         >
-          <span aria-hidden className="absolute inset-0 rounded-full bg-white animate-ping opacity-40" />
+          {/* PONTO 86 — borda BEM fina e nítida, sem halo espalhando */}
           <span
-            className="relative block w-full h-full rounded-full overflow-hidden border border-white/90 shadow-2xl"
-            style={{ boxShadow: '0 10px 28px rgba(0,0,0,.45)' }}
+            className="relative block w-full h-full rounded-full overflow-hidden ring-1 ring-white/70"
+            style={{ boxShadow: '0 8px 22px rgba(0,0,0,.45)' }}
           >
             <img src={CompareAquiIcon} alt="CompareAQUI" className="w-full h-full object-cover rounded-full" />
           </span>
         </button>
-      </div>
-
-      {/* 📣 PONTO 85 — Compartilhar como flutuante redondo, acima da Livoo. NÃO pisca.
-          Reaproveita o handler original do ShareLeiloesButton (Web Share + fallback). */}
-      <div className={`nz-dock-bottom-3 ${driftCls} fixed right-3 sm:right-4 z-50 flex flex-col items-center`}>
-        <ShareLeiloesButton float />
       </div>
 
       {/* Suporte com a Leila (avatar 3D) — canto DIREITO inferior. Animado pra chamar clique.

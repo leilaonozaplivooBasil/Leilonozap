@@ -24,6 +24,7 @@ const RecommendedSection = lazy(() => import('../components/recommendations/Reco
 import RotatingBanner from '../components/banner/RotatingBanner';
 import { interleaveBanners } from '@/lib/interleaveBanners';
 import LiveStats from '../components/home/LiveStats';
+import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
@@ -858,8 +859,10 @@ export default function Home() {
                 <LiveStats />
               </div>
 
-              {/* PONTO 85 — Comparar · Ao Vivo · Compartilhar saíram desta fileira:
-                  agora são os três botões flutuantes redondos (sem nome). */}
+              {/* PONTO 86 — DE VOLTA AO LUGAR DE ORIGEM: Comparar · Ao Vivo ·
+                  Compartilhar vivem aqui dentro do bloco "Leilões Ativos". */}
+              <HeroAcoesLeiloes count={activeCount} />
+
               {/* AÇÕES - CARROSSEL CONTÍNUO (mobile e desktop) */}
               <HeroActionsCarousel currentUser={currentUser} />
             </div>
