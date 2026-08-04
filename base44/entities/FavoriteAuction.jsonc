@@ -25,11 +25,7 @@
     "auction_id"
   ],
   "rls": {
-    "read": {
-      "created_by": "{{user.email}}"
-    },
-    "write": {
-      "created_by": "{{user.email}}"
-    }
+    "read": null,
+    "write": null
   }
 }
