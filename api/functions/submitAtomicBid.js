@@ -205,7 +205,14 @@ export default async function handler(req, res) {
       sender_id: userId,
       sender_name: winnerName,
       bid_amount: bidAmount,
-      frete_amount: freteValor,
+      // 🔴 NÃO REINTRODUZIR `frete_amount` AQUI (04/08/2026).
+      // A coluna auction_messages.frete_amount NÃO EXISTE no banco de produção: a
+      // migração 20260801_frete_leilao.sql entrou pela metade (criou
+      // auctions.frete_reservado_valor, não criou esta). Com o campo no INSERT, o
+      // PostgREST devolvia 42703 e TODO lance morria em "Não foi possível registrar
+      // o lance" — produção ficou sem nenhum lance de 03/08 15:03 até esta correção.
+      // O frete reservado continua auditável em auctions.frete_reservado_valor (gravado
+      // no PATCH abaixo), que é a fonte usada para devolver a reserva do líder anterior.
       content: `Lance de R$ ${bidAmount.toFixed(2).replace('.', ',')}`,
       is_system_message: false,
     });

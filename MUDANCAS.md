@@ -8,6 +8,58 @@
 
 ---
 
+## 04/08/2026 — 🔴 PONTO 83: LANCES PARADOS EM PRODUÇÃO — causa-raiz e correção
+
+- **Sintoma (print do Gabriel):** *"Não foi possível registrar o lance. Tente novamente."* em
+  produção, com saldo suficiente na carteira.
+- **Gravidade real, medida no banco:** **nenhum lance foi gravado em NENHUM dos 58 leilões
+  ativos** desde **03/08 às 15:03 (BRT)** — o último aceito foi de "Rainha do Arremate".
+  O leilão do print (`514ad454…`) tem **0 mensagens**: o *"1 LANCE"* que aparecia na tela era a
+  mensagem otimista do navegador, não um lance real.
+- **Causa-raiz (provada, não suposta):** a coluna **`auction_messages.frete_amount` NÃO EXISTE**
+  no banco — o PostgREST responde `42703: column auction_messages.frete_amount does not exist`.
+  O `submitAtomicBid` mandava esse campo no INSERT do lance, então **todo** lance falhava e caía
+  no retorno 500 com exatamente aquela frase (que existe num único lugar do sistema).
+  A migração **`20260801_frete_leilao.sql` entrou pela metade**: criou
+  `auctions.frete_reservado_valor` (existe), **não criou** `auction_messages.frete_amount`.
+- **Correção aplicada (mínima, 1 campo):** o `frete_amount` saiu do INSERT em
+  `api/functions/submitAtomicBid.js`, com comentário-trava no lugar para ninguém reintroduzir.
+  **Nada mais foi alterado** — nem a reserva de saldo, nem a trava por `version`, nem o rollback,
+  nem a devolução da reserva do líder anterior. O frete reservado continua auditável em
+  `auctions.frete_reservado_valor` (gravado no PATCH), que é a fonte usada para devolver a
+  reserva de quem é superado. **Não perdemos rastreabilidade de frete.**
+- **Por que NÃO rodamos o `ALTER TABLE`:** seria igualmente válido, mas exige acesso ao SQL do
+  Supabase e um passo manual. Remover o campo restaura a produção **no deploy**, sem migração.
+  Se um dia a coluna for criada, o campo pode voltar — o comentário no código explica a ordem.
+- **💰 Dinheiro dos usuários — nenhum prejuízo:** auditados os 3 usuários com reserva ativa
+  (vale-do-recreio R$ 20,40 · Rainha do Arremate R$ 16,40 · pinheiro R$ 14,20). **R$ 0,00 de
+  saldo travado sem lance correspondente** — a devolução automática funcionou em todas as
+  tentativas falhadas. Nenhum usuário perdeu acesso a dinheiro.
+- **Hipóteses descartadas na investigação:** falha na reserva de saldo (a reserva funciona);
+  conflito de concorrência/rollback (o código morre antes do PATCH do preço); PONTO 82 (não
+  tocou em nada de lance — isto vem de 01/08, três dias antes).
+- **Agravante confirmado, ainda aberto:** o servidor **já devolve** o erro real do banco no campo
+  `debug`, mas a sala de lance descarta e mostra só a frase genérica. Foi isso que fez o problema
+  parecer misterioso por horas. Corrigir a exibição é **outra autorização**.
+- **Observação registrada, sem ação:** vale-do-recreio lidera leilões cuja soma (preço+frete) é
+  R$ 47,00 mas tem R$ 20,40 reservado — reserva **a menos**, não dinheiro preso; provável
+  `frete_reservado_valor` em leilão cuja reserva já foi liberada. Verificar depois.
+- **Arquivos:** `api/functions/submitAtomicBid.js`,
+  `base44/functions/diagnosticoLanceFalha/entry.ts` (novo, **100% leitura**, temporário — serve
+  para reconferir que os lances voltaram; apagar depois).
+- **NÃO foi tocado:** `reserveBidBalance`, `releaseBidHold`, `useBidSubmission.js`,
+  `finalizeAuctionCore`, comissões, carteira, checkout, estoque, auth, frete da loja.
+  A versão Deno (`base44/functions/submitAtomicBid/entry.ts`) **já não tinha** o campo — nada a
+  espelhar.
+- **⚠️ Validação:** `/api/functions/*` **não executa no ambiente de preview** (limitação já
+  registrada), então esta correção **só pode ser confirmada em produção**. O que foi confirmado
+  automaticamente: o erro exato do banco, o zero-lance no leilão do print, o marco temporal e o
+  saldo travado. **Teste real:** dar um lance de R$ 1,60 no leilão do Copo Dosador após o deploy.
+- **Risco:** 🟢 Baixo — remove um campo que o banco rejeita; nenhum valor, saldo ou regra de
+  disputa foi alterado.
+
+---
+
 ## 04/08/2026 — PONTO 82: vitrine da loja passou a COBRAR FRETE (vazamento fechado)
 
 - **O vazamento:** em `/loja/:slug` o checkout coletava CEP e endereço e **ignorava**. Todo
