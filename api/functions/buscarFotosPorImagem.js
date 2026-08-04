@@ -9,10 +9,13 @@
 //
 // ⚠️ Devolve SOMENTE URLs de imagem. Nunca título, descrição ou preço — em leilão
 // com lance ativo sobrescrever esses campos seria destrutivo.
-// 🔑 MOTOR PRINCIPAL = SearchAPI (SEARCHAPI_KEY), o MESMO que o Compare Aqui usa em
-// produção para Google Lens (api/_lib/marketSearch.js → fetchGoogleLens).
-// Antes só existia SerpAPI, cuja chave não está publicada neste ambiente — daí o
-// "SERPAPI_KEY não configurada" na tela. SerpAPI passa a ser apenas reserva.
+// 🔑 PONTO 77 CAMADA 4 — MOTOR PRINCIPAL = runtime Base44 (ponte servidor→servidor).
+// CAUSA-RAIZ: a SERPAPI_KEY vive no cofre do Base44 e NÃO é visível para
+// process.env aqui na Vercel — daí "SERPAPI_KEY não configurada" na tela, mesmo com
+// a conta SerpAPI válida e com saldo. E a SEARCHAPI_KEY (usada pelo Compare Aqui)
+// está com a cota do mês esgotada. As duas chaves locais seguem como reserva.
+import { chamarRuntimeBase44, urlsDeImagem } from '../_lib/base44Runtime.js';
+
 const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 
@@ -77,14 +80,20 @@ export default async function handler(req, res) {
       });
     }
 
-    // Cascata: SearchAPI (motor já conectado) → SerpAPI (reserva). Para na primeira
-    // que devolver foto; só reporta falha se AS DUAS falharem.
+    // Cascata: runtime Base44 (tem a chave) → SearchAPI → SerpAPI. Para na primeira
+    // que devolver foto; só reporta falha se TODAS falharem.
+    // Sem recursão: quem responde no runtime é a versão Deno
+    // (base44/functions/buscarFotosPorImagem/entry.ts), outro arquivo.
     let images = [];
     const falhas = [];
-    for (const motor of [
+    const motores = [
+      // 1º — runtime Base44: único ambiente que enxerga a SERPAPI_KEY (comprovado)
+      { nome: 'runtime_base44_lens', fn: async () => urlsDeImagem(await chamarRuntimeBase44('buscarFotosPorImagem', { imageUrl })) },
+      // 2º e 3º — reserva local, caso essas chaves sejam publicadas aqui um dia
       { nome: 'searchapi_lens', fn: () => lensSearchApi(imageUrl) },
       { nome: 'serpapi_lens', fn: () => lensPorImagem(imageUrl) },
-    ]) {
+    ];
+    for (const motor of motores) {
       try {
         images = limparUrls(await motor.fn());
         trilha.push(`${motor.nome}: ${images.length} imagens`);
@@ -96,8 +105,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // As duas fontes quebraram (chave/rede/cota) — isso é FALHA, não "não achei".
-    if (images.length === 0 && falhas.length === 2) {
+    // TODAS as fontes quebraram (chave/rede/cota) — isso é FALHA, não "não achei".
+    if (images.length === 0 && falhas.length === motores.length) {
       return res.status(200).json({
         success: false,
         images: [],

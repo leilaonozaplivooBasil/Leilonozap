@@ -11,6 +11,11 @@
 //   3) SerpAPI Google Shopping direto, SÓ para thumbnails (sem filtro de preço)
 // Para na primeira tentativa que devolver imagem. Sempre { success, images, ... }.
 import { searchMarket, cleanTitle } from '../_lib/marketSearch.js';
+// ⚠️ PONTO 77 CAMADA 4 — a ponte para o runtime Base44 NÃO serve aqui: a versão Deno
+// desta function responde 500 "Authentication required to view users" quando chamada
+// sem sessão. Testado em 04/08/2026. A busca POR NOME depende, portanto, de chave
+// publicada neste ambiente (SEARCHAPI_KEY com cota, ou SERPAPI_KEY na Vercel).
+// A busca POR FOTO (buscarFotosPorImagem) não tem esse problema e usa a ponte.
 
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 
