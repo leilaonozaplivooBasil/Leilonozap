@@ -7,7 +7,8 @@
 // Devolve antes/depois para auditoria.
 
 const ID_ELYON = "696fb43386d2d2aea8e1e6e4";
-const NOME_NOVO = "Elyon Santanna";
+// 04/08/2026 — 2º ajuste autorizado por Gabriel: grafia correta com apóstrofo.
+const NOME_NOVO = "Elyon Sant'anna";
 
 Deno.serve(async (req) => {
   try {
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
     const antes = achados[0];
 
     // 2) trava de segurança: se já está limpo, não grava de novo
-    if (!String(antes.full_name || "").includes("[duplicada")) {
+    if (String(antes.full_name || "") === NOME_NOVO) {
       return Response.json({
         ok: true,
         alterado: false,
