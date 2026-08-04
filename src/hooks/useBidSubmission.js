@@ -299,8 +299,17 @@ export default function useBidSubmission({
             `NINGUÉM SEGURA ${name}! Já são R$ ${v} neste lote.`,
             `PRESSÃO TOTAL! ${name} manda R$ ${v} e desafia a sala!`,
           ];
+          // 🛡️ Sentry 6b51c793 — este create roda DENTRO de um setTimeout, então o
+          // try/catch de fora não o alcança: se o insert falhar (erro Supabase
+          // { code, details, hint, message }), virava Unhandled Promise Rejection e
+          // quebrava a tela do usuário DEPOIS do lance já ter dado certo.
+          // A narração é enfeite: falha aqui só vira aviso no console.
           setTimeout(async () => {
-            await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
+            try {
+              await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
+            } catch (narrationError) {
+              console.warn("⚠️ [BID] Narração da LanceIA não registrada:", narrationError?.message || narrationError);
+            }
           }, 1500);
         }
       }

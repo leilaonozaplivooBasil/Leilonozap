@@ -507,7 +507,13 @@ export default function AuctionRoom() {
   const aceitarTermoEContinuar = useCallback(async () => {
     setShowTermoModal(false);
     if (currentUser) {
-      await registrarAceiteTermo(currentUser);
+      // 🛡️ Sentry 6b51c793 — gravação do aceite não pode derrubar a tela: se o
+      // registro falhar (erro Supabase), o aviso vai pro console e o lance segue.
+      try {
+        await registrarAceiteTermo(currentUser);
+      } catch (termoError) {
+        console.warn("⚠️ [TERMO] Aceite não registrado:", termoError?.message || termoError);
+      }
       setCurrentUser((prev) => (prev ? { ...prev, terms_accepted: true } : prev));
     }
     const amount = pendingBidAmount;
