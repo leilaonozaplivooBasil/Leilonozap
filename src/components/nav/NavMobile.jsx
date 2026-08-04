@@ -221,6 +221,38 @@ export default function NavMobile({
               </button>
             )}
 
+            {/* === ATALHOS PÚBLICOS DO ADMIN ===
+                O admin também é usuário: precisa chegar na vitrine, nos leilões e no
+                Rank Premiado pelo celular. Antes só existia a Visão Geral. */}
+            {userLogged && isAdmin && (
+              <div className="mb-2 space-y-1">
+                <Link
+                  to="/Loja-Virtual"
+                  onClick={onClose}
+                  className="flex min-h-[48px] items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-orange-300 transition-all hover:translate-x-1 hover:text-orange-200"
+                >
+                  <Store className="h-5 w-5" />
+                  Loja Virtual
+                </Link>
+                <Link
+                  to="/leiloes"
+                  onClick={onClose}
+                  className="flex min-h-[48px] items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-emerald-300 transition-all hover:translate-x-1 hover:text-emerald-200"
+                >
+                  <Gavel className="h-5 w-5" />
+                  Leilões
+                </Link>
+                <Link
+                  to="/rankpremiado"
+                  onClick={onClose}
+                  className="flex min-h-[48px] items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-yellow-300 transition-all hover:translate-x-1 hover:text-yellow-200"
+                >
+                  <Crown className="h-5 w-5" />
+                  Rank Premiado
+                </Link>
+              </div>
+            )}
+
             {/* === RANK PREMIADO (destaque — primeiro item) ===
                 🧹 PONTO 76 (C3): fora do menu do admin — o print do dropdown não o traz. */}
             {!isAdmin && (
