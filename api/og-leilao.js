@@ -29,7 +29,24 @@ export default async function handler(req) {
   const titulo = (a?.title || 'Leilão NoZap').slice(0, 70);
   const preco = Number(a?.current_price) > 0 ? Number(a.current_price) : Number(a?.starting_price) || 0;
   const encerrado = a?.status && a.status !== 'active';
-  const foto = (Array.isArray(a?.image_urls) && a.image_urls[0]) ? a.image_urls[0] : `${SITE}/brand/logo-horizontal-og.jpg`;
+  // 🖼️ A foto do produto costuma vir de domínios que recusam requisição sem
+  // navegador (gstatic etc). Por isso baixamos aqui com User-Agent e embutimos
+  // como data URI — assim o card SEMPRE mostra a foto real. Formato não suportado
+  // no render (webp) cai na logo, sem quebrar o card.
+  const bruta = (Array.isArray(a?.image_urls) && a.image_urls[0]) ? a.image_urls[0] : null;
+  let foto = `${SITE}/brand/logo-horizontal-og.jpg`;
+  if (bruta) {
+    try {
+      const ir = await fetch(bruta, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } });
+      const ct = (ir.headers.get('content-type') || '').toLowerCase();
+      if (ir.ok && (ct.includes('jpeg') || ct.includes('jpg') || ct.includes('png'))) {
+        const buf = new Uint8Array(await ir.arrayBuffer());
+        let bin = '';
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        foto = `data:${ct.includes('png') ? 'image/png' : 'image/jpeg'};base64,${btoa(bin)}`;
+      }
+    } catch (_) { /* mantém a logo */ }
+  }
 
   return new ImageResponse(
     h('div', {
@@ -43,7 +60,9 @@ export default async function handler(req) {
 
       // COLUNA ESQUERDA — foto do produto
       h('div', { key: 'foto', style: { display: 'flex', width: '470px', height: '630px', alignItems: 'center', justifyContent: 'center', padding: '40px' } }, [
-        h('img', { key: 'i', src: foto, width: 390, height: 390, style: { width: '390px', height: '390px', objectFit: 'cover', borderRadius: '28px', border: '4px solid rgba(52,211,153,0.45)' } }),
+        h('div', { key: 'placa', style: { display: 'flex', width: '400px', height: '400px', alignItems: 'center', justifyContent: 'center', background: '#ffffff', borderRadius: '28px', border: '4px solid rgba(52,211,153,0.55)', padding: '14px' } }, [
+          h('img', { key: 'i', src: foto, width: 360, height: 360, style: { width: '360px', height: '360px', objectFit: 'contain' } }),
+        ]),
       ]),
 
       // COLUNA DIREITA — texto + leiloeiro embaixo
