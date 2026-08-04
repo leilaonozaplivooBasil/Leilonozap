@@ -48,10 +48,30 @@ export default async function handler(req, res) {
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
 
-    // resolve seller p/ atribuição de comissão: prioridade ref_code do link, senão indicador do comprador
+    // resolve seller p/ atribuição de comissão.
+    // 🥇 REGRA DE VENDA PESSOAL (absoluta, Santana 04/08/2026): quem tem cargo de rede é
+    // SEMPRE o vendedor da própria compra — logado, deslogado, ou comprando pelo link de
+    // outra pessoa. "Comprei na minha loja, automaticamente eu ganho." O comprador puxa a
+    // venda para si e recebe o percentual da própria posição. Vem ANTES do ref_code do link.
+    // Trainee fica de fora: é papel de mentoria, sem percentual de venda direta.
+    const CARGOS_REDE = [
+      'influenciador', 'influencer', 'licenciado_aplicativo',
+      'vendedor',
+      'licenciado', 'licenciado_catalogo',
+      'parceiro',
+      'ponto_retirada',
+      'loja_fisica',
+      'distribuidor',
+    ];
     let seller_id = null;
+    if (buyer.id) {
+      const me = await (await sb(`app_users?select=id,career_levels&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
+      const eu = Array.isArray(me) ? me[0] : null;
+      const meusCargos = Array.isArray(eu?.career_levels) ? eu.career_levels : [];
+      if (eu && meusCargos.some((c) => CARGOS_REDE.includes(c))) seller_id = eu.id;
+    }
     const refCode = String(body?.ref_code || '').trim();
-    if (refCode) {
+    if (!seller_id && refCode) {
       const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(refCode)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) seller_id = r[0].id;
     }
