@@ -98,13 +98,15 @@ Deno.serve(async (req) => {
     }
 
     // 🔴 modo aplicar — só nos IDs que o admin listou, um por um, só o campo description
-    if (idsAutorizados.length === 0) {
-      return Response.json({ ok: false, escrita_realizada: false, error: 'Envie a lista de ids para aplicar' }, { status: 400 });
+    // Autorização em bloco: o admin manda ids:'todos' depois de ver a prévia.
+    const todos = corpo?.ids === 'todos';
+    if (!todos && idsAutorizados.length === 0) {
+      return Response.json({ ok: false, escrita_realizada: false, error: 'Envie a lista de ids (ou "todos") para aplicar' }, { status: 400 });
     }
 
     const resultado = [];
     for (const item of achados) {
-      if (!idsAutorizados.includes(item.id)) continue;
+      if (!todos && !idsAutorizados.includes(item.id)) continue;
       const r = await fetch(`${SB}/rest/v1/${item.tabela}?id=eq.${encodeURIComponent(item.id)}`, {
         method: 'PATCH',
         headers: { ...H, Prefer: 'return=representation' },

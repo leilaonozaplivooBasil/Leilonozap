@@ -8,6 +8,38 @@
 
 ---
 
+## 04/08/2026 — PONTOS 73/74/75: vitrine de fábrica, trava da IA e limpeza de descrições
+
+- **PONTO 73 (vitrine Direto de Fábrica):** a página lia só os **40 leilões mais recentes**
+  e filtrava depois, então itens `factory_new` mais antigos (ex.: *Bike Scooter Elétrica
+  Harley 137*) nunca apareciam. A janela de leitura passou para 300 registros; o critério de
+  fábrica (`product_source === 'factory_new'` e não ser plano de investimento) **não mudou**.
+  Validado na tela: a bike aparece, sem estouro lateral em 375px.
+- **PONTO 75 (botão Editar do admin):** a vitrine não passava a prop `isAdmin` para o
+  `AuctionCard` (o card já suportava). Agora a página lê a sessão do admin em estado, com
+  releitura em `storage` e `focus` — se o admin entra em outra aba, o botão aparece sem F5.
+- **PONTO 74 (trava da IA):** criado `src/lib/descricaoIA.js` (`textoDaIA`) e aplicado em
+  `DescriptionWithAI.jsx` e `AddCatalogProduct.jsx`: quando a IA falha, o JSON de erro **não é
+  mais salvo** na descrição — o campo fica intacto e aparece aviso ao usuário.
+- **PONTO 74 (limpeza dos dados) — AUTORIZADA POR GABRIEL EM 04/08/2026:** 15 leilões tinham
+  o payload de erro da IA (`{"ok":false,"error":"IA indisponível"...}`) colado na descrição.
+  Nova função `auditarDescricoesIA`, que por padrão **só lê** (`modo:'previa'`, mostra
+  antes/depois) e só grava com `modo:'aplicar'`. Aplicado nos 15: **15 atualizados, 0 falhas**;
+  reauditoria voltou **0 contaminados**. Nenhum produto da Loja Virtual estava afetado.
+  Alterado **exclusivamente o campo `description`** — título, fotos, preços, lances,
+  vencedores, pagamentos e comissões intocados.
+- **Efeito colateral conhecido:** nesses 15, a IA nunca chegou a escrever nada, então a
+  descrição ficou **igual ao título**. Limpa, mas pobre — recomendado regerar as descrições
+  (agora protegidas pela trava).
+- **Arquivos:** `src/pages/DiretoDeFabrica.jsx`, `src/lib/descricaoIA.js`,
+  `src/components/admin/DescriptionWithAI.jsx`, `src/pages/AddCatalogProduct.jsx`,
+  `base44/functions/auditarDescricoesIA/entry.ts` (novo).
+- **Impacto no front:** nenhuma quebra. A vitrine de fábrica mostra todos os itens; produtos
+  antes contaminados exibem só o nome, sem texto técnico.
+- **Risco:** 🟢 Baixo — campo de texto de vitrine, um registro por vez, lista fechada.
+
+---
+
 ## 03/08/2026 — Bloco 3: `winner_id` em leilão ativo é o LÍDER, não bug + 3 preços corrigidos
 
 - **Descoberta importante (registrar como regra permanente):** `winner_id` / `winner_name` em
