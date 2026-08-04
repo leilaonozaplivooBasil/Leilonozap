@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     for (const [id, caso] of Object.entries(APROVADOS)) {
       const aRes = await fetch(
-        `${SB}/rest/v1/auctions?id=eq.${id}&select=id,title,status,current_price,starting_price,commissions_distributed,winner_id`,
+        `${SB}/rest/v1/auctions?id=eq.${id}&select=id,title,status,current_price,starting_price,commissions_distributed,winner_id,winner_name`,
         { headers: H }
       );
       const a = (await aRes.json())?.[0];
@@ -57,11 +57,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // trava 3 — sem vencedor
-      if (a.winner_id) {
-        resultado.push({ ...base, acao: 'PULADO', motivo: 'trava 3: tem vencedor' });
-        continue;
-      }
+      // trava 3 — COERÊNCIA DO LÍDER (revisada 03/08/2026, após ler submitAtomicBid):
+      // winner_id em leilão ATIVO é o LÍDER ATUAL, não o vencedor final — todo leilão
+      // que recebeu lance tem esse campo preenchido. Exigir "sem vencedor" era errado.
+      // A trava correta é de coerência, e é aplicada junto da trava 5 (lances reais):
+      //   • existe lance real  → winner_id TEM de ser o autor do maior lance
+      //   • zero lance real    → winner_id é resíduo pré-PONTO 72 (permitido corrigir)
+      // O vencedor definitivo é sempre reapurado por finalizeAuctionCore no encerramento.
 
       // trava 4 — sem pagamento vinculado (asaas / carteira digital)
       let temPagamento = false;
@@ -86,13 +88,25 @@ Deno.serve(async (req) => {
 
       // trava 5 — lances reais revalidados AGORA
       const mRes = await fetch(
-        `${SB}/rest/v1/auction_messages?auction_id=eq.${id}&message_type=eq.bid&select=bid_amount`,
+        `${SB}/rest/v1/auction_messages?auction_id=eq.${id}&message_type=eq.bid&select=bid_amount,sender_id,sender_name`,
         { headers: H }
       );
       const msgs = (await mRes.json()) || [];
-      const maiorLance = msgs.length
-        ? msgs.reduce((m: number, x: any) => Math.max(m, Number(x.bid_amount) || 0), 0)
+      const topo = msgs.length
+        ? msgs.reduce((m: any, x: any) => ((Number(x.bid_amount) || 0) > (Number(m?.bid_amount) || 0) ? x : m), null)
         : null;
+      const maiorLance = topo ? Number(topo.bid_amount) || 0 : null;
+
+      // trava 3 (aplicada aqui) — o líder gravado tem de ser o autor do maior lance real.
+      // Divergência = registro histórico inconsistente: NÃO se corrige preço por cima disso.
+      if (msgs.length > 0 && a.winner_id && topo?.sender_id && a.winner_id !== topo.sender_id) {
+        resultado.push({
+          ...base,
+          acao: 'PULADO',
+          motivo: `trava 3: líder gravado (${a.winner_name || a.winner_id}) não é o autor do maior lance (${topo.sender_name || topo.sender_id})`,
+        });
+        continue;
+      }
 
       if (caso.tipo === 'SEM_LANCE') {
         if (msgs.length > 0) {
