@@ -28,6 +28,7 @@ import { Wallet } from "lucide-react";
 
 import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
+import FaixaCompareAqui from "@/components/auction/FaixaCompareAqui";
 import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
 import { emChamada } from "@/lib/modoChamada";
 // 🛡️ PONTO 70 — Compre Já só com preço real (valor residual de R$ 1,00 é ignorado)
@@ -1079,6 +1080,9 @@ export default function AuctionRoom() {
       {/* 📜 PONTO 67 — aviso permanente: estratégia de marketing, não é leilão oficial */}
       <AvisoNaoLeilaoOficial />
 
+      {/* 🔎 PONTO 82 (Fase 2) — CompareAQUI integrado à sala (abre o modal real do produto) */}
+      <FaixaCompareAqui />
+
       <main className="main-content">
         <aside className="auction-sidebar">
           {/* 💰 PONTO 82 — no desktop o cabeçalho da sala é o painel lateral:
@@ -1438,7 +1442,9 @@ export default function AuctionRoom() {
       <style>{`
         /* Altura EXATA da viewport menos o header fixo do Layout (pt-14 = 56px,
            sm:pt-16 = 64px) — o chat rola por dentro e a página fica travada. */
-        .auction-page-container { display: flex; flex-direction: column; height: calc(100dvh - 56px); background-color: #111827; overflow: hidden; }
+        /* 🎨 PONTO 82 (Fase 2) — paleta premium: base grafite-azulada, acento
+           esmeralda discreto. Só cor/raio/sombra — nenhuma regra de layout mudou. */
+        .auction-page-container { display: flex; flex-direction: column; height: calc(100dvh - 56px); background-color: #0B1120; overflow: hidden; }
         @media (min-width: 640px) { .auction-page-container { height: calc(100dvh - 64px); } }
         
         @media (max-width: 1023px) {
@@ -1454,7 +1460,7 @@ export default function AuctionRoom() {
           .main-content { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: minmax(0, 1fr); gap: 16px; max-width: 1280px; margin: 16px auto; width: 100%; flex: 1; overflow: hidden; min-height: 0; }
           .auction-sidebar { grid-column: 1; height: fit-content; position: sticky; top: 80px; overflow-y: auto; max-height: 100%; }
           .chat-wrapper { grid-column: 2; height: 100%; }
-          .bid-input-container { padding: 16px; background: rgba(31, 41, 55, 0.5); backdrop-filter: blur(8px); border-top: 1px solid rgba(55, 65, 81, 0.8); }
+          .bid-input-container { padding: 16px; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(8px); border-top: 1px solid rgba(16, 185, 129, 0.14); }
         }
 
         .chat-wrapper { position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
@@ -1544,7 +1550,7 @@ export default function AuctionRoom() {
         .message-avatar, .message-avatar-initial { width: 36px; height: 36px; border-radius: 999px; flex-shrink: 0; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.1); }
         .message-avatar-initial { display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; }
         
-        .message-bubble__content { max-width: 100%; padding: 12px 16px; border-radius: 16px; background: #272f3d; color: white; word-wrap: break-word; border: 1px solid #374151; }
+        .message-bubble__content { max-width: 100%; padding: 12px 16px; border-radius: 16px; background: #182233; color: white; word-wrap: break-word; border: 1px solid rgba(148, 163, 184, 0.16); }
         .message-bubble-wrapper--own .message-bubble__content { background: #10b981; border-color: #059669; color: #04432c; }
         
         .message-bubble__header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; opacity: 0.8; color: #d1d5db; }
@@ -1559,7 +1565,7 @@ export default function AuctionRoom() {
         .empty-chat { text-align: center; padding: 48px 16px; color: #9ca3af; margin: auto; }
         .empty-chat__icon { font-size: 48px; margin-bottom: 16px; }
         
-        .mobile-header { display: flex; align-items: center; justify-content: space-between; background: rgba(31, 41, 55, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(55, 65, 81, 0.8); padding: 8px 16px; padding-top: max(8px, env(safe-area-inset-top)); flex-shrink: 0; position: sticky; top: 0; z-index: 20; }
+        .mobile-header { display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(55, 65, 81, 0.8); padding: 8px 16px; padding-top: max(8px, env(safe-area-inset-top)); flex-shrink: 0; position: sticky; top: 0; z-index: 20; }
         .mobile-header__info { text-align: center; flex-grow: 1; }
         .mobile-header__price-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
         .mobile-header__price { font-size: 18px; font-weight: bold; color: #10b981; }
@@ -1576,7 +1582,7 @@ export default function AuctionRoom() {
         
         .mobile-header__info-btn { background: none; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; }
         
-        .product-panel { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(55, 65, 81, 0.8); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+        .product-panel { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); border: 1px solid rgba(16, 185, 129, 0.16); border-radius: 16px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,.38); }
         .product-panel__image { width: 100%; height: 200px; object-fit: cover; }
         .product-panel__body { padding: 16px; }
         .product-panel__title { font-size: 18px; font-weight: bold; color: white; margin-bottom: 8px; word-wrap: break-word; overflow-wrap: break-word; }
@@ -1585,7 +1591,7 @@ export default function AuctionRoom() {
         .product-panel__timer { font-family: monospace; background: #374151; padding: 4px 8px; border-radius: 6px; color: white; font-size: 12px; }
         .product-panel__desc { color: #d1d5db; font-size: 14px; line-height: 1.4; max-height: 60px; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; }
         
-        .bid-input-container { flex-shrink: 0; background: rgba(31, 41, 55, 0.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(55, 65, 81, 0.8); padding-bottom: env(safe-area-inset-bottom); }
+        .bid-input-container { flex-shrink: 0; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(12px); border-top: 1px solid rgba(16, 185, 129, 0.16); padding-bottom: env(safe-area-inset-bottom); }
         
         .mobile-bottom-sheet { display: flex; flex-direction: column; position: fixed; left: 0; right: 0; bottom: 0; background: rgba(31, 41, 55, 0.95); backdrop-filter: blur(16px); border-radius: 16px 16px 0 0; transform: translateY(100%); transition: transform 0.3s ease-out; z-index: 1001; max-height: 80vh; overflow-y: hidden; border-top: 1px solid rgba(55, 65, 81, 0.8); padding-bottom: env(safe-area-inset-bottom); }
         .mobile-bottom-sheet--open { transform: translateY(0); }
