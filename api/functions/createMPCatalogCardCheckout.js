@@ -67,7 +67,14 @@ export default async function handler(req, res) {
     });
     if (!fr.ok) return res.status(200).json({ success: false, error: fr.error });
     const frete = fr.frete;
-    const totalCobrado = round2(totalProdutos + frete.valor);
+    // 💳 TAXA DO CARTÃO REPASSADA AO CLIENTE (Gabriel, 04/08/2026): a loja não absorve
+    // nada. Os juros do parcelamento já são cobrados do cliente pelo próprio MP; aqui
+    // entra a taxa de venda que o MP descontava do recebimento. Fica FORA da base de
+    // comissão (total_amount continua só o produto) — senão infla comissão de todo mundo.
+    const TAXA_CARTAO_PCT = 5.31;
+    const subtotal = round2(totalProdutos + frete.valor);
+    const taxaCartao = round2(subtotal * (TAXA_CARTAO_PCT / 100));
+    const totalCobrado = round2(subtotal + taxaCartao);
     if (totalCobrado < 1) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 1,00' });
 
     const saleId = oid();
@@ -77,7 +84,7 @@ export default async function handler(req, res) {
       sale_price: totalProdutos, total_amount: totalProdutos, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', payment_method: 'credit_card_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       discount_amount: passaporte_desconto || null,
-      raw_base44: { passaporte_coupon_id, passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado },
+      raw_base44: { passaporte_coupon_id, passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao },
     }) });
 
     // Checkout Pro (página hospedada do Mercado Pago) — mesma UX de redirecionamento que a Stripe tinha.
@@ -85,6 +92,7 @@ export default async function handler(req, res) {
     const mpItems = lines.map((l) => ({ title: String(l.p.description).slice(0, 120), quantity: l.q, unit_price: unitPrice(l.p), currency_id: 'BRL' }));
     if (frete.valor > 0) mpItems.push({ title: `Frete — ${[frete.empresa, frete.servico].filter(Boolean).join(' ')}`.slice(0, 120), quantity: 1, unit_price: frete.valor, currency_id: 'BRL' });
     if (passaporte_desconto > 0) mpItems.push({ title: 'Desconto Passaporte do Leilão', quantity: 1, unit_price: -passaporte_desconto, currency_id: 'BRL' });
+    if (taxaCartao > 0) mpItems.push({ title: 'Taxa de pagamento no cartão', quantity: 1, unit_price: taxaCartao, currency_id: 'BRL' });
 
     const prefBody = {
       items: mpItems,
@@ -110,7 +118,7 @@ export default async function handler(req, res) {
     if (!r.ok || !pref?.id) return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 300) });
 
     await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
-    return res.status(200).json({ success: true, sale_id: saleId, amount: totalCobrado, amount_products: totalProdutos, shipping: frete.valor, url: pref.init_point, preference_id: pref.id, passaporte_desconto });
+    return res.status(200).json({ success: true, sale_id: saleId, amount: totalCobrado, amount_products: totalProdutos, shipping: frete.valor, taxa_cartao: taxaCartao, url: pref.init_point, preference_id: pref.id, passaporte_desconto });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao criar checkout', details: String(e?.message || e) });
   }

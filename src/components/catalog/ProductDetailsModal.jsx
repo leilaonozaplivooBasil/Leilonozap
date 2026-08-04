@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { fmtBR } from '@/lib/money';
+import { textoParcelamento } from '@/lib/parcelamento';
 import { useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { createPageUrl } from "@/utils";
@@ -150,7 +151,8 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
   const market = Number(product.market_value) || 0;
   const hasDiscount = market > price && price > 0;
   const discountPct = hasDiscount ? Math.round((1 - price / market) * 100) : 0;
-  const parcela12 = price / 12;
+  // 💳 parcelamento REAL do Mercado Pago (cliente absorve juros + taxa) — nunca preço ÷ 12
+  const parc = textoParcelamento(price);
   const stock = Number(product.quantity) || 0;
   const inStock = stock > 0;
   const specs = [
@@ -309,7 +311,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                     <span className="text-3xl font-black text-green-400">{money(price)}</span>
                     {hasDiscount && <span className="mb-1 text-xs font-black text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded">{discountPct}% OFF</span>}
                   </div>
-                  <p className="text-sm text-gray-400 mt-1">em até <b className="text-gray-200">12x {money(parcela12)}</b> · ou no <b className="text-emerald-300">PIX</b></p>
+                  <p className="text-sm text-gray-400 mt-1">no cartão em <b className="text-gray-200">{parc}</b> · ou <b className="text-emerald-300">{money(price)} no PIX</b></p>
                 </div>
 
                 {inStock && (
@@ -345,7 +347,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                   <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — calcule o frete e o prazo abaixo.</span></div>
                   <div className="flex items-start gap-2.5"><RotateCcw className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Devolução em até 7 dias</b> após o recebimento.</span></div>
                   <div className="flex items-start gap-2.5"><ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Compra garantida</b> — receba o produto ou seu dinheiro de volta.</span></div>
-                  <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX, cartão em até 12x ou boleto.</span></div>
+                  <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX, cartão parcelado ou boleto.</span></div>
                 </div>
               </div>
 
@@ -371,7 +373,8 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">Cartão de crédito</p>
-                  <p className="text-sm text-gray-200">Em até <b>12x {money(parcela12)}</b></p>
+                  <p className="text-sm text-gray-200"><b>{parc}</b></p>
+                  <p className="text-xs text-gray-500 mt-1">Juros e taxas do cartão já inclusos na parcela.</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">Boleto bancário</p>

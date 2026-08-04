@@ -8,6 +8,47 @@
 
 ---
 
+## 04/08/2026 — PONTO 78: parcelamento real + cliente absorve a taxa do cartão
+
+- **Decisão do dono do produto (Gabriel, 04/08/2026):** **o cliente absorve TUDO.** A loja
+  não absorve taxa nenhuma — nem juros de parcelamento, nem taxa de venda do Mercado Pago.
+- **O defeito:** a vitrine mostrava `preço ÷ 12` (produto de R$ 100 → "12x de R$ 8,33"),
+  número que não existe em nenhum cenário. Além disso prometia "em até 12x" em produto de
+  R$ 33, que o MP só parcela em **6x** (parcela mínima ~R$ 5).
+- **Números confirmados na API oficial do MP** (token de produção, 04/08): juros de 9,64% em
+  2x até 22,11% em 12x; taxa de venda parcelada 5,31%. Somados, batem casa decimal por casa
+  decimal com o painel do MP (2x 14,95% · 3x 16,54% · 6x 19,63% · 12x 27,42%). A taxa % é
+  **fixa por número de parcelas** — não varia com o valor.
+- **O que mudou (exibição):** novo `src/lib/parcelamento.js` — fonte única. A parcela exibida
+  agora é `preço × (1 + 5,31%) × (1 + juros do MP) ÷ n`, e o nº de parcelas é o **maior que o
+  MP realmente oferece** para aquele valor. Produto de R$ 100 → **12x de R$ 10,72**.
+  Produto de R$ 33 → passa a mostrar 6x, não 12x.
+- **O que mudou (cobrança) 🔴:** `createMPCatalogCardCheckout.js` acrescenta uma linha
+  **"Taxa de pagamento no cartão" (5,31%)** sobre produtos + frete. Os juros continuam sendo
+  aplicados pelo próprio MP sobre esse valor — é assim que a vitrine e a cobrança batem.
+- **Proteção da comissão:** a taxa fica **FORA da base de comissão** — `sale_price` e
+  `total_amount` continuam sendo só o valor dos produtos. A taxa é registrada em
+  `raw_base44.taxa_cartao` para auditoria. Comissão de ninguém foi inflada.
+- **Armadilha evitada:** "repassar" multiplicando o preço por 1,2742 faria o MP aplicar os
+  22,11% dele **em cima disso** — o cliente pagaria os juros duas vezes (12x de R$ 12,97 num
+  produto de R$ 100). Por isso o repasse é só da taxa de venda.
+- **Arquivos:** `src/lib/parcelamento.js` (novo), `src/components/catalog/ProductDetailsModal.jsx`,
+  `src/pages/CatalogProductDetails.jsx`, `api/functions/createMPCatalogCardCheckout.js`,
+  `base44/functions/consultarTaxasMP/entry.ts` (novo, só leitura — serve pra reconferir as taxas).
+- **NÃO foi tocado:** `mpWebhook`, `createMPPix`, `createMPPayment`, `_lib/commissions`,
+  carteira, frete, estoque, auth, `CatalogProductCard`.
+- **Risco:** 🔴 Alto (altera valor cobrado do cliente) — mitigado: base de comissão intacta,
+  taxa em linha separada e visível no checkout do MP, nenhuma venda existente alterada.
+- **Pendências declaradas:**
+  1. **PIX não repassa taxa** (o MP cobra ~0,99% na hora). Não mexi: o preço do PIX é o preço
+     de vitrine de toda a loja, mudar isso muda o preço anunciado em todo lugar.
+  2. **Leilões e adesão de Vendedor** continuam com a taxa absorvida — outros arquivos, outra
+     autorização.
+  3. `Cart.jsx` e `CatalogCheckout2.jsx` ainda não foram lidos; se exibirem parcela, precisam
+     do mesmo ajuste.
+
+---
+
 ## 04/08/2026 — PONTO 77: fechar a torneira da importação (prevenção na entrada)
 
 - **O que mudou:** todo produto que ENTRA por importação passa a ter o nome limpo
