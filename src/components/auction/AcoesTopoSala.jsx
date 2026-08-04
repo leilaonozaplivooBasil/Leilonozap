@@ -23,7 +23,7 @@ export default function AcoesTopoSala() {
   if (!ctx?.auctionId) return null;
 
   return (
-    <div className="flex items-center gap-1 mr-2 sm:mr-3">
+    <div className="flex items-center gap-1 mr-5 sm:mr-6">
       {ctx.userId && (
         <FavoriteButton
           auctionId={ctx.auctionId}
