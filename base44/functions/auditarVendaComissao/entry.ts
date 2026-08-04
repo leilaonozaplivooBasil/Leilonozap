@@ -175,7 +175,12 @@ Deno.serve(async (req) => {
         status: v.status,
         commission_processed: v.commission_processed,
         vendedor: chain[0]?.full_name || '(sem cadeia)',
-        cadeia: chain.map((u) => ({ nome: u.full_name, cargos: u.career_levels, principal: u.primary_career_level })),
+        cadeia: chain.map((u) => ({
+          nome: u.full_name,
+          cargos: u.career_levels,
+          principal: u.primary_career_level,
+          executivo_cadastrado: (() => { const d = byId.get(carteiraExec(u)); return d ? d.full_name : null; })(),
+        })),
         cadeia_pct: pctCadeia,
         executivo_aplicado: exec ? { nome: exec.full_name, origem: execOrigem } : null,
         total_pago: round2(Object.values(pago).reduce((s, x) => s + x.total, 0)),
