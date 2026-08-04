@@ -11,8 +11,12 @@ export default function IntegracaoMelhorEnvio() {
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState("");
 
+  // O backend valida o cargo pelo actorId (mesmo padrão das outras rotas de admin
+  // deste app). Sem isso a função recusa por segurança.
   const chamar = useCallback(async (acao, extra = {}) => {
-    return await base44.functions.invoke("melhorEnvioOAuth", { acao, ...extra });
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem("currentUser") || "null")?.id || null; } catch { actorId = null; }
+    return await base44.functions.invoke("melhorEnvioOAuth", { acao, actorId, ...extra });
   }, []);
 
   const lerStatus = useCallback(async () => {

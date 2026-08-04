@@ -8,6 +8,34 @@
 
 ---
 
+## 04/08/2026 — PONTO 81 (FASE 1B): a autorização não chegava ao servidor — corrigido
+
+- **Sintoma:** a tela mostrava "Não foi possível montar o link de autorização" e a URL de
+  callback aparecia vazia.
+- **Causa-raiz (não era o Melhor Envio):** neste app `base44.functions.invoke` NÃO chama
+  funções Base44 — o adapter (`src/api/base44Adapter.js`) redireciona tudo para
+  `/api/functions/<nome>` na Vercel. A função criada na Fase 1 existia só como função Deno,
+  então a rota não existia e o adapter devolvia `not_implemented`. Mesmo motivo do status vazio.
+- **Segundo problema, igualmente fatal:** a entidade `MelhorEnvioToken` gravava no banco
+  interno do Base44, não no Supabase de produção — o token seria salvo no lugar errado.
+- **Correção:** função reescrita como rota Vercel nativa (`api/functions/melhorEnvioOAuth.js`),
+  gravando na nova tabela `melhor_envio_tokens` do Supabase via service_role. Autorização por
+  `actorId` validado como admin/super_admin em `app_users` (mesmo padrão de `entityWrite` /
+  `adminUpdateUser`). Token continua fora da resposta e fora de log.
+- **Tabela:** `supabase/migrations/20260804_melhor_envio_tokens.sql` — RLS habilitada e **zero
+  policy** de propósito: só o service_role acessa. **Precisa ser rodada no Supabase.**
+- **A versão Deno foi mantida** como referência (não é alcançável pelo navegador). Mexeu numa,
+  espelhe na outra — está comentado no topo do arquivo.
+- **NÃO foi tocado:** `api/_lib/frete.js`, `cotarFrete` (as duas versões), `MELHOR_ENVIO_TOKEN`,
+  checkout, comissão, estoque, carteira, auth.
+- **⚠️ NÃO validado automaticamente:** `/api/functions/*` **não existe no ambiente de preview**
+  (confirmado: responde "App not found"). Esta rota só executa em produção — o teste real é
+  abrir a tela no site publicado. Se a tabela não tiver sido criada, a função avisa em português
+  pedindo para rodar a migração, em vez de falhar sem explicação.
+- **Risco:** 🔴 Alto (credencial de logística) — mitigado por escopo isolado.
+
+---
+
 ## 04/08/2026 — PONTO 81 (FASE 1): autorização OAuth do Melhor Envio
 
 - **Por que:** o token fixo atual só permite **cotar frete**. Carrinho, pagamento de etiqueta,
