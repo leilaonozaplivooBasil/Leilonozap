@@ -262,9 +262,27 @@ Deno.serve(async (req) => {
       return compacto ? enxuga(arr) : ordena(arr);
     };
 
+    // 5) SEPARAÇÃO OBRIGATÓRIA POR STATUS (decisão Gabriel 03/08/2026):
+    // todo relatório precisa mostrar ATIVOS × ENCERRADOS × VENDIDOS separados,
+    // pra ninguém ler número de histórico como se fosse pendência da vitrine.
+    const porStatus = (lista, st) => lista.filter((a) => a.status === st).length;
+    const semBuyNow = (lista) => lista.filter(
+      (a) => a.buy_now_price === null || a.buy_now_price === undefined || num(a.buy_now_price) === 0
+    );
+    const semBuyNowTodos = semBuyNow(auctions);
+
     return Response.json({
       ok: true,
       escrita_realizada: false,
+      // 👇 leia SEMPRE este bloco primeiro
+      quadro_por_status: {
+        ativos: porStatus(auctions, 'active'),
+        encerrados: porStatus(auctions, 'ended'),
+        vendidos: porStatus(auctions, 'sold'),
+        em_processamento: porStatus(auctions, 'processing'),
+        total_no_banco: auctions.length,
+        observacao: 'Só os ATIVOS aparecem na vitrine. Encerrados e vendidos são histórico — não são pendência.',
+      },
       resumo: {
         total_leiloes_auditados: auctions.length,
         total_lances_lidos: bids.length,
@@ -275,7 +293,15 @@ Deno.serve(async (req) => {
         anomalia_inversa: atencao.length,
         distorcao_total_em_reais: Number(distorcaoTotal.toFixed(2)),
       },
-      sem_buy_now_price: auctions.filter((a) => a.buy_now_price === null || a.buy_now_price === undefined || num(a.buy_now_price) === 0).length,
+      // "Compre Já" ausente é INTENCIONAL (decisão Gabriel 03/08/2026) — informativo, não é anomalia.
+      sem_buy_now_price: {
+        ativos: porStatus(semBuyNowTodos, 'active'),
+        encerrados: porStatus(semBuyNowTodos, 'ended'),
+        vendidos: porStatus(semBuyNowTodos, 'sold'),
+        em_processamento: porStatus(semBuyNowTodos, 'processing'),
+        total: semBuyNowTodos.length,
+        observacao: 'Configuração intencional. Nao corrigir em massa.',
+      },
       grupo_a: saida(grupoA, 'grupo_a'),
       grupo_b: saida(grupoB, 'grupo_b'),
       grupo_c: saida(grupoC, 'grupo_c'),
