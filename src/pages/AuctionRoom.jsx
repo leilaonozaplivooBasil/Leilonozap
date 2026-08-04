@@ -26,7 +26,7 @@ import { Wallet } from "lucide-react";
 
 import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
-import FaixaCompareAqui from "@/components/auction/FaixaCompareAqui";
+import CompareAquiFlutuanteSala from "@/components/comparai/CompareAquiFlutuanteSala";
 import BarraTempoLeilao from "@/components/auction/BarraTempoLeilao";
 import HeaderPrecoTempo from "@/components/auction/HeaderPrecoTempo";
 import ChipParticipantes from "@/components/auction/ChipParticipantes";
@@ -1072,8 +1072,7 @@ export default function AuctionRoom() {
       {/* 📜 PONTO 67 — aviso permanente: estratégia de marketing, não é leilão oficial */}
       <AvisoNaoLeilaoOficial />
 
-      {/* 🔎 PONTO 82 (Fase 2) — CompareAQUI integrado à sala (abre o modal real do produto) */}
-      <FaixaCompareAqui />
+      {/* 🔎 PONTO 84 — o CompareAQUI virou flutuante fixo na lateral esquerda (ver abaixo) */}
 
       <main className="main-content">
         <aside className="auction-sidebar">
@@ -1408,6 +1407,9 @@ export default function AuctionRoom() {
       {/* Um único CompareAQUI na sala: o botão visível é o de baixo (LojaFloatActions);
           aqui só o modal com a comparação real do produto deste leilão. */}
       <CompareAquiButton auction={auction} trigger="event" />
+
+      {/* 🔎 PONTO 84 — botão flutuante fixo (lateral esquerda, mesma altura/tamanho da Leila) */}
+      <CompareAquiFlutuanteSala />
 
       {/* 🆕 Modal de Saldo Baixo */}
       <LowBalanceModal
