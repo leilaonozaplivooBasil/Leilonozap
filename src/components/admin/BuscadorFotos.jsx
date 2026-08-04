@@ -29,11 +29,31 @@ export default function BuscadorFotos({ productName = "", onSelect, jaTem = 0 })
     setEscolhidas([]);
     try {
       const resp = await base44.functions.invoke("extractGoogleShoppingImages", { productName: nome });
-      const urls = (resp?.data?.data?.products || []).map((p) => p.imageUrl).filter(Boolean);
+      // ⚠️ CAUSA-RAIZ PONTO 77: aqui se lia resp.data.data.products[].imageUrl, campo
+      // que esta função NUNCA devolveu — ela devolve { success, images: [...] }. Por
+      // isso TODA busca caía em "Nenhuma foto encontrada", com título curto ou longo.
+      // O adapter devolve o JSON cru; .data é só rede de segurança.
+      // Existem DOIS backends com formatos diferentes (Vercel devolve { images: [] },
+      // o runtime Deno devolve { products: [{ imageUrl }] }) e o adapter às vezes
+      // aninha em .data. Aceita todos — assim a tela não depende de qual respondeu.
+      const camadas = [resp, resp?.data, resp?.data?.data].filter(Boolean);
+      const dados = camadas.find((c) => c.images || c.products) || {};
+      const urls = [
+        ...(dados.images || []),
+        ...(dados.products || []).map((p) => p?.imageUrl || p?.image),
+      ].filter((u, i, arr) => typeof u === "string" && /^https?:\/\//i.test(u) && arr.indexOf(u) === i);
       if (urls.length === 0) {
-        toast.error("Nenhuma foto encontrada. Tente um nome mais completo (marca + modelo).");
+        // Mensagem honesta: "não achei" é diferente de "a busca falhou".
+        if (dados.motivo === "falha_busca") {
+          toast.error("A busca de fotos falhou: " + (dados.error || "erro na API"));
+        } else {
+          toast.error("Nenhuma foto encontrada para \"" + (dados.query_usada || nome) + "\". Tente marca + modelo.");
+        }
         return;
       }
+      // Mostra o termo que REALMENTE foi usado (a busca simplifica o título) —
+      // o usuário pode editar e buscar de novo.
+      if (dados.query_usada) setTermo(dados.query_usada);
       setFotos(urls);
       // já vem com as 6 primeiras marcadas — o caminho natural é sair com 6 fotos
       setEscolhidas(urls.slice(0, IDEAL));
