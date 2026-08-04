@@ -213,14 +213,17 @@ export default async function handler(req, res) {
       // banco antes desta alteração (created_date existe; timestamp existe).
       created_date: new Date().toISOString(),
       timestamp: new Date().toISOString(),
-      // 🔴 NÃO REINTRODUZIR `frete_amount` AQUI (04/08/2026).
-      // A coluna auction_messages.frete_amount NÃO EXISTE no banco de produção: a
-      // migração 20260801_frete_leilao.sql entrou pela metade (criou
-      // auctions.frete_reservado_valor, não criou esta). Com o campo no INSERT, o
-      // PostgREST devolvia 42703 e TODO lance morria em "Não foi possível registrar
-      // o lance" — produção ficou sem nenhum lance de 03/08 15:03 até esta correção.
-      // O frete reservado continua auditável em auctions.frete_reservado_valor (gravado
-      // no PATCH abaixo), que é a fonte usada para devolver a reserva do líder anterior.
+      // 🚚 PONTO 84 (camada 2) — FRETE RESERVADO NESTE LANCE.
+      // A coluna auction_messages.frete_amount foi criada em 04/08/2026 pela migração
+      // 20260804_auction_messages_frete_amount.sql (a 20260801_frete_leilao.sql havia
+      // entrado pela metade: criou auctions.frete_reservado_valor e não esta) e sua
+      // existência foi CONFIRMADA por leitura no banco antes desta alteração.
+      // ⚠️ Histórico: enquanto a coluna não existia, este campo no INSERT fazia o
+      // PostgREST devolver 42703 e TODO lance morria em "Não foi possível registrar o
+      // lance" — produção ficou sem nenhum lance de 03/08 15:03 até o PONTO 83.
+      // Nunca reintroduzir um campo aqui sem antes provar a coluna no banco.
+      // O bid_amount continua sendo SÓ o produto; o frete é registro paralelo.
+      frete_amount: freteValor,
       content: `Lance de R$ ${bidAmount.toFixed(2).replace('.', ',')}`,
       is_system_message: false,
     });

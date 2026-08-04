@@ -8,6 +8,45 @@
 
 ---
 
+## 04/08/2026 — PONTO 84 (CAMADA 2): frete lance a lance + alarme falso do meu diagnóstico
+
+- **O que mudou:** com a coluna `auction_messages.frete_amount` criada em produção, o frete
+  passou a ser gravado **no próprio lance** e o extrato passou a lê-lo de lá. Antes existia só
+  o frete do LÍDER ATUAL (`auctions.frete_reservado_valor`), então o frete aparecia num único
+  lance; agora aparece em **todos**, inclusive nos já superados.
+  1. `submitAtomicBid.js` — `frete_amount: freteValor` volta ao INSERT do lance. `freteValor`
+     já era lido do corpo da requisição na linha 92, **antes** do INSERT (confirmado por
+     leitura) — não há risco de variável indefinida. O comentário-trava do PONTO 83 foi
+     substituído por um comentário que explica a nova regra e a lição.
+  2. `getDigitalWalletHistory.js` — o frete vem de `Number(m.frete_amount)`. Lances gravados
+     ANTES da coluna existir voltam 0 e simplesmente não exibem a linha de frete.
+- **🔴 ERRO MEU, REGISTRADO PARA NÃO REPETIR:** a função `diagnosticoLanceFalha` devolvia
+  `causa_raiz: "frete_amount NAO EXISTE (42703)"` como **STRING FIXA no código** (linha 79),
+  resquício da investigação do PONTO 83 — **ela nunca consultou a coluna**. Depois de o Gabriel
+  já ter aplicado a migração com sucesso, eu li aquela frase e afirmei que a coluna não existia,
+  fazendo-o rodar o comando **duas vezes** e culpando indevidamente o cache de schema do
+  Supabase. **Regra permanente:** função de diagnóstico não pode devolver veredito escrito à
+  mão — o veredito tem de vir do banco na hora. Criada
+  `verificarColunaFreteAmount` (100% leitura), que pede a coluna ao PostgREST e decide pelo
+  código de erro real (42703 = não existe). Ela confirmou: **coluna EXISTE** (HTTP 200, com
+  `frete_amount` vindo nos registros).
+- **⚠️ Pendência de limpeza:** `diagnosticoLanceFalha` continua no projeto com aquela frase
+  fixa e **vai mentir de novo** se alguém a consultar. Recomendo apagá-la (ou remover o campo
+  `causa_raiz`) — não fiz porque está fora do escopo autorizado.
+- **NÃO foi tocado:** `reserveBidBalance`, `releaseBidHold`, `_lib/bidHold.js`,
+  `useBidSubmission.js`, `finalizeAuctionCore`, comissões, checkout, estoque, auth, frete da
+  loja, `WalletDrawer` (layout/CSS). Reserva de saldo, trava por `version` (CAS), rollback do
+  lance e devolução da reserva do líder anterior seguem **idênticos**.
+- **⚠️ Validação:** `/api/functions/*` **não executa no preview** — as duas funções alteradas
+  **não foram testadas automaticamente**. O que foi validado por leitura: a coluna existe, e
+  `freteValor` é definido antes do INSERT. **Teste real em produção:** dar um lance com frete →
+  abrir a carteira → conferir "inclui frete de R$ X"; depois ser superado por outra conta e
+  conferir que o frete **continua aparecendo** no lance superado (era o que faltava).
+- **Risco:** 🟡 Médio — grava um campo novo no registro do lance; nenhum valor financeiro,
+  saldo ou regra de disputa foi alterado.
+
+---
+
 ## 04/08/2026 — PONTO 84: extrato da carteira conta a história do lance
 
 - **O que o cliente via:** dava o lance, abria a carteira e **não achava o lance**. Sem frete,

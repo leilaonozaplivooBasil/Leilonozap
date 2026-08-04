@@ -125,12 +125,13 @@ export default async function handler(req, res) {
       const bidState = souOLider
         ? (a.status === 'active' ? 'liderando' : 'arrematado')
         : 'superado';
-      // 🚚 Frete reservado: hoje só existe o frete do LÍDER ATUAL, em
-      // auctions.frete_reservado_valor (auction_messages.frete_amount ainda NÃO existe —
-      // ver supabase/migrations/20260804_auction_messages_frete_amount.sql). Por isso o
-      // frete aparece apenas no lance que está com o valor reservado. Quando a coluna
-      // existir, trocar por Number(m.frete_amount) para valer em todo o histórico.
-      const freteAmount = bidState === 'liderando' ? (Number(a.frete_reservado_valor) || 0) : 0;
+      // 🚚 PONTO 84 (camada 2) — o frete agora vem do PRÓPRIO lance
+      // (auction_messages.frete_amount, coluna criada em 04/08/2026 e confirmada por
+      // leitura no banco). Assim o frete aparece em TODO lance, inclusive nos já
+      // superados — antes só existia o frete do líder atual, em
+      // auctions.frete_reservado_valor. Lances gravados ANTES da coluna existir voltam
+      // 0 e simplesmente não exibem a linha de frete, sem quebrar nada.
+      const freteAmount = Number(m.frete_amount) || 0;
       transactions.push({
         id: `bid-${m.id}`,
         type: 'bid',
