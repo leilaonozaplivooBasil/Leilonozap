@@ -31,6 +31,18 @@ const sb = (path: string, opts: RequestInit = {}) =>
   });
 
 // ── PLANO OFICIAL ────────────────────────────────────────────────
+// 📕 FONTE DE VERDADE DESTES NÚMEROS: docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md
+// (transcrição da apresentação oficial de negócio, entregue pelo dono em 04/08/2026)
+//
+// ⚠️ NÃO ALTERE NENHUM PERCENTUAL AQUI com base em número falado numa conversa.
+// Se alguém disser um valor diferente, o DOCUMENTO OFICIAL vence — aponte a
+// divergência e peça confirmação por escrito antes de mexer.
+//
+// Validado em 04/08/2026, 100% alinhado ao documento:
+//   Influenciador 5% · Vendedor 10% · Licenciado 13% · Parceiro 15%
+//   Ponto de Retirada 16% · Loja Física 19% · Distribuidor 20%
+//   Executivo 1% (recebe SOBRE A CADEIA, por fora dos 20%)
+//   Fórmula: 30% = 20% cadeia telescópica + 10% topo institucional
 const POOLS = [
   { id: 'ceo', pct: 3.0 }, { id: 'livoo_live', pct: 2.0 }, { id: 'embaixador', pct: 1.0 },
   { id: 'conselheiro', pct: 1.0 }, { id: 'fundador', pct: 1.0 },

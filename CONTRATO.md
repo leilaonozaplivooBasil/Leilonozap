@@ -22,6 +22,33 @@ Coda a lógica de servidor      ponto de              Puxa o código do GitHub
 
 ---
 
+## 📕 0. DOCUMENTO OFICIAL DO PLANO DE CARREIRA E COMISSÕES
+
+> **FONTE DE VERDADE ABSOLUTA:** [`docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`](docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md)
+
+**Qualquer dúvida sobre percentual, cargo, hierarquia, rebate ou quem recebe o quê
+→ LER AQUELE ARQUIVO PRIMEIRO, antes de tocar em qualquer código de comissão.**
+
+Ele é a transcrição da apresentação oficial de negócio (`Leilao-NoZap-apresentacao-Oficial2.pdf`,
+entregue pelo dono em 04/08/2026) e contém:
+
+- Tabela oficial de comissão direta por cargo (5% → 20%)
+- Regra do **Executivo, que recebe sobre a CADEIA** (1%, por fora dos 20%)
+- Hierarquia completa de quem cadastra quem
+- Como o rebate telescópico funciona (teto de 20%)
+- Os 10% de governança (topo institucional) — fórmula 30% = 20% + 10%
+- Regra da venda pessoal e da carteira migrada
+
+⚠️ Se alguém falar um percentual **diferente** do que está no documento (inclusive de
+memória, numa conversa) → **o documento vence.** Aponte a divergência e peça
+confirmação; **não** altere o motor de comissão com base em número falado de cabeça.
+
+**Resumo rápido (04/08/2026):** Influenciador 5% · Vendedor 10% · Licenciado 13% ·
+Parceiro 15% · Ponto de Retirada 16% · Loja Física 19% · Distribuidor 20% ·
+Executivo 1% sobre a cadeia.
+
+---
+
 ## 🗄️ 1. Onde ficam os DADOS
 
 Os dados NÃO ficam no GitHub. GitHub guarda **código**. Os dados ficam no **Supabase**:

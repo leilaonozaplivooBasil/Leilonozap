@@ -8,6 +8,41 @@
 
 ---
 
+## 04/08/2026 — 📕 DOCUMENTO OFICIAL DO PLANO DE CARREIRA (fonte de verdade das comissões)
+
+- **Por que:** numa conversa foi dito "licenciado 15%", e o motor de comissão usa **13%**.
+  Eu **não alterei o código** — pedi confirmação. O dono então entregou a **apresentação
+  oficial de negócio** (`Leilao-NoZap-apresentacao-Oficial2.pdf`) e confirmou: **o documento
+  é a regra; o 15% falado era engano** (15% é o **Parceiro**, não o Licenciado).
+- **✅ Resultado da conferência: o sistema já estava 100% correto.** Nenhum percentual foi
+  alterado. Documento × motor de comissão, item por item:
+  Influenciador 5% ✅ · Vendedor 10% ✅ · Licenciado 13% ✅ · Parceiro 15% ✅ ·
+  Ponto de Retirada 16% ✅ · Loja Física 19% ✅ · Distribuidor 20% ✅ ·
+  Executivo 1% sobre a cadeia ✅ · teto da cadeia 20% ✅ · topo institucional 10% ✅.
+- **O que foi criado:** `docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md` — transcrição completa e
+  estruturada da apresentação: tabela de comissão por cargo, **regra do Executivo (recebe
+  SOBRE A CADEIA, 1%, por fora dos 20%)**, hierarquia de quem cadastra quem, funcionamento do
+  rebate telescópico, os 10% de governança (fórmula **30% = 20% + 10%**), regra da venda
+  pessoal, regra da carteira migrada e o mapa de onde cada regra vive no código.
+- **⚠️ REGRA PERMANENTE INSTITUÍDA:** qualquer dúvida sobre percentual, cargo, hierarquia ou
+  quem recebe o quê → **ler o documento oficial ANTES de tocar em código de comissão**. Se
+  alguém falar um número diferente (inclusive o dono, de memória, numa conversa), **o documento
+  vence** — aponta-se a divergência e pede-se confirmação por escrito. **Nunca** alterar o motor
+  de comissão com base em número falado de cabeça.
+- **Onde o aviso foi plantado (para ninguém tropeçar):**
+  1. `CONTRATO.md` — nova **seção 0**, antes de tudo, apontando para o documento.
+  2. `base44/functions/acertarComissaoVenda/entry.ts` — bloco de aviso **em cima da tabela
+     `NIVEIS`/`POOLS`**, onde alguém iria editar os percentuais.
+- **Arquivos:** `docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md` (novo), `CONTRATO.md`,
+  `base44/functions/acertarComissaoVenda/entry.ts` (**só comentário**), `MUDANCAS.md`.
+- **NÃO foi tocado:** nenhum percentual, nenhuma lógica, nenhum saldo, nenhuma venda.
+  `api/_lib/topPool.js`, `api/_lib/resolveExecutivo.js`, `api/_lib/commissions.js`,
+  `src/lib/careerLevels.js`, checkout, carteira, estoque e auth **intactos**.
+- **Impacto no front:** nenhum — só documentação e comentário.
+- **Risco:** 🟢 Baixo — zero linha executável alterada.
+
+---
+
 ## 04/08/2026 — PONTO 85: frete não aparecia (erro meu) + lance que "sumia" do extrato
 
 - **Arquivo único:** `api/functions/getDigitalWalletHistory.js` — **só leitura/exibição**.
