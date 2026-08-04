@@ -14,19 +14,16 @@ import { Stars } from '../loja/StarRating';
 import { getReferral } from '@/lib/referral';
 import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
+import useAutoCarousel from '@/hooks/useAutoCarousel';
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
 // onOpenDetails: quando presente (Loja Virtual), o clique abre o produto EXPANDIDO na
 // própria página (ProductDetailsModal) em vez de navegar — pedido Gabriel 25/07.
 function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, onOpenDetails }) {
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [isPaused, setIsPaused] = useState(false);
-    const [isHovering, setIsHovering] = useState(false);
     const [showComparai, setShowComparai] = useState(false);
     const [isInCart, setIsInCart] = useState(false);
     const [cartQuantity, setCartQuantity] = useState(0);
-    const intervalRef = useRef(null);
     const navigate = useNavigate();
 
     // Verifica se o produto já está no carrinho ao montar e quando o carrinho muda
@@ -138,48 +135,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     ? product.image_urls
     : [];
 
-  const startCarousel = () => {
-    if (images.length <= 1) return;
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setCurrentImageIndex(prevIndex => (prevIndex + 1) % images.length);
-    }, 1500);
-  };
-
-  const stopCarousel = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  const handleMouseEnter = () => {
-    setIsHovering(true);
-    if (!isPaused) {
-      startCarousel();
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-    stopCarousel();
-    setCurrentImageIndex(0);
-    setIsPaused(false);
-  };
-
-  const handleImageClick = (e) => {
-    e.preventDefault();
-    if (images.length <= 1) return;
-
-    const newPausedState = !isPaused;
-    setIsPaused(newPausedState);
-
-    if (newPausedState) {
-      stopCarousel();
-    } else {
-      startCarousel();
-    }
-  };
+  // 🎞️ PONTO 91 — fotos passando sozinhas, pausa no toque/hover e arraste lateral
+  const { index: currentImageIndex, paused: isPaused, carouselProps } = useAutoCarousel(images.length);
 
   const handleCardClick = (e) => {
     if (e.target.closest('button') || e.target.closest('a')) {
@@ -198,10 +155,6 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     }
     navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
   };
-
-  useEffect(() => {
-    return () => stopCarousel();
-  }, []);
 
   // PEDIR PELO WHATSAPP — conversa direta com licenciado ou loja
   const handleWhatsAppOrder = (e) => {
@@ -311,9 +264,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     >
       <div 
         className="relative overflow-hidden w-full aspect-square bg-white"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleImageClick}
+        {...carouselProps}
       >
         <div className="w-full h-full">
           {images.map((img, index) => (
@@ -346,14 +297,10 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
           </div>
         </div>
 
-        {/* Ícone de Play/Pause */}
-        {isHovering && images.length > 1 && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-14 h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
-            {isPaused ? (
-              <Play className="w-7 h-7 text-white fill-white" />
-            ) : (
-              <Pause className="w-7 h-7 text-white fill-white" />
-            )}
+        {/* Selo de pausa — só enquanto o dedo/mouse segura a foto */}
+        {isPaused && images.length > 1 && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 rounded-full w-14 h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
+            <Pause className="w-7 h-7 text-white/90 fill-white/90" />
           </div>
         )}
         

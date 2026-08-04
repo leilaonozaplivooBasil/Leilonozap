@@ -23,6 +23,7 @@ import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import RotatingBanner from '../components/banner/RotatingBanner';
 import { interleaveBanners } from '@/lib/interleaveBanners';
+import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
 import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
@@ -81,36 +82,42 @@ function HeroActionsCarousel({ currentUser }) {
   // 4 cópias do set = duas metades idênticas; o keyframe translateX(-50%) fecha o loop sem salto
   const loop = [0, 1, 2, 3].flatMap((copy) => items.map((item) => ({ ...item, copy })));
 
+  // 🎠 PONTO 91 — a fileira segue rolando sozinha, mas pausa no toque/hover e
+  // pode ser arrastada pros lados sem que os botões percam o clique.
+  const { paused, rowProps, dragStyle } = useDragRow();
+
   return (
-    <div className="hero-actions-scroller mt-4 -mx-2 px-2">
-      <div className="hero-actions-scroller__inner">
-        {loop.map((item) => {
-          const content = <HeroAction icon={item.icon} label={item.label} sublabel={item.sublabel} accent={item.accent} />;
-          const dupe = item.copy > 0;
-          return item.href ? (
-            <a
-              key={`${item.copy}-${item.key}`}
-              href={item.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-48 sm:w-52 shrink-0"
-              aria-hidden={dupe}
-              tabIndex={dupe ? -1 : undefined}
-            >
-              {content}
-            </a>
-          ) : (
-            <Link
-              key={`${item.copy}-${item.key}`}
-              to={item.to}
-              className="block w-48 sm:w-52 shrink-0"
-              aria-hidden={dupe}
-              tabIndex={dupe ? -1 : undefined}
-            >
-              {content}
-            </Link>
-          );
-        })}
+    <div className="hero-actions-scroller mt-4 -mx-2 px-2" {...rowProps}>
+      <div style={dragStyle}>
+        <div className="hero-actions-scroller__inner" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
+          {loop.map((item) => {
+            const content = <HeroAction icon={item.icon} label={item.label} sublabel={item.sublabel} accent={item.accent} />;
+            const dupe = item.copy > 0;
+            return item.href ? (
+              <a
+                key={`${item.copy}-${item.key}`}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-48 sm:w-52 shrink-0"
+                aria-hidden={dupe}
+                tabIndex={dupe ? -1 : undefined}
+              >
+                {content}
+              </a>
+            ) : (
+              <Link
+                key={`${item.copy}-${item.key}`}
+                to={item.to}
+                className="block w-48 sm:w-52 shrink-0"
+                aria-hidden={dupe}
+                tabIndex={dupe ? -1 : undefined}
+              >
+                {content}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

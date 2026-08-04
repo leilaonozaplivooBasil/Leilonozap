@@ -35,14 +35,13 @@ import SeloChamada from './SeloChamada';
 import useChamada from '@/hooks/useChamada';
 // 🛡️ PONTO 70 — Compre Já só aparece com preço real (nunca valor residual de R$ 1,00)
 import { precoArremateAgora } from '@/lib/arremateAgora';
+import useAutoCarousel from '@/hooks/useAutoCarousel';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
 function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null }) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const intervalRef = useRef(null);
+  // 🎞️ PONTO 91 — as fotos passam sozinhas em qualquer aparelho, pausam no
+  // toque/hover e podem ser arrastadas pros lados (hook único reutilizável).
 
   // 🆕 FORÇA RE-RENDER QUANDO O STATUS MUDAR
   const [localStatus, setLocalStatus] = useState(auction.status);
@@ -69,53 +68,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     ? auction.image_urls
     : []; // Alterado para array vazio se não houver imagens
 
-  // Função central para iniciar o carrossel
-  const startCarousel = () => {
-    if (images.length <= 1) return;
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setCurrentImageIndex(prevIndex => (prevIndex + 1) % images.length);
-    }, 1500);
-  };
-
-  // Função central para parar o carrossel
-  const stopCarousel = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  // Lógica de mouse
-  const handleMouseEnter = () => {
-    setIsHovering(true);
-    if (!isPaused) {
-      startCarousel();
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-    stopCarousel();
-    setCurrentImageIndex(0);
-    setIsPaused(false); // Reseta tudo ao sair
-  };
-
-  // Lógica de clique na imagem (para pausar/continuar carrossel)
-  const handleImageClick = (e) => {
-    e.preventDefault();
-    // e.stopPropagation(); // Não precisa, pois o objetivo é interagir com a imagem, não o card principal
-    if (images.length <= 1) return;
-
-    const newPausedState = !isPaused;
-    setIsPaused(newPausedState);
-
-    if (newPausedState) {
-      stopCarousel();
-    } else {
-      startCarousel();
-    }
-  };
+  const { index: currentImageIndex, paused: isPaused, carouselProps } = useAutoCarousel(images.length);
 
   // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA COM VERIFICAÇÃO DE SALDO
   const handleCardClick = (e) => {
@@ -183,11 +136,6 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
     }
   };
-
-  // Limpeza ao desmontar
-  useEffect(() => {
-    return () => stopCarousel();
-  }, []);
 
   const categoryEmojis = {
     eletronicos: "📱",
@@ -423,10 +371,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       >
         <div
           className={`relative overflow-hidden w-full ${variant === "sai_de_baixo" ? "bg-white" : "bg-gray-900/40"}`}
-          style={{ aspectRatio: '1/1', contain: 'layout' }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          onClick={handleImageClick}
+          {...carouselProps}
+          style={{ aspectRatio: '1/1', contain: 'layout', ...carouselProps.style }}
         >
           <div className="w-full h-full relative">
             {images.map((img, index) => (
@@ -463,14 +409,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
           </div>
 
-          {/* Ícone de Play/Pause */}
-          {isHovering && images.length > 1 && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
-              {isPaused ? (
-                <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
-              ) : (
-                <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
-              )}
+          {/* Selo de pausa — aparece só enquanto o dedo/mouse segura a foto */}
+          {isPaused && images.length > 1 && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
+              <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white/90 fill-white/90" />
             </div>
           )}
 
