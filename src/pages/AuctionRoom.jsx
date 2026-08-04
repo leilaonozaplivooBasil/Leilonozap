@@ -10,6 +10,7 @@ import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2, C
 import { format } from 'date-fns';
 
 import AIMessage from "../components/chat/AIMessage";
+import PlacaLance from "../components/chat/PlacaLance";
 import BidInput from "../components/auction/BidInput";
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
@@ -1185,28 +1186,13 @@ export default function AuctionRoom() {
                   );
                 }
 
-                // Mensagens normais de usuários
+                // PONTO 88 — lance de participante = placa erguida por uma mão
                 return (
-                  <div key={message.id} className={`message-bubble-wrapper ${currentUser && message.sender_id === currentUser.id ? 'message-bubble-wrapper--own' : ''}`}>
-                    {sender?.avatar_url ? (
-                      <img src={sender.avatar_url} alt="Avatar" className="message-avatar" />
-                    ) : (
-                      <div className="message-avatar-initial" style={{ backgroundColor: sender?.avatar_color || '#374151' }}>
-                        {message.sender_name?.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="message-bubble">
-                      <div className="message-bubble__content">
-                        <div className="message-bubble__header">
-                          <span className="message-bubble__name">{message.sender_name}</span>
-                          <span className="message-bubble__time">
-                            {format(new Date(message.created_date), 'HH:mm')}
-                          </span>
-                        </div>
-                        <div className="message-bubble__text">{message.content}</div>
-                      </div>
-                    </div>
-                  </div>
+                  <PlacaLance
+                    key={message.id}
+                    message={message}
+                    isOwn={!!currentUser && message.sender_id === currentUser.id}
+                  />
                 );
               })}
             </>
@@ -1542,29 +1528,8 @@ export default function AuctionRoom() {
         .auction-messages > * { max-width: 34rem; margin-left: auto; margin-right: auto; width: 100%; }
         /* PONTO 87 — sem flutuantes laterais na sala, o chat volta ao padding normal */
 
-        .message-bubble-wrapper { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; max-width: 78%; animation: slideIn 0.3s ease-out; }
-        .message-bubble-wrapper--own { margin-left: auto; margin-right: 0; flex-direction: row-reverse; }
-        
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .message-avatar, .message-avatar-initial { width: 36px; height: 36px; border-radius: 999px; flex-shrink: 0; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.1); }
-        .message-avatar-initial { display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; }
-        
-        .message-bubble__content { max-width: 100%; padding: 12px 16px; border-radius: 16px; background: #12251C; color: white; word-wrap: break-word; border: 1px solid rgba(46, 157, 99, 0.16); }
-        .message-bubble-wrapper--own .message-bubble__content { background: #10b981; border-color: #059669; color: #04432c; }
-        
-        .message-bubble__header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; opacity: 0.8; color: #d1d5db; }
-        .message-bubble-wrapper--own .message-bubble__header { color: #065f46; opacity: 0.9; }
-        
-        .message-bubble__name { font-weight: 500; }
-        .message-bubble-wrapper--own .message-bubble__name { color: white; font-weight: 700; }
-        
-        .message-bubble__text { font-size: 14px; }
-        .message-bubble-wrapper--own .message-bubble__text { font-weight: 600; font-size: 15px; }
-        
+        /* PONTO 88 — as bolhas de usuário deram lugar às placas (PlacaLance) */
+
         .empty-chat { text-align: center; padding: 48px 16px; color: #9ca3af; margin: auto; }
         .empty-chat__icon { font-size: 48px; margin-bottom: 16px; }
         

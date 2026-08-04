@@ -1,7 +1,6 @@
 import React from "react";
 import { Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
-import LanceIAAvatar from "./LanceIAAvatar";
 import LeiloeiroAvatar from "@/assets/leiloeiro-avatar.webp";
 
 // PONTO 85 — realce visual dos valores em R$ que JÁ vêm no texto do backend.
@@ -88,14 +87,14 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
 
   return (
     <div className="ia-linha mb-3.5 flex items-start gap-2">
-      <LanceIAAvatar className="ia-pop mt-0.5" />
+      {/* PONTO 88 — sem rótulo "LanceIA": só o leiloeiro pequeninho falando */}
+      <img src={LeiloeiroAvatar} alt="" aria-hidden="true" className="ia-pop mt-0.5 h-8 w-8 shrink-0 object-contain" />
 
       <div className="ia-balao min-w-0 px-3.5 py-2.5">
-        <div className="mb-1 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-400/80">
+        <div className="mb-1 flex items-center justify-end gap-3">
+          <span className="flex items-center gap-1.5">
             {isCountdown && <Timer className="h-3 w-3 text-amber-300" />}
             {message.message_type === 'winner_announcement' && <Crown className="h-3 w-3 text-yellow-300" />}
-            LanceIA
           </span>
           <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
             {formatTime(message.timestamp)}
