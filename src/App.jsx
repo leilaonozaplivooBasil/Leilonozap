@@ -76,6 +76,7 @@ const Lucre = React.lazy(() => import('@/pages/Lucre'));
 const ComoFunciona = React.lazy(() => import('@/pages/ComoFunciona'));
 const TransferirSaldo = React.lazy(() => import('@/pages/TransferirSaldo'));
 const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
+const IntegracaoMelhorEnvio = React.lazy(() => import('@/pages/IntegracaoMelhorEnvio'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -364,6 +365,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="TransferirSaldo">
           <TransferirSaldo />
         </LayoutWrapper>
+      } />
+      {/* 🚚 PONTO 81 — callback OAuth do Melhor Envio (só admin). A URL precisa ser
+          IDÊNTICA à cadastrada no app do Melhor Envio. */}
+      <Route path="/integracoes/melhor-envio" element={
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+          <IntegracaoMelhorEnvio />
+        </RequireRole>
       } />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfUse />} />

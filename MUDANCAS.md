@@ -8,6 +8,38 @@
 
 ---
 
+## 04/08/2026 — PONTO 81 (FASE 1): autorização OAuth do Melhor Envio
+
+- **Por que:** o token fixo atual só permite **cotar frete**. Carrinho, pagamento de etiqueta,
+  geração/impressão e **leitura de pedidos** exigem token de **usuário** (Authorization Code).
+- **⚠️ Descoberta na leitura:** os três arquivos de frete apontam para
+  `https://www.melhorenvio.com.br` — o `MELHOR_ENVIO_TOKEN` em uso é de **PRODUÇÃO**. Já o app
+  autorizado (client_id 10811) é de **SANDBOX**. Pela documentação oficial os dois ambientes são
+  contas separadas e sem relação: **token de sandbox NÃO faz pedido real aparecer no painel.**
+  Para valer em produção é preciso criar o app em `melhorenvio.com.br` e trocar
+  `MELHOR_ENVIO_AMBIENTE` para `producao` — o código é o mesmo, não precisa reescrever nada.
+- **O que foi criado:** entidade `MelhorEnvioToken` (guarda token/refresh no servidor, RLS
+  admin), função `melhorEnvioOAuth` (ações `autorizar_url`, `trocar`, `status`, `renovar`) e a
+  página `/integracoes/melhor-envio`, protegida por admin/super_admin.
+- **Segurança:** token nunca vai ao frontend, nunca em localStorage, nunca em log; o `?code=` é
+  limpo da barra de endereço logo após o uso; `state` validado (CSRF); cabeçalhos obrigatórios
+  da API (Accept, Content-Type, User-Agent com nome + e-mail) presentes.
+- **Renovação:** access_token vence em 30 dias e refresh em 45 — por isso existe a ação
+  `renovar`. **Pendência:** agendar a renovação automática (hoje é botão manual).
+- **NÃO foi tocado:** `api/_lib/frete.js`, `api/functions/cotarFrete.js`,
+  `base44/functions/cotarFrete/entry.ts`, `MELHOR_ENVIO_TOKEN`, `MELHOR_ENVIO_FROM_CEP`,
+  checkout, comissão, estoque, carteira. A cotação de frete segue idêntica.
+- **Validado:** função responde 200 nas ações `autorizar_url` (monta a URL correta com o
+  client_id 10811 e o callback cadastrado) e `status` (retorna "não autorizado", correto antes
+  da primeira autorização). Rota nova existe e a proteção de admin funciona.
+- **NÃO validado automaticamente:** a aparência da página e a troca real do `code` por token —
+  o navegador de teste não tem sessão de admin (o app usa login próprio) e a troca exige o
+  clique humano em "Autorizar" no Melhor Envio.
+- **Risco:** 🔴 Alto (logística ligada a pedido) — mitigado por escopo isolado: nenhuma linha do
+  frete atual foi alterada e carrinho/etiqueta ficaram para a Fase 2.
+
+---
+
 ## 04/08/2026 — PONTO 79B: descrições regeradas pela IA (359 produtos de estoque)
 
 - **Contexto:** o erro original da IA era `"Free tier users do not have access to this model"`

@@ -1,0 +1,57 @@
+{
+  "name": "MelhorEnvioToken",
+  "type": "object",
+  "properties": {
+    "ambiente": {
+      "type": "string",
+      "enum": [
+        "sandbox",
+        "producao"
+      ],
+      "description": "Ambiente ao qual este token pertence. Sandbox e produ\u00e7\u00e3o s\u00e3o contas totalmente separadas no Melhor Envio."
+    },
+    "access_token": {
+      "type": "string",
+      "description": "Token de acesso do Melhor Envio (validade 30 dias). NUNCA deve ser exposto ao frontend."
+    },
+    "refresh_token": {
+      "type": "string",
+      "description": "Token de renova\u00e7\u00e3o (validade 45 dias). Usado para renovar o access_token automaticamente."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora de expira\u00e7\u00e3o do access_token"
+    },
+    "obtido_em": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora em que o token foi obtido ou renovado pela \u00faltima vez"
+    },
+    "escopos": {
+      "type": "string",
+      "description": "Escopos autorizados pelo usu\u00e1rio no momento da autoriza\u00e7\u00e3o"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Token vigente para este ambiente. Autoriza\u00e7\u00f5es antigas ficam como false."
+    }
+  },
+  "required": [
+    "ambiente",
+    "access_token"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
