@@ -8,6 +8,52 @@
 
 ---
 
+## 04/08/2026 — PONTO 84: extrato da carteira conta a história do lance
+
+- **O que o cliente via:** dava o lance, abria a carteira e **não achava o lance**. Sem frete,
+  sem "fui superado", sem estorno visível.
+- **Achado 1 — a tela já estava pronta e órfã:** `WalletDrawer.jsx` já renderiza
+  `<BidStateTag state={tx.bid_state} />` e a linha *"inclui frete de R$ X"* quando
+  `tx.frete_amount > 0`. O `BidStateTag` já tem os 3 textos escritos ("você foi superado —
+  valor devolvido", "seu lance está na frente — valor reservado", "arrematado por você").
+  O backend **nunca mandava nenhum dos dois campos** — morriam antes de chegar na tela.
+- **Achado 2 (o que fazia o lance "desaparecer"):** o lance nascia com **`created_date` e
+  `timestamp` NULOS**. Essas colunas **não têm preenchimento automático** — quem preenchia era
+  o adapter, que saiu do caminho no PONTO 72. O extrato ordena por data, então o lance sem data
+  era tratado como 1970 e **afundava para o fim da lista**, fora dos 15 primeiros itens, e sem
+  hora ao lado. O lance estava gravado; estava enterrado.
+- **Correções (backend, cirúrgicas):**
+  1. `submitAtomicBid.js` — o INSERT do lance passa `created_date` e `timestamp`.
+     **Ambas as colunas foram confirmadas por leitura no banco ANTES de gravar** (é a lição do
+     PONTO 83: nunca inserir campo sem provar a coluna). Nada mais no arquivo foi tocado.
+  2. `getDigitalWalletHistory.js` — passa a devolver `bid_state` e `frete_amount` no item de
+     lance. O estado vem do estado REAL do leilão (a consulta de `auctions` já existia; só
+     ampliou o select): líder + `active` → `liderando`; líder + `sold`/`ended` → `arrematado`;
+     resto → `superado`. **O estado vale só para o MAIOR lance do usuário naquele leilão** —
+     lances anteriores dele mesmo recebem `superado`, nunca dois "liderando" no mesmo leilão.
+- **Frete — entregue em duas camadas (Opção A, na ordem segura):** hoje o frete aparece **no
+  lance que está liderando**, lido de `auctions.frete_reservado_valor` (única fonte existente).
+  Para frete lance a lance, inclusive histórico, criada
+  `supabase/migrations/20260804_auction_messages_frete_amount.sql` — **precisa ser rodada no
+  Supabase**. Só DEPOIS da coluna existir o campo volta ao INSERT. Inverter essa ordem é
+  exatamente o que parou os lances de 03/08 15:03 até hoje.
+- **NÃO foi tocado:** `reserveBidBalance`, `releaseBidHold`, `_lib/bidHold.js`,
+  `useBidSubmission.js`, `finalizeAuctionCore`, a devolução da reserva do líder anterior,
+  comissões, checkout, estoque, auth, frete da loja, e o layout/CSS do `WalletDrawer`.
+  Este ponto é **exibição**, não movimentação de dinheiro.
+- **⚠️ Validação:** `/api/functions/*` **não executa no ambiente de preview** — nenhuma das duas
+  funções pôde ser testada automaticamente. Confirmado por leitura no banco: `created_date`
+  existe (voltou nula no lance de R$ 1,60), `timestamp` existe, `frete_amount` **não** existe.
+  **Teste real em produção:** dar um lance → abrir a carteira → o lance deve estar no TOPO, com
+  hora, com o frete e com "seu lance está na frente". Depois ser superado por outra conta e
+  conferir "você foi superado — valor devolvido".
+- **Observação de auditoria (registrada, sem ação):** vale-do-recreio aparece com reserva
+  **menor** do que a liderança justifica (R$ 33,60 reservado × R$ 60,20 justificado). É reserva
+  a menos, não dinheiro preso — mesma pendência já anotada no PONTO 83.
+- **Risco:** 🟡 Médio — grava 2 campos de data no registro do lance; o resto é leitura/exibição.
+
+---
+
 ## 04/08/2026 — 🔴 PONTO 83: LANCES PARADOS EM PRODUÇÃO — causa-raiz e correção
 
 - **Sintoma (print do Gabriel):** *"Não foi possível registrar o lance. Tente novamente."* em

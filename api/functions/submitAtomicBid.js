@@ -205,6 +205,14 @@ export default async function handler(req, res) {
       sender_id: userId,
       sender_name: winnerName,
       bid_amount: bidAmount,
+      // 🕐 PONTO 84 — DATA OBRIGATÓRIA NO LANCE. Estas colunas NÃO têm preenchimento
+      // automático no banco (quem preenchia era o adapter, que saiu do caminho no
+      // PONTO 72). Sem elas o lance nascia com data NULA, e o extrato da carteira,
+      // que ordena por data, jogava o lance para o fim da lista — o usuário dava o
+      // lance e não o encontrava. Ambas as colunas foram confirmadas por leitura no
+      // banco antes desta alteração (created_date existe; timestamp existe).
+      created_date: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
       // 🔴 NÃO REINTRODUZIR `frete_amount` AQUI (04/08/2026).
       // A coluna auction_messages.frete_amount NÃO EXISTE no banco de produção: a
       // migração 20260801_frete_leilao.sql entrou pela metade (criou

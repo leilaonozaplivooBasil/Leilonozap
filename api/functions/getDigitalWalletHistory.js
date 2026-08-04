@@ -92,16 +92,45 @@ export default async function handler(req, res) {
     const bids = Array.isArray(bidMessages) ? bidMessages : [];
     const auctionIds = [...new Set(bids.map(m => m.auction_id).filter(Boolean))].slice(0, 60);
     const auctionTitles = {};
+    // PONTO 84: o extrato precisa do ESTADO real do leilão para dizer ao cliente se o
+    // valor está reservado (liderando), se voltou pro saldo (superado) ou se foi usado
+    // no arremate. Sem isso o <BidStateTag> da tela nunca recebia estado e não aparecia.
+    const auctionInfo = {};
     if (auctionIds.length > 0) {
       try {
         const idsList = auctionIds.map(id => encodeURIComponent(id)).join(',');
-        const auctionsData = await (await sb(`auctions?select=id,title&id=in.(${idsList})`)).json();
+        const auctionsData = await (await sb(
+          `auctions?select=id,title,status,winner_id,frete_reservado_valor&id=in.(${idsList})`
+        )).json();
         if (Array.isArray(auctionsData)) {
-          for (const a of auctionsData) auctionTitles[a.id] = a.title;
+          for (const a of auctionsData) { auctionTitles[a.id] = a.title; auctionInfo[a.id] = a; }
         }
       } catch { /* segue sem os títulos */ }
     }
+
+    // O estado vale só para o MAIOR lance do usuário em cada leilão. Lances anteriores
+    // dele mesmo já foram cobertos por ele — recebem 'superado', nunca dois "liderando".
+    const maiorLancePorLeilao = {};
     for (const m of bids) {
+      const atual = maiorLancePorLeilao[m.auction_id];
+      if (!atual || (Number(m.bid_amount) || 0) > (Number(atual.bid_amount) || 0)) {
+        maiorLancePorLeilao[m.auction_id] = m;
+      }
+    }
+
+    for (const m of bids) {
+      const a = auctionInfo[m.auction_id] || {};
+      const ehMaiorDoUsuario = maiorLancePorLeilao[m.auction_id]?.id === m.id;
+      const souOLider = ehMaiorDoUsuario && a.winner_id === userId;
+      const bidState = souOLider
+        ? (a.status === 'active' ? 'liderando' : 'arrematado')
+        : 'superado';
+      // 🚚 Frete reservado: hoje só existe o frete do LÍDER ATUAL, em
+      // auctions.frete_reservado_valor (auction_messages.frete_amount ainda NÃO existe —
+      // ver supabase/migrations/20260804_auction_messages_frete_amount.sql). Por isso o
+      // frete aparece apenas no lance que está com o valor reservado. Quando a coluna
+      // existir, trocar por Number(m.frete_amount) para valer em todo o histórico.
+      const freteAmount = bidState === 'liderando' ? (Number(a.frete_reservado_valor) || 0) : 0;
       transactions.push({
         id: `bid-${m.id}`,
         type: 'bid',
@@ -109,6 +138,8 @@ export default async function handler(req, res) {
         source: 'Leilão',
         amount: Number(m.bid_amount) || 0,
         status: 'info',
+        bid_state: bidState,
+        frete_amount: freteAmount,
         date: m.created_date,
       });
     }
