@@ -50,6 +50,27 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* best effort */ }
 
+    // MAPA FINANCEIRO — para cada tabela candidata: quantas linhas tem e quais
+    // colunas o próprio PostgREST declara (a spec descreve a estrutura mesmo
+    // quando a tabela está vazia, ao contrário de derivar as chaves de 1 linha).
+    let specDefs: Record<string, any> = {};
+    try {
+      const spec = await fetch(`${SB}/rest/v1/`, { headers: H });
+      if (spec.ok) specDefs = (await spec.json())?.definitions || {};
+    } catch (_) { /* best effort */ }
+
+    const mapaFinanceiro: Record<string, unknown> = {};
+    for (const tabela of candidatasFinanceiras) {
+      const c = await fetch(`${SB}/rest/v1/${tabela}?select=*&limit=1`, {
+        headers: { ...H, Prefer: 'count=exact', Range: '0-0' },
+      });
+      const range = c.headers.get('content-range') || '';
+      const total = range.includes('/') ? range.split('/')[1] : '?';
+      const props = specDefs?.[tabela]?.properties || {};
+      // formato de uma linha por tabela: cabe inteiro no relatório sem truncar
+      mapaFinanceiro[tabela] = `linhas=${c.ok ? total : 'erro ' + c.status} | ${Object.keys(props).join(',')}`;
+    }
+
     const relatorio: Record<string, unknown> = {};
 
     for (const [tabela, colunas] of Object.entries(ALVO)) {
@@ -83,8 +104,11 @@ Deno.serve(async (req) => {
       ok: true,
       escrita_realizada: false,
       total_tabelas_no_banco: tabelasExistentes.length,
-      candidatas_financeiras: candidatasFinanceiras,
-      relatorio,
+      mapa_financeiro: mapaFinanceiro,
+      // onde o dinheiro do usuário realmente vive hoje
+      colunas_financeiras_em_app_users: Object.keys(specDefs?.app_users?.properties || {}).filter((c) =>
+        /saldo|balance|credit|comiss|commission|wallet|held/i.test(c)
+      ),
     });
   } catch (error) {
     return Response.json({ ok: false, error: error.message }, { status: 500 });
