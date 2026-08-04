@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star, FileText } from 'lucide-react';
 import { Stars } from '@/components/loja/StarRating';
+import { imagemPedido, imagemFallback } from '@/lib/imagemPedido';
 
 // 🧩 Card de pedido da Loja Virtual — COMPARTILHADO entre MyCatalogOrders e a aba
 // "Meus Pedidos" do Profile (extraído em 25/07 pra acabar com a versão pobre do
@@ -29,7 +30,8 @@ export const CONFIRMABLE = ['paid', 'preparando', 'saiu_entrega', 'shipped', 'en
 
 export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, onDeleteClick, onRateClick, onConfirmReceipt, confirmado, confirmando }) {
   const config = statusConfig[order.status] || statusConfig.pending_payment;
-  const mainImage = order.product_image || "https://via.placeholder.com/150";
+  // PONTO 79 — produto digital (adesão/licença/plano) usa a arte da página Lucre
+  const mainImage = imagemPedido(order);
   const podeAvaliar = onRateClick && RATEABLE.includes(order.status) && order.seller_id;
   const jaAvaliou = order.minha_avaliacao;
 
@@ -43,9 +45,7 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
             <img
               src={mainImage}
               alt={order.product_title}
-              onError={(e) => {
-                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='12' fill='%239CA3AF' text-anchor='middle' dy='.3em'%3EImagem%3C/text%3E%3C/svg%3E"
-              }}
+              onError={(e) => { e.target.src = imagemFallback(order); }}
               className="w-full h-full object-cover"
             />
           </div>
