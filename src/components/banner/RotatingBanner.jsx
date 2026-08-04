@@ -122,12 +122,12 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                     </>
                   );
                   const caption = (
-                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-8 sm:pb-9 md:pb-12 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
-                      <p className="text-sm sm:text-lg md:text-xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
+                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-12 sm:pb-14 md:pb-16 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
+                      <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
                         {banner.caption_title || banner.title}
                       </p>
                       {banner.caption_subtitle && (
-                        <p className="mt-1 text-[11px] sm:text-sm md:text-base text-nz-verde-claro font-medium leading-snug max-w-[88%] sm:max-w-[70%]">
+                        <p className="mt-1 text-xs sm:text-base md:text-lg text-nz-verde-claro font-medium leading-snug max-w-[88%] sm:max-w-[70%]">
                           {banner.caption_subtitle}
                         </p>
                       )}
@@ -232,7 +232,9 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
 
       {/* Indicadores */}
       {filteredBanners.length > 1 && (
-        <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
+        // PONTO 90 — indicadores colados na base e bem translúcidos (mesmo espírito
+        // do "voltar ao topo"): antes encostavam na legenda e disputavam com o texto.
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
           {filteredBanners.map((_, index) => (
             // 📱 o pontinho continua com 8px de desenho, mas o botão tem 44px de
             // área de toque — no celular era praticamente impossível acertar.
@@ -244,7 +246,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
             >
               <span
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? 'bg-white w-8' : 'w-2 bg-white/50 hover:bg-white/75'
+                  index === currentIndex ? 'bg-white/30 w-8' : 'w-2 bg-white/15 hover:bg-white/35'
                 }`}
               />
             </button>
