@@ -14,6 +14,8 @@ import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
+// 📸 Grade de fotos com botões "Principal" e excluir sempre visíveis
+import GradeFotosProduto from '@/components/admin/GradeFotosProduto';
 
 export default function AddCatalogProduct() {
   const navigate = useNavigate();
@@ -568,6 +570,17 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
       ...prev,
       image_urls: prev.image_urls.filter((_, i) => i !== index)
     }));
+  };
+
+  // 📸 Move a foto escolhida para a 1ª posição — a loja usa image_urls[0] como capa.
+  // Só reordena o array em memória; persiste quando o admin clica em "Salvar produto".
+  const definirFotoPrincipal = (index) => {
+    setFormData(prev => {
+      if (index <= 0 || index >= prev.image_urls.length) return prev;
+      const lista = [...prev.image_urls];
+      const [escolhida] = lista.splice(index, 1);
+      return { ...prev, image_urls: [escolhida, ...lista] };
+    });
   };
   
   const addVariation = () => {
@@ -1292,7 +1305,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                       Fotos principais do produto
                     </h2>
                     <p className="text-sm text-gray-500 mb-4">
-                      Arraste as fotos na ordem que quiser e defina a que será a principal do seu produto.
+                      Clique em <strong>Principal</strong> para escolher a foto de capa e na lixeira para excluir uma foto.
                       {' '}
                       <button
                         type="button"
@@ -1367,27 +1380,11 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
                         >
-                          {formData.image_urls.map((url, index) => (
-                            <div key={index} className="relative group">
-                              <img
-                                src={url}
-                                alt={`Produto ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeImage(index)}
-                                className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="w-4 h-4 text-gray-600" />
-                              </button>
-                              {index === 0 && (
-                                <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded font-medium">
-                                  Principal
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                          <GradeFotosProduto
+                            urls={formData.image_urls}
+                            onDefinirPrincipal={definirFotoPrincipal}
+                            onRemover={removeImage}
+                          />
                           
                           <label 
                             htmlFor="image-upload-more" 
