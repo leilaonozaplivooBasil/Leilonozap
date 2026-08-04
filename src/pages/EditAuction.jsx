@@ -1045,7 +1045,10 @@ export default function EditAuction() {
                                                             </div>
                                                         )}
 
-                                                        <div className={`absolute top-1.5 right-1.5 flex flex-col gap-1.5 transition-opacity ${snapshot.isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}>
+                                                        {/* ⚠️ Antes estes botões ficavam invisíveis no desktop até passar o mouse
+                                                            (md:opacity-0) — dava a impressão de que "não tem botão de excluir".
+                                                            Agora ficam SEMPRE visíveis, no celular e no computador. */}
+                                                        <div className={`absolute top-1.5 right-1.5 flex flex-col gap-1.5 transition-opacity ${snapshot.isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                                                             {index !== 0 && (
                                                                 <button type="button" title="Tornar capa" onClick={() => tornarCapa(index)} className="w-7 h-7 rounded-lg bg-black/75 border border-white/15 grid place-items-center text-amber-400 hover:bg-amber-500 hover:text-black transition-colors">
                                                                     <Star className="w-3.5 h-3.5" />
@@ -1059,7 +1062,7 @@ export default function EditAuction() {
                                                             </button>
                                                         </div>
 
-                                                        <div {...provided.dragHandleProps} className={`absolute bottom-1.5 right-1.5 transition-opacity cursor-grab active:cursor-grabbing bg-black/75 border border-white/15 p-1.5 rounded-lg ${snapshot.isDragging ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}>
+                                                        <div {...provided.dragHandleProps} className="absolute bottom-1.5 right-1.5 cursor-grab active:cursor-grabbing bg-black/75 border border-white/15 p-1.5 rounded-lg opacity-100">
                                                             <GripVertical className="w-3.5 h-3.5 text-white" />
                                                         </div>
                                                     </div>
