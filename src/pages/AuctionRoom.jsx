@@ -870,6 +870,23 @@ export default function AuctionRoom() {
     }
   };
 
+  // PONTO 91 — publica o contexto (leilão + usuário) para a barra do site mostrar
+  // Favoritar/Compartilhar, e atende o clique de compartilhar vindo de lá.
+  useEffect(() => {
+    if (!auction) return;
+    const detalhe = { auctionId: auction.id, userId: currentUser?.id || null };
+    const publicar = () => window.dispatchEvent(new CustomEvent('salaAcoes', { detail: detalhe }));
+    publicar();
+    const onShare = () => (isAndroid ? setIsShareModalOpen(true) : handleShare());
+    window.addEventListener('salaAcoesPedido', publicar);
+    window.addEventListener('salaCompartilhar', onShare);
+    return () => {
+      window.removeEventListener('salaAcoesPedido', publicar);
+      window.removeEventListener('salaCompartilhar', onShare);
+      window.dispatchEvent(new CustomEvent('salaAcoes', { detail: null }));
+    };
+  }, [auction?.id, currentUser?.id, isAndroid]);
+
   const getDisplayTime = () => {
     if (!auction) return "Carregando...";
 
@@ -1050,19 +1067,8 @@ export default function AuctionRoom() {
           <AcoesSalaHeader />
           {/* 💰 A carteira agora fica na barra do site (topo, ao lado do menu) —
               ver Layout.jsx. Aqui no cabeçalho da sala ela não aparece mais. */}
-          {/* 🆕 BOTÃO FAVORITAR NO HEADER */}
-          {currentUser && auction && (
-            <FavoriteButton
-              auctionId={auction.id}
-              userId={currentUser.id}
-              size="sm"
-              className="bg-transparent border-none"
-            />
-          )}
-          <Button variant="ghost" size="icon" onClick={() => isAndroid ? setIsShareModalOpen(true) : handleShare()} className="text-green-400">
-            {/* PONTO 90 — compartilhar com a MARCA: a logo do NoZap no lugar do ícone genérico */}
-            <img src="/brand/icon-3d.webp" alt="Compartilhar" className="h-7 w-7 object-contain sm:h-9 sm:w-9" />
-          </Button>
+          {/* PONTO 91 — Favoritar e Compartilhar subiram para a barra do site
+              (entre a logo e a Carteira) — ver AcoesTopoSala em Layout.jsx. */}
         </div>
       </header>
 

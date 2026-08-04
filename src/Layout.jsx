@@ -33,6 +33,7 @@ import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import HeaderMobileActions from "@/components/nav/HeaderMobileActions";
+import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -835,6 +836,8 @@ export default function Layout({ children, currentPageName }) {
 
                 />
                 </div>
+                {/* PONTO 91 — na sala de leilão: Favoritar e Compartilhar entre a logo e a Carteira */}
+                {currentPageName === 'AuctionRoom' && <AcoesTopoSala />}
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
               </div>
 
