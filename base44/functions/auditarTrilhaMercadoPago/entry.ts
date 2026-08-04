@@ -30,6 +30,45 @@ Deno.serve(async (req) => {
       return cr.includes('/') ? cr.split('/')[1] : '?';
     };
 
+    // 🔍 MODO ORFAOS — só leitura: detalha os pagamentos MP sem venda e as vendas pagas sem mp_payment_id
+    const corpo = await req.clone().json().catch(() => ({}));
+    if (corpo?.modo === 'orfaos') {
+      // a) vendas pagas SEM mp_payment_id
+      const rv = await fetch(
+        `${SB}/rest/v1/catalog_sales?select=id,kind,status,total_amount,buyer_email,payment_method,created_date&status=eq.paid&mp_payment_id=is.null`,
+        { headers: H }
+      );
+      const vendasSemMp = (rv.ok ? await rv.json() : []).map((v: any) =>
+        `${v.id} | ${v.kind} | R$${v.total_amount} | ${v.payment_method || 'sem metodo'} | ${v.buyer_email || '-'} | ${String(v.created_date || '').slice(0, 10)}`
+      );
+
+      // b) pagamentos MP suspeitos (refs com formato do app) — consulta individual no MP
+      const suspeitos = corpo?.payment_ids || ['170711504564', '168849863424', '170432259201'];
+      const detalhe: any[] = [];
+      for (const pid of suspeitos) {
+        const r = await fetch(`https://api.mercadopago.com/v1/payments/${pid}`, { headers: { Authorization: `Bearer ${MP}` } });
+        if (!r.ok) { detalhe.push({ payment_id: pid, erro: `MP ${r.status}` }); continue; }
+        const p = await r.json();
+        const ref = p.external_reference || null;
+        // procura de todas as formas possíveis no banco
+        const q = `catalog_sales?select=id,status,kind,total_amount&or=(id.eq.${encodeURIComponent(String(ref))},mp_payment_id.eq.${encodeURIComponent(String(pid))})&limit=1`;
+        const rs = await fetch(`${SB}/rest/v1/${q}`, { headers: H });
+        const achou = rs.ok ? await rs.json() : [];
+        detalhe.push({
+          payment_id: pid,
+          valor: p.transaction_amount,
+          status: p.status,
+          metodo: p.payment_method_id,
+          data: p.date_approved,
+          descricao: (p.description || '').slice(0, 70),
+          pagador: p.payer?.email || null,
+          external_reference: ref,
+          venda_no_banco: Array.isArray(achou) && achou.length ? achou[0] : 'NAO ENCONTRADA',
+        });
+      }
+      return Response.json({ ok: true, escrita_realizada: false, vendas_pagas_sem_mp_id: vendasSemMp, pagamentos_orfaos: detalhe });
+    }
+
     // 1) O QUE O BANCO TEM (catalog_sales = onde o fluxo ativo realmente grava)
     const banco = {
       catalog_sales_total: await contar('catalog_sales?select=id'),
