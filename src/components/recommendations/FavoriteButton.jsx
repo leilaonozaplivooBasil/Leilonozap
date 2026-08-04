@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const FavoriteAuction = base44.entities.FavoriteAuction;
 
@@ -111,7 +112,10 @@ export default function FavoriteButton({ auctionId, userId, size = 'md', classNa
         invalidateCache(); // Invalida cache
       }
     } catch (error) {
+      // Antes o erro morria no console e o coração não reagia — o usuário achava
+      // que o botão estava quebrado. Agora ele sempre recebe uma resposta.
       console.error('Erro ao favoritar:', error);
+      toast.error('Não foi possível salvar o favorito. Tente de novo.');
     } finally {
       setIsLoading(false);
     }
