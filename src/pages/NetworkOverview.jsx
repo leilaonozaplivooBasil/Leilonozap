@@ -26,6 +26,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
 import TreeHierarchy from "../components/network/TreeHierarchy";
+import PurgeUserDialog from "../components/network/PurgeUserDialog";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { CAREER_LEVELS, normalizeLevel, normalizeLevels } from "@/lib/careerLevels";
 import {
@@ -547,6 +548,10 @@ export default function NetworkOverview() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [treeFullscreen, setTreeFullscreen] = useState(false);
+  // Exclusão DEFINITIVA (só da Lixeira): alvo, andamento e motivos de bloqueio do servidor
+  const [purgeTarget, setPurgeTarget] = useState(null);
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeBlockReasons, setPurgeBlockReasons] = useState([]);
 
   // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
   const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);
@@ -1379,6 +1384,38 @@ export default function NetworkOverview() {
     }
   };
 
+  // Apaga de vez, no banco — só para quem já está na Lixeira.
+  // O servidor é quem decide: se houver saldo, comissão ou pedido, ele recusa e
+  // devolve o motivo, que é mostrado no lugar do botão de confirmar.
+  const handlePurgeUser = async () => {
+    const user = purgeTarget;
+    if (!user) return;
+    setIsPurging(true);
+    try {
+      const result = await base44.functions.invoke('hardDeleteUser', {
+        userId: user.id,
+        actorId,
+      });
+      if (result?.success !== true) {
+        if (Array.isArray(result?.reasons) && result.reasons.length) {
+          setPurgeBlockReasons(result.reasons);
+          return;
+        }
+        throw new Error(result?.error || 'o servidor não confirmou a exclusão');
+      }
+      // sai da lista na hora (o contador da aba vem de allUsers)
+      setAllUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setPurgeTarget(null);
+      setPurgeBlockReasons([]);
+      toast.success(`${user.full_name} foi apagado do banco definitivamente.`);
+      await loadAudit();
+    } catch (error) {
+      toast.error('Erro ao apagar: ' + (error?.message || 'falha'));
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
   // Soltar da rede: vira raiz, sem indicador
   const handleDetachUser = async (user) => {
     try {
@@ -1983,7 +2020,7 @@ export default function NetworkOverview() {
                     <Trash2 className="w-4 h-4 text-red-400 flex-shrink-0" />
                     <span className="text-[13px] font-semibold text-red-300">Lixeira</span>
                     <span className="text-[11px] text-gray-500">
-                      ninguém é apagado do banco — quem está aqui sai da árvore e perde o acesso, e pode voltar quando você quiser
+                      quem está aqui saiu da árvore e perdeu o acesso — pode ser restaurado, ou apagado do banco de vez
                     </span>
                   </div>
 
@@ -2025,15 +2062,26 @@ export default function NetworkOverview() {
                                 );
                               })()}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRestoreUser(u)}
-                              className="h-8 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 font-semibold"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                              Restaurar
-                            </Button>
+                            <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRestoreUser(u)}
+                                className="h-9 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 font-semibold"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                                Restaurar
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => { setPurgeTarget(u); setPurgeBlockReasons([]); }}
+                                className="h-9 text-[12px] bg-red-600 hover:bg-red-500 text-white font-semibold"
+                                title="Apagar este cadastro do banco definitivamente"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                Apagar de vez
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
@@ -2063,12 +2111,14 @@ export default function NetworkOverview() {
                           move: 'moveu',
                           promote: 'promoveu',
                           update: 'editou',
+                          purge: 'apagou de vez',
                         }[e.action] || e.action;
                         const cor = {
                           trash: 'text-red-400',
                           restore: 'text-emerald-400',
                           move: 'text-blue-400',
                           promote: 'text-amber-400',
+                          purge: 'text-red-500',
                         }[e.action] || 'text-gray-400';
                         return (
                           <div key={`${e.target_id}-${e.at}-${i}`} className="px-4 py-2 text-[12px] flex items-center gap-2 flex-wrap">
@@ -2282,6 +2332,15 @@ export default function NetworkOverview() {
           </div>
         );
       })()}
+
+      {/* EXCLUSÃO DEFINITIVA — só a partir da Lixeira */}
+      <PurgeUserDialog
+        user={purgeTarget}
+        isPurging={isPurging}
+        blockReasons={purgeBlockReasons}
+        onCancel={() => { setPurgeTarget(null); setPurgeBlockReasons([]); }}
+        onConfirm={handlePurgeUser}
+      />
 
       {editingUserFull && (
         <UserEditModal
