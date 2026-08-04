@@ -700,8 +700,14 @@ export default function EditAuction() {
             // 🆕 LOG ANTES DE SALVAR
             console.log(`🏭 [SAVE] Salvando source_url:`, formData.supplier_url || null);
 
+            // 🐛 CAUSA-RAIZ DO "Erro ao salvar alterações": supplier_url é campo APENAS do
+            // formulário — não existe como coluna em auctions. Ele ia no payload junto com
+            // ...formData e o banco recusava a gravação INTEIRA (42703). O valor continua
+            // sendo gravado normalmente na coluna correta: source_url (mais abaixo).
+            const { supplier_url: _apenasFormulario, ...camposDoBanco } = formData;
+
             const updatePayload = {
-                ...formData,
+                ...camposDoBanco,
                 end_time: utcEndTimeString,
                 status: newStatus,
                 image_urls: imageUrls,
