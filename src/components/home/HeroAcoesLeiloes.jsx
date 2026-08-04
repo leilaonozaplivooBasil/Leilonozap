@@ -15,6 +15,25 @@ const acao =
 export default function HeroAcoesLeiloes({ count = 0 }) {
   return (
     <div className="mt-3 flex items-center gap-3 overflow-x-auto nz-no-scrollbar sm:gap-5">
+      {/* PONTO 88 — pulso de luz branca da logo do CompareAQUI (local, não vaza pro app) */}
+      <style>{`
+        .nz-cmp-anel {
+          position: absolute;
+          inset: 0;
+          border-radius: 999px;
+          border: 2px solid rgba(255,255,255,0.75);
+          pointer-events: none;
+          animation: nzCmpAnel 2.2s ease-out infinite;
+        }
+        @keyframes nzCmpAnel {
+          0% { transform: scale(1); opacity: 0.8; }
+          100% { transform: scale(1.55); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nz-cmp-anel { animation: none; }
+        }
+      `}</style>
+
       {/* Comparar — mesmo evento global do CompareAQUI */}
       <button
         type="button"
@@ -23,14 +42,17 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
         title="CompareAQUI — compare o preço antes de comprar"
         className={acao}
       >
-        {/* PONTO 87 — SÓ a logo, no tamanho do flutuante da Leila (sem rótulo) */}
-        <img
-          src={CompareAquiIcon}
-          alt=""
-          aria-hidden="true"
-          className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-white/70 sm:h-16 sm:w-16"
-          style={{ boxShadow: '0 8px 22px rgba(0,0,0,.45)' }}
-        />
+        {/* PONTO 87/88 — SÓ a logo, tamanho da Leila, com anel branco pulsante */}
+        <span className="relative block h-12 w-12 shrink-0 sm:h-16 sm:w-16">
+          <span className="nz-cmp-anel" aria-hidden="true" />
+          <img
+            src={CompareAquiIcon}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full rounded-full object-cover ring-1 ring-white/70"
+            style={{ boxShadow: '0 8px 22px rgba(0,0,0,.45)' }}
+          />
+        </span>
       </button>
 
       {/* Ao Vivo — mesmo destino do flutuante da Livoo */}
