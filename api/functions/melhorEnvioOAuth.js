@@ -118,9 +118,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, error: 'Apenas administradores.' });
     }
 
-    const ambiente = String(process.env.MELHOR_ENVIO_AMBIENTE || 'sandbox').toLowerCase() === 'producao'
-      ? 'producao'
-      : 'sandbox';
+    // PRODUÇÃO é o padrão (04/08/2026). Só cai em sandbox se MELHOR_ENVIO_AMBIENTE
+    // estiver EXPLICITAMENTE como 'sandbox' — assim esquecer a variável não devolve
+    // o site pra conta de teste (onde pedido real nunca aparece no painel).
+    const ambiente = String(process.env.MELHOR_ENVIO_AMBIENTE || 'producao').toLowerCase() === 'sandbox'
+      ? 'sandbox'
+      : 'producao';
 
     // Aceita nomes por ambiente (SANDBOX_/PRODUCAO_) e cai no nome genérico.
     // Sandbox e produção são apps SEPARADOS no Melhor Envio, com credenciais próprias.
