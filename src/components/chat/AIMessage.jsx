@@ -1,7 +1,20 @@
 import React from "react";
-import { Bot, Zap, Crown, Timer } from "lucide-react";
+import { Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
+import LanceIAAvatar from "./LanceIAAvatar";
 import LeiloeiroAvatar from "@/assets/leiloeiro-avatar.webp";
+
+// PONTO 85 — realce visual dos valores em R$ que JÁ vêm no texto do backend.
+// Não altera, não reescreve e não reordena nada: só destaca o que existe.
+const realcarValores = (texto) => {
+  if (typeof texto !== 'string') return texto;
+  const partes = texto.split(/(R\$\s?[\d.]+,\d{2}|R\$\s?[\d.,]+)/g);
+  return partes.map((parte, i) =>
+    /^R\$/.test(parte)
+      ? <strong key={i} className="font-bold text-emerald-300">{parte}</strong>
+      : <React.Fragment key={i}>{parte}</React.Fragment>
+  );
+};
 
 export default function AIMessage({ message, winner, auction, currentUser }) {
   const formatTime = (timestamp) => {
@@ -11,76 +24,9 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
     });
   };
 
-  const getMessageIcon = () => {
-    switch (message.message_type) {
-      case 'countdown':
-        return <Timer className="w-4 h-4 text-orange-300" />;
-      case 'winner_announcement':
-        return <Crown className="w-4 h-4 text-yellow-300" />;
-      case 'ai_narration':
-        // PONTO 83 — verde apagado da marca (o verde vibrante é só do botão de lance)
-        return <Zap className="w-4 h-4" style={{ color: '#2E9D63' }} />;
-      default:
-        return <Bot className="w-4 h-4 text-green-400" />;
-    }
-  };
-
-  const getMessageStyle = () => {
-    if (message.message_type === 'countdown') {
-      const phase = message.countdown_phase || 1;
-      
-      if (phase === 1) {
-        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-2xl animate-pulse-slow';
-      } else if (phase === 2) {
-        return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl animate-pulse-medium';
-      } else if (phase === 3) {
-        return 'bg-gradient-to-r from-red-500 to-red-700 text-white shadow-2xl animate-pulse-fast';
-      }
-    }
-    
-    if (message.message_type === 'winner_announcement') {
-      return null; // Será renderizado como VictoryCard
-    }
-    
-    if (message.message_type === 'ai_narration') {
-      // PONTO 83 — o degradê roxo/magenta saiu: não existe na identidade e ofuscava
-      // o botão de lance. Agora é vidro fumê neutro (a IA narra, não compete).
-      return 'ai-fume text-slate-100';
-    }
-    
-    return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
-  };
-
-  const formatContent = (content) => {
-    // 🔨 DESTAQUE PARA OS "DOU-LHE" COM IMAGEM DO LEILOEIRO
-    if (content.includes('Dou-lhe')) {
-      const phase = message.countdown_phase || 1;
-      return (
-        <div className="flex items-center gap-3 py-2">
-          <img
-            src={LeiloeiroAvatar}
-            alt="Leiloeiro"
-            className="w-16 h-16 object-contain animate-swing"
-          />
-          <div className="flex-1">
-            <div className="text-2xl font-black tracking-wide mb-1">
-              {content}
-            </div>
-            <div className="text-sm opacity-90 font-semibold uppercase tracking-wide">
-              {phase === 3 ? 'Última chamada' : 'Lance agora'}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    return content;
-  };
-
   // 🏆 SE FOR MENSAGEM DE VITÓRIA, SEMPRE RENDERIZA O CARTÃO
   // 🆕 MESMO SE winner OU auction forem null! (usa fallback)
   if (message.message_type === 'winner_announcement') {
-    // 🆕 SE NÃO TEM DADOS, TENTA PARSEAR DO message.content
     let finalWinner = winner;
     let finalAuction = auction;
 
@@ -94,7 +40,6 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
       }
     }
 
-    // 🆕 SE AINDA NÃO TEM AUCTION, USA UM PLACEHOLDER
     if (!finalAuction) {
       finalAuction = {
         title: 'Produto Arrematado',
@@ -107,103 +52,89 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
     return <VictoryCard winner={finalWinner} auction={finalAuction} currentUser={currentUser} />;
   }
 
-  const messageStyle = getMessageStyle();
-  
-  // Se retornou null (winner_announcement sem dados), não renderiza nada
-  if (!messageStyle) return null;
+  const isCountdown = message.message_type === 'countdown';
+  const phase = message.countdown_phase || 1;
+  const isMartelo = isCountdown && String(message.content || '').includes('Dou-lhe');
 
-  // PONTO 83 — narração ganha formato de FALA: balão estreito, alinhado à esquerda,
-  // padding menor e canto inferior-esquerdo quebrado (leitura de conversa).
-  const narracao = message.message_type === 'ai_narration';
+  // 🔨 MARTELO — mantém a urgência, mas em cápsula contida (nada de faixa
+  // gradiente ocupando a largura toda da tela)
+  if (isMartelo) {
+    const tomFase = {
+      1: { borda: 'rgba(245,197,81,0.55)', fundo: 'rgba(245,197,81,0.12)', texto: 'text-amber-200' },
+      2: { borda: 'rgba(251,146,60,0.6)', fundo: 'rgba(251,146,60,0.14)', texto: 'text-orange-200' },
+      3: { borda: 'rgba(248,113,113,0.65)', fundo: 'rgba(239,68,68,0.16)', texto: 'text-red-200' },
+    }[phase] || {};
+
+    return (
+      <div className="ia-linha mb-4 flex justify-center">
+        <div
+          className="ia-martelo flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
+          style={{ background: tomFase.fundo, border: `1px solid ${tomFase.borda}` }}
+        >
+          <img src={LeiloeiroAvatar} alt="Leiloeiro" className="ia-swing h-10 w-10 shrink-0 object-contain" />
+          <div className="min-w-0">
+            <div className={`text-base font-extrabold leading-tight tracking-tight sm:text-lg ${tomFase.texto}`}>
+              {message.content}
+            </div>
+            <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+              {phase === 3 ? 'Última chamada' : 'Lance agora'}
+            </div>
+          </div>
+        </div>
+        <EstilosIA />
+      </div>
+    );
+  }
 
   return (
-    <div className={`flex mb-4 animate-slide-in ${narracao ? 'justify-start' : 'justify-center'}`}>
-      <div className={narracao
-        ? `ai-balao px-4 py-3 ${messageStyle}`
-        : `max-w-xs lg:max-w-md px-6 py-4 rounded-2xl ${messageStyle}`}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {getMessageIcon()}
-            <span className="text-sm font-bold" style={narracao ? { color: '#2E9D63' } : undefined}>
-              {message.message_type === 'winner_announcement' ? '🏆 LEILÃO NoZap' : 'LanceIA'}
-            </span>
-          </div>
-          <span className="text-xs opacity-75">
+    <div className="ia-linha mb-3.5 flex items-start gap-2">
+      <LanceIAAvatar className="ia-pop mt-0.5" />
+
+      <div className="ia-balao min-w-0 px-3.5 py-2.5">
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-400/80">
+            {isCountdown && <Timer className="h-3 w-3 text-amber-300" />}
+            {message.message_type === 'winner_announcement' && <Crown className="h-3 w-3 text-yellow-300" />}
+            LanceIA
+          </span>
+          <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
             {formatTime(message.timestamp)}
           </span>
         </div>
-        
-        <div className="font-medium leading-relaxed">
-          {formatContent(message.content)}
-        </div>
-      </div>
-      
-      <style>{`
-        /* PONTO 83 — vidro fumê + balão de fala da LanceIA */
-        .ai-fume {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          backdrop-filter: blur(10px) saturate(1.2);
-          -webkit-backdrop-filter: blur(10px) saturate(1.2);
-        }
-        .ai-balao {
-          max-width: 78%;
-          border-radius: 16px 16px 16px 5px;
-        }
 
-        @keyframes pulse-slow {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.95; }
-        }
-        
-        @keyframes pulse-medium {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.08); opacity: 0.9; }
-        }
-        
-        @keyframes pulse-fast {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.12); opacity: 0.85; }
-        }
-        
-        @keyframes swing {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-15deg); }
-          50% { transform: rotate(15deg); }
-          75% { transform: rotate(-10deg); }
-        }
-        
-        @keyframes slide-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-pulse-slow {
-          animation: pulse-slow 2s ease-in-out infinite;
-        }
-        
-        .animate-pulse-medium {
-          animation: pulse-medium 1.5s ease-in-out infinite;
-        }
-        
-        .animate-pulse-fast {
-          animation: pulse-fast 1s ease-in-out infinite;
-        }
-        
-        .animate-swing {
-          animation: swing 1.5s ease-in-out infinite;
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.5s ease-out;
-        }
-      `}</style>
+        <p className="text-[13px] leading-[1.55] text-slate-200/90 sm:text-sm">
+          {realcarValores(message.content)}
+        </p>
+      </div>
+
+      <EstilosIA />
     </div>
+  );
+}
+
+function EstilosIA() {
+  return (
+    <style>{`
+      /* PONTO 85 — narração sóbria: vidro fumê levíssimo, canto quebrado no
+         lado do avatar, sem "quadradão" e sem competir com o botão de lance. */
+      .ia-balao {
+        max-width: 82%;
+        border-radius: 4px 16px 16px 16px;
+        background: rgba(255, 255, 255, 0.035);
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        backdrop-filter: blur(10px) saturate(1.15);
+        -webkit-backdrop-filter: blur(10px) saturate(1.15);
+      }
+      .ia-martelo { max-width: 100%; }
+      @keyframes iaLinhaIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      .ia-linha { animation: iaLinhaIn 0.35s ease-out; }
+      @keyframes iaPop { 0% { transform: scale(0.82); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+      .ia-pop { animation: iaPop 0.45s ease-out; }
+      @keyframes iaSwing { 0%,100% { transform: rotate(0deg); } 30% { transform: rotate(-14deg); } 60% { transform: rotate(12deg); } }
+      .ia-swing { animation: iaSwing 1.5s ease-in-out infinite; transform-origin: 70% 30%; }
+      @media (prefers-reduced-motion: reduce) {
+        .ia-linha, .ia-pop, .ia-swing { animation: none; }
+      }
+    `}</style>
   );
 }

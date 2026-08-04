@@ -1534,8 +1534,15 @@ export default function AuctionRoom() {
           background: transparent !important;
         }
         
-        .message-bubble-wrapper { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; max-width: 90%; animation: slideIn 0.3s ease-out; }
-        .message-bubble-wrapper--own { margin-left: auto; flex-direction: row-reverse; }
+        /* 📏 PONTO 85 — coluna central de leitura: o conteúdo do chat nunca encosta
+           nas laterais, onde vivem os flutuantes (CompareAQUI à esquerda, Leila à
+           direita). Sem isso o texto passava POR BAIXO deles e ficava ilegível. */
+        .auction-messages > * { max-width: 34rem; margin-left: auto; margin-right: auto; width: 100%; }
+        @media (max-width: 1023px) { .auction-messages { padding-left: 60px; padding-right: 60px; } }
+        @media (max-width: 380px) { .auction-messages { padding-left: 54px; padding-right: 54px; } }
+
+        .message-bubble-wrapper { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; max-width: 78%; animation: slideIn 0.3s ease-out; }
+        .message-bubble-wrapper--own { margin-left: auto; margin-right: 0; flex-direction: row-reverse; }
         
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(20px); }
