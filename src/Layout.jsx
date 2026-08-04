@@ -1040,8 +1040,8 @@ export default function Layout({ children, currentPageName }) {
                 ComparaiButton da própria página (comparação REAL do produto).
                 Montar o listener global aqui abriria DOIS modais no mesmo clique. */}
             {!['AuctionRoom', 'AuctionDetails', 'CatalogProductDetails'].includes(currentPageName) && <CompareAquiFloatingButton hideButton />}
-            {/* PONTO 83 — na sala de leilão a Leila vai pro topo-direita (fora do frete/lance) */}
-            <LojaFloatActions posicao={currentPageName === 'AuctionRoom' ? 'topo' : 'rodape'} />
+            {/* PONTO 87 — na sala de leilão a Leila NÃO flutua: virou ícone no cabeçalho (AcoesSalaHeader) */}
+            {currentPageName !== 'AuctionRoom' && <LojaFloatActions posicao="rodape" />}
           </React.Suspense>
         )}
 

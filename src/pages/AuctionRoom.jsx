@@ -26,7 +26,7 @@ import { Wallet } from "lucide-react";
 
 import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
-import CompareAquiFlutuanteSala from "@/components/comparai/CompareAquiFlutuanteSala";
+import AcoesSalaHeader from "@/components/auction/AcoesSalaHeader";
 import BarraTempoLeilao from "@/components/auction/BarraTempoLeilao";
 import HeaderPrecoTempo from "@/components/auction/HeaderPrecoTempo";
 import ChipParticipantes from "@/components/auction/ChipParticipantes";
@@ -1043,7 +1043,10 @@ export default function AuctionRoom() {
           />
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-0.5">
+          {/* 🔎🩷 PONTO 87 — CompareAQUI e Leila entram aqui como ícones compactos:
+              a sala fica lisa, sem flutuantes cobrindo o chat. */}
+          <AcoesSalaHeader />
           {/* 💰 A carteira agora fica na barra do site (topo, ao lado do menu) —
               ver Layout.jsx. Aqui no cabeçalho da sala ela não aparece mais. */}
           {/* 🆕 BOTÃO FAVORITAR NO HEADER */}
@@ -1408,9 +1411,6 @@ export default function AuctionRoom() {
           aqui só o modal com a comparação real do produto deste leilão. */}
       <CompareAquiButton auction={auction} trigger="event" />
 
-      {/* 🔎 PONTO 84 — botão flutuante fixo (lateral esquerda, mesma altura/tamanho da Leila) */}
-      <CompareAquiFlutuanteSala />
-
       {/* 🆕 Modal de Saldo Baixo */}
       <LowBalanceModal
         isOpen={showLowBalanceModal}
@@ -1538,8 +1538,7 @@ export default function AuctionRoom() {
            nas laterais, onde vivem os flutuantes (CompareAQUI à esquerda, Leila à
            direita). Sem isso o texto passava POR BAIXO deles e ficava ilegível. */
         .auction-messages > * { max-width: 34rem; margin-left: auto; margin-right: auto; width: 100%; }
-        @media (max-width: 1023px) { .auction-messages { padding-left: 60px; padding-right: 60px; } }
-        @media (max-width: 380px) { .auction-messages { padding-left: 54px; padding-right: 54px; } }
+        /* PONTO 87 — sem flutuantes laterais na sala, o chat volta ao padding normal */
 
         .message-bubble-wrapper { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; max-width: 78%; animation: slideIn 0.3s ease-out; }
         .message-bubble-wrapper--own { margin-left: auto; margin-right: 0; flex-direction: row-reverse; }
