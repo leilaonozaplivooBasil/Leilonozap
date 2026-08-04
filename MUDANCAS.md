@@ -8,6 +8,34 @@
 
 ---
 
+## 04/08/2026 — PONTO 81 (FASE 1C): ✅ AUTORIZADO EM PRODUÇÃO
+
+- **Status: FUNCIONANDO.** Gabriel concluiu a autorização OAuth do Melhor Envio em **produção**
+  (client_id 27878) e a tela `/integracoes/melhor-envio` passou a exibir a integração ativa.
+  Token e refresh_token gravados na tabela `melhor_envio_tokens` do Supabase (ambiente
+  `producao`), sem passar pelo frontend e sem aparecer em log.
+- **O que fechou o caminho (3 coisas, em ordem):** 1) a função virou rota Vercel nativa (Fase
+  1B) — antes era Deno, inalcançável pelo navegador deste app; 2) `producao` passou a ser o
+  ambiente padrão, com credenciais lidas de `MELHOR_ENVIO_CLIENT_ID`/`_SECRET` (e
+  `..._SANDBOX_...` só quando o ambiente é sandbox), URLs em `melhorenvio.com.br` sem
+  `sandbox.`; 3) **as variáveis foram cadastradas na Vercel** — este era o real bloqueio: o
+  cofre de secrets do Base44 NÃO alcança as rotas `/api` da Vercel. Registrar como regra.
+- **NÃO foi tocado:** frete, checkout, comissão, carteira, auth, estoque. `MELHOR_ENVIO_TOKEN`
+  e a cotação de frete seguem idênticos.
+- **⚠️ Pendências abertas:**
+  1. **Renovação automática do token** — hoje é botão manual. `access_token` vence em **30
+     dias**, `refresh_token` em **45**. Sem ninguém clicar em "Renovar" dentro de 45 dias,
+     será preciso autorizar tudo de novo. Recomendado agendar automação.
+  2. **Secret de produção foi colado no chat** durante o desenvolvimento — tratar como
+     vazado e rotacionar no painel do Melhor Envio.
+  3. **Fase 2 não iniciada:** listar pedidos, carrinho, pagar e gerar/imprimir etiqueta.
+- **Validação:** confirmada **pelo Gabriel na tela em produção**. Não houve validação
+  automatizada — `/api/functions/*` não executa no ambiente de preview.
+- **Risco:** 🔴 Alto (credencial de logística em produção) — escopo isolado, fluxo financeiro
+  intocado.
+
+---
+
 ## 04/08/2026 — PONTO 81 (FASE 1B): a autorização não chegava ao servidor — corrigido
 
 - **Sintoma:** a tela mostrava "Não foi possível montar o link de autorização" e a URL de
