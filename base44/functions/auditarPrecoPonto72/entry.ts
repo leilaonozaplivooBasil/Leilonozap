@@ -66,6 +66,75 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, escrita_realizada: false, colunas: amostra });
     }
 
+    // modo campos: testa se cada campo do formulário existe como coluna em auctions
+    if (reqBody?.modo === 'campos') {
+      const alvo = reqBody?.campos || [];
+      const res = {};
+      for (const c of alvo) {
+        const r = await fetch(`${SB}/rest/v1/auctions?select=${c}&limit=1`, {
+          headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
+        });
+        res[c] = r.ok ? 'existe' : `NAO EXISTE (${(await r.text()).slice(0, 90)})`;
+      }
+      return Response.json({ ok: true, escrita_realizada: false, campos: res });
+    }
+
+    // modo panorama: recorte real da vitrine + raio-x de leilões específicos
+    if (reqBody?.modo === 'panorama') {
+      const agora = new Date().toISOString();
+      const todos = await getAll(
+        'auctions',
+        'select=id,title,status,current_price,starting_price,end_time,is_investment_plan,is_test_auction,is_sample,created_date'
+      );
+      const porStatus = {};
+      for (const a of todos) porStatus[a.status || '(nulo)'] = (porStatus[a.status || '(nulo)'] || 0) + 1;
+      const ativos = todos.filter((a) => a.status === 'active');
+      const ativosFuturo = ativos.filter((a) => a.end_time && a.end_time > agora);
+      const ativosVencidos = ativos.filter((a) => !a.end_time || a.end_time <= agora);
+      const vitrine = ativosFuturo.filter((a) => !a.is_investment_plan && !a.is_test_auction);
+
+      // raio-x de ids pedidos: TODAS as mensagens, sem filtro de tipo
+      const raiox = [];
+      for (const id of (reqBody?.ids || [])) {
+        const a = todos.find((x) => x.id === id);
+        const msgs = await getAll(
+          'auction_messages',
+          `select=message_type,bid_amount,sender_name,timestamp,created_date&auction_id=eq.${id}`
+        );
+        const tipos = {};
+        for (const m of msgs) tipos[m.message_type || '(nulo)'] = (tipos[m.message_type || '(nulo)'] || 0) + 1;
+        raiox.push({
+          id,
+          titulo: a?.title,
+          status: a?.status,
+          current_price: a?.current_price,
+          starting_price: a?.starting_price,
+          total_mensagens: msgs.length,
+          tipos,
+          lances_com_valor: msgs.filter((m) => m.message_type === 'bid' && m.bid_amount !== null).length,
+          maior_bid_amount: msgs.reduce((mx, m) => Math.max(mx, num(m.bid_amount)), 0),
+          amostra: msgs.slice(-5).map((m) => `${m.message_type} | ${m.bid_amount} | ${m.sender_name} | ${m.timestamp || m.created_date}`),
+        });
+      }
+
+      return Response.json({
+        ok: true,
+        escrita_realizada: false,
+        agora,
+        total_no_banco: todos.length,
+        por_status: porStatus,
+        ativos_total: ativos.length,
+        ativos_com_prazo_futuro: ativosFuturo.length,
+        ativos_com_prazo_vencido: ativosVencidos.length,
+        vitrine_publica_estimada: vitrine.length,
+        marcados_teste: todos.filter((a) => a.is_test_auction).length,
+        marcados_plano_investimento: todos.filter((a) => a.is_investment_plan).length,
+        marcados_sample: todos.filter((a) => a.is_sample).length,
+        ativos_vencidos_amostra: ativosVencidos.slice(0, 15).map((a) => `${a.id} | ${a.end_time} | ${(a.title || '').slice(0, 34)}`),
+        raiox,
+      });
+    }
+
     // 1) Leilões
     const auctions = await getAll(
       'auctions',
