@@ -944,7 +944,9 @@ export default function Layout({ children, currentPageName }) {
           {/* FASE 4.6 — PanelSwitcherCard removido: troca de painel só pelo dropdown do avatar (UserAvatarMenu) */}
           {children}
         </main>
-        <Footer />
+        {/* 🔒 Na sala de leilão o rodapé some: ele ficava abaixo da barra de lance e
+            fazia a página "levantar"/rolar. Na sala só o chat rola. */}
+        {currentPageName !== 'AuctionRoom' && <Footer />}
         {/* 🧲 Dock dos flutuantes — define a altura única de ancoragem (sobe nas
             páginas com barra de ação fixa, pra não cobrir compra/lance) */}
         <FloatingDock currentPageName={currentPageName} />

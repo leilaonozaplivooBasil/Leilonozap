@@ -1435,7 +1435,9 @@ export default function AuctionRoom() {
            verde da marca parecer "colado" em cima. Agora o fundo tem alma verde e o
            botão de lance nasce dele. Regra permanente: UM único verde vibrante na
            tela — o botão de lance. Só cor — nenhuma regra de layout mudou. */
-        .auction-page-container { display: flex; flex-direction: column; height: calc(100dvh - 56px); background-color: #0A1611; overflow: hidden; }
+        .auction-page-container { display: flex; flex-direction: column; height: calc(100dvh - 56px); background-color: #0A1611; overflow: hidden; overscroll-behavior: none; }
+        /* 🔒 Sem "efeito elástico": o arrasto no chat não puxa a página inteira */
+        .auction-messages { overscroll-behavior: contain; }
         @media (min-width: 640px) { .auction-page-container { height: calc(100dvh - 64px); } }
         
         @media (max-width: 1023px) {
