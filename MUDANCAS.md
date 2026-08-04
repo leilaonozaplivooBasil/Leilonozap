@@ -8,6 +8,34 @@
 
 ---
 
+## 04/08/2026 — PONTO 79: limpeza dos 30 produtos com erro da IA aparecendo na loja
+
+- **Sintoma:** 30 produtos exibiam na Loja Virtual o payload de erro cru da IA
+  (`{"ok":false,"error":"IA indisponível","details":"...Free tier users do not have access..."}`).
+- **Causa-raiz do "não achávamos":** a auditoria `auditarDescricoesIA` só varria o campo
+  `description` das tabelas `auctions` e `catalog_products`. A corrupção estava **100% no campo
+  `notes` da tabela `products`** — por isso a prévia sempre voltava zero contaminados.
+  ⚠️ Atenção para o futuro: em `products`, `description` é o **título** do produto; o texto
+  longo é `notes`. Confundir os dois apagaria o nome do produto.
+- **O que mudei na função:** as tabelas viraram configuráveis por campo
+  (`{tabela, campo, campo_titulo}`) e entrou `products / notes / description`. O PATCH agora
+  grava em `[item.campo]` em vez de `description` fixo. Comportamento das outras duas tabelas
+  inalterado.
+- **Execução (autorizada por Gabriel, 04/08):** prévia → 30 contaminados, todos
+  `produto_estoque`, todos 100% payload de erro (nada aproveitável). Aplicado com `ids:'todos'`
+  → **30 atualizados, 0 falhas**. Prévia rodada de novo → **0 contaminados**. Confirmado.
+- **Efeito na vitrine:** `notes` ficou vazio, então a Loja Virtual passa a exibir o próprio
+  título do produto (fallback que já existia em `ProductDetailsModal` e `CatalogProductDetails`).
+  Nenhum produto ficou sem texto na tela.
+- **NÃO foi tocado:** preço, estoque, status, título (`description`), imagens, comissões,
+  pagamentos. Só o campo `notes` dos 30 IDs listados na prévia.
+- **Risco:** 🟡 Médio (escrita em massa em produção) — mitigado: prévia obrigatória antes,
+  gravação campo a campo, só nos IDs achados, verificação pós-execução.
+- **Pendência:** regerar descrição de verdade para esses 30 via `regerarDescricoesIA`
+  (gasta créditos de IA — aguardando autorização separada).
+
+---
+
 ## 04/08/2026 — PONTO 78: parcelamento real + cliente absorve a taxa do cartão
 
 - **Decisão do dono do produto (Gabriel, 04/08/2026):** **o cliente absorve TUDO.** A loja

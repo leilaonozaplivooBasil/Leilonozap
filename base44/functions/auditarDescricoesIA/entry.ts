@@ -41,9 +41,14 @@ Deno.serve(async (req) => {
     const modo = corpo?.modo === 'aplicar' ? 'aplicar' : 'previa';
     const idsAutorizados = Array.isArray(corpo?.ids) ? corpo.ids : [];
 
+    // 04/08/2026 — incluído products.notes: a corrupção de JSON de erro da IA estava
+    // MAJORITARIAMENTE nesse campo (a auditoria só olhava 'description' e não via nada).
+    // 'campo' e 'campo_titulo' variam por tabela — products usa 'notes' e 'description'
+    // (em products, 'description' É o título do produto, não o texto longo).
     const tabelas = [
-      { tabela: 'auctions', rotulo: 'leilao' },
-      { tabela: 'catalog_products', rotulo: 'produto' },
+      { tabela: 'auctions', rotulo: 'leilao', campo: 'description', campo_titulo: 'title' },
+      { tabela: 'catalog_products', rotulo: 'produto', campo: 'description', campo_titulo: 'title' },
+      { tabela: 'products', rotulo: 'produto_estoque', campo: 'notes', campo_titulo: 'description' },
     ];
 
     const achados = [];
@@ -51,22 +56,24 @@ Deno.serve(async (req) => {
       let de = 0;
       for (let p = 0; p < 20; p++) {
         const r = await fetch(
-          `${SB}/rest/v1/${t.tabela}?select=id,title,description,status&order=created_date.desc`,
+          `${SB}/rest/v1/${t.tabela}?select=id,${t.campo_titulo},${t.campo},status&order=created_date.desc`,
           { headers: { ...H, Range: `${de}-${de + 199}` } }
         );
         if (!r.ok) break;
         const linhas = await r.json();
         for (const l of linhas) {
-          if (typeof l.description === 'string' && PADRAO.test(l.description)) {
-            const depois = limpar(l.description);
+          const valor = l[t.campo];
+          if (typeof valor === 'string' && PADRAO.test(valor)) {
+            const depois = limpar(valor);
             achados.push({
               tipo: t.rotulo,
               tabela: t.tabela,
+              campo: t.campo,
               id: l.id,
-              titulo: String(l.title || '').slice(0, 60),
+              titulo: String(l[t.campo_titulo] || '').slice(0, 60),
               status: l.status,
-              tamanho_antes: l.description.length,
-              antes: l.description.slice(0, 160),
+              tamanho_antes: valor.length,
+              antes: valor.slice(0, 160),
               depois: depois ? depois.slice(0, 160) : '(ficaria vazio)',
               ficaria_vazio: !depois,
               texto_final: depois,
@@ -110,13 +117,14 @@ Deno.serve(async (req) => {
       const r = await fetch(`${SB}/rest/v1/${item.tabela}?id=eq.${encodeURIComponent(item.id)}`, {
         method: 'PATCH',
         headers: { ...H, Prefer: 'return=representation' },
-        body: JSON.stringify({ description: item.texto_final }),
+        body: JSON.stringify({ [item.campo]: item.texto_final }),
       });
       resultado.push({
         id: item.id,
         titulo: item.titulo,
+        campo: item.campo,
         ok: r.ok,
-        detalhe: r.ok ? 'descricao limpa' : `erro ${r.status}: ${(await r.text()).slice(0, 120)}`,
+        detalhe: r.ok ? `${item.campo} limpo` : `erro ${r.status}: ${(await r.text()).slice(0, 120)}`,
       });
     }
 
