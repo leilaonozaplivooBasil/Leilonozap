@@ -280,7 +280,7 @@ export default function Home() {
   }, []);
 
   // 📊 Lances e participantes REAIS dos leilões ativos (uma query única, leve).
-  // Cards sem dado real seguem com o número estável de sempre.
+  // Card sem dado real NÃO mostra contador nenhum (nada de número inventado).
   const [bidStatsMap, setBidStatsMap] = useState({});
   useEffect(() => {
     const ids = (Array.isArray(auctions) ? auctions : [])

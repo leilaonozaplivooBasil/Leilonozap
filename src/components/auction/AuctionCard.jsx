@@ -10,7 +10,7 @@
  * ESTA VERSÃO FOI APROVADA COMO O MOLDE PERFEITO. NÃO ALTERAR SEM ORDEM.
  * ========================================================================
  */
-import React, { useState, useEffect, useRef, memo, useMemo } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { capOf } from '@/lib/fotoLegenda';
 import { addMoney, gteMoney, fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
@@ -56,17 +56,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // 📣 PONTO 69 — leilão em chamada: aparece na vitrine, mas sem aceitar lances
   const chamada = useChamada(auction);
 
-  // 🆕 VALORES ESTÁVEIS baseados no ID do leilão (não muda a cada render)
-  const stableRandomUsers = useMemo(() => {
-    // Gera um número "aleatório" mas estável baseado no ID do leilão
-    const hash = auction.id?.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 0;
-    return (hash % 15) + 3; // Entre 3 e 17
-  }, [auction.id]);
-
-  const stableRandomBids = useMemo(() => {
-    const hash = auction.id?.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 0;
-    return ((hash * 7) % 25) + 5; // Entre 5 e 29
-  }, [auction.id]);
+  // 📊 SOMENTE DADO REAL: os contadores vêm de bidStats (contagem real de lances em
+  // auction_messages, feita numa única consulta pela listagem). Não existe mais número
+  // "estável" gerado a partir do ID — se não há dado real, o selo simplesmente não aparece.
+  const temLancesReais = Number(bidStats?.bids) > 0;
 
   useEffect(() => {
     setLocalStatus(auction.status);
@@ -605,15 +598,21 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           </div>
 
           <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>{bidStats?.users ?? stableRandomUsers}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" />
-                <span>{bidStats?.bids ?? stableRandomBids} lances</span>
-              </div>
+            <div className="flex items-center gap-4 min-w-0">
+              {temLancesReais && (
+                <>
+                  {Number(bidStats?.users) > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>{bidStats.users}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>{bidStats.bids} {bidStats.bids === 1 ? 'lance' : 'lances'}</span>
+                  </div>
+                </>
+              )}
             </div>
             {/* 🛡️ PONTO 70 — só mostra Compre Já com preço REAL (acima do lance inicial) */}
             {isActive && precoArremateAgora(auction) !== null && (
@@ -802,6 +801,10 @@ export default memo(AuctionCard, (prevProps, nextProps) => {
     prevProps.auction.status === nextProps.auction.status &&
     prevProps.auction.modo_chamada === nextProps.auction.modo_chamada &&
     prevProps.auction.data_abertura_lances === nextProps.auction.data_abertura_lances &&
+    // 📊 sem isso o card ficava congelado com o selo escondido mesmo depois da
+    // contagem real de lances chegar (a memo bloqueava o re-render)
+    prevProps.bidStats?.bids === nextProps.bidStats?.bids &&
+    prevProps.bidStats?.users === nextProps.bidStats?.users &&
     prevProps.isAdmin === nextProps.isAdmin &&
     prevProps.showFavoriteButton === nextProps.showFavoriteButton &&
     prevProps.userId === nextProps.userId
