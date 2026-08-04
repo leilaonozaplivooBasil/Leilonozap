@@ -223,8 +223,12 @@ export default function NavMobile({
               <span>Rank Premiado</span>
             </Link>
 
-            {/* === SETORES (acordeão — mesma fonte do desktop) === */}
-            {SECTORS.map((s) => {
+            {/* === SETORES (acordeão — mesma fonte do desktop) ===
+                🧹 PONTO 76: quem tem o canvas "Visão Geral" (admin/super admin) não vê
+                mais setores/painéis repetidos aqui — o canvas é o único ponto de entrada.
+                ⚠️ Para usuário comum o canvas NÃO existe, então o menu continua completo:
+                esconder para todos deixaria o cliente sem nenhuma navegação. */}
+            {!isAdmin && SECTORS.map((s) => {
               if (s.noMenu) {
                 return (
                   <SectorLink
@@ -277,7 +281,8 @@ export default function NavMobile({
               );
             })}
 
-            {/* === CARRINHO === */}
+            {/* === CARRINHO (PONTO 76: já está dentro da Visão Geral do admin) === */}
+            {!isAdmin && (
             <Link
               to={createPageUrl("Cart")}
               onClick={onClose}
@@ -298,9 +303,10 @@ export default function NavMobile({
               <CartIcon className="w-5 h-5" />
               Carrinho
             </Link>
+            )}
 
             {/* === PAINEL PRÓPRIO (cargo de rede) === */}
-            {userLogged && redeCargo && (
+            {userLogged && !isAdmin && redeCargo && (
               <div className="pt-4 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                 <button
                   onClick={() => handlePanelClick("/painel")}
@@ -317,7 +323,7 @@ export default function NavMobile({
             )}
 
             {/* === ACESSAR COMO... === */}
-            {userLogged && panels.length > 0 && (
+            {userLogged && !isAdmin && panels.length > 0 && (
               <div
                 className="pt-4 mt-3"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
@@ -373,6 +379,8 @@ export default function NavMobile({
                   <UserIcon className="w-5 h-5" />
                   Meu perfil
                 </Link>
+                {/* 🧹 PONTO 76: Favoritos sai do menu do admin (fica na Visão Geral) */}
+                {!isAdmin && (
                 <Link
                   to={createPageUrl("Home") + "?favorites=1"}
                   onClick={onClose}
@@ -381,6 +389,7 @@ export default function NavMobile({
                   <Heart className="w-5 h-5" />
                   Favoritos
                 </Link>
+                )}
               </div>
             )}
 
