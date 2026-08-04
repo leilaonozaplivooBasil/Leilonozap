@@ -8,6 +8,21 @@
 
 ---
 
+## 03/08/2026 — Bloco 3 ENCERRADO: ausência de "Compre Já" é intencional
+
+- **Decisão do dono do produto (Gabriel, 03/08/2026):** os leilões ativos hoje **não têm preço
+  de "Compre Já" de propósito**. É configuração de estratégia comercial (esses leilões devem
+  ser disputados por lance, sem atalho de compra imediata), **não é dado faltando**.
+- **Consequência:** o contador `sem_buy_now_price` da auditoria (`auditarPrecoPonto72`) é
+  **informativo, não é anomalia**. Nenhuma correção em massa deve ser feita sobre ele.
+  Qualquer preenchimento de "Compre Já" nesses leilões só com autorização explícita, um a um.
+- **Arquivos:** nenhum código alterado — registro de decisão.
+- **Impacto no front:** nenhum. Cards e sala de lance seguem escondendo o botão de compra
+  imediata quando o leilão não tem esse preço (comportamento correto e esperado).
+- **Risco:** 🟢 Baixo (só documentação).
+
+---
+
 ## 03/08/2026 — Bloco 2: preço atual abaixo do lance inicial (6 leilões)
 
 - **O que mudou:** 6 leilões ativos estavam com o "lance atual" MENOR que o lance inicial
