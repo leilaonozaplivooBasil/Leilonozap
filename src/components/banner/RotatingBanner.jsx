@@ -3,7 +3,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ambient: preenche as laterais/sobras do container com a própria arte desfocada
 // (em vez de barras chapadas) quando fit="contain" e o banner não cobre tudo.
-export default function RotatingBanner({ banners, fit = 'cover', heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false }) {
+// PONTO 92 — mobileFit: permite um encaixe diferente só no celular (ex.: a Home
+// usa "contain" no desktop, mas no mobile precisa "cover" pra não sobrar faixa
+// escura acima/abaixo, igual à Loja Virtual). Sem mobileFit, nada muda.
+export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -73,6 +76,9 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
 
   if (filteredBanners.length === 0) return null;
 
+  // encaixe efetivo: no celular respeita mobileFit quando informado
+  const fitAtual = isMobile && mobileFit ? mobileFit : fit;
+
   return (
     <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
       <style>{`
@@ -95,7 +101,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 }`}
               >
                 {(() => {
-                  const isContain = fit === 'contain';
+                  const isContain = fitAtual === 'contain';
                   const videoFitClass = isContain ? 'object-contain' : 'object-cover';
                   const videoObjectPosition = isContain ? 'center center' : 'center 20%';
                   const videoContent = (
@@ -172,13 +178,13 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full cursor-pointer relative ${fit === 'contain' ? 'object-contain' : ''} ${fit === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
+                  className={`w-full h-full cursor-pointer relative ${fitAtual === 'contain' ? 'object-contain' : ''} ${fitAtual === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
-                    objectFit: fit,
-                    backgroundColor: fit === 'contain' && !ambient ? '#0f172a' : undefined,
+                    objectFit: fitAtual,
+                    backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
                       transform: `scale(${banner.image_adjustments.scale || 1})`
@@ -191,13 +197,13 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full relative ${fit === 'contain' ? 'object-contain' : ''} ${fit === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
+                  className={`w-full h-full relative ${fitAtual === 'contain' ? 'object-contain' : ''} ${fitAtual === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
-                    objectFit: fit,
-                    backgroundColor: fit === 'contain' && !ambient ? '#0f172a' : undefined,
+                    objectFit: fitAtual,
+                    backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
                       transform: `scale(${banner.image_adjustments.scale || 1})`
