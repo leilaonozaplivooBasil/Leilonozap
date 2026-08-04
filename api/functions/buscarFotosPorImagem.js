@@ -9,6 +9,11 @@
 //
 // ⚠️ Devolve SOMENTE URLs de imagem. Nunca título, descrição ou preço — em leilão
 // com lance ativo sobrescrever esses campos seria destrutivo.
+// 🔑 MOTOR PRINCIPAL = SearchAPI (SEARCHAPI_KEY), o MESMO que o Compare Aqui usa em
+// produção para Google Lens (api/_lib/marketSearch.js → fetchGoogleLens).
+// Antes só existia SerpAPI, cuja chave não está publicada neste ambiente — daí o
+// "SERPAPI_KEY não configurada" na tela. SerpAPI passa a ser apenas reserva.
+const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 
 function limparUrls(lista) {
@@ -18,7 +23,22 @@ function limparUrls(lista) {
   return [...new Set(validas)].slice(0, 12);
 }
 
-// Google Lens: visual_matches são produtos visualmente IGUAIS ao da foto enviada.
+// Google Lens via SearchAPI — caminho já validado em produção no Compare Aqui.
+async function lensSearchApi(imageUrl) {
+  if (!SEARCHAPI_KEY) throw new Error('SEARCHAPI_KEY não configurada');
+  const u = `https://www.searchapi.io/api/v1/search?engine=google_lens&search_type=all&url=${encodeURIComponent(imageUrl)}&gl=br&hl=pt-br&api_key=${SEARCHAPI_KEY}`;
+  const resp = await fetch(u);
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || data?.error) throw new Error(`SearchAPI Lens: ${data?.error || resp.status}`);
+  const urls = [];
+  for (const m of data.visual_matches || []) {
+    if (m.thumbnail) urls.push(m.thumbnail);
+    if (m.image) urls.push(m.image);
+  }
+  return urls.filter(Boolean);
+}
+
+// Google Lens via SerpAPI (reserva): visual_matches são produtos visualmente IGUAIS.
 async function lensPorImagem(imageUrl) {
   if (!SERPAPI_KEY) throw new Error('SERPAPI_KEY não configurada');
   const u = `https://serpapi.com/search.json?engine=google_lens&url=${encodeURIComponent(imageUrl)}&hl=pt&country=br&api_key=${SERPAPI_KEY}`;
@@ -57,8 +77,35 @@ export default async function handler(req, res) {
       });
     }
 
-    const images = limparUrls(await lensPorImagem(imageUrl));
-    trilha.push(`google_lens: ${images.length} imagens`);
+    // Cascata: SearchAPI (motor já conectado) → SerpAPI (reserva). Para na primeira
+    // que devolver foto; só reporta falha se AS DUAS falharem.
+    let images = [];
+    const falhas = [];
+    for (const motor of [
+      { nome: 'searchapi_lens', fn: () => lensSearchApi(imageUrl) },
+      { nome: 'serpapi_lens', fn: () => lensPorImagem(imageUrl) },
+    ]) {
+      try {
+        images = limparUrls(await motor.fn());
+        trilha.push(`${motor.nome}: ${images.length} imagens`);
+        if (images.length > 0) break;
+      } catch (e) {
+        const msg = String(e?.message || e).slice(0, 120);
+        falhas.push(`${motor.nome}: ${msg}`);
+        trilha.push(`${motor.nome}: erro ${msg}`);
+      }
+    }
+
+    // As duas fontes quebraram (chave/rede/cota) — isso é FALHA, não "não achei".
+    if (images.length === 0 && falhas.length === 2) {
+      return res.status(200).json({
+        success: false,
+        images: [],
+        motivo: 'falha_busca',
+        error: falhas.join(' | '),
+        trilha,
+      });
+    }
 
     if (images.length === 0) {
       return res.status(200).json({
