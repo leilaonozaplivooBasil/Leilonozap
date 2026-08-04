@@ -19,6 +19,9 @@ import {
   ChevronRight,
   Map,
   Wallet as WalletIcon,
+  Package,
+  Truck,
+  MapPin,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import { SECTORS } from "@/lib/sectors";
@@ -106,6 +109,8 @@ export default function NavMobile({
   // Cargo de rede → painel próprio em /painel
   const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado"];
   const REDE_TITLE = { distribuidor: "Painel do Distribuidor", loja_fisica: "Painel da Loja Física", ponto_retirada: "Painel do Ponto de Retirada", parceiro: "Painel do Parceiro", licenciado: "Painel do Licenciado" };
+  // 🧩 PONTO 76 (C3): mesmos ícones do UserAvatarMenu (zero emoji)
+  const REDE_ICON = { distribuidor: Truck, loja_fisica: Building2, ponto_retirada: MapPin, parceiro: Store, licenciado: Briefcase };
   const redeCargo = userLogged && Array.isArray(currentUser.career_levels) ? REDE_CARGOS.find((c) => currentUser.career_levels.includes(c)) : null;
   const fullName = currentUser?.full_name || "Usuário";
   const email = currentUser?.email || "";
@@ -182,6 +187,13 @@ export default function NavMobile({
                 <p className="text-sm font-bold text-white truncate">{fullName}</p>
                 <p className="text-xs text-gray-400 truncate">{email}</p>
               </div>
+              {/* 👑 PONTO 76 (C3): selo dourado igual ao dropdown do avatar */}
+              {isAdmin && (
+                <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 px-2.5 py-1 font-slab text-[10px] font-bold uppercase tracking-wide text-black ring-1 ring-white/25 shadow-[0_2px_10px_rgba(245,158,11,0.55)]">
+                  <Crown className="h-3 w-3" />
+                  {currentUser?.role === "super_admin" ? "Super Admin" : "Admin"}
+                </div>
+              )}
             </div>
           )}
 
@@ -209,7 +221,9 @@ export default function NavMobile({
               </button>
             )}
 
-            {/* === RANK PREMIADO (destaque — primeiro item) === */}
+            {/* === RANK PREMIADO (destaque — primeiro item) ===
+                🧹 PONTO 76 (C3): fora do menu do admin — o print do dropdown não o traz. */}
+            {!isAdmin && (
             <Link
               to="/rankpremiado"
               onClick={onClose}
@@ -222,6 +236,7 @@ export default function NavMobile({
               <img src="/icons/trophy-3d.png" alt="" className="w-7 h-7 shrink-0 drop-shadow-[0_2px_6px_rgba(250,204,21,0.45)]" aria-hidden="true" />
               <span>Rank Premiado</span>
             </Link>
+            )}
 
             {/* === SETORES (acordeão — mesma fonte do desktop) ===
                 🧹 PONTO 76: quem tem o canvas "Visão Geral" (admin/super admin) não vê
@@ -306,14 +321,14 @@ export default function NavMobile({
             )}
 
             {/* === PAINEL PRÓPRIO (cargo de rede) === */}
-            {userLogged && !isAdmin && redeCargo && (
+            {userLogged && redeCargo && (
               <div className="pt-4 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                 <button
                   onClick={() => handlePanelClick("/painel")}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-green-500/50 text-left transition-all duration-200 hover:translate-x-1"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-green-500/50 text-left transition-all duration-200 hover:translate-x-1 min-h-[56px]"
                   style={{ background: "rgba(16,185,129,0.10)" }}
                 >
-                  <Building2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  {React.createElement(REDE_ICON[redeCargo] || Truck, { className: "w-5 h-5 text-green-400 flex-shrink-0" })}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-extrabold text-green-300 truncate">{REDE_TITLE[redeCargo]}</p>
                     <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
@@ -364,6 +379,27 @@ export default function NavMobile({
                 className="pt-4 mt-3 space-y-1"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
+                {/* 📦 PONTO 76 (C3): admin ganha os mesmos atalhos do dropdown do avatar */}
+                {isAdmin && (
+                  <>
+                    <Link
+                      to={createPageUrl("MyCatalogOrders")}
+                      onClick={onClose}
+                      className="flex min-h-[48px] items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-emerald-300 transition-all duration-300 hover:translate-x-1 hover:text-emerald-200"
+                    >
+                      <Package className="w-5 h-5" />
+                      Meus Pedidos
+                    </Link>
+                    <Link
+                      to="/painel-arrematante"
+                      onClick={onClose}
+                      className="flex min-h-[48px] items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-emerald-300 transition-all duration-300 hover:translate-x-1 hover:text-emerald-200"
+                    >
+                      <Gavel className="w-5 h-5" />
+                      Painel do Arrematante
+                    </Link>
+                  </>
+                )}
                 <button
                   onClick={() => { window.dispatchEvent(new CustomEvent('openWallet')); onClose(); }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-emerald-300 hover:text-emerald-200"
