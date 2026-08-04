@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Share2 } from 'lucide-react';
 import FavoriteButton from '@/components/recommendations/FavoriteButton';
 
 /**
@@ -22,7 +23,7 @@ export default function AcoesTopoSala() {
   if (!ctx?.auctionId) return null;
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-1 mr-2 sm:mr-3">
       {ctx.userId && (
         <FavoriteButton
           auctionId={ctx.auctionId}
@@ -36,9 +37,9 @@ export default function AcoesTopoSala() {
         onClick={() => window.dispatchEvent(new Event('salaCompartilhar'))}
         aria-label="Compartilhar este leilão"
         title="Compartilhar este leilão"
-        className="grid h-11 w-11 place-items-center rounded-full active:scale-95"
+        className="grid h-11 w-11 place-items-center rounded-full text-white/85 active:scale-95 hover:text-white"
       >
-        <img src="/brand/icon-3d.webp" alt="Compartilhar" className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
+        <Share2 className="h-5 w-5" />
       </button>
     </div>
   );
