@@ -76,8 +76,8 @@ export default function ShareLeiloesButton({ count = 0, compact = false }) {
       aria-label="Compartilhar leilões no WhatsApp"
       className={
         compact
-          ? // PONTO 82: sem fundo — só a bolinha verde + o nome, sobre a placa branca
-            "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-nz-tinta transition-transform active:scale-[0.97] disabled:opacity-70 sm:gap-2 sm:text-sm"
+          ? // PONTO 83: sem fundo — bolinha verde + nome em tinta clara, sobre o bloco escuro
+            "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-gray-100 transition-transform active:scale-[0.97] disabled:opacity-70 sm:gap-2 sm:text-sm"
           : "mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-bold text-white transition-transform active:scale-[0.97] disabled:opacity-70"
       }
       style={

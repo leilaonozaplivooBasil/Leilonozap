@@ -2,15 +2,15 @@ import React from "react";
 import CompareAquiIcon from "@/assets/compareaqui-icon.webp";
 import ShareLeiloesButton from "@/components/home/ShareLeiloesButton";
 
-// 🎯 PONTO 82 — AÇÕES SEM FUNDO: só a bolinha (logo) + o nome, flutuando sobre a
-// placa branca do bloco "Leilões Ativos". Sem cápsula colorida nem borda, as três
-// ações cabem lado a lado sem corte e o ambiente fica mais leve.
+// 🎯 PONTO 83 — AÇÕES SEM FUNDO, EM TINTA CLARA: só a bolinha (logo, nas cores
+// originais) + o nome, sobre o bloco escuro do "Leilões Ativos". Sem cápsula nem
+// borda, as três ações cabem lado a lado sem corte e o ambiente fica mais leve.
 // ⚠️ Comportamento idêntico ao PONTO 81 — nada de lógica reescrita.
 const LIVOO_SITE = "https://livoolive.com.br";
 
 // Aperto calibrado pra as TRÊS ações caberem inteiras em 375px (e em 320px, com rolagem)
 const acao =
-  "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-nz-tinta transition-transform active:scale-[0.97] sm:gap-2 sm:text-sm";
+  "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-gray-100 transition-transform active:scale-[0.97] sm:gap-2 sm:text-sm";
 
 export default function HeroAcoesLeiloes({ count = 0 }) {
   return (

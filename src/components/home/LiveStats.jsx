@@ -87,20 +87,20 @@ export default function LiveStats() {
   if (!temOnline && !temLances) return null;
 
   return (
-    // PONTO 82: chips em tinta escura — o bloco agora é uma placa BRANCA
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-nz-tinta-fraca">
+    // PONTO 83: chips em cinza-claro — o bloco voltou para a cor escura do site
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-400">
       {temOnline && (
         <span className="inline-flex items-center gap-1.5">
-          <Eye className="h-3.5 w-3.5 text-nz-verde" />
-          <span className="font-semibold text-nz-tinta tabular-nums">{stats.onlineUsers}</span>
+          <Eye className="h-3.5 w-3.5 text-emerald-400" />
+          <span className="font-semibold text-gray-100 tabular-nums">{stats.onlineUsers}</span>
           <span>online</span>
         </span>
       )}
-      {temOnline && temLances && <span aria-hidden="true" className="text-nz-borda">·</span>}
+      {temOnline && temLances && <span aria-hidden="true" className="text-gray-600">·</span>}
       {temLances && (
         <span className="inline-flex items-center gap-1.5">
-          <TrendingUp className="h-3.5 w-3.5 text-nz-verde" />
-          <span className="font-semibold text-nz-tinta tabular-nums">R$ {stats.totalBidsToday.toLocaleString('pt-BR')}</span>
+          <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+          <span className="font-semibold text-gray-100 tabular-nums">R$ {stats.totalBidsToday.toLocaleString('pt-BR')}</span>
           <span>hoje</span>
         </span>
       )}

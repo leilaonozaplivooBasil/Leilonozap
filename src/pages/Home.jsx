@@ -807,14 +807,21 @@ export default function Home() {
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? '-mt-6 md:-mt-10' : ''}`}>
         {/* Hero Section - Glass */}
         <div className="mb-6">
-          {/* 🎯 PONTO 82 — PLACA BRANCA (padrão visual da Recepção): quebra a
-              sequência banner escuro → bloco escuro → grade escura e esquenta a
-              entrada. Padding enxuto = bloco mais fino. Orbes verdes removidos
-              (não funcionam sobre branco). */}
+          {/* 🎯 PONTO 83 — DE VOLTA À COR DO SITE, EM VERSÃO CLEAN.
+              A placa branca do PONTO 82 recortava do fundo (efeito adesivo). Agora o
+              bloco é um verde-tinta escuro só um degrau mais claro que a página: ele
+              "acende" sem se desconectar. Fio esmeralda de baixa opacidade em vez de
+              borda marcada, sombra suave, e SEM os orbes verdes. Padding enxuto e
+              tipografia leve do PONTO 82 preservados. */}
           <div
             id="hero-leiloes"
-            className="relative overflow-hidden rounded-2xl bg-white px-4 py-3.5 sm:px-5 sm:py-4"
-            style={{ border: '1px solid var(--nz-borda)', boxShadow: '0 4px 20px rgba(13,19,16,0.10)' }}
+            className="relative overflow-hidden rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4"
+            style={{
+              background: 'linear-gradient(160deg, rgba(16,185,129,0.07), rgba(255,255,255,0.03))',
+              backgroundColor: '#182028',
+              border: '1px solid rgba(16,185,129,0.16)',
+              boxShadow: '0 4px 22px rgba(0,0,0,0.22)'
+            }}
           >
 
             <div className="relative">
@@ -839,13 +846,13 @@ export default function Home() {
                   <source src="/videos/foguinho-animado.webm" type="video/webm" />
                   <Flame className="w-5 h-5 lg:w-7 lg:h-7 text-orange-400 animate-fire" />
                 </video>
-                {/* PONTO 82 — tipografia mais fina/elegante, em tinta escura */}
-                <h1 className="truncate text-xl font-medium tracking-[-0.01em] text-nz-tinta sm:text-2xl lg:text-3xl">
-                  Leilões <span className="font-semibold text-nz-verde">Ativos</span>
+                {/* PONTO 83 — tinta clara de volta, mantendo o peso FINO do PONTO 82 */}
+                <h1 className="truncate text-xl font-medium tracking-[-0.01em] text-white sm:text-2xl lg:text-3xl">
+                  Leilões <span className="font-semibold text-emerald-400">Ativos</span>
                 </h1>
                 {activeCount > 0 && (
-                  <span className="ml-auto shrink-0 text-xs text-nz-tinta-fraca sm:text-sm">
-                    <span className="font-semibold text-nz-tinta tabular-nums">{activeCount}</span> rolando
+                  <span className="ml-auto shrink-0 text-xs text-gray-400 sm:text-sm">
+                    <span className="font-semibold text-gray-100 tabular-nums">{activeCount}</span> rolando
                   </span>
                 )}
               </div>
