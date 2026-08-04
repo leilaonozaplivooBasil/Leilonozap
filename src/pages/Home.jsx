@@ -720,7 +720,8 @@ export default function Home() {
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
 
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
-        setBanners(interleaveBanners(JSON.parse(cachedBanners), VIDEO_BANNERS));
+        // .slice(0,1): cache de sessões antigas ainda pode ter 2 artes de imagem
+        setBanners(interleaveBanners(JSON.parse(cachedBanners).slice(0, 1), VIDEO_BANNERS));
       } else {
         // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
         // PONTO 90 — os banners bonitos da Home estão cadastrados como device_type
@@ -728,8 +729,11 @@ export default function Home() {
         // Marcamos como "any": a MESMA arte serve os dois tamanhos (padrão da Loja
         // Virtual). Os banners velhos (sem context) continuam de fora.
         base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
+        // Só o PRIMEIRO banner de imagem entra no carrossel: a segunda arte
+        // não enquadra em nenhuma proporção (fica sempre cortada nas laterais).
         const imageBanners = (bannerData || [])
           .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .slice(0, 1)
           .map((b) => ({ ...b, device_type: 'any' }));
         const sortedBanners = interleaveBanners(imageBanners, VIDEO_BANNERS);
           // Salva a URL da primeira imagem pra preload na próxima visita
