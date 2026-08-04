@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Camera, Loader2, Plus, X, Image as ImageIcon, Edit2, Trash2 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+// 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
+import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
 
 export default function AddCatalogProduct() {
   const navigate = useNavigate();
@@ -150,8 +152,10 @@ INSTRUÇÕES:
 
 IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, títulos ou comentários adicionais.`
       });
-      if (response) {
-        setFormData(prev => ({ ...prev, description: response }));
+      // 🛡️ PONTO 74: só grava texto válido — JSON de erro da IA é descartado
+      const texto = textoDaIA(response);
+      if (texto) {
+        setFormData(prev => ({ ...prev, description: texto }));
       }
     } catch (e) {
       console.debug('Auto-generate description failed:', e.message);
@@ -408,7 +412,13 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         prompt: prompt
       });
       
-      setFormData(prev => ({ ...prev, description: response }));
+      // 🛡️ PONTO 74: campo intacto quando a IA falha (nada de JSON no banco)
+      const texto = textoDaIA(response);
+      if (texto) {
+        setFormData(prev => ({ ...prev, description: texto }));
+      } else {
+        alert(MSG_IA_INDISPONIVEL);
+      }
     } catch (error) {
       console.error('Erro ao gerar descrição:', error);
       alert('Erro ao gerar descrição. Tente novamente.');

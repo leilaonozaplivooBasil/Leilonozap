@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+// 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
+import { textoDaIA, MSG_IA_INDISPONIVEL } from "@/lib/descricaoIA";
 
 export default function DescriptionWithAI({ value, onChange, title }) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -54,8 +56,10 @@ Regras:
 Retorne apenas a descrição, sem introdução ou explicação.`,
       });
 
-      if (result && typeof result === 'string' && result.trim()) {
-        onChange(result.trim());
+      // 🛡️ PONTO 74: só aplica se for texto válido (nunca JSON de erro da IA)
+      const texto = textoDaIA(result);
+      if (texto) {
+        onChange(texto);
         // Não mostra toast aqui para não poluir a UX (geração automática silenciosa)
       }
     } catch (error) {
@@ -92,11 +96,13 @@ Regras:
 Retorne apenas a descrição, sem introdução ou explicação.`,
       });
 
-      if (result && typeof result === 'string' && result.trim()) {
-        onChange(result.trim());
+      // 🛡️ PONTO 74: campo permanece intacto quando a IA falha
+      const texto = textoDaIA(result);
+      if (texto) {
+        onChange(texto);
         toast.success("Descrição gerada com IA!");
       } else {
-        toast.error("IA não retornou descrição. Tente novamente.");
+        toast.error(MSG_IA_INDISPONIVEL);
       }
     } catch (error) {
       toast.error("Erro ao gerar descrição: " + error.message);

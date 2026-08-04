@@ -4,9 +4,28 @@ import AuctionCard from "../components/auction/AuctionCard";
 
 const Auction = base44.entities.Auction;
 
+// 🔎 PONTO 73 — a vitrine lia só os 40 leilões mais recentes ("-created_date", 40).
+// Como existem 53 itens de fábrica espalhados em 152 leilões, produtos válidos
+// (ex.: Bike Scooter Elétrica Harley 137) ficavam FORA da janela e nunca apareciam.
+// Correção: ler uma janela ampla e filtrar depois. O critério de fábrica NÃO mudou.
+const LIMITE_LEITURA = 300;
+
+const ehDeFabrica = (a) => a?.product_source === "factory_new" && !a?.is_investment_plan;
+
 export default function DiretoDeFabrica() {
   const [auctions, setAuctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 🔧 PONTO 75 — botão Editar do admin: o AuctionCard já suporta a prop isAdmin,
+  // a vitrine simplesmente não a passava. Mesmo padrão usado nas outras telas.
+  const isAdmin = useMemo(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("currentUser") || "null");
+      return u?.role === "admin" || u?.role === "super_admin";
+    } catch {
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     const cached = sessionStorage.getItem("factory_auctions_cache");
@@ -32,7 +51,7 @@ export default function DiretoDeFabrica() {
           if (persisted) base = JSON.parse(persisted);
         }
         if (Array.isArray(base) && base.length > 0) {
-          const onlyFactoryInstant = base.filter(a => a?.product_source === "factory_new" && !a?.is_investment_plan);
+          const onlyFactoryInstant = base.filter(ehDeFabrica);
           if (onlyFactoryInstant.length > 0) {
             setAuctions(onlyFactoryInstant);
             setIsLoading(false);
@@ -44,10 +63,10 @@ export default function DiretoDeFabrica() {
     (async () => {
       try {
         const data = await Promise.race([
-          Auction.list("-created_date", 40),
-          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000))
+          Auction.list("-created_date", LIMITE_LEITURA),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))
         ]);
-        const onlyFactory = (Array.isArray(data) ? data : []).filter(a => a?.product_source === "factory_new" && !a?.is_investment_plan);
+        const onlyFactory = (Array.isArray(data) ? data : []).filter(ehDeFabrica);
         setAuctions(onlyFactory);
         sessionStorage.setItem("factory_auctions_cache", JSON.stringify(onlyFactory));
         sessionStorage.setItem("factory_auctions_cache_time", Date.now().toString());
@@ -96,7 +115,7 @@ export default function DiretoDeFabrica() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {sorted.map((auction) => (
-              <AuctionCard key={auction.id} auction={auction} showFavoriteButton={false} />
+              <AuctionCard key={auction.id} auction={auction} isAdmin={isAdmin} showFavoriteButton={false} />
             ))}
           </div>
         )}
