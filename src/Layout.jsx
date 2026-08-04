@@ -32,6 +32,7 @@ import AdminTopNav from "@/components/layout/AdminTopNav";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
+import HeaderMobileActions from "@/components/nav/HeaderMobileActions";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -861,6 +862,8 @@ export default function Layout({ children, currentPageName }) {
               {/* BOTÃO MOBILE */}
               {!isLojistaPage && (
                 <div className="flex md:hidden items-center gap-2">
+                  {/* 📱 PONTO 80 — CompareAQUI + Livoo agora no topo, ao lado da logo */}
+                  <HeaderMobileActions />
                   {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
                   {isCatalogPage && (
                     <button
@@ -940,7 +943,8 @@ export default function Layout({ children, currentPageName }) {
             href="https://livoolive.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className="livoo-live-float nz-dock-bottom-2 fixed right-3 sm:right-4 z-50 group"
+            /* 📱 PONTO 80: no MOBILE a Livoo subiu pro cabeçalho — aqui só de sm+ */
+            className="livoo-live-float nz-dock-bottom-2 fixed right-3 sm:right-4 z-50 group hidden sm:block"
             title="Livoo Live — Compre ao Vivo"
             aria-label="Livoo Live — Compre ao Vivo"
           >

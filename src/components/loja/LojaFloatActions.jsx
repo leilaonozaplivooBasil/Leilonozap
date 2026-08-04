@@ -28,7 +28,9 @@ export default function LojaFloatActions() {
       {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07).
           Altura vem do FloatingDock (nz-dock-bottom): sobe automaticamente nas páginas
           com barra de ação fixa, pra nunca cobrir "COMPRAR AGORA" nem o campo de lance. */}
-      <div className={`nz-dock-bottom ${driftCls} fixed left-3 sm:left-4 z-50 flex flex-col items-center`}>
+      {/* 📱 PONTO 80: no MOBILE este botão subiu para o cabeçalho (HeaderMobileActions).
+          Aqui ele só aparece de sm+ (desktop/tablet), onde nada mudou. */}
+      <div className={`nz-dock-bottom ${driftCls} fixed left-3 sm:left-4 z-50 hidden sm:flex flex-col items-center`}>
         <button
           onClick={() => window.dispatchEvent(new Event('openComparai'))}
           title="CompareAQUI — compare o preço antes de comprar"
