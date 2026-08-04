@@ -17,7 +17,7 @@ import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
-import BotaoCarteiraFlutuante from '../components/auction/BotaoCarteiraFlutuante';
+import BotaoCarteiraHeader from '../components/auction/BotaoCarteiraHeader';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
 import ViewTracker from "../components/recommendations/ViewTracker";
@@ -1058,8 +1058,13 @@ export default function AuctionRoom() {
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* 💰 PONTO 83 — o chip de saldo saiu do cabeçalho: a carteira virou o botão
-              flutuante (BotaoCarteiraFlutuante), sem valor exposto. */}
+          {/* 💰 A carteira mora AQUI no cabeçalho, compacta e sem valor exposto —
+              flutuando embaixo ela atravessava a conversa e a barra de lance. */}
+          {currentUser && (
+            <BotaoCarteiraHeader
+              onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
+            />
+          )}
           {/* 🆕 BOTÃO FAVORITAR NO HEADER */}
           {currentUser && auction && (
             <FavoriteButton
@@ -1418,14 +1423,6 @@ export default function AuctionRoom() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* 💰 PONTO 83 — Carteira flutuante (canto inferior-esquerdo, sem valor exposto).
-          Mesma ação de antes: abre a carteira. Nenhum cálculo de saldo aqui. */}
-      {currentUser && (
-        <BotaoCarteiraFlutuante
-          onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
-        />
       )}
 
       {/* Um único CompareAQUI na sala: o botão visível é o de baixo (LojaFloatActions);
