@@ -26,7 +26,8 @@ Entre na sala e dê seu lance antes que acabe.
 
 // 🎯 PONTO 81: `compact` só muda o formato (pílula dentro da barra de ações).
 // A lógica de compartilhamento abaixo permanece EXATAMENTE a mesma.
-export default function ShareLeiloesButton({ count = 0, compact = false }) {
+// PONTO 85: `float` = botão redondo só com ícone (flutuante), sem texto e SEM piscar.
+export default function ShareLeiloesButton({ count = 0, compact = false, float = false }) {
   const [loading, setLoading] = useState(false);
 
   const compartilhar = async () => {
@@ -66,6 +67,29 @@ export default function ShareLeiloesButton({ count = 0, compact = false }) {
       setLoading(false);
     }
   };
+
+  if (float) {
+    return (
+      <button
+        type="button"
+        data-share-hide
+        onClick={compartilhar}
+        disabled={loading}
+        title="Compartilhar leilões no WhatsApp"
+        aria-label="Compartilhar leilões no WhatsApp"
+        className="grid h-12 w-12 place-items-center rounded-full border text-white transition-transform hover:scale-110 active:scale-[0.97] disabled:opacity-70 sm:h-16 sm:w-16"
+        style={{
+          borderColor: "rgba(16,185,129,0.55)",
+          background: "radial-gradient(circle at 50% 30%, rgba(16,185,129,0.30), rgba(11,16,24,0.92))",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+        }}
+      >
+        {loading ? <Loader2 className="h-5 w-5 animate-spin sm:h-6 sm:w-6" /> : <Share2 className="h-5 w-5 sm:h-6 sm:w-6" />}
+      </button>
+    );
+  }
 
   return (
     <button

@@ -52,6 +52,8 @@ export default function FloatingDock({ currentPageName }) {
       }
       .nz-dock-bottom { bottom: var(--nz-dock-b) !important; }
       .nz-dock-bottom-2 { bottom: calc(var(--nz-dock-b) + var(--nz-dock-step)) !important; }
+      /* PONTO 85 — terceira altura da coluna direita (Compartilhar, acima da Livoo) */
+      .nz-dock-bottom-3 { bottom: calc(var(--nz-dock-b) + var(--nz-dock-step) * 2) !important; }
     `}</style>
   );
 }

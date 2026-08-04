@@ -946,7 +946,8 @@ export default function Layout({ children, currentPageName }) {
             target="_blank"
             rel="noopener noreferrer"
             /* 📱 PONTO 80: no MOBILE a Livoo subiu pro cabeçalho — aqui só de sm+ */
-            className="livoo-live-float nz-dock-bottom-2 fixed right-3 sm:right-4 z-50 group hidden sm:block"
+            /* 📱 PONTO 85: visível também no mobile (a fileira do bloco saiu) */
+            className="livoo-live-float nz-dock-bottom-2 fixed right-3 sm:right-4 z-50 group"
             title="Livoo Live — Compre ao Vivo"
             aria-label="Livoo Live — Compre ao Vivo"
           >

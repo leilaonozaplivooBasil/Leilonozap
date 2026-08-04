@@ -24,7 +24,6 @@ const RecommendedSection = lazy(() => import('../components/recommendations/Reco
 import RotatingBanner from '../components/banner/RotatingBanner';
 import { interleaveBanners } from '@/lib/interleaveBanners';
 import LiveStats from '../components/home/LiveStats';
-import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
@@ -48,21 +47,21 @@ function HeroAction({ icon: Icon, label, sublabel, accent = "green" }) {
   const isPurple = accent === "purple";
   return (
     <div
-      className={`group flex h-full items-center gap-2.5 rounded-xl px-3.5 py-3 ${isPurple ? "glass-btn" : "glass-btn-green"}`}
+      className={`group flex h-full min-h-11 items-center gap-2 rounded-xl px-3 py-2 ${isPurple ? "glass-btn" : "glass-btn-green"}`}
       style={isPurple ? {
         borderColor: "rgba(168, 85, 247, 0.5)",
         background: "linear-gradient(135deg, rgba(168, 85, 247, 0.32) 0%, rgba(88, 28, 135, 0.45) 100%)",
         boxShadow: "0 4px 20px rgba(168, 85, 247, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)"
       } : undefined}
     >
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${isPurple ? "border-purple-300/25 bg-purple-300/10" : "border-emerald-300/25 bg-emerald-300/10"}`}>
-        <Icon className={`h-4 w-4 ${isPurple ? "text-purple-200" : "text-emerald-300"}`} />
+      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${isPurple ? "border-purple-300/25 bg-purple-300/10" : "border-emerald-300/25 bg-emerald-300/10"}`}>
+        <Icon className={`h-3.5 w-3.5 ${isPurple ? "text-purple-200" : "text-emerald-300"}`} />
       </div>
       <div className="min-w-0 flex-1 text-left">
-        <p className="whitespace-nowrap text-[13px] font-semibold leading-tight text-white">{label}</p>
-        {sublabel && <p className={`mt-0.5 truncate text-[11px] leading-tight ${isPurple ? "text-purple-200/70" : "text-emerald-100/60"}`}>{sublabel}</p>}
+        <p className="whitespace-nowrap text-xs font-semibold leading-tight text-white">{label}</p>
+        {sublabel && <p className={`truncate text-[10px] leading-tight ${isPurple ? "text-purple-200/70" : "text-emerald-100/60"}`}>{sublabel}</p>}
       </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-white/30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-white/70" />
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-white/70" />
     </div>
   );
 }
@@ -82,7 +81,7 @@ function HeroActionsCarousel({ currentUser }) {
   const loop = [0, 1, 2, 3].flatMap((copy) => items.map((item) => ({ ...item, copy })));
 
   return (
-    <div className="hero-actions-scroller mt-6 -mx-2 px-2">
+    <div className="hero-actions-scroller mt-4 -mx-2 px-2">
       <div className="hero-actions-scroller__inner">
         {loop.map((item) => {
           const content = <HeroAction icon={item.icon} label={item.label} sublabel={item.sublabel} accent={item.accent} />;
@@ -93,7 +92,7 @@ function HeroActionsCarousel({ currentUser }) {
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-60 sm:w-64 shrink-0"
+              className="block w-48 sm:w-52 shrink-0"
               aria-hidden={dupe}
               tabIndex={dupe ? -1 : undefined}
             >
@@ -103,7 +102,7 @@ function HeroActionsCarousel({ currentUser }) {
             <Link
               key={`${item.copy}-${item.key}`}
               to={item.to}
-              className="block w-60 sm:w-64 shrink-0"
+              className="block w-48 sm:w-52 shrink-0"
               aria-hidden={dupe}
               tabIndex={dupe ? -1 : undefined}
             >
@@ -830,28 +829,25 @@ export default function Home() {
                   título e subtítulo "57 leilões rolando"), empurrando o primeiro
                   leilão para fora da primeira tela. Agora: pulsinho de vida + título
                   + contador, tudo numa linha só. Nada de informação perdida. */}
-              <div className="flex items-center gap-2 flex-nowrap">
-                <span className="relative flex h-2 w-2 shrink-0" title="Ao vivo agora">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
-                </span>
+              <div className="flex items-center gap-2.5 flex-nowrap">
+                {/* PONTO 85 — pontinho verde removido: o foguinho já sinaliza que está no ar */}
                 <video
                   autoPlay
                   loop
                   muted
                   playsInline
                   aria-hidden="true"
-                  className="w-6 h-6 lg:w-8 lg:h-8 flex-shrink-0 pointer-events-none object-contain">
+                  className="w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 pointer-events-none object-contain">
                   <source src="/videos/foguinho-animado.mov" type='video/quicktime; codecs="hvc1"' />
                   <source src="/videos/foguinho-animado.webm" type="video/webm" />
-                  <Flame className="w-5 h-5 lg:w-7 lg:h-7 text-orange-400 animate-fire" />
+                  <Flame className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400 animate-fire" />
                 </video>
                 {/* PONTO 83 — tinta clara de volta, mantendo o peso FINO do PONTO 82 */}
                 <h1 className="truncate text-xl font-medium tracking-[-0.01em] text-white sm:text-2xl lg:text-3xl">
                   Leilões <span className="font-semibold text-emerald-400">Ativos</span>
                 </h1>
                 {activeCount > 0 && (
-                  <span className="ml-auto shrink-0 text-xs text-gray-400 sm:text-sm">
+                  <span className="ml-auto shrink-0 whitespace-nowrap pl-3 text-xs text-gray-400 sm:text-sm">
                     <span className="font-semibold text-gray-100 tabular-nums">{activeCount}</span> rolando
                   </span>
                 )}
@@ -862,9 +858,8 @@ export default function Home() {
                 <LiveStats />
               </div>
 
-              {/* Barra única: Comparar · Ao Vivo · Compartilhar (PONTO 71 preservado dentro dela) */}
-              <HeroAcoesLeiloes count={activeCount} />
-
+              {/* PONTO 85 — Comparar · Ao Vivo · Compartilhar saíram desta fileira:
+                  agora são os três botões flutuantes redondos (sem nome). */}
               {/* AÇÕES - CARROSSEL CONTÍNUO (mobile e desktop) */}
               <HeroActionsCarousel currentUser={currentUser} />
             </div>

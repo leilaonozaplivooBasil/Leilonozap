@@ -3,6 +3,7 @@ import { MessageCircle } from 'lucide-react';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import leilaSuporte from '@/assets/leila-suporte.webp';
 import useScrollDrift from '@/hooks/useScrollDrift';
+import ShareLeiloesButton from '@/components/home/ShareLeiloesButton';
 
 const SUPORTE_PHONE = '5521984072064';
 // 🔗 Por ora o botão "Ao vivo" leva direto ao feed da Livoo Live.
@@ -28,19 +29,29 @@ export default function LojaFloatActions() {
       {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07).
           Altura vem do FloatingDock (nz-dock-bottom): sobe automaticamente nas páginas
           com barra de ação fixa, pra nunca cobrir "COMPRAR AGORA" nem o campo de lance. */}
-      {/* 📱 PONTO 80: no MOBILE este botão subiu para o cabeçalho (HeaderMobileActions).
-          Aqui ele só aparece de sm+ (desktop/tablet), onde nada mudou. */}
-      <div className={`nz-dock-bottom ${driftCls} fixed left-3 sm:left-4 z-50 hidden sm:flex flex-col items-center`}>
+      {/* 📱 PONTO 85: mesmo lugar, agora do TAMANHO DA LEILA, visível também no mobile,
+          SEM rótulo e SEM fundo branco — só a logo com BORDA BRANCA FINA e anel branco
+          pulsante (mesma mecânica da Leila, que continua intocada). */}
+      <div className={`nz-dock-bottom ${driftCls} fixed left-3 sm:left-4 z-50 flex flex-col items-center`}>
         <button
           onClick={() => window.dispatchEvent(new Event('openComparai'))}
           title="CompareAQUI — compare o preço antes de comprar"
-          className="w-11 h-11 sm:w-14 sm:h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 relative"
-          style={{ boxShadow: '0 8px 24px rgba(37,99,255,.45)' }}
+          className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-transform hover:scale-110 relative"
         >
-          <img src={CompareAquiIcon} alt="CompareAQUI" className="w-full h-full object-cover rounded-full" />
-          <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20" />
+          <span aria-hidden className="absolute inset-0 rounded-full bg-white animate-ping opacity-40" />
+          <span
+            className="relative block w-full h-full rounded-full overflow-hidden border border-white/90 shadow-2xl"
+            style={{ boxShadow: '0 10px 28px rgba(0,0,0,.45)' }}
+          >
+            <img src={CompareAquiIcon} alt="CompareAQUI" className="w-full h-full object-cover rounded-full" />
+          </span>
         </button>
-        <Label>CompareAQUI</Label>
+      </div>
+
+      {/* 📣 PONTO 85 — Compartilhar como flutuante redondo, acima da Livoo. NÃO pisca.
+          Reaproveita o handler original do ShareLeiloesButton (Web Share + fallback). */}
+      <div className={`nz-dock-bottom-3 ${driftCls} fixed right-3 sm:right-4 z-50 flex flex-col items-center`}>
+        <ShareLeiloesButton float />
       </div>
 
       {/* Suporte com a Leila (avatar 3D) — canto DIREITO inferior. Animado pra chamar clique.
