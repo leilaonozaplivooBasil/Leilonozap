@@ -2,6 +2,7 @@ import React from "react";
 import { Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
 import LeiloeiroAvatar from "@/assets/leiloeiro-avatar.webp";
+import useEntradaShow from "./useEntradaShow";
 
 // PONTO 85 — realce visual dos valores em R$ que JÁ vêm no texto do backend.
 // Não altera, não reescreve e não reordena nada: só destaca o que existe.
@@ -16,6 +17,9 @@ const realcarValores = (texto) => {
 };
 
 export default function AIMessage({ message, winner, auction, currentUser }) {
+  // PONTO 89 — leiloeiro entra por cima e bate o martelo só quando a narração
+  // acabou de chegar; histórico segue estático.
+  const isNova = useEntradaShow(message);
   const formatTime = (timestamp) => {
     return new Date(timestamp || message.created_date).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
@@ -88,9 +92,14 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
   return (
     <div className="ia-linha mb-3.5 flex items-start gap-2">
       {/* PONTO 88 — sem rótulo "LanceIA": só o leiloeiro pequeninho falando */}
-      <img src={LeiloeiroAvatar} alt="" aria-hidden="true" className="ia-pop mt-0.5 h-8 w-8 shrink-0 object-contain" />
+      <img
+        src={LeiloeiroAvatar}
+        alt=""
+        aria-hidden="true"
+        className={`${isNova ? 'ia-entrada-leiloeiro' : 'ia-pop'} mt-0.5 h-8 w-8 shrink-0 object-contain`}
+      />
 
-      <div className="ia-balao min-w-0 px-3.5 py-2.5">
+      <div className={`ia-balao min-w-0 px-3.5 py-2.5 ${isNova ? 'ia-balao--entra' : ''}`}>
         <div className="mb-1 flex items-center justify-end gap-3">
           <span className="flex items-center gap-1.5">
             {isCountdown && <Timer className="h-3 w-3 text-amber-300" />}
@@ -131,8 +140,30 @@ function EstilosIA() {
       .ia-pop { animation: iaPop 0.45s ease-out; }
       @keyframes iaSwing { 0%,100% { transform: rotate(0deg); } 30% { transform: rotate(-14deg); } 60% { transform: rotate(12deg); } }
       .ia-swing { animation: iaSwing 1.5s ease-in-out infinite; transform-origin: 70% 30%; }
+      /* PONTO 89 — entrada de live: o leiloeiro vem GRANDE por cima, dá duas
+         marteladas e assenta no tamanho normal (estado final igual ao de hoje). */
+      .ia-entrada-leiloeiro {
+        animation: iaLeiloeiroEntra 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+        transform-origin: 70% 30%;
+        will-change: transform, opacity;
+        position: relative;
+        z-index: 2;
+      }
+      @keyframes iaLeiloeiroEntra {
+        0%   { opacity: 0; transform: scale(1.8) rotate(-22deg); }
+        28%  { opacity: 1; transform: scale(1.55) rotate(10deg); }
+        44%  { transform: scale(1.4) rotate(-16deg); }
+        58%  { transform: scale(1.3) rotate(9deg); }
+        74%  { transform: scale(1.1) rotate(-5deg); }
+        100% { opacity: 1; transform: scale(1) rotate(0deg); }
+      }
+      .ia-balao--entra { animation: iaBalaoEntra 0.55s ease-out 0.18s both; will-change: transform, opacity; }
+      @keyframes iaBalaoEntra {
+        from { opacity: 0; transform: translateY(14px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
       @media (prefers-reduced-motion: reduce) {
-        .ia-linha, .ia-pop, .ia-swing { animation: none; }
+        .ia-linha, .ia-pop, .ia-swing, .ia-entrada-leiloeiro, .ia-balao--entra { animation: none; }
       }
     `}</style>
   );

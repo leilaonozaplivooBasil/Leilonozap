@@ -1,9 +1,12 @@
 import React from "react";
 import { fmtBR } from "@/lib/money";
+import useEntradaShow from "./useEntradaShow";
 
 // PONTO 88 — cada lance vira uma PLACA de leilão erguida por uma mão.
 // Só visual: recebe a mensagem já pronta do chat, não calcula nada.
 export default function PlacaLance({ message, isOwn }) {
+  // PONTO 89 — só lances recém-chegados fazem a entrada "de fora da tela"
+  const isNova = useEntradaShow(message);
   const valor = Number(message.bid_amount) > 0 ? Number(message.bid_amount) : null;
   const hora = new Date(message.created_date).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
@@ -12,8 +15,8 @@ export default function PlacaLance({ message, isOwn }) {
 
   return (
     <div className={`placa-linha ${isOwn ? 'placa-linha--own' : ''}`}>
-      <div className="placa-conjunto">
-        <div className={`placa-corpo ${isOwn ? 'placa-corpo--own' : ''}`}>
+      <div className={`placa-conjunto ${isNova ? 'placa-conjunto--entra' : ''}`}>
+        <div className={`placa-corpo ${isOwn ? 'placa-corpo--own' : ''} ${isNova ? 'placa-corpo--flash' : ''}`}>
           <span className="placa-nome">{message.sender_name}</span>
           <span className="placa-valor">
             {valor !== null ? `R$ ${fmtBR(valor)}` : message.content}
@@ -26,15 +29,17 @@ export default function PlacaLance({ message, isOwn }) {
           {/* haste da placa */}
           <rect x="20" y="0" width="6" height="14" rx="2" fill="#8a5a33" />
           <rect x="20" y="0" width="2.2" height="14" rx="1.1" fill="#a9713f" />
-          {/* punho fechado segurando a haste */}
-          <rect x="9" y="10" width="28" height="20" rx="9.5" fill="#e8b489" />
-          <rect x="9" y="10" width="28" height="7" rx="3.5" fill="#f0c39b" />
-          {/* vincos dos dedos */}
-          <path d="M17 12.5v15M23 12.5v15M29 12.5v15" stroke="#d09b70" strokeWidth="1.1" strokeLinecap="round" opacity="0.75" />
-          {/* polegar */}
-          <rect x="5.5" y="17" width="9" height="7" rx="3.5" fill="#f0c39b" />
+          {/* PONTO 89 — punho FECHADO de verdade: os 4 dedos dobrados são faixas
+              horizontais (nada de dedo vertical se destacando no meio). */}
+          <rect x="9" y="11" width="28" height="19" rx="8" fill="#e8b489" />
+          <rect x="10.5" y="12.5" width="25" height="4" rx="2" fill="#f2c79f" />
+          <rect x="10.5" y="17.2" width="25" height="4" rx="2" fill="#eec096" />
+          <rect x="10.5" y="21.9" width="25" height="4" rx="2" fill="#e8b489" />
+          <rect x="10.5" y="26" width="25" height="3.4" rx="1.7" fill="#dfa87c" />
+          {/* polegar dobrado por cima, na lateral */}
+          <rect x="5.2" y="16.5" width="10" height="7" rx="3.5" fill="#f2c79f" />
           {/* pulso */}
-          <rect x="14" y="28" width="18" height="10" rx="4" fill="#dda67c" />
+          <rect x="14" y="28.5" width="18" height="10" rx="4" fill="#dda67c" />
         </svg>
       </div>
 
@@ -48,6 +53,13 @@ export default function PlacaLance({ message, isOwn }) {
           align-items: center;
           max-width: 78%;
           animation: placaSobe 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+        /* PONTO 89 — entrada "presente de live": vem grande e transparente de
+           fora da tela, bate o impacto e ASSENTA no estado final (idêntico ao
+           de hoje). Só a chegada é show; depois nada muda. */
+        .placa-conjunto--entra {
+          animation: placaEntradaShow 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: transform, opacity;
         }
         .placa-corpo {
           min-width: 132px;
@@ -95,8 +107,22 @@ export default function PlacaLance({ message, isOwn }) {
           from { opacity: 0; transform: translateY(22px) rotate(-4deg); }
           to { opacity: 1; transform: translateY(0) rotate(0deg); }
         }
+        @keyframes placaEntradaShow {
+          0%   { opacity: 0; transform: translateY(120px) scale(1.6) rotate(-9deg); }
+          45%  { opacity: 1; transform: translateY(0) scale(1.22) rotate(4deg); }
+          65%  { transform: translateY(0) scale(0.95) rotate(-2deg); }
+          82%  { transform: translateY(0) scale(1.04) rotate(1deg); }
+          100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+        }
+        /* flash dourado curtinho no impacto — some sozinho e não deixa rastro */
+        .placa-corpo--flash { animation: placaFlash 0.7s ease-out; }
+        @keyframes placaFlash {
+          0%, 40% { box-shadow: 0 10px 22px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.65); }
+          52% { box-shadow: 0 0 0 3px rgba(245, 196, 81, 0.85), 0 0 34px 10px rgba(245, 196, 81, 0.55), inset 0 1px 0 rgba(255,255,255,0.9); }
+          100% { box-shadow: 0 10px 22px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.65); }
+        }
         @media (prefers-reduced-motion: reduce) {
-          .placa-conjunto { animation: none; }
+          .placa-conjunto, .placa-conjunto--entra, .placa-corpo--flash { animation: none; }
         }
       `}</style>
     </div>
