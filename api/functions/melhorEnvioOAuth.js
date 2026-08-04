@@ -118,17 +118,33 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, error: 'Apenas administradores.' });
     }
 
-    const CLIENT_ID = process.env.MELHOR_ENVIO_CLIENT_ID;
-    const CLIENT_SECRET = process.env.MELHOR_ENVIO_CLIENT_SECRET;
-    const REDIRECT_URI = process.env.MELHOR_ENVIO_REDIRECT_URI;
     const ambiente = String(process.env.MELHOR_ENVIO_AMBIENTE || 'sandbox').toLowerCase() === 'producao'
       ? 'producao'
       : 'sandbox';
 
+    // Aceita nomes por ambiente (SANDBOX_/PRODUCAO_) e cai no nome genérico.
+    // Sandbox e produção são apps SEPARADOS no Melhor Envio, com credenciais próprias.
+    const CLIENT_ID = ambiente === 'producao'
+      ? (process.env.MELHOR_ENVIO_PRODUCAO_CLIENT_ID || process.env.MELHOR_ENVIO_CLIENT_ID)
+      : (process.env.MELHOR_ENVIO_SANDBOX_CLIENT_ID || process.env.MELHOR_ENVIO_CLIENT_ID);
+    const CLIENT_SECRET = ambiente === 'producao'
+      ? (process.env.MELHOR_ENVIO_PRODUCAO_CLIENT_SECRET || process.env.MELHOR_ENVIO_CLIENT_SECRET)
+      : (process.env.MELHOR_ENVIO_SANDBOX_CLIENT_SECRET || process.env.MELHOR_ENVIO_CLIENT_SECRET);
+    const REDIRECT_URI = process.env.MELHOR_ENVIO_REDIRECT_URI;
+
     if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+      // Diz exatamente O QUE falta, sem nunca revelar valor de credencial.
+      const faltando = [
+        !CLIENT_ID && 'CLIENT_ID',
+        !CLIENT_SECRET && 'CLIENT_SECRET',
+        !REDIRECT_URI && 'MELHOR_ENVIO_REDIRECT_URI',
+      ].filter(Boolean).join(', ');
       return res.status(200).json({
         ok: false,
-        error: 'Integração incompleta: falta CLIENT_ID, CLIENT_SECRET ou REDIRECT_URI nas variáveis de ambiente.',
+        ambiente,
+        error: `Faltando na Vercel (ambiente ${ambiente}): ${faltando}. `
+          + 'Atenção: variáveis salvas no painel do Base44 NÃO chegam às rotas /api da Vercel — '
+          + 'elas precisam ser cadastradas em Settings › Environment Variables do projeto na Vercel e o projeto redeployado.',
       });
     }
 
