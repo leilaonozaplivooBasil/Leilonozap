@@ -69,6 +69,51 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, escrita_realizada: false, vendas_pagas_sem_mp_id: vendasSemMp, pagamentos_orfaos: detalhe });
     }
 
+    // 🔍 MODO PAGADOR — quem pagou os 2 PIX órfãos (leitura na API do MP)
+    if (corpo?.modo === 'pagador') {
+      const ids = corpo?.ids || ['170711504564', '168849863424'];
+      const out: any[] = [];
+      for (const pid of ids) {
+        const r = await fetch(`https://api.mercadopago.com/v1/payments/${pid}`, {
+          headers: { Authorization: `Bearer ${MP}` },
+        });
+        if (!r.ok) { out.push({ payment_id: pid, erro: `${r.status}` }); continue; }
+        const p = await r.json();
+        const pagador = p.payer || {};
+        // procura esse pagador entre os usuários cadastrados
+        let usuario: any = null;
+        const email = pagador.email || '';
+        if (email) {
+          const u = await fetch(`${SB}/rest/v1/app_users?select=id,full_name,email,phone,role,is_seller&email=eq.${encodeURIComponent(email)}`, { headers: H });
+          if (u.ok) usuario = (await u.json())[0] || null;
+        }
+        out.push({
+          payment_id: pid,
+          valor: p.transaction_amount,
+          status: p.status,
+          data: p.date_approved || p.date_created,
+          descricao: p.description,
+          referencia: p.external_reference,
+          pagador: {
+            nome: [pagador.first_name, pagador.last_name].filter(Boolean).join(' ') || null,
+            email: pagador.email || null,
+            documento: pagador.identification ? `${pagador.identification.type} ${pagador.identification.number}` : null,
+            telefone: pagador.phone ? `${pagador.phone.area_code || ''}${pagador.phone.number || ''}` : null,
+          },
+          usuario_cadastrado: usuario,
+          // 🔎 é dinheiro REAL ou teste/sandbox? live_mode responde
+          live_mode: p.live_mode,
+          payer_id: pagador.id || null,
+          metodo: p.payment_method_id,
+          moeda: p.currency_id,
+          liquido_recebido: p.transaction_details?.net_received_amount,
+          pix_pagador: p.point_of_interaction?.transaction_data?.bank_info?.payer || null,
+          collector_id: p.collector_id,
+        });
+      }
+      return Response.json({ ok: true, escrita_realizada: false, pagamentos: out });
+    }
+
     // 🔍 MODO STATUS — descobre quais status existem de fato (as 444 linhas não classificadas)
     if (corpo?.modo === 'status') {
       const r = await fetch(`${SB}/rest/v1/catalog_sales?select=status,kind&limit=1000`, { headers: H });
