@@ -27,35 +27,20 @@ export const TOP_ROLES = [
   { level: 'diretoria_executiva', pct: 0.5, pool: true },
 ];
 
-export const EXECUTIVE_LEVEL = 'executivo_conta';
-export const EXECUTIVE_PCT = 1;
-// Cargo usado como executivo de último recurso (linha sem nenhum executivo acima).
-// Genérico de propósito: quando entrar um novo executivo, a própria árvore passa a
-// resolvê-lo e nada aqui precisa mudar.
-const FALLBACK_EXECUTIVE_LEVEL = 'ceo';
+// A regra do executivo mora em UM lugar só: api/_lib/resolveExecutivo.js.
+// Este arquivo NÃO reimplementa a resolução — apenas consome a fonte única.
+import {
+  EXECUTIVE_LEVEL,
+  EXECUTIVE_PCT,
+  levelsOf,
+  isExecutivo,
+  readExecutiveOwner,
+  resolveExecutivo,
+} from './resolveExecutivo.js';
+
+export { EXECUTIVE_LEVEL, EXECUTIVE_PCT, readExecutiveOwner };
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-
-const levelsOf = (u) => {
-  const raw = u?.career_levels;
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string' && raw) return [raw];
-  return [];
-};
-
-/** Lê o executivo dono da estrutura (coluna dedicada ou campo de compatibilidade). */
-export function readExecutiveOwner(user) {
-  if (!user) return null;
-  if (user.executive_owner_id) return user.executive_owner_id;
-  const ctx = user.licenciado_context;
-  if (!ctx) return null;
-  try {
-    const parsed = typeof ctx === 'string' ? JSON.parse(ctx) : ctx;
-    return parsed?.executive_owner_id || null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Calcula os lançamentos do topo para uma venda.
@@ -105,30 +90,9 @@ export function computeTopPool(value, users, anchorId) {
   const byId = new Map(ativos.map((u) => [u.id, u]));
   const anchor = anchorId ? byId.get(anchorId) : null;
   if (anchor) {
-    // 1) O próprio dono da venda é executivo? Ele é o executivo da própria estrutura.
-    //    (caso Ribeiro: atua como parceiro dentro da estrutura que ele mesmo comanda)
-    let execId = levelsOf(anchor).includes(EXECUTIVE_LEVEL) ? anchor.id : readExecutiveOwner(anchor);
-    if (!execId) {
-      // herda subindo a linha de indicação
-      const seen = new Set([anchor.id]);
-      let cur = anchor.referred_by_id ? byId.get(anchor.referred_by_id) : null;
-      while (cur && !seen.has(cur.id)) {
-        seen.add(cur.id);
-        const dono = readExecutiveOwner(cur);
-        if (dono) { execId = dono; break; }
-        if (levelsOf(cur).includes(EXECUTIVE_LEVEL)) { execId = cur.id; break; }
-        cur = cur.referred_by_id ? byId.get(cur.referred_by_id) : null;
-      }
-    }
-    if (!execId) {
-      // Linha sem nenhum executivo acima: cai no executivo raiz (cargo de fallback).
-      const raiz = ativos.find(
-        (u) => levelsOf(u).includes(EXECUTIVE_LEVEL) && levelsOf(u).includes(FALLBACK_EXECUTIVE_LEVEL)
-      );
-      if (raiz) execId = raiz.id;
-    }
-    const exec = execId ? byId.get(execId) : null;
-    if (exec && levelsOf(exec).includes(EXECUTIVE_LEVEL)) {
+    // Regra única: carteira migrada → cargo → sobe a linha → executivo raiz.
+    const exec = resolveExecutivo(anchor, byId, ativos);
+    if (exec && isExecutivo(exec)) {
       const amount = round2((total * EXECUTIVE_PCT) / 100);
       if (amount > 0.001) {
         out.push({

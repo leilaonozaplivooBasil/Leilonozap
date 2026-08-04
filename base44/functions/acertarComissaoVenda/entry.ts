@@ -99,13 +99,28 @@ function calcular(sale: any, users: any[]) {
       assignments.push({ role: p.id, user_id: u.id, user_name: u.full_name, percent: p.pct / donos.length, amount: cent / 100, tipo: 'governanca' });
     }
   }
-  // EXECUTIVO — própria estrutura, nunca pool
-  let exec = chain.find((u) => temCargo(u, 'executivo'));
-  if (!exec) {
-    for (const u of chain) {
-      const dono = byId.get(carteiraExec(u));
+  // EXECUTIVO — própria estrutura, nunca pool.
+  // ⚠️ REGRA ESPELHADA de api/_lib/resolveExecutivo.js (fonte única da regra).
+  // Este arquivo roda em Deno e o outro em Node/Vercel — os dois ambientes NÃO
+  // compartilham import. Mudou a regra? Mude NOS DOIS, sempre.
+  //
+  // "Migrou para um executivo, vai com tudo" (dono, 04/08/2026):
+  //   1) carteira migrada da PRÓPRIA pessoa vence — inclusive sobre a árvore
+  //   2) senão, a própria pessoa é executiva
+  //   3) senão, sobe pra quem indicou
+  //   4) linha acabou → executivo raiz (executivo + ceo)
+  let exec: any = null;
+  {
+    const vistosExec = new Set();
+    let atual: any = chain[0] || null;
+    while (atual && !vistosExec.has(atual.id) && vistosExec.size < 50) {
+      vistosExec.add(atual.id);
+      const dono = byId.get(carteiraExec(atual));
       if (dono && temCargo(dono, 'executivo')) { exec = dono; break; }
+      if (temCargo(atual, 'executivo')) { exec = atual; break; }
+      atual = atual.referred_by_id ? byId.get(atual.referred_by_id) : null;
     }
+    if (!exec) exec = elegiveis.find((u) => temCargo(u, 'executivo') && temCargo(u, 'ceo')) || null;
   }
   if (exec) assignments.push({ role: 'executivo', user_id: exec.id, user_name: exec.full_name, percent: PCT_EXECUTIVO, amount: Math.round(valor * PCT_EXECUTIVO) / 100, tipo: 'estrutura' });
 
