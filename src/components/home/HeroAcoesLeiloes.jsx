@@ -14,7 +14,7 @@ const acao =
 
 export default function HeroAcoesLeiloes({ count = 0 }) {
   return (
-    <div className="mt-4 flex items-center gap-4 overflow-x-auto px-1 nz-no-scrollbar sm:mt-5 sm:gap-6 sm:px-2">
+    <div className="mt-4 flex items-center gap-4 overflow-x-auto px-3 py-1 nz-no-scrollbar sm:mt-5 sm:gap-6 sm:px-4">
       {/* PONTO 88 — pulso de luz branca da logo do CompareAQUI (local, não vaza pro app) */}
       <style>{`
         .nz-cmp-anel {
@@ -28,6 +28,14 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
         @keyframes nzCmpAnel {
           0% { transform: scale(1); opacity: 0.8; }
           100% { transform: scale(1.55); opacity: 0; }
+        }
+        /* O pulso do CompareAQUI cresce PRA DENTRO: a fileira rola no eixo X e
+           recortava o halo que saía do círculo, dando impressão de estar atrás. */
+        .nz-cmp-anel { animation-name: nzCmpAnelDentro; }
+        @keyframes nzCmpAnelDentro {
+          0% { transform: scale(0.72); opacity: 0; }
+          55% { transform: scale(0.92); opacity: 0.85; }
+          100% { transform: scale(1); opacity: 0; }
         }
         .nz-livoo-anel {
           position: absolute;
