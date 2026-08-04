@@ -51,7 +51,7 @@ export default function BuscadorFotos({ productName = "", imagemBase = "", onSel
   // A imagem identifica o produto exato. O nome fica só como alternativa.
   const buscarPorFoto = async () => {
     if (!imagemBase) {
-      toast.error("Este leilão ainda não tem foto — envie 1 foto e busque as parecidas");
+      toast.error("Envie uma foto primeiro para buscar pela imagem");
       return;
     }
     setBuscando(true);
@@ -132,8 +132,14 @@ export default function BuscadorFotos({ productName = "", imagemBase = "", onSel
         </div>
       )}
 
-      {imagemBase && (
+      {imagemBase ? (
         <p className="text-center text-[10px] uppercase tracking-widest text-slate-500">ou busque pelo nome</p>
+      ) : (
+        // Sem foto de referência a busca por imagem não existe — deixar isso explícito
+        // evita o usuário procurar um botão que não está lá.
+        <p className="text-[11px] text-amber-300/90">
+          Envie uma foto primeiro para buscar pela imagem (a busca por nome já funciona).
+        </p>
       )}
 
       <div className="flex gap-2">

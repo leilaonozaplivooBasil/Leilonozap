@@ -11,6 +11,9 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 // 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
 import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
+// 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
+// Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
+import BuscadorFotos from '@/components/admin/BuscadorFotos';
 
 export default function AddCatalogProduct() {
   const navigate = useNavigate();
@@ -37,6 +40,8 @@ export default function AddCatalogProduct() {
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  // PONTO 77 CAMADA 5 — painel do buscador de fotos (abre/fecha pelo link "Buscar fotos")
+  const [showBuscadorFotos, setShowBuscadorFotos] = useState(false);
   
   const [formData, setFormData] = useState({
     // Informações Gerais
@@ -1291,13 +1296,31 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                       {' '}
                       <button
                         type="button"
-                        onClick={() => autoFetchImages(formData)}
-                        disabled={isAutoImporting}
-                        className="text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                        onClick={() => setShowBuscadorFotos(v => !v)}
+                        className="text-purple-600 hover:text-purple-700 font-semibold"
                       >
-                        {isAutoImporting ? 'Buscando...' : 'Buscar fotos'}
+                        {showBuscadorFotos ? 'Fechar buscador' : 'Buscar fotos'}
                       </button>
                     </p>
+
+                    {/* 🔍 PONTO 77 CAMADA 5 — buscador de fotos (mesmo do leilão).
+                        Só ADICIONA no fim da lista: nunca sobrescreve nem apaga foto
+                        já cadastrada, e só persiste quando o admin salva o produto. */}
+                    {showBuscadorFotos && (
+                      <div className="mb-5 rounded-xl bg-[#161b22] p-4">
+                        <BuscadorFotos
+                          productName={formData.title}
+                          imagemBase={formData.image_urls[0] || ''}
+                          jaTem={formData.image_urls.length}
+                          onSelect={(urls) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              image_urls: [...prev.image_urls, ...urls.filter(u => !prev.image_urls.includes(u))]
+                            }));
+                          }}
+                        />
+                      </div>
+                    )}
                     
                     {formData.image_urls.length === 0 ? (
                       <label 

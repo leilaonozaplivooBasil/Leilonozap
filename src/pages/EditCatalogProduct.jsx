@@ -16,7 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, Edit, Package } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, Edit, Package, Search } from 'lucide-react';
+// 🔍 PONTO 77 CAMADA 5 — MESMO buscador do leilão (foto via Google Lens + nome).
+import BuscadorFotos from '@/components/admin/BuscadorFotos';
 
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -45,6 +47,8 @@ export default function EditCatalogProduct() {
     const [isUploading, setIsUploading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    // PONTO 77 CAMADA 5 — painel do buscador de fotos
+    const [showBuscadorFotos, setShowBuscadorFotos] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -302,7 +306,22 @@ export default function EditCatalogProduct() {
                             </Droppable>
                         </DragDropContext>
                         
-                        <div className="mt-6 flex justify-center">
+                        {/* 🔍 PONTO 77 CAMADA 5 — buscador de fotos (mesmo do leilão).
+                            Só ADICIONA no fim da lista; persiste em "Salvar Alterações". */}
+                        {showBuscadorFotos && (
+                            <div className="mb-6 rounded-xl bg-[#161b22] p-4">
+                                <BuscadorFotos
+                                    productName={formData.description}
+                                    imagemBase={imageUrls[0] || ''}
+                                    jaTem={imageUrls.length}
+                                    onSelect={(urls) => {
+                                        setImageUrls(prev => [...prev, ...urls.filter(u => !prev.includes(u))]);
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
                             <input
                                 type="file"
                                 multiple
@@ -313,7 +332,7 @@ export default function EditCatalogProduct() {
                             />
                             <Button 
                                 variant="outline" 
-                                className="w-full md:w-auto"
+                                className="w-full sm:w-auto"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading || isSaving || isDeleting}
                             >
@@ -322,6 +341,15 @@ export default function EditCatalogProduct() {
                                 ) : (
                                     <><Plus className="w-4 h-4 mr-2" /> Adicionar Fotos</>
                                 )}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-full sm:w-auto border-purple-300 text-purple-700 hover:bg-purple-50"
+                                onClick={() => setShowBuscadorFotos(v => !v)}
+                                disabled={isUploading || isSaving || isDeleting}
+                            >
+                                <Search className="w-4 h-4 mr-2" />
+                                {showBuscadorFotos ? 'Fechar buscador' : 'Buscar fotos'}
                             </Button>
                         </div>
                     </CardContent>
