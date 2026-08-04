@@ -8,6 +8,30 @@
 
 ---
 
+## 04/08/2026 — PONTO 76: DIAGNÓSTICO de qualidade de texto (nada foi alterado)
+
+- **Natureza:** auditoria **100% leitura**. Nova função `auditarQualidadeTextos`
+  (`base44/functions/auditarQualidadeTextos/entry.ts`) — não existe caminho de escrita dentro
+  dela, só GET. Nenhum produto, leilão, página ou componente foi alterado.
+- **Escopo:** 3.697 registros — 152 leilões (`auctions`) + 3.545 produtos (`products`).
+- **Descoberta estrutural (importante para o front):** a Loja Virtual usa a tabela `products`,
+  que **não tem coluna `title`** — o NOME do produto está gravado no campo `description`, e
+  **não existe campo de descrição rica** nesses 3.545 registros. Por isso a auditoria trata
+  esse campo como NOME (caixa alta, cortado, lixo de marketplace, duplicado) e não cobra
+  "descrição curta" de um nome de produto.
+- **Resultado:** saúde geral **73%** — 2.702 limpos, 995 com algum defeito.
+  Sem foto 738 · Título em CAIXA ALTA 194 · Título cortado 121 · Nome duplicado 102 ·
+  Lixo de marketplace 65 · Descrição curta 57 · Descrição duplicada 54 · Texto cortado 38.
+- **Zero resíduo de erro de IA** em todo o site — a trava do PONTO 74 está sustentando.
+- **Modos:** `resumo` (números) e `detalhado` (item a item), com filtro por tabela, status e
+  tipo de defeito.
+- **Ajuste durante a auditoria:** o detector de "texto cortado" marcava como defeito qualquer
+  texto terminando sem ponto final, o que acusava bullets e ficha técnica legítimos (45 casos).
+  Regra corrigida: item de lista e linha "Chave: valor" não contam. Ficaram 38 casos reais.
+- **Risco:** 🟢 Baixo — leitura pura, sem PATCH/POST/DELETE.
+
+---
+
 ## 04/08/2026 — PONTO 74B: descrições regeradas pela IA (22 leilões)
 
 - **Contexto:** depois da limpeza do PONTO 74, esses leilões ficaram com a descrição
