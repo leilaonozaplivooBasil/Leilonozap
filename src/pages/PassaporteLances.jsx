@@ -88,7 +88,7 @@ export default function PassaporteLances() {
             ? 'Criar conta para participar'
             : enviando
               ? 'Registrando aceite...'
-              : `Comprar Passaporte · R$ ${VALOR} no PIX`}
+              : `Comprar Passaporte · R$ ${VALOR} no PIX ou cartão parcelado`}
         </button>
         {!todosMarcados && (
           <p className="text-center text-[11px] text-white/40 mt-2.5">

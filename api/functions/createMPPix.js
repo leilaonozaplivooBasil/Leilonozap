@@ -123,6 +123,8 @@ export default async function handler(req, res) {
     const payBody = {
       transaction_amount: totalCobrado, // produtos − descontos + frete recotado no servidor
       description: `Loja Virtual - ${main.description}`.slice(0, 200),
+      // 🏷️ Itens na cobrança para o Mercado Pago poder exibir o produto na listagem.
+      additional_info: { items: lines.map((l) => ({ title: String(l.p.description).slice(0, 120), quantity: l.q, unit_price: unitPrice(l.p) })) },
       payment_method_id: 'pix',
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
       external_reference: saleId,

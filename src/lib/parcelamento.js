@@ -26,7 +26,9 @@ const JUROS_MP = {
 // O Mercado Pago não parcela em valores que gerem parcela abaixo de ~R$ 5,00.
 // Por isso produto barato NÃO tem 12x — prometer 12x nele é propaganda falsa.
 const PARCELA_MINIMA = 5;
-const MAX_PARCELAS = 12;
+// 💳 Máximo de parcelas do app em UM ÚNICO lugar (vitrine + checkout de cartão).
+// Para mudar o limite depois, basta alterar este número.
+export const MAX_PARCELAS = 12;
 
 const round2 = (n) => Math.round(n * 100) / 100;
 

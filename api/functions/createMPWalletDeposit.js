@@ -84,6 +84,9 @@ export default async function handler(req, res) {
           transaction_amount: chargeAmount,
           token: cardToken,
           description,
+          // 🏷️ Nome do que foi vendido junto da cobrança — ajuda o Mercado Pago a exibir
+          // o item (e não só "Venda de produtos") na listagem de transações do painel.
+          additional_info: { items: [{ title: description.slice(0, 120), quantity: 1, unit_price: chargeAmount }] },
           installments,
           payment_method_id: cardPaymentMethodId,
           external_reference: cardSaleId,
@@ -170,6 +173,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         transaction_amount: amount,
         description,
+        additional_info: { items: [{ title: description.slice(0, 120), quantity: 1, unit_price: amount }] },
         payment_method_id: 'pix',
         notification_url: `${BASE_URL}/api/functions/mpWebhook`,
         external_reference: saleId,

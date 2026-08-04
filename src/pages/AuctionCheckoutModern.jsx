@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PaymentErrorModal from '@/components/payment/PaymentErrorModal';
+import SelecaoParcelas from '@/components/payment/SelecaoParcelas';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { ehDestinoValido, DESTINO_PADRAO } from '@/lib/origemDeposito';
 
@@ -988,20 +989,14 @@ export default function AuctionCheckoutModern() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                          Parcelas
-                        </label>
-                        <select
-                          value={installments}
-                          onChange={(e) => setInstallments(parseInt(e.target.value))}
-                          className="w-full h-12 bg-gray-800/50 border border-gray-700 rounded-md text-white px-3"
-                        >
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                            <option key={n} value={n}>{n}x</option>
-                          ))}
-                        </select>
-                      </div>
+                      {/* 💳 Parcelas REAIS do Mercado Pago (valor de cada parcela visível) */}
+                      <SelecaoParcelas
+                        mpInstance={mpInstanceRef.current}
+                        cardNumber={cardNumber}
+                        amount={appliesCardSurcharge ? totalWithSurcharge : baseAmount}
+                        value={installments}
+                        onChange={setInstallments}
+                      />
 
                       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
                         <p className="text-yellow-300 text-sm flex items-start gap-2">
