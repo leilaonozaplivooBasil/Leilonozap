@@ -15,14 +15,17 @@ export default function CalculadoraFrete({
 }) {
   const frete = useFrete({ items, autoCalcular, cepInicial });
 
+  // o CEP cotado vai junto da opção: o servidor recota com ele antes de cobrar
+  const comCep = (op) => (op ? { ...op, cep: frete.cep } : op);
+
   const escolher = (op) => {
     frete.setSelecionada(op);
-    if (onSelecionar) onSelecionar(op);
+    if (onSelecionar) onSelecionar(comCep(op));
   };
 
   // avisa o pai sempre que a cotação traz uma nova opção padrão (a mais barata)
   React.useEffect(() => {
-    if (frete.selecionada && onSelecionar) onSelecionar(frete.selecionada);
+    if (frete.selecionada && onSelecionar) onSelecionar(comCep(frete.selecionada));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frete.selecionada?.id]);
 

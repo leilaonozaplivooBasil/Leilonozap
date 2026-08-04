@@ -8,6 +8,48 @@
 
 ---
 
+## 04/08/2026 — PONTO 82: vitrine da loja passou a COBRAR FRETE (vazamento fechado)
+
+- **O vazamento:** em `/loja/:slug` o checkout coletava CEP e endereço e **ignorava**. Todo
+  pedido online de loja da rede saía **sem frete** — o custo do envio ficava com a casa.
+- **O que mudou (cobrança) 🔴:** `createStoreOrder.js` agora chama
+  `resolverFreteDoCheckout` (o MESMO motor antifraude do PONTO 74, já em produção na Loja
+  Virtual): o navegador manda só o **ID da transportadora + CEP**, e o servidor **recota** na
+  Melhor Envio. Se a opção escolhida não voltar na recotação, o pedido é **recusado** com
+  mensagem clara — nunca cobra frete zero calado. PIX passa a cobrar produtos + frete
+  (`transaction_amount`); no cartão o frete entra como **linha própria e visível** no checkout
+  do Mercado Pago.
+- **Proteção da comissão:** `sale_price` e `total_amount` continuam sendo **só produtos** —
+  são a base de comissão do `storeFulfill`. O frete vai em `raw_base44.frete`, com
+  `amount_charged` para auditoria. **Comissão de ninguém foi inflada.** Mesmo padrão do
+  `createMPPix`, de propósito: um motor de frete só, não dois.
+- **O que mudou (tela):** o checkout saiu de dentro de `LojaVitrine.jsx` (já com 299 linhas)
+  para `src/components/loja/LojaCheckout.jsx`, com escolha **Entrega × Retirar na loja**,
+  calculadora de frete reaproveitada, resumo mostrando *Produtos + Frete = Total* e alvos de
+  toque ≥44px. Em "Entrega", **sem frete escolhido o botão de pagar fica travado** — é o que
+  impede a tela prometer um valor que a cobrança não cumpre. Em "Retirar na loja" o frete é
+  zero explícito (o servidor concorda: `pickup`).
+- **Ajuste mínimo em `CalculadoraFrete.jsx`:** a opção escolhida agora leva o **CEP cotado**
+  junto (`{...op, cep}`). Sem isso a tela teria um segundo campo de CEP e o cliente poderia
+  cotar com um CEP e pagar com outro. É campo **adicional** — quem já usa o componente
+  (Loja Virtual, carrinho) não muda de comportamento.
+- **NÃO foi tocado:** `_lib/frete.js`, `_lib/storeFulfill.js`, `_lib/commissions.js`,
+  `mpWebhook.js`, `createMPPix.js`, `createMPCatalogCardCheckout.js`, `Cart.jsx`,
+  `CatalogCheckout2.jsx`, estoque, carteira, auth, OAuth/etiqueta do Melhor Envio.
+- **Sem taxa de cartão de 5,31% aqui** (a do PONTO 78 é da Loja Virtual) — decisão do dono do
+  produto para esta entrega.
+- **⚠️ NÃO validado automaticamente:** `/api/functions/*` **não executa no ambiente de
+  preview**. Confirmado apenas que a tela nova carrega sem quebrar o app. O teste real é um
+  pedido de verdade em `/loja/:slug` no site publicado: conferir se o valor do PIX = produtos
+  + frete e se a comissão gerada bate **só com os produtos**.
+- **Risco:** 🔴 Alto (altera valor cobrado do cliente) — mitigado: base de comissão intacta,
+  frete em linha separada e visível, recotação obrigatória no servidor, nenhuma venda
+  existente alterada.
+- **Pendências:** rotacionar o `client_secret` do Melhor Envio (exposto no chat) e automatizar
+  a renovação do token (30/45 dias) continuam abertas, do PONTO 81.
+
+---
+
 ## 04/08/2026 — PONTO 81 (FASE 1C): ✅ AUTORIZADO EM PRODUÇÃO
 
 - **Status: FUNCIONANDO.** Gabriel concluiu a autorização OAuth do Melhor Envio em **produção**

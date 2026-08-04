@@ -4,6 +4,10 @@
 // O estoque só é baixado e a comissão só é paga QUANDO o pagamento confirma (mpWebhook).
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
+// 🚚 PONTO 82 — frete RECOTADO no servidor (mesmo motor antifraude da Loja Virtual).
+// O navegador só manda o ID da transportadora + CEP; o valor é apurado aqui.
+// ⚠️ O frete NÃO entra em sale_price/total_amount: essa é a base de comissão.
+import { resolverFreteDoCheckout } from '../_lib/frete.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -63,6 +67,21 @@ export default async function handler(req, res) {
     total = round2(total);
     if (total <= 0) return res.status(400).json({ success: false, error: 'Total inválido' });
 
+    // 🚚 PONTO 82 — FRETE. Antes o CEP era coletado e ignorado: toda entrega saía com
+    // frete pago pela casa. Agora o servidor RECOTA (mesmo motor da Loja Virtual) e recusa
+    // o pedido se a opção escolhida não existir mais — nunca cobra frete zero calado.
+    // 'pickup' = retirada na loja (zero explícito). Qualquer outro valor = entrega.
+    const fr = await resolverFreteDoCheckout({
+      delivery_type: body?.delivery_type === 'pickup' ? 'pickup' : 'delivery',
+      cep: body?.cep || customer.cep,
+      items,
+      frete_id: body?.frete_id,
+    });
+    if (!fr.ok) return res.status(200).json({ success: false, error: fr.error });
+    const frete = fr.frete;
+    // 🔴 total (produtos) = base da comissão. totalCobrado = o que o cliente paga.
+    const totalCobrado = round2(total + (Number(frete.valor) || 0));
+
     const saleId = oid();
     const title = lines.length === 1 ? lines[0].title : `${lines[0].title} +${lines.length - 1} item(ns)`;
     const tracking = 'LJ' + saleId.slice(0, 8).toUpperCase();
@@ -70,7 +89,9 @@ export default async function handler(req, res) {
       id: saleId, base44_id: saleId, kind: 'loja', source: 'loja_online',
       seller_id: store.id, store_slug: slug,
       buyer_name: customer.name, buyer_email: customer.email || null, buyer_phone: customer.phone,
-      buyer_address: customer.address || null, buyer_cep: customer.cep || null,
+      buyer_address: customer.address || null, buyer_cep: frete.cep || customer.cep || null,
+      // frete fica FORA de sale_price/total_amount (base de comissão) — igual createMPPix
+      raw_base44: { delivery_type: body?.delivery_type === 'pickup' ? 'pickup' : 'delivery', frete, amount_charged: totalCobrado },
       product_title: String(title).slice(0, 300), sale_price: total, total_amount: total, quantity: totalQty,
       items_json: lines, status: 'pending_payment', tracking_code: tracking,
       payment_method: gateway === 'card' ? 'credit_card_mp' : 'pix_mp', created_date: new Date().toISOString(),
@@ -89,7 +110,8 @@ export default async function handler(req, res) {
       const mp = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': saleId },
         body: JSON.stringify({
-          transaction_amount: total, description: `Pedido ${storeName} - Leilão NoZap`.slice(0, 200),
+          transaction_amount: totalCobrado, // produtos + frete recotado no servidor
+          description: `Pedido ${storeName} - Leilão NoZap`.slice(0, 200),
           payment_method_id: 'pix', notification_url: `${BASE_URL}/api/functions/mpWebhook`, external_reference: saleId,
           payer: { email: customer.email || 'comprador@leilaonozap.net', first_name: first || 'Cliente', last_name: rest.join(' ') || 'NoZap', ...(customer.cpf ? { identification: { type: 'CPF', number: String(customer.cpf).replace(/\D/g, '') } } : {}) },
         }),
@@ -98,14 +120,20 @@ export default async function handler(req, res) {
       if (!mp.ok || !pay?.id) return res.status(200).json({ success: false, error: 'Falha ao gerar PIX', details: (pay?.message || '').slice(0, 200) });
       const td = pay.point_of_interaction?.transaction_data || {};
       await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_payment_id: String(pay.id), pix_qr: td.qr_code, pix_qr_base64: td.qr_code_base64, pix_ticket_url: td.ticket_url }) });
-      return res.status(200).json({ success: true, gateway: 'pix', sale_id: saleId, amount: total, tracking, payment_id: String(pay.id), pix_code: td.qr_code, qr_code_base64: td.qr_code_base64, ticket_url: td.ticket_url });
+      return res.status(200).json({ success: true, gateway: 'pix', sale_id: saleId, amount: totalCobrado, amount_products: total, shipping: round2(frete.valor || 0), shipping_carrier: [frete.empresa, frete.servico].filter(Boolean).join(' ') || null, tracking, payment_id: String(pay.id), pix_code: td.qr_code, qr_code_base64: td.qr_code_base64, ticket_url: td.ticket_url });
     }
 
     // 💳 Cartão via Mercado Pago Checkout Pro (página hospedada) — substitui a antiga Stripe.
     if (!MP_TOKEN) return res.status(500).json({ success: false, error: 'Cartão indisponível no momento' });
     const [cFirst, ...cRest] = String(customer.name).trim().split(/\s+/);
     const prefBody = {
-      items: lines.map((ln) => ({ title: ln.title || 'Produto', quantity: ln.qty, unit_price: ln.unit, currency_id: 'BRL' })),
+      items: [
+        ...lines.map((ln) => ({ title: ln.title || 'Produto', quantity: ln.qty, unit_price: ln.unit, currency_id: 'BRL' })),
+        // frete como linha própria e visível no checkout do MP (não some dentro do produto)
+        ...(Number(frete.valor) > 0
+          ? [{ title: `Frete - ${[frete.empresa, frete.servico].filter(Boolean).join(' ') || 'Entrega'}`.slice(0, 200), quantity: 1, unit_price: round2(frete.valor), currency_id: 'BRL' }]
+          : []),
+      ],
       payer: { email: customer.email || 'comprador@leilaonozap.net', name: cFirst || 'Cliente', surname: cRest.join(' ') || 'NoZap' },
       external_reference: saleId,
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
@@ -120,7 +148,7 @@ export default async function handler(req, res) {
     const pref = await sr.json();
     if (!sr.ok || !pref?.id) return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 200) });
     await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
-    return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount: total, tracking, url: pref.init_point });
+    return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount: totalCobrado, amount_products: total, shipping: round2(frete.valor || 0), tracking, url: pref.init_point });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao criar pedido', details: String(e?.message || e) });
   }

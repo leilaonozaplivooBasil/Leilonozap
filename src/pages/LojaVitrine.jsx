@@ -7,11 +7,12 @@ import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import CompareAquiModal from '@/components/comparai/CompareAquiModal';
+// PONTO 82 — checkout com frete real vive em componente próprio (este arquivo já era longo)
+import LojaCheckout from '@/components/loja/LojaCheckout';
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, X, Loader2, Store as StoreIcon,
-  ShieldCheck, Share2, MessageCircle, Copy, CheckCircle2, Package,
+  ShieldCheck, Share2, CheckCircle2, Package,
 } from 'lucide-react';
-import { useCopiarPix } from '@/hooks/useCopiarPix';
 
 const firstImg = (images) => {
   if (Array.isArray(images)) return images[0] || '';
@@ -205,7 +206,7 @@ export default function LojaVitrine() {
         </div>
       )}
 
-      {checkout && <Checkout slug={slug} store={store} cartItems={cartItems} total={cartTotal} onClose={() => setCheckout(false)} onPaid={() => { setCart({}); setCheckout(false); }} />}
+      {checkout && <LojaCheckout slug={slug} store={store} cartItems={cartItems} total={cartTotal} onClose={() => setCheckout(false)} onPaid={() => { setCart({}); setCheckout(false); }} />}
 
       {comparaiItem && (
         <CompareAquiModal
@@ -220,80 +221,4 @@ export default function LojaVitrine() {
   );
 }
 
-// ---------- CHECKOUT ----------
-function Checkout({ slug, store, cartItems, total, onClose, onPaid }) {
-  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
-  const [form, setForm] = useState({ name: '', phone: '', email: '', cep: '', address: '' });
-  const [gateway, setGateway] = useState('pix');
-  const [step, setStep] = useState('form'); // form | pix
-  const [sending, setSending] = useState(false);
-  const [pix, setPix] = useState(null);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  const pay = async () => {
-    if (!form.name.trim() || !form.phone.trim()) { toast.error('Preencha nome e WhatsApp'); return; }
-    setSending(true);
-    try {
-      const items = cartItems.map((i) => ({ product_id: i.id, quantity: i.qty }));
-      const r = await base44.functions.invoke('createStoreOrder', { slug, gateway, items, customer: form });
-      if (!r?.success) { toast.error(r?.error || 'Falha ao criar pedido'); setSending(false); return; }
-      if (gateway === 'card' && r.url) { window.location.href = r.url; return; }
-      setPix(r); setStep('pix');
-    } catch (e) { toast.error('Erro ao processar'); }
-    setSending(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md bg-[#0c1310] border border-gray-800 rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto">
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-[#0c1310]">
-          <h2 className="font-bold">{step === 'pix' ? 'Pague com PIX' : `Finalizar — ${store.name}`}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-800"><X className="w-5 h-5" /></button>
-        </div>
-
-        {step === 'form' && (
-          <div className="p-4 space-y-3">
-            <div className="bg-gray-900/60 rounded-xl p-3 text-sm flex justify-between"><span className="text-gray-400">{cartItems.length} item(ns)</span><span className="font-black text-emerald-400 text-lg">{money(total)}</span></div>
-            <Field label="Nome completo *" value={form.name} onChange={set('name')} placeholder="Seu nome" />
-            <Field label="WhatsApp *" value={form.phone} onChange={set('phone')} placeholder="(21) 99999-9999" />
-            <Field label="E-mail" value={form.email} onChange={set('email')} placeholder="opcional (recibo)" type="email" />
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-1"><Field label="CEP" value={form.cep} onChange={set('cep')} placeholder="00000-000" /></div>
-              <div className="col-span-2"><Field label="Endereço de entrega" value={form.address} onChange={set('address')} placeholder="Rua, nº, bairro" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button onClick={() => setGateway('pix')} className={`py-3.5 rounded-xl border-2 font-bold text-sm ${gateway === 'pix' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-gray-700 text-gray-400'}`}>💚 PIX</button>
-              <button onClick={() => setGateway('card')} className={`py-3.5 rounded-xl border-2 font-bold text-sm ${gateway === 'card' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-gray-700 text-gray-400'}`}>💳 Cartão</button>
-            </div>
-            <button onClick={pay} disabled={sending} className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-white flex items-center justify-center gap-2">
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {gateway === 'pix' ? 'Gerar PIX agora' : 'Pagar com Cartão'}
-            </button>
-            <p className="text-[11px] text-gray-500 text-center flex items-center justify-center gap-1"><ShieldCheck className="w-3 h-3" /> Pagamento seguro · seus dados protegidos</p>
-          </div>
-        )}
-
-        {step === 'pix' && pix && (
-          <div className="p-5 text-center space-y-3">
-            <p className="text-emerald-400 font-semibold">💚 Escaneie ou copie o código PIX</p>
-            {pix.qr_code_base64 && <img src={`data:image/png;base64,${pix.qr_code_base64}`} alt="QR PIX" className="w-56 h-56 mx-auto bg-white rounded-xl p-2" />}
-            <div className="text-3xl font-black text-emerald-400">{money(pix.amount)}</div>
-            <button onClick={() => copiarPix(pix.pix_code || '')} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${pixCopiado ? 'bg-emerald-500' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{pixCopiado ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {pixCopiado ? 'Código PIX copiado!' : 'Copiar código PIX'}</button>
-            <p className="text-[12px] text-gray-400">Pedido <b className="text-emerald-300">{pix.tracking}</b>. Assim que o pagamento cair, a loja recebe e prepara o envio. Você pode fechar esta tela.</p>
-            <a href={`https://wa.me/55${(store.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Acabei de fazer o pedido ' + pix.tracking + ' na sua loja.')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-emerald-300"><MessageCircle className="w-4 h-4" /> Falar com a loja</a>
-            <button onClick={onPaid} className="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm">Concluir</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, ...props }) {
-  return (
-    <label className="block">
-      <span className="text-[11px] text-gray-400">{label}</span>
-      <input {...props} className="w-full mt-0.5 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-600" />
-    </label>
-  );
-}
+// (checkout movido para src/components/loja/LojaCheckout.jsx — PONTO 82)

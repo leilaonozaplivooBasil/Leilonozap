@@ -116,8 +116,6 @@ export default function LojaCheckout({ slug, store, cartItems, total, onClose, o
                     if (op?.cep) setForm((f) => ({ ...f, cep: op.cep }));
                   }}
                 />
-                {/* o CEP fica visível/editável: a calculadora usa o mesmo campo */}
-                <Field label="CEP da entrega *" value={form.cep} onChange={set('cep')} placeholder="00000-000" inputMode="numeric" />
                 {!frete && (
                   <p className="text-[11px] text-amber-300">Escolha uma opção de entrega acima para liberar o pagamento.</p>
                 )}
