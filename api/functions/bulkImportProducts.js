@@ -5,6 +5,8 @@
 // (média de mercado − 20%) e validado. Preço não validado na base = comissão errada = fura o plano de carreira.
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
+// PONTO 77 — faxina de título na entrada (remove lixo de marketplace, arruma CAIXA ALTA).
+import { limparTitulo, cortarNaPalavra } from '../_lib/limparTitulo.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const num = (v) => {
@@ -43,7 +45,9 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     const rows = [];
     for (const it of items) {
-      const name = String(it.name || it.description || '').trim();
+      // PONTO 77: limpa ANTES de validar a linha — se a limpeza esvaziar
+      // (linha que era só "FRETE GRÁTIS"), limparTitulo devolve o original.
+      const name = limparTitulo(String(it.name || it.description || '').trim());
       if (!name) continue;
       const price = num(it.price);
       const cost = num(it.cost);
@@ -53,7 +57,7 @@ export default async function handler(req, res) {
       const id = oid();
       rows.push({
         id, base44_id: id,
-        description: name.slice(0, 500),
+        description: cortarNaPalavra(name, 500),
         // SEM preço de loja no import: só será precificado pelo motor real e validado 1 a 1.
         price_catalog: null,
         selling_price_retail: null,

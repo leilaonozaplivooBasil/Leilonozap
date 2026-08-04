@@ -8,6 +8,47 @@
 
 ---
 
+## 04/08/2026 — PONTO 77: fechar a torneira da importação (prevenção na entrada)
+
+- **O que mudou:** todo produto que ENTRA por importação passa a ter o nome limpo
+  **antes de ser gravado**: sai o lixo de marketplace ("frete grátis", "promoção",
+  "últimas unidades", "R$ 149,90", "12x sem juros", emoji), e nome em CAIXA ALTA vira
+  Capitalizado preservando siglas técnicas (LED, USB, 4K, INOX) e códigos (M4, 137, 2L, XL).
+  Corte de tamanho agora respeita a palavra inteira — nunca corta no meio.
+- **Regra de ouro embutida:** se a limpeza piorar o nome (resultado com menos de 3
+  caracteres), a função **devolve o original intacto**. Nunca destrói nome de produto.
+- **Arquivos:** `api/_lib/limparTitulo.js` (novo), `api/functions/bulkImportProducts.js`,
+  `base44/functions/gerarProdutosDoLote/entry.ts`.
+- **⚠️ ESPELHO OBRIGATÓRIO:** `gerarProdutosDoLote` roda no runtime Deno e **não consegue
+  importar de `api/_lib`** — por isso tem uma **cópia inline** da mesma lógica. Mexeu em um,
+  mexa no outro. Está comentado nos dois arquivos.
+- **Retomada de lote protegida:** como o nome agora é gravado limpo, a detecção de
+  "produto já criado" passou a casar pelas DUAS formas (limpa e original). Sem isso,
+  retomar um lote gerado antes desta mudança duplicaria itens no estoque.
+- **Item removido do escopo (não existia):** a auditoria acusou o template pobre
+  `"Produto novo. Estoque: N unidade(s)."`, mas ele **não é gravado por `gerarProdutosDoLote`**
+  (que grava `item.desc`) nem existe em 400 produtos varridos no banco. Aquele texto vem dos
+  **57 leilões**, de origem ainda não identificada — fica como PONTO separado.
+- **2 defeitos meus, encontrados e corrigidos no teste com dados reais:**
+  1. a regra de parcelamento apagava quantidade e medida legítimas
+     ("Kit **4x** Parafusos" → "Kit Parafusos"; "15 **X** 15 Cm" → "15 Cm"). Agora só remove
+     com contexto explícito de pagamento ("12x sem juros", "em 12x").
+  2. qualquer palavra de 3 letras em maiúscula era preservada, então "KIT TAÇAS" virava
+     "KIT Taças". Agora existe lista fechada de siglas reais.
+- **Limitação conhecida e aceita:** a conversão de CAIXA ALTA só age em nomes com **mais de
+  3 palavras** (regra do escopo). Nome curto tipo "SECADOR PROFISSIONAL 2000W" continua em
+  caixa alta — comportamento conservador, de propósito.
+- **Impacto no front:** nenhum código de front mudou. Nenhum registro existente foi tocado:
+  os 995 defeitos do PONTO 76 continuam como estão (limpeza retroativa é outra autorização).
+- **Risco:** 🟡 Médio — grava só o campo de nome, só em itens novos de importação, com
+  proteção de "se piorar, devolve o original". Preço, estoque, grade, custo, depósito,
+  imagem, comissão e pagamento intocados.
+- **Importadores que gravam título e NÃO foram alterados** (aguardando sua autorização):
+  `searchGoogleShopping`, `importFromUrl`, `extractProductData`, `analyzeImageUrlAndImport`,
+  `PlanilhaImport.jsx`, `AddCatalogProduct.jsx`.
+
+---
+
 ## 04/08/2026 — PONTO 76: DIAGNÓSTICO de qualidade de texto (nada foi alterado)
 
 - **Natureza:** auditoria **100% leitura**. Nova função `auditarQualidadeTextos`

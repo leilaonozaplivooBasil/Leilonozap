@@ -1,5 +1,84 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// ─── PONTO 77 — FAXINA DE TÍTULO NA ENTRADA ────────────────────────────────
+// ⚠️ ESPELHO de api/_lib/limparTitulo.js. Esta função roda no runtime Deno e
+// NÃO consegue importar de api/_lib — por isso a cópia inline. Mudou lá? Muda aqui.
+// Regra de ouro: se a limpeza piorar (< 3 caracteres), devolve o ORIGINAL intacto.
+const RUIDO_TITULO = [
+  /\bfrete\s*gr[aá]tis\b/gi,
+  /\bfrete\s*gratis\b/gi,
+  /\bpromo[cç][aã]o\b/gi,
+  /\boferta\s*(do\s*dia|imperd[ií]vel)?\b/gi,
+  // ⚠️ Parcelamento só com contexto EXPLÍCITO — "\d+x" solto destruía
+  // quantidade e medida reais ("Kit 4x Parafusos", "15 X 15 Cm").
+  /\b\d{1,2}\s*x\s*sem\s*juros\b/gi,
+  /\bem\s+\d{1,2}\s*x\b/gi,
+  /\bsem\s*juros\b/gi,
+  /\bR\$\s*[\d.,]+/gi,
+  /\bcompre\s*j[aá]\b/gi,
+  /\b[uú]ltimas?\s*unidades?\b/gi,
+  /\benvio\s*imediato\b/gi,
+  /\bpronta\s*entrega\b/gi,
+  /\bnovo\s*lacrado\b/gi,
+  /\b(super\s*)?desconto\b/gi,
+  /\bmenor\s*pre[cç]o\b/gi,
+];
+const EMOJI_TITULO = /[\u{1F000}-\u{1FAFF}\u{2190}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/gu;
+const CONECTORES_TITULO = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'com', 'para', 'em', 'no', 'na', 'a', 'o', 'ou', 'por']);
+// Lista fechada de siglas — sem ela "KIT TAÇAS" virava "KIT Taças".
+const SIGLAS_TITULO = new Set(['LED', 'USB', 'TV', 'HD', 'PC', 'GB', 'MB', 'TB', 'ML', 'KG', 'CM', 'MM', 'V', 'W', 'A', 'AC', 'DC', 'SSD', 'RGB', 'GPS', 'USD', 'PVC', 'ABS', 'CPU', 'RAM', 'HDMI', 'INOX', 'SMD', 'IP', 'NF']);
+
+function ehSiglaOuCodigo(palavra) {
+  const limpa = palavra.replace(/[^\p{L}\p{N}]/gu, '');
+  if (!limpa) return true;
+  if (/\d/.test(limpa)) return true; // código/medida: M4, 137, 2L, 4K
+  if (limpa === limpa.toUpperCase() && SIGLAS_TITULO.has(limpa)) return true;
+  if (limpa.length <= 3 && limpa === limpa.toUpperCase() && !/[AEIOUÁÉÍÓÚÃÕÂÊÔ]/i.test(limpa)) return true;
+  return false;
+}
+
+function capitalizarPalavra(palavra, indice) {
+  if (ehSiglaOuCodigo(palavra)) return palavra;
+  const min = palavra.toLowerCase();
+  if (indice > 0 && CONECTORES_TITULO.has(min)) return min;
+  return min.charAt(0).toUpperCase() + min.slice(1);
+}
+
+function estaTodoEmCaixaAlta(texto) {
+  const letras = texto.match(/\p{L}/gu) || [];
+  if (letras.length === 0) return false;
+  const maiusculas = letras.filter((c) => c === c.toUpperCase() && c !== c.toLowerCase());
+  const palavras = texto.trim().split(/\s+/).length;
+  return maiusculas.length / letras.length >= 0.7 && palavras > 3;
+}
+
+function limparTitulo(titulo) {
+  const original = String(titulo == null ? '' : titulo);
+  if (!original.trim()) return original;
+  let texto = original.replace(EMOJI_TITULO, ' ');
+  for (const padrao of RUIDO_TITULO) texto = texto.replace(padrao, ' ');
+  texto = texto.replace(/\s*[|/•·]\s*/g, ' ').replace(/\s+-\s+-\s+/g, ' - ');
+  texto = texto.replace(/\s{2,}/g, ' ').trim();
+  if (estaTodoEmCaixaAlta(texto)) {
+    texto = texto.split(/\s+/).map((p, i) => capitalizarPalavra(p, i)).join(' ');
+  }
+  texto = texto.replace(/^[\s\-–—:|,.;*+]+/, '').replace(/[\s\-–—:|,;*+]+$/, '').trim();
+  texto = texto.replace(/\s{2,}/g, ' ');
+  if (texto.length < 3) return original;
+  return texto;
+}
+
+function cortarNaPalavra(texto, limite) {
+  const t = String(texto == null ? '' : texto);
+  if (!limite || limite <= 0) return t;
+  if (t.length <= limite) return t;
+  const fatia = t.slice(0, limite);
+  const ultimoEspaco = fatia.lastIndexOf(' ');
+  if (ultimoEspaco < 3) return fatia.trim();
+  return fatia.slice(0, ultimoEspaco).trim();
+}
+// ─── fim PONTO 77 ──────────────────────────────────────────────────────────
+
 /**
  * Gera produtos (entidade Product) a partir de um LoteRecebido.
  *
@@ -118,7 +197,12 @@ Deno.serve(async (req) => {
       const grade = String(item.grade || 'A').toUpperCase();
       // Grade original preservada — o match agora usa o marcador [grade:X] em notes,
       // então NÃO colapsamos mais C->B nem E->D (evita pular/duplicar item errado).
-      const chave = `${String(item.desc || '').trim().toLowerCase()}|${grade}`;
+      // PONTO 77: o nome agora é gravado limpo, então a retomada precisa casar
+      // pelas DUAS formas — limpa (produtos novos) e original (produtos criados
+      // antes desta mudança). Sem isso, retomar um lote antigo duplicaria itens.
+      const chaveOriginal = `${String(item.desc || '').trim().toLowerCase()}|${grade}`;
+      const chaveLimpa = `${limparTitulo(String(item.desc || '')).trim().toLowerCase()}|${grade}`;
+      const chave = (chavesExistentes.get(chaveLimpa) || 0) > 0 ? chaveLimpa : chaveOriginal;
       if (chavesExistentes.has(chave) && chavesExistentes.get(chave) > 0) {
         chavesExistentes.set(chave, chavesExistentes.get(chave) - 1);
         puladosJaExistentes++;
@@ -148,7 +232,9 @@ Deno.serve(async (req) => {
       const base = {
         date: hoje,
         lot: lote.nome_lote,
-        description: String(item.desc || 'Item sem descrição').substring(0, 500),
+        // PONTO 77: nome limpo na gravação (lixo de marketplace fora, CAIXA ALTA
+        // arrumada) e corte na palavra inteira — nunca no meio da palavra.
+        description: cortarNaPalavra(limparTitulo(String(item.desc || 'Item sem descrição')), 500),
         quantity: qtd,
         qty_perfeito: 0,
         qty_bom: 0,
