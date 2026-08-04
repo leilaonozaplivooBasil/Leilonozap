@@ -1078,6 +1078,7 @@ export default function EditAuction() {
                             <p className="text-[10px] uppercase tracking-widest text-sky-400 font-bold mb-2">Buscar fotos na internet</p>
                             <BuscadorFotos
                                 productName={formData.title}
+                                imagemBase={imageUrls[0]}
                                 jaTem={imageUrls.length}
                                 onSelect={(urls) => setImageUrls((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))])}
                             />

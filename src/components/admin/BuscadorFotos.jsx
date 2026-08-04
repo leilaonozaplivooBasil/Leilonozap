@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, Check, Images } from "lucide-react";
+import { Loader2, Search, Check, Images, Camera } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
@@ -12,11 +12,60 @@ import { toast } from "sonner";
 // destrutivo. Quem quiser o pacote completo usa o GoogleShoppingImporter (criação).
 const IDEAL = 6;
 
-export default function BuscadorFotos({ productName = "", onSelect, jaTem = 0 }) {
+export default function BuscadorFotos({ productName = "", imagemBase = "", onSelect, jaTem = 0 }) {
   const [termo, setTermo] = useState(productName);
   const [buscando, setBuscando] = useState(false);
   const [fotos, setFotos] = useState([]);
   const [escolhidas, setEscolhidas] = useState([]);
+
+  // Leitura única das respostas. Existem DOIS backends com formatos diferentes
+  // (Vercel devolve { images: [] }, o runtime Deno devolve { products: [{ imageUrl }] })
+  // e o adapter às vezes aninha em .data. Aceita todos.
+  const processarResposta = (resp, referencia) => {
+    const camadas = [resp, resp?.data, resp?.data?.data].filter(Boolean);
+    const dados = camadas.find((c) => c.images || c.products) || {};
+    const urls = [
+      ...(dados.images || []),
+      ...(dados.products || []).map((p) => p?.imageUrl || p?.image),
+    ].filter((u, i, arr) => typeof u === "string" && /^https?:\/\//i.test(u) && arr.indexOf(u) === i);
+
+    if (urls.length === 0) {
+      // Mensagem honesta: "não achei" é diferente de "a busca falhou".
+      if (dados.motivo === "falha_busca") {
+        toast.error("A busca de fotos falhou: " + (dados.error || "erro na API"));
+      } else {
+        toast.error(`Nenhuma foto encontrada para ${dados.query_usada || referencia}.`);
+      }
+      return;
+    }
+    if (dados.query_usada) setTermo(dados.query_usada);
+    setFotos(urls);
+    // já vem com as 6 primeiras marcadas — o caminho natural é sair com 6 fotos
+    setEscolhidas(urls.slice(0, IDEAL));
+    toast.success(`${urls.length} fotos encontradas`);
+  };
+
+  // 📸 PONTO 77 CAMADA 3 — busca PELA FOTO (Google Lens), não pelo nome.
+  // Buscar por texto trazia produto errado: "Ferro de Passar Vertical a Vapor"
+  // devolvia ferro comum, "Mini Pipoqueira" devolvia máquina de algodão doce.
+  // A imagem identifica o produto exato. O nome fica só como alternativa.
+  const buscarPorFoto = async () => {
+    if (!imagemBase) {
+      toast.error("Este leilão ainda não tem foto — envie 1 foto e busque as parecidas");
+      return;
+    }
+    setBuscando(true);
+    setFotos([]);
+    setEscolhidas([]);
+    try {
+      const resp = await base44.functions.invoke("buscarFotosPorImagem", { imageUrl: imagemBase });
+      processarResposta(resp, "esta foto");
+    } catch (e) {
+      toast.error("Erro na busca por imagem: " + e.message);
+    } finally {
+      setBuscando(false);
+    }
+  };
 
   const buscar = async () => {
     const nome = (termo || "").trim();
@@ -33,31 +82,7 @@ export default function BuscadorFotos({ productName = "", onSelect, jaTem = 0 })
       // que esta função NUNCA devolveu — ela devolve { success, images: [...] }. Por
       // isso TODA busca caía em "Nenhuma foto encontrada", com título curto ou longo.
       // O adapter devolve o JSON cru; .data é só rede de segurança.
-      // Existem DOIS backends com formatos diferentes (Vercel devolve { images: [] },
-      // o runtime Deno devolve { products: [{ imageUrl }] }) e o adapter às vezes
-      // aninha em .data. Aceita todos — assim a tela não depende de qual respondeu.
-      const camadas = [resp, resp?.data, resp?.data?.data].filter(Boolean);
-      const dados = camadas.find((c) => c.images || c.products) || {};
-      const urls = [
-        ...(dados.images || []),
-        ...(dados.products || []).map((p) => p?.imageUrl || p?.image),
-      ].filter((u, i, arr) => typeof u === "string" && /^https?:\/\//i.test(u) && arr.indexOf(u) === i);
-      if (urls.length === 0) {
-        // Mensagem honesta: "não achei" é diferente de "a busca falhou".
-        if (dados.motivo === "falha_busca") {
-          toast.error("A busca de fotos falhou: " + (dados.error || "erro na API"));
-        } else {
-          toast.error("Nenhuma foto encontrada para \"" + (dados.query_usada || nome) + "\". Tente marca + modelo.");
-        }
-        return;
-      }
-      // Mostra o termo que REALMENTE foi usado (a busca simplifica o título) —
-      // o usuário pode editar e buscar de novo.
-      if (dados.query_usada) setTermo(dados.query_usada);
-      setFotos(urls);
-      // já vem com as 6 primeiras marcadas — o caminho natural é sair com 6 fotos
-      setEscolhidas(urls.slice(0, IDEAL));
-      toast.success(`${urls.length} fotos encontradas`);
+      processarResposta(resp, nome);
     } catch (e) {
       toast.error("Erro na busca: " + e.message);
     } finally {
@@ -82,6 +107,35 @@ export default function BuscadorFotos({ productName = "", onSelect, jaTem = 0 })
 
   return (
     <div className="space-y-3">
+      {/* 📸 Caminho PRINCIPAL: usa a foto de capa como referência — traz o produto
+          exato, não um parecido de nome. Só aparece quando já existe 1 foto. */}
+      {imagemBase && (
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-2.5">
+          <img
+            src={imagemBase}
+            alt=""
+            className="h-14 w-14 shrink-0 rounded-lg bg-[#0d1117] object-contain"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-emerald-300">Buscar pela foto (recomendado)</p>
+            <p className="text-[11px] leading-snug text-slate-400">Acha o produto idêntico, sem errar pelo nome</p>
+          </div>
+          <Button
+            type="button"
+            onClick={buscarPorFoto}
+            disabled={buscando}
+            className="h-11 shrink-0 rounded-xl bg-emerald-600 px-4 font-bold text-white hover:bg-emerald-500"
+          >
+            {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">Buscar pela Foto</span>
+          </Button>
+        </div>
+      )}
+
+      {imagemBase && (
+        <p className="text-center text-[10px] uppercase tracking-widest text-slate-500">ou busque pelo nome</p>
+      )}
+
       <div className="flex gap-2">
         <Input
           value={termo}
