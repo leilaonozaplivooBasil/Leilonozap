@@ -74,13 +74,33 @@ export default function ShareLeiloesButton({ count = 0, compact = false }) {
       onClick={compartilhar}
       disabled={loading}
       aria-label="Compartilhar leilões no WhatsApp"
-      className={`${compact ? "shrink-0" : "mt-5"} inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-bold text-white transition-transform active:scale-[0.97] disabled:opacity-70`}
-      style={{
-        background: "linear-gradient(135deg, #059669, #047857)",
-        boxShadow: "0 6px 20px rgba(16,185,129,0.35)",
-      }}
+      className={
+        compact
+          ? // PONTO 82: sem fundo — só a bolinha verde + o nome, sobre a placa branca
+            "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-nz-tinta transition-transform active:scale-[0.97] disabled:opacity-70 sm:gap-2 sm:text-sm"
+          : "mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-bold text-white transition-transform active:scale-[0.97] disabled:opacity-70"
+      }
+      style={
+        compact
+          ? undefined
+          : {
+              background: "linear-gradient(135deg, #059669, #047857)",
+              boxShadow: "0 6px 20px rgba(16,185,129,0.35)",
+            }
+      }
     >
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+      {compact ? (
+        <span
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white sm:h-7 sm:w-7"
+          style={{ background: "linear-gradient(135deg, #059669, #047857)" }}
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+        </span>
+      ) : loading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Share2 className="h-4 w-4" />
+      )}
       <span>{loading ? "Preparando..." : compact ? "Compartilhar" : "Compartilhar leilões"}</span>
     </button>
   );
