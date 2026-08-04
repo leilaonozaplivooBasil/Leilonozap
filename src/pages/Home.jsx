@@ -815,7 +815,7 @@ export default function Home() {
               escuras (contain num aspect largo). Agora usa a MESMA receita da
               Loja Virtual no mobile: altura fixa de 220px preenchida (cover).
               Do md+ pra cima nada muda: aspect 16/5 com contain e ambiente. */}
-          <RotatingBanner banners={banners} heightClass="h-[220px] md:h-auto md:aspect-[16/5]" rounded={false} fit="contain" mobileFit="cover" ambient />
+          <RotatingBanner banners={banners} heightClass="h-[220px] md:h-auto md:aspect-[16/5]" rounded={false} fit="contain" mobileFit="contain" ambient />
           {/* fade na base pro card AO VIVO sobrepor fundindo com o fundo */}
           <div className="absolute inset-x-0 bottom-0 h-24 md:h-44 bg-gradient-to-t from-gray-900 via-gray-900/55 to-transparent pointer-events-none" />
         </div>
