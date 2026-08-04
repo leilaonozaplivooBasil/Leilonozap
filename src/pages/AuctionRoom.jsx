@@ -29,6 +29,10 @@ import { Wallet } from "lucide-react";
 import TermoAdesaoModal from "@/components/legal/TermoAdesaoModal";
 import AvisoNaoLeilaoOficial from "@/components/legal/AvisoNaoLeilaoOficial";
 import FaixaCompareAqui from "@/components/auction/FaixaCompareAqui";
+import BarraTempoLeilao from "@/components/auction/BarraTempoLeilao";
+import BadgeStatusLeilao from "@/components/auction/BadgeStatusLeilao";
+import ChipParticipantes from "@/components/auction/ChipParticipantes";
+import FeedUltimosLances from "@/components/auction/FeedUltimosLances";
 import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
 import { emChamada } from "@/lib/modoChamada";
 // 🛡️ PONTO 70 — Compre Já só com preço real (valor residual de R$ 1,00 é ignorado)
@@ -1077,6 +1081,15 @@ export default function AuctionRoom() {
         </div>
       </header>
 
+      {/* ⏳ PONTO 82 (Fase 3) — barra fina de tempo (usa o timeRemaining já existente) */}
+      <BarraTempoLeilao auction={auction} timeRemaining={timeRemaining} />
+
+      {/* 🏷️👥 PONTO 82 (Fase 3) — estado da sala + prova social, uma linha só */}
+      <div className="sala-faixa-social">
+        <BadgeStatusLeilao status={auction?.status} timeRemaining={timeRemaining} emChamada={chamada.emChamada} />
+        <ChipParticipantes messages={messages} />
+      </div>
+
       {/* 📜 PONTO 67 — aviso permanente: estratégia de marketing, não é leilão oficial */}
       <AvisoNaoLeilaoOficial />
 
@@ -1110,6 +1123,12 @@ export default function AuctionRoom() {
                 messages={messages}
                 currentUser={currentUser}
               />
+              {/* 🔥 PONTO 82 (Fase 3) — feed dos últimos lances no painel lateral.
+                  No celular o próprio chat já É esse feed (as bolhas de lance), então
+                  repetir aqui só roubaria altura da conversa. */}
+              <div className="mt-3">
+                <FeedUltimosLances messages={messages} />
+              </div>
             </div>
           </div>
         </aside>
@@ -1464,6 +1483,10 @@ export default function AuctionRoom() {
         }
 
         .chat-wrapper { position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+        /* 🏷️ PONTO 82 (Fase 3) — faixa de estado/prova social: uma linha, nunca
+           empurra o chat nem cria rolagem lateral (flex-wrap + itens compactos). */
+        .sala-faixa-social { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px 0; flex-shrink: 0; }
 
         /* Botão liquid glass de descer o chat */
         .chat-scroll-btn {
