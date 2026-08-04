@@ -37,8 +37,11 @@ export default async function handler(req, res) {
         ? `Arrematado por ${money(price)}. Veja outros leilões no Leilão NoZap!`
         : `Lance atual ${money(price)}. Dê seu lance agora no Leilão NoZap!`)
       : 'Entre na sala e dê seu lance no Leilão NoZap!';
-    // FOTO REAL do produto leiloado — é isso que o WhatsApp mostra no preview
-    const ogImage = (Array.isArray(a?.image_urls) && a.image_urls[0]) ? a.image_urls[0] : `${SITE}/brand/logo-horizontal-og.jpg`;
+    // CARD COMPOSTO: foto real do produto + leiloeiro NoZap + lance atual (api/og-leilao).
+    // Se o leilão não foi encontrado, cai na logo (o preview nunca fica vazio).
+    const ogImage = a
+      ? `${SITE}/api/og-leilao?id=${encodeURIComponent(id)}`
+      : `${SITE}/brand/logo-horizontal-og.jpg`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
