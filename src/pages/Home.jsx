@@ -24,7 +24,7 @@ const RecommendedSection = lazy(() => import('../components/recommendations/Reco
 import RotatingBanner from '../components/banner/RotatingBanner';
 import { interleaveBanners } from '@/lib/interleaveBanners';
 import LiveStats from '../components/home/LiveStats';
-import ShareLeiloesButton from '../components/home/ShareLeiloesButton';
+import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
@@ -812,41 +812,44 @@ export default function Home() {
             <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full orb-2" style={{ background: 'radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 70%)' }} />
 
             <div className="relative">
-              {/* Selo AO VIVO */}
-              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.08] px-2.5 py-1">
-                <span className="relative flex h-2 w-2">
+              {/* 🎯 PONTO 81 — CABEÇALHO EM 1 LINHA.
+                  Antes eram 3 elementos dizendo a mesma coisa (selo "AO VIVO AGORA",
+                  título e subtítulo "57 leilões rolando"), empurrando o primeiro
+                  leilão para fora da primeira tela. Agora: pulsinho de vida + título
+                  + contador, tudo numa linha só. Nada de informação perdida. */}
+              <div className="flex items-center gap-2 flex-nowrap">
+                <span className="relative flex h-2 w-2 shrink-0" title="Ao vivo agora">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">Ao vivo agora</span>
-              </div>
-
-              <h1 className="text-2xl lg:text-4xl font-black mb-1.5 tracking-tight flex items-center gap-2">
                 <video
                   autoPlay
                   loop
                   muted
                   playsInline
                   aria-hidden="true"
-                  className="w-7 h-7 lg:w-9 lg:h-9 flex-shrink-0 pointer-events-none object-contain">
+                  className="w-6 h-6 lg:w-8 lg:h-8 flex-shrink-0 pointer-events-none object-contain">
                   <source src="/videos/foguinho-animado.mov" type='video/quicktime; codecs="hvc1"' />
                   <source src="/videos/foguinho-animado.webm" type="video/webm" />
-                  <Flame className="w-6 h-6 lg:w-8 lg:h-8 text-orange-400 animate-fire" />
+                  <Flame className="w-5 h-5 lg:w-7 lg:h-7 text-orange-400 animate-fire" />
                 </video>
-                <span>Leilões <span className="text-gradient-green">Ativos</span></span>
-              </h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight truncate">
+                  Leilões <span className="text-gradient-green">Ativos</span>
+                </h1>
+                {activeCount > 0 && (
+                  <span className="ml-auto shrink-0 text-xs sm:text-sm text-gray-400">
+                    <span className="font-bold text-white tabular-nums">{activeCount}</span> rolando
+                  </span>
+                )}
+              </div>
 
-              <p className="text-gray-400 mb-3 text-sm lg:text-base font-light max-w-xl">
-                {activeCount > 0 ?
-                <><span className="text-white font-semibold">{activeCount}</span> {activeCount === 1 ? 'leilão rolando' : 'leilões rolando'}. Entre na sala e dê seu lance!</> :
-                <>Novos leilões entram no ar em breve. Fique de olho e garanta seu lance!</>
-                }
-              </p>
+              {/* Métricas como chips discretos (somem quando são zero) */}
+              <div className="mt-2">
+                <LiveStats />
+              </div>
 
-              <LiveStats />
-
-              {/* 📣 PONTO 71 — gera a imagem deste bloco e compartilha no WhatsApp */}
-              <ShareLeiloesButton count={activeCount} />
+              {/* Barra única: Comparar · Ao Vivo · Compartilhar (PONTO 71 preservado dentro dela) */}
+              <HeroAcoesLeiloes count={activeCount} />
 
               {/* AÇÕES - CARROSSEL CONTÍNUO (mobile e desktop) */}
               <HeroActionsCarousel currentUser={currentUser} />

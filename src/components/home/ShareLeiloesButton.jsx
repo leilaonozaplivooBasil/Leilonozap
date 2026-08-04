@@ -24,7 +24,9 @@ Entre na sala e dê seu lance antes que acabe.
 👉 ${LINK}`;
 };
 
-export default function ShareLeiloesButton({ count = 0 }) {
+// 🎯 PONTO 81: `compact` só muda o formato (pílula dentro da barra de ações).
+// A lógica de compartilhamento abaixo permanece EXATAMENTE a mesma.
+export default function ShareLeiloesButton({ count = 0, compact = false }) {
   const [loading, setLoading] = useState(false);
 
   const compartilhar = async () => {
@@ -72,14 +74,14 @@ export default function ShareLeiloesButton({ count = 0 }) {
       onClick={compartilhar}
       disabled={loading}
       aria-label="Compartilhar leilões no WhatsApp"
-      className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full px-5 text-sm font-bold text-white transition-transform active:scale-[0.97] disabled:opacity-70"
+      className={`${compact ? "shrink-0" : "mt-5"} inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-bold text-white transition-transform active:scale-[0.97] disabled:opacity-70`}
       style={{
         background: "linear-gradient(135deg, #059669, #047857)",
         boxShadow: "0 6px 20px rgba(16,185,129,0.35)",
       }}
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-      <span>{loading ? "Preparando..." : "Compartilhar leilões"}</span>
+      <span>{loading ? "Preparando..." : compact ? "Compartilhar" : "Compartilhar leilões"}</span>
     </button>
   );
 }

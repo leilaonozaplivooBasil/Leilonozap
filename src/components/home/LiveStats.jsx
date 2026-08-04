@@ -78,26 +78,31 @@ export default function LiveStats() {
     }
   };
 
+  // 🎯 PONTO 81 — CHIPS, NÃO CARTÕES.
+  // Métrica zerada não aparece: "0 participantes online" em destaque prova que o
+  // app está vazio. Escondendo o zero, o número só entra em cena quando ajuda
+  // (prova social). Se as duas forem zero, a linha inteira não renderiza.
+  const temOnline = Number(stats.onlineUsers) > 0;
+  const temLances = Number(stats.totalBidsToday) > 0;
+  if (!temOnline && !temLances) return null;
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10">
-          <Eye className="h-4 w-4 text-emerald-300" />
-        </div>
-        <div>
-          <p className="text-sm font-bold leading-tight text-white tabular-nums">{stats.onlineUsers}</p>
-          <p className="text-[11px] leading-tight text-gray-400">participantes online</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10">
-          <TrendingUp className="h-4 w-4 text-emerald-300" />
-        </div>
-        <div>
-          <p className="text-sm font-bold leading-tight text-white tabular-nums">R$ {stats.totalBidsToday.toLocaleString('pt-BR')}</p>
-          <p className="text-[11px] leading-tight text-gray-400">em lances hoje</p>
-        </div>
-      </div>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-400">
+      {temOnline && (
+        <span className="inline-flex items-center gap-1.5">
+          <Eye className="h-3.5 w-3.5 text-emerald-300" />
+          <span className="font-bold text-white tabular-nums">{stats.onlineUsers}</span>
+          <span>online</span>
+        </span>
+      )}
+      {temOnline && temLances && <span aria-hidden="true" className="text-gray-600">·</span>}
+      {temLances && (
+        <span className="inline-flex items-center gap-1.5">
+          <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
+          <span className="font-bold text-white tabular-nums">R$ {stats.totalBidsToday.toLocaleString('pt-BR')}</span>
+          <span>hoje</span>
+        </span>
+      )}
     </div>
   );
 }
