@@ -8,6 +8,40 @@
 
 ---
 
+## 03/08/2026 — Bloco 3: `winner_id` em leilão ativo é o LÍDER, não bug + 3 preços corrigidos
+
+- **Descoberta importante (registrar como regra permanente):** `winner_id` / `winner_name` em
+  leilão com status `active` significa **líder atual da disputa**, NÃO vencedor final. O
+  `submitAtomicBid` grava esses campos a cada lance vencedor, e o próprio motor usa
+  `!winner_id` para saber se é o primeiro lance. Portanto **leilão ativo com vencedor é
+  comportamento correto** — 12 leilões estão assim hoje, todos normais. O vencedor definitivo
+  é **reapurado no encerramento** pelo `finalizeAuctionCore`, sempre pelo MAIOR LANCE REALMENTE
+  GRAVADO — ele não confia no `winner_id` intermediário. Não há risco financeiro nisso.
+- **Causa-raiz dos preços divergentes (já fechada):** antes do PONTO 72, o servidor gravava
+  preço + líder e o **navegador** criava o registro do lance depois. Se aquela criação falhasse,
+  sobrava preço subido + líder gravado **sem o lance correspondente**. O `submitAtomicBid` atual
+  grava o lance ANTES do preço e faz rollback do lance se perder a corrida — **não gera casos
+  novos**. O que restou é resíduo histórico.
+- **O que mudou:** `corrigirPrecoAtivosInflados` teve a **trava 3 revisada**: saiu o critério
+  errado "não pode ter vencedor" e entrou **coerência do líder** — se existe lance real, o
+  `winner_id` tem de ser o autor do maior lance; se não existe lance, o líder é resíduo
+  pré-PONTO 72 e a correção é permitida. Aplicado em 3 leilões ativos sem nenhum lance real:
+  Kit 5 Spot R$ 5,80 → **0,80** · Mini Máquina R$ 32 → **30** · Sensor Presença R$ 3,60 → **1,60**.
+- **Barrado de propósito:** *Irrigador Dental* — líder gravado (Alexandre walenkamp) não é o
+  autor do maior lance (vale-do-recreio). Registro histórico inconsistente: **preço NÃO foi
+  mexido**, para não maquiar divergência. Aguarda decisão separada.
+- **Arquivos:** `base44/functions/corrigirPrecoAtivosInflados/entry.ts` (trava 3 revisada),
+  `base44/functions/investigarAtivosComVencedor/entry.ts` (novo, 100% leitura).
+- **Impacto no front:** nenhum código de front mudou. Os 3 leilões passam a exibir o valor
+  correto na vitrine e na sala.
+- **Risco:** 🟡 Médio — só o campo `current_price` de leilões ativos, sem lance, sem comissão.
+- **Limitação da validação (transparência):** a trava 4 (pagamento vinculado) **não pôde ser
+  confirmada** — `asaas_payments` e `digital_wallet_transactions` responderam "indisponível"
+  (a mesma pendência de schema já registrada no Bloco 2). Mitigação aceita: os 3 leilões têm
+  zero lance, estão ativos no prazo e sem comissão distribuída.
+
+---
+
 ## 03/08/2026 — Bloco 3 ENCERRADO: ausência de "Compre Já" é intencional
 
 - **Decisão do dono do produto (Gabriel, 03/08/2026):** os leilões ativos hoje **não têm preço
