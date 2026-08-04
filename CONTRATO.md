@@ -152,6 +152,9 @@ Assim qualquer dev do front abre a função e entende em segundos.
 | `closeExpiredAuctions` | Fecha leilões que passaram do horário |
 | `createTestAuction` | Cria leilão de teste (uso interno) |
 | `notifyFavoriteBid` | Avisa quem favoritou que houve lance |
+| `auditarPrecoPonto72` | 🔴 SÓ LEITURA — audita divergência entre o preço atual e o maior lance real |
+| `corrigirPrecoPonto72` | 🔴 TEMPORÁRIA — corrige preço inflado de uma lista fixa de leilões (com travas) |
+| `corrigirPrecoAbaixoMinimo` | 🔴 TEMPORÁRIA (03/08/2026) — iguala o preço atual ao lance inicial nos 6 leilões auditados. Lista fixa no código, 6 travas por leilão, simula por padrão e só grava com `confirmar: true` |
 
 ### 🧾 Comissões (rede de indicação) 🔴
 | Função | O que faz |

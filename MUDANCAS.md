@@ -8,6 +8,30 @@
 
 ---
 
+## 03/08/2026 — Bloco 2: preço atual abaixo do lance inicial (6 leilões)
+
+- **O que mudou:** 6 leilões ativos estavam com o "lance atual" MENOR que o lance inicial
+  (4 zerados e 2 defasados após o inicial ser aumentado), o que faria o primeiro lance
+  começar de graça na vitrine. O `current_price` desses 6 foi igualado ao `starting_price`
+  por uma função temporária de escopo fechado (`corrigirPrecoAbaixoMinimo`), com lista fixa
+  de IDs no código, 6 travas por leilão (ativo · zero lance · sem vencedor · sem comissão ·
+  lance inicial confere · preço ainda abaixo) e execução em duas fases (simulação → gravação).
+  Corrigidos: R$ 0 → 0,80 (Organizador de Mesa) · R$ 0 → 0,80 (Kit Fineliner) ·
+  R$ 10 → 20 (Mini Ferro) · R$ 10 → 25 (Ferro Vertical) · R$ 0 → 216 (Cadeira Presidente) ·
+  R$ 0 → 497 (Bike Harley M4). Reauditoria: anomalia inversa caiu de 6 para 0.
+- **Arquivos:** `base44/functions/corrigirPrecoAbaixoMinimo/entry.ts` (novo, temporário)
+- **Impacto no front:** nenhum código de front mudou. Os 6 leilões passam a exibir o valor
+  inicial correto na vitrine e na sala de lance.
+- **Risco:** 🔴 Alto (escreve preço de leilão em produção) — mitigado: nenhum dos 6 tinha
+  lance, vencedor ou comissão; apenas `current_price` foi alterado.
+- **Pendência registrada (fora do escopo):** as 3 checagens de vínculo financeiro da auditoria
+  falham silenciosamente porque procuram colunas/tabela que não existem mais
+  (`asaas_payments.auction_id`, tabela `mercado_pago_payments`,
+  `digital_wallet_transactions.related_auction_id`). Enquanto isso, o "grupo com pagamento"
+  da auditoria nunca acusa ninguém.
+
+---
+
 ## 28/07/2026 — Correção da escrita de lotes (Estoque de Lotes)
 
 - **O que mudou:** os botões da tela de Estoque de Lotes (Salvar, Arrematamos, Avançar status,
