@@ -22,6 +22,7 @@ import { toast } from '@/components/ui/use-toast';
 import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer, Copy, Archive, ArchiveRestore, CalendarClock, ShoppingBag } from 'lucide-react';
 import { capOf, withCap } from '@/lib/fotoLegenda';
 import ModoChamadaCard from '@/components/auction/ModoChamadaCard';
+import BuscadorFotos from '@/components/admin/BuscadorFotos';
 import { precoArremateAgora, normalizarArremateAgora } from '@/lib/arremateAgora';
 import { supabase } from '@/api/supabaseClient';
 
@@ -1001,6 +1002,11 @@ export default function EditAuction() {
                             <div className="min-w-0">
                                 <CardTitle className="text-white text-base">Fotos do Leilão</CardTitle>
                                 <p className="text-xs text-slate-400 mt-1">Arraste para reordenar — a primeira foto é a capa.</p>
+                                {/* 🔍 PONTO 77 — contador: AVISA, não trava (leilão antigo com 1 foto
+                                    precisa continuar editável para ajuste de preço/horário) */}
+                                <p className={`text-xs font-bold mt-1.5 ${imageUrls.length >= 6 ? 'text-emerald-400' : imageUrls.length >= 4 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                    {imageUrls.length} foto(s) — mínimo 4, ideal 6
+                                </p>
                             </div>
                         </div>
                     </CardHeader>
@@ -1066,6 +1072,17 @@ export default function EditAuction() {
                             </Droppable>
                         </DragDropContext>
                         
+                        {/* 🔍 PONTO 77 — Buscador Inteligente de Fotos: usa o título do leilão como
+                            consulta e SOMA as fotos escolhidas (nunca substitui, nunca duplica) */}
+                        <div className="mt-4 rounded-xl border border-sky-500/25 bg-sky-500/[0.04] p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-sky-400 font-bold mb-2">Buscar fotos na internet</p>
+                            <BuscadorFotos
+                                productName={formData.title}
+                                jaTem={imageUrls.length}
+                                onSelect={(urls) => setImageUrls((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))])}
+                            />
+                        </div>
+
                         <div className="mt-6 flex justify-center">
                             <input
                                 type="file"

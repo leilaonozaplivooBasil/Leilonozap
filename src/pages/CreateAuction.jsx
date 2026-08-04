@@ -30,6 +30,7 @@ import ManualImageUpload from "../components/admin/ManualImageUpload";
 import ValidationReportModal from "../components/admin/ValidationReportModal";
 import GoogleShoppingImporter from "../components/admin/GoogleShoppingImporter";
 import PriceSection from "../components/admin/PriceSection";
+import BuscadorFotos from "../components/admin/BuscadorFotos";
 import { normalizarArremateAgora } from "@/lib/arremateAgora";
 
 const withRetry = async (fn, max = 3) => {
@@ -1039,6 +1040,13 @@ export default function CreateAuction() {
       return;
     }
 
+    // 🔍 PONTO 77 — produto NOVO nasce com no mínimo 4 fotos (ideal 6). A trava vale
+    // só na criação: na edição ela impediria ajustar leilão antigo com 1 ou 2 fotos.
+    if (finalImageUrls.length < 4) {
+      toast.error(`Adicione pelo menos 4 fotos (você tem ${finalImageUrls.length}). Use o Buscar Fotos na Internet — o ideal são 6.`);
+      return;
+    }
+
     if (parseFloat(formData.starting_price) <= 0) {
       toast.error("O preço inicial deve ser maior que zero");
       return;
@@ -1655,6 +1663,30 @@ export default function CreateAuction() {
                         }));
                         toast.success("✅ Dados do Google Shopping aplicados!");
                       }}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* 🔍 PONTO 77 — Buscador Inteligente de Fotos: SOMA fotos ao formulário
+                    (permite passar das 5 do importador e chegar às 6 ideais) */}
+                <Card className="bg-gray-800 border border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2 text-sky-400">
+                      <ImageIcon className="w-5 h-5" /> Buscar Fotos na Internet
+                    </CardTitle>
+                    <p className="text-xs mt-1 font-bold text-gray-400">
+                      {formData.image_urls.filter(u => u && u.trim()).length} foto(s) — mínimo 4, ideal 6
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <BuscadorFotos
+                      productName={formData.title}
+                      jaTem={formData.image_urls.filter(u => u && u.trim()).length}
+                      onSelect={(urls) => setFormData(prev => {
+                        const atuais = prev.image_urls.filter(u => u && u.trim());
+                        const novas = urls.filter(u => !atuais.includes(u));
+                        return { ...prev, image_urls: [...atuais, ...novas] };
+                      })}
                     />
                   </CardContent>
                 </Card>
