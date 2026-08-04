@@ -26,6 +26,7 @@ import {
 import { resolveUserPanels } from "@/lib/panelResolver";
 import { SECTORS } from "@/lib/sectors";
 import SectorLink from "@/components/nav/SectorLink";
+import MobileSectorTiles from "@/components/nav/MobileSectorTiles";
 
 const ICON_MAP = {
   ShoppingBag,
@@ -101,6 +102,14 @@ export default function NavMobile({
 }) {
   const navigate = useNavigate();
   const [openSector, setOpenSector] = React.useState(null);
+  // 🛒 Contador do carrinho igual ao do desktop (lido do mesmo localStorage do Layout)
+  const cartCountLocal = React.useMemo(() => {
+    if (!isOpen) return 0;
+    try {
+      const c = JSON.parse(localStorage.getItem("catalogCart") || "[]");
+      return c.reduce((s, i) => s + (i.quantity || 1), 0);
+    } catch { return 0; }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -225,32 +234,7 @@ export default function NavMobile({
                 O admin também é usuário: precisa chegar na vitrine, nos leilões e no
                 Rank Premiado pelo celular. Antes só existia a Visão Geral. */}
             {userLogged && isAdmin && (
-              <div className="mb-2 space-y-1">
-                <Link
-                  to="/Loja-Virtual"
-                  onClick={onClose}
-                  className="flex min-h-[48px] items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-orange-300 transition-all hover:translate-x-1 hover:text-orange-200"
-                >
-                  <Store className="h-5 w-5" />
-                  Loja Virtual
-                </Link>
-                <Link
-                  to="/leiloes"
-                  onClick={onClose}
-                  className="flex min-h-[48px] items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-emerald-300 transition-all hover:translate-x-1 hover:text-emerald-200"
-                >
-                  <Gavel className="h-5 w-5" />
-                  Leilões
-                </Link>
-                <Link
-                  to="/rankpremiado"
-                  onClick={onClose}
-                  className="flex min-h-[48px] items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-yellow-300 transition-all hover:translate-x-1 hover:text-yellow-200"
-                >
-                  <Crown className="h-5 w-5" />
-                  Rank Premiado
-                </Link>
-              </div>
+              <MobileSectorTiles onNavigate={onClose} cartCount={cartCountLocal} />
             )}
 
             {/* === RANK PREMIADO (destaque — primeiro item) ===
