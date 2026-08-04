@@ -20,11 +20,17 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
         type="button"
         onClick={() => window.dispatchEvent(new Event("openComparai"))}
         aria-label="Comparar preços com o CompareAQUI"
+        title="CompareAQUI — compare o preço antes de comprar"
         className={acao}
       >
-        {/* PONTO 86 — bordinha branca FINA na logo (o flutuante saiu daqui pra cá) */}
-        <img src={CompareAquiIcon} alt="" aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/70 sm:h-7 sm:w-7" />
-        <span>Comparar</span>
+        {/* PONTO 87 — SÓ a logo, no tamanho do flutuante da Leila (sem rótulo) */}
+        <img
+          src={CompareAquiIcon}
+          alt=""
+          aria-hidden="true"
+          className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-white/70 sm:h-16 sm:w-16"
+          style={{ boxShadow: '0 8px 22px rgba(0,0,0,.45)' }}
+        />
       </button>
 
       {/* Ao Vivo — mesmo destino do flutuante da Livoo */}
