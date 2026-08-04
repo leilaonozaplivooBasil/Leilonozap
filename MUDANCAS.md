@@ -8,7 +8,7 @@
 
 ---
 
-## 04/08/2026 — PONTO 79B: descrições regeradas pela IA (30 produtos de estoque)
+## 04/08/2026 — PONTO 79B: descrições regeradas pela IA (359 produtos de estoque)
 
 - **Contexto:** o erro original da IA era `"Free tier users do not have access to this model"`
   — falha de **plano**, não bug. Gabriel confirmou plano pago em 04/08 e autorizou a regeração.
@@ -25,9 +25,18 @@
 - **Protegido:** só o campo `notes`. O título (`description`) não foi tocado — e a função
   agora documenta que em `products` `description` é o TÍTULO.
 - **Risco:** 🟡 Médio — prévia obrigatória, gravação um a um, texto suspeito/curto é pulado.
-- **⚠️ Achado fora do escopo (NÃO executado):** existem **359 produtos** sem texto em `notes`
-  no total — os 30 do PONTO 79 mais **~329 que nunca tiveram descrição**. Ficaram como estão;
-  regerar todos consome créditos de IA e precisa de autorização própria.
+- **⚠️ Achado:** eram **359 produtos** sem texto em `notes` — os 30 do PONTO 79 mais ~329 que
+  **nunca tiveram descrição nenhuma**.
+
+**CONCLUSÃO — vitrine inteira coberta (autorizado por Gabriel na mesma sessão):** os **359
+foram regerados**, em blocos, até a fila zerar. Reauditoria final: **0 produtos sem descrição**
+na Loja Virtual. Zero falhas de IA em todos os blocos; textos entre ~630 e ~950 caracteres.
+- **⚠️ Ajuste operacional importante para quem rodar isso de novo:** bloco de **30 estoura o
+  tempo** do runtime (timeout em ~110s — um bloco morreu no meio e foi reprocessado depois).
+  **Use `limite: 15`** (~34s por bloco, estável nos 20+ blocos executados).
+- **1 registro pulado de propósito:** produto sem título — a trava "sem título, sem geração"
+  agiu corretamente (a IA não teria base para escrever nada verdadeiro).
+- **Continua intocado:** preço, estoque, título, imagens, comissões, pagamentos. Só `notes`.
 
 ---
 
