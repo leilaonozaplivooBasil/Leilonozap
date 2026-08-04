@@ -17,7 +17,7 @@ import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
-import FloatingWalletButton from '../components/wallet/FloatingWalletButton';
+import ChipCarteiraSala from '../components/auction/ChipCarteiraSala';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
 import ViewTracker from "../components/recommendations/ViewTracker";
@@ -945,11 +945,8 @@ export default function AuctionRoom() {
       <PagePerformanceTracker pageName="AuctionRoom" />
       {currentUser && (
         <>
-          <FloatingWalletButton
-            balance={userWallet?.balance}
-            heldBalance={userWallet?.held_balance}
-            onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
-          />
+          {/* PONTO 82 — o saldo saiu do flutuante (cobria o campo de frete/lance no
+              celular) e passou a viver no cabeçalho da sala (ChipCarteiraSala). */}
           <WalletDrawer
             open={walletOpen}
             startView={walletStartView}
@@ -1055,7 +1052,15 @@ export default function AuctionRoom() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* 💰 PONTO 82 — saldo da carteira no cabeçalho da sala */}
+          {currentUser && (
+            <ChipCarteiraSala
+              balance={userWallet?.balance}
+              heldBalance={userWallet?.held_balance}
+              onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
+            />
+          )}
           {/* 🆕 BOTÃO FAVORITAR NO HEADER */}
           {currentUser && auction && (
             <FavoriteButton
@@ -1076,6 +1081,17 @@ export default function AuctionRoom() {
 
       <main className="main-content">
         <aside className="auction-sidebar">
+          {/* 💰 PONTO 82 — no desktop o cabeçalho da sala é o painel lateral:
+              o mesmo chip de carteira aparece aqui (o header mobile fica oculto). */}
+          {currentUser && (
+            <div className="mb-3 flex justify-end">
+              <ChipCarteiraSala
+                balance={userWallet?.balance}
+                heldBalance={userWallet?.held_balance}
+                onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
+              />
+            </div>
+          )}
           <div className="product-panel">
             <img src={mainImageUrl} alt={auction.title} className="product-panel__image" />
             <div className="product-panel__body">

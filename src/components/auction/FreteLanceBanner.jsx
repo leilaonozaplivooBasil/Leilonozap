@@ -1,73 +1,68 @@
 import React from "react";
-import { Loader2, Truck } from "lucide-react";
+import { Loader2, Truck, MapPin, Search } from "lucide-react";
 import { fmtBR } from "@/lib/money";
 
-// Banner acima do input de lance: mostra o frete já calculado (uma vez, fixo
-// durante toda a disputa) ou pede o CEP quando o perfil não tem um salvo.
+/**
+ * PONTO 82 — CEP em UMA linha: input + botão + resultado.
+ * Sem tabelas, sem texto longo, sem amarelo. Nenhum cálculo aqui — só UI:
+ * quem cota o frete continua sendo o cotarFrete chamado pela sala.
+ */
 export default function FreteLanceBanner({ status, freteValor, cep, onChangeCep, onCalcular }) {
   if (status === "ok" && freteValor > 0) {
     return (
-      <div className="flex items-center gap-2 px-4 pt-3 text-xs text-gray-300">
-        <Truck className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-        <span>Frete para seu CEP: <span className="font-bold text-green-400">R$ {fmtBR(freteValor)}</span> — já incluso no valor descontado da carteira</span>
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.25)' }}>
+        <Truck className="h-4 w-4 shrink-0 text-emerald-400" />
+        <span className="min-w-0 flex-1 truncate text-xs text-emerald-100">Frete para seu CEP</span>
+        <span className="shrink-0 text-sm font-bold text-emerald-300 tabular-nums">R$ {fmtBR(freteValor)}</span>
       </div>
     );
   }
 
   if (status === "loading") {
     return (
-      <div className="flex items-center gap-2 px-4 pt-3 text-xs text-gray-400">
-        <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
-        Calculando frete...
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-400" />
+        <span className="text-xs text-gray-300">Calculando frete…</span>
       </div>
     );
   }
 
-  if (status === "needs_cep") {
+  if (status === "needs_cep" || status === "error") {
+    const falhou = status === "error";
     return (
-      <div className="flex items-center gap-2 px-4 pt-3">
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Seu CEP (só números)"
-          value={cep}
-          onChange={(e) => onChangeCep(e.target.value)}
-          maxLength={9}
-          className="flex-1 bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg px-3 py-2 text-sm min-h-[40px]"
-        />
-        <button
-          type="button"
-          onClick={() => onCalcular(cep)}
-          className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg px-3 py-2 min-h-[40px] flex-shrink-0"
+      <div className="mx-auto mt-3 max-w-lg">
+        <form
+          onSubmit={(e) => { e.preventDefault(); onCalcular(cep); }}
+          className="flex items-center gap-2 rounded-xl p-1.5"
+          style={{
+            background: falhou ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${falhou ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.10)'}`,
+          }}
         >
-          Calcular frete
-        </button>
-      </div>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <div className="px-4 pt-3 space-y-2">
-        <p className="text-xs text-amber-400">Não conseguimos calcular o frete para esse CEP — confira e tente outro.</p>
-        <div className="flex items-center gap-2">
+          <MapPin className={`ml-1.5 h-4 w-4 shrink-0 ${falhou ? 'text-red-300' : 'text-emerald-400'}`} />
           <input
             type="text"
             inputMode="numeric"
-            placeholder="Seu CEP (só números)"
+            autoComplete="postal-code"
+            placeholder="00000-000"
             value={cep}
             onChange={(e) => onChangeCep(e.target.value)}
             maxLength={9}
-            className="flex-1 bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg px-3 py-2 text-sm min-h-[40px]"
+            className="min-h-[40px] min-w-0 flex-1 bg-transparent text-sm tracking-wider text-white placeholder:text-gray-500 focus:outline-none"
           />
           <button
-            type="button"
-            onClick={() => onCalcular(cep)}
-            className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg px-3 py-2 min-h-[40px] flex-shrink-0"
+            type="submit"
+            className="flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white hover:bg-emerald-500"
           >
+            <Search className="h-3.5 w-3.5" />
             Calcular frete
           </button>
-        </div>
+        </form>
+        {falhou && (
+          <p className="mt-1 px-2 text-[11px] text-red-300">CEP não encontrado — confira e tente outro.</p>
+        )}
       </div>
     );
   }
