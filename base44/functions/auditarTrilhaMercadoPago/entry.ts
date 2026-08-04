@@ -69,6 +69,52 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, escrita_realizada: false, vendas_pagas_sem_mp_id: vendasSemMp, pagamentos_orfaos: detalhe });
     }
 
+    // 🔍 MODO STATUS — descobre quais status existem de fato (as 444 linhas não classificadas)
+    if (corpo?.modo === 'status') {
+      const r = await fetch(`${SB}/rest/v1/catalog_sales?select=status,kind&limit=1000`, { headers: H });
+      const rows = r.ok ? await r.json() : [];
+      const tally: Record<string, number> = {};
+      const kinds: Record<string, number> = {};
+      for (const x of rows) {
+        const s = x.status === null ? '(NULO)' : String(x.status);
+        tally[s] = (tally[s] || 0) + 1;
+        const k = x.kind === null ? '(NULO)' : String(x.kind);
+        kinds[k] = (kinds[k] || 0) + 1;
+      }
+      return Response.json({ ok: true, escrita_realizada: false, linhas_lidas: rows.length, status: tally, kind: kinds });
+    }
+
+    // 🔍 MODO IDS — busca crua, sem or(), dos ids suspeitos + panorama de status
+    if (corpo?.modo === 'ids') {
+      const ids = corpo?.ids || ['b4eac2c7e4ce44bbeccd2260', '085ccf6f46f1e89f13dfe482'];
+      const achados: any[] = [];
+      for (const id of ids) {
+        const r1 = await fetch(`${SB}/rest/v1/catalog_sales?select=id,status,kind,total_amount,created_date,mp_payment_id&id=eq.${encodeURIComponent(id)}`, { headers: H });
+        const porId = r1.ok ? await r1.json() : `erro ${r1.status}: ${(await r1.text()).slice(0, 120)}`;
+        achados.push({ id, busca_por_id: porId });
+      }
+      const r2 = await fetch(`${SB}/rest/v1/catalog_sales?select=id&mp_payment_id=in.("170711504564","168849863424")`, { headers: H });
+      const porPagamento = r2.ok ? await r2.json() : `erro ${r2.status}`;
+
+      const statusList = ['paid', 'pending_payment', 'canceled', 'shipped', 'delivered'];
+      const porStatus: Record<string, string> = {};
+      for (const s of statusList) porStatus[s] = await contar(`catalog_sales?select=id&status=eq.${s}`);
+      porStatus['TOTAL'] = await contar('catalog_sales?select=id');
+      const rMin = await fetch(`${SB}/rest/v1/catalog_sales?select=created_date&order=created_date.asc&limit=1`, { headers: H });
+      const rMax = await fetch(`${SB}/rest/v1/catalog_sales?select=created_date&order=created_date.desc&limit=1`, { headers: H });
+      const minD = rMin.ok ? (await rMin.json())[0]?.created_date : null;
+      const maxD = rMax.ok ? (await rMax.json())[0]?.created_date : null;
+
+      return Response.json({
+        ok: true, escrita_realizada: false,
+        busca_direta: achados,
+        busca_por_mp_payment_id: porPagamento,
+        por_status: porStatus,
+        venda_mais_antiga: minD,
+        venda_mais_recente: maxD,
+      });
+    }
+
     // 1) O QUE O BANCO TEM (catalog_sales = onde o fluxo ativo realmente grava)
     const banco = {
       catalog_sales_total: await contar('catalog_sales?select=id'),
