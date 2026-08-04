@@ -42,7 +42,7 @@ const User = { me: () => base44.auth.me() };
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
 const CompareAquiFloatingButton = React.lazy(() => import("@/components/comparai/CompareAquiFloatingButton"));
 const MiniCanvasOverview = React.lazy(() => import("@/components/admin/MiniCanvasOverview"));
-import { Menu, ShoppingCart as CartIcon } from "lucide-react";
+import { Menu, ShoppingCart as CartIcon, Wallet as WalletIcon } from "lucide-react";
 
 
 
@@ -880,6 +880,24 @@ export default function Layout({ children, currentPageName }) {
                           {cartCount > 99 ? '99+' : cartCount}
                         </span>
                       )}
+                    </button>
+                  )}
+                  {/* 💰 Carteira na barra do site, ao lado do menu — SÓ na sala de leilão.
+                      Nas outras páginas a carteira continua onde já estava. */}
+                  {isLoggedIn && currentPageName === 'AuctionRoom' && (
+                    <button
+                      type="button"
+                      aria-label="Abrir carteira"
+                      title="Carteira"
+                      {...fastTap(() => window.dispatchEvent(new Event('openWallet')))}
+                      className="flex min-h-[44px] items-center gap-1.5 rounded-full px-2.5"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(22,127,76,0.92), rgba(14,92,55,0.92))',
+                        border: '1px solid rgba(46,157,99,0.5)',
+                      }}
+                    >
+                      <WalletIcon className="h-3.5 w-3.5 text-white" />
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-white">Carteira</span>
                     </button>
                   )}
                   <button

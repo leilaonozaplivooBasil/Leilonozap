@@ -17,7 +17,6 @@ import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
-import BotaoCarteiraHeader from '../components/auction/BotaoCarteiraHeader';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
 import ViewTracker from "../components/recommendations/ViewTracker";
@@ -1058,13 +1057,8 @@ export default function AuctionRoom() {
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* 💰 A carteira mora AQUI no cabeçalho, compacta e sem valor exposto —
-              flutuando embaixo ela atravessava a conversa e a barra de lance. */}
-          {currentUser && (
-            <BotaoCarteiraHeader
-              onClick={() => { setWalletStartView('wallet'); setWalletOpen(true); }}
-            />
-          )}
+          {/* 💰 A carteira agora fica na barra do site (topo, ao lado do menu) —
+              ver Layout.jsx. Aqui no cabeçalho da sala ela não aparece mais. */}
           {/* 🆕 BOTÃO FAVORITAR NO HEADER */}
           {currentUser && auction && (
             <FavoriteButton
