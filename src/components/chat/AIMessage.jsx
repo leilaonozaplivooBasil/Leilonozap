@@ -90,29 +90,32 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
   }
 
   return (
-    <div className="ia-linha mb-3.5 flex items-start gap-2">
-      {/* PONTO 88 — sem rótulo "LanceIA": só o leiloeiro pequeninho falando */}
-      <img
-        src={LeiloeiroAvatar}
-        alt=""
-        aria-hidden="true"
-        className={`${isNova ? 'ia-entrada-leiloeiro' : 'ia-pop'} mt-0.5 h-8 w-8 shrink-0 object-contain`}
-      />
+    <div className="ia-linha mb-4 flex flex-col items-start">
+      {/* PONTO 90 — o leiloeiro virou a BASE da fala (igual a placa): balão em
+          cima e ele maior embaixo, com a fala saindo da cabeça dele. */}
+      <div className={`ia-conjunto ${isNova ? 'ia-conjunto--entra' : ''}`}>
+        <div className="ia-balao min-w-0 px-3.5 py-2.5">
+          <div className="mb-1 flex items-center justify-end gap-3">
+            <span className="flex items-center gap-1.5">
+              {isCountdown && <Timer className="h-3 w-3 text-amber-300" />}
+              {message.message_type === 'winner_announcement' && <Crown className="h-3 w-3 text-yellow-300" />}
+            </span>
+            <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
+              {formatTime(message.timestamp)}
+            </span>
+          </div>
 
-      <div className={`ia-balao min-w-0 px-3.5 py-2.5 ${isNova ? 'ia-balao--entra' : ''}`}>
-        <div className="mb-1 flex items-center justify-end gap-3">
-          <span className="flex items-center gap-1.5">
-            {isCountdown && <Timer className="h-3 w-3 text-amber-300" />}
-            {message.message_type === 'winner_announcement' && <Crown className="h-3 w-3 text-yellow-300" />}
-          </span>
-          <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
-            {formatTime(message.timestamp)}
-          </span>
+          <p className="text-[13px] leading-[1.55] text-slate-200/90 sm:text-sm">
+            {realcarValores(message.content)}
+          </p>
         </div>
 
-        <p className="text-[13px] leading-[1.55] text-slate-200/90 sm:text-sm">
-          {realcarValores(message.content)}
-        </p>
+        <img
+          src={LeiloeiroAvatar}
+          alt=""
+          aria-hidden="true"
+          className="ia-leiloeiro-base h-16 w-16 object-contain sm:h-[72px] sm:w-[72px]"
+        />
       </div>
 
       <EstilosIA />
@@ -125,9 +128,36 @@ function EstilosIA() {
     <style>{`
       /* PONTO 85 — narração sóbria: vidro fumê levíssimo, canto quebrado no
          lado do avatar, sem "quadradão" e sem competir com o botão de lance. */
+      /* PONTO 90 — conjunto fala+leiloeiro: o balão fica em cima e ele embaixo,
+         encostado na cabeça (a fala "sai" dele). */
+      .ia-conjunto {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        max-width: 88%;
+      }
+      .ia-leiloeiro-base { margin-top: -6px; margin-left: 10px; }
+      /* 👻 FANTASMA TIKTOK — o leiloeiro e a fala descem de fora da tela,
+         gigantes e translúcidos, cobrindo tudo, e encolhem até assentar. */
+      .ia-conjunto--entra {
+        animation: iaFantasma 1.05s cubic-bezier(0.16, 1, 0.3, 1);
+        transform-origin: 20% 100%;
+        will-change: transform, opacity;
+        position: relative;
+        z-index: 40;
+      }
+      @keyframes iaFantasma {
+        0%   { opacity: 0; transform: translateY(-75vh) scale(5.2) rotate(-10deg); }
+        18%  { opacity: 0.35; transform: translateY(-20vh) scale(4.2) rotate(6deg); }
+        40%  { opacity: 0.6; transform: translateY(0) scale(2.8) rotate(-4deg); }
+        62%  { opacity: 0.9; transform: translateY(0) scale(1.65) rotate(2deg); }
+        80%  { opacity: 1; transform: translateY(0) scale(0.95) rotate(-1deg); }
+        90%  { transform: translateY(0) scale(1.05) rotate(0.5deg); }
+        100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+      }
       .ia-balao {
-        max-width: 82%;
-        border-radius: 4px 16px 16px 16px;
+        max-width: 100%;
+        border-radius: 16px 16px 16px 4px;
         background: rgba(255, 255, 255, 0.035);
         border: 1px solid rgba(255, 255, 255, 0.075);
         backdrop-filter: blur(10px) saturate(1.15);
@@ -163,7 +193,7 @@ function EstilosIA() {
         to { opacity: 1; transform: translateY(0) scale(1); }
       }
       @media (prefers-reduced-motion: reduce) {
-        .ia-linha, .ia-pop, .ia-swing, .ia-entrada-leiloeiro, .ia-balao--entra { animation: none; }
+        .ia-linha, .ia-pop, .ia-swing, .ia-conjunto--entra { animation: none; }
       }
     `}</style>
   );

@@ -58,8 +58,10 @@ export default function PlacaLance({ message, isOwn }) {
            fora da tela, bate o impacto e ASSENTA no estado final (idêntico ao
            de hoje). Só a chegada é show; depois nada muda. */
         .placa-conjunto--entra {
-          animation: placaEntradaShow 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: placaEntradaShow 1.05s cubic-bezier(0.16, 1, 0.3, 1);
           will-change: transform, opacity;
+          position: relative;
+          z-index: 40;
         }
         .placa-corpo {
           min-width: 132px;
@@ -107,11 +109,15 @@ export default function PlacaLance({ message, isOwn }) {
           from { opacity: 0; transform: translateY(22px) rotate(-4deg); }
           to { opacity: 1; transform: translateY(0) rotate(0deg); }
         }
+        /* 👻 FANTASMA TIKTOK — vem de FORA (de cima), gigante o suficiente pra
+           cobrir a tela toda, translúcida, e vai encolhendo até assentar. */
         @keyframes placaEntradaShow {
-          0%   { opacity: 0; transform: translateY(120px) scale(1.6) rotate(-9deg); }
-          45%  { opacity: 1; transform: translateY(0) scale(1.22) rotate(4deg); }
-          65%  { transform: translateY(0) scale(0.95) rotate(-2deg); }
-          82%  { transform: translateY(0) scale(1.04) rotate(1deg); }
+          0%   { opacity: 0; transform: translateY(-70vh) scale(5.5) rotate(-12deg); }
+          18%  { opacity: 0.35; transform: translateY(-18vh) scale(4.4) rotate(6deg); }
+          40%  { opacity: 0.6; transform: translateY(0) scale(2.9) rotate(-4deg); }
+          62%  { opacity: 0.9; transform: translateY(0) scale(1.7) rotate(2deg); }
+          80%  { opacity: 1; transform: translateY(0) scale(0.94) rotate(-1deg); }
+          90%  { transform: translateY(0) scale(1.06) rotate(0.5deg); }
           100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
         }
         /* flash dourado curtinho no impacto — some sozinho e não deixa rastro */
