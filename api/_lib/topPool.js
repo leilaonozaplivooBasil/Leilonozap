@@ -29,6 +29,10 @@ export const TOP_ROLES = [
 
 export const EXECUTIVE_LEVEL = 'executivo_conta';
 export const EXECUTIVE_PCT = 1;
+// Cargo usado como executivo de último recurso (linha sem nenhum executivo acima).
+// Genérico de propósito: quando entrar um novo executivo, a própria árvore passa a
+// resolvê-lo e nada aqui precisa mudar.
+const FALLBACK_EXECUTIVE_LEVEL = 'ceo';
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -101,7 +105,9 @@ export function computeTopPool(value, users, anchorId) {
   const byId = new Map(ativos.map((u) => [u.id, u]));
   const anchor = anchorId ? byId.get(anchorId) : null;
   if (anchor) {
-    let execId = readExecutiveOwner(anchor);
+    // 1) O próprio dono da venda é executivo? Ele é o executivo da própria estrutura.
+    //    (caso Ribeiro: atua como parceiro dentro da estrutura que ele mesmo comanda)
+    let execId = levelsOf(anchor).includes(EXECUTIVE_LEVEL) ? anchor.id : readExecutiveOwner(anchor);
     if (!execId) {
       // herda subindo a linha de indicação
       const seen = new Set([anchor.id]);
@@ -113,6 +119,13 @@ export function computeTopPool(value, users, anchorId) {
         if (levelsOf(cur).includes(EXECUTIVE_LEVEL)) { execId = cur.id; break; }
         cur = cur.referred_by_id ? byId.get(cur.referred_by_id) : null;
       }
+    }
+    if (!execId) {
+      // Linha sem nenhum executivo acima: cai no executivo raiz (cargo de fallback).
+      const raiz = ativos.find(
+        (u) => levelsOf(u).includes(EXECUTIVE_LEVEL) && levelsOf(u).includes(FALLBACK_EXECUTIVE_LEVEL)
+      );
+      if (raiz) execId = raiz.id;
     }
     const exec = execId ? byId.get(execId) : null;
     if (exec && levelsOf(exec).includes(EXECUTIVE_LEVEL)) {
