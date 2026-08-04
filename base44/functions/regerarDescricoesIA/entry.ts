@@ -45,19 +45,43 @@ Deno.serve(async (req) => {
     const idsAutorizados = Array.isArray(corpo?.ids) ? corpo.ids : [];
     const limite = Math.min(Number(corpo?.limite) || 20, 30);
 
-    // 1) alvos: leilões com descrição vazia ou igual ao título
+    // 🎯 ALVO — dois destinos possíveis, MESMO padrão de segurança nos dois:
+    //  • 'leiloes'  (padrão) → auctions.description  [comportamento original, intacto]
+    //  • 'produtos' → products.notes  (PONTO 79: em `products`, `description` é o
+    //    TÍTULO e o texto longo é `notes`. Confundir os dois apagaria o nome do produto.)
+    const alvo = corpo?.alvo === 'produtos' ? 'produtos' : 'leiloes';
+    const TABELA = alvo === 'produtos' ? 'products' : 'auctions';
+    const CAMPO = alvo === 'produtos' ? 'notes' : 'description';
+    const CAMPO_TITULO = alvo === 'produtos' ? 'description' : 'title';
+    // `products` não tem as mesmas colunas de `auctions` (category/status) — pedir
+    // coluna inexistente faz o PostgREST devolver 400 e a busca voltar vazia.
+    const SELECT = alvo === 'produtos'
+      ? `id,${CAMPO_TITULO},${CAMPO}`
+      : `id,${CAMPO_TITULO},${CAMPO},category,status`;
+
+    // 1) alvos: registros com o texto vazio ou igual ao título
     const alvos: any[] = [];
     let de = 0;
     for (let p = 0; p < 20; p++) {
       const r = await fetch(
-        `${SB}/rest/v1/auctions?select=id,title,description,category,status&order=created_date.desc`,
+        `${SB}/rest/v1/${TABELA}?select=${SELECT}&order=created_date.desc`,
         { headers: { ...H, Range: `${de}-${de + 199}` } }
       );
-      if (!r.ok) break;
+      if (!r.ok) {
+        return Response.json(
+          { ok: false, escrita_realizada: false, error: `leitura de ${TABELA} falhou (${r.status})`, detalhe: (await r.text()).slice(0, 200) },
+          { status: 500 }
+        );
+      }
       const linhas = await r.json();
       for (const l of linhas) {
-        const d = String(l.description || '').trim();
-        if (!d || normal(d) === normal(l.title)) alvos.push(l);
+        const titulo = l[CAMPO_TITULO];
+        const d = String(l[CAMPO] || '').trim();
+        // ⚠️ sem título não há como a IA escrever nada seguro → fica fora
+        if (!String(titulo || '').trim()) continue;
+        if (!d || normal(d) === normal(titulo)) {
+          alvos.push({ id: l.id, title: titulo, category: l.category, status: l.status });
+        }
       }
       if (!Array.isArray(linhas) || linhas.length < 200) break;
       de += 200;
@@ -111,6 +135,9 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: true,
         escrita_realizada: false,
+        alvo,
+        tabela: TABELA,
+        campo: CAMPO,
         alvos_encontrados: alvos.length,
         gerados_nesta_previa: itens.filter((x) => x.gerado_ok).length,
         pulados: itens.filter((x) => !x.gerado_ok).length,
@@ -125,28 +152,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3) grava SOMENTE description, um registro por vez
+    // 3) grava SOMENTE o campo de texto do alvo, um registro por vez
     const resultado: any[] = [];
     for (const it of itens) {
       if (!it._texto) {
         resultado.push({ id: it.id, titulo: it.titulo, ok: false, detalhe: it.motivo });
         continue;
       }
-      const r = await fetch(`${SB}/rest/v1/auctions?id=eq.${encodeURIComponent(it.id)}`, {
+      const r = await fetch(`${SB}/rest/v1/${TABELA}?id=eq.${encodeURIComponent(it.id)}`, {
         method: 'PATCH',
         headers: { ...H, Prefer: 'return=minimal' },
-        body: JSON.stringify({ description: it._texto }),
+        body: JSON.stringify({ [CAMPO]: it._texto }),
       });
       resultado.push({
         id: it.id,
         titulo: it.titulo,
+        campo: CAMPO,
         ok: r.ok,
-        detalhe: r.ok ? `descricao regerada (${it.tamanho} chars)` : `erro ${r.status}: ${(await r.text()).slice(0, 120)}`,
+        detalhe: r.ok ? `${CAMPO} regerado (${it.tamanho} chars)` : `erro ${r.status}: ${(await r.text()).slice(0, 120)}`,
       });
     }
 
     return Response.json({
       ok: true,
+      alvo,
+      tabela: TABELA,
+      campo: CAMPO,
       escrita_realizada: resultado.some((x) => x.ok),
       atualizados: resultado.filter((x) => x.ok).length,
       falhas: resultado.filter((x) => !x.ok).length,

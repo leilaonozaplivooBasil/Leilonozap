@@ -8,6 +8,29 @@
 
 ---
 
+## 04/08/2026 — PONTO 79B: descrições regeradas pela IA (30 produtos de estoque)
+
+- **Contexto:** o erro original da IA era `"Free tier users do not have access to this model"`
+  — falha de **plano**, não bug. Gabriel confirmou plano pago em 04/08 e autorizou a regeração.
+- **O que mudou na função `regerarDescricoesIA`:** ganhou o parâmetro `alvo`
+  (`'leiloes'` = padrão, comportamento original **intacto**; `'produtos'` = `products.notes`).
+  Tabela/campo/título passaram a ser variáveis e o PATCH grava em `[CAMPO]`.
+- **Dois detalhes achados no teste (e corrigidos):** 1) `products` não tem as colunas
+  `category`/`status` — pedir coluna inexistente fazia o PostgREST devolver 400 e a busca voltar
+  **vazia silenciosamente** (parecia "0 alvos"). Agora o SELECT é por tabela e falha de leitura
+  retorna erro explícito em vez de fingir zero. 2) Registro **sem título** é descartado — sem
+  título a IA não tem base para escrever nada seguro.
+- **Execução:** prévia com 3 itens confirmou IA funcionando e texto de qualidade (~740-820
+  caracteres, 2 parágrafos + benefícios). Aplicado: **30 atualizados, 0 falhas**.
+- **Protegido:** só o campo `notes`. O título (`description`) não foi tocado — e a função
+  agora documenta que em `products` `description` é o TÍTULO.
+- **Risco:** 🟡 Médio — prévia obrigatória, gravação um a um, texto suspeito/curto é pulado.
+- **⚠️ Achado fora do escopo (NÃO executado):** existem **359 produtos** sem texto em `notes`
+  no total — os 30 do PONTO 79 mais **~329 que nunca tiveram descrição**. Ficaram como estão;
+  regerar todos consome créditos de IA e precisa de autorização própria.
+
+---
+
 ## 04/08/2026 — PONTO 79: limpeza dos 30 produtos com erro da IA aparecendo na loja
 
 - **Sintoma:** 30 produtos exibiam na Loja Virtual o payload de erro cru da IA
