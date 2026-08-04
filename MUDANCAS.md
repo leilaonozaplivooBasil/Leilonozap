@@ -30,9 +30,12 @@
   `verificarColunaFreteAmount` (100% leitura), que pede a coluna ao PostgREST e decide pelo
   código de erro real (42703 = não existe). Ela confirmou: **coluna EXISTE** (HTTP 200, com
   `frete_amount` vindo nos registros).
-- **⚠️ Pendência de limpeza:** `diagnosticoLanceFalha` continua no projeto com aquela frase
-  fixa e **vai mentir de novo** se alguém a consultar. Recomendo apagá-la (ou remover o campo
-  `causa_raiz`) — não fiz porque está fora do escopo autorizado.
+- **✅ Pendência RESOLVIDA (autorizada por Gabriel em 04/08):** `diagnosticoLanceFalha` foi
+  **APAGADA** do projeto. Ela era a origem do alarme falso e voltaria a mentir para qualquer um
+  que a consultasse no futuro, mesmo com o problema já resolvido. Nada dependia dela: era
+  função temporária de investigação (100% leitura), criada no PONTO 83, sem nenhuma chamada em
+  página, componente, hook ou outra função. Quem precisar checar a coluna usa
+  `verificarColunaFreteAmount`, que pergunta ao banco na hora em vez de repetir texto fixo.
 - **NÃO foi tocado:** `reserveBidBalance`, `releaseBidHold`, `_lib/bidHold.js`,
   `useBidSubmission.js`, `finalizeAuctionCore`, comissões, checkout, estoque, auth, frete da
   loja, `WalletDrawer` (layout/CSS). Reserva de saldo, trava por `version` (CAS), rollback do
