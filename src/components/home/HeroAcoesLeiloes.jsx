@@ -22,7 +22,8 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
         aria-label="Comparar preços com o CompareAQUI"
         className={acao}
       >
-        <img src={CompareAquiIcon} alt="" aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full object-cover sm:h-7 sm:w-7" />
+        {/* PONTO 86 — bordinha branca FINA na logo (o flutuante saiu daqui pra cá) */}
+        <img src={CompareAquiIcon} alt="" aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/70 sm:h-7 sm:w-7" />
         <span>Comparar</span>
       </button>
 
@@ -47,8 +48,8 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
         <span>Ao Vivo</span>
       </a>
 
-      {/* Compartilhar — componente original (handler intacto), agora sem fundo */}
-      <ShareLeiloesButton count={count} compact />
+      {/* Compartilhar — PONTO 86: só o ícone, sem rótulo (handler intacto) */}
+      <ShareLeiloesButton count={count} compact semRotulo />
     </div>
   );
 }

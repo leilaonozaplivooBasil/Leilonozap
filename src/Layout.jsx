@@ -937,66 +937,8 @@ export default function Layout({ children, currentPageName }) {
         {/* 🔄 Nova versão publicada: avisa e atualiza sem o usuário sair e voltar */}
         <AtualizacaoDisponivel />
 
-        {/* 🩷 LIVOO LIVE — logo redonda animada, alinhada logo ACIMA da Leila (canto
-            inferior direito). Em TODAS as páginas, menos na raiz "/" (Recepcao).
-            Clique abre livoolive.com.br. Cor oficial da logo: #D91674. Pedido Gabriel 26/07. */}
-        {!["Recepcao", "LiveShopNoZap"].includes(currentPageName) && (
-          <a
-            href="https://livoolive.com.br"
-            target="_blank"
-            rel="noopener noreferrer"
-            /* 📱 PONTO 80: no MOBILE a Livoo subiu pro cabeçalho — aqui só de sm+ */
-            /* 📱 PONTO 85: visível também no mobile (a fileira do bloco saiu) */
-            className="livoo-live-float nz-dock-bottom-2 fixed right-3 sm:right-4 z-50 group"
-            title="Livoo Live — Compre ao Vivo"
-            aria-label="Livoo Live — Compre ao Vivo"
-          >
-            <div className="relative">
-              <span className="livoo-live-float__ring" aria-hidden="true"></span>
-              <div className="livoo-live-float__btn w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-                {/* Logo Livoo Live: círculo branco + play rosa com a bolinha no vértice */}
-                <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-11 sm:h-11" aria-hidden="true">
-                  <circle cx="24" cy="24" r="19" fill="#ffffff" />
-                  <path d="M19 15.5 L34 24 L19 32.5 Z" fill="#D91674" stroke="#D91674" strokeWidth="4" strokeLinejoin="round" />
-                  <circle cx="19" cy="15.5" r="3.4" fill="#D91674" />
-                </svg>
-              </div>
-            </div>
-            <style>{`
-              .livoo-live-float__btn {
-                background: linear-gradient(135deg, #D91674, #E3559C);
-                border: 2px solid rgba(255, 255, 255, 0.3);
-                box-shadow: 0 8px 24px rgba(217, 22, 116, 0.45);
-                animation: livoo-float-beat 2.2s ease-in-out infinite;
-              }
-              .livoo-live-float:hover .livoo-live-float__btn {
-                box-shadow: 0 10px 32px rgba(217, 22, 116, 0.65);
-              }
-              .livoo-live-float__ring {
-                position: absolute;
-                inset: 0;
-                border-radius: 999px;
-                border: 2px solid rgba(217, 22, 116, 0.7);
-                animation: livoo-float-ring 2.2s ease-out infinite;
-                pointer-events: none;
-              }
-              @keyframes livoo-float-beat {
-                0%, 100% { transform: scale(1); }
-                12% { transform: scale(1.08); }
-                24% { transform: scale(1); }
-                36% { transform: scale(1.05); }
-                48% { transform: scale(1); }
-              }
-              @keyframes livoo-float-ring {
-                0% { transform: scale(1); opacity: 0.8; }
-                100% { transform: scale(1.55); opacity: 0; }
-              }
-              @media (prefers-reduced-motion: reduce) {
-                .livoo-live-float__btn, .livoo-live-float__ring { animation: none; }
-              }
-            `}</style>
-          </a>
-        )}
+        {/* 🩷 PONTO 86 — o flutuante da Livoo Live foi CONSOLIDADO na fileira do bloco
+            "Leilões Ativos" (HeroAcoesLeiloes), como ação "Ao Vivo". Aqui não flutua mais. */}
 
         {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}

@@ -1,6 +1,5 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
-import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import leilaSuporte from '@/assets/leila-suporte.webp';
 import useScrollDrift from '@/hooks/useScrollDrift';
 
@@ -25,28 +24,8 @@ export default function LojaFloatActions() {
 
   return (
     <>
-      {/* CompareAQUI — canto ESQUERDO inferior (rebranding oficial Heloim 23/07).
-          Altura vem do FloatingDock (nz-dock-bottom): sobe automaticamente nas páginas
-          com barra de ação fixa, pra nunca cobrir "COMPRAR AGORA" nem o campo de lance. */}
-      {/* 📱 PONTO 85: mesmo lugar, agora do TAMANHO DA LEILA, visível também no mobile,
-          SEM rótulo e SEM fundo branco — só a logo com BORDA BRANCA FINA e anel branco
-          pulsante (mesma mecânica da Leila, que continua intocada). */}
-      <div className={`nz-dock-bottom ${driftCls} fixed left-3 sm:left-4 z-50 flex flex-col items-center`}>
-        <button
-          onClick={() => window.dispatchEvent(new Event('openComparai'))}
-          title="CompareAQUI — compare o preço antes de comprar"
-          className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-transform hover:scale-110 relative"
-        >
-          {/* PONTO 86 — borda BEM fina e nítida, sem halo espalhando */}
-          <span
-            className="relative block w-full h-full rounded-full overflow-hidden ring-1 ring-white/70"
-            style={{ boxShadow: '0 8px 22px rgba(0,0,0,.45)' }}
-          >
-            <img src={CompareAquiIcon} alt="CompareAQUI" className="w-full h-full object-cover rounded-full" />
-          </span>
-        </button>
-      </div>
-
+      {/* 🎯 PONTO 86 — o flutuante do CompareAQUI foi CONSOLIDADO na fileira do bloco
+          "Leilões Ativos" (HeroAcoesLeiloes). Aqui sobra apenas a Leila, intocada. */}
       {/* Suporte com a Leila (avatar 3D) — canto DIREITO inferior. Animado pra chamar clique.
           O 'Ao vivo' flutuante foi removido; a live fica no botão 'AO VIVO AGORA' do topo. */}
       <style>{`

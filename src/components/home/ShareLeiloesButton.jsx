@@ -27,7 +27,8 @@ Entre na sala e dê seu lance antes que acabe.
 // 🎯 PONTO 81: `compact` só muda o formato (pílula dentro da barra de ações).
 // A lógica de compartilhamento abaixo permanece EXATAMENTE a mesma.
 // PONTO 85: `float` = botão redondo só com ícone (flutuante), sem texto e SEM piscar.
-export default function ShareLeiloesButton({ count = 0, compact = false, float = false }) {
+// PONTO 86: `semRotulo` (com compact) = só a bolinha verde, sem o texto "Compartilhar".
+export default function ShareLeiloesButton({ count = 0, compact = false, float = false, semRotulo = false }) {
   const [loading, setLoading] = useState(false);
 
   const compartilhar = async () => {
@@ -125,7 +126,9 @@ export default function ShareLeiloesButton({ count = 0, compact = false, float =
       ) : (
         <Share2 className="h-4 w-4" />
       )}
-      <span>{loading ? "Preparando..." : compact ? "Compartilhar" : "Compartilhar leilões"}</span>
+      {!(compact && semRotulo) && (
+        <span>{loading ? "Preparando..." : compact ? "Compartilhar" : "Compartilhar leilões"}</span>
+      )}
     </button>
   );
 }
