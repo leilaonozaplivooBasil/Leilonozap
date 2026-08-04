@@ -22,6 +22,8 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
     if (!Array.isArray(banners)) return [];
     return banners.filter(banner => {
       const deviceType = banner.device_type || 'desktop';
+      // "any" = arte única que serve celular e desktop (não filtra por dispositivo)
+      if (deviceType === 'any') return true;
       return deviceType === (isMobile ? 'mobile' : 'desktop');
     });
   }, [banners, isMobile]);

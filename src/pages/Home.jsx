@@ -716,13 +716,14 @@ export default function Home() {
         setBanners(interleaveBanners(JSON.parse(cachedBanners), VIDEO_BANNERS));
       } else {
         // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
-        // PONTO 90 — os banners antigos da Home foram criados ANTES do campo `context`
-        // existir, então ficaram sem context e desapareceram do carrossel (no mobile
-        // sobrava zero banner de imagem). Banner sem context = Home, como era antes.
-        base44.entities.BannerImage.filter({ is_active: true }).then((bannerData) => {
+        // PONTO 90 — os banners bonitos da Home estão cadastrados como device_type
+        // "desktop", então o carrossel os escondia no celular e sobrava só o vídeo.
+        // Marcamos como "any": a MESMA arte serve os dois tamanhos (padrão da Loja
+        // Virtual). Os banners velhos (sem context) continuam de fora.
+        base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
         const imageBanners = (bannerData || [])
-          .filter((b) => !b.context || b.context === 'home')
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map((b) => ({ ...b, device_type: 'any' }));
         const sortedBanners = interleaveBanners(imageBanners, VIDEO_BANNERS);
           // Salva a URL da primeira imagem pra preload na próxima visita
           if (sortedBanners[0]?.image_url) {
