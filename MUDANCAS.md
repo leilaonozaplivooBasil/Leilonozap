@@ -12,6 +12,66 @@
 
 ---
 
+## 05/08/2026 — 🟡 BLOCO: RESTAURAR-HISTORICO-SISTEMA (`system_logs` era uma casca)
+
+### O que foi descoberto (por teste real, não suposição)
+
+A tabela **`system_logs` é uma CASCA** da migração Base44 → Supabase. As únicas colunas que
+existem são `id`, `base44_id`, `created_at`, `updated_at`. **Nenhuma coluna de conteúdo existe.**
+
+Consequência medida no preview: **TODO `SystemLog.create()` falha**, com
+`Could not find the 'component_name' column of 'system_logs' in the schema cache`.
+Ou seja: **o app não tem NENHUM diagnóstico de erro gravado.** Se um usuário reclamar
+"deu erro ao dar lance", **não existe registro para consultar.**
+
+Isso passou invisível porque o gravador de log é (corretamente) silencioso — ele nunca
+derruba o fluxo do usuário quando falha. O silêncio escondeu a casca.
+
+### O que mudou
+
+- Criada `supabase/migrations/20260805_system_logs_restaurar_colunas.sql`, **puramente aditiva**:
+  `ADD COLUMN IF NOT EXISTS` para `entity_id`, `component_name`, `step`, `status`, `message`,
+  `error_details` (jsonb), `user_agent`, `is_mobile`, `url`, `execution_time_ms`,
+  `payload` (jsonb) e `created_by_id`.
+- **Todas nullable, nenhum DEFAULT obrigatório** — gravar log JAMAIS pode falhar por validação
+  e derrubar um fluxo real.
+- `status` é **`text` e NÃO enum**, de propósito: um status novo no app nunca pode fazer a
+  gravação do log falhar.
+- Índices `idx_system_logs_created_at` (created_at DESC) e `idx_system_logs_status`, para a
+  consulta do painel não pesar quando o volume crescer.
+- **Idempotente:** pode rodar duas vezes sem quebrar.
+
+### ⚠️ Ordem obrigatória de aplicação
+
+Escrever o arquivo `.sql` **não executa nada**. DDL só acontece rodando o SQL no **SQL Editor
+do Supabase** (ou via `supabase db push` no deploy). Enquanto não rodar, o log continua não
+gravando — exatamente como está hoje, sem regressão.
+
+### NÃO foi tocado
+
+`src/lib/logDedupe.js` · `GlobalMonitor.jsx` · `ErrorBoundary.jsx` · `src/Layout.jsx` ·
+`base44/entities/SystemLog.jsonc` · **nenhuma outra tabela** · comissões, carteira, saldos,
+pagamentos, webhooks, lances, pedidos, estoque, auth. **Nenhum registro existente foi apagado**
+— as linhas vazias antigas permanecem como estão. **Nenhuma linha de frontend foi alterada.**
+
+### Não iniciado de propósito
+
+As outras **8 tabelas casca financeiras** da mesma migração continuam como estão. São outro
+bloco, com outra autorização. **Não foram tocadas.**
+
+### Impacto no front
+
+Nenhum código de front mudou. Depois de rodar a migração, o histórico do sistema volta a
+gravar no formato que o app **já envia** hoje.
+
+### Risco
+
+🟡 **Médio** — banco de produção, MAS operação puramente **aditiva** e **idempotente**, em
+tabela de **LOG**. Nenhum fluxo financeiro (comissão, saldo, carteira, pedido, lance) lê
+`system_logs`. Pior cenário de falha = log continua não gravando, igual a hoje.
+
+---
+
 ## 04/08/2026 — 🔴 BLOCO FINANCEIRO 1: trava anti-contágio + leilão 3% → 5%
 
 Duas correções autorizadas pelo dono, com investigação obrigatória antes da segunda.

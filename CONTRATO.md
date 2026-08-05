@@ -62,6 +62,27 @@ Os dados NÃO ficam no GitHub. GitHub guarda **código**. Os dados ficam no **Su
 
 Esta é a **fonte única de verdade** dos dados (lotes, usuários, transações, pedidos, saldos).
 
+### ⚠️ 1.1 TABELAS "CASCA" DA MIGRAÇÃO (armadilha conhecida)
+
+Algumas tabelas vieram da migração Base44 → Supabase **só com o esqueleto**
+(`id`, `base44_id`, `created_at`, `updated_at`) e **sem as colunas de conteúdo**. O sintoma é
+sempre o mesmo e é **silencioso**:
+
+```
+Could not find the '<coluna>' column of '<tabela>' in the schema cache
+```
+
+**Regra permanente:** antes de afirmar que uma gravação funciona, **confirme que a coluna existe
+no banco**. "O código envia o campo" **não** significa "o banco tem a coluna".
+
+| Tabela | Situação | Migration |
+|---|---|---|
+| `system_logs` | 🟡 **casca identificada em 05/08/2026** — nenhuma coluna de conteúdo; **todo** registro de log falhava | `supabase/migrations/20260805_system_logs_restaurar_colunas.sql` — **rodar no SQL Editor do Supabase** |
+| 8 tabelas financeiras | ⚠️ cascas ainda **não corrigidas** — bloco separado, exige autorização própria | — |
+
+> 📌 **Escrever o arquivo `.sql` não altera o banco.** Alteração de estrutura (DDL) só acontece
+> rodando o SQL no **SQL Editor do Supabase** ou via `supabase db push` no deploy.
+
 ---
 
 ## 🔌 2. Como o FRONT lê e escreve DADOS
