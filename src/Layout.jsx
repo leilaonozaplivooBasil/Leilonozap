@@ -280,25 +280,13 @@ export default function Layout({ children, currentPageName }) {
 
   // Captura erros globais não tratados
   useEffect(() => {
+    // 🔇 DUPLICAÇÃO REMOVIDA: este handler gravava 'Global_UncaughtError' e o
+    // GlobalMonitor gravava 'Global_Uncaught_Error' para o MESMO evento — dois
+    // registros idênticos por erro. A gravação ficou só no GlobalMonitor (que
+    // registra mais contexto: is_mobile e o tipo do evento). Aqui permanece o
+    // console.error, que é o que aparece no navegador para diagnóstico.
     const handleError = (event) => {
       console.error('🚨 Erro global capturado:', event.error || event.reason);
-
-      try {
-        base44.entities.SystemLog.create({
-          step: 'Global_UncaughtError',
-          status: 'error',
-          message: `Uncaught error: ${event.message || (event.error && event.error.message) || event.reason}`,
-          component_name: 'GlobalErrorHandler',
-          error_details: {
-            message: event.message || (event.error && event.error.message) || event.reason,
-            stack: (event.error && event.error.stack) || (event.reason && event.reason.stack)
-          },
-          url: window.location.href,
-          user_agent: navigator.userAgent
-        }).catch(() => { });
-      } catch (e) {
-        // Falha silenciosa
-      }
     };
 
     window.addEventListener('error', handleError);

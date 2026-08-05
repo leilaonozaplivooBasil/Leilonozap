@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { base44 } from '@/api/base44Client';
+import { registrarLog } from '@/lib/logDedupe';
 
 /**
  * 🛡️ IA PROTETORA GLOBAL
@@ -20,28 +20,27 @@ export default function GlobalMonitor() {
 
   // ============= CAPTURA ERROS GLOBAIS E LOGA =============
   useEffect(() => {
-    const handleGlobalError = async (event) => {
+    // 🔇 Passa pelo gravador único (registrarLog): erro idêntico repetido dentro
+    // de 60s grava UMA vez. Antes, um erro em loop gerava dezenas de registros
+    // idênticos por minuto. Erro distinto continua sempre sendo gravado.
+    const handleGlobalError = (event) => {
       const error = event.error || event.reason;
       const errorMessage = error?.message || event.message || 'Erro desconhecido';
-      
-      try {
-        await base44.entities.SystemLog.create({
-          step: 'Global_Uncaught_Error',
-          status: 'error',
+
+      registrarLog({
+        step: 'Global_Uncaught_Error',
+        status: 'error',
+        message: errorMessage,
+        component_name: 'GlobalMonitor',
+        error_details: {
           message: errorMessage,
-          component_name: 'GlobalMonitor',
-          error_details: {
-            message: errorMessage,
-            stack: error?.stack,
-            type: event.type
-          },
-          url: window.location.href,
-          user_agent: navigator.userAgent,
-          is_mobile: /Mobi|Android/i.test(navigator.userAgent)
-        });
-      } catch (e) {
-        console.debug('Falha ao logar erro');
-      }
+          stack: error?.stack,
+          type: event.type
+        },
+        url: window.location.href,
+        user_agent: navigator.userAgent,
+        is_mobile: /Mobi|Android/i.test(navigator.userAgent)
+      });
     };
 
     window.addEventListener('error', handleGlobalError);

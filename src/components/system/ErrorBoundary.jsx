@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { registrarLog } from '@/lib/logDedupe';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,24 +14,21 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     console.error('🚨 ErrorBoundary capturou erro:', error.message);
     
-    // Loga o erro no SystemLog para diagnóstico
-    try {
-      base44.entities.SystemLog.create({
-        step: 'ErrorBoundary_ClientError',
-        status: 'error',
-        message: `UI crashed: ${error.message}`,
-        component_name: 'ErrorBoundary',
-        error_details: {
-          message: error.message,
-          stack: error.stack,
-          componentStack: errorInfo.componentStack
-        },
-        url: window.location.href,
-        user_agent: navigator.userAgent
-      }).catch(() => {}); // Falha silenciosa no log
-    } catch (e) {
-      // Ignora erro de logging
-    }
+    // Loga o erro no SystemLog para diagnóstico (via gravador único: a mesma
+    // tela quebrando em loop não grava N vezes o mesmo registro).
+    registrarLog({
+      step: 'ErrorBoundary_ClientError',
+      status: 'error',
+      message: `UI crashed: ${error.message}`,
+      component_name: 'ErrorBoundary',
+      error_details: {
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      },
+      url: window.location.href,
+      user_agent: navigator.userAgent
+    });
 
     // Auto-reload após 2 segundos ao invés de mostrar tela de erro
     this.setState(prev => ({ errorCount: prev.errorCount + 1 }));
