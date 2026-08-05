@@ -86,8 +86,18 @@ Deno.serve(async (req_) => {
     for (const v of vendas) kindPorVenda[v.id] = String(v.kind || '');
     const idsVendas = new Set(vendas.map((v: any) => v.id));
 
-    const alvo = comissoes.filter(antesDoCorte);
-    const preservado = comissoes.filter((c: any) => !antesDoCorte(c));
+    // 🎯 MODO A+ (padrão, decidido pelo dono em 04/08/2026):
+    // além do pré-agosto, expurga também as comissões DE AGOSTO lançadas sobre item
+    // não-comissionável (depósito de carteira, passaporte, frete). Sem isso, o saldo
+    // recalculado reinflaria justamente o vazamento que a regra oficial proíbe —
+    // o banco ficaria "limpo" mas VIOLANDO a regra de comissionamento.
+    // Para desligar e apagar só o pré-agosto: { expurgar_vazamento_agosto: false }.
+    const expurgarVazamento = body.expurgar_vazamento_agosto !== false;
+    const ehVazamento = (c: any) => NAO_COMISSIONAVEL.test(kindPorVenda[c.sale_id] || '');
+    const deveApagar = (c: any) => antesDoCorte(c) || (expurgarVazamento && ehVazamento(c));
+
+    const alvo = comissoes.filter(deveApagar);
+    const preservado = comissoes.filter((c: any) => !deveApagar(c));
 
     // ─── Motivo de exclusão, para o dono ver de onde vem o lixo ───
     const motivo = (c: any) => {
@@ -139,7 +149,10 @@ Deno.serve(async (req_) => {
 
     const relatorio = {
       corte_oficial: CORTE,
-      modo_saldo: modoSaldo === 'B' ? 'B — zerar tudo em 0,00' : 'A — recalcular pela soma de agosto',
+      modo_expurgo: expurgarVazamento
+        ? 'A+ — pré-agosto + vazamento de agosto (depósito/passaporte/frete)'
+        : 'A — somente pré-agosto',
+      modo_saldo: modoSaldo === 'B' ? 'B — zerar tudo em 0,00' : 'A — recalcular pela soma do que sobra',
       a_excluir: {
         registros: alvo.length,
         valor: soma(alvo, 'amount'),

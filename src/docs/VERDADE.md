@@ -165,6 +165,52 @@ Ler esta tabela evita repetir erro que já custou horas.
 |---|---|---|
 | **1A** | Criar este documento + subordinar os outros | ✅ **CONCLUÍDA** (04/08/2026) |
 | **1B** | Inventário do lixo — **100% leitura**, zero escrita (`inventarioSaneamento`) | ✅ **CONCLUÍDA** (04/08/2026) |
-| **2** | Limpeza propriamente dita | ⏸️ **NÃO INICIADA** — depende de autorização do dono, **bloco por bloco, por escrito** |
+| **2** | Limpeza propriamente dita | 🔄 **EM ANDAMENTO** — bloco por bloco, com autorização escrita do dono |
 
-⛔ **Nenhum registro, função ou tabela foi apagado até aqui.**
+### Blocos da Fase 2 já executados
+
+| Bloco | O que fez | Status |
+|---|---|---|
+| **QUARENTENA-MOTOR-LEGADO** | Travou `processCatalogCommission` (26%), trocou o recompute para `acertarComissaoVenda` (30%), arquivou a automação e removeu o DELETE prévio que causava crédito em dobro | ✅ 04/08/2026 |
+| **ZERAGEM-HISTORICO** | Excluiu **9.890** registros de comissão (**R$ 19.435,70**) e recalculou os saldos | ✅ 04/08/2026 |
+
+---
+
+## 7. 🧹 MARCO ZERO DA COMISSÃO — 01/08/2026
+
+> **Regra permanente:** o histórico de comissão do Leilão NoZap **começa em
+> 01/08/2026.** Não existe comissão válida antes dessa data.
+
+Em 04/08/2026, com autorização explícita do dono, todo o histórico anterior foi
+**excluído em definitivo** — era produto do motor legado de 26%, de testes e de
+vendas que não existem mais. Junto dele saíram também os lançamentos **de agosto**
+feitos sobre item não-comissionável, porque violavam a regra nº 1 da seção 3.
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Registros em `commission_records` | 10.197 | **307** |
+| Valor total | R$ 19.537,40 | **R$ 101,70** |
+| Soma dos saldos de comissão | R$ 149,23 | **R$ 101,70** |
+| Comissão sobre depósito/passaporte/frete | R$ 295,50 | **R$ 0,00** |
+| `total_commissions_generated` | nulo em 100% das contas | **alimentado** |
+
+**Consequências permanentes desta decisão:**
+
+1. **Saldo e extrato batem exatamente.** R$ 101,70 = R$ 101,70. Divergência daqui
+   pra frente é **fato novo**, nunca herança de teste.
+2. **Todo registro vivo é venda de produto confirmada.** Zero exceção.
+3. `total_commissions_generated` passa a ser a **trilha independente** de
+   conferência — a ausência dela era o que impedia dupla checagem.
+4. ⛔ **Não procurar, não reconstruir e não "recuperar" comissão anterior a
+   01/08/2026.** Ela foi apagada de propósito. Registro pré-agosto que apareça é
+   defeito, não histórico.
+5. A divergência histórica de R$ 205,89 e os 407 registros indevidos estão
+   **encerrados** — foram eliminados na origem, não remendados.
+
+**Rastro:** `gravarRetratoAntesZeragem` (retrato pré-exclusão) e
+`zerarHistoricoPreAgosto` (executor, `dry_run: true` por padrão).
+Detalhamento completo: seção 7 de `docs/MARCO-OFICIAL-AGOSTO-2026.md`.
+
+**Nada fora de comissão foi tocado:** `catalog_sales`, `auctions`,
+`digital_wallets`, `wallet_transactions`, percentuais oficiais e carteiras dos
+usuários permanecem intactos.

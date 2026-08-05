@@ -158,13 +158,74 @@ contábil de cada número segue **em aberto**.
 
 ## 6. PRÓXIMOS PASSOS (não autorizados ainda)
 
-1. Decidir o destino dos 407 registros indevidos (estornar, marcar como
-   inválidos ou preservar como histórico de teste).
-2. Reconciliar a divergência de R$ 205,89.
-3. Definir se `total_commissions_generated` passa a ser alimentado como trilha
-   independente de auditoria.
+1. ✅ **RESOLVIDO** — destino dos 407 registros indevidos: **excluídos** na
+   ZERAGEM-HISTORICO (seção 7).
+2. ✅ **RESOLVIDO** — divergência de R$ 205,89: eliminada na origem, saldos
+   recalculados a partir dos registros válidos (seção 7).
+3. ✅ **RESOLVIDO** — `total_commissions_generated` passou a ser alimentado.
 4. Religar a automação **somente após** validação da trava de `kind` em ambiente
-   controlado.
+   controlado. ⚠️ **AINDA PENDENTE** — e o motor legado está em quarentena
+   permanente, então a automação **não deve** ser religada apontando pra ele.
 
 > ⚠️ Nenhum dos itens acima pode ser executado sem autorização explícita do dono,
 > conforme `docs/VERDADE.md`.
+
+---
+
+## 7. ✅ ZERAGEM-HISTORICO — EXECUTADA EM 04/08/2026
+
+**Autorizada explicitamente pelo dono. Modo A+ (expurgo + recálculo).**
+
+### 7.1 O que foi apagado — 9.890 registros / R$ 19.435,70
+
+| Motivo | Registros | Valor |
+|---|---|---|
+| Motor legado 26% (pré-agosto) | 9.269 | R$ 17.064,97 |
+| Órfã — venda-mãe não existe | 214 | R$ 2.075,23 |
+| 🔴 Depósito de carteira (agosto) | 381 | R$ 265,50 |
+| 🔴 Passaporte (agosto) | 26 | R$ 30,00 |
+| **TOTAL EXCLUÍDO** | **9.890** | **R$ 19.435,70** |
+
+Executado em 20 blocos de até 500 registros. Frete: zero registros (nunca
+comissionou).
+
+### 7.2 O que ficou — a base limpa
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Registros de comissão no banco | 10.197 | **307** |
+| Valor total | R$ 19.537,40 | **R$ 101,70** |
+| Soma dos saldos das contas | R$ 149,23 | **R$ 101,70** |
+| Comissão sobre item não-comissionável | R$ 295,50 | **R$ 0,00** |
+| `total_commissions_generated` | nulo/zero em 100% | **alimentado (18 contas)** |
+
+**Os 307 registros restantes são 100% venda de produto de agosto/2026.**
+Saldo e extrato agora batem exatamente: R$ 101,70 = R$ 101,70.
+
+### 7.3 Por que modo A+ e não "só pré-agosto"
+
+Apagar apenas o pré-agosto e recalcular pela soma bruta de agosto **subiria** os
+saldos de R$ 149,23 para R$ 397,20 — porque R$ 295,50 dos R$ 397,20 de agosto
+eram os 407 registros de depósito/passaporte. Isso deixaria o banco arrumado
+**violando a regra oficial** (comissão só em venda confirmada de produto). O modo
+A+ expurga também esse vazamento, então nenhuma conta recebeu centavo que a regra
+não autoriza.
+
+### 7.4 Rastro de segurança
+
+- **Retrato pré-exclusão:** função `gravarRetratoAntesZeragem`
+  (`parte: RESUMO | ALVO | PRESERVADO`) — capturou os 10.197 registros e os
+  saldos das 52 contas antes de qualquer DELETE.
+- **Função executora:** `zerarHistoricoPreAgosto` — `dry_run: true` por padrão;
+  só apaga com `dry_run: false` explícito.
+- **Corte cravado no código:** `2026-08-01`.
+
+### 7.5 O que NÃO foi tocado
+
+`catalog_sales` · `auctions` · `digital_wallets` · `wallet_transactions` ·
+percentuais oficiais (30% loja / 5% leilão) · motor `acertarComissaoVenda` ·
+quarentena do `processCatalogCommission`.
+
+> ✅ **A partir de 01/08/2026 o banco de comissão está limpo, consistente e em
+> conformidade com a regra oficial.** Qualquer divergência daqui pra frente é
+> fato novo, não herança.
