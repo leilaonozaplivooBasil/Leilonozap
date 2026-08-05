@@ -34,6 +34,8 @@ import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import HeaderMobileActions from "@/components/nav/HeaderMobileActions";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
+// 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
+import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
@@ -1034,6 +1036,10 @@ export default function Layout({ children, currentPageName }) {
         <TransactionToasts />
         <ReferralSignupToast />
         <GlobalWalletDrawer />
+        {/* 💰 PONTO 84 — a carteira sumiu do desktop (o botão da navbar é md:hidden e o
+            topo já está cheio): volta como pill flutuante no canto inferior esquerdo
+            da sala, ancorada no dock pra não cobrir o botão "Dar Lance". */}
+        {isLoggedIn && currentPageName === 'AuctionRoom' && <CarteiraFlutuante user={currentUser} />}
         {/* 📜 PONTO 70 — Termo de Adesão só na intenção de compra (lance / carrinho) */}
         <TermoGateGlobal />
 
