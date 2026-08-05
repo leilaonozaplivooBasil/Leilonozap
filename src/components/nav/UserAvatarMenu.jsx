@@ -153,9 +153,14 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
   const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
   const RedeIcon = redeMeta?.icon || Truck;
 
-  // Badge da role principal — cargo de rede tem prioridade visual sobre "CLIENTE"
+  // Badge da role principal.
+  // ⚠️ CORREÇÃO: antes o cargo de rede só aparecia quando role === "user". Quem é
+  // Loja Física / Distribuidor / Ponto de Retirada mas tem role 'licensee' recebia
+  // o selo genérico "LICENCIADO", contradizendo a própria sidebar ("Loja Física").
+  // Agora o cargo de rede REAL tem prioridade — só Admin/Super Admin ficam acima.
   const roleKey = effectiveUser.role || "user";
-  const badge = (redeMeta && roleKey === "user")
+  const isAdminRole = roleKey === "admin" || roleKey === "super_admin";
+  const badge = (redeMeta && !isAdminRole)
     ? { label: redeMeta.label, grad: "bg-gradient-to-r from-emerald-400 to-green-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(16,185,129,0.45)]", icon: redeMeta.icon }
     : (ROLE_BADGE[roleKey] || ROLE_BADGE.user);
   const BadgeIcon = badge.icon;
