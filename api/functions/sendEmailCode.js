@@ -5,7 +5,10 @@ import crypto from 'crypto';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_KEY = process.env.RESEND_API_KEY;
-const FROM = process.env.MAIL_FROM || 'Leilão NoZap <nao-responda@draisabeladias.com.br>';
+// PONTO 83 — o fallback tinha o e-mail de OUTRO projeto (@draisabeladias.com.br):
+// como MAIL_FROM nunca foi criada na Vercel, todo código de acesso saía com
+// remetente de terceiro e o usuário achava que era phishing. Domínio oficial: .net
+const FROM = process.env.MAIL_FROM || 'Leilão NoZap <noreply@leilaonozap.net>';
 
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 

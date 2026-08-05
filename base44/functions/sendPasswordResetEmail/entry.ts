@@ -227,7 +227,7 @@ async function sendEmailViaBrevoAPI(to: string, subject: string, htmlContent: st
       body: JSON.stringify({
         sender: {
           name: "Leilão no Zap",
-          email: "no-reply@leilaonozap.com"
+          email: "no-reply@leilaonozap.net" // PONTO 83 — era .com (domínio errado); o oficial é .net
         },
         to: [{ email: to }],
         subject: subject,
