@@ -119,15 +119,25 @@ export async function finalizeOneAuction(auction) {
       // recolhido (o valor pago virou compra). Nunca deixa saldo negativo.
       try { await recolherBonusPorArremate(winnerId, auctionId); } catch (e) { console.warn('[FINALIZE] bônus passaporte:', e?.message); }
 
-      // 💰 Comissão do licenciado: 3% do arremate (regra vigente), saldo de
-      // teste ou real conforme is_test_auction. Planos de investimento não comissionam.
+      // 💰 COMISSÃO DE LEILÃO — REGRA OFICIAL (04/08/2026, confirmada pelo dono):
+      //   • 5% do valor do arremate (era 3%)
+      //   • SOMENTE VENDA DIRETA/PESSOAL: uma única pessoa — quem indicou o arrematante.
+      //     NÃO tem cadeia, NÃO tem telescópio, NÃO tem pool de topo, NÃO tem executivo.
+      //     Todo o restante fica integralmente com a empresa.
+      //   • Base = finalPrice = auction.current_price → SÓ O PRODUTO.
+      //     O frete viaja separado (frete_reservado_valor) e NUNCA comissiona.
+      //   • Paga no MARTELO e está correto: o saldo do arrematante já foi depositado
+      //     antecipadamente e reservado no lance, então o martelo JÁ É o pagamento.
+      //     NÃO mover este gatilho para o fluxo de pagamento.
+      // Saldo de teste ou real conforme is_test_auction. Planos de investimento não comissionam.
+      // 📕 Fonte de verdade: docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md
       if (u.referred_by_id && !auction.is_investment_plan) {
         try {
           const lic = (await (await sb(
             `app_users?select=id,network_bids_count,commission_balance,test_valora_balance,valora_pay_balance&id=eq.${enc(u.referred_by_id)}&limit=1`
           )).json())?.[0];
           if (lic) {
-            const commission = money(finalPrice * 0.03);
+            const commission = money(finalPrice * 0.05);
             const patch = {
               network_bids_count: (Number(lic.network_bids_count) || 0) + 1,
               commission_balance: money((Number(lic.commission_balance) || 0) + commission),

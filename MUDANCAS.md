@@ -8,6 +8,114 @@
 
 ---
 
+## 04/08/2026 — 🔴 BLOCO FINANCEIRO 1: trava anti-contágio + leilão 3% → 5%
+
+Duas correções autorizadas pelo dono, com investigação obrigatória antes da segunda.
+
+### A) 🔴 TRAVA ANTI-CONTÁGIO NO RECÁLCULO EM LOTE
+
+- **O defeito:** no modo lote de `acertarComissaoVenda`, a consulta filtrava **só por
+  status** (`paid/shipped/delivered`), sem filtrar **tipo**. A tabela `catalog_sales` guarda
+  muito mais do que venda de produto: **depósito de carteira, crédito de Passaporte, frete de
+  vendedor, adesão de Vendedor e plano de expansão** moram na mesma tabela. Todos entravam no
+  recálculo **como se fossem venda** e recebiam **30% de comissão**.
+- **Exposição medida (dry_run antes da correção): R$ 393,48.** Nada havia sido pago ainda —
+  o padrão `dry_run:true` segurou. Bastava alguém rodar com `dry_run:false` para o dinheiro sair.
+- **Regra oficial reafirmada:** comissão **só em venda confirmada de produto**. Depósito não é
+  venda. Crédito de passaporte não é venda. Frete não é venda. Adesão e plano não são venda.
+- **Correção — dupla barreira:**
+  1. **No banco:** a consulta ganhou `or=(kind.eq.loja,kind.is.null)` — só entra venda de
+     catálogo (`kind='loja'`) ou registro com `kind` nulo (vendas antigas legítimas, criadas
+     antes da coluna existir).
+  2. **No código:** filtro extra derrubando `wallet_deposit`, `commission_deposit`,
+     `passaporte`, `seller_freight`, `adesao`, `seller_adhesion`, `partner_plan` — rede de
+     segurança caso o filtro do banco falhe (coluna renomeada, cache de schema do PostgREST).
+- **Transparência na resposta:** o retorno agora traz `registros_barrados_pela_trava` e a lista
+  de tipos excluídos, para dar pra ver na tela o que ficou de fora.
+- **✅ Prova (dry_run depois):** **20 → 12 vendas analisadas**, todas produto real. Nenhum
+  "Depósito na Carteira Digital", nenhum "Passaporte de Lances", nenhum "Frete — Buslog" na
+  lista. Total de ajuste caiu de **R$ 393,48 para R$ 0,38** — centavos de arredondamento em 2
+  vendas legítimas.
+- **Modo venda-avulsa (`sale_id`) revalidado e intacto** — testado após a mudança, resposta
+  idêntica ao comportamento anterior.
+
+### B) 🔴 LEILÃO: 3% → 5%, SÓ VENDA DIRETA
+
+- **Regra oficial confirmada pelo dono (04/08/2026):** leilão paga **5%** para **UMA única
+  pessoa** — quem indicou o arrematante. **Sem cadeia, sem telescópio, sem pool de topo, sem
+  executivo.** O restante fica integralmente com a empresa. Detalhamento completo na **seção
+  6-A** do `DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`.
+- **✅ Confirmado por leitura: frete NUNCA entra na base.** A base é `auction.current_price`
+  (só o produto); o frete viaja separado em `auctions.frete_reservado_valor`.
+- **✅ Paga no MARTELO — e está correto.** O arrematante deposita antes e o valor é reservado
+  no lance, então quando o martelo bate **o dinheiro já está no caixa**: o martelo **já é o
+  pagamento**. Decisão explícita do dono: **não mover este gatilho.** (Eu havia classificado
+  isso como defeito na análise anterior — **estava errado, e fica registrado.**)
+
+### ⚠️ INVESTIGAÇÃO OBRIGATÓRIA ANTES DE MEXER NO PERCENTUAL (só leitura)
+
+Havia risco de **pagamento duplo** (3% no martelo + 3% no pagamento = 6%, e com 5% viraria
+10%). **Investiguei antes de alterar** e o risco **não se concretiza em produção**:
+
+| Motor | Estado real | Paga comissão? |
+|---|---|---|
+| `api/_lib/finalizeAuctionCore.js` (martelo) | ✅ **VIVO** — fala com o Supabase via REST | **SIM — é o único** |
+| `base44/functions/settleAuctionBalance` | ✅ **VIVO** — é o pagamento real do arremate | **NÃO** — só movimenta saldo |
+| `processAuctionInfluencerCommission` | ⚠️ **INATIVO** — grava no store interno do Base44 | Sim, mas **no banco errado** |
+
+- **Prova do motor inativo:** existe **1 único** `CommissionRecord` com `role='influencer_app'`,
+  de **19/01/2026, R$ 0,06** — antes da migração para o Supabase. Ele é chamado por
+  `payOrderWithWallet`, que também usa `asServiceRole.entities` e por isso nem encontra os
+  leilões de produção.
+- **Conclusão: não há duplo pagamento hoje.** Seguro aplicar os 5%.
+- **🚨 ALERTA PERMANENTE GRAVADO NO CÓDIGO:** os dois motores **não se conhecem** — a trava de
+  idempotência do motor legado procura um `commission_record` que o `finalizeAuctionCore`
+  **nunca cria**. **Reativar o motor legado sem antes remover a chamada em `payOrderWithWallet`
+  faz o leilão pagar 10% em vez de 5%.** Aviso plantado no topo do percentual.
+
+### Arquivos e escopo
+
+- **Alterados:** `base44/functions/acertarComissaoVenda/entry.ts` (só a consulta do lote + 1
+  filtro), `api/_lib/finalizeAuctionCore.js` (`0.03` → `0.05`),
+  `base44/functions/processAuctionInfluencerCommission/entry.ts` (`3.0` → `5.0` + alerta),
+  `docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`, `MUDANCAS.md`.
+- **NÃO foi tocado:** percentuais da Loja Virtual (30% = 20% cadeia + 10% topo), cálculo
+  telescópico, pools do topo, executivo, `topPool.js`, `resolveExecutivo.js`, `commissions.js`,
+  `storeFulfill.js`, `createMPPix.js`, `createMPCatalogCardCheckout.js`, `mpWebhook.js`,
+  passaporte, bônus de 10%, cupons, frete, `bidHold.js`, estoque, auth, e **nenhum arquivo de
+  tela**. `dry_run` continua **TRUE** por padrão.
+- **Não iniciado neste bloco (de propósito):** limpeza do banco e `valora_pay_balance`.
+
+### Impacto no front
+
+- **Nenhum código de front mudou.** A partir de agora o arremate gera **5%** de comissão em vez
+  de 3% para quem indicou o arrematante. Comissões de leilões já encerrados **não foram
+  recalculadas** — a mudança vale para os próximos.
+
+### Validação
+
+1. ✅ Releitura de todos os arquivos alterados após a edição.
+2. ✅ `dry_run` do lote provando que nenhum depósito/passaporte/frete entra mais.
+3. ✅ Venda avulsa por `sale_id` revalidada.
+4. ⚠️ `api/_lib/finalizeAuctionCore.js` roda em `/api/*` na Vercel e **não executa no ambiente
+   de preview** — a mudança de `0.03` para `0.05` foi validada **por releitura**, não por
+   execução. **Teste real em produção:** encerrar um leilão com arrematante indicado e conferir
+   que a comissão creditada é 5% do valor do produto (sem frete).
+
+### Risco
+
+🔴 **Alto** — motor de comissão em produção. Mitigado: escopo de 3 arquivos, `dry_run` padrão,
+investigação de duplo pagamento feita **antes** da alteração, prova em dry_run, e nenhuma
+comissão histórica recalculada.
+
+### ⚠️ Pendência recomendada (não autorizada neste bloco)
+
+Remover a chamada de `processAuctionInfluencerCommission` dentro de `payOrderWithWallet` para
+**desarmar em definitivo** o motor legado. Hoje ele é inofensivo por estar apontando para o
+banco antigo — mas continua carregado.
+
+---
+
 ## 04/08/2026 — 📕 DOCUMENTO OFICIAL DO PLANO DE CARREIRA (fonte de verdade das comissões)
 
 - **Por que:** numa conversa foi dito "licenciado 15%", e o motor de comissão usa **13%**.

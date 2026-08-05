@@ -169,6 +169,48 @@ estável pela venda. Pool sem nenhum dono ativo: o percentual volta para a empre
 
 ---
 
+## 6-A. COMISSÃO DE LEILÃO — REGRA OFICIAL (confirmada pelo dono em 04/08/2026)
+
+⚠️ **O LEILÃO NÃO SEGUE A REGRA DA LOJA VIRTUAL.** São modelos diferentes.
+Não aplicar aqui os 30% / cadeia telescópica / pools do topo.
+
+| Item | Regra oficial do leilão |
+|---|---|
+| Percentual | **5%** do valor do arremate (era 3% até 04/08/2026) |
+| Quem recebe | **UMA pessoa** — quem indicou o arrematante (`referred_by_id`) |
+| Cadeia | ❌ **NÃO TEM.** Sem telescópio, sem rebate, sem pool de topo, sem executivo |
+| Restante | Fica **integralmente com a empresa** (não é distribuído) |
+| Base de cálculo | **SÓ o valor do produto** (`current_price`). **Frete NUNCA comissiona** |
+| Quando paga | **NO MARTELO** |
+| Não comissiona | Planos de investimento (`is_investment_plan`) |
+
+### Por que paga no martelo (e por que está correto)
+O arrematante **deposita o saldo antes** de dar lance, e o valor é **reservado no
+lance** (`saldo_reservado`). Quando o martelo bate, o dinheiro **já está no caixa** —
+o martelo **já É o pagamento**. Não existe "esperar pagar depois".
+
+> ⛔ **NÃO MOVER este gatilho para o fluxo de pagamento.** Decisão explícita do dono.
+
+### Onde vive no código
+| Papel | Arquivo | Estado |
+|---|---|---|
+| **Motor ativo** — paga os 5% no martelo | `api/_lib/finalizeAuctionCore.js` | ✅ VIVO |
+| Movimenta o saldo do arremate (sem comissão) | `base44/functions/settleAuctionBalance/entry.ts` | ✅ VIVO |
+| Motor legado de 5% | `base44/functions/processAuctionInfluencerCommission/entry.ts` | ⚠️ INATIVO |
+
+### 🚨 ALERTA PERMANENTE — RISCO DE PAGAMENTO DUPLO
+`processAuctionInfluencerCommission` é chamado por `payOrderWithWallet` e **grava no
+store interno do Base44, não no Supabase de produção** — por isso está inerte
+(última execução real: 19/01/2026, R$ 0,06, antes da migração).
+
+**Os dois motores não se conhecem.** A trava de idempotência do motor legado procura
+um `commission_record` que o `finalizeAuctionCore` **nunca cria**.
+
+> ⛔ **Reativar o motor legado sem antes remover a chamada em `payOrderWithWallet`
+> faz o leilão pagar 10% em vez de 5%.**
+
+---
+
 ## 7. OUTRAS COMISSÕES CITADAS NA APRESENTAÇÃO
 
 - **Venda de licença** (Distribuidor sobre licenciados da região): **7%**
@@ -228,3 +270,31 @@ Confrontada a apresentação oficial contra o motor de comissão em produção:
 
 **Resultado: motor de comissão 100% alinhado ao documento oficial. Zero alteração
 necessária.**
+
+---
+
+## 11. BLOCO FINANCEIRO 1 — 04/08/2026
+
+Duas correções autorizadas pelo dono e aplicadas:
+
+**A) Trava anti-contágio no recálculo em lote** (`acertarComissaoVenda`)
+O modo lote filtrava só por status, então **depósito de carteira, crédito de
+passaporte, frete de vendedor, adesão e plano de expansão eram tratados como venda
+de produto** e recebiam 30% de comissão indevida. Exposição medida: **R$ 393,48**.
+Agora só entra `kind='loja'` ou `kind` nulo (vendas legadas), com dupla barreira
+(banco + código).
+
+Prova (dry_run após a correção): **20 → 12 vendas**, todas produto real. Nenhum
+depósito, passaporte ou frete na lista. Total de ajuste caiu para **R$ 0,38**
+(centavos de arredondamento em 2 vendas legítimas).
+
+**B) Leilão 3% → 5%** — ver seção 6-A.
+
+Investigação prévia obrigatória (só leitura) provou que **não existe pagamento duplo
+em produção**: o caminho real de pagamento de arremate hoje é
+`settleAuctionBalance`, que **não paga comissão nenhuma** — só movimenta saldo.
+Único motor de comissão de leilão ativo: `finalizeAuctionCore` (martelo).
+
+**Regra transversal reafirmada: FRETE NUNCA COMISSIONA** — nem no leilão, nem na
+Loja Virtual. Verificado na Loja Virtual: `frete_vazou_para_base: "nao"` em todas as
+vendas auditadas.

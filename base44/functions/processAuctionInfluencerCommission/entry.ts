@@ -97,8 +97,15 @@ Deno.serve(async (req) => {
       influencer = await getOrCreateSiteOfficial(base44);
     }
 
-    // Calcula 3%
-    const INFLUENCER_PERCENT = 3.0;
+    // 💰 5% — REGRA OFICIAL (04/08/2026): leilão paga 5%, só venda direta, uma pessoa.
+    // ⚠️ ESTE MOTOR ESTÁ INATIVO EM PRODUÇÃO. Ele grava via base44.asServiceRole.entities,
+    // que aponta pro store interno do Base44 — NÃO pro Supabase de produção. Última
+    // execução real: 19/01/2026 (R$ 0,06), antes da migração. Quem paga comissão de
+    // leilão hoje é api/_lib/finalizeAuctionCore.js, no martelo.
+    // 🚨 NÃO REATIVAR sem antes remover a chamada em payOrderWithWallet: os dois motores
+    // não se conhecem e a trava de idempotência daqui (linha ~57) procura um registro que
+    // o finalizeAuctionCore nunca cria. Reativar = 10% pago em vez de 5%.
+    const INFLUENCER_PERCENT = 5.0;
     const commissionAmount = +(finalPrice * (INFLUENCER_PERCENT / 100)).toFixed(2);
 
     if (commissionAmount <= 0) {

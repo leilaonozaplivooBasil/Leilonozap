@@ -256,9 +256,25 @@ Deno.serve(async (req) => {
     if (body.lote) {
       const desde = body.desde || '2026-07-14';
       const limite = Math.min(Number(body.limite) || 500, 1000);
-      const vendasRes = await sb(`catalog_sales?select=*&status=in.(paid,shipped,delivered)&created_date=gte.${desde}&order=created_date.asc&limit=${limite}`);
+      // 🛡️ TRAVA ANTI-CONTÁGIO (04/08/2026 — autorizada pelo dono)
+      // A consulta filtrava SÓ por status. Resultado: depósito de carteira, crédito de
+      // passaporte, frete de vendedor, adesão e plano de expansão entravam no recálculo
+      // como se fossem venda de produto — e ganhavam 30% de comissão indevida.
+      // REGRA OFICIAL: comissão SÓ em venda confirmada de produto.
+      // Aceita: kind='loja' (venda de catálogo) e kind NULL (vendas antigas legítimas,
+      // criadas antes da coluna existir). Todo o resto fica FORA.
+      const vendasRes = await sb(`catalog_sales?select=*&status=in.(paid,shipped,delivered)&or=(kind.eq.loja,kind.is.null)&created_date=gte.${desde}&order=created_date.asc&limit=${limite}`);
       if (!vendasRes.ok) return Response.json({ error: 'falha ao ler catalog_sales', details: await vendasRes.text() }, { status: 500 });
-      const vendas = await vendasRes.json();
+      const brutas = await vendasRes.json();
+      // 🔒 Segunda barreira em código: se algum dia o filtro do banco falhar (coluna
+      // renomeada, cache de schema), nada que NÃO seja venda de produto passa daqui.
+      const NAO_E_VENDA = ['wallet_deposit', 'commission_deposit', 'passaporte', 'seller_freight', 'adesao', 'seller_adhesion', 'partner_plan'];
+      const vendas = (Array.isArray(brutas) ? brutas : []).filter((v: any) => {
+        const k = String(v?.kind ?? '').trim().toLowerCase();
+        if (NAO_E_VENDA.includes(k)) return false; // depósito/passaporte/frete/adesão/plano
+        return k === '' || k === 'loja';           // só venda de produto
+      });
+      const descartadas = (Array.isArray(brutas) ? brutas.length : 0) - vendas.length;
 
       const resultados: any[] = [];
       const porPessoa: Record<string, number> = {};
@@ -285,7 +301,8 @@ Deno.serve(async (req) => {
 
       return Response.json({
         success: true, modo: 'lote', dry_run: dryRun,
-        filtro: { desde, limite, status: 'paid/shipped/delivered' },
+        filtro: { desde, limite, status: 'paid/shipped/delivered', tipo: "SOMENTE venda de produto (kind='loja' ou nulo)", excluidos: NAO_E_VENDA },
+        registros_barrados_pela_trava: descartadas,
         vendas_analisadas: vendas.length, vendas_ajustadas: ajustadas, com_erro: comErro,
         total_creditado: totalCreditado,
         por_pessoa: Object.entries(porPessoa).filter(([, v]) => Math.abs(v) > 0.001).sort((a, b) => b[1] - a[1]).map(([nome, delta]) => ({ nome, delta })),
