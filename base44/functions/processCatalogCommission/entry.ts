@@ -77,7 +77,48 @@ async function buildAncestorChain(base44, anchorUser) {
   return chain; // ordem: âncora -> ... -> topo
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// ⛔ MOTOR APOSENTADO — QUARENTENA APLICADA EM 04/08/2026
+// ═══════════════════════════════════════════════════════════════════
+// Autorizado pelo dono (BLOCO QUARENTENA-MOTOR-LEGADO, 04/08/2026).
+//
+// POR QUE FOI APOSENTADO:
+//   1. PERCENTUAL ERRADO — usa totalPercent = 26.0 (linha ~230).
+//      A regra oficial é 30% = 20% cadeia telescópica + 10% topo
+//      institucional (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, seção 6).
+//   2. PLANO DE CARREIRA ANTIGO — a tabela ROLE_ORDER usa cargos que já
+//      não existem (kit_start, plano_lider, plano_lojista) e NÃO tem os
+//      cargos oficiais (Influenciador, Vendedor, Parceiro, Ponto de
+//      Retirada, Loja Física, Livoo Live). Também não implementa a
+//      cadeia telescópica nem o teto de 20%.
+//   3. VAZAMENTO HISTÓRICO — foi o autor dos 407 registros de comissão
+//      indevidos (R$ 295,50) em agosto/2026, gerados sobre itens NÃO
+//      comissionáveis (depósito de carteira, passaporte, frete).
+//      ⚠️ Esses 407 registros NÃO foram apagados — ficam intactos como
+//      prova, conforme docs/MARCO-OFICIAL-AGOSTO-2026.md.
+//   4. COLISÃO DE MOTORES — escrevia em commission_records (mesma tabela
+//      de api/_lib/storeFulfill.js), mas com 26% em vez de 30%.
+//
+// MOTOR OFICIAL QUE SUBSTITUI ESTE:
+//   • Venda nova (pagamento confirma) → api/_lib/storeFulfill.js (30%)
+//   • Recálculo/correção de venda     → acertarComissaoVenda (30%)
+//
+// O CORPO ABAIXO FOI MANTIDO INTACTO como registro histórico/auditável.
+// Ele NÃO executa mais: o retorno de quarentena barra tudo no início.
+// ⛔ NÃO reativar, NÃO "corrigir o 26 para 30" — corrigir exigiria
+//    reescrever a tabela de cargos inteira, e isso já existe pronto e
+//    validado no acertarComissaoVenda.
+// ═══════════════════════════════════════════════════════════════════
 Deno.serve(async (req) => {
+        // 🔒 TRAVA DE QUARENTENA — antes de QUALQUER leitura, cálculo ou escrita.
+        // Nada abaixo desta linha roda. Ver cabeçalho de aposentadoria acima.
+        return Response.json({
+          success: true,
+          disabled: true,
+          reason: 'motor legado aposentado (26% do plano antigo) — usar acertarComissaoVenda (30% oficial)',
+        });
+
+        // eslint-disable-next-line no-unreachable
         try {
           const base44 = createClientFromRequest(req);
           const payload = await req.json().catch(() => ({}));

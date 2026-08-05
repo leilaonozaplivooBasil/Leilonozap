@@ -44,7 +44,17 @@ Deno.serve(async (req) => {
     }
 
     // 3) Re-run commission processing
-    const recomputeRes = await base44.functions.invoke('processCatalogCommission', { sale_id: saleId });
+    // ⚠️ TROCA DE MOTOR — 04/08/2026 (BLOCO QUARENTENA-MOTOR-LEGADO, autorizado pelo dono).
+    // ANTES: invoke('processCatalogCommission') → motor LEGADO, totalPercent = 26.0,
+    //        com o plano de carreira antigo (kit_start/plano_lider/plano_lojista, sem
+    //        Influenciador/Vendedor/Parceiro, sem cadeia telescópica, sem teto de 20%).
+    // PROBLEMA: como o passo 2 acima APAGA as comissões da venda, este ponto era a
+    //        última porta capaz de rebaixar uma venda real de 30% para 26% — inclusive
+    //        furando a guarda de idempotência de api/_lib/storeFulfill.js.
+    // AGORA: acertarComissaoVenda → motor OFICIAL, 30% = 20% cadeia telescópica +
+    //        10% topo institucional (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, seção 6).
+    // dry_run: false porque este endpoint é explicitamente de aplicação (admin manual).
+    const recomputeRes = await base44.functions.invoke('acertarComissaoVenda', { sale_id: saleId, dry_run: false });
 
     // 4) Fetch final distribution for proof
     let distribution = null;
