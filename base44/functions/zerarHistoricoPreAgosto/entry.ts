@@ -77,6 +77,10 @@ Deno.serve(async (req_) => {
       'id,sale_id,sale_type,user_id,user_name,role,amount,status,created_date'
     );
     const vendas = await tudo('catalog_sales', 'id,kind,status,total_amount');
+    // 🛡️ Leilões entram na leitura por SEGURANÇA: comissão de leilão tem o sale_id
+    // apontando para `auctions`, não para `catalog_sales`. Sem carregar isso, toda
+    // comissão de leilão pareceria "órfã" e seria apagada indevidamente.
+    const leiloes = await tudo('auctions', 'id');
     const users = await tudo(
       'app_users',
       'id,full_name,email,commission_balance,catalog_commission_balance,total_commissions_generated'
@@ -85,6 +89,11 @@ Deno.serve(async (req_) => {
     const kindPorVenda: Record<string, string> = {};
     for (const v of vendas) kindPorVenda[v.id] = String(v.kind || '');
     const idsVendas = new Set(vendas.map((v: any) => v.id));
+    const idsLeiloes = new Set(leiloes.map((a: any) => a.id));
+
+    // 🔴 ÓRFÃ = o sale_id não existe NEM na loja NEM em leilões. É comissão sem
+    // venda de origem: saldo sem lastro, impossível de auditar ou abrir na tela.
+    const ehOrfa = (c: any) => !idsVendas.has(c.sale_id) && !idsLeiloes.has(c.sale_id);
 
     // 🎯 MODO A+ (padrão, decidido pelo dono em 04/08/2026):
     // além do pré-agosto, expurga também as comissões DE AGOSTO lançadas sobre item
@@ -94,7 +103,17 @@ Deno.serve(async (req_) => {
     // Para desligar e apagar só o pré-agosto: { expurgar_vazamento_agosto: false }.
     const expurgarVazamento = body.expurgar_vazamento_agosto !== false;
     const ehVazamento = (c: any) => NAO_COMISSIONAVEL.test(kindPorVenda[c.sale_id] || '');
-    const deveApagar = (c: any) => antesDoCorte(c) || (expurgarVazamento && ehVazamento(c));
+
+    // 🩹 CORREÇÃO 05/08/2026 — FURO ENCONTRADO NA 1ª EXECUÇÃO:
+    // a versão original só apagava por DATA ou por KIND. Uma órfã DE AGOSTO não tem
+    // kind (a venda-mãe não existe, então kindPorVenda dá undefined) e portanto
+    // escapava das duas peneiras. Resultado: 61 registros (R$ 41,48) sobreviveram
+    // à zeragem e ficaram como saldo sem lastro. Agora a órfã é critério próprio.
+    const expurgarOrfas = body.expurgar_orfas !== false;
+    const deveApagar = (c: any) =>
+      antesDoCorte(c) ||
+      (expurgarVazamento && ehVazamento(c)) ||
+      (expurgarOrfas && ehOrfa(c));
 
     const alvo = comissoes.filter(deveApagar);
     const preservado = comissoes.filter((c: any) => !deveApagar(c));
@@ -102,7 +121,8 @@ Deno.serve(async (req_) => {
     // ─── Motivo de exclusão, para o dono ver de onde vem o lixo ───
     const motivo = (c: any) => {
       const k = kindPorVenda[c.sale_id];
-      if (!idsVendas.has(c.sale_id)) return 'orfa_venda_inexistente';
+      if (ehOrfa(c)) return 'orfa_venda_inexistente';
+      if (idsLeiloes.has(c.sale_id)) return 'leilao_pre_agosto';
       if (NAO_COMISSIONAVEL.test(k || '')) {
         if (/passaporte/i.test(k)) return 'passaporte';
         if (/frete|freight/i.test(k)) return 'frete';
@@ -149,9 +169,15 @@ Deno.serve(async (req_) => {
 
     const relatorio = {
       corte_oficial: CORTE,
-      modo_expurgo: expurgarVazamento
-        ? 'A+ — pré-agosto + vazamento de agosto (depósito/passaporte/frete)'
-        : 'A — somente pré-agosto',
+      modo_expurgo: [
+        'pré-agosto',
+        expurgarVazamento ? 'vazamento de agosto (depósito/passaporte/frete)' : null,
+        expurgarOrfas ? 'órfãs de qualquer data (sem venda na loja nem em leilão)' : null,
+      ].filter(Boolean).join(' + '),
+      protecao_leilao: {
+        leiloes_carregados: idsLeiloes.size,
+        nota: 'Comissão de leilão NÃO é órfã: o sale_id dela vive em `auctions`. Carregada para não ser apagada por engano.',
+      },
       modo_saldo: modoSaldo === 'B' ? 'B — zerar tudo em 0,00' : 'A — recalcular pela soma do que sobra',
       a_excluir: {
         registros: alvo.length,

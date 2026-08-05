@@ -10,6 +10,38 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  */
 
 Deno.serve(async (req) => {
+  // ═══════════════════════════════════════════════════════════════════
+  // 🚫 QUARENTENA PERMANENTE — 05/08/2026 — NÃO REMOVER SEM AUTORIZAÇÃO
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  // POR QUE FOI TRAVADA:
+  //
+  //  1. 🔴 SEM QUALQUER CHECAGEM DE PERMISSÃO — não chamava `auth.me()` nem
+  //        validava role. Qualquer chamador conseguia criar venda e pagamento.
+  //
+  //  2. 🔴 CRIAVA VENDA FALSA DE R$ 100 em `catalog_sales` e marcava como `paid`,
+  //        além de um `MercadoPagoPayment` fictício. Suja a mesma tabela que
+  //        alimenta a comissão real e a conferência financeira.
+  //
+  //  3. 🔴 INVOCAVA `processCatalogCommission` — motor legado de 26%, já em
+  //        quarentena desde 04/08/2026.
+  //
+  //  4. 🔴 Media `valora_pay_balance`, campo depreciado (docs/VERDADE.md).
+  //
+  // ✅ COMO TESTAR COMISSÃO DO JEITO CERTO:
+  //    `acertarComissaoVenda` com { sale_id, dry_run: true } — motor oficial de
+  //    30%, Supabase de produção, ZERO escrita, sobre venda que existe de verdade.
+  //
+  return Response.json({
+    error: 'FUNÇÃO EM QUARENTENA PERMANENTE',
+    motivo: 'Sem checagem de permissão, criava venda e pagamento falsos em produção e chamava o motor legado de 26%.',
+    travada_em: '2026-08-05',
+    use_no_lugar: "acertarComissaoVenda com { sale_id, dry_run: true }",
+    documento: 'docs/VERDADE.md',
+  }, { status: 423 });
+
+  // ⛔ CÓDIGO ORIGINAL PRESERVADO ABAIXO APENAS COMO REGISTRO HISTÓRICO.
+  //    Inalcançável por causa do return acima. NÃO reativar.
   try {
     const base44 = createClientFromRequest(req);
 

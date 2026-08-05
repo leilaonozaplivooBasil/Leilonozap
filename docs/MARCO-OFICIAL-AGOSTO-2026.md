@@ -193,14 +193,33 @@ comissionou).
 
 | Medida | Antes | Depois |
 |---|---|---|
-| Registros de comissão no banco | 10.197 | **307** |
-| Valor total | R$ 19.537,40 | **R$ 101,70** |
-| Soma dos saldos das contas | R$ 149,23 | **R$ 101,70** |
+| Registros de comissão no banco | 10.197 | **246** |
+| Valor total | R$ 19.537,40 | **R$ 60,22** |
+| Soma dos saldos das contas | R$ 149,23 | **R$ 60,22** |
 | Comissão sobre item não-comissionável | R$ 295,50 | **R$ 0,00** |
-| `total_commissions_generated` | nulo/zero em 100% | **alimentado (18 contas)** |
+| Comissão órfã (sem venda de origem) | R$ 2.116,71 | **R$ 0,00** |
+| `total_commissions_generated` | nulo/zero em 100% | **alimentado (17 contas)** |
 
-**Os 307 registros restantes são 100% venda de produto de agosto/2026.**
-Saldo e extrato agora batem exatamente: R$ 101,70 = R$ 101,70.
+**Os 246 registros restantes são 100% venda de produto de agosto/2026, todos com
+venda-mãe rastreável.** Saldo e extrato batem exatamente: R$ 60,22 = R$ 60,22.
+
+### 7.2.1 ⚠️ Correção da 1ª passada (05/08/2026)
+
+A primeira execução parou em 307 registros / R$ 101,70 — mas **61 deles
+(R$ 41,48) eram órfãos**, em dois `sale_id` que não existem nem em
+`catalog_sales` nem em `auctions`.
+
+**Causa-raiz:** `deveApagar` peneirava por **data** e por **kind**. Uma órfã de
+agosto não tem `kind` (a venda-mãe não existe → `kindPorVenda` devolve
+`undefined`), então escapava das duas peneiras. O relatório *reportava* o motivo
+"órfã", o que mascarou o furo: as 214 que apareceram eram órfãs pré-agosto,
+pegas pela **data**, não pelo critério de órfã.
+
+**Correção:** órfã virou critério próprio (`expurgar_orfas`, ligado por padrão),
+e a função passou a carregar `auctions` — sem isso, **toda comissão de leilão
+pareceria órfã e seria apagada indevidamente**, porque o `sale_id` de leilão vive
+em `auctions`. Na execução, 149 leilões foram carregados e protegidos; nenhum
+registro de leilão foi tocado.
 
 ### 7.3 Por que modo A+ e não "só pré-agosto"
 

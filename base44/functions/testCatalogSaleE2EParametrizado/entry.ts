@@ -12,6 +12,50 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  */
 
 Deno.serve(async (req) => {
+  // ═══════════════════════════════════════════════════════════════════
+  // 🚫 QUARENTENA PERMANENTE — 05/08/2026 — NÃO REMOVER SEM AUTORIZAÇÃO
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  // Esta função era um MOTOR CLANDESTINO DE COMISSÃO. Foi descoberta ao ser
+  // sugerida como "teste ponta a ponta" e auditada ANTES de executar.
+  //
+  // POR QUE FOI TRAVADA (4 violações graves):
+  //
+  //  1. 🔴 PERCENTUAL ERRADO — reimplementava a tabela de 26% à mão, com o plano
+  //        de carreira ANTIGO (kit_start 1%, plano_lider 1%, plano_lojista 3%).
+  //        O oficial é 30% = 20% cadeia telescópica + 10% topo institucional
+  //        (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, seção 6).
+  //
+  //  2. 🔴 BANCO ERRADO — gravava via `asServiceRole.entities`, que aponta para o
+  //        store interno do Base44, NÃO para o Supabase de produção
+  //        (docs/VERDADE.md, seção 2). Escrevia num lugar que ninguém lê.
+  //
+  //  3. 🔴 CAMPO DEPRECIADO — creditava `valora_pay_balance`. "Valora Pay" está
+  //        descontinuado (docs/VERDADE.md).
+  //
+  //  4. 🔴 CRIAVA VENDA FALSA em produção e marcava como `paid`, sujando
+  //        `catalog_sales` — a mesma tabela que alimenta a comissão real.
+  //
+  // Executá-la HOJE reintroduziria exatamente o lixo que a ZERAGEM-HISTORICO de
+  // 04/08/2026 removeu (9.951 registros) — com o percentual errado, no banco
+  // errado, em cima de venda que não existe.
+  //
+  // ✅ COMO TESTAR COMISSÃO DO JEITO CERTO:
+  //    `acertarComissaoVenda` com { sale_id, dry_run: true } — motor oficial,
+  //    30%, Supabase de produção, ZERO escrita em modo dry_run.
+  //
+  return Response.json({
+    error: 'FUNÇÃO EM QUARENTENA PERMANENTE',
+    motivo: 'Motor clandestino de comissão: 26% (errado), banco interno (errado), valora_pay_balance (depreciado) e criava venda falsa em produção.',
+    travada_em: '2026-08-05',
+    percentual_que_aplicava: '26% com cargos obsoletos',
+    percentual_oficial: '30% = 20% cadeia telescópica + 10% topo institucional',
+    use_no_lugar: "acertarComissaoVenda com { sale_id, dry_run: true }",
+    documento: 'docs/VERDADE.md',
+  }, { status: 423 });
+
+  // ⛔ CÓDIGO ORIGINAL PRESERVADO ABAIXO APENAS COMO REGISTRO HISTÓRICO.
+  //    Está inalcançável por causa do return acima. NÃO reativar.
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);

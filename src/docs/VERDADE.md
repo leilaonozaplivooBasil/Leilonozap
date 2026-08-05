@@ -173,6 +173,8 @@ Ler esta tabela evita repetir erro que já custou horas.
 |---|---|---|
 | **QUARENTENA-MOTOR-LEGADO** | Travou `processCatalogCommission` (26%), trocou o recompute para `acertarComissaoVenda` (30%), arquivou a automação e removeu o DELETE prévio que causava crédito em dobro | ✅ 04/08/2026 |
 | **ZERAGEM-HISTORICO** | Excluiu **9.890** registros de comissão (**R$ 19.435,70**) e recalculou os saldos | ✅ 04/08/2026 |
+| **ZERAGEM-HISTORICO — 2ª PASSADA** | Corrigiu furo do filtro de órfãs e excluiu **61** registros residuais (**R$ 41,48**) | ✅ 05/08/2026 |
+| **QUARENTENA-TESTES-E2E** | Travou `testCatalogSaleE2E` e `testCatalogSaleE2EParametrizado` — motores clandestinos de 26% | ✅ 05/08/2026 |
 
 ---
 
@@ -188,11 +190,20 @@ feitos sobre item não-comissionável, porque violavam a regra nº 1 da seção 
 
 | Medida | Antes | Depois |
 |---|---|---|
-| Registros em `commission_records` | 10.197 | **307** |
-| Valor total | R$ 19.537,40 | **R$ 101,70** |
-| Soma dos saldos de comissão | R$ 149,23 | **R$ 101,70** |
+| Registros em `commission_records` | 10.197 | **246** |
+| Valor total | R$ 19.537,40 | **R$ 60,22** |
+| Soma dos saldos de comissão | R$ 149,23 | **R$ 60,22** |
 | Comissão sobre depósito/passaporte/frete | R$ 295,50 | **R$ 0,00** |
+| Comissão órfã (sem venda de origem) | R$ 2.116,71 | **R$ 0,00** |
 | `total_commissions_generated` | nulo em 100% das contas | **alimentado** |
+
+> ⚠️ **Foi preciso DUAS passadas.** A 1ª (04/08) deixou 307 registros / R$ 101,70,
+> mas **61 deles (R$ 41,48) eram órfãos** — o filtro só peneirava por data e por
+> `kind`, e uma órfã de agosto não tem `kind` (a venda-mãe não existe), então
+> escapava das duas. Corrigido em 05/08: **órfã virou critério próprio**, e a
+> função passou a carregar `auctions` para **não confundir comissão de leilão com
+> órfã** (o `sale_id` de leilão vive em `auctions`, não em `catalog_sales`).
+> Número final auditado: **246 registros = R$ 60,22 = soma dos saldos.**
 
 **Consequências permanentes desta decisão:**
 
@@ -206,6 +217,18 @@ feitos sobre item não-comissionável, porque violavam a regra nº 1 da seção 
    defeito, não histórico.
 5. A divergência histórica de R$ 205,89 e os 407 registros indevidos estão
    **encerrados** — foram eliminados na origem, não remendados.
+
+6. ⛔ **Motor de comissão em quarentena NUNCA é reativado sem autorização escrita.**
+   Já são **três**: `processCatalogCommission`, `testCatalogSaleE2E` e
+   `testCatalogSaleE2EParametrizado`. Todos aplicavam **26%** (o oficial é 30%) e
+   os dois últimos ainda gravavam no **banco interno** e criavam **venda falsa**
+   em produção. `backfillUserCatalogCommissions` depende do primeiro, então está
+   neutralizado por consequência.
+
+7. 🔴 **`resetAllCommissions` não tem `dry_run`.** Um POST de admin cancela TODOS
+   os `commission_records` e zera o saldo de TODAS as contas, sem simulação e sem
+   confirmação. Não está travada (pode ser legítima), mas **é a função mais
+   perigosa do projeto**. Não invocar por curiosidade.
 
 **Rastro:** `gravarRetratoAntesZeragem` (retrato pré-exclusão) e
 `zerarHistoricoPreAgosto` (executor, `dry_run: true` por padrão).
