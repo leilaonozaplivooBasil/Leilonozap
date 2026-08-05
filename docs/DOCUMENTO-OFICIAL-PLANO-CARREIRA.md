@@ -137,11 +137,47 @@ Ordem de resolução no checkout (PIX e cartão):
 4. Vendedor tem que **existir** no banco — senão a venda fica sem vendedor
    (nunca paga conta fantasma)
 
-### 5.2 Carteira migrada vence a árvore (executivo)
-Se a pessoa tem `executive_owner_id` definido (carteira migrada), esse executivo
-vence a travessia normal da árvore — para ela e para a sub-rede dela.
-Ordem: carteira própria → a própria pessoa é executiva → sobe pra quem indicou →
-executivo raiz (CEO).
+### 5.2 O EXECUTIVO É DESIGNADO À MÃO — A DESIGNAÇÃO VENCE A ÁRVORE
+**(regra oficial esclarecida pelo dono em 05/08/2026)**
+
+O executivo de conta **não é derivado da árvore**. Ele é uma **designação
+administrativa editável**: o admin abre a ficha da pessoa e escolhe/troca o
+executivo daquela linha (tela de rede → botão **Editar** → campo
+*Estrutura de Negócio (1% do Executivo)*, que exibe `Ribeiro — fixado`).
+
+Como isso nasceu (palavras do dono):
+> "O Luiz Santanna cadastrou todo mundo e teve que ir soltando. A linha de Bangu
+> é uma linha que vai precisar de um executivo e ele destinou o Ribeiro. O
+> sistema permite que eu escolha o executivo. **Então isso não é uma regra** — a
+> regra é que o sistema permite o Ribeiro ser executivo de uma linha que nasceu
+> da conta oficial. Assim como vamos poder mover outros, tirar do Luiz Santanna
+> e botar para outros."
+
+Portanto:
+- ✅ **`executive_owner_id` gravado é a FONTE DA VERDADE.** Vence a árvore, para a
+  pessoa e para toda a sub-rede dela.
+- ✅ Uma linha que **nasceu da Conta Oficial pode ter executivo diferente do
+  Luiz Santanna**. Isso é o recurso funcionando, não um defeito.
+- ✅ A designação é **transferível a qualquer momento** pelo admin. Mover o
+  executivo de uma linha é operação **prevista e legítima**.
+- ⚠️ **Unicidade:** uma pessoa/linha tem **um** executivo por vez.
+
+Ordem de resolução no motor: designação própria → a própria pessoa é executiva →
+sobe pra quem indicou → executivo raiz (CEO).
+
+#### ⛔ NÃO EXISTE a regra "quem vem da Conta Oficial é do Luiz Santanna"
+Essa inferência é **falsa** e nunca foi regra de negócio.
+
+🚨 **`auditarDesalinhamentoExecutivo` está construído sobre essa premissa falsa.**
+Ele compara a designação gravada contra o que a *árvore* sugere e chama de
+"desalinhado" o que na verdade está **certo**. Hoje ele acusa o
+**DISTRIBUIDOR BANGU** (`Ribeiro`, correto e fixado pelo dono) e recomenda
+`Ribeiro → LUIZ SANTANNA`.
+
+> ⛔ **NUNCA rodar `corrigirExecutivoEstrutura` com base na saída desse auditor.**
+> Aplicar a sugestão dele **desfaz a designação oficial da cadeia Bangu.**
+> O motor de comissão (`acertarComissaoVenda` / `resolveExecutivo.js`) está
+> **correto** — respeita a designação gravada. O defeito é só do auditor.
 
 ### 5.3 Trainee
 **Trainee é papel de mentoria — NÃO tem percentual de venda direta.** Fica fora da

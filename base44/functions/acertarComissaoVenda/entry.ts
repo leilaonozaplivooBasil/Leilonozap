@@ -41,8 +41,24 @@ const sb = (path: string, opts: RequestInit = {}) =>
 // Validado em 04/08/2026, 100% alinhado ao documento:
 //   Influenciador 5% · Vendedor 10% · Licenciado 13% · Parceiro 15%
 //   Ponto de Retirada 16% · Loja Física 19% · Distribuidor 20%
-//   Executivo 1% (recebe SOBRE A CADEIA, por fora dos 20%)
-//   Fórmula: 30% = 20% cadeia telescópica + 10% topo institucional
+//
+//   FÓRMULA OFICIAL:  30% = 20% (cadeia telescópica) + 10% (topo)
+//
+//   ⚠️ ATENÇÃO — O 1% DO EXECUTIVO ESTÁ DENTRO DOS 10% DO TOPO.
+//   Os 10% do topo se decompõem assim (confirmado pelo dono em 05/08/2026):
+//        1%  executivo de conta (sobre a estrutura dele) ....... PCT_EXECUTIVO
+//      + 9%  pools institucionais (CEO → fundadores) .......... soma de POOLS
+//      = 10% topo
+//   Por isso a constante POOLS soma 9,0 e NÃO 10,0 — o décimo ponto é o do
+//   executivo, lançado à parte (linha do `assignments` com role='executivo').
+//   Somar POOLS e achar "9%" e concluir que falta 1% é LEITURA ERRADA: o 1%
+//   do executivo é justamente o que fecha os 10%. Confirmado na venda real de
+//   R$ 101,98 → cadeia R$ 20,40 (20%) + exec R$ 1,02 (1%) + pools R$ 9,18 (9%)
+//   = R$ 30,60 = 30,0% exato.
+//   "por fora" do executivo significa fora dos 20% DA CADEIA — nunca fora dos 30%.
+// POOLS = os 9% institucionais. Somados ao 1% do executivo (PCT_EXECUTIVO,
+// logo abaixo) fecham os 10% do topo. NÃO "corrija" para somar 10 aqui —
+// isso pagaria 31% no total e estouraria o plano oficial.
 const POOLS = [
   { id: 'ceo', pct: 3.0 }, { id: 'livoo_live', pct: 2.0 }, { id: 'embaixador', pct: 1.0 },
   { id: 'conselheiro', pct: 1.0 }, { id: 'fundador', pct: 1.0 },
