@@ -67,6 +67,25 @@ Deno.serve(async (req) => {
       continue;
     }
 
+    // 🛡️ TRAVA DE DESIGNAÇÃO MANUAL (05/08/2026)
+    // A designação do executivo é MANUAL e é a fonte da verdade — vence a árvore
+    // (DOCUMENTO-OFICIAL-PLANO-CARREIRA, seção 5.2). Quem já tem executivo gravado
+    // foi designado por decisão administrativa e NÃO pode ser sobrescrito por
+    // engano (foi assim que o Ribeiro virou executivo da cadeia Bangu).
+    //
+    // ⚠️ Mover executivo entre linhas É recurso oficial e continua permitido —
+    // só exige intenção explícita: { forcar_troca: true }. Sem isso, protege.
+    if (antes && body.forcar_troca !== true) {
+      resultado.push({
+        nome: u.full_name,
+        status: 'designacao_manual_protegida',
+        executivo_atual_mantido: antes,
+        nao_gravado_para: RIBEIRO_ID,
+        como_trocar_de_verdade: 'enviar { forcar_troca: true, dry_run: false }',
+      });
+      continue;
+    }
+
     const novoCtx = { ...ctx, executive_owner_id: RIBEIRO_ID };
 
     if (dryRun) {

@@ -55,6 +55,50 @@ Deno.serve(async (req) => {
     const totalCommissionRecordsBefore = await countRows('commission_records');
     const totalAppUsers = await countRows('app_users');
 
+    // ─────────────────────────────────────────────────────────────────────
+    // 🛡️ TRAVA DE SEGURANÇA (05/08/2026) — mesmo padrão de zerarHistoricoPreAgosto.
+    // Antes desta trava, um único POST cancelava TODOS os commission_records e
+    // zerava o saldo de comissão de TODAS as contas, sem simulação nem confirmação.
+    // Agora: só executa com dry_run:false E confirmar:"CONFIRMO-RESET-TOTAL".
+    // Qualquer outra chamada devolve apenas o relatório do impacto — zero escrita.
+    // ─────────────────────────────────────────────────────────────────────
+    const body = await req.json().catch(() => ({}));
+    const dryRun = body.dry_run !== false;
+    const confirmado = body.confirmar === 'CONFIRMO-RESET-TOTAL';
+
+    if (dryRun || !confirmado) {
+      // Soma o impacto financeiro sem alterar nada
+      const saldos = await sbFetch('app_users?select=id,commission_balance,catalog_commission_balance,total_commissions_generated&limit=5000');
+      let somaCommission = 0, somaCatalog = 0, somaHistorico = 0, contasComSaldo = 0;
+      if (saldos.status === 200 && Array.isArray(saldos.body)) {
+        for (const u of saldos.body) {
+          const c = Number(u.commission_balance) || 0;
+          const k = Number(u.catalog_commission_balance) || 0;
+          somaCommission += c;
+          somaCatalog += k;
+          somaHistorico += Number(u.total_commissions_generated) || 0;
+          if (c !== 0 || k !== 0) contasComSaldo++;
+        }
+      }
+      return Response.json({
+        success: true,
+        modo: 'SIMULACAO — NADA FOI ALTERADO',
+        motivo: dryRun
+          ? 'dry_run não veio como false (default é simulação)'
+          : 'campo confirmar ausente ou diferente de "CONFIRMO-RESET-TOTAL"',
+        impacto_se_executar: {
+          commission_records_que_seriam_cancelados: totalCommissionRecordsBefore,
+          contas_que_seriam_zeradas: totalAppUsers,
+          contas_com_saldo_de_comissao_hoje: contasComSaldo,
+          soma_commission_balance: Math.round(somaCommission * 100) / 100,
+          soma_catalog_commission_balance: Math.round(somaCatalog * 100) / 100,
+          soma_total_commissions_generated: Math.round(somaHistorico * 100) / 100,
+        },
+        para_executar_de_verdade: { dry_run: false, confirmar: 'CONFIRMO-RESET-TOTAL' },
+        wallet_untouched: true,
+      });
+    }
+
     // 1) Cancela TODOS os commission_records (sem filtro de usuário) — não exclui, só marca status
     const cancelRes = await sbFetch('commission_records?id=not.is.null', {
       method: 'PATCH',
