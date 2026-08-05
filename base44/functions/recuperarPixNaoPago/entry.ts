@@ -92,7 +92,13 @@ async function enviarEmail(para: string, assunto: string, html: string): Promise
       method: 'POST',
       headers: { 'api-key': KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Leilão NoZap', email: 'site@leilaonozap.com' },
+        // ⚠️ REMETENTE: só vale e-mail CADASTRADO no Brevo. Conferido em 05/08/2026 —
+        // o único remetente ativo na conta é `no-reply@leilaonozap.com`. Trocar por
+        // qualquer outro endereço (mesmo real e da empresa) faz o envio FALHAR calado.
+        sender: { name: 'Leilão NoZap', email: 'no-reply@leilaonozap.com' },
+        // Resposta vai para o time de relacionamento: cliente que responde o aviso
+        // precisa cair numa caixa que alguém lê, não no vazio do no-reply.
+        replyTo: { name: 'Relacionamento Leilão NoZap', email: 'relacionamento@leilaonozap.com' },
         to: [{ email: para }],
         subject: assunto,
         htmlContent: html,
