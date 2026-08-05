@@ -1,14 +1,16 @@
-// sendEmailCode — gera um código de 6 dígitos, guarda só o HASH no banco e envia por e-mail (Resend).
+// sendEmailCode — gera um código de 6 dígitos, guarda só o HASH no banco e envia por e-mail (Brevo).
 // Usado no cadastro (purpose:'signup') e no esqueci-a-senha (purpose:'reset'). SEM link mágico.
 import crypto from 'crypto';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const RESEND_KEY = process.env.RESEND_API_KEY;
-// PONTO 83 — o fallback tinha o e-mail de OUTRO projeto (@draisabeladias.com.br):
-// como MAIL_FROM nunca foi criada na Vercel, todo código de acesso saía com
-// remetente de terceiro e o usuário achava que era phishing. Domínio oficial: .net
-const FROM = process.env.MAIL_FROM || 'Leilão NoZap <noreply@leilaonozap.net>';
+// ⚠️ ANTES usava RESEND_API_KEY — chave que NUNCA existiu neste projeto, então
+// todo "Enviar Código" morria em 'Config do servidor ausente'. A infraestrutura
+// de e-mail real e verificada aqui é a Brevo, com o domínio .com assinado (DKIM).
+const BREVO_KEY = process.env.BREVO_API_KEY;
+const FROM_EMAIL = 'no-reply@leilaonozap.com';
+const FROM_NAME = 'Leilão NoZap';
+const REPLY_TO = 'relacionamento@leilaonozap.com';
 
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 
@@ -40,7 +42,7 @@ export default async function handler(req, res) {
     const email = String(body?.email || '').trim().toLowerCase();
     const purpose = body?.purpose === 'reset' ? 'reset' : 'signup';
     if (!email || !email.includes('@')) return res.status(400).json({ success: false, error: 'E-mail inválido' });
-    if (!SUPABASE_URL || !SR || !RESEND_KEY) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
+    if (!SUPABASE_URL || !SR || !BREVO_KEY) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     // No reset, só envia se o usuário existir (mas responde sucesso sempre, p/ não vazar quem tem conta)
     if (purpose === 'reset') {
@@ -58,9 +60,17 @@ export default async function handler(req, res) {
     await sb('email_codes', { method: 'POST', headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({ email, code_hash: sha(code), purpose, expires_at: expires }) });
 
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST', headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [email], subject: `${code} é seu código — Leilão NoZap`, html: emailHtml(code, purpose) }),
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { accept: 'application/json', 'api-key': BREVO_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: FROM_NAME, email: FROM_EMAIL },
+        to: [{ email }],
+        replyTo: { email: REPLY_TO, name: FROM_NAME },
+        subject: `${code} é seu código — Leilão NoZap`,
+        htmlContent: emailHtml(code, purpose),
+        textContent: `Seu código: ${code}\n\nExpira em 10 minutos. Se você não solicitou, ignore este e-mail.`,
+      }),
     });
     if (!r.ok) {
       const t = await r.text().catch(() => '');
