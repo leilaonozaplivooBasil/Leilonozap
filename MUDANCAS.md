@@ -12,6 +12,77 @@
 
 ---
 
+## 05/08/2026 — 🕵️ PONTO 88 (FASE 1): FECHAR O CERCO DOS ERROS — só captura
+
+### O que estava cego (medido por leitura, não por suposição)
+
+1. **Erro de servidor não deixava rastro NENHUM.** Todas as ~190 chamadas de servidor passam
+   por **um único funil** (`invokeFunction`, em `src/api/base44Adapter.js`), e ele engolia a
+   falha em 3 caminhos: 404/405/501 virava stub, erro 400/500 era devolvido como JSON que
+   **ninguém conferia**, e falha de rede virava stub. Inclui os fluxos de dinheiro —
+   pagamento, comissão, lance, frete, carteira.
+2. **O `GlobalMonitor` detectava 7 problemas e gravava só 1.** Loop infinito de renderização,
+   erro de hooks, requisição lenta, rate limit, excesso de requisições e erro de rede iam para
+   o estado da tela e para o **`localStorage` do dispositivo do usuário** — morriam no celular
+   dele. O dono nunca via.
+
+### O que mudou (2 arquivos, só observação)
+
+- `src/api/base44Adapter.js` — **apenas** `invokeFunction`. Passou a registrar em 4 assinaturas
+  distintas: `Servidor_Erro_Resposta` (400/500), `Servidor_Funcao_Inexistente` (rota não existe),
+  `Servidor_Resposta_Negocio` (404 com JSON de recusa) e `Servidor_Falha_Rede`. Cada registro leva
+  nome da função, status HTTP, mensagem, rota, URL da tela e se é celular.
+- `src/components/system/GlobalMonitor.jsx` — **apenas** `addIssue`. Cada problema detectado passa
+  também pelo gravador. `critical` → `error`; `warning` → `warning`. localStorage e alerta visual
+  **idênticos**.
+
+### 🔴 DUAS ARMADILHAS ENCONTRADAS E RESOLVIDAS
+
+1. **Dependência circular:** `logDedupe` importa o `base44`, que é o **próprio adapter**.
+   Import no topo criaria ciclo e podia quebrar o carregamento do app inteiro. Solução: o
+   gravador é carregado **sob demanda**, só no instante do erro. **Comentário-trava no código
+   proibindo mover para o topo.**
+2. **Detecção incompleta, achada NO TESTE (não em teoria):** a primeira versão só reconhecia
+   `success/ok/error`. O primeiro teste real devolveu um erro com as chaves `error_type` e
+   `detail` (formato da plataforma) e **passou em branco**. Corrigido para cobrir as duas formas.
+   Sem esse teste, teria ficado um furo silencioso.
+
+### ✅ VALIDAÇÃO COM NÚMEROS MEDIDOS
+
+| Teste | Resultado |
+|---|---|
+| Erro de servidor real provocado pelo funil | ✅ **gravou** (lido de volta do banco) |
+| **5 chamadas com o MESMO erro** | ✅ **1 registro** por assinatura |
+| Chamada com erro **DIFERENTE** | ✅ **registro próprio** (assinatura por função funciona) |
+| Retorno de `invokeFunction` | ✅ **idêntico** ao de antes em todos os casos testados |
+| Site computador + celular (abertura e Loja) | ✅ normal, **sem rolagem lateral**, zero erro de console |
+| Dados de teste | ✅ **3 criados, 3 apagados, 0 sobras** (confirmado por releitura) |
+
+### NÃO foi tocado
+
+`entities`, `auth`, `integrations`, `analytics`, `TABLE_MAP`, `FIELD_MAP`, `_routeWrite`,
+`invokeIntegration`, `UploadFile` · a intercepção de fetch, o `console.error` e o handler global
+do monitor · o visual do alerta · `logDedupe.js` · **comissão, carteira, saldo, pagamento, lance,
+checkout, frete, estoque, auth, RLS e banco de dados** — nenhuma linha, nenhuma migration,
+nenhuma tabela nova, nenhuma entidade nova.
+
+### ⚠️ Limites declarados desta fase
+
+- Erro que estoura **dentro** da função da Vercel antes de responder continua só no painel da
+  Vercel. O funil registra "o servidor respondeu erro", não o detalhe interno dele.
+- **Não** foi feito: painel de erros em tempo real (Fase 2) e varredura dos `catch` silenciosos
+  (Fase 3).
+- Validação rodou no ambiente de teste com usuário **deslogado** (caminho de gravação anônimo).
+  Com admin logado a gravação passa por outra rota de escrita — **não testado** nesta fase.
+
+### Risco
+
+🟡 **Médio** — mexe no funil por onde passa TODA chamada de servidor. Mitigado: o gravador nunca
+lança erro, é carregado sob demanda, o valor de retorno não muda em nenhum caminho, e a
+dependência circular foi identificada **antes** de rodar.
+
+---
+
 ## 05/08/2026 — ✅ BLOCO: RESTAURAR-HISTORICO-SISTEMA (`system_logs` era uma casca) — **RESOLVIDO E VALIDADO**
 
 ### O que foi descoberto (por teste real, não suposição)

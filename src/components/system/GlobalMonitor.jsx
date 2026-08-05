@@ -211,7 +211,31 @@ export default function GlobalMonitor() {
   }, []);
 
   // ============= ADICIONA ISSUE =============
+  // 🕵️ PONTO 88 (FASE 1): antes desta data, os 6 problemas detectados aqui
+  // (loop infinito, erro de hooks, requisição lenta, rate limit, excesso de
+  // requisições, erro de rede) NÃO chegavam ao banco — ficavam só no estado da
+  // tela e no localStorage do dispositivo do usuário. O dono nunca via.
+  // Agora também gravam, pelo MESMO porteiro anti-duplicação (60s).
+  // O localStorage e o alerta visual continuam EXATAMENTE como eram.
   const addIssue = (issue) => {
+    try {
+      registrarLog({
+        step: `Monitor_${issue?.type || 'desconhecido'}`,
+        status: issue?.level === 'critical' ? 'error' : 'warning',
+        message: String(issue?.message || 'problema detectado pelo monitor').slice(0, 300),
+        component_name: 'GlobalMonitor',
+        error_details: {
+          tipo: issue?.type,
+          nivel: issue?.level,
+          local: issue?.location,
+          detectado_em: issue?.timestamp,
+        },
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        is_mobile: typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : undefined,
+      });
+    } catch (_) { /* log jamais derruba o monitor */ }
+
     setIssues(prev => {
       // Evita duplicatas nos últimos 10 segundos
       const isDuplicate = prev.some(i => 

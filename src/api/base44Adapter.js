@@ -319,6 +319,32 @@ const entities = new Proxy(
 // Tolerante a "not implemented": se a function não existir como API route,
 // retorna { ok: false, error: 'not_implemented' } em vez de throw — mantém
 // a UI viva enquanto a migração das ~190 functions Base44 está em andamento.
+// ─────────────────────────────────────────────────────────────
+// 🕵️ PONTO 88 (FASE 1) — REGISTRO DE FALHA DE SERVIDOR
+//
+// Este é o FUNIL ÚNICO de todas as chamadas de servidor do app (~190 funções).
+// Antes desta data, TODA falha de servidor era engolida aqui: 404/501 virava
+// stub, erro 500 era devolvido como JSON que ninguém conferia, e falha de rede
+// virava stub. Nenhuma deixava rastro — inclusive nos fluxos de dinheiro
+// (pagamento, comissão, lance, frete, carteira).
+//
+// ⚠️ POR QUE O IMPORT É SOB DEMANDA (e não no topo do arquivo):
+// `logDedupe` importa `base44`, que é ESTE arquivo → import no topo cria
+// DEPENDÊNCIA CIRCULAR e pode quebrar o carregamento do app inteiro.
+// Carregar só no momento do erro corta o ciclo. NÃO mover para o topo.
+//
+// 🔒 REGRA INVIOLÁVEL: registrar NUNCA pode mudar o comportamento. Se o log
+// falhar, falha calado — o valor de retorno de invokeFunction é idêntico ao
+// de antes em todos os casos.
+// ─────────────────────────────────────────────────────────────
+function _logarFalhaServidor(dados) {
+  try {
+    import('@/lib/logDedupe')
+      .then((m) => { try { m.registrarLog(dados); } catch (_) {} })
+      .catch(() => {});
+  } catch (_) { /* jamais propaga */ }
+}
+
 async function invokeFunction(name, body, options = {}) {
   const url = `/api/functions/${name}`;
   try {
@@ -338,15 +364,66 @@ async function invokeFunction(name, body, options = {}) {
     // erro padrão da Vercel/HTML), senão a mensagem real do servidor é perdida.
     if (resp.status === 404 || resp.status === 405 || resp.status === 501) {
       if (parsed && typeof parsed === 'object') {
+        // Resposta de NEGÓCIO (ex: "leilão não encontrado") — não é falha de
+        // infraestrutura. Registra como aviso, não como erro, e só quando o
+        // servidor sinalizou insucesso.
+        // ⚠️ As chaves de erro variam por origem: função nossa usa
+        // success/ok/error; a plataforma devolve error_type/detail. Sem cobrir
+        // as duas formas, a falha entra como JSON válido e passa em branco
+        // (foi exatamente o que o primeiro teste desta fase mostrou).
+        if (
+          parsed.success === false || parsed.ok === false ||
+          parsed.error || parsed.error_type || parsed.detail
+        ) {
+          _logarFalhaServidor({
+            step: 'Servidor_Resposta_Negocio',
+            status: 'warning',
+            message: `[${name}] ${resp.status}: ${String(parsed.error || parsed.message || 'recusado pelo servidor').slice(0, 300)}`,
+            component_name: `funcao:${name}`,
+            error_details: { funcao: name, http_status: resp.status, resposta: parsed },
+            url: typeof window !== 'undefined' ? window.location.href : url,
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+            is_mobile: typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : undefined,
+          });
+        }
         return parsed;
       }
       if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
+      _logarFalhaServidor({
+        step: 'Servidor_Funcao_Inexistente',
+        status: 'error',
+        message: `[${name}] rota de servidor não existe (HTTP ${resp.status})`,
+        component_name: `funcao:${name}`,
+        error_details: { funcao: name, http_status: resp.status, rota: url, corpo: String(text || '').slice(0, 500) },
+        url: typeof window !== 'undefined' ? window.location.href : url,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        is_mobile: typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : undefined,
+      });
       return { ok: false, error: 'not_implemented', name, status: resp.status };
     }
     // As functions já respondem com JSON detalhado (success:false, conflict, message)
     // mesmo em status 400/401/409/500 — devolve o JSON real; só lança erro genérico se
     // o corpo não for JSON válido.
     if (!resp.ok) {
+      // 🔴 Aqui mora o erro de servidor de verdade (400/401/409/500) — inclusive
+      // nos fluxos de dinheiro. Era o ponto MAIS cego do sistema.
+      _logarFalhaServidor({
+        step: 'Servidor_Erro_Resposta',
+        status: 'error',
+        message: `[${name}] HTTP ${resp.status}: ${String(
+          (parsed && (parsed.error || parsed.message || parsed.details)) || text || 'sem detalhe'
+        ).slice(0, 300)}`,
+        component_name: `funcao:${name}`,
+        error_details: {
+          funcao: name,
+          http_status: resp.status,
+          rota: url,
+          resposta: parsed || String(text || '').slice(0, 500),
+        },
+        url: typeof window !== 'undefined' ? window.location.href : url,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        is_mobile: typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : undefined,
+      });
       if (parsed && typeof parsed === 'object') return parsed;
       throw new Error(`Function ${name} failed: ${resp.status} ${text}`);
     }
@@ -354,6 +431,16 @@ async function invokeFunction(name, body, options = {}) {
   } catch (err) {
     if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
       if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' fetch falhou — stub`, err.message);
+      _logarFalhaServidor({
+        step: 'Servidor_Falha_Rede',
+        status: 'error',
+        message: `[${name}] não foi possível falar com o servidor: ${String(err?.message || '').slice(0, 200)}`,
+        component_name: `funcao:${name}`,
+        error_details: { funcao: name, rota: url, erro: String(err?.message || err), tipo: err?.name },
+        url: typeof window !== 'undefined' ? window.location.href : url,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        is_mobile: typeof navigator !== 'undefined' ? /Mobi|Android/i.test(navigator.userAgent) : undefined,
+      });
       return { ok: false, error: 'network_or_not_implemented', name };
     }
     throw err;
