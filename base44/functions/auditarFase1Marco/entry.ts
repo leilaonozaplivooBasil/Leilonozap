@@ -254,6 +254,62 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── 5) VAZAMENTO: comissão sobre item NÃO-COMISSIONÁVEL ───
+    // Regra oficial: só venda de produto comissiona. Depósito, passaporte e
+    // frete NUNCA. Aqui medimos o dano histórico por mês e por conta.
+    if (secao === 'VAZAMENTO') {
+      const NAO_COMISSIONAVEL = /deposit|wallet|passaporte|frete|freight/i;
+      const kindPorVenda: Record<string, string> = {};
+      for (const v of vendas) kindPorVenda[v.id] = String(v.kind || '(sem kind)');
+
+      const vazadas = comissoes.filter((c: any) => NAO_COMISSIONAVEL.test(kindPorVenda[c.sale_id] || ''));
+
+      // por kind
+      const porKind: Record<string, { registros: number; valor: number; vendas: Set<string> }> = {};
+      // por mês
+      const porMes: Record<string, { registros: number; valor: number }> = {};
+      // por conta beneficiada
+      const porConta: Record<string, { conta: string; registros: number; valor: number }> = {};
+
+      for (const c of vazadas) {
+        const k = kindPorVenda[c.sale_id];
+        porKind[k] = porKind[k] || { registros: 0, valor: 0, vendas: new Set() };
+        porKind[k].registros++;
+        porKind[k].valor = r2(porKind[k].valor + (Number(c.amount) || 0));
+        porKind[k].vendas.add(c.sale_id);
+
+        const mes = String(c.created_date || '').slice(0, 7) || '(sem data)';
+        porMes[mes] = porMes[mes] || { registros: 0, valor: 0 };
+        porMes[mes].registros++;
+        porMes[mes].valor = r2(porMes[mes].valor + (Number(c.amount) || 0));
+
+        const uid = c.user_id;
+        porConta[uid] = porConta[uid] || { conta: c.user_name || nome(uid), registros: 0, valor: 0 };
+        porConta[uid].registros++;
+        porConta[uid].valor = r2(porConta[uid].valor + (Number(c.amount) || 0));
+      }
+
+      return Response.json({
+        success: true,
+        item_5_vazamento: {
+          pergunta: 'Quanto foi comissionado indevidamente sobre item não-comissionável?',
+          regra_violada: 'Comissão só em venda confirmada de produto. Depósito, passaporte e frete NUNCA comissionam.',
+          total_registros_indevidos: vazadas.length,
+          valor_total_indevido: soma(vazadas, 'amount'),
+          por_tipo_de_item: Object.entries(porKind)
+            .sort((a, b) => b[1].valor - a[1].valor)
+            .map(([kind, v]) => ({ kind, registros: v.registros, valor: v.valor, vendas_distintas: v.vendas.size })),
+          por_mes: Object.entries(porMes)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([mes, v]) => ({ mes, registros: v.registros, valor: v.valor })),
+          por_conta_beneficiada: Object.entries(porConta)
+            .sort((a, b) => b[1].valor - a[1].valor)
+            .slice(0, 25)
+            .map(([user_id, v]) => ({ user_id, conta: v.conta, registros: v.registros, valor: v.valor })),
+        },
+      });
+    }
+
     // ─── RESUMO ───
     return Response.json({
       success: true,
