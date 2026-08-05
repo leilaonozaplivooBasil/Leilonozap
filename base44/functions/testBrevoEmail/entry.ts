@@ -204,7 +204,8 @@ Deno.serve(async (req) => {
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:14px 0 26px 0;">
           ${itemCheck('O disparo automático está <strong>ativo</strong>')}
-          ${itemCheck(`O domínio <strong>leilaonozap.com</strong> está assinando os envios`)}
+          ${/* já entra como link nosso: senão o Gmail autolinka e pinta de azul, fugindo do padrão */ ''}
+          ${itemCheck(`O domínio <a href="${SITE_URL}" style="color:${C.tinta};text-decoration:none;font-weight:bold;">leilaonozap.com</a> está assinando os envios`)}
           ${itemCheck('A resposta chega numa caixa lida por uma pessoa')}
         </table>
 
