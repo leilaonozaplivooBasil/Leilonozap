@@ -42,6 +42,20 @@ export function initSentry() {
       dsn,
       environment: 'production',
       integrations: [Sentry.browserTracingIntegration(), replay],
+      // 🔇 O registro do Service Worker do PWA (registerSW.js, gerado pelo plugin
+      // no build — não é código nosso) rejeita a promessa em alguns Android/Chrome
+      // Mobile. O site funciona normal; só o modo offline não registra naquele
+      // aparelho. Como o plugin não trata a rejeição, o Sentry recebia isso como
+      // "unhandled rejection" de alta prioridade e disparava e-mail toda vez.
+      // Aqui esse evento é descartado ANTES de sair do navegador. Nenhum outro
+      // erro é afetado — o PWA e o aviso de nova versão seguem funcionando.
+      beforeSend(event) {
+        try {
+          const assinatura = JSON.stringify(event.exception || {});
+          if (assinatura.includes('registerSW') || assinatura.includes('ServiceWorkerContainer')) return null;
+        } catch (_) { /* se não der pra inspecionar, envia normalmente */ }
+        return event;
+      },
       tracesSampleRate: 0.1,
       replaysSessionSampleRate: 0.1,
       replaysOnErrorSampleRate: 1.0,
