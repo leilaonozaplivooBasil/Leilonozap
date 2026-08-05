@@ -68,7 +68,11 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // 💸 Imagens FORA do precache: o plugin percorria e calculava hash de cada
+        // png/svg/webp em TODO build (custo de CPU de build na Vercel) e ainda
+        // empurrava tudo pro celular na primeira visita. As imagens continuam
+        // ganhando cache pelo runtimeCaching abaixo, sob demanda.
+        globPatterns: ['**/*.{js,css,html,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // SPA fallback do SW igual ao vercel.json: tudo que não é /api cai no index
         navigateFallback: '/index.html',

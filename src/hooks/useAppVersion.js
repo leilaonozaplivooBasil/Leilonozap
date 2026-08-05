@@ -9,7 +9,11 @@ import { useEffect, useRef, useState } from 'react';
 // checagem também acontece em 'visibilitychange' e 'focus' (voltar do banco).
 // Falha de rede é silenciosa — nunca aparece erro pro usuário.
 
-const INTERVALO = 60000; // 60s
+// 💸 Custo: eram 60s × cada aba aberta × cada usuário — muita requisição só pra
+// perguntar "mudou?". 5 minutos continua pegando o deploy novo rápido, e o
+// usuário que volta do background é checado NA HORA (visibilitychange/focus),
+// que é o caminho real de quase toda atualização percebida.
+const INTERVALO = 300000; // 5 min
 
 export function useAppVersion() {
   const [temAtualizacao, setTemAtualizacao] = useState(false);
