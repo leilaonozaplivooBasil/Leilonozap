@@ -77,11 +77,35 @@ no banco**. "O código envia o campo" **não** significa "o banco tem a coluna".
 
 | Tabela | Situação | Migration |
 |---|---|---|
-| `system_logs` | 🟡 **casca identificada em 05/08/2026** — nenhuma coluna de conteúdo; **todo** registro de log falhava | `supabase/migrations/20260805_system_logs_restaurar_colunas.sql` — **rodar no SQL Editor do Supabase** |
+| `system_logs` | 🟢 **RESOLVIDO em 05/08/2026** — colunas restauradas **e** permissão de escrita criada; gravação validada com registro real | `20260805_system_logs_restaurar_colunas.sql` + `20260805_system_logs_politica_insert.sql` — **ambos já executados** |
 | 8 tabelas financeiras | ⚠️ cascas ainda **não corrigidas** — bloco separado, exige autorização própria | — |
 
 > 📌 **Escrever o arquivo `.sql` não altera o banco.** Alteração de estrutura (DDL) só acontece
 > rodando o SQL no **SQL Editor do Supabase** ou via `supabase db push` no deploy.
+
+### 🔒 1.2 SEGUNDA TRAVA: coluna existe mas RLS bloqueia (aprendizado de 05/08/2026)
+
+Restaurar a coluna **não basta**. A tabela pode ter RLS ligada e **nenhuma política de escrita**.
+O erro muda de cara e é fácil confundir com o primeiro:
+
+```
+new row violates row-level security policy for table "<tabela>"
+```
+
+**Como diferenciar (regra de leitura de erro):**
+
+| Mensagem | Significa |
+|---|---|
+| `Could not find the '<coluna>' column` | a **coluna não existe** → falta migration de estrutura |
+| `new row violates row-level security policy` | a coluna **existe**; falta **política de permissão** |
+
+**Permissões atuais de `system_logs` (desenhadas propositalmente assim):**
+
+| Operação | Quem pode |
+|---|---|
+| `INSERT` | `anon` + `authenticated` (política `system_logs_insert_publico`) — o app precisa registrar erro mesmo com visitante deslogado |
+| `SELECT` | apenas admin / service_role |
+| `UPDATE` / `DELETE` | **ninguém** pelo app — log é **append-only** (imutável, à prova de adulteração). Limpeza só via `service_role`. |
 
 ---
 

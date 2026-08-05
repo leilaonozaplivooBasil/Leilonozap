@@ -12,7 +12,7 @@
 
 ---
 
-## 05/08/2026 — 🟡 BLOCO: RESTAURAR-HISTORICO-SISTEMA (`system_logs` era uma casca)
+## 05/08/2026 — ✅ BLOCO: RESTAURAR-HISTORICO-SISTEMA (`system_logs` era uma casca) — **RESOLVIDO E VALIDADO**
 
 ### O que foi descoberto (por teste real, não suposição)
 
@@ -44,8 +44,45 @@ derruba o fluxo do usuário quando falha. O silêncio escondeu a casca.
 ### ⚠️ Ordem obrigatória de aplicação
 
 Escrever o arquivo `.sql` **não executa nada**. DDL só acontece rodando o SQL no **SQL Editor
-do Supabase** (ou via `supabase db push` no deploy). Enquanto não rodar, o log continua não
-gravando — exatamente como está hoje, sem regressão.
+do Supabase** (ou via `supabase db push` no deploy). ✅ **Executado por Gabriel em 05/08/2026.**
+
+### 🔒 PARTE 2 — A SEGUNDA TRAVA (não estava prevista)
+
+Com as colunas criadas, a gravação **continuou falhando** — mas com **outro erro**:
+
+```
+new row violates row-level security policy for table "system_logs"
+```
+
+A tabela tinha RLS ligada e **nenhuma política de escrita**: as colunas existiam, mas ninguém
+tinha autorização para inserir — nem o app. Criada
+`supabase/migrations/20260805_system_logs_politica_insert.sql` (autorizada por Gabriel e
+executada em 05/08), com a política `system_logs_insert_publico`:
+
+| Operação | Quem pode | Por quê |
+|---|---|---|
+| `INSERT` | `anon` + `authenticated` | erro de front acontece também com visitante **deslogado** (vitrine da Recepção) — sem `anon`, justamente os erros mais críticos ficariam invisíveis |
+| `SELECT` | só admin / service_role | ninguém vê o log de ninguém |
+| `UPDATE` / `DELETE` | **ninguém** pelo app | log **append-only**, à prova de adulteração |
+
+**📌 Regra permanente de leitura de erro** (para não confundir as duas travas):
+`Could not find the '<coluna>' column` = **coluna não existe**.
+`new row violates row-level security policy` = coluna existe, **falta permissão**.
+
+### ✅ VALIDAÇÃO COM NÚMEROS MEDIDOS (05/08/2026, no app real)
+
+| Teste | Resultado |
+|---|---|
+| Gravar registro com **todos os 11 campos** | ✅ gravou |
+| Ler de volta e conferir **campo a campo** | ✅ **11/11 íntegros** (texto, número decimal, booleano e os 2 campos `jsonb`) |
+| **5 erros IDÊNTICOS** disparados no app | ✅ **1 registro** — porteiro anti-duplicação funcionando |
+| **1 erro DIFERENTE** | ✅ **1 registro** — erro distinto nunca é engolido |
+| Site (computador + celular) | ✅ abrindo normal, sem erro novo |
+| Dados de teste no banco | ✅ **0** — todos removidos ao final |
+
+**Descoberta secundária (positiva):** a tentativa de apagar log **pelo app** não teve efeito —
+confirmando na prática que o histórico é **imutável**. Limpeza dos registros de teste foi feita
+via `service_role` e verificada: **zero sobras**.
 
 ### NÃO foi tocado
 
@@ -68,7 +105,13 @@ gravar no formato que o app **já envia** hoje.
 
 🟡 **Médio** — banco de produção, MAS operação puramente **aditiva** e **idempotente**, em
 tabela de **LOG**. Nenhum fluxo financeiro (comissão, saldo, carteira, pedido, lance) lê
-`system_logs`. Pior cenário de falha = log continua não gravando, igual a hoje.
+`system_logs`. Pior cenário de falha = log continua não gravando, igual a antes.
+
+**Contrapartida declarada da política de INSERT:** qualquer visitante do site pode inserir
+linha em `system_logs`. É o comportamento padrão de log de erro em app web, e o volume fica
+limitado pelo porteiro anti-duplicação (`src/lib/logDedupe.js`). Leitura, edição e exclusão
+seguem fechadas. Se um dia isso incomodar, a alternativa é mandar o log por função de servidor
+— exige alterar código do front, é outro bloco.
 
 ---
 
