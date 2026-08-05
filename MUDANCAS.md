@@ -12,6 +12,67 @@
 
 ---
 
+## 05/08/2026 — 🔎 PONTO 89 (BLOCO 1): INVENTÁRIO DO BANCO ANTIGO — **100% LEITURA, NADA ALTERADO**
+
+### Natureza
+
+Auditoria de leitura. **Nenhum arquivo de código alterado, nenhum registro criado, alterado ou
+apagado.** Único arquivo escrito: este diário.
+
+### Descoberta central (medida, não suposta)
+
+Existem **dois bancos vivos**: o **Supabase** (oficial, coluna `created_at`) e o **store interno
+do Base44** (coluna `created_date`). O dado de NEGÓCIO do store interno está **congelado na
+migração** — mas o store interno **continua recebendo gravação HOJE**.
+
+| Entidade no store interno | Registro mais recente | Leitura |
+|---|---|---|
+| `SystemLog` | **05/08 16:58** (minutos antes da auditoria) | 🔴 **gravando agora** |
+| `DigitalWallet` | **30/07 23:10** — 3 carteiras criadas no mesmo segundo (lote) | 🟡 **tem saldo em R$** |
+| `AppUser` | 27/05 | congelado |
+| `CatalogSale` | 24/05 | congelado |
+| `CommissionRecord` | 21/05 | congelado |
+| `Auction` | 19/04 | congelado |
+
+### Quem ainda escreve no banco antigo (evidência: 120 registros de hoje, 05:14 → 16:58)
+
+| Função | Registros hoje | O que grava | Classificação |
+|---|---|---|---|
+| `systemHealthCheck` | **94** | `SystemLog` | 🟢 LOG — descartável |
+| `sendAuctionReminder24h` | **24** | `SystemLog` | 🟢 LOG — descartável |
+| `cleanExpiredCatalogSales` | **2** | `SystemLog` **+ cancela venda** | 🔴 **DADO DE NEGÓCIO** |
+
+### 🔴 DOIS ACHADOS GRAVES — REPORTADOS, **NÃO CORRIGIDOS**
+
+1. **`cleanExpiredCatalogSales` faz `CatalogSale.update(status:'canceled')` no store interno.**
+   É escrita de dado de negócio (cancelamento de venda) no banco errado. Pela regra do próprio
+   comando desta tarefa, **PAREI e não alterei** — exige autorização própria.
+2. **`sendAuctionReminder24h` LÊ `Auction`, `FavoriteAuction` e `AppUser` do store interno**, cujo
+   dado está congelado desde abril/maio. Por isso o log dele diz **"Notificados: 0"**: o lembrete
+   de 24h provavelmente **não avisa ninguém há meses**. Não é só destino de log — é a leitura que
+   está no banco errado. Mesmo caso em `systemHealthCheck`, que testa conectividade e conta erros
+   contra o banco **antigo** — ou seja, o health check **não mede o banco de produção**.
+
+### Veredito do inventário
+
+- ✅ **Pode ser apagado sem perda:** os registros de `SystemLog` do store interno (log puro).
+- ⚠️ **Exige sua decisão:** `DigitalWallet` do store interno tem **saldo em reais**
+  (ex.: R$ 23,98 · R$ 6,00 · R$ 75,10). Antes de apagar, é preciso confirmar que esses valores já
+  existem na Supabase — **não conferi isso neste bloco e não vou supor**.
+- ⛔ **Nada foi apagado.**
+
+### Limite declarado desta auditoria
+
+A varredura de "toda função que grava no store interno" foi feita **por evidência de gravação
+real** (quem apareceu no log), não por leitura das ~200 funções uma a uma. Função que grave no
+store antigo **sem gerar log** e que **não rodou nos últimos 7 dias** pode não estar nesta lista.
+
+### Risco
+
+🟢 **Baixo** — leitura pura.
+
+---
+
 ## 05/08/2026 — ✅ PONTO 88 (FASE 2B): O DIAGNÓSTICO VOLTOU A MOSTRAR OS LOGS
 
 ### O que mudou
