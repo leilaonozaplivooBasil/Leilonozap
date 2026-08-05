@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star, FileText } from 'lucide-react';
 import { Stars } from '@/components/loja/StarRating';
 import { imagemPedido, imagemFallback } from '@/lib/imagemPedido';
+import PagarNovamenteBotao from '@/components/catalog/PagarNovamenteBotao';
 
 // 🧩 Card de pedido da Loja Virtual — COMPARTILHADO entre MyCatalogOrders e a aba
 // "Meus Pedidos" do Profile (extraído em 25/07 pra acabar com a versão pobre do
@@ -144,6 +145,10 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
             </button>
           )
         )}
+
+        {/* 💳 PAGAR AGORA — recuperação de venda. Pedido aguardando pagamento pode
+            gerar um código PIX NOVO para o MESMO pedido (não cria pedido novo). */}
+        {order.status === 'pending_payment' && <PagarNovamenteBotao order={order} />}
 
         {/* EXCLUIR — pendentes e cancelados */}
         {onDeleteClick && (order.status === 'pending_payment' || order.status === 'canceled') && (
