@@ -1,7 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // Teste simples de envio de email via Brevo
-const BREVO_API_KEY = 'xsmtpsib-2dac89dc7b6c36da8498ca124e41003dfc53f32413c193b74ec22f3183ece960-JYNspueaUHRtbvGV';
+// A chave vive nos segredos do app (a antiga estava fixa aqui e já havia sido revogada).
+const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY') || '';
 
 Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -39,6 +40,8 @@ Deno.serve(async (req) => {
                     email: 'no-reply@leilaonozap.com'
                 },
                 to: [{ email: email }],
+                // Resposta do destinatário cai na caixa real de atendimento
+                replyTo: { email: 'relacionamento@leilaonozap.com', name: 'Leilão NoZap' },
                 subject: '🧪 Teste de Email - Leilão no Zap',
                 htmlContent: '<h1>Teste OK!</h1><p>Se você recebeu este email, a integração Brevo está funcionando.</p>'
             })
