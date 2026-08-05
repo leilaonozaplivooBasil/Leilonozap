@@ -139,6 +139,9 @@ export function buildAdminMenu(isSuperAdmin = false) {
       isCategory: true,
       items: [
         { title: "Diagnóstico do Sistema", pageName: "SystemDiagnostics", icon: Activity },
+        // 🛡️ Sentinel — assistente de monitoramento que já existia com rota
+        // protegida por admin, mas estava fora do menu (página órfã).
+        { title: "Sentinel (IA)", pageName: "SentinelNoZap", icon: ShieldCheck },
         { title: "Creditar Saldo (Teste)", pageName: "AdminCreditoTeste", icon: Wand2 },
         ...(isSuperAdmin
           ? [{ title: "Habilitar Painéis", pageName: "SuperAdminPanels", icon: SlidersHorizontal }]

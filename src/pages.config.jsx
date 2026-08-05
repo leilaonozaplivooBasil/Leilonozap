@@ -51,7 +51,6 @@ const ArremateDevolucoes = React.lazy(() => import('./pages/ArremateDevolucoes')
 const SejaVendedor = React.lazy(() => import('./pages/SejaVendedor'));
 const EditAuction = React.lazy(() => import('./pages/EditAuction'));
 const EditCatalogProduct = React.lazy(() => import('./pages/EditCatalogProduct'));
-const ErrorReport = React.lazy(() => import('./pages/ErrorReport'));
 const Financial = React.lazy(() => import('./pages/Financial'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const Home = React.lazy(() => import('./pages/Home'));
@@ -164,7 +163,6 @@ export const PAGES = {
     "SejaVendedor": SejaVendedor,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
-    "ErrorReport": ErrorReport,
     "Financial": Financial,
     "ForgotPassword": ForgotPassword,
     "Home": Home,

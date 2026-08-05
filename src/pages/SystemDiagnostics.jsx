@@ -9,6 +9,9 @@ import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, 
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import PortalPageHeader from '@/components/common/PortalPageHeader';
+// 🕵️ PONTO 88 (FASE 2) — resumo em português no topo. Só leitura; não altera
+// as abas, os filtros, a exportação nem as ações de reparo desta página.
+import ResumoErros24h from '@/components/system/ResumoErros24h';
 
 /**
  * 🩺 PÁGINA DE DIAGNÓSTICO DO SISTEMA
@@ -181,6 +184,8 @@ export default function SystemDiagnostics() {
             </>
           }
         />
+
+        <ResumoErros24h />
 
         {/* 🛠️ SEÇÃO DE AÇÕES DE REPARO */}
         <Card className="bg-emerald-900/10 border-emerald-500/30 mb-6">

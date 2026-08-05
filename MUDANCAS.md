@@ -12,6 +12,69 @@
 
 ---
 
+## 05/08/2026 — 📊 PONTO 88 (FASE 2): PAINEL DE ERROS + LIMPEZA DA ÁREA "SISTEMA"
+
+### O que foi feito (3 partes, só tela e menu)
+
+1. **Resumo em português no Diagnóstico do Sistema.** Componente NOVO em
+   `src/components/system/ResumoErros24h.jsx`, importado no topo de
+   `src/pages/SystemDiagnostics.jsx`. Mostra das últimas 24h: total de erros, total de
+   avisos, quantos vieram de celular e quantos de computador, os 5 problemas que mais
+   repetiram (agrupados) e um **destaque vermelho separado** quando o erro toca área de
+   dinheiro (pagamento, comissão, saldo, carteira, lance, frete, pedido). Só leitura.
+2. **Página falsa removida.** `src/pages/ErrorReport.jsx` e
+   `src/components/system/ErrorDiagnostic.jsx` apagados: eram um documento **estático**
+   com 10 erros escritos à mão, sem ler nada do banco, citando linhas de arquivo que já
+   não existem. Confirmado por leitura que só `pages.config.jsx` referenciava a página e
+   só `ErrorReport.jsx` importava o componente — as duas entradas saíram do arquivo de rotas.
+3. **Menu organizado.** `src/lib/adminMenu.js` — grupo "Sistema" ganhou **"Sentinel (IA)"**
+   (ícone lucide `ShieldCheck`) apontando para `SentinelNoZap`, que já existia com rota
+   protegida por admin mas estava **órfã**, fora do menu.
+
+### 🔴 DOIS DEFEITOS REAIS DESCOBERTOS NO TESTE
+
+1. **A coluna do banco é `created_at`, NÃO `created_date`.** Minha primeira versão ordenava
+   por `created_date` e o banco **recusou a consulta inteira** (`42703`). Corrigido para
+   `-created_at`, com comentário-trava no código.
+2. **O agrupamento nasceu inútil.** "Requisição lenta: 26252ms" e "…: 27469ms" contavam como
+   problemas diferentes → tudo aparecia como "1x". Passou a ignorar os números na
+   comparação. Depois da correção: **445x** e **55x** — agora serve para algo.
+
+### ✅ VALIDAÇÃO COM DADO REAL DO BANCO
+
+| Teste | Resultado |
+|---|---|
+| Resumo aparece com dado real | ✅ **500 avisos** reais nas 24h, conferido direto no banco |
+| Números da tela x números do banco | ✅ **batem** (0 erros / 500 avisos / 500 computador) |
+| Agrupamento por repetição | ✅ **445x** e **55x** após a correção |
+| Aviso de amostra em volume alto | ✅ aparece ("500 registros mais recentes") |
+| Abas, filtros, Exportar e Ações de Reparo | ✅ **intactos** |
+| Celular (sem rolagem lateral) | ✅ ok |
+| Rota da página falsa | ✅ removida do arquivo de rotas antes de apagar os arquivos |
+
+### ⚠️ ACHADO GRAVE — **NÃO CORRIGIDO** (fora do escopo autorizado)
+
+**A página Diagnóstico do Sistema já estava quebrada antes desta fase.** As 3 abas
+(`Sistema`, `CompareAQUI`, `Frontend`) mostram **(0)** porque a leitura própria dela também
+ordena por `created_date` — a mesma coluna inexistente. Ou seja: **existem 500 registros no
+banco e a tela mostrava zero.** O prompt desta fase proibiu explicitamente alterar a leitura
+de logs existente, então **deixei como está e estou reportando.** Precisa de autorização
+própria (troca de `-created_date` por `-created_at` em `SystemLog` e `ComparaiLog`).
+
+### NÃO foi tocado
+
+Comissão, carteira, saldo, pagamento, lance, checkout, frete, estoque, auth, RLS, banco,
+migrations, entidades · `base44Adapter.js`, `GlobalMonitor.jsx`, `logDedupe.js` · as abas,
+filtros, exportação e ações de reparo da página · nenhuma entidade, tabela ou função de
+servidor criada.
+
+### Risco
+
+🟡 **Médio** — tela e menu. O componente novo é só leitura e, se a consulta falhar, mostra o
+motivo em vez de derrubar a página.
+
+---
+
 ## 05/08/2026 — 🕵️ PONTO 88 (FASE 1): FECHAR O CERCO DOS ERROS — só captura
 
 ### O que estava cego (medido por leitura, não por suposição)
