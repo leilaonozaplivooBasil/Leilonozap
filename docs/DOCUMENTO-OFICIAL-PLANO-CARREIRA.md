@@ -278,6 +278,22 @@ catálogo porque **tem regra própria (20%)**, diferente da venda de produto (30
 | `commission_records` | motor Deno (`acertarComissaoVenda`) | venda de **produto** (30%) |
 | `commission_ledger` | motor Node/Vercel (`mpWebhook`, `commissions.js`, `storeFulfill.js`) | **adesão** (20%), bônus e cadeia direta |
 
+### 📊 ESTADO REAL DA `commission_ledger` (medido em 05/08/2026)
+
+Auditado via `auditarCommissionLedger` (função **somente-leitura**):
+
+> **A tabela existe e está VAZIA — 0 registros, R$ 0,00.**
+
+Duas conclusões diretas:
+
+1. ✅ **Os números da auditoria anterior estão COMPLETOS.** Não havia comissão
+   escondida na segunda tabela — os R$ 60,22 são o total real do sistema.
+2. ⚠️ **O caminho de comissão da adesão NUNCA RODOU em produção.** O código
+   existe e está correto na leitura, mas **jamais foi executado com dinheiro
+   real** — logo, está **NÃO VALIDADO na prática**. A primeira adesão paga de
+   verdade será o primeiro teste real desse motor. **Conferir manualmente a
+   comissão da primeira adesão** antes de confiar no fluxo.
+
 🚨 **Auditoria que olha só `commission_records` é CEGA para adesão e bônus.**
 Foi exatamente o que aconteceu na auditoria de 04–05/08/2026: as comissões de
 adesão não apareceram porque vivem na outra tabela. Toda auditoria financeira
