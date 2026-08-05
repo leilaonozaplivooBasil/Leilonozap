@@ -2,8 +2,9 @@
 // A chave vive nos segredos do app (a antiga estava fixa aqui e já havia sido revogada).
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY') || '';
 
-// Logo 3D oficial (PNG com fundo transparente → assenta sobre o cabeçalho escuro)
-const LOGO_URL = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/86bd7e4c3_image.png';
+// Logo 3D OFICIAL (martelo + caixa no balão verde, letreiro preto).
+// Letreiro é escuro → sempre exibida sobre placa BRANCA, nunca direto no verde escuro.
+const LOGO_URL = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/c4024e6c2_image.png';
 // Página principal (a vitrine de abertura) — é para cá que o botão leva
 const SITE_URL = 'https://leilaonozap.net';
 const EMAIL_CONTATO = 'relacionamento@leilaonozap.com';
@@ -91,11 +92,15 @@ function montarEmail({ etiqueta, titulo, subtitulo, corpoHtml, ctaTexto, ctaUrl,
 
                 <!-- CABEÇALHO ESCURO COM A LOGO 3D -->
                 <tr>
-                  <td align="center" bgcolor="${C.escuro}" style="background:${C.escuro};padding:38px 24px 34px 24px;">
-                    <!-- Se o app do cliente bloquear imagens, o alt aparece em branco e legível -->
-                    <a href="${SITE_URL}" style="text-decoration:none;">
-                      <img src="${LOGO_URL}" alt="LEILÃO NOZAP" width="228" style="display:block;width:228px;max-width:78%;height:auto;border:0;color:#ffffff;font-family:${FONTE};font-size:22px;font-weight:bold;letter-spacing:1px;">
-                    </a>
+                  <td align="center" bgcolor="${C.escuro}" style="background:${C.escuro};padding:30px 24px;">
+                    <!-- placa branca: o letreiro da logo é preto e sumiria no fundo escuro -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td align="center" bgcolor="${C.branco}" style="background:${C.branco};border-radius:14px;padding:16px 26px;">
+                        <a href="${SITE_URL}" style="text-decoration:none;">
+                          <img src="${LOGO_URL}" alt="LEILÃO NOZAP" width="248" style="display:block;width:248px;max-width:100%;height:auto;border:0;color:${C.tinta};font-family:${FONTE};font-size:22px;font-weight:bold;letter-spacing:1px;">
+                        </a>
+                      </td>
+                    </tr></table>
                   </td>
                 </tr>
 
@@ -184,9 +189,9 @@ function assinaturaMarca() {
           <tr>
             <td align="center" style="padding:22px 0 4px 0;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-                <td align="center" bgcolor="${C.escuro}" style="background:${C.escuro};border-radius:12px;padding:14px 26px;">
+                <td align="center" style="padding:0;">
                   <a href="${SITE_URL}" style="text-decoration:none;">
-                    <img src="${LOGO_URL}" alt="LEILÃO NOZAP" width="168" style="display:block;width:168px;height:auto;border:0;color:#ffffff;font-family:${FONTE};font-size:16px;font-weight:bold;letter-spacing:1px;">
+                    <img src="${LOGO_URL}" alt="LEILÃO NOZAP" width="160" style="display:block;width:160px;height:auto;border:0;color:${C.tinta};font-family:${FONTE};font-size:16px;font-weight:bold;letter-spacing:1px;">
                   </a>
                 </td>
               </tr></table>
