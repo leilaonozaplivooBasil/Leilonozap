@@ -27,23 +27,12 @@ import {
   Package,
   Wallet as WalletIcon,
   Map as MapIcon,
+  Heart,
 } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
-
-// Cargos de rede que têm Painel próprio e completo (/painel)
-const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado"];
-const REDE_META = {
-  distribuidor: { label: "DISTRIBUIDOR", title: "Painel do Distribuidor", icon: Truck },
-  loja_fisica: { label: "LOJA FÍSICA", title: "Painel da Loja Física", icon: Building2 },
-  ponto_retirada: { label: "PONTO DE RETIRADA", title: "Painel do Ponto de Retirada", icon: MapPin },
-  parceiro: { label: "PARCEIRO", title: "Painel do Parceiro", icon: Store },
-  licenciado: { label: "LICENCIADO", title: "Painel do Licenciado", icon: Briefcase },
-};
-function getRedeCargo(user) {
-  const levels = Array.isArray(user?.career_levels) ? user.career_levels : [];
-  // respeita a ordem de prioridade (distribuidor primeiro)
-  return REDE_CARGOS.find((c) => levels.includes(c)) || null;
-}
+// 🏷️ Selo e cargos de rede vêm da fonte ÚNICA compartilhada com o menu mobile —
+// era a duplicação que fazia a Loja Física aparecer como "LICENCIADO" aqui.
+import { getRedeCargo, REDE_META, getRoleBadge } from "@/lib/roleBadge";
 
 // Mapa de ícones (string → componente) — evita import dinâmico
 const ICON_MAP = {
@@ -69,16 +58,6 @@ const PANEL_ACCENT = {
   leiloeiro: { text: "text-red-300", border: "border-red-500/40", bg: "hover:bg-red-500/5", icon: "text-red-400" },
   admin: { text: "text-slate-200", border: "border-slate-500/40", bg: "hover:bg-slate-500/10", icon: "text-slate-300" },
   super_admin: { text: "text-yellow-300", border: "border-yellow-500/50", bg: "hover:bg-yellow-500/5", icon: "text-yellow-400" },
-};
-
-// Badge da role principal — pill com gradiente + brilho (acabamento premium)
-const ROLE_BADGE = {
-  super_admin: { label: "SUPER ADMIN", grad: "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.55)]", icon: Crown },
-  admin: { label: "ADMIN", grad: "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.55)]", icon: Crown },
-  licensee: { label: "LICENCIADO", grad: "bg-gradient-to-r from-blue-400 to-indigo-500", text: "text-white", glow: "shadow-[0_2px_10px_rgba(59,130,246,0.45)]", icon: Briefcase },
-  investidor: { label: "INVESTIDOR", grad: "bg-gradient-to-r from-amber-300 to-orange-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.45)]", icon: TrendingUp },
-  leiloeiro: { label: "LEILOEIRO", grad: "bg-gradient-to-r from-red-400 to-rose-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(239,68,68,0.45)]", icon: Hammer },
-  user: { label: "CLIENTE", grad: "bg-gradient-to-r from-emerald-400 to-green-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(16,185,129,0.45)]", icon: UserIcon },
 };
 
 function getInitials(name = "") {
@@ -153,17 +132,14 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
   const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
   const RedeIcon = redeMeta?.icon || Truck;
 
-  // Badge da role principal.
-  // ⚠️ CORREÇÃO: antes o cargo de rede só aparecia quando role === "user". Quem é
-  // Loja Física / Distribuidor / Ponto de Retirada mas tem role 'licensee' recebia
-  // o selo genérico "LICENCIADO", contradizendo a própria sidebar ("Loja Física").
-  // Agora o cargo de rede REAL tem prioridade — só Admin/Super Admin ficam acima.
+  // Selo do cargo — prioridade Admin > cargo de rede real > role genérica
   const roleKey = effectiveUser.role || "user";
-  const isAdminRole = roleKey === "admin" || roleKey === "super_admin";
-  const badge = (redeMeta && !isAdminRole)
-    ? { label: redeMeta.label, grad: "bg-gradient-to-r from-emerald-400 to-green-600", text: "text-white", glow: "shadow-[0_2px_10px_rgba(16,185,129,0.45)]", icon: redeMeta.icon }
-    : (ROLE_BADGE[roleKey] || ROLE_BADGE.user);
+  const badge = getRoleBadge(effectiveUser);
   const BadgeIcon = badge.icon;
+
+  // Painéis liberados (mesma regra do mobile). Quando o cargo de rede JÁ é
+  // licenciado, o card duplicaria o /painel dele — só esse é filtrado.
+  const panelCards = panels.filter((p) => !(redeCargo === "licenciado" && p.key === "licenciado"));
 
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -276,9 +252,42 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
         )}
 
-        <DropdownMenuSeparator className="bg-white/5 my-0" />
+        {/* ===== Acessar como... — mesmos cards do menu mobile (padrão único) =====
+            ⚠️ Antes o desktop resolvia os painéis mas NÃO os exibia: o admin ficava
+            sem acesso ao Painel do Licenciado / Lojista / Loja Virtual por aqui. */}
+        {panelCards.length > 0 && (
+          <div className="p-3 pb-0">
+            <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              {redeMeta ? "Também acessar como..." : "Acessar como..."}
+            </p>
+            <div className="space-y-1.5">
+              {panelCards.map((panel) => {
+                const accent = PANEL_ACCENT[panel.key] || PANEL_ACCENT.arrematante;
+                const Icon = ICON_MAP[panel.iconName] || UserIcon;
+                const subtitle = panel.key === "lojista" && effectiveUser.store_name
+                  ? `Loja: ${effectiveUser.store_name}`
+                  : panel.description;
+                return (
+                  <button
+                    key={panel.key}
+                    onClick={() => { setMenuOpen(false); navigate(panel.route); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-lg border ${accent.border} ${accent.bg} text-left transition-all duration-200`}
+                  >
+                    <Icon className={`w-4 h-4 ${accent.icon} flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] font-bold ${accent.text} truncate`}>{panel.title}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{subtitle}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-        {/* ===== Ações pessoais ===== */}
+        <DropdownMenuSeparator className="bg-white/5 mt-3 mb-0" />
+
+        {/* ===== Minha conta — itens idênticos ao menu mobile ===== */}
         <div className="p-2">
           <DropdownMenuItem
             onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
@@ -292,7 +301,7 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
             className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
           >
             <Gavel className="w-4 h-4" />
-            Painel do Arrematante
+            Meus Arremates
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
@@ -302,11 +311,18 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
             Carteira
           </DropdownMenuItem>
           <DropdownMenuItem
+            onClick={() => navigate(createPageUrl("Home") + "?favorites=1")}
+            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
+          >
+            <Heart className="w-4 h-4" />
+            Favoritos
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => navigate(createPageUrl("Profile"))}
             className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
           >
             <UserIcon className="w-4 h-4" />
-            Meu perfil
+            Meu Perfil
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onLogout}

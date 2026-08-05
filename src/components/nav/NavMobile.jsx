@@ -1,94 +1,43 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import {
-  LogOut,
-  User as UserIcon,
-  ShoppingCart as CartIcon,
-  Heart,
-  ShoppingBag,
-  Gavel,
-  Store,
-  Building2,
-  Briefcase,
-  TrendingUp,
-  Hammer,
-  Shield,
-  Crown,
-  ChevronDown,
-  ChevronRight,
-  Map,
-  Wallet as WalletIcon,
-  Package,
-  Truck,
-  MapPin,
-} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, User as UserIcon, ChevronRight, Map, Truck } from "lucide-react";
 import { resolveUserPanels } from "@/lib/panelResolver";
-import { SECTORS } from "@/lib/sectors";
-import SectorLink from "@/components/nav/SectorLink";
+import { getRedeCargo, REDE_META } from "@/lib/roleBadge";
 import MobileSectorTiles from "@/components/nav/MobileSectorTiles";
-
-const ICON_MAP = {
-  ShoppingBag,
-  Gavel,
-  Store,
-  Building2,
-  Briefcase,
-  TrendingUp,
-  Hammer,
-  Shield,
-  Crown,
-};
-
-const PANEL_ACCENT = {
-  loja_virtual: { text: "text-orange-300", icon: "text-orange-400", border: "border-orange-500/30" },
-  arrematante: { text: "text-emerald-300", icon: "text-emerald-400", border: "border-emerald-500/30" },
-  vendedor: { text: "text-purple-300", icon: "text-purple-400", border: "border-purple-500/30" },
-  lojista: { text: "text-fuchsia-300", icon: "text-fuchsia-400", border: "border-fuchsia-500/30" },
-  licenciado: { text: "text-blue-300", icon: "text-blue-400", border: "border-blue-500/30" },
-  investidor: { text: "text-amber-300", icon: "text-amber-400", border: "border-amber-500/30" },
-  leiloeiro: { text: "text-red-300", icon: "text-red-400", border: "border-red-500/30" },
-  admin: { text: "text-slate-200", icon: "text-slate-300", border: "border-slate-500/30" },
-  super_admin: { text: "text-yellow-300", icon: "text-yellow-400", border: "border-yellow-500/40" },
-};
-
-function getInitials(name = "") {
-  return (
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase() || "?"
-  );
-}
+import MobileUserHeader from "@/components/nav/MobileUserHeader";
+import MobilePanelCards from "@/components/nav/MobilePanelCards";
+import MobileAccountLinks from "@/components/nav/MobileAccountLinks";
 
 /**
- * 🛡️ NavMobile — Drawer público padrão LEILÃO NOZAP
+ * 📱 NavMobile — MENU MOBILE PADRÃO ÚNICO (todos os perfis usam o mesmo esqueleto)
  *
- * Estrutura vertical:
- *   • Header do usuário (avatar + nome + role badge) [se logado]
- *   • Links públicos: Leilões / Loja / Seja Licenciado
- *   • Carrinho
- *   • Acessar como... (cards de painel — só logado)
- *   • Meu perfil / Favoritos / Sair  [se logado]
- *   • Entrar  [se visitante]
+ *   1. Perfil        — avatar, nome, e-mail e selo do cargo real
+ *   2. Atalhos       — grade Comprar / Leilões / Lucre / Rank / Carrinho (igual desktop)
+ *   3. Visão Geral   — mapa do painel (só admin / super admin)
+ *   4. Meu Painel    — painel próprio do cargo de rede (quem tem)
+ *   5. Acessar como  — cards dos painéis liberados (TODOS, inclusive admin)
+ *   6. Minha Conta   — Pedidos, Arremates, Carteira, Favoritos, Perfil (iguais p/ todos)
+ *   7. Sair
+ *
+ * ⚠️ Antes cada perfil via um menu diferente: admin só tinha a Visão Geral (sem
+ * nenhum "acessar como"), o usuário via acordeões em caixa alta + Rank em card
+ * gigante + Carrinho solto, e Pedidos/Arremates/Favoritos apareciam só para alguns.
+ * Agora a estrutura é a mesma para todos — muda apenas o que o cargo libera.
  */
 export default function NavMobile({
   isOpen,
   onClose,
-  currentPageName,
   currentUser,
   onLoginClick,
   onLogout,
-  // props legadas — mantidas para compatibilidade
+  isAdmin,
+  // props legadas — mantidas para compatibilidade com o Layout
+   
+  currentPageName,
    
   finalMenuItems,
    
   isLoggedIn,
-   
-  isAdmin,
    
   isInvestidor,
    
@@ -101,9 +50,9 @@ export default function NavMobile({
   onShareClick,
 }) {
   const navigate = useNavigate();
-  const [openSector, setOpenSector] = React.useState(null);
-  // 🛒 Contador do carrinho igual ao do desktop (lido do mesmo localStorage do Layout)
-  const cartCountLocal = React.useMemo(() => {
+
+  // 🛒 Mesmo contador do desktop (lido do mesmo localStorage do Layout)
+  const cartCount = React.useMemo(() => {
     if (!isOpen) return 0;
     try {
       const c = JSON.parse(localStorage.getItem("catalogCart") || "[]");
@@ -114,40 +63,22 @@ export default function NavMobile({
   if (!isOpen) return null;
 
   const userLogged = !!(currentUser && currentUser.email);
-  const panels = userLogged ? resolveUserPanels(currentUser) : [];
-  // Cargo de rede → painel próprio em /painel
-  const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado"];
-  const REDE_TITLE = { distribuidor: "Painel do Distribuidor", loja_fisica: "Painel da Loja Física", ponto_retirada: "Painel do Ponto de Retirada", parceiro: "Painel do Parceiro", licenciado: "Painel do Licenciado" };
-  // 🧩 PONTO 76 (C3): mesmos ícones do UserAvatarMenu (zero emoji)
-  const REDE_ICON = { distribuidor: Truck, loja_fisica: Building2, ponto_retirada: MapPin, parceiro: Store, licenciado: Briefcase };
-  const redeCargo = userLogged && Array.isArray(currentUser.career_levels) ? REDE_CARGOS.find((c) => currentUser.career_levels.includes(c)) : null;
-  const fullName = currentUser?.full_name || "Usuário";
-  const email = currentUser?.email || "";
-  const initials = getInitials(fullName);
-  const avatarColor = currentUser?.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
-  const photoUrl = currentUser?.profile_photo_url || currentUser?.avatar_url;
+  const redeCargo = userLogged ? getRedeCargo(currentUser) : null;
+  const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
+  const RedeIcon = redeMeta?.icon || Truck;
 
-  const isActive = (pageName) => {
-    if (pageName === "Home" && currentPageName === "Home") return true;
-    if (pageName === "Catalog" && (currentPageName === "Catalog" || currentPageName === "CatalogProductDetails")) return true;
-    if (pageName === "Licensing" && currentPageName === "Licensing") return true;
-    return false;
-  };
+  // Painéis liberados. Quando o cargo de rede JÁ é licenciado, o card "Painel do
+  // Licenciado" sairia duplicado (o próprio /painel já é dele) — filtramos só esse.
+  const panels = userLogged
+    ? resolveUserPanels(currentUser).filter((p) => !(redeCargo === "licenciado" && p.key === "licenciado"))
+    : [];
 
-  const handlePanelClick = (route) => {
-    onClose();
-    navigate(route);
-  };
+  const go = (route) => { onClose(); navigate(route); };
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200" onClick={onClose} />
 
-      {/* Drawer */}
       <div
         className="fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] animate-in slide-in-from-right duration-300"
         style={{
@@ -159,67 +90,30 @@ export default function NavMobile({
         }}
       >
         <div className="flex flex-col h-full">
-          {/* ===== Header ===== */}
-          <div
-            className="flex items-center justify-between p-4"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-          >
+          {/* ===== Topo ===== */}
+          <div className="flex items-center justify-between p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <h2 className="text-xl font-bold text-white">Menu</h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg transition-colors hover:bg-white/5"
-              aria-label="Fechar menu"
-            >
+            <button onClick={onClose} className="p-2 rounded-lg transition-colors hover:bg-white/5" aria-label="Fechar menu">
               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          {/* ===== Bloco do usuário (se logado) ===== */}
-          {userLogged && (
-            <div
-              className="flex items-center gap-3 p-4"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-            >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base shadow-lg overflow-hidden flex-shrink-0"
-                style={{ background: photoUrl ? "transparent" : avatarColor }}
-              >
-                {photoUrl ? (
-                  <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">{fullName}</p>
-                <p className="text-xs text-gray-400 truncate">{email}</p>
-              </div>
-              {/* 👑 PONTO 76 (C3): selo dourado igual ao dropdown do avatar */}
-              {isAdmin && (
-                <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 px-2.5 py-1 font-slab text-[10px] font-bold uppercase tracking-wide text-black ring-1 ring-white/25 shadow-[0_2px_10px_rgba(245,158,11,0.55)]">
-                  <Crown className="h-3 w-3" />
-                  {currentUser?.role === "super_admin" ? "Super Admin" : "Admin"}
-                </div>
-              )}
-            </div>
-          )}
+          {/* ===== 1. Perfil ===== */}
+          {userLogged && <MobileUserHeader user={currentUser} />}
 
-          {/* ===== Content ===== */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            {/* === VISÃO GERAL (mesmo cartão do dropdown do desktop) === */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* ===== 2. Atalhos (todos os perfis, inclusive visitante) ===== */}
+            <p className="font-bold text-[10px] uppercase tracking-wider px-1 mb-2 text-gray-500">Atalhos</p>
+            <MobileSectorTiles onNavigate={onClose} cartCount={cartCount} />
+
+            {/* ===== 3. Visão Geral (admin) ===== */}
             {userLogged && isAdmin && (
               <button
-                onClick={() => {
-                  onClose();
-                  window.dispatchEvent(new CustomEvent("openMiniCanvas"));
-                }}
-                className="mb-2 flex min-h-[56px] w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all active:scale-[0.98]"
-                style={{
-                  background: "rgba(16,185,129,0.10)",
-                  border: "1px solid rgba(16,185,129,0.30)",
-                }}
+                onClick={() => { onClose(); window.dispatchEvent(new CustomEvent("openMiniCanvas")); }}
+                className="mb-1 flex min-h-[56px] w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all active:scale-[0.98]"
+                style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.30)" }}
               >
                 <Map className="h-5 w-5 flex-shrink-0 text-emerald-400" />
                 <div className="min-w-0 flex-1">
@@ -230,229 +124,42 @@ export default function NavMobile({
               </button>
             )}
 
-            {/* === ATALHOS PÚBLICOS DO ADMIN ===
-                O admin também é usuário: precisa chegar na vitrine, nos leilões e no
-                Rank Premiado pelo celular. Antes só existia a Visão Geral. */}
-            {userLogged && isAdmin && (
-              <MobileSectorTiles onNavigate={onClose} cartCount={cartCountLocal} />
-            )}
-
-            {/* === RANK PREMIADO (destaque — primeiro item) ===
-                🧹 PONTO 76 (C3): fora do menu do admin — o print do dropdown não o traz. */}
-            {!isAdmin && (
-            <Link
-              to="/rankpremiado"
-              onClick={onClose}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide text-yellow-300 hover:text-yellow-200 hover:translate-x-1 transition-all"
-              style={{
-                background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(217,119,6,0.08))",
-                border: "1px solid rgba(250,204,21,0.30)",
-              }}
-            >
-              <img src="/icons/trophy-3d.png" alt="" className="w-7 h-7 shrink-0 drop-shadow-[0_2px_6px_rgba(250,204,21,0.45)]" aria-hidden="true" />
-              <span>Rank Premiado</span>
-            </Link>
-            )}
-
-            {/* === SETORES (acordeão — mesma fonte do desktop) ===
-                🧹 PONTO 76: quem tem o canvas "Visão Geral" (admin/super admin) não vê
-                mais setores/painéis repetidos aqui — o canvas é o único ponto de entrada.
-                ⚠️ Para usuário comum o canvas NÃO existe, então o menu continua completo:
-                esconder para todos deixaria o cliente sem nenhuma navegação. */}
-            {!isAdmin && SECTORS.map((s) => {
-              if (s.noMenu) {
-                return (
-                  <SectorLink
-                    key={s.key}
-                    target={s.href}
-                    onClick={onClose}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide text-gray-300 hover:text-white transition-all duration-200"
-                  >
-                    {s.icon && <s.icon className="w-5 h-5 text-emerald-300 shrink-0" />}
-                    <span className="flex-1 text-left">{s.title}</span>
-                  </SectorLink>
-                );
-              }
-              const open = openSector === s.key;
-              return (
-                <div key={s.key}>
-                  <button
-                    onClick={() => setOpenSector(open ? null : s.key)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-slab text-base font-bold uppercase tracking-wide transition-all duration-200 ${
-                      open ? "text-emerald-300" : "text-gray-300 hover:text-white"
-                    }`}
-                    style={open ? { background: "rgba(16,185,129,0.1)", borderLeft: "3px solid rgba(16,185,129,0.5)" } : {}}
-                  >
-                    {s.icon && <s.icon className="w-5 h-5 text-emerald-300 shrink-0" />}
-                    <span className="flex-1 text-left">{s.title}</span>
-                    {s.live && (
-                      <span className="relative flex h-2 w-2" aria-hidden>
-                        <span className="animate-ping absolute h-full w-full rounded-full bg-red-500 opacity-75" />
-                        <span className="relative rounded-full h-2 w-2 bg-red-500" />
-                      </span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
-                  </button>
-                  {open && (
-                    <div className="pl-4 pb-1 space-y-0.5">
-                      {s.items.map((it) => (
-                        <SectorLink
-                          key={it.title}
-                          target={it}
-                          onClick={onClose}
-                          className="block px-4 py-2.5 rounded-xl hover:bg-white/5"
-                        >
-                          <p className="text-sm font-semibold text-gray-200">{it.title}</p>
-                          <p className="text-[11px] text-gray-500 leading-snug">{it.desc}</p>
-                        </SectorLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* === CARRINHO (PONTO 76: já está dentro da Visão Geral do admin) === */}
-            {!isAdmin && (
-            <Link
-              to={createPageUrl("Cart")}
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${
-                currentPageName === "Cart"
-                  ? "text-emerald-300"
-                  : "text-gray-400 hover:text-white hover:translate-x-1"
-              }`}
-              style={
-                currentPageName === "Cart"
-                  ? {
-                      background: "rgba(16,185,129,0.1)",
-                      borderLeft: "3px solid rgba(16,185,129,0.5)",
-                    }
-                  : {}
-              }
-            >
-              <CartIcon className="w-5 h-5" />
-              Carrinho
-            </Link>
-            )}
-
-            {/* === PAINEL PRÓPRIO (cargo de rede) === */}
-            {userLogged && redeCargo && (
+            {/* ===== 4. Meu Painel (cargo de rede) ===== */}
+            {userLogged && redeMeta && (
               <div className="pt-4 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="font-bold text-[10px] uppercase tracking-wider px-4 mb-2 text-gray-500">Meu Painel</p>
                 <button
-                  onClick={() => handlePanelClick("/painel")}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-green-500/50 text-left transition-all duration-200 hover:translate-x-1 min-h-[56px]"
+                  onClick={() => go("/painel")}
+                  className="w-full flex min-h-[56px] items-center gap-3 p-3 rounded-xl border border-green-500/50 text-left transition-all duration-200 active:scale-[0.98]"
                   style={{ background: "rgba(16,185,129,0.10)" }}
                 >
-                  {React.createElement(REDE_ICON[redeCargo] || Truck, { className: "w-5 h-5 text-green-400 flex-shrink-0" })}
+                  <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-extrabold text-green-300 truncate">{REDE_TITLE[redeCargo]}</p>
+                    <p className="text-sm font-extrabold text-green-300 truncate">{redeMeta.title}</p>
                     <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
                   </div>
                 </button>
               </div>
             )}
 
-            {/* === ACESSAR COMO... === */}
-            {userLogged && !isAdmin && panels.length > 0 && (
-              <div
-                className="pt-4 mt-3"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <p className="font-bold text-[10px] uppercase tracking-wider px-4 mb-3 text-gray-500">
-                  {redeCargo ? "Também acessar como..." : "Acessar como..."}
-                </p>
-                <div className="space-y-2">
-                  {panels.map((panel) => {
-                    const accent = PANEL_ACCENT[panel.key] || PANEL_ACCENT.arrematante;
-                    const Icon = ICON_MAP[panel.iconName] || UserIcon;
-                    let subtitle = panel.description;
-                    if (panel.key === "lojista" && currentUser.store_name) {
-                      subtitle = `Loja: ${currentUser.store_name}`;
-                    }
-                    return (
-                      <button
-                        key={panel.key}
-                        onClick={() => handlePanelClick(panel.route)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl border ${accent.border} text-left transition-all duration-200 hover:translate-x-1`}
-                        style={{ background: "rgba(255,255,255,0.02)" }}
-                      >
-                        <Icon className={`w-5 h-5 ${accent.icon} flex-shrink-0`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-bold ${accent.text} truncate`}>{panel.title}</p>
-                          <p className="text-[11px] text-gray-400 truncate">{subtitle}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* === AÇÕES PESSOAIS === */}
+            {/* ===== 5. Acessar como... ===== */}
             {userLogged && (
-              <div
-                className="pt-4 mt-3 space-y-1"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                {/* 📦 PONTO 76 (C3): admin ganha os mesmos atalhos do dropdown do avatar */}
-                {isAdmin && (
-                  <>
-                    <Link
-                      to={createPageUrl("MyCatalogOrders")}
-                      onClick={onClose}
-                      className="flex min-h-[48px] items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-emerald-300 transition-all duration-300 hover:translate-x-1 hover:text-emerald-200"
-                    >
-                      <Package className="w-5 h-5" />
-                      Meus Pedidos
-                    </Link>
-                    <Link
-                      to="/painel-arrematante"
-                      onClick={onClose}
-                      className="flex min-h-[48px] items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-emerald-300 transition-all duration-300 hover:translate-x-1 hover:text-emerald-200"
-                    >
-                      <Gavel className="w-5 h-5" />
-                      Painel do Arrematante
-                    </Link>
-                  </>
-                )}
-                <button
-                  onClick={() => { window.dispatchEvent(new CustomEvent('openWallet')); onClose(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-emerald-300 hover:text-emerald-200"
-                >
-                  <WalletIcon className="w-5 h-5" />
-                  Carteira
-                </button>
-                <Link
-                  to={createPageUrl("Profile")}
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
-                >
-                  <UserIcon className="w-5 h-5" />
-                  Meu perfil
-                </Link>
-                {/* 🧹 PONTO 76: Favoritos sai do menu do admin (fica na Visão Geral) */}
-                {!isAdmin && (
-                <Link
-                  to={createPageUrl("Home") + "?favorites=1"}
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
-                >
-                  <Heart className="w-5 h-5" />
-                  Favoritos
-                </Link>
-                )}
-              </div>
+              <MobilePanelCards
+                panels={panels}
+                storeName={currentUser.store_name}
+                titulo={redeMeta ? "Também acessar como..." : "Acessar como..."}
+                onGo={go}
+              />
             )}
 
-            {/* === ENTRAR === */}
+            {/* ===== 6. Minha Conta ===== */}
+            {userLogged && <MobileAccountLinks onClose={onClose} />}
+
+            {/* ===== Entrar (visitante) ===== */}
             {!userLogged && (
               <button
-                onClick={() => {
-                  onClose();
-                  onLoginClick();
-                }}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 mt-6 text-white"
+                onClick={() => { onClose(); onLoginClick(); }}
+                className="w-full flex min-h-[52px] items-center justify-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 mt-6 text-white active:scale-[0.98]"
                 style={{
                   background: "linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))",
                   border: "1px solid rgba(16,185,129,0.3)",
@@ -464,14 +171,11 @@ export default function NavMobile({
               </button>
             )}
 
-            {/* === SAIR === */}
+            {/* ===== 7. Sair ===== */}
             {userLogged && (
               <button
-                onClick={() => {
-                  onClose();
-                  onLogout();
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 mt-4 text-red-400/80 hover:text-red-300"
+                onClick={() => { onClose(); onLogout(); }}
+                className="w-full flex min-h-[48px] items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 mt-4 text-red-400/80 active:scale-[0.98]"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
                 <LogOut className="h-5 w-5" />
