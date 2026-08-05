@@ -1,19 +1,12 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Award, Shield, Store } from 'lucide-react';
+import { LICENSING_TABS } from '@/lib/licensingTabs';
 
 // 🧭 Rail vertical de ícones (estilo Mercado Pago) — substitui a barra de
 // pílulas no topo. Controlado externamente via activeTab/onTabChange, sem
 // depender do TabsList do Radix.
-const TAB_ITEMS = [
-  { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard, show: () => true },
-  { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag, show: (ctx) => ctx.userLevels.includes('licenciado') || ctx.isAdmin },
-  { value: 'minha-loja', label: 'Minha Loja', icon: Store, show: (ctx) => (ctx.userLevels.includes('licenciado') || ctx.isSeller) && !ctx.isAdmin },
-  { value: 'plano-carreira', label: 'Carreira', icon: Award, show: () => true },
-  { value: 'admin', label: 'Admin', icon: Shield, show: (ctx) => ctx.isAdmin },
-];
-
-export default function LicensingSidebar({ user, shortName, activeTab, onTabChange, userLevels, isAdmin, isSeller }) {
-  const ctx = { userLevels, isAdmin, isSeller };
+// PONTO 85: a lista de itens vem de @/lib/licensingTabs (fonte única) e os 4
+// itens aparecem para TODOS — nada de filtro por cargo aqui.
+export default function LicensingSidebar({ user, shortName, activeTab, onTabChange }) {
   const initials = (shortName || '?').trim().split(' ').filter(Boolean).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   return (
@@ -26,7 +19,7 @@ export default function LicensingSidebar({ user, shortName, activeTab, onTabChan
       <p className="text-[10px] font-medium text-gray-500 text-center leading-tight mb-4 px-1 truncate w-full">{shortName}</p>
 
       <nav className="flex flex-col gap-1 w-full px-2">
-        {TAB_ITEMS.filter((item) => item.show(ctx)).map((item) => {
+        {LICENSING_TABS.map((item) => {
           const Icon = item.icon;
           const active = activeTab === item.value;
           return (

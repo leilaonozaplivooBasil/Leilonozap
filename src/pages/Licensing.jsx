@@ -47,6 +47,9 @@ import DashboardTabsList from '../components/licensing/DashboardTabsList';
 import LicensingSidebar from '../components/licensing/LicensingSidebar';
 import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
+// 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
+import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
+import { VALID_LICENSING_TABS } from '@/lib/licensingTabs';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
@@ -105,8 +108,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     try {
       const params = new URLSearchParams(window.location.search);
       const t = params.get('tab');
-      const VALID_TABS = ['visao-geral', 'catalogo', 'minha-loja', 'plano-carreira', 'admin'];
-      return VALID_TABS.includes(t) ? t : 'visao-geral';
+      return VALID_LICENSING_TABS.includes(t) ? t : 'visao-geral';
     } catch {
       return 'visao-geral';
     }
@@ -1023,22 +1025,13 @@ const DashboardContent = ({ user, isAdmin }) => {
         shortName={shortName}
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        userLevels={userLevels}
-        isAdmin={isAdmin}
-        isSeller={user.is_seller === true}
       />
 
       <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
         {/* 📱 Mobile: sidebar fica escondida, mantém a barra de abas no topo */}
         <div className="md:hidden mb-4">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <DashboardTabsList
-              isSaiDeBaixo={isSaiDeBaixo}
-              userLevels={userLevels}
-              isAdmin={isAdmin}
-              isSeller={user.is_seller === true}
-              myClientsCount={myClients.length}
-            />
+            <DashboardTabsList />
           </Tabs>
         </div>
 
@@ -1084,16 +1077,19 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
 
-        {(userLevels.includes('licenciado') || user.is_seller === true) && !isAdmin &&
+        {/* PONTO 85 — mantida por compatibilidade: links antigos com ?tab=minha-loja
+            continuam abrindo a administração da loja (que hoje vive no item Admin) */}
+        {!isAdmin &&
           <TabsContent value="minha-loja" className="space-y-6">
-            <MyStoreTab user={user} isSaiDeBaixo={isSaiDeBaixo} />
+            <MinhaLojaAdmin user={user} />
           </TabsContent>
         }
 
 
 
-        {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores */}
-        {(userLevels.includes('licenciado') || isAdmin) &&
+        {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores
+            PONTO 85 — liberada para TODOS: toda loja tem central de vendas. */}
+        {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               <TabsList className="bg-white border border-nz-marrom/20 flex-wrap h-auto gap-2 p-2">
@@ -1296,6 +1292,14 @@ const DashboardContent = ({ user, isAdmin }) => {
         <TabsContent value="visao-geral" className="space-y-6">
           <HowItWorksCard isSaiDeBaixo={isSaiDeBaixo} />
         </TabsContent>
+
+        {/* PONTO 85 — ABA ADMIN CONTEXTUAL: usuário comum administra a PRÓPRIA loja
+            (foto, nome e link pra compartilhar). Admin/super admin: painel completo. */}
+        {!isAdmin &&
+          <TabsContent value="admin" className="space-y-6">
+            <MinhaLojaAdmin user={user} />
+          </TabsContent>
+        }
 
         {isAdmin &&
           <TabsContent value="admin" className="space-y-6">
