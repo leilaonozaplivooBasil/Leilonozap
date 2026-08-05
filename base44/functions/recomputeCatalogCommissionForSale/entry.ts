@@ -30,27 +30,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2) Delete existing commission records for this sale
-    let deletedCount = 0;
-    try {
-      const existing = await base44.asServiceRole.entities.CommissionRecord.filter({ sale_id: saleId });
-      for (const r of existing || []) {
-        await base44.asServiceRole.entities.CommissionRecord.delete(r.id);
-        deletedCount += 1;
-      }
-    } catch (e) {
-      // If entity name differs in this app, surface error
-      return Response.json({ error: 'Failed to delete existing commission records', details: e.message }, { status: 500 });
-    }
+    // 2) ⛔ PASSO REMOVIDO — 04/08/2026 (TRAVA 4, autorizada pelo dono).
+    //
+    // ANTES: este passo apagava TODOS os CommissionRecord da venda antes do recálculo.
+    //
+    // POR QUE FOI REMOVIDO (risco de CRÉDITO EM DOBRO):
+    //   O motor oficial acertarComissaoVenda trabalha por DELTA: ele lê os
+    //   commission_records existentes (o que JÁ foi pago), calcula o devido e credita
+    //   apenas a diferença (devido − pago). Ele mesmo já apaga e regrava os lançamentos
+    //   da venda (acertarComissaoVenda/entry.ts, linha 194 — DELETE por sale_id).
+    //
+    //   Apagar os registros AQUI, antes de chamá-lo, fazia ele ler pago = 0 e creditar
+    //   o valor CHEIO em cima de um saldo que a pessoa já tinha recebido — inflando o
+    //   commission_balance a cada execução deste endpoint.
+    //
+    // Portanto: NÃO apagar nada aqui. A limpeza é responsabilidade do motor oficial,
+    // que faz DELETE + INSERT + ajuste de saldo de forma consistente.
+    //
+    // deletedCount fica 0 fixo só para não quebrar quem consome a resposta.
+    const deletedCount = 0;
 
     // 3) Re-run commission processing
     // ⚠️ TROCA DE MOTOR — 04/08/2026 (BLOCO QUARENTENA-MOTOR-LEGADO, autorizado pelo dono).
     // ANTES: invoke('processCatalogCommission') → motor LEGADO, totalPercent = 26.0,
     //        com o plano de carreira antigo (kit_start/plano_lider/plano_lojista, sem
     //        Influenciador/Vendedor/Parceiro, sem cadeia telescópica, sem teto de 20%).
-    // PROBLEMA: como o passo 2 acima APAGA as comissões da venda, este ponto era a
-    //        última porta capaz de rebaixar uma venda real de 30% para 26% — inclusive
-    //        furando a guarda de idempotência de api/_lib/storeFulfill.js.
+    // PROBLEMA: na época, o passo 2 acima APAGAVA as comissões da venda antes desta
+    //        chamada (removido pela TRAVA 4) — então este ponto era a última porta capaz
+    //        de rebaixar uma venda real de 30% para 26%, inclusive furando a guarda de
+    //        idempotência de api/_lib/storeFulfill.js.
     // AGORA: acertarComissaoVenda → motor OFICIAL, 30% = 20% cadeia telescópica +
     //        10% topo institucional (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, seção 6).
     // dry_run: false porque este endpoint é explicitamente de aplicação (admin manual).
