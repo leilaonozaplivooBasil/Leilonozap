@@ -32,11 +32,16 @@ export default function SystemDiagnostics() {
     setIsLoading(true);
     try {
       // Backend logs
-      const sysLogs = await SystemLog.list('-created_date', 200);
+      // ⚠️ TRAVA (PONTO 88 FASE 2B): a coluna real no banco é `created_at`.
+      // Ordenar por `created_date` faz o banco RECUSAR a consulta inteira
+      // (erro 42703) e a lista volta VAZIA em silêncio — foi por isso que esta
+      // aba mostrava (0) tendo 500 registros gravados. NÃO trocar de volta.
+      const sysLogs = await SystemLog.list('-created_at', 200);
       setSystemLogs(sysLogs);
 
       // Comparai logs
-      const compLogs = await ComparaiLog.list('-created_date', 200);
+      // ⚠️ Mesma trava: `created_at` é a coluna real, `created_date` não existe.
+      const compLogs = await ComparaiLog.list('-created_at', 200);
       setComparaiLogs(compLogs);
 
       // Frontend logs (localStorage)
@@ -149,7 +154,9 @@ export default function SystemDiagnostics() {
         <p className="text-gray-300 text-sm mb-2">{log.message}</p>
         
         <div className="flex items-center gap-4 text-xs text-gray-500">
-          <span>{new Date(log.created_date || log.timestamp).toLocaleString()}</span>
+          {/* Compatibilidade: registro antigo pode ter `created_date`; o banco
+              usa `created_at`. Mantidos os dois, sem remover nada. */}
+          <span>{new Date(log.created_date || log.created_at || log.timestamp).toLocaleString()}</span>
           {log.entity_id && <span>ID: {log.entity_id}</span>}
           {log.execution_time_ms && <span>⏱️ {log.execution_time_ms}ms</span>}
         </div>
