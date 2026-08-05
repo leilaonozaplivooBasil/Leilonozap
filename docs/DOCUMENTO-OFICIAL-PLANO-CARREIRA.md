@@ -251,6 +251,40 @@ um `commission_record` que o `finalizeAuctionCore` **nunca cria**.
 
 ---
 
+## 6-B. ADESÃO COMISSIONA — MAS POR MOTOR PRÓPRIO (verificado em 05/08/2026)
+
+**Dúvida levantada:** o documento diz que adesão paga comissão, mas o motor de
+catálogo (`acertarComissaoVenda`) lista `adesao` e `seller_adhesion` em
+`NAO_E_VENDA` e as barra. Parecia contradição. **Não é.**
+
+Verificado linha por linha em `api/functions/mpWebhook.js`:
+
+| `kind` | Função que trata | Comissão paga | Regra |
+|---|---|---|---|
+| `adesao` | `activateAdesao()` | ✅ **20% em dinheiro** ao vendedor que indicou | `role_in_sale: 'bonus_adesao'` |
+| `seller_adhesion` | `creditSellerAdhesion()` | ✅ **cadeia telescópica, teto 20%** para o `referred_by_id` | via `payDirectCommissions()` |
+
+✅ **Adesão comissiona — como manda o documento.** Ela só não passa pelo motor de
+catálogo porque **tem regra própria (20%)**, diferente da venda de produto (30%).
+
+> ⛔ **NUNCA remover `adesao`/`seller_adhesion` do `NAO_E_VENDA`.** Essa trava é a
+> proteção contra **PAGAMENTO DUPLO**: a adesão já foi paga a 20% pelo webhook;
+> se o motor de catálogo também a processasse, pagaria 30% por cima.
+
+### ⚠️ EXISTEM DUAS TABELAS DE COMISSÃO — atenção em toda auditoria
+
+| Tabela | Quem grava | O que contém |
+|---|---|---|
+| `commission_records` | motor Deno (`acertarComissaoVenda`) | venda de **produto** (30%) |
+| `commission_ledger` | motor Node/Vercel (`mpWebhook`, `commissions.js`, `storeFulfill.js`) | **adesão** (20%), bônus e cadeia direta |
+
+🚨 **Auditoria que olha só `commission_records` é CEGA para adesão e bônus.**
+Foi exatamente o que aconteceu na auditoria de 04–05/08/2026: as comissões de
+adesão não apareceram porque vivem na outra tabela. Toda auditoria financeira
+daqui pra frente **tem que ler as duas**.
+
+---
+
 ## 7. OUTRAS COMISSÕES CITADAS NA APRESENTAÇÃO
 
 - **Venda de licença** (Distribuidor sobre licenciados da região): **7%**

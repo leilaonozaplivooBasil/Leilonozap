@@ -200,8 +200,22 @@ comissionou).
 | Comissão órfã (sem venda de origem) | R$ 2.116,71 | **R$ 0,00** |
 | `total_commissions_generated` | nulo/zero em 100% | **alimentado (17 contas)** |
 
-**Os 246 registros restantes são 100% venda de produto de agosto/2026, todos com
-venda-mãe rastreável.** Saldo e extrato batem exatamente: R$ 60,22 = R$ 60,22.
+**Os 246 registros restantes são 100% venda de produto, todos com venda-mãe
+rastreável.** Saldo e extrato batem exatamente: R$ 60,22 = R$ 60,22.
+
+### 🔧 CORREÇÃO DE REDAÇÃO (05/08/2026)
+A frase original dizia "venda de produto **de agosto/2026**". **Estava errada.**
+As vendas-mãe são de **abril e maio/2026**; o que é de agosto é a **data do
+recálculo** — o motor grava `created_date` no momento em que roda. O Marco Zero
+corta pela data do **registro de comissão**, não pela data da venda. Nenhum
+número muda; só a descrição estava imprecisa.
+
+### 💠 DECISÃO SOBRE OS R$ 26,34 (05/08/2026) — NÃO PAGAR
+O `acertarComissaoVenda` em `dry_run` sobre 2026 aponta **R$ 26,34** faltando em
+6 vendas (todo destinado ao topo). **Decisão: não pagar.** Motivo: as vendas-mãe
+são de abril/maio — período declarado como teste. Pagar exigiria **recriar
+comissão pré-agosto**, violando o Marco Zero. Fica registrado como
+**diferença conhecida e intencional**, não como erro pendente.
 
 ### 7.2.1 ⚠️ Correção da 1ª passada (05/08/2026)
 
