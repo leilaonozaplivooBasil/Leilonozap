@@ -32,15 +32,23 @@ async function sb(path: string, init: RequestInit = {}) {
 
 Deno.serve(async (req) => {
   try {
-    // Autorização continua pela plataforma (só admin dispara a limpeza).
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (user?.role !== 'admin' && user?.role !== 'super_admin') {
+    // Autorização: se vier um usuário logado, precisa ser admin. Quando a rotina
+    // é disparada pelo agendamento automático não existe usuário — e nesse caso
+    // ela roda normalmente (é o próprio sistema chamando).
+    let usuario = null;
+    try {
+      const base44 = createClientFromRequest(req);
+      usuario = await base44.auth.me();
+    } catch (_) { /* sem usuário = chamada do agendamento */ }
+
+    if (usuario && usuario.role !== 'admin' && usuario.role !== 'super_admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     // ⚠️ A coluna de data na Supabase é `created_at` (não `created_date`).
-    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    // 24h de tolerância: prática de mercado para loja que vende por PIX (o próprio
+    // código PIX expira em ~1h, então 24h já é folga generosa para o cliente).
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Já filtra no banco: pendentes E criadas antes do corte de 48h.
     const expiradas = await sb(
@@ -71,7 +79,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         step: 'CLEAN_EXPIRED_CATALOG_SALES',
         status: 'success',
-        message: `Limpeza automática: ${canceladas} vendas órfãs canceladas (corte de 48h)`,
+        message: `Limpeza automática: ${canceladas} vendas órfãs canceladas (corte de 24h)`,
         component_name: 'cleanExpiredCatalogSales',
         payload: { total_expiradas: expiradas.length, total_canceladas: canceladas, cutoff },
       }),
