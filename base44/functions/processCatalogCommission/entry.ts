@@ -136,6 +136,25 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, skipped: true, reason: 'Sale not paid' });
     }
 
+    // 🛡️ TRAVA DE KIND — regra oficial (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md):
+    // comissão SÓ em venda confirmada de PRODUTO. Depósito de carteira, passaporte,
+    // frete, adesão e plano de parceiro NUNCA comissionam. Esta trava já existia em
+    // api/functions/mpWebhook.js mas nunca havia sido portada pra cá — o resultado foi
+    // 407 registros indevidos (R$ 295,50) em agosto/2026. Mesma regra, mesmo lugar.
+    const KINDS_NAO_COMISSIONAVEIS = new Set([
+      'wallet_deposit', 'commission_deposit', 'passaporte',
+      'seller_freight', 'seller_adhesion', 'partner_plan', 'adesao',
+    ]);
+    if (sale.kind && KINDS_NAO_COMISSIONAVEIS.has(String(sale.kind))) {
+      console.log(`🛡️ Venda ${saleId} é kind='${sale.kind}' — item NÃO comissionável. Nada distribuído.`);
+      return Response.json({
+        success: true,
+        skipped: true,
+        reason: `kind não comissionável: ${sale.kind}`,
+        sale_id: saleId,
+      });
+    }
+
     const totalAmount = Number((sale.total_amount ?? sale.sale_price ?? sale.amount ?? 0));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
       console.log('❌ [CommissionError] Sale:', sale);
