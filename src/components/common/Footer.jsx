@@ -10,8 +10,10 @@ export default function Footer() {
   const defaultFooter = {
     address: 'Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102',
     email: 'relacionamento@leilaonozap.com',
-    phone: '',
-    whatsapp: '',
+    phone: '(21) 98407-2064',
+    // Link de convite do WhatsApp Business (wa.me/message/...). O rodapé aceita
+    // tanto link completo quanto número puro — ver montagem do href abaixo.
+    whatsapp: 'https://wa.me/message/IVTKZKFQY6SBD1',
     is_active: true
   };
 
@@ -142,7 +144,7 @@ export default function Footer() {
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-emerald-400/70 flex-shrink-0" />
                     <a
-                      href={`tel:${footerSettings.phone}`}
+                      href={`tel:${String(footerSettings.phone).replace(/\D/g, '')}`}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
                       {footerSettings.phone}
@@ -154,12 +156,14 @@ export default function Footer() {
                   <div className="flex items-center gap-3">
                     <MessageCircle className="w-5 h-5 text-emerald-400/70 flex-shrink-0" />
                     <a
-                      href={`https://wa.me/${footerSettings.whatsapp}`}
+                      href={String(footerSettings.whatsapp).startsWith('http')
+                        ? footerSettings.whatsapp
+                        : `https://wa.me/${String(footerSettings.whatsapp).replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      {footerSettings.whatsapp}
+                      Falar no WhatsApp
                     </a>
                   </div>
                 )}
