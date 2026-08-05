@@ -12,6 +12,47 @@
 
 ---
 
+## 05/08/2026 — ✅ PONTO 89 (BLOCO 2): 2 ROTINAS SAÍRAM DO BANCO ANTIGO + CASCA DE FAVORITOS DESCOBERTA
+
+### Arquivos alterados
+
+| Arquivo | O que mudou |
+|---|---|
+| `base44/functions/systemHealthCheck/entry.ts` | Lê e loga na **Supabase** (era banco antigo) |
+| `base44/functions/sendAuctionReminder24h/entry.ts` | Lê leilões/favoritos/usuários da **Supabase**; janela de 24h filtrada no próprio banco; log em `system_logs`; passou a **denunciar** falha de leitura em vez de engolir |
+| `supabase/migrations/20260805_favorite_auctions_colunas_reais.sql` | **NOVO** — repara a tabela casca `favorite_auctions` (100% aditivo) |
+
+### 🔴 Tabela casca descoberta: `favorite_auctions`
+
+Existe na Supabase só com o esqueleto da migração (`id`, `base44_id`, `raw_base44`,
+`created_at`, `updated_at`). **`user_id`, `auction_id` e `context` nunca foram criadas.**
+Prova: `column favorite_auctions.user_id does not exist` (42703) e **0 registros**.
+Ou seja: **o botão "❤️ Favoritar" não grava em produção** — e o lembrete de 24h nunca acha
+favorito. Migração criada (só `ADD COLUMN IF NOT EXISTS` + índices, tabela vazia) —
+**precisa ser executada no SQL Editor.**
+
+### Prova de que o health check estava mentindo
+
+Antes (banco antigo): `3/3 OK`. Depois (Supabase, execução real hoje 17:18):
+`db_connectivity` ✅ · `recent_errors` ❌ **23 erros reais em 24h** · `close_expired_auctions` ✅
+→ status **degraded**. O "saudável" anterior era medição de banco morto.
+Lembrete 24h executado: `200`, `auctions_ending: 0` — correto, os ativos encerram 13/08 e 14/08.
+
+### ⛔ Deliberadamente NÃO tocado
+
+- **`cleanExpiredCatalogSales`** — cancela venda. Apontar pra Supabase faria a rotina começar a
+  **cancelar vendas pendentes REAIS**. 🔴 Exige autorização própria.
+- **Nenhum registro apagado.** As carteiras do banco antigo **não são espelho** da Supabase:
+  Eloha 23,98 × **78,40** · Iara 6,00 × **2,20** · Luciano 75,10 × **200,40**, e **2 usuários do
+  banco antigo não existem na Supabase**. Apagar seria destruir histórico sem análise.
+
+### Risco
+
+🟡 **Médio** — só diagnóstico e notificação. Nenhuma regra de comissão, saldo, pedido, checkout,
+frete, estoque ou auth foi tocada.
+
+---
+
 ## 05/08/2026 — 🔎 PONTO 89 (BLOCO 1): INVENTÁRIO DO BANCO ANTIGO — **100% LEITURA, NADA ALTERADO**
 
 ### Natureza
