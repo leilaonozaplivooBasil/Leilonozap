@@ -1,5 +1,9 @@
 # 📕 DOCUMENTO OFICIAL — PLANO DE CARREIRA E COMISSÕES · LEILÃO NOZAP
 
+> ⚠️ **Documento soberano: [`VERDADE.md`](VERDADE.md). Em caso de conflito, ele vence.**
+> Este documento é o **2º** na hierarquia e tem autoridade **exclusiva** em comissão,
+> percentual e hierarquia de cargos.
+
 > **STATUS: FONTE DE VERDADE ABSOLUTA · CONSULTA OBRIGATÓRIA**
 >
 > Fonte: `Leilao-NoZap-apresentacao-Oficial2.pdf` — apresentação oficial de negócio

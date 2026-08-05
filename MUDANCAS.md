@@ -1,5 +1,9 @@
 # 📋 MUDANÇAS — Diário de Bordo do Backend
 
+> ⚠️ **Documento soberano: [`docs/VERDADE.md`](docs/VERDADE.md). Em caso de conflito, ele vence.**
+> Este arquivo é o **4º** na hierarquia: **diário HISTÓRICO, NÃO É REGRA.** Ele conta o que foi
+> feito em cada data — não o que vale hoje. **Nunca extraia regra daqui.**
+
 > **Para o time do front:** toda alteração feita no backend é registrada aqui, em português,
 > da mais recente pra mais antiga. Leia este arquivo pra saber **o que mudou a cada entrega.**
 >

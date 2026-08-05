@@ -1,5 +1,8 @@
 # 📘 CONTRATO — Leilão NoZap
 
+> ⚠️ **Documento soberano: [`docs/VERDADE.md`](docs/VERDADE.md). Em caso de conflito, ele vence.**
+> Este CONTRATO é o **3º** na hierarquia de autoridade — mapa técnico, não fonte final de regra.
+
 > **Este é o mapa-mestre do projeto.** Se você chegou agora (time do front), **comece por aqui.**
 > Documento em português. Última revisão: 28/07/2026 (adicionado o índice das funções).
 
