@@ -173,6 +173,33 @@ function itemCheck(texto: string) {
         </tr>`;
 }
 
+/**
+ * Assinatura da marca no fim do corpo: fio fino + logo oficial (martelo e nome).
+ * Fundo claro atrás dela, porque o letreiro da logo é branco e desapareceria no branco puro.
+ */
+function assinaturaMarca() {
+  return `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:30px 0 0 0;">
+          <tr><td style="border-top:1px solid ${C.borda};font-size:0;line-height:0;height:1px;">&nbsp;</td></tr>
+          <tr>
+            <td align="center" style="padding:22px 0 4px 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td align="center" bgcolor="${C.escuro}" style="background:${C.escuro};border-radius:12px;padding:14px 26px;">
+                  <a href="${SITE_URL}" style="text-decoration:none;">
+                    <img src="${LOGO_URL}" alt="LEILÃO NOZAP" width="168" style="display:block;width:168px;height:auto;border:0;color:#ffffff;font-family:${FONTE};font-size:16px;font-weight:bold;letter-spacing:1px;">
+                  </a>
+                </td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:12px 0 0 0;font-family:${FONTE};font-size:13px;line-height:20px;color:#93A29A;">
+              Equipe Leilão NoZap
+            </td>
+          </tr>
+        </table>`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -204,8 +231,8 @@ Deno.serve(async (req) => {
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:14px 0 26px 0;">
           ${itemCheck('O disparo automático está <strong>ativo</strong>')}
-          ${/* já entra como link nosso: senão o Gmail autolinka e pinta de azul, fugindo do padrão */ ''}
-          ${itemCheck(`O domínio <a href="${SITE_URL}" style="color:${C.tinta};text-decoration:none;font-weight:bold;">leilaonozap.com</a> está assinando os envios`)}
+          ${/* o <span> no meio quebra a detecção automática do Gmail — sem isso ele pinta de azul e sublinha */ ''}
+          ${itemCheck(`O domínio <strong>leilaonozap<span>.</span>com</strong> está assinando os envios`)}
           ${itemCheck('A resposta chega numa caixa lida por uma pessoa')}
         </table>
 
@@ -218,7 +245,9 @@ Deno.serve(async (req) => {
               um <strong style="color:${C.tinta};">lembrete de leilão</strong> ou uma <strong style="color:${C.tinta};">confirmação de compra</strong>.
             </td>
           </tr>
-        </table>`,
+        </table>
+
+        ${assinaturaMarca()}`,
       ctaTexto: 'Visite o nosso site',
       ctaUrl: SITE_URL
     });
