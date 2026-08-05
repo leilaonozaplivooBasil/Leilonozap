@@ -12,6 +12,57 @@
 
 ---
 
+## 05/08/2026 — ✅ PONTO 88 (FASE 2B): O DIAGNÓSTICO VOLTOU A MOSTRAR OS LOGS
+
+### O que mudou
+
+`src/pages/SystemDiagnostics.jsx` — **duas linhas de ordenação**. A leitura de `SystemLog` e de
+`ComparaiLog` passou de `-created_date` para `-created_at`, com comentário-trava nos dois pontos.
+No cartão de log, a data ganhou `created_at` como alternativa
+(`created_date || created_at || timestamp`) — **nada removido**, só compatibilidade.
+
+### Por que
+
+A coluna `created_date` **não existe** nessas tabelas. O banco recusava a consulta inteira
+(`42703`) e a lista voltava **vazia em silêncio** — por isso as abas mostravam **(0)** tendo
+centenas de registros gravados. A tela de diagnóstico era decorativa: numa reclamação real de
+cliente, o dono abria e **não via nada**. É o **mesmo erro** que eu cometi na Fase 2 e corrigi no
+componente novo; aqui ele já existia antes.
+
+### ✅ RESULTADO MEDIDO — ANTES × DEPOIS
+
+| | Antes | Depois |
+|---|---|---|
+| Aba Sistema | **(0)** | **(200)** |
+| Aba CompareAQUI | **(0)** | **(200)** |
+| Bate com o banco? | — | ✅ **200 e 200**, conferido por consulta direta |
+
+Demais checagens: filtro de status funcionando (200 → **0** em ERROR → 200 em "Todos") ·
+**Exportar** ativo · **Ações de Reparo** (Encerrar Leilões Expirados / Health Check) ativas ·
+celular **sem rolagem lateral** · nenhum erro novo de console (os 2 presentes são
+pré-existentes e sem relação: checagem de sessão com usuário deslogado e aviso de propriedade
+de imagem no cabeçalho).
+
+### NÃO foi tocado
+
+Filtros, abas, contadores, Exportar, Ações de Reparo, layout, cores, textos ·
+`ResumoErros24h.jsx` · `base44Adapter.js` · `GlobalMonitor.jsx` · `logDedupe.js` · comissão,
+carteira, saldo, pagamento, lance, checkout, frete, estoque, auth, RLS · nenhuma migration,
+entidade, tabela ou função de servidor. **Zero escrita no banco.**
+
+### ⚠️ Observação registrada (sem ação)
+
+Com a tela funcionando, ficou visível que **100% do volume de avisos é um único problema
+repetido 500x: "Requisição lenta" do GlobalMonitor.** Pode ser lentidão real afetando cliente —
+investigação é outro ponto, outra autorização.
+
+### Risco
+
+🟡 **Médio** — só ordenação de leitura de tela. Pior cenário de falha seria continuar mostrando
+zero, exatamente como já estava.
+
+---
+
 ## 05/08/2026 — 📊 PONTO 88 (FASE 2): PAINEL DE ERROS + LIMPEZA DA ÁREA "SISTEMA"
 
 ### O que foi feito (3 partes, só tela e menu)
