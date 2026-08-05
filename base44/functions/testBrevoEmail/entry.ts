@@ -5,7 +5,8 @@ const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY') || '';
 
 // Logo 3D oficial (PNG com fundo transparente → vai sobre o cabeçalho escuro)
 const LOGO_URL = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/86bd7e4c3_image.png';
-const SITE_URL = 'https://leilaonozap.com';
+// Página principal (a vitrine de abertura) — é para cá que o botão leva
+const SITE_URL = 'https://leilaonozap.net';
 const EMAIL_CONTATO = 'relacionamento@leilaonozap.com';
 const WHATSAPP_URL = 'https://wa.me/message/IVTKZKFQY6SBD1';
 
@@ -48,7 +49,10 @@ function montarEmail({ titulo, subtitulo, corpoHtml, ctaTexto, ctaUrl }: {
           <!-- CABEÇALHO ESCURO COM A LOGO 3D -->
           <tr>
             <td align="center" style="background:#0C1F16;padding:32px 24px 28px 24px;">
-              <img src="${LOGO_URL}" alt="Leilão NoZap" width="240" style="display:block;width:240px;max-width:80%;height:auto;border:0;">
+              <!-- Se o app do cliente bloquear imagens, o alt aparece em branco e legível -->
+              <a href="${SITE_URL}" style="text-decoration:none;">
+                <img src="${LOGO_URL}" alt="LEILÃO NOZAP" width="240" style="display:block;width:240px;max-width:80%;height:auto;border:0;color:#ffffff;font-family:Helvetica,Arial,sans-serif;font-size:22px;font-weight:bold;letter-spacing:1px;">
+              </a>
             </td>
           </tr>
 
@@ -79,7 +83,7 @@ function montarEmail({ titulo, subtitulo, corpoHtml, ctaTexto, ctaUrl }: {
               <p style="margin:0;">
                 <a href="mailto:${EMAIL_CONTATO}" style="color:#1B7A48;text-decoration:none;">${EMAIL_CONTATO}</a><br>
                 <a href="${WHATSAPP_URL}" style="color:#1B7A48;text-decoration:none;">Falar no WhatsApp</a> &nbsp;·&nbsp; (21) 98407-2064<br>
-                <a href="${SITE_URL}" style="color:#1B7A48;text-decoration:none;">leilaonozap.com</a>
+                <a href="${SITE_URL}" style="color:#1B7A48;text-decoration:none;">leilaonozap.net</a>
               </p>
               <p style="margin:16px 0 0 0;font-size:12px;line-height:19px;color:#8A9891;">
                 Você recebeu este e-mail porque tem uma conta ou um pedido no Leilão NoZap.
@@ -131,8 +135,8 @@ Deno.serve(async (req) => {
           É este mesmo modelo que o cliente recebe ao ter um pedido aguardando pagamento,
           um lembrete de leilão ou uma confirmação de compra.
         </p>`,
-      ctaTexto: 'Ver os leilões de hoje',
-      ctaUrl: `${SITE_URL}/leiloes`
+      ctaTexto: 'Visite o nosso site',
+      ctaUrl: SITE_URL
     });
 
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
