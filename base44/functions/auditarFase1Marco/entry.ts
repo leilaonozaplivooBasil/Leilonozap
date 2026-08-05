@@ -208,11 +208,57 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── 4b) IDS EXATOS DO CONJUNTO A PRESERVAR (paginado) ───
+    // Separa por natureza da venda-mãe: DEPOSITO (não deveria comissionar,
+    // conforme regra oficial) x VENDA (produto/loja legítimo).
+    if (secao === 'IDS') {
+      const pagina = Math.max(1, Number(body.pagina) || 1);
+      const porPagina = 150;
+      const kindDe = (saleId: string) =>
+        String((vendasReais.find((v: any) => v.id === saleId) || {}).kind || '(sem kind)');
+      const ehDeposito = (saleId: string) => /deposit|wallet|passaporte|frete/i.test(kindDe(saleId));
+
+      const deposito = preservar.filter((c: any) => ehDeposito(c.sale_id));
+      const venda = preservar.filter((c: any) => !ehDeposito(c.sale_id));
+
+      const ordenado = [...preservar].sort((a: any, b: any) => String(a.id).localeCompare(String(b.id)));
+      const inicio = (pagina - 1) * porPagina;
+      const fatia = ordenado.slice(inicio, inicio + porPagina);
+
+      return Response.json({
+        success: true,
+        item_4b_ids_exatos: {
+          pergunta: 'Quais são os IDs exatos das comissões de agosto de dinheiro real?',
+          total_registros: preservar.length,
+          valor_total: soma(preservar, 'amount'),
+          separacao_por_natureza: {
+            DE_DEPOSITO_CARTEIRA: {
+              registros: deposito.length,
+              valor: soma(deposito, 'amount'),
+              alerta: 'Regra oficial: depósito NÃO comissiona. Este grupo é vazamento, não é receita.',
+            },
+            DE_VENDA_DE_PRODUTO: {
+              registros: venda.length,
+              valor: soma(venda, 'amount'),
+              nota: 'Único grupo legitimamente comissionável pela regra oficial.',
+            },
+          },
+          paginacao: {
+            pagina,
+            por_pagina: porPagina,
+            total_paginas: Math.ceil(preservar.length / porPagina),
+            proxima: inicio + porPagina < preservar.length ? pagina + 1 : null,
+          },
+          ids: fatia.map((c: any) => c.id),
+        },
+      });
+    }
+
     // ─── RESUMO ───
     return Response.json({
       success: true,
       natureza: '100% LEITURA — nada foi apagado nem alterado',
-      seccoes_disponiveis: ['DIVERGENCIA', 'GERADO', 'ORFAS', 'PRESERVAR'],
+      seccoes_disponiveis: ['DIVERGENCIA', 'GERADO', 'ORFAS', 'PRESERVAR', 'IDS'],
       panorama: {
         comissoes_no_banco: comissoes.length,
         valor_total_comissoes: soma(comissoes, 'amount'),
