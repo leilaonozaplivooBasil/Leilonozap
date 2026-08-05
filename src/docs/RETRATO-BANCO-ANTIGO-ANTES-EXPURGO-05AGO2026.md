@@ -114,3 +114,42 @@ as carteiras reais dos clientes, as vendas, os leilões ativos, os pagamentos, o
 login e as regras de comissão (30% loja / 5% leilão).
 
 > ✅ A partir daqui existe **um único banco**: a Supabase. Não há mais dualidade.
+
+---
+
+## 4. EXECUÇÃO DO EXPURGO — CONCLUÍDA EM 05/08/2026
+
+**4.795 registros excluídos** das 17 tabelas de negócio do banco antigo.
+Conferência final: **as 17 voltaram vazias**.
+
+| Tabela | Apagados |
+|---|---|
+| `AuctionMessage` | 1.597 |
+| `CommissionRecord` | 1.324 |
+| `Sale` | 786 |
+| `SaleCommission` | 625 |
+| `MercadoPagoPayment` | 180 |
+| `Wallet` | 195 |
+| `Payment` | 153 |
+| `CatalogSale` | 143 |
+| `Auction` | 136 |
+| `AsaasPayment` | 91 |
+| `DigitalWalletTransaction` | 52 |
+| `WalletTransaction` | 43 |
+| `AppUser` | 38 |
+| `FavoriteAuction` | 30 |
+| `Bid` | 29 |
+| `WithdrawalRequest` | 13 |
+| `DigitalWallet` | 10 |
+
+### ⚠️ TRAVA TÉCNICA DESCOBERTA — NÃO REPETIR O ERRO
+
+Excluir em massa filtrando por data **NÃO funciona** neste banco:
+`deleteMany({ created_date: { $lt: '2026-08-01' } })` retornou **"0 apagados"** em todas as
+tabelas — e os registros continuavam lá. **Silencioso**: nenhum erro, nenhum aviso.
+A exclusão só funciona **registro por registro, por ID**.
+
+> 🚨 Quem confiar no retorno do `deleteMany` por data vai jurar que apagou e **não apagou nada**.
+> Sempre conferir depois com uma leitura.
+
+**Zero erros** nas 4.795 exclusões. A Supabase não foi tocada em nenhum momento.
