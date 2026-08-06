@@ -32,6 +32,7 @@ const CANAIS = [
       'Canal direto da empresa, com disputa em tempo real. Acelera o giro de lotes e define saída rápida quando a operação precisa de velocidade.',
     atingido: '52 pessoas ativas hoje',
     atingidoNota: 'Pré-lançamento, sem mídia paga ligada e sem abertura oficial.',
+    atingidoExtra: 'Herda a base histórica de +10.000 clientes da Loja Virtual.',
     metaMinima: 'Abertura oficial operando com os 300 licenciados ativos vendendo',
     metaAlcancavel: '100.000 usuários comprando',
     base: 'R$ 297 / mês por usuário',
@@ -39,6 +40,7 @@ const CANAIS = [
       'o canal de leilão já está construído, publicado e operando com usuários reais — falta ligar audiência.',
     calculo: [
       { rotulo: 'Ponto de partida real (hoje)', valor: '52 pessoas ativas na plataforma', nota: 'Sem mídia paga, sem influenciador ativado e antes da abertura oficial.' },
+      { rotulo: 'Base histórica já impactada', valor: '+10.000 clientes desde o início das vendas', nota: 'Base compartilhada entre os canais — é público já atendido, não público a conquistar.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
       { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores', nota: 'Cada degrau da estrutura alimenta o canal com público próprio.' },
       { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 novos usuários por mês', nota: 'Depende diretamente da verba de aquisição — é exatamente o que a captação destrava.' },
@@ -53,18 +55,22 @@ const CANAIS = [
     titulo: 'Loja Virtual',
     texto:
       'Canal digital próprio da empresa. Recebe o item curado, com ficha, foto tratada e posicionamento definido pela operação — sem depender de marketplace de terceiros.',
-    atingido: '52 pessoas ativas hoje',
-    atingidoNota: 'Mesma base de usuários do Leilão — a conta compartilha os dois canais.',
+    atingido: '+10.000 clientes impactados',
+    atingidoNota:
+      'Base histórica desde o início das vendas, em migração para a plataforma.',
+    atingidoSecundario: '52 pessoas ativas na plataforma hoje',
+    atingidoSecundarioNota: 'Pré-lançamento, sem mídia paga ligada.',
     metaMinima: 'Abertura oficial operando com os 300 licenciados ativos vendendo',
     metaAlcancavel: '100.000 usuários comprando',
     base: 'R$ 297 / mês por usuário',
     estruturaExistente:
-      'a loja já está no ar, com catálogo curado, checkout, frete e pagamento em produção.',
+      'a loja já está no ar, com catálogo curado, checkout, frete e pagamento em produção, e mais de 10 mil clientes já atendidos desde o início das vendas.',
     calculo: [
       { rotulo: 'Ponto de partida real (hoje)', valor: '52 pessoas ativas na plataforma', nota: 'A loja já opera de ponta a ponta: catálogo, checkout, frete e pagamento.' },
+      { rotulo: 'Base histórica já impactada', valor: '+10.000 clientes desde o início das vendas', nota: 'Base em migração — não é público a conquistar, é público já atendido.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
       { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores' },
-      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 novos usuários por mês', nota: 'O canal está pronto; o que falta é volume de tráfego pago e orgânico.' },
+      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 novos usuários por mês', nota: 'Parte desse caminho vem da reativação da base histórica de mais de 10 mil clientes, não só de aquisição nova.' },
       { rotulo: 'Base de cálculo conservadora', valor: 'R$ 297 / mês por usuário' },
     ],
   },
@@ -179,6 +185,21 @@ export default function ParceiroCanaisVenda() {
                     <p className="mt-1.5 text-xs leading-relaxed text-pc-tinta-fraca">
                       {c.atingidoNota}
                     </p>
+                    {c.atingidoSecundario && (
+                      <div className="mt-3 border-t border-pc-borda pt-3">
+                        <p className="text-sm font-semibold leading-snug text-pc-tinta">
+                          {c.atingidoSecundario}
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-pc-tinta-fraca">
+                          {c.atingidoSecundarioNota}
+                        </p>
+                      </div>
+                    )}
+                    {c.atingidoExtra && (
+                      <p className="mt-3 border-t border-pc-borda pt-3 text-xs leading-relaxed text-pc-tinta">
+                        {c.atingidoExtra}
+                      </p>
+                    )}
                     {pct !== null && (
                       <div className="mt-3">
                         <div className="h-1 w-full bg-pc-borda">
