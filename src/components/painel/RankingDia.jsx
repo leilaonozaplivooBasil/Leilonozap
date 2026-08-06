@@ -56,7 +56,7 @@ export default function RankingDia({ userId, refreshKey, onSeller, period = 'dia
           <BarChart3 className="w-9 h-9 text-emerald-300 shrink-0" />
           <div>
             <div className="text-lg font-black text-emerald-200">Faturamento da {LABEL[period]}</div>
-            <div className="text-sm text-gray-200"><strong className="text-emerald-300 text-xl">{money(total)}</strong> em {pedidos} pedido(s) na rede.</div>
+            <div className="text-sm text-gray-200"><strong className="text-emerald-300 text-xl">{money(total)}</strong> em {pedidos} pedido(s) na árvore.</div>
           </div>
         </div>
       )}
@@ -64,7 +64,7 @@ export default function RankingDia({ userId, refreshKey, onSeller, period = 'dia
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="w-4 h-4 text-yellow-400" />
         <h3 className="text-xs font-bold tracking-wider text-gray-400 uppercase">Ranking — {LABEL[period]}</h3>
-        <span className="text-[11px] text-gray-500">· {money(total)} em {pedidos} pedido(s) na rede</span>
+        <span className="text-[11px] text-gray-500">· {money(total)} em {pedidos} pedido(s) na árvore</span>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">

@@ -111,7 +111,7 @@ export function buildAdminMenu(isSuperAdmin = false) {
       ],
     },
     {
-      title: "Rede & Pessoas",
+      title: "Árvore & Pessoas",
       icon: Users,
       isCategory: true,
       items: [

@@ -9,7 +9,7 @@ import { useCopiarPix } from '@/hooks/useCopiarPix';
 // descrição de conversão por nível pago
 const PITCH = {
   licenciado: { tag: 'Mais vendido', desc: 'Tenha sua própria operação de catálogo e cadastre vendedores e influenciadores.', icon: Package },
-  parceiro: { tag: 'Escala', desc: 'Cadastre licenciados e lojistas. Comece a montar sua estrutura de rede.', icon: Users },
+  parceiro: { tag: 'Escala', desc: 'Cadastre licenciados e lojistas. Comece a montar sua estrutura de negócio.', icon: Users },
   ponto_retirada: { tag: 'Logística', desc: 'Vire ponto de armazenagem e distribuição da sua região.', icon: Package },
   loja_fisica: { tag: 'Presença física', desc: 'Sua loja física completa, cadastrando toda a cadeia abaixo.', icon: Crown },
   distribuidor: { tag: 'Topo', desc: 'O nível máximo: distribua e cadastre toda a estrutura.', icon: Crown },

@@ -230,7 +230,7 @@ export default function PainelDistribuidor() {
   const MENU = isLoja ? [
     { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
-    { id: 'rede', label: 'Minha Rede', icon: Network },
+    { id: 'rede', label: 'Minha Árvore', icon: Network },
     { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
     { id: 'estoque', label: 'Meu Estoque', icon: Package, route: '/painel/estoque', star: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
@@ -243,7 +243,7 @@ export default function PainelDistribuidor() {
   ] : [
     { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
-    { id: 'rede', label: 'Minha Rede', icon: Network },
+    { id: 'rede', label: 'Minha Árvore', icon: Network },
     { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
     { id: 'funcionarios', label: 'Funcionários (PDV)', icon: UserCog },
     { id: 'produtos', label: 'Produtos & Estoque', icon: Package, ext: true },
@@ -341,11 +341,11 @@ export default function PainelDistribuidor() {
               <Stat icon={DollarSign} label="Valor em loja" value={money(lojaStats?.valor_loja || 0)} sub="estoque × preço" color="text-amber-400" />
               <Stat icon={Truck} label="Pedidos a despachar" value={lojaStats?.pedidos_abrir || 0} sub="aguardando" color={lojaStats?.pedidos_abrir > 0 ? 'text-orange-400' : 'text-white'} />
             </div>
-            <SectionLabel>💰 Vendas & Rede</SectionLabel>
+            <SectionLabel>💰 Vendas & Árvore</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <Stat icon={ShoppingCart} label="Vendas" value={money(lojaStats?.vendas_valor || 0)} sub="online + PDV" color="text-green-400" />
               <Stat icon={TrendingUp} label="Comissões" value={money(lojaStats?.comissao || 0)} sub="acumuladas" color="text-yellow-400" />
-              <Stat icon={Users} label="Minha rede" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
+              <Stat icon={Users} label="Minha árvore" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
               <Stat icon={Wallet} label="Saldo" value={money(lojaStats?.saldo || 0)} sub="pra sacar" color="text-emerald-400" />
             </div>
             <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
@@ -416,9 +416,9 @@ export default function PainelDistribuidor() {
             </div>
 
             {/* REDE & EQUIPE */}
-            <SectionLabel>🌐 Rede & Equipe</SectionLabel>
+            <SectionLabel>🌳 Árvore & Equipe</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
-              <Stat icon={Users} label="Rede total" value={stats.rede_total} sub="pessoas abaixo" color="text-white" />
+              <Stat icon={Users} label="Árvore total" value={stats.rede_total} sub="pessoas abaixo" color="text-white" />
               <Stat icon={UserCog} label="Funcionários (PDV)" value={stats.funcionarios} sub="logins de balcão" color="text-cyan-400" />
               <Stat icon={Factory} label="Fornecedores" value={stats.fornecedores} sub="cadastrados" color="text-fuchsia-400" />
               <Stat icon={MousePointerClick} label="Cliques na loja" value={stats.cliques} sub="visitas" color="text-blue-400" />
@@ -436,7 +436,7 @@ export default function PainelDistribuidor() {
             <SectionLabel>⚡ Atalhos</SectionLabel>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Shortcut onClick={() => navigate(ROUTES.pdv)} icon={ShoppingCart} title="PDV · Tirar pedido" desc="Venda no balcão e baixe estoque." highlight />
-              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Links pra montar sua rede." />
+              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Links pra montar sua árvore." />
               <Shortcut onClick={() => navigate(ROUTES.pedidos)} icon={Truck} title="Pedidos & Envio" desc="Despache e acompanhe entregas." />
               <Shortcut onClick={() => navigate(createPageUrl('CatalogManagement'))} icon={Store} title="Editar loja / Importar" desc="Vitrine, banners e planilha." />
             </div>
@@ -460,7 +460,7 @@ export default function PainelDistribuidor() {
         {tab === 'cadastrar' && (
           <div>
             <h1 className="text-2xl font-black mb-1">Cadastrar & Vender</h1>
-            <p className="text-gray-400 text-sm mb-6">Compartilhe os links abaixo. Quem entrar por eles fica na <strong>sua rede</strong>. Nos cargos pagos você ganha <strong className="text-yellow-400">20% da adesão</strong> (venda direta).</p>
+            <p className="text-gray-400 text-sm mb-6">Compartilhe os links abaixo. Quem entrar por eles fica na <strong>sua árvore genealógica</strong>. Nos cargos pagos você ganha <strong className="text-yellow-400">20% da adesão</strong> (venda direta).</p>
             <div className="grid md:grid-cols-2 gap-4">
               {perms.map((p) => {
                 const lvl = levels.find((l) => l.id === p.can_register_level);
@@ -494,7 +494,7 @@ export default function PainelDistribuidor() {
         {/* ───────────────────── MINHA REDE ───────────────────── */}
         {tab === 'rede' && (
           <div>
-            <h1 className="text-2xl font-black mb-1">Minha Rede</h1>
+            <h1 className="text-2xl font-black mb-1">Minha Árvore Genealógica</h1>
             <p className="text-gray-400 text-sm mb-6">{stats.rede_total} pessoa(s) cadastrada(s) abaixo de você.</p>
             <div className="flex flex-wrap gap-2 mb-6 text-xs">
               <span className="bg-purple-500/15 text-purple-300 rounded-full px-3 py-1">Vendedores: <b>{stats.vendedores}</b></span>
@@ -504,7 +504,7 @@ export default function PainelDistribuidor() {
             </div>
             {downline.length === 0 ? (
               <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-8 text-center text-gray-400">
-                Sua rede está vazia. Use <button onClick={() => setTab('cadastrar')} className="text-green-400 underline">Cadastrar & Vender</button> pra começar.
+                Sua árvore está vazia. Use <button onClick={() => setTab('cadastrar')} className="text-green-400 underline">Cadastrar & Vender</button> pra começar.
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-gray-800">

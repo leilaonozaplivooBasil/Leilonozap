@@ -66,6 +66,11 @@ export default async function handler(req, res) {
       const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) referred_by_id = r[0].id;
     }
+    // 🌳 REGRA DA ÁRVORE GENEALÓGICA: sem indicador, entra sob o Site Oficial.
+    if (!referred_by_id) {
+      const site = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json();
+      if (Array.isArray(site) && site[0]) referred_by_id = site[0].id;
+    }
 
     // referral_code próprio único (usa o sugerido se livre; senão gera)
     let referral_code = String(body?.referral_code || '').trim() || genReferral(full_name);

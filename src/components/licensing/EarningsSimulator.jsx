@@ -218,7 +218,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                   <div className={`border rounded-lg p-3 text-center ${
                     isSaiDeBaixo ? 'bg-red-50 border-red-300' : 'bg-nz-verde-fundo border-nz-verde/20'
                   }`}>
-                    <div className="text-xs font-bold mb-0.5 text-nz-tinta">Faturamento Total da Rede</div>
+                    <div className="text-xs font-bold mb-0.5 text-nz-tinta">Faturamento Total da Árvore</div>
                     <div className="text-lg font-bold text-nz-tinta">
                       R$ {totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>

@@ -1724,7 +1724,7 @@ export default function LicensingPage() {
   const getMotivationalMessage = (level) => {
     const messages = {
       'influenciador': 'Continue evoluindo! O próximo passo é se tornar Licenciado Loja Virtual e desbloquear ainda mais benefícios.',
-      'licenciado': 'Você já tem acesso à loja virtual! Cresça sua rede para alcançar os próximos níveis.',
+      'licenciado': 'Você já tem acesso à loja virtual! Cresça sua árvore genealógica para alcançar os próximos níveis.',
       'trainee_diretor': 'Não sei se te dou parabéns ou pêsames, seja bem vindo a... SIFUDENCIA! Serão 6 meses de extremo desafio, porém se você se formar o céu é o limite. BOA SORTE!',
       'executivo_conta': 'Ótimo trabalho! Continue crescendo sua estrutura de negócio.',
       'distribuidor': 'Parabéns! Continue para alcançar a Diretoria e ingressar na liderança.',

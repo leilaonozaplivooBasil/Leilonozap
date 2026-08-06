@@ -22,7 +22,7 @@ const SECTION_LAYOUT = [
   { title: "Operação — Loja Virtual", x: 560, y: -300 },
   { title: "Operação — Estoque", x: -680, y: 90 },
   { title: "Financeiro", x: 680, y: 90 },
-  { title: "Rede & Pessoas", x: -460, y: 390 },
+  { title: "Árvore & Pessoas", x: -460, y: 390 },
   { title: "Automação & IA", x: 460, y: 390 },
   { title: "Sistema", x: 0, y: 440 },
   { title: "Minha Conta", x: 900, y: -40 },

@@ -16,10 +16,10 @@ const PITCH = {
   influenciador: 'Indique clientes e ganhe comissão em cada venda feita pelo seu link.',
   vendedor: 'Venda os produtos da Leilão NoZap e ganhe comissão direta nas suas vendas.',
   licenciado: 'Tenha sua própria operação de catálogo e cadastre vendedores e influenciadores.',
-  parceiro: 'Cadastre licenciados e monte sua estrutura de rede com comissões em vários níveis.',
+  parceiro: 'Cadastre licenciados e monte sua estrutura de negócio com comissões em vários níveis.',
   ponto_retirada: 'Vire ponto de armazenagem e distribuição da sua região, com estoque próprio.',
   loja_fisica: 'Sua loja física completa, com estoque próprio e toda a cadeia abaixo de você.',
-  distribuidor: 'O nível máximo: distribua e cadastre toda a estrutura da rede.',
+  distribuidor: 'O nível máximo: distribua e cadastre toda a estrutura de negócio.',
 };
 
 const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
@@ -176,7 +176,7 @@ export default function Cadastro() {
         <div className="text-center mb-8">
           <p className="text-green-400 font-semibold tracking-wide uppercase text-sm mb-1">Seja um</p>
           <h1 className="text-4xl md:text-5xl font-black mb-3">{cargoNome}</h1>
-          <p className="text-gray-300 max-w-xl mx-auto">{PITCH[cargo] || 'Faça parte da rede da Leilão NoZap.'}</p>
+          <p className="text-gray-300 max-w-xl mx-auto">{PITCH[cargo] || 'Faça parte da árvore genealógica da Leilão NoZap.'}</p>
         </div>
 
         {/* CARD PRINCIPAL */}

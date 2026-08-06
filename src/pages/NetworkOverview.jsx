@@ -152,7 +152,7 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
                   <p className="text-xs text-gray-500">{referrer.email}</p>
                 </>
               ) : (
-                <p className="text-xs text-gray-500 mt-2">Sem indicação</p>
+                <p className="text-xs text-gray-500 mt-2">Leilão NoZap Oficial (site)</p>
               )}
             </div>
           )}
@@ -711,7 +711,7 @@ export default function NetworkOverview() {
     let actor = null;
     try { actor = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { actor = null; }
     if (!actor) {
-      throw new Error('faça login como admin para alterar a rede');
+      throw new Error('faça login como admin para alterar a árvore genealógica');
     }
     const result = await base44.functions.invoke('adminUpdateUser', {
       userId,
@@ -1420,10 +1420,10 @@ export default function NetworkOverview() {
   const handleDetachUser = async (user) => {
     try {
       await saveUserFields(user.id, { referred_by_id: null });
-      toast.success(`${user.full_name} agora é raiz da rede.`);
+      toast.success(`${user.full_name} foi desvinculado(a) do indicador anterior.`);
       await fetchData();
     } catch (error) {
-      toast.error('Erro ao soltar da rede: ' + (error?.message || 'falha'));
+      toast.error('Erro ao desvincular: ' + (error?.message || 'falha'));
     }
   };
 
@@ -1482,7 +1482,7 @@ export default function NetworkOverview() {
               className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-emerald-400/90 hover:text-emerald-300 transition-colors"
             >
               {showStats ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-              Resumo da rede
+              Resumo da árvore genealógica
             </button>
             <div className="flex items-center gap-3 text-[12px] text-gray-400">
               <span className="flex items-center gap-1.5">
@@ -1637,7 +1637,7 @@ export default function NetworkOverview() {
               <TabsList className="grid w-full grid-cols-4 bg-gray-700/50">
                 <TabsTrigger value="licensees">
                   <Network className="w-4 h-4 mr-2" />
-                  Árvore da Rede
+                  Árvore Genealógica
                 </TabsTrigger>
                 <TabsTrigger value="users">
                   <Users className="w-4 h-4 mr-2" />
@@ -1805,7 +1805,7 @@ export default function NetworkOverview() {
                                         <span className="text-xs text-gray-600">{(referrer || siteLicensee).email}</span>
                                       </div>
                                     ) : (
-                                      <span className="text-gray-500">Sem indicação</span>
+                                      <span className="text-gray-500">Leilão NoZap Oficial (site)</span>
                                     )}
                                   </TableCell>
                                   <TableCell>
@@ -1872,7 +1872,7 @@ export default function NetworkOverview() {
                       title="Faz cada descendente seguir o executivo da raiz da estrutura dele"
                     >
                       <Network className="w-3.5 h-3.5 mr-1.5" />
-                      Aplicar cascata em toda a rede
+                      Aplicar cascata em toda a árvore
                     </Button>
                   </div>
 
@@ -2263,7 +2263,7 @@ export default function NetworkOverview() {
             <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-gray-900 shadow-2xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
                 <TriangleAlert className="w-4 h-4 text-red-400" />
-                <span className="text-[14px] font-semibold text-white">Excluir usuário da rede</span>
+                <span className="text-[14px] font-semibold text-white">Excluir usuário da árvore genealógica</span>
               </div>
 
               <div className="px-4 py-4 space-y-3 text-[13px] text-gray-300">
@@ -2280,7 +2280,7 @@ export default function NetworkOverview() {
                   {diretos > 0 && (
                     <p className="text-emerald-400/90">
                       A estrutura é preservada: os indicados diretos passam para{' '}
-                      <strong>{indicador ? indicador.full_name : 'a raiz da rede'}</strong>.
+                      <strong>{indicador ? indicador.full_name : 'Leilão NoZap Oficial (site)'}</strong>.
                     </p>
                   )}
                   <p className="text-gray-500">

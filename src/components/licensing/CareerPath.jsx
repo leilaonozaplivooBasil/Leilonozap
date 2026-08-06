@@ -79,8 +79,8 @@ const careerSteps = [
     achievedDescription: 'Sócio: 1% sobre todo o seu sistema de alavancagem.',
     lockedDescription: 'Convidado para participar da mentoria X-OS (nossa Academia de Desenvolvimento). Ao concluir, torna-se Sócio e ganha 1% sobre todo o seu sistema de alavancagem — ex: se um Distribuidor da sua rede vender R$ 10 milhões, você ganha 1% sobre esse total.' },
   { id: 'distribuidor', title: 'Distribuidor', icon: Gem,
-    achievedDescription: 'Topo da rede. Estoque próprio, sobe produtos e recebe 20% na venda direta.',
-    lockedDescription: 'Adesão R$ 4.000.000 (100% em produto). 20% na venda direta + topo da rede.' },
+    achievedDescription: 'Topo da árvore. Estoque próprio, sobe produtos e recebe 20% na venda direta.',
+    lockedDescription: 'Adesão R$ 4.000.000 (100% em produto). 20% na venda direta + topo da árvore.' },
   { id: 'loja_fisica', title: 'Loja Física', icon: Building2,
     achievedDescription: 'Loja física com estoque próprio. 19% na venda direta.',
     lockedDescription: 'Adesão R$ 350.000 (100% em produto). 19% na venda direta.' },
@@ -88,7 +88,7 @@ const careerSteps = [
     achievedDescription: 'Ponto de retirada com estoque próprio. 16% na venda direta.',
     lockedDescription: 'Adesão R$ 50.000 (100% em produto). 16% na venda direta.' },
   { id: 'parceiro', title: 'Parceiro', icon: Store,
-    achievedDescription: 'Parceiro da rede. 15% na venda direta e cadastra sua equipe.',
+    achievedDescription: 'Parceiro da estrutura de negócio. 15% na venda direta e cadastra sua equipe.',
     lockedDescription: 'Adesão R$ 20.000 (100% em produto). 15% na venda direta.' },
   { id: 'licenciado', title: 'Licenciado', icon: Briefcase,
     achievedDescription: 'Licenciado. 13% na venda direta pelo seu link.',
@@ -100,7 +100,7 @@ const careerSteps = [
     achievedDescription: 'Influenciador. Indique e ganhe 5% nas vendas pelo seu link.',
     lockedDescription: 'Em breve: torne-se Influenciador e ganhe 5%.' },
   { id: 'usuario', title: 'Usuário', icon: Users,
-    achievedDescription: 'Bem-vindo! Você está cadastrado e pronto para evoluir na rede.',
+    achievedDescription: 'Bem-vindo! Você está cadastrado e pronto para evoluir na estrutura de negócio.',
     lockedDescription: 'Nível inicial: cadastro ativo no sistema.' },
 ];
 
@@ -193,7 +193,7 @@ export default function CareerPath({ currentUser }) {
                                     </p>
                                     {roleRebate[step.id] ? (
                                       <p className={cn("mt-0.5 text-xs", isActive ? "text-nz-verde font-semibold" : "text-gray-400")}>
-                                        Rebate de {roleRebate[step.id].pct}% sobre {roleRebate[step.id].sobre} (quando alguém da sua rede vende).
+                                        Rebate de {roleRebate[step.id].pct}% sobre {roleRebate[step.id].sobre} (quando alguém da sua árvore vende).
                                       </p>
                                     ) : null}
                                     {roleCadastra[step.id] ? (

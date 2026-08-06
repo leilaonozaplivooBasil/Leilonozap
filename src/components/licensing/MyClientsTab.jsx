@@ -53,7 +53,7 @@ export default function MyClientsTab({
                       {referrer ? (
                         <span className={isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde'}>👤 {referrer.full_name}</span>
                       ) : (
-                        <span className="text-gray-400">Sem indicação</span>
+                        <span className="text-gray-400">Leilão NoZap Oficial (site)</span>
                       )}
                     </TableCell>
                     <TableCell className="text-gray-600">

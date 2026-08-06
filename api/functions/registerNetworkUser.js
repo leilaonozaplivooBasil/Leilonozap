@@ -88,8 +88,15 @@ export default async function handler(req, res) {
       if (Array.isArray(a) && a[0]) { referred_by_id = a[0].id; actorLevel = a[0].primary_career_level; }
     }
     if (!referred_by_id && ref_code) {
+      // (resolve pelo link de indicação)
       const r = await (await sb(`app_users?select=id,primary_career_level&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) { referred_by_id = r[0].id; actorLevel = r[0].primary_career_level; }
+    }
+    // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém entra solto. Sem indicador válido,
+    // o cadastro fica sob o Leilão NoZap - Site Oficial (raiz da árvore).
+    if (!referred_by_id) {
+      const site = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json();
+      if (Array.isArray(site) && site[0]) referred_by_id = site[0].id;
     }
 
     // 4) define a categoria do novo usuário
