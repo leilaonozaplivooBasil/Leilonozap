@@ -66,7 +66,7 @@ export default function ContasDemonstrativo({ aporte, taxaMensalPct = 3 }) {
       <p className="border-t border-pc-borda px-5 py-4 text-[10px] leading-relaxed text-pc-tinta-fraca">
         Demonstrativo metodológico. O valor efetivamente repassado é o APURADO do lote do seu ciclo, com
         nota, comprovante e extrato de vendas anexados no fechamento — pode ficar acima ou abaixo desta
-        referência. Não é promessa de rendimento.
+        referência. Não é promessa de repasse.
       </p>
     </div>
   );

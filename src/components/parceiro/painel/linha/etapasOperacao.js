@@ -102,9 +102,9 @@ export const ETAPAS = [
   {
     id: 'apuracao',
     dia: DIA_INICIO_APURACAO,
-    titulo: 'Início da apuração da rentabilidade',
+    titulo: 'Início da apuração do repasse',
     texto:
-      'A partir do 31º dia a rentabilidade do seu aporte passa a ser apurada e contabilizada dia a dia.',
+      'A partir do 31º dia o repasse do seu aporte passa a ser apurado e contabilizado dia a dia.',
     marco: 'Financeiro',
     destaque: true,
   },
@@ -113,7 +113,7 @@ export const ETAPAS = [
     dia: DIA_PRIMEIRO_REPASSE,
     titulo: 'Primeiro repasse e prestação de contas',
     texto:
-      'Fechamento do primeiro ciclo (Cláusula 8.2): repasse do resultado apurado e demonstrativo completo na tela de Prestação de Contas.',
+      'Fechamento do primeiro ciclo (Cláusula 8.2): repasse do resultado apurado e demonstrativo completo na tela de Prestação de Contas. Deste marco começam a contar os 12 meses de repasses do contrato.',
     marco: 'Financeiro',
     destaque: true,
   },

@@ -13,7 +13,7 @@ export default function ContadorRentabilidade({ dataAssinatura, aporte, taxaMens
     <div className="border border-pc-ouro/50 bg-pc-preto-2 p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-pc-ouro">
-          <TrendingUp className="h-4 w-4" strokeWidth={1.8} /> Rentabilidade apurada do ciclo
+          <TrendingUp className="h-4 w-4" strokeWidth={1.8} /> Repasse apurado do ciclo
         </p>
         <span className="border border-pc-borda px-2 py-0.5 text-[10px] uppercase tracking-wide text-pc-tinta-fraca">
           Dia {r.diaAtual} do ciclo
@@ -53,7 +53,7 @@ export default function ContadorRentabilidade({ dataAssinatura, aporte, taxaMens
 
       <p className="mt-4 border-t border-pc-borda pt-3 text-[10px] leading-relaxed text-pc-tinta-fraca">
         Valor de acompanhamento, apurado sobre o resultado real da operação e sujeito ao fechamento do
-        ciclo. Não constitui promessa de rendimento nem garantia de resultado futuro.
+        ciclo. Não constitui promessa de repasse nem garantia de resultado futuro.
       </p>
     </div>
   );

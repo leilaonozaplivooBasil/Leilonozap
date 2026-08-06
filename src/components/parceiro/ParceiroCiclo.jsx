@@ -10,7 +10,7 @@ const ETAPAS = [
   { quando: 'Dia 0', titulo: 'Aceite e aporte', texto: 'Assinatura do instrumento e transferência do capital. A vigência de doze meses conta do aceite.' },
   { quando: 'Dias 1–15', titulo: 'Teste e colocação', texto: 'Aquisição dos lotes, preparação e entrada nos canais de venda.' },
   { quando: 'Dias 16–60', titulo: 'Giro do capital', texto: 'Quarenta e cinco dias de giro comercial. Primeiro compartilhamento em até sessenta dias.' },
-  { quando: 'Mês 3 ao 12', titulo: 'Repasses mensais', texto: 'A cada trinta dias, com retirada opcional. O capital segue alocado em novas operações.' },
+  { quando: 'A partir do 1º repasse', titulo: 'Repasses mensais', texto: '12 meses de repasses, contados a partir do primeiro repasse. A cada trinta dias, com retirada opcional. O capital segue alocado em novas operações.' },
   { quando: 'Mês 12 + 30 dias', titulo: 'Encerramento', texto: 'Encerramento automático da parceria. Capital disponível para retirada em até trinta dias.' },
 ];
 
@@ -20,11 +20,11 @@ export default function ParceiroCiclo() {
     <ParceiroSecao numero="05" rotulo="Ciclo operacional" referencia="Cláusula 8">
       <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
         <h2 className="text-2xl font-bold leading-tight text-pc-tinta sm:text-4xl">
-          Doze meses, do aceite à <span className="text-pc-ouro">devolução</span>
+          12 meses de repasses, mais os <span className="text-pc-ouro">60 dias de estruturação</span>
         </h2>
         <p className="text-sm leading-relaxed text-pc-tinta-fraca lg:text-right">
-          Prazos exatamente como pactuados em contrato.
-          <br className="hidden sm:block" /> Nada além, nada implícito.
+          Os primeiros 60 dias são de estruturação e não entram na contagem:
+          <br className="hidden sm:block" /> os 12 meses de repasses começam no primeiro repasse.
         </p>
       </div>
 

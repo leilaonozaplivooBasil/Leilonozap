@@ -33,8 +33,11 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
         Todo o ciclo físico — assinatura, pagamento, arremate, logística, curadoria e publicação —
-        acontece em até <strong className="text-pc-ouro">{DIAS_CICLO_FISICO} dias</strong>. A apuração da
-        rentabilidade começa no 31º dia e o primeiro repasse ocorre no {DIA_PRIMEIRO_REPASSE}º dia.
+        acontece em até <strong className="text-pc-ouro">{DIAS_CICLO_FISICO} dias</strong>. A apuração do
+        repasse começa no 31º dia e o primeiro repasse ocorre no {DIA_PRIMEIRO_REPASSE}º dia. Estes
+        primeiros 60 dias são de estruturação e não entram na contagem: os{' '}
+        <strong className="text-pc-ouro">12 meses de repasses</strong> começam a contar no primeiro
+        repasse.
       </p>
 
       {demonstracao && (

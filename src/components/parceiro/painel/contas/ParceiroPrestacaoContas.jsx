@@ -34,8 +34,8 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-pc-tinta-fraca">
         Prestar contas aqui não é mostrar um número bonito — é mostrar de onde ele veio. A cada
         fechamento de ciclo você recebe o resultado apurado do lote comprado com o seu capital, a
-        decomposição completa desse resultado e os documentos que provam cada linha. Se o ciclo render
-        menos que a referência, você vê isso também: transparência radical é a regra da operação.
+        decomposição completa desse resultado e os documentos que provam cada linha. Se o ciclo fechar
+        abaixo da referência, você vê isso também: transparência radical é a regra da operação.
       </p>
 
       {demonstracao && (
@@ -95,8 +95,8 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
         </p>
         <ul className="mt-3 space-y-2 text-sm leading-relaxed text-pc-tinta-fraca">
           <li>• <strong className="text-pc-tinta">D+0 a D+15</strong> — ciclo físico: compra, logística, curadoria e publicação na Loja Virtual.</li>
-          <li>• <strong className="text-pc-tinta">D+31</strong> — início da apuração da rentabilidade, contabilizada dia a dia.</li>
-          <li>• <strong className="text-pc-tinta">D+60</strong> — fechamento do ciclo, repasse e demonstrativo completo (Cláusula 8.2).</li>
+          <li>• <strong className="text-pc-tinta">D+31</strong> — início da apuração do repasse, contabilizado dia a dia.</li>
+          <li>• <strong className="text-pc-tinta">D+60</strong> — fechamento do ciclo, primeiro repasse e demonstrativo completo (Cláusula 8.2). Deste marco começam os 12 meses de repasses.</li>
           <li>• <strong className="text-pc-tinta">A cada fechamento</strong> — você decide: retirar o resultado ou recompor o capital no ciclo seguinte.</li>
         </ul>
         <button
@@ -124,7 +124,7 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
           </p>
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-pc-tinta-fraca">
             <li>• Não é investimento regulado pela CVM nem produto financeiro.</li>
-            <li>• Não é renda fixa: não há rendimento garantido nem promessa de retorno.</li>
+            <li>• Não é renda fixa: não há repasse garantido nem promessa de resultado.</li>
             <li>• Não é participação societária e não remunera por indicação de pessoas.</li>
           </ul>
         </div>
