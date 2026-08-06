@@ -14,16 +14,7 @@ import {
   LogOut,
   ChevronDown,
   ShoppingBag,
-  Gavel,
-  Store,
-  Building2,
-  Briefcase,
-  TrendingUp,
-  Hammer,
-  Shield,
-  Crown,
   Truck,
-  MapPin,
   Package,
   Wallet as WalletIcon,
   Map as MapIcon,
@@ -33,32 +24,6 @@ import AtalhosGrid from "@/components/nav/AtalhosGrid";
 // 🏷️ Selo e cargos de rede vêm da fonte ÚNICA compartilhada com o menu mobile —
 // era a duplicação que fazia a Loja Física aparecer como "LICENCIADO" aqui.
 import { getRedeCargo, REDE_META, getRoleBadge } from "@/lib/roleBadge";
-
-// Mapa de ícones (string → componente) — evita import dinâmico
-const ICON_MAP = {
-  ShoppingBag,
-  Gavel,
-  Store,
-  Building2,
-  Briefcase,
-  TrendingUp,
-  Hammer,
-  Shield,
-  Crown,
-};
-
-// Cor accent por painel (para borda/texto destacado dos cards)
-const PANEL_ACCENT = {
-  loja_virtual: { text: "text-orange-300", border: "border-orange-500/40", bg: "hover:bg-orange-500/5", icon: "text-orange-400" },
-  arrematante: { text: "text-emerald-300", border: "border-emerald-500/40", bg: "hover:bg-emerald-500/5", icon: "text-emerald-400" },
-  vendedor: { text: "text-purple-300", border: "border-purple-500/40", bg: "hover:bg-purple-500/5", icon: "text-purple-400" },
-  lojista: { text: "text-fuchsia-300", border: "border-fuchsia-500/40", bg: "hover:bg-fuchsia-500/5", icon: "text-fuchsia-400" },
-  licenciado: { text: "text-blue-300", border: "border-blue-500/40", bg: "hover:bg-blue-500/5", icon: "text-blue-400" },
-  investidor: { text: "text-amber-300", border: "border-amber-500/40", bg: "hover:bg-amber-500/5", icon: "text-amber-400" },
-  leiloeiro: { text: "text-red-300", border: "border-red-500/40", bg: "hover:bg-red-500/5", icon: "text-red-400" },
-  admin: { text: "text-slate-200", border: "border-slate-500/40", bg: "hover:bg-slate-500/10", icon: "text-slate-300" },
-  super_admin: { text: "text-yellow-300", border: "border-yellow-500/50", bg: "hover:bg-yellow-500/5", icon: "text-yellow-400" },
-};
 
 function getInitials(name = "") {
   return name
