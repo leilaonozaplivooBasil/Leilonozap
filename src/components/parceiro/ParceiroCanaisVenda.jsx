@@ -12,11 +12,17 @@ import ParceiroMetaCalculo from './ParceiroMetaCalculo';
 // no topo (a ação principal precisa ser vista de cara, não no pé do cartão).
 // ⚠️ PROIBIDO aqui: comissão, percentual de comissão, faturamento, ticket médio,
 // projeção consolidada e a palavra "investimento".
+// O percurso da Loja Virtual saiu daqui: ele agora mora no bloco 06 (Prova de
+// operação), junto da vitrine — ter os dois lado a lado soava repetido.
 const PERCURSOS = [
   { id: 'leilao', rotulo: 'Percorrer o Leilão' },
-  { id: 'loja', rotulo: 'Percorrer a Loja Virtual' },
   { id: 'expansao', rotulo: 'Conhecer o Plano de Expansão' },
 ];
+
+// Imagens institucionais dos cartões (preto/dourado) — puxam o olho para o "Ver o cálculo"
+const IMG_LEILAO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/37a6c8764_generated_image.png';
+const IMG_LOJA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/1570ba555_generated_image.png';
+const IMG_REDE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/b023a95bd_generated_image.png';
 
 // 📊 Números REAIS de hoje (informados por Gabriel em 06/08/2026):
 // 52 pessoas ativas na plataforma · ~70 licenciados reunidos no grupo,
@@ -28,6 +34,8 @@ const CANAIS = [
     icone: Gavel,
     rotulo: 'Canal direto · Disputa em tempo real',
     titulo: 'Leilão',
+    imagem: IMG_LEILAO,
+    essencia: 'Disputa em tempo real acelera o giro dos lotes.',
     texto:
       'Canal direto da empresa, com disputa em tempo real. Acelera o giro de lotes e define saída rápida quando a operação precisa de velocidade.',
     atingido: '52 pessoas ativas hoje',
@@ -53,6 +61,8 @@ const CANAIS = [
     icone: Store,
     rotulo: 'Canal digital próprio',
     titulo: 'Loja Virtual',
+    imagem: IMG_LOJA,
+    essencia: 'Canal próprio, sem depender de marketplace de terceiros.',
     texto:
       'Canal digital próprio da empresa. Recebe o item curado, com ficha, foto tratada e posicionamento definido pela operação — sem depender de marketplace de terceiros.',
     atingido: '+10.000 clientes impactados',
@@ -80,6 +90,8 @@ const CANAIS = [
     icone: Users,
     rotulo: 'Canal humano · Licenciado → Vendedor → Influenciador',
     titulo: 'Estrutura de Alavancagem',
+    imagem: IMG_REDE,
+    essencia: 'Capilaridade de escoamento sem custo fixo de loja.',
     texto:
       'O licenciado assume a praça e sustenta os próprios vendedores; o vendedor revende o estoque curado e ativa influenciadores. Capilaridade de escoamento sem custo fixo de loja física.',
     atingido: '70 licenciados reunidos',
@@ -143,7 +155,7 @@ export default function ParceiroCanaisVenda() {
           <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">
             Percursos demonstrativos — navegue pelos canais sem sair desta página
           </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {PERCURSOS.map((p) => (
               <button
                 key={p.id}
@@ -164,44 +176,49 @@ export default function ParceiroCanaisVenda() {
               ? Math.round((c.progresso.atual / c.progresso.minimo) * 100)
               : null;
             return (
-              <article key={c.id} className="flex flex-col border border-pc-borda bg-pc-preto-2 p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <Icone className="h-6 w-6 text-pc-ouro" strokeWidth={1.5} />
-                  <span className="text-xs font-bold tracking-[0.15em] text-pc-ouro">{c.ordem}</span>
+              <article key={c.id} className="flex flex-col border border-pc-borda bg-pc-preto-2">
+                {/* faixa de imagem: identidade imediata do canal */}
+                <div className="relative h-32 overflow-hidden sm:h-36">
+                  <img
+                    src={c.imagem}
+                    alt={`Canal ${c.titulo}`}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        'linear-gradient(0deg, rgba(17,17,20,0.96) 0%, rgba(17,17,20,0.55) 55%, rgba(17,17,20,0.30) 100%)',
+                    }}
+                  />
+                  <span className="absolute right-4 top-4 text-xs font-bold tracking-[0.15em] text-pc-ouro">
+                    {c.ordem}
+                  </span>
+                  <Icone
+                    className="absolute bottom-4 left-5 h-6 w-6 text-pc-ouro"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <p className="mt-5 text-[10px] uppercase tracking-[0.2em] text-pc-ouro">{c.rotulo}</p>
-                <h3 className="mt-2 text-lg font-bold text-pc-tinta">{c.titulo}</h3>
-                <p className="mt-3 flex-1 text-sm leading-relaxed text-pc-tinta-fraca">{c.texto}</p>
 
-                {/* Já atingido → meta mínima → meta alcançável */}
-                <div className="mt-5 space-y-4 border-t border-pc-ouro/25 pt-5">
-                  <div>
+                <div className="flex flex-1 flex-col p-6">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">{c.rotulo}</p>
+                  <h3 className="mt-2 text-lg font-bold text-pc-tinta">{c.titulo}</h3>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-pc-tinta-fraca">
+                    {c.essencia}
+                  </p>
+
+                  {/* só o impacto: o número de hoje. A régua completa vive no cálculo. */}
+                  <div className="mt-5 border-t border-pc-ouro/25 pt-5">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">
                       Já atingido hoje
                     </p>
-                    <p className="mt-1 text-xl font-bold leading-tight text-pc-tinta sm:text-2xl">
+                    <p className="mt-1.5 text-2xl font-bold leading-tight text-pc-tinta sm:text-3xl">
                       {c.atingido}
                     </p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-pc-tinta-fraca">
-                      {c.atingidoNota}
-                    </p>
-                    {c.atingidoSecundario && (
-                      <div className="mt-3 border-t border-pc-borda pt-3">
-                        <p className="text-sm font-semibold leading-snug text-pc-tinta">
-                          {c.atingidoSecundario}
-                        </p>
-                        <p className="mt-1 text-xs leading-relaxed text-pc-tinta-fraca">
-                          {c.atingidoSecundarioNota}
-                        </p>
-                      </div>
-                    )}
-                    {c.atingidoExtra && (
-                      <p className="mt-3 border-t border-pc-borda pt-3 text-xs leading-relaxed text-pc-tinta">
-                        {c.atingidoExtra}
-                      </p>
-                    )}
                     {pct !== null && (
-                      <div className="mt-3">
+                      <div className="mt-4">
                         <div className="h-1 w-full bg-pc-borda">
                           <div className="h-1 bg-pc-ouro" style={{ width: `${pct}%` }} />
                         </div>
@@ -210,36 +227,15 @@ export default function ParceiroCanaisVenda() {
                         </p>
                       </div>
                     )}
-                  </div>
 
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-pc-tinta-fraca">
-                      Meta mínima (memorando)
-                    </p>
-                    <p className="mt-1 text-sm font-semibold leading-snug text-pc-tinta">
-                      {c.metaMinima}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setCalculo(c)}
+                      className="mt-5 flex min-h-[48px] w-full items-center justify-center border border-pc-ouro px-4 text-xs font-semibold uppercase tracking-[0.15em] text-pc-ouro transition-colors hover:bg-pc-ouro hover:text-pc-preto"
+                    >
+                      Ver o cálculo
+                    </button>
                   </div>
-
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-pc-tinta-fraca">
-                      Meta alcançável até dez/2026
-                    </p>
-                    <p className="mt-1 text-sm font-semibold leading-snug text-pc-tinta">
-                      {c.metaAlcancavel}
-                    </p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-pc-tinta-fraca">
-                      Base de cálculo conservadora: <span className="text-pc-tinta">{c.base}</span>
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setCalculo(c)}
-                    className="flex min-h-[44px] w-full items-center justify-center border border-pc-borda px-4 text-xs font-semibold uppercase tracking-[0.15em] text-pc-ouro transition-colors hover:border-pc-ouro"
-                  >
-                    Ver o cálculo
-                  </button>
                 </div>
               </article>
             );

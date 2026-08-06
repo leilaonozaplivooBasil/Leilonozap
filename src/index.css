@@ -73,8 +73,20 @@ body.pc-tema footer * {
   color: var(--pc-tinta-fraca) !important;
   border-color: var(--pc-borda) !important;
 }
-/* flutuante de atendimento: perde o verde e entra no dourado fosco */
-body.pc-tema [data-share-hide]:not(button),
+/* flutuantes globais (voltar ao topo e atendimento): perdem o verde do site e
+   entram no preto/dourado institucional — só nesta página. */
+body.pc-tema [aria-label*="topo" i],
+body.pc-tema [aria-label*="Leila" i],
+body.pc-tema [title*="Leila" i] {
+  background: var(--pc-preto-2) !important;
+  border-color: var(--pc-ouro) !important;
+  color: var(--pc-ouro) !important;
+  box-shadow: none !important;
+}
+body.pc-tema [aria-label*="topo" i] svg,
+body.pc-tema [aria-label*="Leila" i] svg {
+  color: var(--pc-ouro) !important;
+}
 body.pc-tema .livoo-brilho,
 body.pc-tema .livoo-brilho-forte {
   box-shadow: none !important;
