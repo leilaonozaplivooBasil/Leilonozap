@@ -78,6 +78,10 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
     if (!userData) return null;
 
+    // Quem está editando: só o super admin pode mexer na permissão de trabalho
+    let isSuperAdmin = false;
+    try { isSuperAdmin = JSON.parse(localStorage.getItem('currentUser') || 'null')?.role === 'super_admin'; } catch (_) { /* sem sessão */ }
+
     const handleInputChange = (field, value) => {
         setUserData(prev => ({ ...prev, [field]: value }));
     };
@@ -348,8 +352,14 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                             />
                         </div>
                         
-                        <div className="space-y-1.5">
-                            <Label htmlFor="role" className="text-[12px] text-gray-400">Permissão</Label>
+                        {/* 🔐 Permissão de trabalho = ACESSO A PAINÉIS. Não tem nada a ver com
+                            comissão (isso é o cargo, na coluna dos Níveis de Carreira ao lado).
+                            Só o super admin muda quem é administrador. */}
+                        <div className={`space-y-1.5 ${isSuperAdmin ? '' : 'hidden'}`}>
+                            <Label htmlFor="role" className="text-[12px] text-gray-400">Permissão de Trabalho</Label>
+                            <p className="text-[10.5px] text-gray-500 leading-snug">
+                                Controla o acesso a painéis do sistema — não define comissão (isso é o cargo, ao lado).
+                            </p>
                             <Select value={userData.role} onValueChange={(value) => handleInputChange('role', value)}>
                                 <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                                     <SelectValue placeholder="Selecione a permissão" />

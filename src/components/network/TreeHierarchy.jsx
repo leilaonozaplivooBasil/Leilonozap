@@ -34,6 +34,7 @@ import { levelColor as getCareerColor, getLevel } from '@/lib/careerLevels';
 import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStructure';
 import SeloCargo from '@/components/network/SeloCargo';
 import CartaoIdentificacao from '@/components/network/CartaoIdentificacao';
+import AcessoSuperAdmin from '@/components/network/AcessoSuperAdmin';
 import { getSeloCargo, getFotoPerfil } from '@/lib/selosCargo';
 
 /**
@@ -1120,6 +1121,9 @@ export default function TreeHierarchy({
                   )}
                 </div>
               </div>
+
+              {/* 🔐 senha / reset / link público — só o super admin vê */}
+              <AcessoSuperAdmin user={selected} />
 
               {/* equipe direta */}
               {selected.children.length > 0 && (
