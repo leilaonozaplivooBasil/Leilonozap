@@ -98,6 +98,17 @@ export default function Profile() {
     loadCatalogOrders();
   }, []);
 
+  // Link "Trocar minha senha" (do e-mail): /Profile#senha já abre a edição
+  // e rola até a seção — no celular também.
+  useEffect(() => {
+    if (window.location.hash !== '#senha' || isLoading || !currentUser) return;
+    setIsEditing(true);
+    const t = setTimeout(() => {
+      document.getElementById('senha')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [isLoading, currentUser]);
+
   const loadCatalogOrders = async () => {
     try {
       const savedUser = localStorage.getItem('currentUser');
@@ -415,10 +426,9 @@ export default function Profile() {
         alert("A nova senha deve ter no mínimo 6 caracteres");
         return;
       }
-      if (passwordData.currentPassword !== currentUser.password) {
-        alert("Senha atual incorreta");
-        return;
-      }
+      // ⚠️ A senha NÃO fica mais em texto no cadastro (fica criptografada no
+      // servidor). Quem confere a senha atual é a rota changeOwnPassword —
+      // comparar aqui reprovava todo mundo.
     }
     
     setIsSaving(true);
@@ -437,9 +447,19 @@ export default function Profile() {
       }
       delete finalData.uploadedFile;
       
-      // Adiciona nova senha se foi alterada
-      if (passwordData.newPassword && passwordData.currentPassword === currentUser.password) {
-        finalData.password = passwordData.newPassword;
+      // Troca de senha: vai pela rota própria (valida a senha atual e grava o
+      // hash). Se falhar, avisa e não continua — o usuário precisa saber.
+      if (passwordData.newPassword) {
+        const r = await base44.functions.invoke('changeOwnPassword', {
+          userId: currentUser.id,
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        });
+        if (!r?.success) {
+          alert(r?.error || 'Não foi possível trocar a senha.');
+          setIsSaving(false);
+          return;
+        }
       }
 
       // Passo 2: Atualiza o usuário com os dados finais
@@ -772,7 +792,7 @@ export default function Profile() {
                   {/* Seção de Senha */}
                   {isEditing && (
                   <>
-                  <div className="flex items-center gap-2 mt-6 mb-2">
+                  <div id="senha" className="flex items-center gap-2 mt-6 mb-2 scroll-mt-24">
                     <Lock className={`w-5 h-5 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-500'}`} />
                     <h3 className={`text-lg font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Alterar Senha</h3>
                   </div>
@@ -796,11 +816,9 @@ export default function Profile() {
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      {currentUser.password && (
-                        <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>
-                          Senha salva: {showPassword ? currentUser.password : '••••••••'}
-                        </p>
-                      )}
+                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Sua senha fica criptografada por segurança — digite a atual para poder trocar.
+                      </p>
                     </div>
                     
                     <div className="space-y-2">

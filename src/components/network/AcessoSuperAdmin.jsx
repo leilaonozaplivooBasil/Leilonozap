@@ -31,7 +31,7 @@ function gerarCodigo(nome) {
  */
 export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
   const [nova, setNova] = useState(SENHA_PADRAO);
-  const [confirmar, setConfirmar] = useState(null); // 'senha' | 'reset'
+  const [confirmar, setConfirmar] = useState(null); // 'senha' | 'padrao' | 'reset'
   const [ocupado, setOcupado] = useState(false);
   const [definidaAgora, setDefinidaAgora] = useState(null);
   const [codigoNovo, setCodigoNovo] = useState(null);
@@ -77,17 +77,25 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
     }
   };
 
-  const salvarSenha = async () => {
+  // Define a senha DE VERDADE no servidor. `padrao` = usa a senha da casa e
+  // avisa a pessoa por e-mail (com o caminho pra ela trocar depois).
+  const salvarSenha = async (padrao = false) => {
+    const senha = padrao ? SENHA_PADRAO : nova;
     setOcupado(true);
     try {
       const r = await base44.functions.invoke('adminSetPassword', {
         userId: user.id,
-        newPassword: nova,
+        newPassword: senha,
         actorId: eu?.id,
+        notify: true,
       });
       if (r?.success) {
-        setDefinidaAgora(nova);
-        toast.success('Senha definida — a pessoa já pode entrar com ela.');
+        setDefinidaAgora(senha);
+        toast.success(
+          r.emailed
+            ? `Senha definida e enviada por e-mail para ${user.email}.`
+            : 'Senha definida — a pessoa já pode entrar com ela. (o e-mail não saiu)'
+        );
         setNova(SENHA_PADRAO);
         setConfirmar(null);
       } else {
@@ -175,7 +183,7 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
           size="sm"
           variant="outline"
           disabled={ocupado}
-          onClick={() => setNova(SENHA_PADRAO)}
+          onClick={() => setConfirmar('padrao')}
           className="h-11 text-[12px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white"
         >
           <Wand2 className="w-3.5 h-3.5 mr-1.5" />
@@ -243,8 +251,10 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
       {confirmar && (
         <div className="mt-3 rounded-lg border border-amber-500/40 bg-gray-900 p-3">
           <p className="text-[12.5px] text-gray-200">
-            {confirmar === 'senha'
-              ? `Definir a senha "${nova}" para ${user.full_name}? A senha atual deixa de funcionar.`
+            {confirmar === 'padrao'
+              ? `Definir a senha padrão ${SENHA_PADRAO} para ${user.full_name} e avisar por e-mail em ${user.email}? A senha atual deixa de funcionar.`
+              : confirmar === 'senha'
+              ? `Definir a senha "${nova}" para ${user.full_name} e avisar por e-mail? A senha atual deixa de funcionar.`
               : `Enviar um código de redefinição para ${user.email}?`}
           </p>
           <div className="flex justify-end gap-2 mt-2.5">
@@ -252,7 +262,8 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
               className="h-10 text-[12px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white">
               Cancelar
             </Button>
-            <Button size="sm" disabled={ocupado} onClick={confirmar === 'senha' ? salvarSenha : enviarReset}
+            <Button size="sm" disabled={ocupado}
+              onClick={() => (confirmar === 'reset' ? enviarReset() : salvarSenha(confirmar === 'padrao'))}
               className="h-10 text-[12px] bg-emerald-600 hover:bg-emerald-500">
               {ocupado ? 'Aguarde…' : 'Confirmar'}
             </Button>
