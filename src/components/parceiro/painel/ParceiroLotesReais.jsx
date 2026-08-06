@@ -1,63 +1,68 @@
-import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { normalizarLoteRecebido } from '@/lib/loteParceiro';
-import ParceiroLoteLinha from './ParceiroLoteLinha';
+import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
+import { FileSpreadsheet, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { lerPlanilhaMercadoLivre } from '@/lib/parseLotePlanilha';
+import { loteDaPlanilha } from '@/lib/loteParceiro';
+import { LOTES_ARREMATADOS, carregarLoteArrematado } from '@/lib/lotesArrematadosParceiro';
 import ParceiroLoteDetalheModal from './ParceiroLoteDetalheModal';
 
-// 📦 Lotes reais que a operação já arrematou — MESMA fonte da página interna
-// Estoque de Lotes (entidade LoteRecebido, mais recente primeiro). Leitura pura:
-// nenhum botão de salvar, arrematar, gerar produto ou excluir.
+// 📦 Lotes reais que a operação já arrematou. Tocar em um lote abre o analisador
+// completo (KPIs, custos, cenários, grades e item por item). Somente leitura.
 export default function ParceiroLotesReais() {
-  const [lotes, setLotes] = useState([]);
-  const [carregando, setCarregando] = useState(true);
   const [loteAberto, setLoteAberto] = useState(null);
+  const [carregando, setCarregando] = useState(null);
+  const [erro, setErro] = useState('');
 
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        const dados = await base44.entities.LoteRecebido.list('-created_date', 30);
-        // 🙈 Vitrine do parceiro: só entram lotes com economia real sobre o valor de
-        // mercado. Lote sem margem (0% ou negativo) fica FORA daqui — nada é alterado
-        // nem removido do Estoque de Lotes, é apenas um filtro de exibição.
-        const comMargem = (dados || [])
-          .filter((r) => (r.marketplace || r.origem) === 'Mercado Livre')
-          .map(normalizarLoteRecebido)
-          .filter((l) => typeof l.economiaPct === 'number' && l.economiaPct > 0);
-        if (ativo) setLotes(comMargem);
-      } catch (e) {
-        console.debug('Lotes reais indisponíveis:', e?.message);
-      } finally {
-        if (ativo) setCarregando(false);
-      }
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, []);
+  const abrir = async (item) => {
+    setCarregando(item.url);
+    setErro('');
+    try {
+      setLoteAberto(await carregarLoteArrematado(XLSX, lerPlanilhaMercadoLivre, loteDaPlanilha, item));
+    } catch (e) {
+      setErro(e?.message || 'Não foi possível abrir este lote.');
+    } finally {
+      setCarregando(null);
+    }
+  };
 
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-bold text-pc-tinta sm:text-xl">
-        Lotes que já arrematamos
-      </h2>
+      <h2 className="text-lg font-bold text-pc-tinta sm:text-xl">Lotes que já arrematamos</h2>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
-        Alguns lotes que já arrematamos. Toque em um lote para ver o analisador completo:
-        custo, grades, cenários de venda e item por item.
+        Toque em um lote para ver o analisador completo: custo, grades, cenários de venda e
+        item por item.
       </p>
 
-      {carregando ? (
-        <p className="mt-6 text-sm text-pc-tinta-fraca">Carregando lotes...</p>
-      ) : lotes.length === 0 ? (
-        <p className="mt-6 border border-pc-borda bg-pc-preto-2 p-4 text-sm text-pc-tinta-fraca">
-          Nenhum lote disponível para consulta neste momento.
+      <div className="mt-6 space-y-3">
+        {LOTES_ARREMATADOS.map((item) => (
+          <button
+            key={item.url}
+            type="button"
+            onClick={() => abrir(item)}
+            disabled={!!carregando}
+            className="flex min-h-[56px] w-full items-center gap-3 border border-pc-borda bg-pc-preto-2 p-4 text-left transition-colors hover:border-pc-ouro disabled:opacity-60"
+          >
+            <FileSpreadsheet className="h-5 w-5 shrink-0 text-pc-ouro" strokeWidth={1.5} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-pc-tinta">{item.nome}</span>
+              <span className="mt-0.5 block text-[11px] uppercase tracking-[0.12em] text-pc-tinta-fraca">
+                Mercado Livre · Arrematado em {item.dataArremate}
+              </span>
+            </span>
+            {carregando === item.url ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-pc-ouro" strokeWidth={1.5} />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0 text-pc-ouro" strokeWidth={1.5} />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {erro && (
+        <p className="mt-4 flex items-start gap-2 border border-pc-borda bg-pc-preto-2 p-3 text-sm text-pc-tinta">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-pc-ouro" strokeWidth={1.5} />
+          {erro}
         </p>
-      ) : (
-        <div className="mt-6 space-y-3">
-          {lotes.map((lote) => (
-            <ParceiroLoteLinha key={lote.id} lote={lote} onAbrir={setLoteAberto} />
-          ))}
-        </div>
       )}
 
       <ParceiroLoteDetalheModal lote={loteAberto} onFechar={() => setLoteAberto(null)} />
