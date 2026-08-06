@@ -39,8 +39,72 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
+import ParceiroPainelNav from '@/components/parceiro/painel/ParceiroPainelNav';
+import ParceiroPainelGate from '@/components/parceiro/painel/ParceiroPainelGate';
+import ParceiroPainelResumo from '@/components/parceiro/painel/ParceiroPainelResumo';
+import ParceiroComoFunciona from '@/components/parceiro/painel/ParceiroComoFunciona';
+import ParceiroPainelEmBreve from '@/components/parceiro/painel/ParceiroPainelEmBreve';
 
 const FeaturedProduct = base44.entities.FeaturedProduct;
+
+// 🧭 Telas do painel (padrão "tela a tela" do Painel de Alavancagem).
+// Fase 1 entrega a estrutura + o gate; as telas seguintes entram nas próximas
+// fases com estado honesto, sem número inventado.
+const TELAS = [
+  { id: 'visao', rotulo: 'Visão geral' },
+  {
+    id: 'nda',
+    rotulo: 'Confidencialidade',
+    titulo: 'Termo de confidencialidade',
+    texto:
+      'Assinatura digital do termo de confidencialidade, espelhando a Cláusula 12 do Contrato de Parceria (sigilo por 5 anos), com aceite registrado e download em PDF.',
+  },
+  {
+    id: 'operacao',
+    rotulo: 'A operação por dentro',
+    exigeNda: true,
+    titulo: 'A operação por dentro',
+    texto:
+      'Como compramos (Cláusula 4.1), a estrutura de precificação da operação e como cadastramos e vendemos, com espaço para os vídeos reais da operação. Liberado após a assinatura do termo de confidencialidade.',
+  },
+  {
+    id: 'analisador',
+    rotulo: 'Analisador',
+    exigeNda: true,
+    titulo: 'Analisador de lotes',
+    texto:
+      'Acesso em modo consulta ao nosso analisador, com lotes reais já arrematados para o parceiro medir o resultado da operação. Liberado após a assinatura do termo de confidencialidade.',
+  },
+  {
+    id: 'oportunidades',
+    rotulo: 'Oportunidades do dia',
+    exigeNda: true,
+    titulo: 'Oportunidades do dia',
+    texto:
+      'Lotes disponíveis para comprar junto com a operação, atualizados diariamente. Liberado após a assinatura do termo de confidencialidade.',
+  },
+  {
+    id: 'contrato',
+    rotulo: 'Contrato e plano',
+    titulo: 'Contrato de Parceria e plano',
+    texto:
+      'Leitura do Contrato de Parceria Comercial, aceite eletrônico (Lei nº 14.063/2020 e MP nº 2.200-2/2001) e download do PDF. Por enquanto, use o botão "Contratar novo plano" na visão geral.',
+  },
+  {
+    id: 'linha',
+    rotulo: 'Linha do tempo',
+    titulo: 'Linha do tempo do aporte',
+    texto:
+      'Da assinatura do contrato até o produto no ar na Loja Virtual, etapa por etapa, com registro real da operação. Visível após a assinatura do contrato.',
+  },
+  {
+    id: 'contas',
+    rotulo: 'Prestação de contas',
+    titulo: 'Prestação de contas',
+    texto:
+      'Extrato das operações e demonstrativo de resultados previstos na Cláusula 7.4, somente com dados apurados. Aguardando o primeiro ciclo (até 60 dias, Cláusula 8.2).',
+  },
+];
 
 export default function InvestorDashboard() {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
@@ -62,6 +126,19 @@ export default function InvestorDashboard() {
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [acceptedContract, setAcceptedContract] = useState(false);
+  const [telaAtiva, setTelaAtiva] = useState('visao');
+
+  // 🔐 Estágio do parceiro (somente LEITURA — a persistência do aceite do NDA
+  // entra na Fase 2). Contrato assinado = já possui plano ativo contratado.
+  const ndaAssinado = !!currentUser?.parceiro_nda_aceito_em;
+  const contratoAssinado = activeInvestments.length > 0;
+
+  // 🖤 Tema preto/dourado institucional escopado a esta página (mesma marca já
+  // usada na página do Parceiro). Removido ao sair — nenhuma outra tela muda.
+  useEffect(() => {
+    document.body.classList.add('pc-tema');
+    return () => document.body.classList.remove('pc-tema');
+  }, []);
 
   // 🔄 Função para carregar dados (reutilizável)
   const loadUserData = async () => {
@@ -257,9 +334,9 @@ export default function InvestorDashboard() {
   }, [navigate]);
 
   const commonFeatures = [
-    "Gestão 100% profissional",
-    "Produtos pré-selecionados",
-    "Retorno garantido em 60 dias",
+    "Gestão operacional integral",
+    "Produtos pré-selecionados por curadoria própria",
+    "Primeiro ciclo em até 60 dias (Cláusula 8.2)",
     "Suporte dedicado"
   ];
 
@@ -366,8 +443,8 @@ export default function InvestorDashboard() {
       title: "Lucro Contabilizado",
       icon: DollarSign,
       description: investment
-        ? `${investment.paidPeriods || 0} de ${investment.totalPeriods || 12} parcelas pagas • R$ ${(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido`
-        : "Seu retorno está garantido!",
+        ? `${investment.paidPeriods || 0} de ${investment.totalPeriods || 12} ciclos apurados • R$ ${(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido`
+        : "Aguardando a apuração do primeiro ciclo (até 60 dias, Cláusula 8.2)",
       color: "text-green-400",
       bgColor: "bg-green-500/20",
       borderColor: "border-green-500/30",
@@ -430,188 +507,42 @@ export default function InvestorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen bg-pc-preto text-pc-tinta">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
 
-        {/* Perfil do Parceiro */}
-        <Card className="bg-gradient-to-br from-gray-800 via-gray-800 to-green-900/20 backdrop-blur-sm border-2 border-green-500/30 mb-8 shadow-2xl shadow-green-500/10 hover:shadow-green-500/20 transition-all duration-500">
-          <CardContent className="p-4 sm:p-8">
-            {/* Informações do Usuário */}
-            <div className="mb-6 pb-4 border-b border-gray-700">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <p className="text-gray-400 text-sm">Email</p>
-                  <p className="text-white font-semibold">{currentUser?.email}</p>
-                </div>
-                {currentUser?.last_dashboard_access && (
-                  <div className="text-right">
-                    <p className="text-gray-400 text-sm">Último Acesso</p>
-                    <p className="text-white font-semibold">
-                      {new Date(currentUser.last_dashboard_access).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                )}
-              </div>
-              {activeInvestments.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge className="bg-purple-600/20 text-purple-400 border-purple-500/30">
-                    ✨ Associado Vitalício
-                  </Badge>
-                  <Badge className="bg-green-600/20 text-green-400 border-green-500/30">
-                    {activeInvestments[0]?.plan || 'Plano Visionário'}
-                  </Badge>
-                </div>
-              )}
-            </div>
+        <ParceiroPainelNav
+          telas={TELAS.map((t) => ({
+            ...t,
+            bloqueada: !!t.exigeNda && !ndaAssinado,
+          }))}
+          telaAtiva={telaAtiva}
+          onSelecionar={setTelaAtiva}
+        />
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-              <motion.div
-                className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg shadow-green-500/50 relative"
-                animate={{
-                  boxShadow: [
-                    '0 10px 40px rgba(34, 197, 94, 0.5)',
-                    '0 10px 60px rgba(34, 197, 94, 0.7)',
-                    '0 10px 40px rgba(34, 197, 94, 0.5)'
-                  ]
-                }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <motion.span
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  {currentUser?.full_name?.charAt(0) || 'P'}
-                </motion.span>
-                <div className="absolute inset-0 rounded-full bg-green-400/20 blur-xl animate-pulse"></div>
-              </motion.div>
-              <div className="flex-1 text-center sm:text-left">
-                <motion.h1
-                  className="text-2xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-green-400 bg-clip-text text-transparent"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  {currentUser?.full_name || 'Investidor'}
-                </motion.h1>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                  className="flex items-center gap-2"
-                >
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <p className="text-green-400 font-semibold text-sm sm:text-base">Parceiro de Compra</p>
-                </motion.div>
-              </div>
-              <div className="flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full sm:w-auto"
-                >
-                  <Button
-                    onClick={() => setShowPlansModal(true)}
-                    className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 text-base sm:text-lg px-4 sm:px-6 py-4 sm:py-6 font-bold relative overflow-hidden group"
-                  >
-                    <motion.div
-                      className="absolute inset-0 bg-white/20"
-                      initial={{ x: '-100%' }}
-                      whileHover={{ x: '100%' }}
-                      transition={{ duration: 0.5 }}
-                    />
-                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 relative z-10" />
-                    <span className="relative z-10">Contratar Novo Plano</span>
-                  </Button>
-                </motion.div>
-                <motion.div
-                  className="text-center sm:text-right bg-green-500/10 rounded-lg px-4 py-2 border border-green-500/30 w-full sm:w-auto"
-                  animate={{
-                    borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)']
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <div className="flex items-center justify-center sm:justify-end gap-2 text-green-400 mb-1">
-                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <motion.span
-                      className="text-2xl sm:text-3xl font-bold"
-                      animate={{
-                        textShadow: [
-                          '0 0 10px rgba(34, 197, 94, 0.5)',
-                          '0 0 20px rgba(34, 197, 94, 0.8)',
-                          '0 0 10px rgba(34, 197, 94, 0.5)'
-                        ]
-                      }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      R$ {totalPaidProfit.toLocaleString('pt-BR')}
-                    </motion.span>
-                  </div>
-                  <p className="text-sm text-gray-300 font-semibold">Lucro Contabilizado</p>
-                  {totalProfit > totalPaidProfit && (
-                    <p className="text-xs text-gray-500">de R$ {totalProfit.toLocaleString('pt-BR')} estimado</p>
-                  )}
-                </motion.div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Resumo da Carteira */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
-                  <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm">Total de Compras</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white">R$ {totalInvested.toLocaleString('pt-BR')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
-                  <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm">Lucro Contabilizado / Total</p>
-                  <p className="text-xl sm:text-2xl font-bold text-green-400">
-                    R$ {totalPaidProfit.toLocaleString('pt-BR')}
-                    <span className="text-sm text-gray-500 font-normal"> / R$ {totalProfit.toLocaleString('pt-BR')}</span>
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 cursor-pointer hover:border-purple-500/50 transition-all"
-            onClick={() => setShowInvestments(!showInvestments)}
-          >
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
-                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm">Compras Ativas</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white">{activeInvestments.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {telaAtiva === 'visao' && (
+          <>
+            <ParceiroPainelGate
+              ndaAssinado={ndaAssinado}
+              contratoAssinado={contratoAssinado}
+              onIrPara={setTelaAtiva}
+            />
+            <ParceiroPainelResumo
+              user={currentUser}
+              totalAportado={totalInvested}
+              lucroApurado={totalPaidProfit}
+              comprasAtivas={activeInvestments.length}
+              planoAtual={activeInvestments[0]?.plan}
+              onContratarPlano={() => setShowPlansModal(true)}
+              onVerCompras={() => setShowInvestments(!showInvestments)}
+            />
+          </>
+        )}
 
         {/* Compras Ativas */}
-        {activeInvestments.length > 0 && showInvestments && (
+        {telaAtiva === 'visao' && activeInvestments.length > 0 && showInvestments && (
           <div className="mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
-              Minhas <span className="text-green-400">Compras Ativas</span>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-pc-tinta">
+              Minhas <span className="text-pc-ouro">Operações Ativas</span>
             </h2>
 
             <div className="space-y-6">
@@ -634,10 +565,10 @@ export default function InvestorDashboard() {
                         <div className="text-left sm:text-right w-full sm:w-auto">
                           <p className="text-xl sm:text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
                           <p className="text-xs sm:text-sm text-green-400 font-semibold">
-                            R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido de R$ {(investment.estimatedProfit || 0).toLocaleString('pt-BR')}
+                            R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido
                           </p>
                           <p className="text-xs text-gray-500">
-                            {investment.paidPeriods || 0}/{investment.totalPeriods || 12} parcelas • {investment.investmentRate || 3}% ao mês
+                            {investment.paidPeriods || 0}/{investment.totalPeriods || 12} ciclos apurados (Cláusula 8.2)
                           </p>
                         </div>
                       </div>
@@ -731,9 +662,9 @@ export default function InvestorDashboard() {
                           <p className="text-lg sm:text-xl font-bold text-green-400">
                             R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')}
                           </p>
-                          <p className="text-xs text-gray-400">lucro contabilizado</p>
+                          <p className="text-xs text-gray-400">resultado compartilhado recebido</p>
                           <p className="text-xs text-gray-500">
-                            Total estimado: R$ {(investment.amount + investment.estimatedProfit).toLocaleString('pt-BR')}
+                            Capital aportado: R$ {investment.amount.toLocaleString('pt-BR')}
                           </p>
                         </div>
                       </div>
@@ -755,8 +686,8 @@ export default function InvestorDashboard() {
               </DialogTitle>
               <p className="text-gray-400 text-xs text-center">
                 {activeInvestments.length > 0
-                  ? 'Faça novas compras e aumente seus lucros'
-                  : 'Selecione o plano ideal para começar a comprar'
+                  ? 'Selecione o plano para um novo aporte de capital'
+                  : 'Selecione o plano de parceria para o seu aporte'
                 }
               </p>
             </DialogHeader>
@@ -1049,7 +980,7 @@ export default function InvestorDashboard() {
                                 </div>
                               )}
                               <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                                RISCO ZERO
+                                CURADORIA PRÓPRIA
                               </div>
                             </div>
 
@@ -1060,24 +991,22 @@ export default function InvestorDashboard() {
 
                               {/* Cards de Valores - MOBILE OTIMIZADO */}
                               <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
-                                <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700">
-                                  <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Compra Mínima</p>
+                                <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700 col-span-2">
+                                  <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Capital do aporte</p>
                                   <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight">
                                     R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                                   </p>
-                                </div>
-                                <div className="bg-green-600/10 rounded-lg p-2 sm:p-3 border border-green-500/30">
-                                  <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Lucro Estimado ({portfolio.expectedReturn}%)</p>
-                                  <p className="text-base sm:text-xl md:text-2xl font-bold text-green-400 leading-tight">
-                                    R$ {projection.profit.toLocaleString('pt-BR')}
+                                  <p className="text-gray-500 text-[10px] mt-1 leading-relaxed">
+                                    Participação sobre o lucro líquido apurado nas operações, conforme
+                                    percentual definido na adesão (Cláusula 7.1).
                                   </p>
                                 </div>
                               </div>
 
                               {/* Informações Inferiores */}
                               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-4 text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
-                                <span className="flex items-center gap-1">⏱️ Retorno em {portfolio.duration} dias</span>
-                                <span className="flex items-center gap-1">📦 Gestão 100% nossa</span>
+                                <span className="flex items-center gap-1">⏱️ Primeiro ciclo em até 60 dias</span>
+                                <span className="flex items-center gap-1">📦 Gestão operacional nossa</span>
                               </div>
 
                               {/* Botão - TAMANHO RESPONSIVO */}
@@ -1444,46 +1373,20 @@ export default function InvestorDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Informações */}
-        <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-2xl text-white flex items-center gap-2">
-              <ShieldCheck className="w-6 h-6 text-green-400" />
-              Como Funciona
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-bold text-white mb-2">📦 Produtos Verificados</h4>
-                <p className="text-gray-400 text-sm">
-                  Todos os produtos passam por rigoroso controle de qualidade em nosso centro no Rio de Janeiro.
-                </p>
-              </div>
+        {telaAtiva === 'visao' && <ParceiroComoFunciona />}
 
-              <div>
-                <h4 className="font-bold text-white mb-2">💰 Lucro Garantido</h4>
-                <p className="text-gray-400 text-sm">
-                  3% de retorno sobre o valor de compra, independente do volume de vendas.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-white mb-2">📊 Acompanhamento Real</h4>
-                <p className="text-gray-400 text-sm">
-                  Veja em tempo real todas as etapas da sua compra neste dashboard.
-                </p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-white mb-2">🔒 Compra Segura</h4>
-                <p className="text-gray-400 text-sm">
-                  Produtos de alta liquidez e contratos formalizados garantem sua segurança.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {telaAtiva !== 'visao' && (() => {
+          const tela = TELAS.find((t) => t.id === telaAtiva);
+          if (!tela) return null;
+          return (
+            <ParceiroPainelEmBreve
+              titulo={tela.titulo}
+              texto={tela.texto}
+              exigeNda={!!tela.exigeNda && !ndaAssinado}
+              onIrParaNda={() => setTelaAtiva('nda')}
+            />
+          );
+        })()}
       </div>
     </div>
   );
