@@ -1,5 +1,9 @@
 import React from 'react';
 import ParceiroSecao from './ParceiroSecao';
+import ParceiroLamina from './ParceiroLamina';
+import ParceiroDetalhe from './ParceiroDetalhe';
+
+const IMG_ESTOQUE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/77d21348f_generated_image.png';
 
 const ORIGENS = [
   { n: '01', titulo: 'Devoluções em prazo legal', texto: 'Produtos devolvidos dentro dos sete dias previstos em lei, íntegros e prontos para recolocação.' },
@@ -22,6 +26,15 @@ export default function ParceiroOrigens() {
         </p>
       </div>
 
+      <div className="mt-10">
+        <ParceiroLamina
+          imagem={IMG_ESTOQUE}
+          alt="Estoque organizado em depósito da operação"
+          selo="Produto de alto giro"
+          frase="Quatro origens. Um só critério: liquidez real."
+        />
+      </div>
+
       <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
         {ORIGENS.map((o, i) => (
           <div key={o.n} className={`border-t pt-5 ${i === 0 ? 'border-pc-ouro' : 'border-pc-borda'}`}>
@@ -32,7 +45,8 @@ export default function ParceiroOrigens() {
         ))}
       </div>
 
-      <div className="mt-14 grid gap-px overflow-hidden border border-pc-borda bg-pc-borda sm:grid-cols-2">
+      <ParceiroDetalhe rotulo="Ver como escoa e quem decide">
+      <div className="mt-6 grid gap-px overflow-hidden border border-pc-borda bg-pc-borda sm:grid-cols-2">
         <div className="bg-pc-preto p-6">
           <p className="text-[10px] uppercase tracking-[0.25em] text-pc-ouro sm:text-xs">Como escoa</p>
           <p className="mt-3 text-sm leading-relaxed text-pc-tinta-fraca">
@@ -49,6 +63,7 @@ export default function ParceiroOrigens() {
           </p>
         </div>
       </div>
+      </ParceiroDetalhe>
     </ParceiroSecao>
   );
 }

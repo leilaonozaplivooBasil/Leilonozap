@@ -1,5 +1,9 @@
 import React from 'react';
 import ParceiroSecao from './ParceiroSecao';
+import ParceiroLamina from './ParceiroLamina';
+import ParceiroDetalhe from './ParceiroDetalhe';
+
+const IMG_CICLO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a5ded50b6_generated_image.png';
 
 const ETAPAS = [
   { quando: 'Dia 0', titulo: 'Aceite e aporte', texto: 'Assinatura do instrumento e transferência do capital. A vigência de doze meses conta do aceite.' },
@@ -33,16 +37,27 @@ export default function ParceiroCiclo() {
         ))}
       </ol>
 
-      <div className="mt-14 border border-pc-borda p-6 sm:flex sm:gap-8">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-pc-ouro sm:w-40 sm:flex-shrink-0 sm:text-xs">
-          Ponto de atenção
-        </p>
-        <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca sm:mt-0 sm:text-sm">
-          O capital permanece alocado continuamente em novas operações durante a vigência e{' '}
-          <strong className="font-semibold text-pc-tinta">não pode ser retirado antecipadamente</strong>,
-          ressalvadas as condições de encerramento previstas na Cláusula 8.
-        </p>
+      <div className="mt-14">
+        <ParceiroLamina
+          imagem={IMG_CICLO}
+          alt="Doca de carregamento da operação logística"
+          selo="Giro contínuo"
+          frase="O capital não fica parado. Ele gira em operações sucessivas."
+        />
       </div>
+
+      <ParceiroDetalhe rotulo="Ver ponto de atenção do ciclo">
+        <div className="mt-6 border border-pc-borda p-6 sm:flex sm:gap-8">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-pc-ouro sm:w-40 sm:flex-shrink-0 sm:text-xs">
+            Ponto de atenção
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca sm:mt-0 sm:text-sm">
+            O capital permanece alocado continuamente em novas operações durante a vigência e{' '}
+            <strong className="font-semibold text-pc-tinta">não pode ser retirado antecipadamente</strong>,
+            ressalvadas as condições de encerramento previstas na Cláusula 8.
+          </p>
+        </div>
+      </ParceiroDetalhe>
     </ParceiroSecao>
   );
 }

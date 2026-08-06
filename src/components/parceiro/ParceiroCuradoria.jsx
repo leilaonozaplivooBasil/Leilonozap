@@ -1,5 +1,9 @@
 import React from 'react';
 import ParceiroSecao from './ParceiroSecao';
+import ParceiroLamina from './ParceiroLamina';
+import ParceiroDetalhe from './ParceiroDetalhe';
+
+const IMG_CURADORIA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/d9f9f805d_generated_image.png';
 
 const PASSOS = [
   'Classificação por curva ABC',
@@ -56,17 +60,28 @@ export default function ParceiroCuradoria() {
             </ul>
           </div>
 
-          <div className="mt-6 border-l-2 border-pc-borda pl-5">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-pc-tinta-fraca sm:text-xs">
-              Obrigação contratual da plataforma
-            </p>
-            <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca sm:text-sm">
-              Alocar o capital, executar curadoria e aquisição com critérios técnicos, operar logística
-              e comercialização, garantir transparência total pelo painel e efetuar os repasses e a
-              devolução do capital nos prazos pactuados.
-            </p>
-          </div>
+          <ParceiroDetalhe rotulo="Ver obrigação contratual da plataforma">
+            <div className="mt-4 border-l-2 border-pc-borda pl-5">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-pc-tinta-fraca sm:text-xs">
+                Obrigação contratual da plataforma
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca sm:text-sm">
+                Alocar o capital, executar curadoria e aquisição com critérios técnicos, operar logística
+                e comercialização, garantir transparência total pelo painel e efetuar os repasses e a
+                devolução do capital nos prazos pactuados.
+              </p>
+            </div>
+          </ParceiroDetalhe>
         </div>
+      </div>
+
+      <div className="mt-14">
+        <ParceiroLamina
+          imagem={IMG_CURADORIA}
+          alt="Inspeção técnica de produto na operação"
+          selo="Item a item"
+          frase="Nenhum lote entra por oportunidade. Entra por método."
+        />
       </div>
     </ParceiroSecao>
   );
