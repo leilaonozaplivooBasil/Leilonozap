@@ -3,6 +3,7 @@ import { Store, Users, Gavel } from 'lucide-react';
 import ParceiroSecao from './ParceiroSecao';
 import ParceiroTourLoja from './ParceiroTourLoja';
 import ParceiroTourExpansao from './ParceiroTourExpansao';
+import ParceiroComoChegamos from './ParceiroComoChegamos';
 
 // 🛣️ Bloco 07 — por onde o produto curado gira, com os percursos em destaque
 // no topo (a ação principal precisa ser vista de cara, não no pé do cartão).
@@ -16,30 +17,63 @@ const PERCURSOS = [
   { id: 'leilao', rotulo: 'Percorrer o Leilão' },
 ];
 
+// 🗺️ Roadmap 2026 — METAS DE OPERAÇÃO (alcance + base de cálculo conservadora).
+// ⚠️ Proibido aqui: volume total consolidado, projeção anual e a palavra
+// "investimento". O consolidado só existe no material privado, pós-NDA.
 const CANAIS = [
   {
+    id: 'leilao',
+    ordem: '1º',
+    icone: Gavel,
+    rotulo: 'Canal direto · Disputa em tempo real',
+    titulo: 'Leilão',
+    texto:
+      'Canal direto da empresa, com disputa em tempo real. Acelera o giro de lotes e define saída rápida quando a operação precisa de velocidade.',
+    meta: '100.000 usuários comprando',
+    prazo: 'até dez/2026',
+    base: 'R$ 297 / mês por usuário',
+  },
+  {
     id: 'loja',
+    ordem: '2º',
     icone: Store,
-    rotulo: 'Canal próprio · Digital',
+    rotulo: 'Canal digital próprio',
     titulo: 'Loja Virtual',
     texto:
       'Canal digital próprio da empresa. Recebe o item curado, com ficha, foto tratada e posicionamento definido pela operação — sem depender de marketplace de terceiros.',
+    meta: '100.000 usuários comprando',
+    prazo: 'até dez/2026',
+    base: 'R$ 297 / mês por usuário',
   },
   {
     id: 'licenciados',
+    ordem: '3º',
     icone: Users,
     rotulo: 'Canal humano · Estrutura de Alavancagem',
     titulo: 'Estrutura de Alavancagem',
     texto:
       'Licenciados e vendedores que revendem o estoque curado nas próprias praças e comunidades. Capilaridade de escoamento sem custo fixo de loja física.',
+    meta: '10.000 vendedores ativos',
+    prazo: 'até dez/2026',
+    base: 'R$ 2.500 / mês por vendedor',
+  },
+];
+
+const COMO_CHEGAMOS = [
+  {
+    titulo: 'Estratégia de influenciadores',
+    texto:
+      'Rede de criadores já mapeada, com link próprio e material pronto, levando audiência direto para os canais da empresa.',
   },
   {
-    id: 'leilao',
-    icone: Gavel,
-    rotulo: 'Canal direto · Giro acelerado',
-    titulo: 'Leilão',
+    titulo: 'Marketing de performance',
     texto:
-      'Canal direto da empresa, com disputa em tempo real. Usado para acelerar o giro de lotes e definir saída rápida quando a operação precisa de velocidade.',
+      'Aquisição paga medida por canal e por praça, com verba concentrada no que já converte.',
+  },
+  {
+    titulo: 'Canais próprios estruturados',
+    texto:
+      'Leilão, Loja Virtual e Estrutura de Alavancagem já em operação — a meta é escala de audiência, não construção de canal.',
   },
 ];
 
@@ -48,14 +82,14 @@ export default function ParceiroCanaisVenda() {
 
   return (
     <>
-      <ParceiroSecao numero="07" rotulo="Canais próprios de venda" referencia="Escoamento">
+      <ParceiroSecao numero="07" rotulo="Canais próprios de venda" referencia="Roadmap 2026">
         <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <h2 className="text-2xl font-bold leading-tight text-pc-tinta sm:text-4xl">
             Por onde o produto <span className="text-pc-ouro">gira</span>
           </h2>
           <p className="text-sm leading-relaxed text-pc-tinta-fraca lg:text-right">
-            Três canais próprios de escoamento,
-            <br className="hidden sm:block" /> operados pela própria estrutura.
+            Roadmap 2026 — metas de operação
+            <br className="hidden sm:block" /> dos três canais próprios da empresa.
           </p>
         </div>
 
@@ -83,14 +117,40 @@ export default function ParceiroCanaisVenda() {
             const Icone = c.icone;
             return (
               <article key={c.id} className="flex flex-col border border-pc-borda bg-pc-preto-2 p-6">
-                <Icone className="h-6 w-6 text-pc-ouro" strokeWidth={1.5} />
+                <div className="flex items-center justify-between gap-3">
+                  <Icone className="h-6 w-6 text-pc-ouro" strokeWidth={1.5} />
+                  <span className="text-xs font-bold tracking-[0.15em] text-pc-ouro">{c.ordem}</span>
+                </div>
                 <p className="mt-5 text-[10px] uppercase tracking-[0.2em] text-pc-ouro">{c.rotulo}</p>
                 <h3 className="mt-2 text-lg font-bold text-pc-tinta">{c.titulo}</h3>
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-pc-tinta-fraca">{c.texto}</p>
+
+                {/* Meta de alcance + base de cálculo conservadora */}
+                <div className="mt-5 border-t border-pc-ouro/25 pt-5">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">
+                    Meta {c.prazo}
+                  </p>
+                  <p className="mt-1.5 text-xl font-bold leading-tight text-pc-tinta sm:text-2xl">
+                    {c.meta}
+                  </p>
+                  <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca">
+                    Base de cálculo conservadora: <span className="text-pc-tinta">{c.base}</span>
+                  </p>
+                </div>
               </article>
             );
           })}
         </div>
+
+        <ParceiroComoChegamos itens={COMO_CHEGAMOS} />
+
+        <p className="mt-8 border-t border-pc-borda pt-6 text-[10px] leading-relaxed text-pc-tinta-fraca sm:text-xs">
+          Os números acima são <strong className="text-pc-tinta">metas de operação do roadmap 2026</strong>,
+          construídas sobre base de cálculo conservadora por usuário e por vendedor.
+          Não constituem garantia de resultado, promessa de rendimento nem oferta pública.
+          Condições comerciais e números consolidados são tratados somente após cadastro
+          e termo de confidencialidade.
+        </p>
       </ParceiroSecao>
 
       {(tour === 'loja' || tour === 'leilao') && (
