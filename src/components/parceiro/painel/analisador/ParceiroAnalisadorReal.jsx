@@ -4,6 +4,7 @@ import ParceiroKpis from './ParceiroKpis';
 import ParceiroCenarios from './ParceiroCenarios';
 import ParceiroRoscaQualidade from './ParceiroRoscaQualidade';
 import ParceiroItensLote from './ParceiroItensLote';
+import ParceiroDistribuicaoDepartamental from './ParceiroDistribuicaoDepartamental';
 
 // 🔬 Analisador REAL do Parceiro — mesma leitura e mesmas cores do analisador
 // interno da operação, em modo consulta. Não grava nada, não gera produto,
@@ -26,6 +27,10 @@ export default function ParceiroAnalisadorReal({ lote }) {
       />
       <ParceiroCenarios lote={lote} grades={grades} />
       <ParceiroRoscaQualidade grades={grades} />
+      <ParceiroDistribuicaoDepartamental
+        categorias={lote.categorias}
+        itensPorCategoria={lote.itensPorCategoria}
+      />
       <ParceiroItensLote itens={lote.itens} />
     </div>
   );

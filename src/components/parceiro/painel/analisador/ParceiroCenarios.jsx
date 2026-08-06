@@ -1,5 +1,6 @@
-import React from 'react';
-import { DollarSign, TrendingUp, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { DollarSign, TrendingUp, Activity, Eye } from 'lucide-react';
+import GradeItemsModal from '@/components/lotes/GradeItemsModal';
 
 const brl = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v ?? 0);
@@ -11,22 +12,33 @@ export default function ParceiroCenarios({ lote, grades }) {
   const q = (k) => g[k]?.qtd || 0;
   const v = (k) => g[k]?.valorMarket || 0;
 
+  // 👁️ Cada grupo abre a lista de itens daquelas grades — igual ao analisador interno.
+  const [modal, setModal] = useState(null);
+
   const grupos = [
-    { label: 'Somente Grupo A', qtd: q('A'), val: v('A'), cor: 'border-l-blue-400' },
-    { label: 'Grupo A + B', qtd: q('A') + q('B'), val: v('A') + v('B'), cor: 'border-l-emerald-400' },
+    { label: 'Somente Grupo A', qtd: q('A'), val: v('A'), cor: 'border-l-blue-400', grades: ['A'] },
+    { label: 'Grupo A + B', qtd: q('A') + q('B'), val: v('A') + v('B'), cor: 'border-l-emerald-400', grades: ['A', 'B'] },
     {
       label: 'Grupo A + B + C',
       qtd: q('A') + q('B') + q('C'),
       val: v('A') + v('B') + v('C'),
       cor: 'border-l-yellow-400',
+      grades: ['A', 'B', 'C'],
     },
     {
       label: 'Grupo A + B + C + D',
       qtd: q('A') + q('B') + q('C') + q('D'),
       val: v('A') + v('B') + v('C') + v('D'),
       cor: 'border-l-orange-400',
+      grades: ['A', 'B', 'C', 'D'],
     },
-    { label: 'Todos os Grupos', qtd: quantidade, val: valorMercado, cor: 'border-l-slate-400' },
+    {
+      label: 'Todos os Grupos',
+      qtd: quantidade,
+      val: valorMercado,
+      cor: 'border-l-slate-400',
+      grades: ['A', 'B', 'C', 'D', 'E', 'U'],
+    },
   ];
 
   const cenarios = [
@@ -108,12 +120,17 @@ export default function ParceiroCenarios({ lote, grades }) {
         </p>
         <div className="flex flex-1 flex-col justify-center space-y-2">
           {grupos.map((row) => (
-            <div
+            <button
+              type="button"
               key={row.label}
-              className={`flex items-center justify-between gap-2 rounded-lg border border-gray-700/50 border-l-4 bg-gray-800/60 p-2.5 ${row.cor}`}
+              onClick={() => setModal({ title: row.label, grades: row.grades })}
+              className={`group flex w-full items-center justify-between gap-2 rounded-lg border border-gray-700/50 border-l-4 bg-gray-800/60 p-2.5 text-left transition-colors hover:border-blue-500/40 hover:bg-white/[0.04] ${row.cor}`}
             >
               <div className="min-w-0">
-                <p className="text-xs font-bold text-gray-200">{row.label}</p>
+                <p className="flex items-center gap-1.5 text-xs font-bold text-gray-200">
+                  {row.label}
+                  <Eye size={11} className="text-gray-500 opacity-0 transition-opacity group-hover:opacity-100" />
+                </p>
                 <p className="text-[10px] text-gray-500">{row.qtd} produtos</p>
               </div>
               <div className="text-right">
@@ -123,10 +140,20 @@ export default function ParceiroCenarios({ lote, grades }) {
                 </p>
                 <p className="text-[10px] uppercase text-gray-500">Apurado: {brl(row.val)}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {modal && (
+        <GradeItemsModal
+          isOpen
+          onClose={() => setModal(null)}
+          title={modal.title}
+          grades={modal.grades}
+          items={lote.itens || []}
+        />
+      )}
     </div>
   );
 }

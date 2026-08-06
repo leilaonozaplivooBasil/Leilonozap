@@ -1,5 +1,4 @@
 import React from 'react';
-import ParceiroLoteCategorias from './ParceiroLoteCategorias';
 import ParceiroAnalisadorReal from './analisador/ParceiroAnalisadorReal';
 
 // 📈 Resultado da análise de uma planilha — SOMENTE LEITURA.
@@ -20,17 +19,6 @@ export default function ParceiroAnaliseResultado({ lote }) {
 
       <ParceiroAnalisadorReal lote={lote} />
 
-      {lote.categorias?.length > 0 && (
-        <div>
-          <h4 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-pc-ouro">
-            Categorias e itens
-          </h4>
-          <ParceiroLoteCategorias
-            categorias={lote.categorias}
-            itensPorCategoria={lote.itensPorCategoria}
-          />
-        </div>
-      )}
     </div>
   );
 }
