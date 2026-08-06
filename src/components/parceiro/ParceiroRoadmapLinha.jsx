@@ -32,13 +32,14 @@ const MARCOS = [
     titulo: 'Aplicativo 100% entregue',
     texto:
       'Plataforma concluída e em fase de pré-lançamento, com vendas estratégicas em curso para consolidar números antes da abertura oficial.',
+    hoje: 'Hoje: 52 pessoas ativas na plataforma e cerca de 70 licenciados reunidos para ativação.',
   },
   {
     periodo: 'Dez/2026',
     estado: 'previsto',
     titulo: 'Lançamento oficial',
     texto:
-      'Meta mínima do memorando: 300 licenciados ativos, 8 lojas físicas e distribuidor no Recreio em operação.',
+      'Meta mínima do memorando: 300 LICENCIADOS ativos (cada um sustentando os próprios vendedores), 8 lojas físicas e distribuidor no Recreio em operação.',
   },
 ];
 
@@ -47,6 +48,9 @@ const SELO = {
   atual: { rotulo: 'Em curso', Icone: Circle },
   previsto: { rotulo: 'Previsto', Icone: Dot },
 };
+
+const CONCLUIDOS = MARCOS.filter((m) => m.estado === 'concluido').length;
+const PCT_EXECUTADO = Math.round((CONCLUIDOS / MARCOS.length) * 100);
 
 export default function ParceiroRoadmapLinha() {
   const trilhoRef = useRef(null);
@@ -62,6 +66,28 @@ export default function ParceiroRoadmapLinha() {
       <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">
         Linha do tempo — execução até dezembro de 2026
       </p>
+
+      {/* Percentual de execução do roadmap = marcos concluídos / total de marcos */}
+      <div className="mt-5 max-w-md">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-xs uppercase tracking-[0.15em] text-pc-tinta-fraca">
+            Roadmap executado
+          </span>
+          <span className="text-2xl font-bold text-pc-ouro">{`${PCT_EXECUTADO}%`}</span>
+        </div>
+        <div className="mt-2 h-1 w-full bg-pc-borda">
+          <motion.div
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: PCT_EXECUTADO / 100 }}
+            viewport={{ once: true, amount: 0.6 }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            className="h-1 origin-left bg-pc-ouro"
+          />
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-pc-tinta-fraca">
+          {`${CONCLUIDOS} de ${MARCOS.length} marcos concluídos. O marco em curso é o pré-lançamento da plataforma.`}
+        </p>
+      </div>
 
       <div ref={trilhoRef} className="relative mt-10">
         {/* Trilho: à esquerda no mobile, centralizado no desktop */}
@@ -131,6 +157,11 @@ export default function ParceiroRoadmapLinha() {
                   <p className="mt-2 text-xs leading-relaxed text-pc-tinta-fraca sm:text-sm">
                     {m.texto}
                   </p>
+                  {m.hoje && (
+                    <p className="mt-3 border-t border-pc-ouro/25 pt-3 text-xs leading-relaxed text-pc-tinta">
+                      {m.hoje}
+                    </p>
+                  )}
                 </motion.article>
               </li>
             );
