@@ -380,6 +380,7 @@ export default function InvestorDashboard() {
             texto={telaSelecionada.texto}
             exigeNda={!!telaSelecionada.exigeNda && !ndaAssinado}
             onIrParaNda={() => setTelaAtiva('nda')}
+            liberado={ehValidador}
           />
         )}
 

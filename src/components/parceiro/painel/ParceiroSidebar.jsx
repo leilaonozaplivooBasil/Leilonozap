@@ -2,7 +2,8 @@ import React from 'react';
 import { Lock } from 'lucide-react';
 
 // 🧭 Menu LATERAL do Painel do Parceiro (padrão Painel de Alavancagem / Mercado Pago).
-// Desktop/tablet: coluna vertical fixa de 76px, sticky no scroll.
+// Desktop/tablet: coluna vertical fixa de 116px (nome completo em até 2 linhas,
+// sem cortar), sticky no scroll.
 // Mobile (<md): barra inferior fixa, horizontal e rolável.
 // Paleta exclusiva --pc- (preto/dourado). Alvos de toque >= 44x44.
 export default function ParceiroSidebar({ telas, telaAtiva, onSelecionar }) {
@@ -16,7 +17,7 @@ export default function ParceiroSidebar({ telas, telaAtiva, onSelecionar }) {
         aria-current={ativa ? 'page' : undefined}
         aria-label={t.rotulo}
         onClick={() => onSelecionar(t.id)}
-        className={`relative flex min-h-[56px] w-[68px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 transition-colors md:w-full ${
+        className={`relative flex min-h-[56px] w-[68px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-lg px-1 py-2 transition-colors md:min-h-[76px] md:w-full md:px-2 md:py-3 ${
           ativa ? 'bg-pc-preto-2 text-pc-ouro' : 'text-pc-tinta-fraca hover:text-pc-tinta'
         } ${bloqueada ? 'opacity-50' : ''}`}
       >
@@ -41,8 +42,13 @@ export default function ParceiroSidebar({ telas, telaAtiva, onSelecionar }) {
             />
           )}
         </span>
-        <span className="w-full text-center text-[9px] font-semibold uppercase leading-tight tracking-wide">
+        {/* 📱 mobile: rótulo curto (não estoura a barra inferior) */}
+        <span className="w-full text-center text-[9px] font-semibold uppercase leading-tight tracking-wide md:hidden">
           {t.rotuloCurto}
+        </span>
+        {/* 💻 desktop: nome COMPLETO, em até 2 linhas, sem cortar nem truncar */}
+        <span className="hidden w-full break-words text-center text-[10px] font-semibold uppercase leading-[1.15] tracking-[0.01em] md:block">
+          {t.rotulo}
         </span>
       </button>
     );
@@ -53,7 +59,7 @@ export default function ParceiroSidebar({ telas, telaAtiva, onSelecionar }) {
       {/* 💻 Desktop / tablet — coluna vertical sticky */}
       <nav
         aria-label="Telas do painel do parceiro"
-        className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[76px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-pc-borda bg-pc-preto px-1 py-3 nz-no-scrollbar md:flex"
+        className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[116px] shrink-0 flex-col gap-2 overflow-y-auto border-r border-pc-borda bg-pc-preto px-2 py-4 nz-no-scrollbar md:flex"
       >
         {telas.map((t) => (
           <Item key={t.id} t={t} />

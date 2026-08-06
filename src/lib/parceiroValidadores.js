@@ -11,11 +11,14 @@ const EMAILS_VALIDADORES = [
   'luciano4.100@hotmail.com',
 ];
 
-// Casamento também por NOME, porque o validador pode entrar com outro e-mail.
+// Domínios institucionais internos: qualquer conta do domínio é validadora.
+const DOMINIOS_VALIDADORES = ['tttcorporate.com', 'tttcorporate.com.br'];
+
+// Casamento também por NOME (pedaço do nome), porque o validador pode entrar
+// com outro e-mail e o cadastro varia entre "Santana" e "Santanna".
 const NOMES_VALIDADORES = [
   'luciano pinheiro',
-  'luiz santana',
-  'luiz santanna',
+  'luiz santan', // cobre Santana e Santanna
 ];
 
 // remove acento e normaliza espaços para o casamento ser tolerante
@@ -36,10 +39,11 @@ export function isParceiroValidador(user) {
 
   const email = normalizar(user.email);
   if (email && EMAILS_VALIDADORES.includes(email)) return true;
+  if (email && DOMINIOS_VALIDADORES.some((d) => email.endsWith('@' + d))) return true;
 
   const nomes = [user.full_name, user.nickname, `${user.display_first_name || ''} ${user.display_last_name || ''}`]
     .map(normalizar)
     .filter(Boolean);
 
-  return nomes.some((n) => NOMES_VALIDADORES.includes(n));
+  return nomes.some((n) => NOMES_VALIDADORES.some((v) => n.includes(v)));
 }
