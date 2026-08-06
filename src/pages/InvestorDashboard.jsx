@@ -44,6 +44,8 @@ import ParceiroPainelGate from '@/components/parceiro/painel/ParceiroPainelGate'
 import ParceiroPainelResumo from '@/components/parceiro/painel/ParceiroPainelResumo';
 import ParceiroComoFunciona from '@/components/parceiro/painel/ParceiroComoFunciona';
 import ParceiroPainelEmBreve from '@/components/parceiro/painel/ParceiroPainelEmBreve';
+import ParceiroAssinatura from '@/components/parceiro/painel/ParceiroAssinatura';
+import { isParceiroValidador } from '@/lib/parceiroValidadores';
 
 const FeaturedProduct = base44.entities.FeaturedProduct;
 
@@ -127,11 +129,21 @@ export default function InvestorDashboard() {
   const [showContract, setShowContract] = useState(false);
   const [acceptedContract, setAcceptedContract] = useState(false);
   const [telaAtiva, setTelaAtiva] = useState('visao');
+  // ✍️ Assinatura eletrônica do contrato (Fase 2)
+  const [showAssinatura, setShowAssinatura] = useState(false);
+  const [assinaturaPng, setAssinaturaPng] = useState(null);
+  const [assinaturaRegistro, setAssinaturaRegistro] = useState(null);
+  const [salvandoAssinatura, setSalvandoAssinatura] = useState(false);
 
-  // 🔐 Estágio do parceiro (somente LEITURA — a persistência do aceite do NDA
-  // entra na Fase 2). Contrato assinado = já possui plano ativo contratado.
-  const ndaAssinado = !!currentUser?.parceiro_nda_aceito_em;
-  const contratoAssinado = activeInvestments.length > 0;
+  // 🔓 Conta validadora (homologação): vê o painel como se já tivesse assinado
+  // o termo de confidencialidade e o contrato. Só visualização — nada é alterado
+  // no banco nem no cadastro do usuário.
+  const ehValidador = isParceiroValidador(currentUser);
+
+  // 🔐 Estágio do parceiro. Contrato assinado = plano ativo contratado OU
+  // assinatura eletrônica registrada nesta sessão.
+  const ndaAssinado = ehValidador || !!currentUser?.parceiro_nda_aceito_em;
+  const contratoAssinado = ehValidador || activeInvestments.length > 0 || !!assinaturaRegistro;
 
   // 🖤 Tema preto/dourado institucional escopado a esta página (mesma marca já
   // usada na página do Parceiro). Removido ao sair — nenhuma outra tela muda.
@@ -850,10 +862,15 @@ export default function InvestorDashboard() {
                     onClick={async () => {
                       try {
                         toast.info("Gerando PDF do contrato...");
-                        const response = await base44.functions.invoke('generateContractPDF', { 
+                        const response = await base44.functions.invoke('generateContractPDF', {
                           format: 'base64',
                           partner_name: pixFormData?.name || '',
-                          partner_cpf: pixFormData?.cpf || ''
+                          partner_cpf: pixFormData?.cpf || '',
+                          partner_email: pixFormData?.email || '',
+                          plan_name: selectedPlan?.name,
+                          plan_amount: selectedPlan?.minInvestment,
+                          signature_base64: assinaturaPng || undefined,
+                          ...(assinaturaRegistro || {}),
                         });
                         const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
                         if (!pdfBase64) throw new Error('PDF não gerado');
@@ -909,10 +926,15 @@ export default function InvestorDashboard() {
                   onClick={async () => {
                     try {
                       toast.info("Gerando PDF para compartilhar...");
-                      const response = await base44.functions.invoke('generateContractPDF', { 
+                      const response = await base44.functions.invoke('generateContractPDF', {
                         format: 'base64',
                         partner_name: pixFormData?.name || '',
-                        partner_cpf: pixFormData?.cpf || ''
+                        partner_cpf: pixFormData?.cpf || '',
+                        partner_email: pixFormData?.email || '',
+                        plan_name: selectedPlan?.name,
+                        plan_amount: selectedPlan?.minInvestment,
+                        signature_base64: assinaturaPng || undefined,
+                        ...(assinaturaRegistro || {}),
                       });
                       const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
                       if (!pdfBase64) throw new Error('PDF não gerado');
@@ -1144,6 +1166,71 @@ export default function InvestorDashboard() {
                 >
                   📄 Ler Contrato de Parceria
                 </Button>
+
+                {/* ✍️ Assinatura eletrônica do contrato */}
+                {showAssinatura ? (
+                  <div className="rounded-lg border border-pc-borda bg-pc-preto-2 p-3 mb-3">
+                    <ParceiroAssinatura
+                      nome={pixFormData?.name}
+                      salvando={salvandoAssinatura}
+                      onCancelar={() => setShowAssinatura(false)}
+                      onConfirmar={async (png) => {
+                        setSalvandoAssinatura(true);
+                        try {
+                          const resp = await base44.functions.invoke('registrarAssinaturaContrato', {
+                            user_id: currentUser?.id,
+                            nome: pixFormData?.name,
+                            cpf: pixFormData?.cpf,
+                            email: pixFormData?.email,
+                            plano: selectedPlan?.name,
+                            valor_aporte: selectedPlan?.minInvestment,
+                            assinatura_png: png,
+                          });
+                          const dados = resp?.data || resp;
+                          if (!dados?.success) {
+                            toast.error(dados?.error || 'Não foi possível registrar a assinatura');
+                            return;
+                          }
+                          setAssinaturaPng(png);
+                          setAssinaturaRegistro(dados.assinatura);
+                          setAcceptedContract(true);
+                          setShowAssinatura(false);
+                          toast.success(`Contrato assinado. Código ${dados.assinatura.codigo_verificacao}`);
+                          if (!dados.persistido) {
+                            toast.warning('Assinatura aplicada no documento, mas o registro no servidor falhou.');
+                          }
+                        } catch (e) {
+                          toast.error('Erro ao assinar: ' + e.message);
+                        } finally {
+                          setSalvandoAssinatura(false);
+                        }
+                      }}
+                    />
+                  </div>
+                ) : assinaturaRegistro ? (
+                  <div className="rounded-lg border border-pc-ouro/40 bg-pc-preto-2 p-3 mb-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">Contrato assinado eletronicamente</p>
+                    <p className="mt-1 text-xs text-pc-tinta">
+                      Código de verificação {assinaturaRegistro.codigo_verificacao}
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-pc-tinta-fraca">
+                      Registrado em {new Date(assinaturaRegistro.assinado_em).toLocaleString('pt-BR')} · Lei nº 14.063/2020 e MP nº 2.200-2/2001
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      if (!pixFormData?.name || !pixFormData?.cpf || !pixFormData?.email) {
+                        toast.error('Preencha nome, CPF e e-mail antes de assinar');
+                        return;
+                      }
+                      setShowAssinatura(true);
+                    }}
+                    className="w-full min-h-[48px] bg-pc-ouro font-semibold text-pc-preto hover:bg-pc-ouro-claro mb-3"
+                  >
+                    ✍️ Assinar contrato digitalmente
+                  </Button>
+                )}
 
                 {/* Checkbox Aceitar Contrato */}
                 <div className="flex items-center space-x-3 bg-gray-800 rounded-lg p-3 border border-gray-700 mb-3">
