@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -23,6 +23,17 @@ export default function ParceiroTermoSigilo({ user, registro, onAssinado, libera
   const [docIdentidade, setDocIdentidade] = useState('');
   const [docCpf, setDocCpf] = useState('');
   const [salvando, setSalvando] = useState(false);
+
+  // 📱 No celular a Etapa 2 fica muito acima da Etapa 3: o parceiro lê "informe o
+  // CPF" mas não vê o campo e acha que a assinatura não abriu. Este ref leva ele
+  // até lá. Só navegação — nenhuma regra de validação muda.
+  const cpfRef = useRef(null);
+  const irParaCpf = () => {
+    const el = cpfRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => el.focus(), 350);
+  };
 
   if (registro) {
     return <ParceiroTermoAssinado registro={registro} />;
@@ -151,12 +162,18 @@ export default function ParceiroTermoSigilo({ user, registro, onAssinado, libera
           <div>
             <label className="text-[9px] font-semibold uppercase tracking-[0.15em] text-pc-tinta-fraca">CPF / CNPJ</label>
             <Input
+              ref={cpfRef}
               value={cpf}
               onChange={(e) => setCpf(e.target.value)}
               inputMode="numeric"
               placeholder="Somente números"
-              className="mt-1 min-h-[44px] border-pc-borda bg-pc-preto text-pc-tinta"
+              className={`mt-1 min-h-[44px] bg-pc-preto text-pc-tinta ${
+                cpfLimpo.length >= 11 ? 'border-pc-borda' : 'border-pc-ouro ring-1 ring-pc-ouro/40'
+              }`}
             />
+            {cpfLimpo.length < 11 && (
+              <p className="mt-1 text-[10px] text-pc-ouro">Obrigatório para assinar</p>
+            )}
           </div>
         </div>
 
@@ -194,11 +211,27 @@ export default function ParceiroTermoSigilo({ user, registro, onAssinado, libera
 
         {!podeAssinar && (
           <ul className="mt-4 space-y-1 text-[11px] text-pc-tinta-fraca">
-            {!identidadeOk && <li>• Informe um CPF/CNPJ válido para assinar.</li>}
+            {!identidadeOk && (
+              <li>
+                <button
+                  type="button"
+                  onClick={irParaCpf}
+                  className="min-h-[44px] text-left text-[11px] font-semibold text-pc-ouro underline decoration-pc-ouro/50 underline-offset-2"
+                >
+                  • Informe um CPF/CNPJ válido para assinar — toque aqui para preencher
+                </button>
+              </li>
+            )}
             {!docIdentidade && <li>• Envie o documento de identidade.</li>}
             {!docCpf && <li>• Envie a comprovação de CPF.</li>}
             {!aceite && <li>• Marque o aceite do termo.</li>}
           </ul>
+        )}
+
+        {!podeAssinar && (
+          <p className="mt-4 border border-pc-ouro/40 bg-pc-preto px-3 py-2 text-[11px] font-semibold text-pc-ouro">
+            Assinatura liberada após completar os itens acima.
+          </p>
         )}
 
         <div className={`mt-5 ${podeAssinar ? '' : 'pointer-events-none opacity-40'}`}>
