@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { base44 } from '@/api/base44Client';
-import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse, ShoppingBag, MapPin } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse, ShoppingBag, MapPin, Sparkles } from 'lucide-react';
 import GradeItemsModal from './GradeItemsModal';
+import PublicarOportunidadeModal from './PublicarOportunidadeModal';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 
@@ -20,6 +21,9 @@ export default function AnalisadorLoteInline({ onEnviado }) {
     const [error, setError] = useState('');
     const [expandedCategories, setExpandedCategories] = useState(new Set());
     const [gradeModal, setGradeModal] = useState(null);
+    // 🌟 Publicação nas Oportunidades do Dia (painel do Parceiro)
+    const [oportunidadeModal, setOportunidadeModal] = useState(false);
+    const [publicandoOportunidade, setPublicandoOportunidade] = useState(false);
     const [modeloPlanilha, setModeloPlanilha] = useState('mercadolivre');
     const [arremateInputValue, setArremateInputValue] = useState('');
     const [taxaPct, setTaxaPct] = useState(7);
@@ -293,6 +297,56 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         finally { setIsSaving(false); }
     };
 
+    // 🌟 Publica o lote analisado nas Oportunidades do Dia do painel do Parceiro.
+    // Usa o MESMO caminho de escrita do estoque (loteRecebidoWrite → Supabase),
+    // sem tocar em estoque, produtos, comissões ou Marketplace.
+    const handlePublicarOportunidade = async (dadosOportunidade) => {
+        if (!loteAtual) return;
+        setPublicandoOportunidade(true);
+        try {
+            const caller_email = JSON.parse(localStorage.getItem('currentUser') || '{}')?.email;
+            const itens = (loteAtual.rawItemsByGrade || []).map((i) => ({
+                desc: String(i.desc || '').trim(),
+                grade: String(i.grade || 'A').toUpperCase(),
+                qtd: i.qtd || 1,
+                valor_mercado: i.valor || 0,
+            }));
+            const resp = await base44.functions.invoke('loteRecebidoWrite', {
+                method: 'create',
+                caller_email,
+                data: {
+                    nome_lote: loteAtual.nomeLote,
+                    marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
+                    origem: loteAtual.origem,
+                    status: 'em_analise',
+                    valor_lote: calculations?.custoTotal || 0,
+                    custo_total: calculations?.custoTotal || 0,
+                    valor_arremate: calculations?.valorArrematado || 0,
+                    taxa_pct: taxaPct,
+                    frete,
+                    outros,
+                    local_coleta: loteAtual.localColeta || null,
+                    quantidade_total: loteAtual.quantidadeTotal || 0,
+                    valor_mercado_total: loteAtual.valorMercadoTotal || 0,
+                    itens_json: JSON.stringify(itens),
+                    categorias_json: loteAtual.resumoCategorias?.length > 0 ? JSON.stringify(loteAtual.resumoCategorias) : null,
+                    grades_json: loteAtual.gradesData ? JSON.stringify(loteAtual.gradesData) : null,
+                    data_recebimento: new Date().toISOString(),
+                    produtos_gerados: false,
+                    publicado_parceiro: true,
+                    ...dadosOportunidade,
+                },
+            });
+            if (resp?.error || resp?.data?.error) throw new Error(resp?.error || resp?.data?.error);
+            setOportunidadeModal(false);
+            alert('✅ Oportunidade publicada no painel do Parceiro!');
+        } catch (e) {
+            alert('Erro ao publicar oportunidade: ' + (e?.message || e));
+        } finally {
+            setPublicandoOportunidade(false);
+        }
+    };
+
     const handleEnviarParaEstoque = async () => {
         if (!loteAtual) return;
         setIsSaving(true);
@@ -437,6 +491,10 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                                 <button disabled={isSaving} onClick={handlePublicarMarketplace}
                                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
                                     <ShoppingBag size={15} />{isSaving ? 'Publicando...' : 'Publicar no Marketplace'}
+                                </button>
+                                <button disabled={isSaving} onClick={() => setOportunidadeModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
+                                    <Sparkles size={15} />Publicar nas Oportunidades do Dia
                                 </button>
                             </div>
                         </div>
@@ -650,6 +708,20 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                     </div>{/* fim grid xl:grid-cols-3 */}
 
                 </div>
+            )}
+
+            {oportunidadeModal && loteAtual && calculations && (
+                <PublicarOportunidadeModal
+                    lote={loteAtual}
+                    custoTotal={calculations.custoTotal}
+                    freteSugerido={frete}
+                    economiaPct={loteAtual.valorMercadoTotal > 0 && calculations.custoTotal > 0
+                        ? (1 - calculations.custoTotal / loteAtual.valorMercadoTotal) * 100
+                        : null}
+                    salvando={publicandoOportunidade}
+                    onConfirmar={handlePublicarOportunidade}
+                    onFechar={() => setOportunidadeModal(false)}
+                />
             )}
 
             {gradeModal && loteAtual && (

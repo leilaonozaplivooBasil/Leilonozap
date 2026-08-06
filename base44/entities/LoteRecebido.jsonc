@@ -142,6 +142,35 @@
       ],
       "default": "Bangu",
       "description": "Dep\u00f3sito onde os produtos ser\u00e3o alocados"
+    },
+    "publicado_parceiro": {
+      "type": "boolean",
+      "default": false,
+      "description": "Publicado nas Oportunidades do Dia do painel do Parceiro"
+    },
+    "data_leilao": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data e hor\u00e1rio do leil\u00e3o desta oportunidade"
+    },
+    "lance_entrada": {
+      "type": "number",
+      "default": 0,
+      "description": "Lance de entrada sugerido apresentado ao parceiro"
+    },
+    "frete_oportunidade": {
+      "type": "number",
+      "default": 0,
+      "description": "Frete estimado apresentado ao parceiro nesta oportunidade"
+    },
+    "vagas": {
+      "type": "number",
+      "default": 0,
+      "description": "Limite de participantes desta oportunidade (0 = sem limite)"
+    },
+    "observacao_parceiro": {
+      "type": "string",
+      "description": "Observa\u00e7\u00e3o curta exibida ao parceiro na oportunidade"
     }
   },
   "required": [
