@@ -472,29 +472,32 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                                 )}
                             </div>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <div className="flex gap-2 flex-wrap">
+                        {/* 📱 No celular: campos e botões em coluna, 100% de largura e
+                            alvo de toque >= 44px (antes os 3 botões ficavam numa linha só
+                            e saíam cortados na borda direita da tela). */}
+                        <div className="flex w-full flex-col gap-2 md:w-auto">
+                            <div className="grid grid-cols-2 gap-2">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Data do Leilão</label>
-                                    <input type="date" value={dataLeilao} onChange={e => setDataLeilao(e.target.value)} className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500" />
+                                    <input type="date" value={dataLeilao} onChange={e => setDataLeilao(e.target.value)} className="w-full min-h-[44px] bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500" />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Horário do Leilão</label>
-                                    <input type="time" value={horarioLeilao} onChange={e => setHorarioLeilao(e.target.value)} className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500" />
+                                    <input type="time" value={horarioLeilao} onChange={e => setHorarioLeilao(e.target.value)} className="w-full min-h-[44px] bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500" />
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                                 <button disabled={isSaving} onClick={handleEnviarParaEstoque}
-                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow sm:w-auto">
                                     <Warehouse size={15} />{isSaving ? 'Enviando...' : 'Enviar para Estoque'}
                                 </button>
                                 <button disabled={isSaving} onClick={handlePublicarMarketplace}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow sm:w-auto">
                                     <ShoppingBag size={15} />{isSaving ? 'Publicando...' : 'Publicar no Marketplace'}
                                 </button>
                                 <button disabled={isSaving} onClick={() => setOportunidadeModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
-                                    <Sparkles size={15} />Publicar nas Oportunidades do Dia
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow sm:w-auto">
+                                    <Sparkles size={15} /><span className="text-center">Publicar nas Oportunidades do Dia</span>
                                 </button>
                             </div>
                         </div>
