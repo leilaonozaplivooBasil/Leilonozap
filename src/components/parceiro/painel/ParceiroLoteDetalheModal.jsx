@@ -43,6 +43,12 @@ export default function ParceiroLoteDetalheModal({ lote, onFechar }) {
           <p className="mt-1 text-3xl font-bold text-pc-tinta">
             {lote.economiaPct != null ? `${lote.economiaPct.toFixed(1).replace('.', ',')}%` : '—'}
           </p>
+          {lote.economiaPct != null && (
+            <p className="mt-2 text-sm font-bold text-emerald-400">
+              Pagamos {(100 - lote.economiaPct).toFixed(2).replace('.', ',')}% do valor de
+              mercado
+            </p>
+          )}
           <p className="mt-1 text-xs text-pc-tinta-fraca">
             Custo total {real(lote.custoTotal)} contra {real(lote.valorMercado)} de valor de
             mercado dos itens.
