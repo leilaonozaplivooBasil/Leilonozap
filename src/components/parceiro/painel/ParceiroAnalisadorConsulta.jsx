@@ -5,6 +5,7 @@ import { lerPlanilhaMercadoLivre, lerPlanilhaCasaEVideo } from '@/lib/parseLoteP
 import { loteDaPlanilha } from '@/lib/loteParceiro';
 import ParceiroAnaliseCustos from './ParceiroAnaliseCustos';
 import ParceiroAnaliseResultado from './ParceiroAnaliseResultado';
+import ParceiroPlanilhasTeste from './ParceiroPlanilhasTeste';
 
 const CUSTOS_PADRAO = { arremate: '', taxaPct: 7, frete: 2500, outros: 0 };
 
@@ -14,6 +15,7 @@ export default function ParceiroAnalisadorConsulta() {
   const [custos, setCustos] = useState(CUSTOS_PADRAO);
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState('');
+  const [carregandoId, setCarregandoId] = useState(null);
 
   const analisar = (workbook, nomeArquivo, qualModelo) => {
     const resultado =
@@ -48,6 +50,26 @@ export default function ParceiroAnalisadorConsulta() {
     e.target.value = '';
   };
 
+  // 📄 Lotes hospedados aqui dentro: o sistema baixa o arquivo e roda o analisador.
+  // O parceiro não abre nem recebe a planilha — só vê a leitura.
+  const aoEscolherHospedada = async (p) => {
+    setCarregandoId(p.id);
+    setErro('');
+    try {
+      const resposta = await fetch(p.url);
+      if (!resposta.ok) throw new Error('Não foi possível carregar este lote agora.');
+      const buffer = await resposta.arrayBuffer();
+      analisar(XLSX.read(buffer, { type: 'array' }), p.titulo, 'mercadolivre');
+      setModelo('mercadolivre');
+      setCustos(CUSTOS_PADRAO);
+    } catch (err) {
+      setErro(err?.message || 'Não foi possível ler este lote.');
+      setLido(null);
+    } finally {
+      setCarregandoId(null);
+    }
+  };
+
   const lote = lido ? loteDaPlanilha(lido, custos) : null;
 
   return (
@@ -55,7 +77,14 @@ export default function ParceiroAnalisadorConsulta() {
       <h2 className="text-lg font-bold text-pc-tinta sm:text-xl">Analisar uma planilha</h2>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
         O mesmo analisador que a operação usa antes de dar um lance, aqui em modo consulta.
-        Escolha o modelo, carregue a planilha e veja a leitura completa do lote.
+        Toque em um dos lotes abaixo — as planilhas já estão aqui dentro — e veja a leitura
+        completa: custo, grades, cenários de venda e item por item.
+      </p>
+
+      <ParceiroPlanilhasTeste onEscolher={aoEscolherHospedada} carregandoId={carregandoId} />
+
+      <p className="mt-8 text-xs uppercase tracking-wide text-pc-tinta-fraca">
+        Ou teste com uma planilha sua
       </p>
 
       {/* modelo */}
