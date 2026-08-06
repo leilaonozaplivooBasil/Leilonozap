@@ -10,8 +10,10 @@ import ParceiroTourExpansao from './ParceiroTourExpansao';
 // "investimento" e qualquer valor em R$. Descrição operacional apenas.
 const PERCURSOS = [
   { id: 'loja', rotulo: 'Percorrer a Loja Virtual' },
-  { id: 'leilao', rotulo: 'Percorrer o Leilão' },
+  // Cada botão fica na coluna do cartão que ele demonstra: expansão sobre o
+  // canal humano (2º) e leilão sobre o canal direto (3º).
   { id: 'expansao', rotulo: 'Conhecer o Plano de Expansão' },
+  { id: 'leilao', rotulo: 'Percorrer o Leilão' },
 ];
 
 const CANAIS = [
