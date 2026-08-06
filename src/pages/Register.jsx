@@ -64,7 +64,9 @@ export default function Register() {
     setErrorMessage('');
     setIsGoogleLoading(true);
     try {
-      const result = await base44.functions.invoke('googleLogin', { credential: response.credential });
+      // Passa o código do link de indicação: sem ele o cadastro por Google caía
+      // no Site Oficial e o indicador real perdia a pessoa da árvore.
+      const result = await base44.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível continuar com o Google.'));
         setIsGoogleLoading(false);

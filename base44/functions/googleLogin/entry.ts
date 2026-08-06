@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 Deno.serve(async (req) => {
   try {
-    const { credential } = await req.json();
+    const { credential, ref_code } = await req.json();
     if (!credential) {
       return Response.json({ error: 'Token do Google não informado.' }, { status: 400 });
     }
@@ -37,11 +37,23 @@ Deno.serve(async (req) => {
     if (existing && existing.length > 0) {
       user = existing[0];
     } else {
+      // 🌳 Indicador do link (ref_code) tem prioridade; sem ele, a raiz Site Oficial.
+      let referred_by_id = null;
+      const code = String(ref_code || '').trim();
+      if (code) {
+        const ind = await base44.asServiceRole.entities.AppUser.filter({ referral_code: code });
+        if (ind && ind[0]) referred_by_id = ind[0].id;
+      }
+      if (!referred_by_id) {
+        const site = await base44.asServiceRole.entities.AppUser.filter({ referral_code: 'leilaonozap' });
+        if (site && site[0]) referred_by_id = site[0].id;
+      }
       user = await base44.asServiceRole.entities.AppUser.create({
         full_name: payload.name || email.split('@')[0],
         email,
         password: crypto.randomUUID(),
         phone: '',
+        referred_by_id,
         avatar_url: payload.picture || ''
       });
     }

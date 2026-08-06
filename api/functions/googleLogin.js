@@ -19,6 +19,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const credential = body?.credential;
+    // 🔗 CAUSA-RAIZ (05/08/2026): o cadastro por Google NUNCA recebia o código do
+    // link de indicação. Quem chegava pelo link de um distribuidor (ex.: Eloá) e
+    // clicava "Entrar com Google" era criado direto sob o Site Oficial, roubando a
+    // linha de quem indicou. Agora o ref_code do link vem do front e é respeitado.
+    const ref_code = String(body?.ref_code || '').trim();
     if (!credential) return res.status(400).json({ success: false, error: 'Token do Google não informado.' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -50,8 +55,15 @@ export default async function handler(req, res) {
     if (!user) {
       // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém entra solto — sem link de indicação,
       // o cadastro fica sob o Leilão NoZap - Site Oficial (raiz da árvore).
-      const site = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json();
-      const referred_by_id = Array.isArray(site) && site[0] ? site[0].id : null;
+      let referred_by_id = null;
+      if (ref_code) {
+        const ind = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`)).json();
+        if (Array.isArray(ind) && ind[0]) referred_by_id = ind[0].id;
+      }
+      if (!referred_by_id) {
+        const site = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json();
+        referred_by_id = Array.isArray(site) && site[0] ? site[0].id : null;
+      }
       const created = await (await sb('app_users', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },

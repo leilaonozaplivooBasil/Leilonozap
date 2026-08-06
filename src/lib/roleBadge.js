@@ -49,5 +49,10 @@ export function getRoleBadge(user) {
   if (roleKey === "admin" || roleKey === "super_admin") return ROLE_BADGE[roleKey];
   const rede = getRedeCargo(user);
   if (rede) return { label: REDE_META[rede].label, ...VERDE, icon: REDE_META[rede].icon };
+  // 🛡️ BLINDAGEM (05/08/2026): o campo antigo `role='licensee'` sobrou em contas que
+  // NÃO têm cargo de licenciado na árvore (vendedor, influenciador, usuário) e fazia
+  // o selo "LICENCIADO" aparecer indevidamente (caso TTT). O selo agora só sai do
+  // cargo real; sem cargo de rede, o `licensee` legado não vale como cargo.
+  if (roleKey === "licensee") return ROLE_BADGE.user;
   return ROLE_BADGE[roleKey] || ROLE_BADGE.user;
 }

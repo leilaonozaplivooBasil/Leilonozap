@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
+import { getReferral } from '@/lib/referral';
 
 const AppUser = base44.entities.AppUser;
 const SendEmail = (params) => base44.integrations.Core.SendEmail(params);
@@ -40,7 +41,9 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     setErrorMessage('');
     setIsLogging(true);
     try {
-      const result = await base44.functions.invoke('googleLogin', { credential: response.credential });
+      // Entrar com Google também CRIA conta na primeira vez: sem o código do link
+      // a pessoa entrava solta e caía no Site Oficial, tirando-a da árvore de quem indicou.
+      const result = await base44.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível entrar com o Google.'));
         setIsLogging(false);
