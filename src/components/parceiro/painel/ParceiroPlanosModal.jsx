@@ -49,6 +49,19 @@ export default function ParceiroPlanosModal({
     setIndice(planoInicialIndex);
   }, [planoInicialIndex]);
 
+  // 🔄 Ao ABRIR o modal, sempre volta para a vitrine de planos. Sem isso, o
+  // plano escolhido numa contratação anterior ficava preso no estado e o modal
+  // reabria direto no formulário (parecia que o carrossel não girava).
+  useEffect(() => {
+    if (!open) return;
+    setPlano(null);
+    setPixData(null);
+    setShowContract(false);
+    setAceitouContrato(false);
+    setIndice(planoInicialIndex);
+     
+  }, [open]);
+
   // Carrossel automático: só enquanto o modal está aberto e na vitrine de planos
   useEffect(() => {
     if (!open || pausado || plano) return;
