@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,26 @@ export default function AcessoSuperAdmin({ user }) {
   const [nova, setNova] = useState('');
   const [confirmar, setConfirmar] = useState(null); // 'senha' | 'reset'
   const [ocupado, setOcupado] = useState(false);
+  // ⚠️ O cargo salvo no navegador pode estar defasado (o Layout tem "sticky admin",
+  // que trava a cópia local em 'admin'). Quem manda é o cargo no banco.
+  const [souSuperAdmin, setSouSuperAdmin] = useState(false);
 
-  let eu = null;
-  try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch (_) { /* sem sessão */ }
-  if (eu?.role !== 'super_admin') return null;
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      let eu = null;
+      try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch (_) { /* sem sessão */ }
+      if (!eu?.id) return;
+      if (eu.role === 'super_admin') { setSouSuperAdmin(true); return; }
+      try {
+        const rows = await base44.entities.AppUser.filter({ id: eu.id });
+        if (vivo && rows?.[0]?.role === 'super_admin') setSouSuperAdmin(true);
+      } catch (_) { /* sem permissão de leitura: mantém oculto */ }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  if (!souSuperAdmin) return null;
 
   const hash = ehHash(user?.password);
   const link = linkPublico(user);
