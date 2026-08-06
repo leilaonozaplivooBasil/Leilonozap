@@ -17,7 +17,13 @@ export default function ParceiroLotesReais() {
     (async () => {
       try {
         const dados = await base44.entities.LoteRecebido.list('-created_date', 30);
-        if (ativo) setLotes((dados || []).map(normalizarLoteRecebido));
+        // 🙈 Vitrine do parceiro: só entram lotes com economia real sobre o valor de
+        // mercado. Lote sem margem (0% ou negativo) fica FORA daqui — nada é alterado
+        // nem removido do Estoque de Lotes, é apenas um filtro de exibição.
+        const comMargem = (dados || [])
+          .map(normalizarLoteRecebido)
+          .filter((l) => typeof l.economiaPct === 'number' && l.economiaPct > 0);
+        if (ativo) setLotes(comMargem);
       } catch (e) {
         console.debug('Lotes reais indisponíveis:', e?.message);
       } finally {
