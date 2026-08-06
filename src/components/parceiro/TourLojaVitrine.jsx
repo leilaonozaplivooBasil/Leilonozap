@@ -7,6 +7,8 @@ export default function TourLojaVitrine({
   categoriaAtual,
   onTrocarCategoria,
   itens,
+  selo = 'Curadoria aprovada',
+  textoVazio = 'Nenhum item publicado nesta categoria no momento.',
   carregando,
   carregandoMais,
   fim,
@@ -15,12 +17,14 @@ export default function TourLojaVitrine({
   onAbrirItem,
   onTentarNovamente,
 }) {
-  const abas = [{ id: 'all', name: 'Todos' }, ...categorias];
+  const abas = categorias.length ? [{ id: 'all', name: 'Todos' }, ...categorias] : [];
+  // Leilão tem title próprio; no catálogo o título vive em description
+  const titulo = (item) => item.title || item.description || 'Item em operação';
 
   return (
     <div>
-      {/* Categorias reais do catálogo — rolagem horizontal sem barra visível */}
-      <div className="border-b border-pc-borda">
+      {/* Categorias reais do canal — rolagem horizontal sem barra visível */}
+      <div className={`border-b border-pc-borda ${abas.length ? '' : 'hidden'}`}>
         <div className="nz-no-scrollbar flex gap-2 overflow-x-auto px-4 py-3 sm:px-6">
           {abas.map((c) => {
             const ativo = categoriaAtual === c.id;
@@ -72,9 +76,7 @@ export default function TourLojaVitrine({
 
         {!erro && !carregando && itens.length === 0 && (
           <div className="border border-pc-borda p-10 text-center">
-            <p className="text-sm text-pc-tinta-fraca">
-              Nenhum item publicado nesta categoria no momento.
-            </p>
+            <p className="text-sm text-pc-tinta-fraca">{textoVazio}</p>
             <button
               type="button"
               onClick={() => onTrocarCategoria('all')}
@@ -98,7 +100,7 @@ export default function TourLojaVitrine({
                   <div className="aspect-square overflow-hidden bg-pc-preto">
                     <img
                       src={item.image_urls[0]}
-                      alt={item.description || 'Item da operação'}
+                      alt={titulo(item)}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                       decoding="async"
@@ -108,10 +110,10 @@ export default function TourLojaVitrine({
                   </div>
                   <div className="p-3 sm:p-4">
                     <p className="text-[9px] uppercase tracking-[0.18em] text-pc-ouro sm:text-[10px]">
-                      Curadoria aprovada
+                      {selo}
                     </p>
                     <h3 className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-pc-tinta sm:text-sm">
-                      {item.description || 'Item em operação'}
+                      {titulo(item)}
                     </h3>
                   </div>
                 </button>

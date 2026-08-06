@@ -3,8 +3,11 @@ import { ArrowLeft } from 'lucide-react';
 
 // 📄 Ficha do item DENTRO do tour (não é navegação pra outra página).
 // ⚠️ SOMENTE LEITURA: sem preço, sem frete, sem comprar, sem carrinho.
-export default function TourLojaProduto({ item, nomeCategoria, onVoltar }) {
+export default function TourLojaProduto({ item, nomeCategoria, canalNome, onVoltar }) {
   const fotos = (item.image_urls || []).filter(Boolean);
+  // Leilão tem title próprio; no catálogo o título vive em description
+  const titulo = item.title || item.description || 'Item em operação';
+  const eLeilao = /leil/i.test(canalNome || '');
   const [ativa, setAtiva] = useState(0);
 
   return (
@@ -23,7 +26,7 @@ export default function TourLojaProduto({ item, nomeCategoria, onVoltar }) {
           <div className="aspect-square overflow-hidden border border-pc-borda bg-pc-preto">
             <img
               src={fotos[ativa]}
-              alt={item.description || 'Item da operação'}
+              alt={titulo}
               className="h-full w-full object-contain"
               decoding="async"
             />
@@ -52,13 +55,13 @@ export default function TourLojaProduto({ item, nomeCategoria, onVoltar }) {
             {nomeCategoria || 'Curadoria da operação'}
           </p>
           <h2 className="mt-3 text-xl font-bold leading-snug text-pc-tinta sm:text-2xl">
-            {item.description || 'Item em operação'}
+            {titulo}
           </h2>
 
           <dl className="mt-6 divide-y divide-pc-borda border-y border-pc-borda text-sm">
             <div className="flex justify-between gap-4 py-3">
               <dt className="text-pc-tinta-fraca">Canal de venda</dt>
-              <dd className="text-right font-medium text-pc-tinta">Loja Virtual própria</dd>
+              <dd className="text-right font-medium text-pc-tinta">{canalNome || 'Loja Virtual própria'}</dd>
             </div>
             {item.grade && (
               <div className="flex justify-between gap-4 py-3">
@@ -68,18 +71,21 @@ export default function TourLojaProduto({ item, nomeCategoria, onVoltar }) {
             )}
             <div className="flex justify-between gap-4 py-3">
               <dt className="text-pc-tinta-fraca">Situação</dt>
-              <dd className="text-right font-medium text-pc-tinta">Publicado e ativo</dd>
+              <dd className="text-right font-medium text-pc-tinta">
+                {eLeilao ? 'Lote em operação' : 'Publicado e ativo'}
+              </dd>
             </div>
           </dl>
 
-          {item.long_description && (
+          {/* Descrição livre só no catálogo: texto de lote pode conter valores */}
+          {!eLeilao && item.long_description && (
             <p className="mt-6 whitespace-pre-line text-sm leading-relaxed text-pc-tinta-fraca">
               {item.long_description}
             </p>
           )}
 
           <p className="mt-6 border-t border-pc-borda pt-4 text-[10px] leading-relaxed text-pc-tinta-fraca sm:text-xs">
-            Ficha exibida como o consumidor final a encontra no canal próprio, com os
+            Ficha exibida como o público final a encontra no canal próprio, com os
             valores omitidos nesta apresentação.
           </p>
         </div>

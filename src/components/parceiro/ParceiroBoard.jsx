@@ -14,13 +14,15 @@ const MEMBROS = [
     foto: FOTO_LUIZ,
   },
   {
-    cargo: 'Sócio institucional',
+    cargo: 'Diretor de Operação Estruturada',
+    vinculo: 'Sócio fundador',
     nome: 'Luciano Pinheiro',
     bio: 'Sócio da Trino Instituição de Pagamentos. Histórico em negociação de contratos B2B de grande porte, incluindo parcerias com indústrias como a EMS. Responde pela governança financeira da operação.',
     foto: FOTO_LUCIANO,
   },
   {
-    cargo: 'Sócio de tecnologia',
+    cargo: 'Diretor de Tecnologia',
+    vinculo: 'Sócio fundador',
     nome: 'Diogo Archanjo',
     bio: 'CMO da Phizchat e CEO da Ingoobrasil. Responsável pela arquitetura tecnológica, escalabilidade de tráfego e pela esteira digital que sustenta os canais próprios de venda.',
     foto: FOTO_DIOGO,
@@ -58,6 +60,9 @@ export default function ParceiroBoard() {
               <div>
                 <p className="text-[10px] uppercase leading-relaxed tracking-[0.2em] text-pc-ouro">{m.cargo}</p>
                 <h3 className="mt-1 text-lg font-bold text-pc-tinta sm:text-xl">{m.nome}</h3>
+                {m.vinculo && (
+                  <p className="mt-0.5 text-[11px] text-pc-tinta-fraca">{m.vinculo}</p>
+                )}
               </div>
             </div>
             <p className="mt-5 border-t border-pc-borda pt-5 text-xs leading-relaxed text-pc-tinta-fraca sm:text-sm">
