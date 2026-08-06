@@ -41,15 +41,81 @@ function comporCustosPadrao(custoTotal) {
   };
 }
 
+// 💰 Custos REAIS gravados no campo observacoes do lote no momento da compra, no
+// formato "Arremate: R$ X | Taxa: 7% (R$ Y) | Frete: R$ Z | Outros: R$ W".
+// É a fonte fiel — só cai na média do Rio quando o lote não tem essa anotação.
+const dinheiro = (s) => parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+
+function custosDasObservacoes(obs) {
+  if (!obs) return null;
+  const mArr = obs.match(/Arremate:\s*R\$\s*([\d.,]+)/i);
+  if (!mArr) return null;
+  const arremate = dinheiro(mArr[1]);
+  if (arremate <= 0) return null;
+  const mTaxa = obs.match(/Taxa:\s*([\d.,]+)\s*%/i);
+  const mTaxaVal = obs.match(/Taxa:[^|]*?\(R\$\s*([\d.,]+)\)/i);
+  const mFrete = obs.match(/Frete:\s*R\$\s*([\d.,]+)/i);
+  const mOutros = obs.match(/Outros:\s*R\$\s*([\d.,]+)/i);
+  const taxaPct = mTaxa ? parseFloat(mTaxa[1].replace(',', '.')) || 0 : 0;
+  return {
+    arremate,
+    taxaPct,
+    taxaValor: mTaxaVal ? dinheiro(mTaxaVal[1]) : arremate * (taxaPct / 100),
+    frete: mFrete ? dinheiro(mFrete[1]) : 0,
+    outros: mOutros ? dinheiro(mOutros[1]) : 0,
+  };
+}
+
+// 📊 Grades e resumo por grade a partir dos itens do lote (A/B/C/D/E/U).
+export function derivarGrades(itens) {
+  const grades = {
+    A: { qtd: 0, valorMarket: 0 },
+    B: { qtd: 0, valorMarket: 0 },
+    C: { qtd: 0, valorMarket: 0 },
+    D: { qtd: 0, valorMarket: 0 },
+    E: { qtd: 0, valorMarket: 0 },
+    U: { qtd: 0, valorMarket: 0 },
+  };
+  (itens || []).forEach((item) => {
+    const bruta = String(item.grade || 'U').toUpperCase();
+    const g = ['A', 'B', 'C', 'D', 'E', 'U'].includes(bruta) ? bruta : 'U';
+    grades[g].qtd += Number(item.qtd || item.quantidade || 1);
+    grades[g].valorMarket += Number(item.valor || item.valor_mercado || 0);
+  });
+  return grades;
+}
+
+// 📦 Itens individuais do lote, no formato único usado pelo analisador do Parceiro.
+function itensDoRegistro(registro) {
+  const lista = jsonSeguro(registro.itens_json, []);
+  if (!Array.isArray(lista)) return [];
+  return lista.map((i) => ({
+    grade: String(i.grade || 'U').toUpperCase(),
+    desc: i.desc || i.descricao || 'Item',
+    qtd: Number(i.qtd || i.quantidade || 1),
+    valor: Number(i.valor || i.valor_mercado || 0),
+  }));
+}
+
 export function normalizarLoteRecebido(registro) {
   let arremate = Number(registro.valor_arremate) || 0;
   let taxaPct = Number(registro.taxa_pct) || 0;
   let frete = Number(registro.frete) || 0;
   let outros = Number(registro.outros) || 0;
-  const custoTotal = Number(registro.custo_total) || Number(registro.valor_lote) || 0;
+  let custoTotal = Number(registro.custo_total) || Number(registro.valor_lote) || 0;
   let estimado = false;
 
-  // Sem arremate ou sem taxa no cadastro → aplica a composição padrão do Rio.
+  // 1º) custos reais anotados na compra (fonte fiel)
+  const reais = custosDasObservacoes(registro.observacoes);
+  if (reais) {
+    arremate = reais.arremate;
+    taxaPct = reais.taxaPct;
+    frete = reais.frete;
+    outros = reais.outros;
+    custoTotal = arremate + reais.taxaValor + frete + outros;
+  }
+
+  // 2º) Sem arremate ou sem taxa em lugar nenhum → composição média do Rio.
   if (custoTotal > 0 && (arremate <= 0 || taxaPct <= 0)) {
     const p = comporCustosPadrao(custoTotal);
     if (p) {
@@ -60,10 +126,14 @@ export function normalizarLoteRecebido(registro) {
       estimado = true;
     }
   }
-  const valorMercado = Number(registro.valor_mercado_total) || 0;
-  const quantidade = Number(registro.quantidade_total) || 0;
+  const itens = itensDoRegistro(registro);
+  const valorMercado =
+    Number(registro.valor_mercado_total) || itens.reduce((s, i) => s + i.valor, 0);
+  const quantidade =
+    Number(registro.quantidade_total) || itens.reduce((s, i) => s + i.qtd, 0);
 
   return {
+    itens,
     id: registro.id,
     nome: registro.nome_lote || 'Lote sem nome',
     origem: registro.origem || registro.marketplace || '—',
@@ -81,7 +151,7 @@ export function normalizarLoteRecebido(registro) {
     custosEstimados: estimado,
     localColeta: registro.local_coleta || null,
     economiaPct: economiaPct(custoTotal, valorMercado),
-    grades: jsonSeguro(registro.grades_json, null),
+    grades: jsonSeguro(registro.grades_json, null) || derivarGrades(itens),
     categorias: jsonSeguro(registro.categorias_json, []),
     itensPorCategoria: {},
     produtosGerados: Number(registro.produtos_gerados_count) || 0,
@@ -100,6 +170,7 @@ export function loteDaPlanilha(lidoDaPlanilha, custos) {
 
   return {
     id: 'planilha',
+    itens: lidoDaPlanilha.itens || [],
     nome: lidoDaPlanilha.nomeLote,
     origem: lidoDaPlanilha.origem,
     data: null,

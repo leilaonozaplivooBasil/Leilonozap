@@ -21,6 +21,7 @@ export default function ParceiroLotesReais() {
         // mercado. Lote sem margem (0% ou negativo) fica FORA daqui — nada é alterado
         // nem removido do Estoque de Lotes, é apenas um filtro de exibição.
         const comMargem = (dados || [])
+          .filter((r) => (r.marketplace || r.origem) === 'Mercado Livre')
           .map(normalizarLoteRecebido)
           .filter((l) => typeof l.economiaPct === 'number' && l.economiaPct > 0);
         if (ativo) setLotes(comMargem);
@@ -41,8 +42,8 @@ export default function ParceiroLotesReais() {
         Lotes que já arrematamos
       </h2>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
-        Compras reais da operação, atualizadas conforme novos lotes entram. Toque em um lote
-        para ver custo, grades, categorias e itens.
+        Alguns lotes que já arrematamos. Toque em um lote para ver o analisador completo:
+        custo, grades, cenários de venda e item por item.
       </p>
 
       {carregando ? (

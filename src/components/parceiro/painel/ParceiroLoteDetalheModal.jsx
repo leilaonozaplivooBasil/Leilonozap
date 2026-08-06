@@ -1,7 +1,7 @@
 import React from 'react';
 import ParceiroDocumentoModal from './ParceiroDocumentoModal';
-import ParceiroGradeBarras from './ParceiroGradeBarras';
 import ParceiroLoteCategorias from './ParceiroLoteCategorias';
+import ParceiroAnalisadorReal from './analisador/ParceiroAnalisadorReal';
 import { real } from '@/lib/operacaoNumeros';
 
 // 🔎 Detalhamento de um lote real — SEMPRE dentro da tela, no modal institucional.
@@ -69,24 +69,26 @@ export default function ParceiroLoteDetalheModal({ lote, onFechar }) {
           </p>
         )}
 
-        {lote.grades && (
+        {lote.itens?.length > 0 && (
           <div>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-pc-ouro">
-              Distribuição por grade
+              Analisador completo do lote
             </h3>
-            <ParceiroGradeBarras grades={lote.grades} quantidadeTotal={lote.quantidade} />
+            <ParceiroAnalisadorReal lote={lote} />
           </div>
         )}
 
-        <div>
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-pc-ouro">
-            Categorias do lote
-          </h3>
-          <ParceiroLoteCategorias
-            categorias={lote.categorias}
-            itensPorCategoria={lote.itensPorCategoria}
-          />
-        </div>
+        {lote.categorias?.length > 0 && (
+          <div>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.1em] text-pc-ouro">
+              Categorias do lote
+            </h3>
+            <ParceiroLoteCategorias
+              categorias={lote.categorias}
+              itensPorCategoria={lote.itensPorCategoria}
+            />
+          </div>
+        )}
 
         <p className="border-t border-pc-borda pt-4 text-[11px] leading-relaxed text-pc-tinta-fraca">
           Histórico real de compras da operação, apresentado apenas para análise. Resultado
