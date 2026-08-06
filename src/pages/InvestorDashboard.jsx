@@ -20,6 +20,7 @@ import ParceiroPrestacaoContas from '@/components/parceiro/painel/contas/Parceir
 import ParceiroBloqueioContrato from '@/components/parceiro/painel/ParceiroBloqueioContrato';
 import ParceiroModoVisita from '@/components/parceiro/painel/ParceiroModoVisita';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
+import { encerramentoPlano } from '@/lib/cicloParceiro';
 import {
   LayoutGrid,
   ShieldCheck,
@@ -102,14 +103,14 @@ const TELAS = [
     exigeContrato: true,
     titulo: 'Prestação de contas',
     texto:
-      'Extrato das operações e demonstrativo de resultados previstos na Cláusula 7.4, somente com dados apurados. Aguardando o primeiro ciclo (até 60 dias, Cláusula 8.2).',
+      'Extrato das operações e demonstrativo de resultados previstos na Cláusula 7.4, somente com dados apurados. Aguardando o primeiro ciclo (30 dias, Cláusula 8.2).',
   },
 ];
 
 const COMMON_FEATURES = [
   'Gestão operacional integral',
   'Produtos pré-selecionados por curadoria própria',
-  'Primeiro ciclo em até 60 dias (Cláusula 8.2)',
+  'Primeiro ciclo em 30 dias (Cláusula 8.2)',
   'Suporte dedicado',
 ];
 
@@ -119,7 +120,7 @@ const PORTFOLIOS = [
     name: 'Plano Visionário',
     minInvestment: 5000,
     expectedReturn: 3,
-    duration: 60,
+    duration: 30,
     products: ['Eletrônicos'],
     risk: 'Baixo',
     description: 'Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.',
@@ -131,7 +132,7 @@ const PORTFOLIOS = [
     name: 'Plano Sócios de Ouro',
     minInvestment: 15000,
     expectedReturn: 3,
-    duration: 60,
+    duration: 30,
     products: ['Eletrodomésticos', 'Eletrônicos', 'Apple'],
     risk: 'Baixo',
     description: 'Para parceiros que buscam maior retorno com segurança.',
@@ -143,7 +144,7 @@ const PORTFOLIOS = [
     name: 'Plano Elite',
     minInvestment: 30000,
     expectedReturn: 3,
-    duration: 60,
+    duration: 30,
     products: ['Todas as categorias'],
     risk: 'Baixo',
     description: 'Máximo retorno com acesso a todas as oportunidades.',
@@ -157,7 +158,7 @@ const PORTFOLIOS = [
     name: 'Private Galpão',
     minInvestment: 50000,
     expectedReturn: 3,
-    duration: 60,
+    duration: 30,
     products: ['Volume fechado sob demanda'],
     risk: 'Baixo',
     description:
@@ -320,10 +321,11 @@ export default function InvestorDashboard() {
             paidProfit,
             totalPeriods: 12,
             purchasePeriods: periods,
+            // ⚖️ Os 12 meses de repasses contam A PARTIR DO 1º REPASSE (D+30),
+            // não da assinatura — regra oficial em linha/etapasOperacao.js.
             estimatedReturn: purchase.is_investment
-              ? purchase.withdrawal_available_date ||
-                new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
-              : new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              ? purchase.withdrawal_available_date || encerramentoPlano(purchase.activated_at)
+              : encerramentoPlano(purchase.activated_at),
           });
         });
       } catch (error) {
@@ -342,9 +344,8 @@ export default function InvestorDashboard() {
             products: [],
             isInvestment: false,
             estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
-            estimatedReturn: new Date(
-              new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000
-            ).toISOString(),
+            // Antes eram 60 dias com o rótulo "12 meses" — contradição na tela.
+            estimatedReturn: encerramentoPlano(user.partner_plan_activated_at),
           });
         }
       }

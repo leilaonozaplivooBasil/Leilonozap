@@ -14,9 +14,9 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
   const demonstracao = !investimento;
   const aporte = investimento?.amount || 15000;
   const taxa = investimento?.investmentRate || 3;
-  // No modo demonstração, posiciona o ciclo no 38º dia: físico concluído e
-  // contador de rentabilidade já rodando — é exatamente o que se quer ver.
-  const dataAssinatura = investimento?.startDate || new Date(Date.now() - 38 * DIA_MS).toISOString();
+  // No modo demonstração, posiciona o ciclo no 18º dia: físico concluído e
+  // capital já rentabilizando — é exatamente o que se quer ver.
+  const dataAssinatura = investimento?.startDate || new Date(Date.now() - 18 * DIA_MS).toISOString();
 
   const base = new Date(dataAssinatura).getTime();
   const diaAtual = (Date.now() - base) / DIA_MS;
@@ -32,12 +32,13 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
         Linha do tempo do aporte
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
-        Todo o ciclo físico — assinatura, pagamento, arremate, logística, curadoria e publicação —
-        acontece em até <strong className="text-pc-ouro">{DIAS_CICLO_FISICO} dias</strong>. A apuração do
-        repasse começa no 31º dia e o primeiro repasse ocorre no {DIA_PRIMEIRO_REPASSE}º dia. Estes
-        primeiros 60 dias são de estruturação e não entram na contagem: os{' '}
-        <strong className="text-pc-ouro">12 meses de repasses</strong> começam a contar no primeiro
-        repasse.
+        A operação inteira é de <strong className="text-pc-ouro">{DIA_PRIMEIRO_REPASSE} dias</strong>. O
+        lote é pago no mesmo dia da assinatura, retirado entre o 3º e o 7º dia e os produtos entram na
+        Loja Virtual em até <strong className="text-pc-ouro">{DIAS_CICLO_FISICO} dias</strong> — é aí que
+        o seu capital começa a rentabilizar. No{' '}
+        <strong className="text-pc-ouro">{DIA_PRIMEIRO_REPASSE}º dia</strong> o repasse é pago com a
+        prestação de contas do ciclo. Deste primeiro repasse começam a contar os{' '}
+        <strong className="text-pc-ouro">12 meses</strong> do contrato.
       </p>
 
       {demonstracao && (
@@ -45,7 +46,7 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-pc-ouro" />
           <p className="text-xs leading-relaxed text-pc-tinta-fraca">
             <strong className="text-pc-ouro">MODELO DEMONSTRATIVO.</strong> Você ainda não tem plano ativo:
-            esta é a simulação de um aporte de {real(aporte)} assinado há 38 dias, para você ver
+            esta é a simulação de um aporte de {real(aporte)} assinado há 18 dias, para você ver
             exatamente como a sua linha do tempo será acompanhada. Ao contratar, ela passa a usar as
             suas datas reais.
           </p>

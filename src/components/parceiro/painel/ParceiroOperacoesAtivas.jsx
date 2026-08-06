@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
+import { DIAS_CICLO_FISICO, DIA_PRIMEIRO_REPASSE } from './linha/etapasOperacao';
 
 // 📦 Lista de operações ativas do parceiro, com a linha de etapas.
 // Extraído de InvestorDashboard sem mudança de cálculo nem de texto.
@@ -23,7 +24,7 @@ const etapas = (investment) => [
     icon: DollarSign,
     description: investment
       ? `${investment.paidPeriods || 0} de ${investment.totalPeriods || 12} ciclos apurados • R$ ${(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido`
-      : 'Aguardando a apuração do primeiro ciclo (até 60 dias, Cláusula 8.2)',
+      : 'Aguardando o fechamento do primeiro ciclo (30 dias, Cláusula 8.2)',
     color: 'text-green-400',
     bgColor: 'bg-green-500/20',
     borderColor: 'border-green-500/30',
@@ -35,11 +36,15 @@ const diasCorridos = (startDate) => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
+// 🗺️ Régua ALINHADA às etapas oficiais (linha/etapasOperacao.js — ciclo de 30
+// dias): lote pago em D+0, chegada no RJ D+8, curadoria D+9, na Loja D+10 e
+// repasse D+30. Antes esta tela usava régua própria (5/15/20/30) e contradizia
+// a Linha do Tempo do mesmo painel.
 const etapaAtual = (dias) => {
-  if (dias < 5) return 0;
-  if (dias < 15) return 1;
-  if (dias < 20) return 2;
-  if (dias < 30) return 3;
+  if (dias < 8) return 0;
+  if (dias < 9) return 1;
+  if (dias < DIAS_CICLO_FISICO) return 2;
+  if (dias < DIA_PRIMEIRO_REPASSE) return 3;
   return 4;
 };
 
@@ -150,7 +155,9 @@ export default function ParceiroOperacoesAtivas({ investimentos }) {
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                     <div>
-                      <p className="text-xs sm:text-sm text-gray-400">Encerramento do Plano (12 meses)</p>
+                      <p className="text-xs sm:text-sm text-gray-400">
+                        Encerramento previsto (12 meses após o 1º repasse)
+                      </p>
                       <p className="font-bold text-white text-sm sm:text-base">
                         {new Date(investment.estimatedReturn).toLocaleDateString('pt-BR')}
                       </p>

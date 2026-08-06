@@ -14,7 +14,7 @@ export default function ParceiroContratoPlano({ user, investimento, onContratar 
   const aporte = investimento?.amount || 15000;
   const plano = investimento?.plan || 'Plano Sócios de Ouro (modelo)';
   const taxa = investimento?.investmentRate || 3;
-  const assinatura = investimento?.startDate || new Date(Date.now() - 38 * 86400000).toISOString();
+  const assinatura = investimento?.startDate || new Date(Date.now() - 18 * 86400000).toISOString();
 
   const linhas = [
     { r: 'Contratante', v: user?.full_name || '—' },
@@ -23,7 +23,7 @@ export default function ParceiroContratoPlano({ user, investimento, onContratar 
     { r: 'Aporte', v: real(aporte) },
     { r: 'Participação no resultado', v: `${String(taxa).replace('.', ',')}% ao mês sobre o apurado` },
     { r: 'Data do aceite', v: new Date(assinatura).toLocaleString('pt-BR') },
-    { r: 'Primeiro ciclo', v: 'Fechamento em até 60 dias (Cláusula 8.2)' },
+    { r: 'Primeiro ciclo', v: 'Fechamento e repasse em 30 dias (Cláusula 8.2)' },
     { r: 'Sigilo', v: '5 anos (Cláusula 12)' },
   ];
 

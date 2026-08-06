@@ -95,7 +95,7 @@ export default function ParceiroPlanoCarrossel({
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-4 text-xs sm:text-sm text-pc-tinta-fraca mb-3 sm:mb-4">
-                  <span className="flex items-center gap-1">⏱️ Primeiro ciclo em até 60 dias</span>
+                  <span className="flex items-center gap-1">⏱️ Ciclo completo em 30 dias</span>
                   <span className="flex items-center gap-1">📦 Gestão operacional nossa</span>
                 </div>
 

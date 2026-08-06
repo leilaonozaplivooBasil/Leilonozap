@@ -1,16 +1,19 @@
 // 🗺️ ETAPAS OFICIAIS DO CICLO DO APORTE — fonte única da Linha do Tempo.
 //
-// Regra da operação (definida por Gabriel em 06/08/2026): TODO o ciclo físico —
-// do aceite do contrato até o produto disponível para venda na Loja Virtual —
-// acontece em NO MÁXIMO 15 dias. A apuração da rentabilidade começa no 31º dia
-// e o primeiro repasse ocorre no 60º dia (Cláusula 8.2).
+// ⚠️ REGRA OFICIAL ATUALIZADA POR GABRIEL EM 06/08/2026 (substitui a régua
+// anterior de 15/31/60 dias). A operação inteira é de **30 DIAS**:
+//   • D+0  — contrato assinado, aporte confirmado e LOTE PAGO no mesmo dia
+//   • D+3 a D+7 — retirada e carregamento no leiloeiro
+//   • D+10 — produtos publicados na Loja Virtual (fim do ciclo físico) e
+//            início da rentabilização do capital
+//   • D+30 — repasse pago + prestação de contas do ciclo
 //
 // `dia` = D+n contado da assinatura do contrato. Só descrição — nenhum cálculo
 // financeiro nasce aqui.
 
-export const DIAS_CICLO_FISICO = 15;
-export const DIA_INICIO_APURACAO = 31;
-export const DIA_PRIMEIRO_REPASSE = 60;
+export const DIAS_CICLO_FISICO = 10;
+export const DIA_INICIO_APURACAO = 10;
+export const DIA_PRIMEIRO_REPASSE = 30;
 
 export const ETAPAS = [
   {
@@ -31,7 +34,7 @@ export const ETAPAS = [
   },
   {
     id: 'alocacao',
-    dia: 1,
+    dia: 0,
     titulo: 'Capital alocado na operação',
     texto:
       'Seu capital é reservado para a disputa de um lote específico da curadoria, com limite máximo de lance definido antes do leilão.',
@@ -39,23 +42,23 @@ export const ETAPAS = [
   },
   {
     id: 'arremate',
-    dia: 2,
-    titulo: 'Lote arrematado',
+    dia: 0,
+    titulo: 'Lote arrematado e pago no mesmo dia',
     texto:
-      'Arremate confirmado no leilão, com nota e comprovante de pagamento do lote anexados ao ciclo.',
+      'O lote é arrematado e o pagamento ao leiloeiro é feito no mesmo dia, com nota e comprovante anexados ao ciclo.',
     marco: 'Operação',
   },
   {
     id: 'retirada',
-    dia: 4,
-    titulo: 'Retirada e carregamento',
+    dia: 3,
+    titulo: 'Retirada e carregamento (3 a 7 dias)',
     texto:
-      'Coleta do lote no local indicado pelo leiloeiro, com conferência de volumes na origem.',
+      'Coleta do lote no local indicado pelo leiloeiro, entre o 3º e o 7º dia, com conferência de volumes na origem.',
     marco: 'Logística',
   },
   {
     id: 'transito',
-    dia: 6,
+    dia: 7,
     titulo: 'Em trânsito para o Rio de Janeiro',
     texto: 'Transporte do lote da origem até a nossa base operacional.',
     marco: 'Logística',
@@ -70,7 +73,7 @@ export const ETAPAS = [
   },
   {
     id: 'curadoria',
-    dia: 10,
+    dia: 9,
     titulo: 'Curadoria e classificação',
     texto:
       'Teste, limpeza e classificação item por item nas grades A a E. É a curadoria que separa o que vira produto do que vira peça.',
@@ -78,7 +81,7 @@ export const ETAPAS = [
   },
   {
     id: 'precificacao',
-    dia: 12,
+    dia: 9,
     titulo: 'Precificação e cadastro',
     texto:
       'Preço definido contra o valor de mercado do momento, com foto, descrição e ficha técnica de cada item.',
@@ -86,14 +89,14 @@ export const ETAPAS = [
   },
   {
     id: 'publicado',
-    dia: 14,
+    dia: 10,
     titulo: 'Publicado na Loja Virtual',
     texto: 'Os produtos entram no ar na Loja Virtual e no aplicativo, com estoque real.',
     marco: 'Comercial',
   },
   {
     id: 'disponivel',
-    dia: 15,
+    dia: DIAS_CICLO_FISICO,
     titulo: 'Disponível para venda em toda a rede',
     texto:
       'Toda a rede — licenciados, vendedores e influenciadores — passa a poder vender os produtos do lote. Fim do ciclo físico.',
@@ -102,18 +105,18 @@ export const ETAPAS = [
   {
     id: 'apuracao',
     dia: DIA_INICIO_APURACAO,
-    titulo: 'Início da apuração do repasse',
+    titulo: 'Capital começa a rentabilizar',
     texto:
-      'A partir do 31º dia o repasse do seu aporte passa a ser apurado e contabilizado dia a dia.',
+      'Com os produtos no ar, o resultado do lote passa a ser apurado. Nada é devido antes do fechamento do ciclo.',
     marco: 'Financeiro',
     destaque: true,
   },
   {
     id: 'repasse',
     dia: DIA_PRIMEIRO_REPASSE,
-    titulo: 'Primeiro repasse e prestação de contas',
+    titulo: 'Repasse pago e prestação de contas',
     texto:
-      'Fechamento do primeiro ciclo (Cláusula 8.2): repasse do resultado apurado e demonstrativo completo na tela de Prestação de Contas. Deste marco começam a contar os 12 meses de repasses do contrato.',
+      'Fechamento do ciclo no 30º dia: repasse do resultado apurado e demonstrativo completo na tela de Prestação de Contas. Deste marco começam a contar os 12 meses de repasses do contrato.',
     marco: 'Financeiro',
     destaque: true,
   },

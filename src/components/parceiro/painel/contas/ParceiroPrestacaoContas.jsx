@@ -3,6 +3,7 @@ import { Receipt, FileCheck2, Info, CalendarClock, ShieldAlert } from 'lucide-re
 import { real } from '@/lib/operacaoNumeros';
 import ContasDemonstrativo from './ContasDemonstrativo';
 import useRentabilidadeAcumulada from '../linha/useRentabilidadeAcumulada';
+import { DIAS_CICLO_FISICO, DIA_INICIO_APURACAO, DIA_PRIMEIRO_REPASSE } from '../linha/etapasOperacao';
 
 const DIA_MS = 86400000;
 
@@ -13,7 +14,7 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
   const demonstracao = !investimento;
   const aporte = investimento?.amount || 15000;
   const taxa = investimento?.investmentRate || 3;
-  const assinatura = investimento?.startDate || new Date(Date.now() - 38 * DIA_MS).toISOString();
+  const assinatura = investimento?.startDate || new Date(Date.now() - 18 * DIA_MS).toISOString();
   const r = useRentabilidadeAcumulada(assinatura, aporte, taxa);
 
   const documentos = [
@@ -53,8 +54,8 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
       <dl className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { r: 'Aporte do ciclo', v: real(aporte) },
-          { r: 'Apurado até agora', v: real(r.acumulado) },
-          { r: 'Previsto no fechamento', v: real(r.alvo) },
+          { r: 'Dia do ciclo', v: `${Math.min(r.diaAtual, DIA_PRIMEIRO_REPASSE)} de ${DIA_PRIMEIRO_REPASSE}` },
+          { r: 'Repasse previsto no fechamento', v: real(r.alvo) },
           {
             r: 'Próximo repasse',
             v: r.diasParaRepasse > 0 ? `em ${r.diasParaRepasse} dias` : 'disponível',
@@ -94,9 +95,10 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
           <CalendarClock className="h-4 w-4" strokeWidth={1.8} /> Calendário do ciclo
         </p>
         <ul className="mt-3 space-y-2 text-sm leading-relaxed text-pc-tinta-fraca">
-          <li>• <strong className="text-pc-tinta">D+0 a D+15</strong> — ciclo físico: compra, logística, curadoria e publicação na Loja Virtual.</li>
-          <li>• <strong className="text-pc-tinta">D+31</strong> — início da apuração do repasse, contabilizado dia a dia.</li>
-          <li>• <strong className="text-pc-tinta">D+60</strong> — fechamento do ciclo, primeiro repasse e demonstrativo completo (Cláusula 8.2). Deste marco começam os 12 meses de repasses.</li>
+          <li>• <strong className="text-pc-tinta">D+0</strong> — contrato assinado, aporte confirmado e lote pago no mesmo dia.</li>
+          <li>• <strong className="text-pc-tinta">D+3 a D+7</strong> — retirada e carregamento do lote no leiloeiro.</li>
+          <li>• <strong className="text-pc-tinta">D+{DIAS_CICLO_FISICO}</strong> — produtos publicados na Loja Virtual e capital começa a rentabilizar (D+{DIA_INICIO_APURACAO}).</li>
+          <li>• <strong className="text-pc-tinta">D+{DIA_PRIMEIRO_REPASSE}</strong> — fechamento do ciclo, repasse pago e demonstrativo completo (Cláusula 8.2). Deste marco começam os 12 meses de repasses.</li>
           <li>• <strong className="text-pc-tinta">A cada fechamento</strong> — você decide: retirar o resultado ou recompor o capital no ciclo seguinte.</li>
         </ul>
         <button
