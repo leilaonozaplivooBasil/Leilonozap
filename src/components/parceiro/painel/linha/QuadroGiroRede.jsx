@@ -40,7 +40,6 @@ const ITENS = [
 
 const CANAIS = ['Loja Virtual', 'Licenciado', 'Vendedor', 'Influencer'];
 
-const MAX_PILHA = 6;
 // Janela comercial do giro dentro do dia (horas locais)
 const HORA_INICIO = 8;
 const HORA_FIM = 21.5;
@@ -211,7 +210,9 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
     if (onGiroDoDia) onGiroDoDia(ativo ? total : 0);
   }, [total, ativo, onGiroDoDia]);
 
-  const pilha = vendas.slice(Math.max(0, exibidas - MAX_PILHA), exibidas).reverse();
+  // 🧮 A soma dos cartões TEM que fechar com o contador do dia: mostramos TODAS
+  // as vendas já exibidas (a lista antiga cortava nas 6 últimas e a conta não batia).
+  const pilha = vendas.slice(0, exibidas).reverse();
 
   return (
     <div className="mt-6 border border-pc-ouro/40 bg-pc-preto-2 p-5 sm:p-7">
