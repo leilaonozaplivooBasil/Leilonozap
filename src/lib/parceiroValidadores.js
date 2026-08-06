@@ -11,8 +11,35 @@ const EMAILS_VALIDADORES = [
   'luciano4.100@hotmail.com',
 ];
 
+// Casamento também por NOME, porque o validador pode entrar com outro e-mail.
+const NOMES_VALIDADORES = [
+  'luciano pinheiro',
+  'luiz santana',
+  'luiz santanna',
+];
+
+// remove acento e normaliza espaços para o casamento ser tolerante
+function normalizar(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 export function isParceiroValidador(user) {
-  const email = String(user?.email || '').trim().toLowerCase();
-  if (!email) return false;
-  return EMAILS_VALIDADORES.includes(email);
+  if (!user) return false;
+
+  // Super admin também enxerga tudo (homologação e suporte)
+  if (user.role === 'super_admin') return true;
+
+  const email = normalizar(user.email);
+  if (email && EMAILS_VALIDADORES.includes(email)) return true;
+
+  const nomes = [user.full_name, user.nickname, `${user.display_first_name || ''} ${user.display_last_name || ''}`]
+    .map(normalizar)
+    .filter(Boolean);
+
+  return nomes.some((n) => NOMES_VALIDADORES.includes(n));
 }

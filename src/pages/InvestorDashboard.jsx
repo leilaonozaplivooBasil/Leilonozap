@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
-import ParceiroPainelNav from '@/components/parceiro/painel/ParceiroPainelNav';
+import ParceiroSidebar from '@/components/parceiro/painel/ParceiroSidebar';
 import ParceiroPainelGate from '@/components/parceiro/painel/ParceiroPainelGate';
 import ParceiroPainelResumo from '@/components/parceiro/painel/ParceiroPainelResumo';
 import ParceiroComoFunciona from '@/components/parceiro/painel/ParceiroComoFunciona';
@@ -11,15 +11,27 @@ import ParceiroPainelEmBreve from '@/components/parceiro/painel/ParceiroPainelEm
 import ParceiroOperacoesAtivas from '@/components/parceiro/painel/ParceiroOperacoesAtivas';
 import ParceiroPlanosModal from '@/components/parceiro/painel/ParceiroPlanosModal';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
+import {
+  LayoutGrid,
+  ShieldCheck,
+  Factory,
+  BarChart3,
+  Sparkles,
+  FileSignature,
+  History,
+  Receipt,
+} from 'lucide-react';
 
 const FeaturedProduct = base44.entities.FeaturedProduct;
 
 // 🧭 Telas do painel (padrão "tela a tela" do Painel de Alavancagem).
 const TELAS = [
-  { id: 'visao', rotulo: 'Visão geral' },
+  { id: 'visao', rotulo: 'Visão geral', rotuloCurto: 'Visão Geral', icone: LayoutGrid },
   {
     id: 'nda',
     rotulo: 'Confidencialidade',
+    rotuloCurto: 'Sigilo',
+    icone: ShieldCheck,
     titulo: 'Termo de confidencialidade',
     texto:
       'Assinatura digital do termo de confidencialidade, espelhando a Cláusula 12 do Contrato de Parceria (sigilo por 5 anos), com aceite registrado e download em PDF.',
@@ -27,6 +39,8 @@ const TELAS = [
   {
     id: 'operacao',
     rotulo: 'A operação por dentro',
+    rotuloCurto: 'A Operação',
+    icone: Factory,
     exigeNda: true,
     titulo: 'A operação por dentro',
     texto:
@@ -35,6 +49,8 @@ const TELAS = [
   {
     id: 'analisador',
     rotulo: 'Analisador',
+    rotuloCurto: 'Analisador',
+    icone: BarChart3,
     exigeNda: true,
     titulo: 'Analisador de lotes',
     texto:
@@ -43,6 +59,8 @@ const TELAS = [
   {
     id: 'oportunidades',
     rotulo: 'Oportunidades do dia',
+    rotuloCurto: 'Oportunidades',
+    icone: Sparkles,
     exigeNda: true,
     titulo: 'Oportunidades do dia',
     texto:
@@ -51,6 +69,8 @@ const TELAS = [
   {
     id: 'contrato',
     rotulo: 'Contrato e plano',
+    rotuloCurto: 'Contrato',
+    icone: FileSignature,
     titulo: 'Contrato de Parceria e plano',
     texto:
       'Leitura do Contrato de Parceria Comercial, aceite eletrônico (Lei nº 14.063/2020 e MP nº 2.200-2/2001) e download do PDF. Por enquanto, use o botão "Contratar novo plano" na visão geral.',
@@ -58,6 +78,8 @@ const TELAS = [
   {
     id: 'linha',
     rotulo: 'Linha do tempo',
+    rotuloCurto: 'Linha do Tempo',
+    icone: History,
     titulo: 'Linha do tempo do aporte',
     texto:
       'Da assinatura do contrato até o produto no ar na Loja Virtual, etapa por etapa, com registro real da operação. Visível após a assinatura do contrato.',
@@ -65,6 +87,8 @@ const TELAS = [
   {
     id: 'contas',
     rotulo: 'Prestação de contas',
+    rotuloCurto: 'Prestação',
+    icone: Receipt,
     titulo: 'Prestação de contas',
     texto:
       'Extrato das operações e demonstrativo de resultados previstos na Cláusula 7.4, somente com dados apurados. Aguardando o primeiro ciclo (até 60 dias, Cláusula 8.2).',
@@ -310,19 +334,21 @@ export default function InvestorDashboard() {
   const telaSelecionada = TELAS.find((t) => t.id === telaAtiva);
 
   return (
-    <div className="min-h-screen bg-pc-preto text-pc-tinta">
-      {/* 🖥️ TELA CHEIA: sem max-w/mx-auto — o painel usa toda a largura da
-          viewport, com respiro lateral progressivo (padrão Mercado Pago). */}
-      <div className="w-full px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 xl:px-10">
-        <ParceiroPainelNav
-          telas={TELAS.map((t) => ({
-            ...t,
-            bloqueada: !!t.exigeNda && !ndaAssinado,
-          }))}
-          telaAtiva={telaAtiva}
-          onSelecionar={setTelaAtiva}
-        />
+    <div className="flex min-h-screen w-full bg-pc-preto text-pc-tinta">
+      {/* 🧭 MENU LATERAL (desktop) / barra inferior (mobile) */}
+      <ParceiroSidebar
+        telas={TELAS.map((t) => ({
+          ...t,
+          bloqueada: !!t.exigeNda && !ndaAssinado,
+        }))}
+        telaAtiva={telaAtiva}
+        onSelecionar={setTelaAtiva}
+      />
 
+      {/* 🖥️ TELA CHEIA: sem max-w/mx-auto — o conteúdo usa toda a largura
+          restante, com respiro lateral progressivo (padrão Mercado Pago).
+          pb extra no mobile por causa da barra inferior fixa. */}
+      <main className="min-w-0 flex-1 px-4 pb-28 pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 xl:px-10 md:pb-8">
         {telaAtiva === 'visao' && (
           <>
             <ParceiroPainelGate
@@ -368,7 +394,7 @@ export default function InvestorDashboard() {
           onPagamentoConfirmado={loadUserData}
           onContratoAssinado={() => setAssinouContrato(true)}
         />
-      </div>
+      </main>
     </div>
   );
 }
