@@ -565,7 +565,7 @@ export default function TreeHierarchy({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && matches.size) focusUser([...matches][0]);
             }}
-            placeholder="Buscar pessoa na rede…"
+            placeholder="Buscar pessoa na estrutura de negócio…"
             className="w-52 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
           />
         </div>
@@ -926,7 +926,7 @@ export default function TreeHierarchy({
                 <button type="button" className={`${item} text-amber-300 hover:bg-amber-500/15`}
                   onClick={() => { setMenu(null); onDetach(target); }}>
                   <Unlink className="w-3.5 h-3.5" />
-                  Soltar da rede (virar raiz)
+                  Desvincular (volta pro Leilão NoZap Oficial)
                 </button>
               )}
 
@@ -1060,12 +1060,12 @@ export default function TreeHierarchy({
 
                 {/* coluna 2 — posição na rede + plano */}
                 <div className="space-y-3">
-                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold">Posição na rede</p>
+                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold">Posição na árvore genealógica</p>
                   <Field icon={Users} label="Indicados diretos" value={`${selected.children.length} pessoa(s)`} />
                   <Field
                     icon={GitBranch}
                     label="Indicado por"
-                    value={selectedParent ? selectedParent.full_name : 'Raiz da rede — sem indicador'}
+                    value={selectedParent ? selectedParent.full_name : 'Leilão NoZap Oficial (site) — vínculo pendente'}
                   />
 
                   {(() => {
@@ -1164,7 +1164,7 @@ export default function TreeHierarchy({
           <div className="w-full max-w-sm rounded-xl border border-emerald-500/30 bg-gray-900 shadow-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
               <TriangleAlert className="w-4 h-4 text-amber-400" />
-              <span className="text-[13px] font-semibold text-white">Confirmar mudança na rede</span>
+              <span className="text-[13px] font-semibold text-white">Confirmar mudança na árvore genealógica</span>
             </div>
             <div className="px-4 py-4 text-[13px] text-gray-300 space-y-2">
               <p>

@@ -1458,7 +1458,7 @@ export default function NetworkOverview() {
         <PortalPageHeader
           icon={Users}
           title="Sistema de Alavancagem"
-          subtitle="Visão completa do sistema multinível"
+          subtitle="Visão completa da árvore genealógica"
           accentColor="green"
           actions={
             <Button
@@ -1658,7 +1658,7 @@ export default function NetworkOverview() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* ABA 1: ÁRVORE MULTINÍVEL */}
+              {/* ABA 1: ÁRVORE GENEALÓGICA */}
               <TabsContent value="licensees" className="mt-4">
                 <div
                   className={
@@ -1670,7 +1670,7 @@ export default function NetworkOverview() {
                   <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
                     <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
                     <span className="text-[13px] font-semibold text-green-400">
-                      Sistema Multinível — Visualização em Árvore
+                      Árvore Genealógica
                     </span>
                     <span className="text-[11px] text-gray-500 hidden sm:inline">
                       arraste uma pessoa sobre outra para mudar o indicador (pede confirmação)

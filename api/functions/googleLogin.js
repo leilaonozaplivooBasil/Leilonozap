@@ -48,6 +48,10 @@ export default async function handler(req, res) {
     let user = Array.isArray(existing) ? existing[0] : null;
 
     if (!user) {
+      // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém entra solto — sem link de indicação,
+      // o cadastro fica sob o Leilão NoZap - Site Oficial (raiz da árvore).
+      const site = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json();
+      const referred_by_id = Array.isArray(site) && site[0] ? site[0].id : null;
       const created = await (await sb('app_users', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },
@@ -56,6 +60,7 @@ export default async function handler(req, res) {
           email,
           password: crypto.randomUUID(),
           phone: '',
+          referred_by_id,
           avatar_url: payload.picture || ''
         })
       })).json();

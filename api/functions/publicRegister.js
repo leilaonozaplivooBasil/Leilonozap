@@ -67,6 +67,12 @@ export default async function handler(req, res) {
       const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) referred_by_id = r[0].id;
     }
+    // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém fica solto. Quem chega sem link de
+    // indicação entra sob o Leilão NoZap - Site Oficial (a raiz da árvore).
+    if (!referred_by_id) {
+      const site = await (await sb(`app_users?select=id&referral_code=eq.leilaonozap&limit=1`)).json();
+      if (Array.isArray(site) && site[0]) referred_by_id = site[0].id;
+    }
 
     // referral_code único do novo usuário
     let referral_code = genReferral(full_name);
