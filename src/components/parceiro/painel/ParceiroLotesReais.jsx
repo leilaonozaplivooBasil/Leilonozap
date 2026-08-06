@@ -21,6 +21,9 @@ export default function ParceiroLotesReais() {
         // Lotes pequenos de estoque (maquiagem, relógio) não entram na vitrine.
         const melhores = (dados || [])
           .filter((r) => (r.marketplace || r.origem) === 'Mercado Livre')
+          // 🚫 Lote publicado como Oportunidade do Dia é lote que a operação AINDA VAI
+          // disputar — ele vive só na aba Oportunidades. Aqui entram apenas arrematados.
+          .filter((r) => r.publicado_parceiro !== true)
           .filter((r) => /^lote\s+(\d|arrematado)/i.test((r.nome_lote || '').trim()))
           .map(normalizarLoteRecebido)
           .filter((l) => l.itens.length > 0 && l.valorMercado > 0 && l.custoTotal > 0)

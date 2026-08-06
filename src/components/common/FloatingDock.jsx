@@ -31,12 +31,19 @@ const PAGINAS_COM_HERO_INFERIOR = [
   'Recepcao',
 ];
 
+// Páginas cujo rodapé no mobile é uma BARRA DE NAVEGAÇÃO fixa (painel do Parceiro:
+// Visão Geral / Sigilo / A Operação / Analisador / Oportunidades / Contrato).
+// Os flutuantes caíam em cima desses ícones (print Gabriel 06/08) — aqui sobem
+// acima da barra e perdem o verde do site, que destoava do preto institucional.
+const PAGINAS_COM_NAV_INFERIOR = ['InvestorDashboard'];
+
 export default function FloatingDock({ currentPageName }) {
   const temBarra = PAGINAS_COM_BARRA_INFERIOR.includes(currentPageName);
   const temHero = PAGINAS_COM_HERO_INFERIOR.includes(currentPageName);
+  const temNav = PAGINAS_COM_NAV_INFERIOR.includes(currentPageName);
   // Base: distância do fundo. Passo: espaço entre um flutuante e o de cima.
-  const base = temBarra ? '11.5rem' : temHero ? '3.25rem' : '1.75rem';
-  const baseSm = temBarra ? '12rem' : temHero ? '3.5rem' : '2rem';
+  const base = temBarra ? '11.5rem' : temNav ? '6rem' : temHero ? '3.25rem' : '1.75rem';
+  const baseSm = temBarra ? '12rem' : temNav ? '6.5rem' : temHero ? '3.5rem' : '2rem';
 
   return (
     <style>{`
@@ -54,6 +61,17 @@ export default function FloatingDock({ currentPageName }) {
       .nz-dock-bottom-2 { bottom: calc(var(--nz-dock-b) + var(--nz-dock-step)) !important; }
       /* PONTO 85 — terceira altura da coluna direita (Compartilhar, acima da Livoo) */
       .nz-dock-bottom-3 { bottom: calc(var(--nz-dock-b) + var(--nz-dock-step) * 2) !important; }
+      ${temNav ? `
+      /* Seta "voltar ao topo" lisa nesta página: sem o verde do site, só um vidro
+         escuro discreto com a linha dourada institucional do Parceiro. */
+      [aria-label="Voltar ao topo"] {
+        background: rgba(17, 17, 20, 0.82) !important;
+        border-color: rgba(201, 165, 92, 0.35) !important;
+        color: #C9A55C !important;
+        box-shadow: none !important;
+      }
+      [aria-label="Voltar ao topo"] > span[aria-hidden] { background: none !important; --tw-ring-color: rgba(201, 165, 92, 0.18) !important; }
+      ` : ''}
     `}</style>
   );
 }
