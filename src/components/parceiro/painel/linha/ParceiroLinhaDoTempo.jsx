@@ -4,6 +4,7 @@ import { real } from '@/lib/operacaoNumeros';
 import { ETAPAS, DIAS_CICLO_FISICO, DIA_PRIMEIRO_REPASSE } from './etapasOperacao';
 import RoadmapAscendente from './RoadmapAscendente';
 import ContadorRentabilidade from './ContadorRentabilidade';
+import FeedVendasCiclo from './FeedVendasCiclo';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -68,8 +69,15 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
         ))}
       </dl>
 
-      <div className="mt-6">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <ContadorRentabilidade dataAssinatura={dataAssinatura} aporte={aporte} taxaMensalPct={taxa} />
+        {/* 🧾 Giro do lote na rede — simulação rotulada enquanto a Loja Virtual
+            não está ligada a este painel (o repasse é fixo e não depende dela). */}
+        <FeedVendasCiclo
+          seed={investimento?.id || 'demonstracao'}
+          ativo={diaAtual >= DIAS_CICLO_FISICO}
+          simulado
+        />
       </div>
 
       {/* 🚀 Roadmap ascendente: D+0 na base, primeiro repasse no topo */}

@@ -2,9 +2,8 @@ import React from 'react';
 import { TrendingUp, Clock } from 'lucide-react';
 import useRentabilidadeAcumulada from './useRentabilidadeAcumulada';
 import { DIA_INICIO_APURACAO, DIA_PRIMEIRO_REPASSE } from './etapasOperacao';
-
-const centavos = (v) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(v || 0);
+import CofreOperacao from './CofreOperacao';
+import OdometroValor from './OdometroValor';
 
 // 🕒 ACOMPANHAMENTO DO CICLO DE 30 DIAS.
 // ⚖️ Mostra o ANDAMENTO DO CICLO (dias) e o repasse PREVISTO no fechamento.
@@ -30,8 +29,22 @@ export default function ContadorRentabilidade({ dataAssinatura, aporte, taxaMens
         <span className="text-pc-tinta-fraca"> de {DIA_PRIMEIRO_REPASSE}</span>
       </p>
 
-      <div className="mt-4 h-1.5 w-full bg-pc-borda">
-        <div className="h-full bg-pc-ouro transition-all" style={{ width: `${r.progressoPct}%` }} />
+      {/* 🏦 Cofre no lugar da barrinha: o mesmo dado (dia do ciclo), com leitura
+          de operação viva em vez de uma linha reta. */}
+      <div className="mt-4">
+        <CofreOperacao
+          pct={r.progressoPct}
+          diaAtual={diaMostrado}
+          estado={r.iniciou ? 'Rentabilizando' : 'Ciclo físico'}
+          marcos={[
+            {
+              rotulo: `D+${DIA_INICIO_APURACAO}`,
+              texto: 'produtos na Loja Virtual',
+              pct: (DIA_INICIO_APURACAO / DIA_PRIMEIRO_REPASSE) * 100,
+            },
+            { rotulo: `D+${DIA_PRIMEIRO_REPASSE}`, texto: 'repasse + prestação de contas', pct: 100 },
+          ]}
+        />
       </div>
 
       <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca">
@@ -43,7 +56,7 @@ export default function ContadorRentabilidade({ dataAssinatura, aporte, taxaMens
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-pc-borda pt-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-pc-ouro">Repasse previsto no fechamento</p>
-          <p className="mt-1 font-mono text-xl font-black text-pc-ouro">{centavos(r.alvo)}</p>
+          <OdometroValor valor={r.alvo} className="mt-1 block text-xl font-black text-pc-ouro" />
         </div>
         <p className="flex items-center gap-1.5 text-[11px] text-pc-tinta-fraca">
           <Clock className="h-3.5 w-3.5 text-pc-ouro" />
