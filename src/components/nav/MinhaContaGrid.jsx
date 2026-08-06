@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Package, Wallet } from "lucide-react";
+import { Package, Wallet, Handshake } from "lucide-react";
 import { TILE, Rotulo } from "@/components/nav/AtalhosGrid";
 
 /**
@@ -20,6 +20,8 @@ export default function MinhaContaGrid({ onNavigate, colunas = 3 }) {
   const itens = [
     { key: "pedidos", rotulo: "Meus Pedidos", icon: Package, acao: () => navigate(createPageUrl("MyCatalogOrders")) },
     { key: "carteira", rotulo: "Carteira", icon: Wallet, acao: () => window.dispatchEvent(new CustomEvent("openWallet")) },
+    // 🖤 Acesso rápido ao Painel do Parceiro (captação privada)
+    { key: "parceiro", rotulo: "Parceiro", icon: Handshake, acao: () => navigate(createPageUrl("InvestorDashboard")) },
   ];
 
   return (
