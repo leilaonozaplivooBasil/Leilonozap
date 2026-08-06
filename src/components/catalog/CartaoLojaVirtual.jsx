@@ -56,16 +56,18 @@ export default function CartaoLojaVirtual({ parceiro, productCount = 0 }) {
       {/* Loja Virtual em cima · nome embaixo, com o selo chapado colado no nome */}
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-wider text-green-400 font-bold leading-none">Loja Virtual</p>
-        <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+        <div className="mt-1 flex items-center gap-2.5 min-w-0">
           <h3 className="text-white font-bold text-sm sm:text-base truncate leading-tight">
             {nome || 'Especial'}
           </h3>
-          {/* Selo chapado: sem moldura, sem caixa — só o selo ao lado do nome */}
+          {/* Selo chapado: redondo (sem o quadrado branco atrás), no tamanho da foto */}
           {cargo && (
-            <SeloCargo cargo={cargo} title={levelName(cargo)} className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
+            <span className="block w-11 h-11 shrink-0 overflow-hidden rounded-full">
+              <SeloCargo cargo={cargo} title={levelName(cargo)} />
+            </span>
           )}
         </div>
-        <div className="mt-0.5 flex items-center gap-x-2.5 text-[10.5px] text-gray-400">
+        <div className="mt-1 flex items-center gap-x-4 text-[10.5px] text-gray-400">
           <span className="inline-flex items-center gap-1">
             <Package className="w-3 h-3 text-green-400 shrink-0" />{productCount} produtos
           </span>
