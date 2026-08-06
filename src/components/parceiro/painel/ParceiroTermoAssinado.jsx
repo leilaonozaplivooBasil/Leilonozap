@@ -10,13 +10,73 @@ const formatarData = (iso) => {
   } catch { return iso; }
 };
 
+// 🆔 quem está pedindo o documento — o servidor confere se pode ver.
+const idDoUsuarioLogado = () => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || ''; }
+  catch { return ''; }
+};
+
 // ✅ Comprovante do termo já assinado + download do PDF do termo.
 export default function ParceiroTermoAssinado({ registro, persistido = true }) {
   const [gerando, setGerando] = useState(false);
 
+  const nomeArquivo = 'Termo_Confidencialidade_LeilaoNoZap.pdf';
+
+  // 📤 Entrega o PDF ao parceiro: no celular tenta o compartilhar nativo,
+  // no desktop baixa. Mesmo comportamento de antes — só virou função.
+  const entregar = async (blob) => {
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], nomeArquivo, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Termo de Confidencialidade' });
+          toast.success('Termo compartilhado');
+          return;
+        }
+      } catch { /* usuário cancelou — segue para download */ }
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = nomeArquivo;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(blobUrl); a.remove(); }, 200);
+    toast.success('Termo baixado em PDF');
+  };
+
+  // 🗄️ Via oficial arquivada no cofre privado. Link assinado de 5 minutos,
+  // liberado pelo servidor só para o próprio signatário ou um admin.
+  // Devolve true se conseguiu entregar; false = quem chamou usa a reserva.
+  const tentarViaArquivada = async () => {
+    const assinaturaId = registro?.id;
+    const solicitanteId = idDoUsuarioLogado();
+    if (!assinaturaId || !solicitanteId) return false;
+    try {
+      const resp = await base44.functions.invoke('getDocumentoAssinadoUrl', {
+        assinatura_id: assinaturaId,
+        solicitante_id: solicitanteId,
+      });
+      const url = resp?.url || resp?.data?.url;
+      if (!url) return false;
+      const r = await fetch(url);
+      if (!r.ok) return false;
+      const blob = await r.blob();
+      if (!blob || blob.size === 0) return false;
+      await entregar(blob);
+      return true;
+    } catch {
+      return false; // silencioso: cai na reserva sem assustar o parceiro
+    }
+  };
+
   const baixar = async () => {
     setGerando(true);
     try {
+      // 1) via oficial do cofre — 2) reserva: gerar na hora
+      if (await tentarViaArquivada()) return;
+
       const resp = await base44.functions.invoke('generateNdaPDF', {
         format: 'base64',
         partner_name: registro?.nome,
@@ -39,30 +99,7 @@ export default function ParceiroTermoAssinado({ registro, persistido = true }) {
       const bytes = atob(base64Data);
       const arr = new Uint8Array(bytes.length);
       for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-      const blob = new Blob([arr], { type: 'application/pdf' });
-      const nomeArquivo = 'Termo_Confidencialidade_LeilaoNoZap.pdf';
-
-      // Celular: tenta compartilhar o arquivo antes de cair no download
-      if (navigator.share && navigator.canShare) {
-        try {
-          const file = new File([blob], nomeArquivo, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: 'Termo de Confidencialidade' });
-            toast.success('Termo compartilhado');
-            return;
-          }
-        } catch { /* usuário cancelou — segue para download */ }
-      }
-
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = nomeArquivo;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(blobUrl); a.remove(); }, 200);
-      toast.success('Termo baixado em PDF');
+      await entregar(new Blob([arr], { type: 'application/pdf' }));
     } catch (e) {
       toast.error('Não foi possível gerar o PDF: ' + (e?.message || 'erro'));
     } finally {
