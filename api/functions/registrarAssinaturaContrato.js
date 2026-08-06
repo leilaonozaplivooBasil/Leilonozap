@@ -99,6 +99,9 @@ export default async function handler(req, res) {
       persistido,
       detalhe_persistencia: detalhePersistencia,
       assinatura: {
+        // 🗄️ id do registro — necessário para arquivar o PDF no cofre privado
+        // (arquivarDocumentoAssinado). Campo ADICIONADO: nada que já era usado mudou.
+        id: registro.id,
         documento,
         assinado_em: assinadoEm,
         ip,
