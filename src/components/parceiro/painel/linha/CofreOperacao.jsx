@@ -100,25 +100,29 @@ export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo f
       {/* Marcos reais do ciclo, ancorados na altura que ocupam no cofre */}
       <div className="relative min-w-0 flex-1">
         {hero && <div className="mb-3">{hero}</div>}
-        <span className="border border-pc-ouro/50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-pc-ouro">
-          {estado}
-        </span>
-        <div className={`relative mt-2 ${hero ? 'h-[40px] sm:h-[96px]' : 'h-[104px] sm:h-[164px]'}`}>
-          {marcos.map((m) => (
-            <div
-              key={m.rotulo}
-              className="absolute inset-x-0 flex items-center gap-2"
-              style={{ bottom: `${Math.max(0, Math.min(100, m.pct))}%` }}
-            >
-              <span className={`h-1.5 w-1.5 shrink-0 ${nivel >= m.pct ? 'bg-pc-ouro' : 'bg-pc-borda'}`} />
-              <p className="min-w-0 truncate text-[10px] leading-tight text-pc-tinta-fraca">
-                <strong className={nivel >= m.pct ? 'text-pc-tinta' : 'text-pc-tinta-fraca'}>{m.rotulo}</strong>
-                {' · '}
-                {m.texto}
-              </p>
-            </div>
-          ))}
+        {/* Selo em bloco próprio: nunca colide com os marcos logo abaixo */}
+        <div>
+          <span className="inline-block border border-pc-ouro/50 px-2 py-1 text-[9px] font-semibold uppercase leading-none tracking-[0.14em] text-pc-ouro">
+            {estado}
+          </span>
         </div>
+        {/* Marcos em lista (do topo do ciclo pra base): texto quebra em vez de cortar */}
+        <ul className="mt-3 space-y-2">
+          {[...marcos]
+            .sort((a, b) => b.pct - a.pct)
+            .map((m) => (
+              <li key={m.rotulo} className="flex items-start gap-2">
+                <span
+                  className={`mt-1 h-1.5 w-1.5 shrink-0 ${nivel >= m.pct ? 'bg-pc-ouro' : 'bg-pc-borda'}`}
+                />
+                <p className="min-w-0 text-[10px] leading-snug text-pc-tinta-fraca">
+                  <strong className={nivel >= m.pct ? 'text-pc-tinta' : 'text-pc-tinta-fraca'}>{m.rotulo}</strong>
+                  {' · '}
+                  {m.texto}
+                </p>
+              </li>
+            ))}
+        </ul>
       </div>
 
       <style>{`

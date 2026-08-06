@@ -5,12 +5,16 @@ import ContadorReservaRepasse from './ContadorReservaRepasse';
 
 // 🛒 QUADRO "GIRO DA FORÇA DE VENDA" — acompanhamento DEMONSTRATIVO do giro.
 //
-// Abre SEMPRE em R$ 0,00, dá tempo do parceiro ler, e então as vendas começam a
-// cair uma a uma (R$ 1,00 a R$ 3,50), somando até fechar EXATAMENTE a cota do dia.
-// ⚖️ A cota do dia = repasse previsto do ciclo ÷ 20 dias de apuração (D+10→D+30).
-// Nada aqui apura valor: o repasse é o previsto no contrato, pago no fechamento.
-// 📱 Um único timer, pausado fora de foco; ao voltar retoma de onde parou (nunca
-// despeja vendas acumuladas de uma vez).
+// 🔒 HISTÓRICO DO DIA IMUTÁVEL (decisão 06/08/2026): a lista inteira do dia
+// (produto, canal, valor e HORÁRIO do relógio) é gerada de UMA VEZ, de forma
+// determinística, a partir da semente (seed + dia do ciclo + data). Sair, voltar,
+// dar F5 dez vezes no mesmo dia devolve EXATAMENTE as mesmas vendas, nos mesmos
+// horários e valores — nada de número novo, que destruiria a confiança do parceiro.
+//
+// As vendas aparecem conforme o horário DELAS chega: cada uma tem hora fixa,
+// espalhada da manhã à noite com intervalos irregulares. Ao completar a cota do
+// dia, o quadro fica sendo o histórico consolidado daquele dia.
+// ⚖️ Nada aqui apura valor: o repasse é o previsto no contrato, pago no fechamento.
 
 const FRASES = [
   'Acabaram de comprar na loja',
@@ -37,10 +41,24 @@ const ITENS = [
 const CANAIS = ['Loja Virtual', 'Licenciado', 'Vendedor', 'Influencer'];
 
 const MAX_PILHA = 6;
-const TICKET_MEDIO = 2.2;
+// Janela comercial do giro dentro do dia (horas locais)
+const HORA_INICIO = 8;
+const HORA_FIM = 21.5;
 
 const brl = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(v || 0);
+
+const horaTexto = (ts) =>
+  new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+
+// "há 26 min" / "há 3h 12min" — só o relativo muda; o horário é fixo.
+function relativo(ts, agora) {
+  const min = Math.max(0, Math.floor((agora - ts) / 60000));
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `há ${h}h` : `há ${h}h ${m}min`;
+}
 
 function semear(seed) {
   let s = 0;
@@ -57,79 +75,82 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
   const ativo = diaAtual >= DIA_INICIO_APURACAO;
   const cotaDia = alvo / (DIA_PRIMEIRO_REPASSE - DIA_INICIO_APURACAO);
 
-  // Semente do DIA: mesmo ritmo dentro do dia, dia seguinte reinicia sozinho.
-  const sementeDia = `${seed || 'demo'}-${new Date().toISOString().slice(0, 10)}`;
+  // ⏱️ Relógio: só ele muda ao longo do dia (revela vendas cujo horário chegou).
+  // Mobile congela timer em background → revalida em visibilitychange e focus.
+  const [agora, setAgora] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const tick = () => setAgora(Date.now());
+    const id = setInterval(tick, 30000);
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('focus', tick);
+    };
+  }, []);
 
-  // Vendas pequenas e irregulares (R$ 1,00–3,50) que somam EXATAMENTE a cota.
-  const { vendas, esperaInicial } = React.useMemo(() => {
+  // Data local (não ISO/UTC, senão o dia "vira" fora de hora no Brasil)
+  const hoje = new Date(agora);
+  const dataLocal = `${hoje.getFullYear()}-${hoje.getMonth() + 1}-${hoje.getDate()}`;
+  const sementeDia = `${seed || 'demo'}-d${diaAtual}-${dataLocal}`;
+
+  // 🔒 Lista determinística do dia: valores + horários fixos, gerados de uma vez.
+  const vendas = React.useMemo(() => {
     const rnd = semear(sementeDia);
-    const inicial = 4000 + Math.floor(rnd() * 2000); // 4s a 6s de leitura
-    const lista = [];
-    let restante = Math.round(cotaDia * 100) / 100;
-    let i = 0;
 
-    while (restante > 0.005 && i < 60) {
+    // 1) valores irregulares (R$ 1,00–3,50) que somam EXATAMENTE a cota
+    const valores = [];
+    let restante = Math.round(cotaDia * 100) / 100;
+    while (restante > 0.005 && valores.length < 60) {
       const bruto = Math.round((1 + rnd() * 2.5) * 100) / 100;
-      // fecha a conta quando o que sobraria seria menor que uma venda mínima
       const valor = restante - bruto < 1 ? Math.round(restante * 100) / 100 : bruto;
       restante = Math.round((restante - valor) * 100) / 100;
-      lista.push({
+      valores.push(valor);
+    }
+
+    // 2) horários irregulares espalhados da manhã à noite (pesos aleatórios
+    //    normalizados na janela comercial — nada de cadência uniforme)
+    const pesos = valores.map(() => 0.25 + rnd());
+    const somaPesos = pesos.reduce((a, b) => a + b, 0) || 1;
+    const inicio = new Date(hoje);
+    inicio.setHours(HORA_INICIO, Math.floor(rnd() * 25), 0, 0);
+    const janelaMs = (HORA_FIM - HORA_INICIO) * 3600000;
+
+    let acumPeso = 0;
+    let acumValor = 0;
+    return valores.map((valor, i) => {
+      acumPeso += pesos[i];
+      acumValor = Math.round((acumValor + valor) * 100) / 100;
+      return {
         id: `${sementeDia}-${i}`,
         valor,
-        acumulado: Math.round((cotaDia - restante) * 100) / 100,
+        acumulado: acumValor,
+        hora: inicio.getTime() + Math.round((acumPeso / somaPesos) * janelaMs),
         frase: FRASES[Math.floor(rnd() * FRASES.length)],
         item: ITENS[Math.floor(rnd() * ITENS.length)],
         canal: CANAIS[Math.floor(rnd() * CANAIS.length)],
-        minutos: 1 + Math.floor(rnd() * 40),
-        espera: 5000 + Math.floor(rnd() * 7000), // 5s a 12s, irregular
-      });
-      i++;
-    }
-    return { vendas: lista, esperaInicial: inicial };
+      };
+    });
+    // hoje/agora fora das deps de propósito: a lista NÃO pode ser regerada a cada tick
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sementeDia, cotaDia]);
 
-  // Começa SEMPRE em zero — nada de pré-preencher pela hora do dia.
-  const [indice, setIndice] = React.useState(0);
-  React.useEffect(() => {
-    setIndice(0);
-  }, [sementeDia, cotaDia]);
-
-  const total = indice > 0 ? vendas[indice - 1].acumulado : 0;
-  const cheio = indice >= vendas.length;
+  // Só entram as vendas cujo horário já passou — o resto chega ao longo do dia.
+  let reveladas = 0;
+  for (let i = 0; i < vendas.length; i++) {
+    if (vendas[i].hora <= agora) reveladas = i + 1;
+    else break;
+  }
+  const total = reveladas > 0 ? vendas[reveladas - 1].acumulado : 0;
+  const cheio = reveladas >= vendas.length && vendas.length > 0;
 
   // 📊 Eleva o giro de HOJE pra tela pai, pra a barra do histórico avançar junto.
   React.useEffect(() => {
     if (onGiroDoDia) onGiroDoDia(ativo ? total : 0);
   }, [total, ativo, onGiroDoDia]);
 
-  // Timer único: pausa fora de foco e retoma de onde parou (não pula pro fim).
-  React.useEffect(() => {
-    if (!ativo || cheio || vendas.length === 0) return;
-
-    let timer;
-    let vivo = true;
-
-    const agendar = () => {
-      clearTimeout(timer);
-      if (document.visibilityState !== 'visible') return;
-      const espera = indice === 0 ? esperaInicial : vendas[indice].espera;
-      timer = setTimeout(() => {
-        if (vivo) setIndice((n) => Math.min(n + 1, vendas.length));
-      }, espera);
-    };
-
-    agendar();
-    document.addEventListener('visibilitychange', agendar);
-    window.addEventListener('focus', agendar);
-    return () => {
-      vivo = false;
-      clearTimeout(timer);
-      document.removeEventListener('visibilitychange', agendar);
-      window.removeEventListener('focus', agendar);
-    };
-  }, [ativo, cheio, indice, vendas, esperaInicial]);
-
-  const pilha = vendas.slice(Math.max(0, indice - MAX_PILHA), indice).reverse();
+  const pilha = vendas.slice(Math.max(0, reveladas - MAX_PILHA), reveladas).reverse();
 
   return (
     <div className="mt-6 border border-pc-ouro/40 bg-pc-preto-2 p-5 sm:p-7">
@@ -161,25 +182,35 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
             />
           </div>
 
-          {indice === 0 ? (
+          {reveladas === 0 ? (
             <p className="mt-4 flex items-center gap-2 text-[11px] text-pc-tinta-fraca">
               <span className="giro-pulso h-1.5 w-1.5 shrink-0 rounded-full bg-pc-ouro" />
-              Aguardando o próximo giro...
+              O giro do dia começa às {horaTexto(vendas[0]?.hora || agora)}.
             </p>
           ) : (
-            <ul className="mt-4 space-y-2.5">
-              {pilha.map((e) => (
-                <li key={e.id} className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4">
-                  <p className="truncate text-xs font-bold text-pc-tinta">{e.frase}</p>
-                  <p className="mt-0.5 truncate text-[11px] text-pc-tinta-fraca">
-                    {e.item} · {e.canal} · há {e.minutos} min
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-pc-ouro">
-                    repasse de <strong className="font-bold">{brl(e.valor)}</strong>
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="mt-4 text-[10px] uppercase tracking-[0.14em] text-pc-tinta-fraca">
+                Histórico do dia · {reveladas} de {vendas.length} vendas
+              </p>
+              <ul className="mt-2 space-y-2.5">
+                {pilha.map((e) => (
+                  <li key={e.id} className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4">
+                    <p className="truncate text-xs font-bold text-pc-tinta">{e.frase}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-pc-tinta-fraca">
+                      {e.item} · {e.canal}
+                    </p>
+                    <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-[10px] text-pc-ouro">
+                      <span>
+                        repasse de <strong className="font-bold">{brl(e.valor)}</strong>
+                      </span>
+                      <span className="tabular-nums text-pc-tinta-fraca">
+                        {horaTexto(e.hora)} · {relativo(e.hora, agora)}
+                      </span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </>
       )}
