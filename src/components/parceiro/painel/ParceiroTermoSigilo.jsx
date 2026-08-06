@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ShieldCheck, Gavel, Clock, BadgeCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { VERSAO_TERMO } from '@/lib/termoSigiloTexto';
+import { arquivarDocumentoAssinado } from '@/lib/arquivarDocumento';
 import ParceiroTermoSigiloTexto from './ParceiroTermoSigiloTexto';
 import ParceiroDocsUpload from './ParceiroDocsUpload';
 import ParceiroAssinatura from './ParceiroAssinatura';
@@ -54,6 +55,11 @@ export default function ParceiroTermoSigilo({ user, registro, onAssinado, libera
       }
 
       const a = resp.assinatura || resp.data?.assinatura || {};
+
+      // 🗄️ Guarda a via oficial no cofre privado + cópia no Drive.
+      // Segundo plano: não travamos a tela nem dependemos disso pra concluir.
+      arquivarDocumentoAssinado(a.id);
+
       onAssinado(
         {
           nome,
