@@ -64,10 +64,10 @@ export default function ParceiroContratoTexto() {
       <h5 className="text-green-400 font-bold mt-4">8. DA VIGÊNCIA E DO CICLO OPERACIONAL</h5>
       <p>8.1. O presente contrato terá vigência de 12 (doze) meses, contados a partir da data de aceite eletrônico pelo PARCEIRO.</p>
       <p>8.2. O ciclo financeiro da parceria observará as seguintes regras:</p>
-      <p className="ml-4">a) O primeiro compartilhamento de lucros será disponibilizado ao PARCEIRO em até 60 (sessenta) dias contados da data do aporte inicial, prazo necessário para os 15 (quinze) primeiros dias destinados a testes, disponibilização e colocação à venda dos produtos na plataforma, seguidos de 45 (quarenta e cinco) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e segurança da operação;</p>
+      <p className="ml-4">a) O primeiro compartilhamento de lucros será disponibilizado ao PARCEIRO em até 30 (trinta) dias contados da data do aporte inicial, prazo necessário para os 10 (dez) primeiros dias destinados à aquisição, conferência, testes, curadoria, disponibilização e colocação à venda dos produtos na plataforma, seguidos de 20 (vinte) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e segurança da operação;</p>
       <p className="ml-4">b) Após o primeiro ciclo, os compartilhamentos subsequentes ocorrerão em ciclos mensais, com disponibilização a cada 30 (trinta) dias;</p>
       <p className="ml-4">c) O capital aportado permanecerá alocado continuamente em novas operações de compra e recompra de produtos, enquanto vigente o contrato.</p>
-      <p>8.3. Os valores de lucro compartilhado, apurados após o período inicial de 60 (sessenta) dias, poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
+      <p>8.3. Os valores de lucro compartilhado, apurados após o período inicial de 30 (trinta) dias, poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
       <p>8.4. Ao final do prazo de 12 (doze) meses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para celebração de novo acordo, o qual poderá conter condições, prazos e critérios distintos.</p>
       <p>8.5. Encerrada a vigência contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO será disponibilizado para retirada em até 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.</p>
 

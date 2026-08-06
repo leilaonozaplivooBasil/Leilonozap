@@ -70,10 +70,10 @@ const SECOES = [
   ['8. DA VIGENCIA E DO CICLO OPERACIONAL',
     '8.1. O presente contrato tera vigencia de 12 (doze) meses, contados a partir da data de aceite eletronico pelo PARCEIRO.',
     '8.2. O ciclo financeiro da parceria observara as seguintes regras:',
-    'a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 60 (sessenta) dias contados da data do aporte inicial, prazo necessario para os 15 (quinze) primeiros dias destinados a testes, disponibilizacao e colocacao a venda dos produtos na plataforma, seguidos de 45 (quarenta e cinco) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e seguranca da operacao;',
+    'a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 30 (trinta) dias contados da data do aporte inicial, prazo necessario para os 10 (dez) primeiros dias destinados a aquisicao, conferencia, testes, curadoria, disponibilizacao e colocacao a venda dos produtos na plataforma, seguidos de 20 (vinte) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e seguranca da operacao;',
     'b) Apos o primeiro ciclo, os compartilhamentos subsequentes ocorrerao em ciclos mensais, com disponibilizacao a cada 30 (trinta) dias;',
     'c) O capital aportado permanecera alocado continuamente em novas operacoes de compra e recompra de produtos, enquanto vigente o contrato.',
-    '8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 60 (sessenta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.',
+    '8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 30 (trinta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.',
     '8.4. Ao final do prazo de 12 (doze) meses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para celebracao de novo acordo, o qual podera conter condicoes, prazos e criterios distintos.',
     '8.5. Encerrada a vigencia contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO sera disponibilizado para retirada em ate 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.'],
   ['9. DAS OBRIGACOES DO PARCEIRO',
@@ -104,7 +104,11 @@ const SECOES = [
     '14.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ, com renuncia expressa a qualquer outro, por mais privilegiado que seja, para dirimir quaisquer questoes oriundas ou relacionadas ao presente contrato.'],
 ];
 
-export const VERSAO_CONTRATO = '2026-08-06';
+// 🗓️ Versão do contrato. Subiu em 06/08/2026-b: Cláusulas 8.2 "a" e 8.3 passaram
+// de 60 para 30 dias (ciclo real: 10 dias operacionais + 20 de giro), alinhando o
+// contrato ao painel do parceiro. Assinaturas anteriores seguem vinculadas à
+// versão gravada no próprio registro (hash + versao), não a esta constante.
+export const VERSAO_CONTRATO = '2026-08-06-b';
 
 /**
  * Gera o PDF do contrato.

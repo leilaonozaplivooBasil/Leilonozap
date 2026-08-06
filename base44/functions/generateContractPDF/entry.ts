@@ -165,10 +165,10 @@ Deno.serve(async (req) => {
     addTitle('8. DA VIGENCIA E DO CICLO OPERACIONAL');
     addText('8.1. O presente contrato tera vigencia de 12 (doze) meses, contados a partir da data de aceite eletronico pelo PARCEIRO.');
     addText('8.2. O ciclo financeiro da parceria observara as seguintes regras:');
-    addText('a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 60 (sessenta) dias contados da data do aporte inicial, prazo necessario para os 15 (quinze) primeiros dias destinados a testes, disponibilizacao e colocacao a venda dos produtos na plataforma, seguidos de 45 (quarenta e cinco) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e seguranca da operacao;');
+    addText('a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 30 (trinta) dias contados da data do aporte inicial, prazo necessario para os 10 (dez) primeiros dias destinados a aquisicao, conferencia, testes, curadoria, disponibilizacao e colocacao a venda dos produtos na plataforma, seguidos de 20 (vinte) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e seguranca da operacao;');
     addText('b) Apos o primeiro ciclo, os compartilhamentos subsequentes ocorrerao em ciclos mensais, com disponibilizacao a cada 30 (trinta) dias;');
     addText('c) O capital aportado permanecera alocado continuamente em novas operacoes de compra e recompra de produtos, enquanto vigente o contrato.');
-    addText('8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 60 (sessenta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.');
+    addText('8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 30 (trinta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.');
     addText('8.4. Ao final do prazo de 12 (doze) meses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para celebracao de novo acordo, o qual podera conter condicoes, prazos e criterios distintos.');
     addText('8.5. Encerrada a vigencia contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO sera disponibilizado para retirada em ate 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.');
 
