@@ -38,6 +38,7 @@ import {
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { getReferral } from '@/lib/referral';
+import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 import FreteResumo from '@/components/cart/FreteResumo';
 
@@ -571,6 +572,11 @@ export default function Cart() {
       return;
     }
 
+    // 👑 REGRA DE DONO ÚNICO — quem recebe a comissão desta venda.
+    // Cliente com dono no cadastro → o dono real; vendedor → ele mesmo;
+    // sem dono / visitante → o link. Falha aqui cai no link (nunca bloqueia a venda).
+    const refCodeVenda = await resolverRefCodeDaVenda(freshUser);
+
     try {
       // ═══════════════════════════════════════════════════════════
       // PASSO 1: GERAR PIX/PAGAMENTO PRIMEIRO (igual AuctionCheckoutModern)
@@ -608,7 +614,7 @@ export default function Cart() {
           buyer_address: deliveryMethod === 'delivery' ? `${formData.street}, ${formData.number} ${formData.complement || ''} - ${formData.neighborhood}, ${formData.city}/${formData.state}`.trim() : 'Retirada',
           buyer_cep: formData.cep.replace(/\D/g, ''),
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
-          ref_code: getReferral(),
+          ref_code: refCodeVenda,
           coupon_code: appliedCoupon?.code || null,
           delivery_type: deliveryMethod,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
@@ -638,7 +644,7 @@ export default function Cart() {
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
-          ref_code: getReferral(),
+          ref_code: refCodeVenda,
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
@@ -656,7 +662,7 @@ export default function Cart() {
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
-          ref_code: getReferral(),
+          ref_code: refCodeVenda,
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
@@ -707,7 +713,7 @@ export default function Cart() {
       // PASSO 2: PAGAMENTO GERADO COM SUCESSO — agora registra vendas
       // Isso acontece DEPOIS do PIX/pagamento estar garantido
       // ═══════════════════════════════════════════════════════════
-      const referralCode = getReferral();
+      const referralCode = refCodeVenda;
       let licenseeId = 'site_official';
       let licenseeData = null;
 

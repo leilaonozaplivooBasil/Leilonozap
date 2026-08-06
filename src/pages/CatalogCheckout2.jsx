@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { getReferral } from '@/lib/referral';
+import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 
 const Product = base44.entities.Product;
 const Auction = base44.entities.Auction;
@@ -134,7 +135,8 @@ export default function CatalogCheckout2() {
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
             const savedUser = JSON.parse(savedUserJSON);
-            const referralCode = getReferral();
+            // 👑 REGRA DE DONO ÚNICO — dono real do cadastro tem precedência sobre o link
+            const referralCode = await resolverRefCodeDaVenda(savedUser);
 
             const mp = await base44.functions.invoke('createMPPix', {
                 items: [{ product_id: product.id, quantity: 1 }],
