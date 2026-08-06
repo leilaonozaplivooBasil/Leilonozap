@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import ParceiroAporteLivre from './ParceiroAporteLivre';
 
 // 🎠 Carrossel de planos de parceria (extraído de InvestorDashboard, sem
 // alteração de conteúdo, valores ou textos de compliance).
@@ -15,6 +16,18 @@ export default function ParceiroPlanoCarrossel({
   onEscolher,
 }) {
   const portfolio = portfolios[indice];
+
+  // 💰 Plano Private: valor digitável. Começa no mínimo e reseta ao trocar de plano.
+  const livre = portfolio?.valorLivre === true;
+  const min = portfolio?.valorMin || 0;
+  const max = portfolio?.valorMax || 0;
+  const passo = portfolio?.valorPasso || 0;
+  const [aporte, setAporte] = React.useState(portfolio?.minInvestment || 0);
+  React.useEffect(() => {
+    setAporte(portfolio?.minInvestment || 0);
+  }, [portfolio?.id, portfolio?.minInvestment]);
+
+  const aporteValido = !livre || (aporte >= min && aporte <= max && aporte % passo === 0);
 
   return (
     <>
@@ -34,9 +47,9 @@ export default function ParceiroPlanoCarrossel({
           >
             <Card className="bg-pc-preto-2 border border-pc-borda w-full max-w-md overflow-hidden">
               <div className="relative h-64 sm:h-80 md:h-96 overflow-hidden bg-pc-preto">
-                {productImages[portfolio.imageKey] ? (
+                {(portfolio.imageUrl || productImages[portfolio.imageKey]) ? (
                   <img
-                    src={productImages[portfolio.imageKey]}
+                    src={portfolio.imageUrl || productImages[portfolio.imageKey]}
                     alt={portfolio.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
@@ -58,10 +71,22 @@ export default function ParceiroPlanoCarrossel({
 
                 <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
                   <div className="bg-pc-preto p-2 sm:p-3 border border-pc-borda col-span-2">
-                    <p className="text-pc-ouro text-[10px] sm:text-xs uppercase tracking-[0.15em] mb-1">Capital do aporte</p>
-                    <p className="text-base sm:text-xl md:text-2xl font-bold text-pc-tinta leading-tight">
-                      R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
-                    </p>
+                    {livre ? (
+                      <ParceiroAporteLivre
+                        valor={aporte}
+                        min={min}
+                        max={max}
+                        passo={passo}
+                        onChange={setAporte}
+                      />
+                    ) : (
+                      <>
+                        <p className="text-pc-ouro text-[10px] sm:text-xs uppercase tracking-[0.15em] mb-1">Capital do aporte</p>
+                        <p className="text-base sm:text-xl md:text-2xl font-bold text-pc-tinta leading-tight">
+                          R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
+                        </p>
+                      </>
+                    )}
                     <p className="text-pc-tinta-fraca text-[10px] mt-1 leading-relaxed">
                       Participação sobre o lucro líquido apurado nas operações, conforme
                       percentual definido na adesão (Cláusula 7.1).
@@ -75,8 +100,11 @@ export default function ParceiroPlanoCarrossel({
                 </div>
 
                 <Button
-                  className="w-full min-h-[48px] bg-transparent border border-pc-ouro text-pc-ouro hover:bg-pc-ouro hover:text-pc-preto text-sm sm:text-base py-3 sm:py-4 font-semibold"
-                  onClick={() => onEscolher(portfolio)}
+                  disabled={!aporteValido}
+                  className="w-full min-h-[48px] bg-transparent border border-pc-ouro text-pc-ouro hover:bg-pc-ouro hover:text-pc-preto disabled:opacity-40 text-sm sm:text-base py-3 sm:py-4 font-semibold"
+                  onClick={() =>
+                    onEscolher(livre ? { ...portfolio, minInvestment: aporte } : portfolio)
+                  }
                 >
                   Comprar Agora
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />

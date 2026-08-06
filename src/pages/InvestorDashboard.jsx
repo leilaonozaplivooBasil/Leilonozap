@@ -146,6 +146,26 @@ const PORTFOLIOS = [
     features: COMMON_FEATURES,
     imageKey: 'apple',
   },
+  // 🖤 4º plano EXCLUSIVO — o parceiro digita o próprio valor de aporte
+  // (R$ 50.000 a R$ 1.000.000, em múltiplos de R$ 50.000).
+  {
+    id: 4,
+    name: 'Private Galpão',
+    minInvestment: 50000,
+    expectedReturn: 3,
+    duration: 60,
+    products: ['Volume fechado sob demanda'],
+    risk: 'Baixo',
+    description:
+      'Curadoria exclusiva com volume fechado sob demanda. O parceiro define o capital do aporte.',
+    features: COMMON_FEATURES,
+    imageKey: 'private_galpao',
+    imageUrl: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/0afd480b8_generated_image.png',
+    valorLivre: true,
+    valorMin: 50000,
+    valorMax: 1000000,
+    valorPasso: 50000,
+  },
 ];
 
 export default function InvestorDashboard() {
