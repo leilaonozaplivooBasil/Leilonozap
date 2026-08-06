@@ -9,12 +9,12 @@ import ParceiroComoChegamos from './ParceiroComoChegamos';
 // no topo (a ação principal precisa ser vista de cara, não no pé do cartão).
 // ⚠️ PROIBIDO aqui: comissão, percentual, faturamento, ticket médio, projeção,
 // "investimento" e qualquer valor em R$. Descrição operacional apenas.
+// Cada botão fica na coluna do cartão que ele demonstra: Leilão (1º),
+// Loja Virtual (2º) e Plano de Expansão sobre a Estrutura de Alavancagem (3º).
 const PERCURSOS = [
-  { id: 'loja', rotulo: 'Percorrer a Loja Virtual' },
-  // Cada botão fica na coluna do cartão que ele demonstra: expansão sobre o
-  // canal humano (2º) e leilão sobre o canal direto (3º).
-  { id: 'expansao', rotulo: 'Conhecer o Plano de Expansão' },
   { id: 'leilao', rotulo: 'Percorrer o Leilão' },
+  { id: 'loja', rotulo: 'Percorrer a Loja Virtual' },
+  { id: 'expansao', rotulo: 'Conhecer o Plano de Expansão' },
 ];
 
 // 🗺️ Roadmap 2026 — METAS DE OPERAÇÃO (alcance + base de cálculo conservadora).
