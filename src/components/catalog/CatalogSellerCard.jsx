@@ -1,5 +1,6 @@
 import React from "react";
 import { MessageCircle, Package, Truck } from "lucide-react";
+import { linkWhatsParceiro } from "@/lib/contatoParceiro";
 
 /**
  * CatalogSellerCard — barra compacta do vendedor/licenciado.
@@ -14,11 +15,8 @@ export default function CatalogSellerCard({ licenseeData, productCount = 0 }) {
   const phone = hasLicensee ? licenseeData.phone : null;
   const photo = hasLicensee ? licenseeData.photo : null;
 
-  const waHref = phone
-    ? `https://wa.me/55${phone.replace(/\D/g, "")}?text=${encodeURIComponent(
-        `Olá ${name}! Estou vendo sua loja virtual.`
-      )}`
-    : null;
+  // 🔒 Contato direto só a partir de Vendedor oficial (regra única em contatoParceiro).
+  const waHref = linkWhatsParceiro(licenseeData);
 
   return (
     <section

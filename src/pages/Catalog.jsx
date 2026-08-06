@@ -6,7 +6,7 @@ const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Filter, MessageCircle, SlidersHorizontal, Package, Truck } from "lucide-react";
+import { Filter, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 
@@ -19,6 +19,7 @@ import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { getReferral, saveReferral } from '@/lib/referral';
+import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -252,7 +253,11 @@ export default function Catalog() {
         setLicenseeData({
           name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
           photo: photoUrl,
-          phone: licensee.phone
+          phone: licensee.phone,
+          // cargo real + código: o cartão usa pra decidir o "Falar Comigo" e o selo
+          career_levels: licensee.career_levels,
+          primary_career_level: licensee.primary_career_level,
+          referral_code: licensee.referral_code
         });
         
         console.log('✅ Dados do licenciado:', {
@@ -327,7 +332,10 @@ export default function Catalog() {
                   setLicenseeData({
                     name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
                     photo: photoUrl,
-                    phone: licensee.phone
+                    phone: licensee.phone,
+                    career_levels: licensee.career_levels,
+                    primary_career_level: licensee.primary_career_level,
+                    referral_code: licensee.referral_code
                   });
                 }
               }, 0);
@@ -645,37 +653,9 @@ export default function Catalog() {
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago products={products} onOpenDetails={openDetails} />
 
-        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja */}
-        <div className="mb-6 flex items-center gap-3 sm:gap-4 bg-gray-800/50 border border-gray-700 rounded-2xl p-3 sm:p-4">
-          {licenseeData?.photo ? (
-            <img src={licenseeData.photo} alt={licenseeData.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-green-500/40 shrink-0" />
-          ) : (
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-black shrink-0">
-              {(licenseeData?.name || 'Loja Virtual Especial').charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <h3 className="text-white font-bold text-base sm:text-lg truncate">
-              {licenseeData?.name ? `Loja Virtual ${licenseeData.name}` : 'Loja Virtual Especial'}
-            </h3>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mt-1">
-              <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-green-400" /> {products.length} produtos</span>
-              <span className="text-gray-600">·</span>
-              <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-green-400" /> Envio para todo Brasil</span>
-            </div>
-          </div>
-          {licenseeData?.phone && (
-            <a
-              href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo sua loja virtual personalizada.`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Falar Comigo</span>
-            </a>
-          )}
-        </div>
+        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
+            "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
+        <CartaoLojaVirtual parceiro={licenseeData} productCount={products.length} />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
