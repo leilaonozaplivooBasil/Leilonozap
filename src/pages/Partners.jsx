@@ -27,6 +27,14 @@ export default function PartnersPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
+  // 🖤 Tema preto exclusivo desta página: marca o body enquanto ela está montada
+  // e limpa ao sair. Alcança rodapé/flutuante (que vivem no Layout) sem alterar
+  // nenhum componente global — as outras telas seguem exatamente como são.
+  useEffect(() => {
+    document.body.classList.add('pc-tema');
+    return () => document.body.classList.remove('pc-tema');
+  }, []);
+
   useEffect(() => {
     try {
       const savedUserJSON = localStorage.getItem('currentUser');

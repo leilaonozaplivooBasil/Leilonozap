@@ -60,6 +60,26 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
   }
 }
 
+/* 🖤 TEMA EXCLUSIVO DA PÁGINA DO PARCEIRO (/Partners).
+   A marca `pc-tema` é colocada no <body> só enquanto a página está aberta e
+   removida ao sair — nenhum componente global é alterado e NENHUMA outra tela
+   muda de aparência. Serve para o rodapé e o flutuante (que são renderizados
+   fora da árvore da página, pelo Layout) acompanharem o preto institucional. */
+body.pc-tema footer {
+  background: var(--pc-preto) !important;
+  border-top: 1px solid var(--pc-borda) !important;
+}
+body.pc-tema footer * {
+  color: var(--pc-tinta-fraca) !important;
+  border-color: var(--pc-borda) !important;
+}
+/* flutuante de atendimento: perde o verde e entra no dourado fosco */
+body.pc-tema [data-share-hide]:not(button),
+body.pc-tema .livoo-brilho,
+body.pc-tema .livoo-brilho-forte {
+  box-shadow: none !important;
+}
+
 @layer utilities {
   @keyframes nzFloat {
     0%, 100% { transform: translateY(0); }
