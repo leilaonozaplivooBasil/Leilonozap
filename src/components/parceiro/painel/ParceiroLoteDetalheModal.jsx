@@ -9,9 +9,9 @@ import { real } from '@/lib/operacaoNumeros';
 export default function ParceiroLoteDetalheModal({ lote, onFechar }) {
   if (!lote) return null;
 
-  // 🧾 Só mostramos a linha que EXISTE no registro do lote. Lote antigo, cadastrado
-  // apenas com o custo total (arremate e taxa do leiloeiro já embutidos), não pode
-  // exibir "Arremate R$ 0" e "Taxa 0%" — isso passaria informação errada ao parceiro.
+  // 🧾 Composição do custo. Lote antigo (só com o custo total salvo) usa a média
+  // da operação no Rio — frete R$ 2.500, outros R$ 600 e taxa do leiloeiro de 7%
+  // sobre o arremate — sinalizada como média logo abaixo da tabela.
   const linhas = [
     ['Origem', lote.origem || lote.marketplace || '—'],
     ['Data', lote.data ? new Date(lote.data).toLocaleDateString('pt-BR') : '—'],
@@ -21,10 +21,7 @@ export default function ParceiroLoteDetalheModal({ lote, onFechar }) {
       : []),
     ...(lote.frete > 0 ? [['Frete', real(lote.frete)]] : []),
     ...(lote.outros > 0 ? [['Outros custos', real(lote.outros)]] : []),
-    [
-      lote.arremate > 0 ? 'Custo total' : 'Custo total (arremate + taxa + frete inclusos)',
-      real(lote.custoTotal),
-    ],
+    ['Custo total', real(lote.custoTotal)],
     ['Valor de mercado', real(lote.valorMercado)],
     ['Quantidade', `${lote.quantidade || 0} itens`],
     ['VPU · valor por unidade', real(lote.custoUnitario)],
@@ -63,6 +60,14 @@ export default function ParceiroLoteDetalheModal({ lote, onFechar }) {
             </div>
           ))}
         </dl>
+
+        {lote.custosEstimados && (
+          <p className="-mt-6 text-[11px] leading-relaxed text-pc-tinta-fraca">
+            Composição pela média da operação no Rio de Janeiro: frete de R$ 2.500, outros
+            custos de R$ 600 e taxa do leiloeiro de 7% sobre o arremate. O custo total é o
+            valor real pago pelo lote.
+          </p>
+        )}
 
         {lote.grades && (
           <div>
