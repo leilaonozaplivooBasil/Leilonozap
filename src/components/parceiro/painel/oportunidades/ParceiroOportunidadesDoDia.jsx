@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { normalizarLoteRecebido } from '@/lib/loteParceiro';
 import OportunidadeCard from './OportunidadeCard';
 import OportunidadeDetalheModal from './OportunidadeDetalheModal';
+import CapacidadeAporteHoje from './CapacidadeAporteHoje';
 
 // 🌟 Oportunidades do Dia — vitrine SOMENTE LEITURA dos lotes que a operação
 // publicou para comprar em conjunto. Nenhuma escrita acontece nesta tela.
@@ -70,11 +71,14 @@ export default function ParceiroOportunidadesDoDia({ onParticipar }) {
           ele aparece aqui com data e horário do leilão.
         </p>
       ) : (
+        <>
+        <CapacidadeAporteHoje oportunidades={oportunidades} />
         <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {oportunidades.map((o) => (
             <OportunidadeCard key={o.id} oportunidade={o} onAbrir={setAberta} />
           ))}
         </div>
+        </>
       )}
 
       {aberta && (
