@@ -32,6 +32,9 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { levelColor as getCareerColor, getLevel } from '@/lib/careerLevels';
 import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStructure';
+import SeloCargo from '@/components/network/SeloCargo';
+import CartaoIdentificacao from '@/components/network/CartaoIdentificacao';
+import { getSeloCargo, getFotoPerfil } from '@/lib/selosCargo';
 
 /**
  * TreeHierarchy — Árvore da rede (Sistema de Alavancagem)
@@ -720,7 +723,7 @@ export default function TreeHierarchy({
             /* ---------- modo LISTA ---------- */
             if (mode === 'list') {
               return (
-                <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, width: H.card }}>
+                <div key={n.id} className="absolute group/ident" style={{ left: n.x, top: n.y, width: H.card }}>
                   <div
                     {...pointerProps}
                     role="button"
@@ -743,9 +746,12 @@ export default function TreeHierarchy({
                         n.data.primary_career_level || 'usuario'
                       )} flex items-center justify-center text-white text-[11px] font-bold overflow-hidden flex-shrink-0`}
                     >
-                      {n.data.avatar_url ? (
+                      {/* 🏅 selo oficial do cargo · foto real só no hover (balãozinho) */}
+                      {getSeloCargo(n.data.primary_career_level || 'usuario') ? (
+                        <SeloCargo cargo={n.data.primary_career_level || 'usuario'} />
+                      ) : getFotoPerfil(n.data) ? (
                         <img
-                          src={n.data.avatar_url}
+                          src={getFotoPerfil(n.data)}
                           alt=""
                           className="w-full h-full object-cover pointer-events-none"
                           draggable={false}
@@ -776,6 +782,10 @@ export default function TreeHierarchy({
                     </button>
                     {expandButton}
                   </div>
+                  {/* 🪪 hover: foto real + nome + cargo (identificar sem abrir o perfil) */}
+                  <div className="absolute left-full top-0 ml-2 z-20 hidden group-hover/ident:block pointer-events-none">
+                    <CartaoIdentificacao user={n.data} cargoNome={level.name} cargoCor={level.color} />
+                  </div>
                 </div>
               );
             }
@@ -803,9 +813,12 @@ export default function TreeHierarchy({
                     ${isDragging ? 'opacity-40' : ''}`}
                   style={{ width: V.node, height: V.node }}
                 >
-                  {n.data.avatar_url ? (
+                  {/* 🏅 selo oficial do cargo · foto real só no hover (balãozinho) */}
+                  {getSeloCargo(n.data.primary_career_level || 'usuario') ? (
+                    <SeloCargo cargo={n.data.primary_career_level || 'usuario'} />
+                  ) : getFotoPerfil(n.data) ? (
                     <img
-                      src={n.data.avatar_url}
+                      src={getFotoPerfil(n.data)}
                       alt=""
                       className="w-full h-full object-cover pointer-events-none"
                       draggable={false}
@@ -813,6 +826,11 @@ export default function TreeHierarchy({
                   ) : (
                     getInitials(n.data.full_name)
                   )}
+                </div>
+
+                {/* 🪪 hover: foto real + nome + cargo */}
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-20 hidden group-hover/node:block pointer-events-none">
+                  <CartaoIdentificacao user={n.data} cargoNome={level.name} cargoCor={level.color} />
                 </div>
 
                 {expandButton}
@@ -957,16 +975,27 @@ export default function TreeHierarchy({
                     selected.primary_career_level || 'usuario'
                   )} flex items-center justify-center text-white text-2xl font-bold overflow-hidden ring-1 ring-white/10 flex-shrink-0`}
                 >
-                  {selected.avatar_url ? (
-                    <img src={selected.avatar_url} alt={selected.full_name} className="w-full h-full object-cover" />
+                  {/* no perfil aberto quem manda é a FOTO REAL da pessoa */}
+                  {getFotoPerfil(selected) ? (
+                    <img src={getFotoPerfil(selected)} alt={selected.full_name} className="w-full h-full object-cover" />
                   ) : (
                     getInitials(selected.full_name)
                   )}
                 </div>
 
+                {/* 🏅 selo oficial do cargo, ao lado da foto */}
+                {getSeloCargo(selected.primary_career_level || 'usuario') && (
+                  <div className="w-16 h-16 rounded-full overflow-hidden ring-1 ring-white/15 flex-shrink-0 hidden sm:block">
+                    <SeloCargo cargo={selected.primary_career_level || 'usuario'} title={selectedLevel.name} />
+                  </div>
+                )}
+
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-bold text-white leading-tight truncate">{selected.full_name}</h2>
-                  <p className={`text-[13px] font-semibold ${selectedLevel.textColor}`}>{selectedLevel.name}</p>
+                  {/* cargo como chip (o texto colorido puro ficava escuro e ilegível) */}
+                  <span className={`inline-block mt-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${selectedLevel.color} text-white`}>
+                    {selectedLevel.name}
+                  </span>
                   {selected.active === false && (
                     <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
                       na lixeira
@@ -1110,7 +1139,9 @@ export default function TreeHierarchy({
                           title="Abrir esta pessoa na árvore"
                         >
                           <span className={`w-7 h-7 rounded-full ${l.color} flex items-center justify-center text-white text-[9.5px] font-bold overflow-hidden flex-shrink-0`}>
-                            {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : getInitials(c.full_name)}
+                            {getSeloCargo(c.primary_career_level || 'usuario')
+                              ? <SeloCargo cargo={c.primary_career_level || 'usuario'} title={l.name} />
+                              : getFotoPerfil(c) ? <img src={getFotoPerfil(c)} alt="" className="w-full h-full object-cover" /> : getInitials(c.full_name)}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-[12px] text-gray-200 truncate">{c.full_name}</span>
