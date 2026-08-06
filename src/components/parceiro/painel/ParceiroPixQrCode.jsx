@@ -6,14 +6,33 @@ import { Loader2, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
+import usePixAporteStatus from '@/hooks/usePixAporteStatus';
+import ParceiroPixConfirmado from './ParceiroPixConfirmado';
 
 // 💚 Tela do QR Code PIX do aporte + verificação de pagamento.
 // ⚠️ Lógica financeira copiada 1:1 de InvestorDashboard (mesma function
 // checkPartnerPlanPayment, mesmo billing_id, mesmo comportamento).
-export default function ParceiroPixQrCode({ pixData, valor, onCancelar, onPagamentoConfirmado }) {
+export default function ParceiroPixQrCode({ pixData, valor, plano, onCancelar, onPagamentoConfirmado }) {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const { copiado: pixCopiado2, copiar: copiarPix2 } = useCopiarPix();
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+
+  // 🔄 Confirmação automática: ciclo de 8s + checagem imediata ao voltar do
+  // app do banco. O botão manual abaixo continua existindo.
+  const { verificando, confirmado, expirado } = usePixAporteStatus(pixData?.billing_id, () => {
+    toast.success('✅ Pagamento PIX confirmado!');
+  });
+
+  // ✅ Confirmado: mostra o comprovante antes de fechar o modal
+  if (confirmado) {
+    return (
+      <ParceiroPixConfirmado
+        plano={plano}
+        valor={valor}
+        onConcluir={onPagamentoConfirmado}
+      />
+    );
+  }
 
   return (
     <motion.div
@@ -63,6 +82,19 @@ export default function ParceiroPixQrCode({ pixData, valor, onCancelar, onPagame
       </div>
       <p className="text-2xl font-bold text-pc-ouro text-center">
         R$ {(valor || 0).toLocaleString('pt-BR')}
+      </p>
+
+      {/* ⏳ Estado da espera — o parceiro não fica no vácuo */}
+      <p className="flex items-center justify-center gap-2 text-center text-[11px] text-pc-tinta-fraca">
+        {expirado ? (
+          <>Este PIX está aberto há muito tempo. Use o botão abaixo ou gere um novo código.</>
+        ) : (
+          <>
+            <Loader2 className={`h-3.5 w-3.5 ${verificando ? 'animate-spin' : ''}`} />
+            Aguardando a confirmação do PIX — assim que o banco confirmar, esta tela avisa
+            automaticamente.
+          </>
+        )}
       </p>
 
       <Button

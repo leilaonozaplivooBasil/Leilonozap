@@ -58,6 +58,11 @@ export default function ParceiroPlanosModal({
     setPixData(null);
     setShowContract(false);
     setAceitouContrato(false);
+    // ✍️ A assinatura pertence a UM plano e UM valor. Sem zerar aqui, quem assinou
+    // numa contratação anterior reaproveitava o registro (plano/valor errados no
+    // documento) e o aceite já vinha pré-marcado.
+    setAssinaturaPng(null);
+    setAssinaturaRegistro(null);
     setIndice(planoInicialIndex);
      
   }, [open]);
@@ -113,6 +118,10 @@ export default function ParceiroPlanosModal({
             onEscolher={(p) => {
               setPlano(p);
               setPixData(null);
+              // troca de plano = assinatura anterior não vale mais
+              setAceitouContrato(false);
+              setAssinaturaPng(null);
+              setAssinaturaRegistro(null);
             }}
           />
         ) : !pixData ? (
@@ -131,6 +140,8 @@ export default function ParceiroPlanosModal({
             onVoltar={() => {
               setPlano(null);
               setAceitouContrato(false);
+              setAssinaturaPng(null);
+              setAssinaturaRegistro(null);
             }}
             onPixGerado={setPixData}
           />
@@ -138,6 +149,7 @@ export default function ParceiroPlanosModal({
           <ParceiroPixQrCode
             pixData={pixData}
             valor={plano.minInvestment}
+            plano={plano.name}
             onCancelar={() => {
               setPixData(null);
               setPlano(null);

@@ -17,6 +17,8 @@ import ParceiroOportunidadesDoDia from '@/components/parceiro/painel/oportunidad
 import ParceiroContratoPlano from '@/components/parceiro/painel/contrato/ParceiroContratoPlano';
 import ParceiroLinhaDoTempo from '@/components/parceiro/painel/linha/ParceiroLinhaDoTempo';
 import ParceiroPrestacaoContas from '@/components/parceiro/painel/contas/ParceiroPrestacaoContas';
+import ParceiroBloqueioContrato from '@/components/parceiro/painel/ParceiroBloqueioContrato';
+import ParceiroModoVisita from '@/components/parceiro/painel/ParceiroModoVisita';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
 import {
   LayoutGrid,
@@ -87,6 +89,7 @@ const TELAS = [
     rotulo: 'Linha do tempo',
     rotuloCurto: 'Linha do Tempo',
     icone: History,
+    exigeContrato: true,
     titulo: 'Linha do tempo do aporte',
     texto:
       'Da assinatura do contrato até o produto no ar na Loja Virtual, etapa por etapa, com registro real da operação. Visível após a assinatura do contrato.',
@@ -96,6 +99,7 @@ const TELAS = [
     rotulo: 'Prestação de contas',
     rotuloCurto: 'Prestação',
     icone: Receipt,
+    exigeContrato: true,
     titulo: 'Prestação de contas',
     texto:
       'Extrato das operações e demonstrativo de resultados previstos na Cláusula 7.4, somente com dados apurados. Aguardando o primeiro ciclo (até 60 dias, Cláusula 8.2).',
@@ -183,14 +187,21 @@ export default function InvestorDashboard() {
   // 📜 Registro do Termo de Confidencialidade (trilha de auditoria). Fonte de
   // verdade de "assinou o sigilo" — é o que libera Operação/Analisador/Oportunidades.
   const [registroSigilo, setRegistroSigilo] = useState(null);
+  // ✍️ Registro do CONTRATO DE PARCERIA no servidor. Sem ler isto, a assinatura
+  // se perdia a cada recarga da página e o painel voltava a "modelo demonstrativo".
+  const [registroContrato, setRegistroContrato] = useState(null);
+  // 👁️ Homologação: validador pode ver o painel como um parceiro novo (só visual)
+  const [verComoParceiroNovo, setVerComoParceiroNovo] = useState(false);
 
   // 🔓 Conta validadora (homologação): vê o painel como se já tivesse assinado
   // o termo de confidencialidade e o contrato. Só visualização — nada é alterado
   // no banco nem no cadastro do usuário.
-  const ehValidador = isParceiroValidador(currentUser);
+  const contaValidadora = isParceiroValidador(currentUser);
+  const ehValidador = contaValidadora && !verComoParceiroNovo;
 
-  const ndaAssinado = ehValidador || !!registroSigilo || !!currentUser?.parceiro_nda_aceito_em;
-  const contratoAssinado = ehValidador || activeInvestments.length > 0 || assinouContrato;
+  const ndaAssinado = ehValidador || !!registroSigilo;
+  const contratoAssinado =
+    ehValidador || !!registroContrato || activeInvestments.length > 0 || assinouContrato;
 
   // 🖤 Tema preto/dourado institucional escopado a esta página.
   useEffect(() => {
@@ -231,6 +242,19 @@ export default function InvestorDashboard() {
         if (reg) setRegistroSigilo(reg);
       } catch (e) {
         console.debug('Consulta do termo de sigilo indisponível');
+      }
+
+      // ✍️ Já assinou o Contrato de Parceria? (somente leitura)
+      // O servidor grava 'contrato_parceria' — é o que libera as telas financeiras.
+      try {
+        const resp = await base44.functions.invoke('consultarAssinaturaSigilo', {
+          user_id: user.id,
+          documento: 'contrato_parceria',
+        });
+        const reg = resp?.registro || resp?.data?.registro || null;
+        if (reg) setRegistroContrato(reg);
+      } catch (e) {
+        console.debug('Consulta do contrato indisponível');
       }
 
       try {
@@ -381,7 +405,8 @@ export default function InvestorDashboard() {
       <ParceiroSidebar
         telas={TELAS.map((t) => ({
           ...t,
-          bloqueada: !!t.exigeNda && !ndaAssinado,
+          bloqueada:
+            (!!t.exigeNda && !ndaAssinado) || (!!t.exigeContrato && !contratoAssinado),
         }))}
         telaAtiva={telaAtiva}
         onSelecionar={setTelaAtiva}
@@ -391,6 +416,11 @@ export default function InvestorDashboard() {
           restante, com respiro lateral progressivo (padrão Mercado Pago).
           pb extra no mobile por causa da barra inferior fixa. */}
       <main className="min-w-0 flex-1 px-4 pb-28 pt-4 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 xl:px-10 md:pb-8">
+        {/* 👁️ Homologação — só para contas validadoras (nada é gravado) */}
+        {contaValidadora && (
+          <ParceiroModoVisita ativo={verComoParceiroNovo} onAlternar={setVerComoParceiroNovo} />
+        )}
+
         {telaAtiva === 'visao' && (
           <>
             <ParceiroPainelGate
@@ -445,16 +475,32 @@ export default function InvestorDashboard() {
           />
         )}
 
-        {/* 🕒 Linha do tempo do aporte (modelo demonstrativo sem plano ativo) */}
-        {telaAtiva === 'linha' && <ParceiroLinhaDoTempo investimento={activeInvestments[0] || null} />}
+        {/* 🕒 Linha do tempo do aporte — área financeira: exige contrato assinado */}
+        {telaAtiva === 'linha' &&
+          (contratoAssinado ? (
+            <ParceiroLinhaDoTempo investimento={activeInvestments[0] || null} />
+          ) : (
+            <ParceiroBloqueioContrato
+              titulo="Linha do tempo do aporte"
+              texto="Da assinatura do contrato até o produto no ar na Loja Virtual, etapa por etapa, com registro real da operação."
+              onIrParaContrato={() => setTelaAtiva('contrato')}
+            />
+          ))}
 
-        {/* 🧾 Prestação de contas (Cláusula 7.4) */}
-        {telaAtiva === 'contas' && (
-          <ParceiroPrestacaoContas
-            investimento={activeInvestments[0] || null}
-            onIrParaLinha={() => setTelaAtiva('linha')}
-          />
-        )}
+        {/* 🧾 Prestação de contas (Cláusula 7.4) — exige contrato assinado */}
+        {telaAtiva === 'contas' &&
+          (contratoAssinado ? (
+            <ParceiroPrestacaoContas
+              investimento={activeInvestments[0] || null}
+              onIrParaLinha={() => setTelaAtiva('linha')}
+            />
+          ) : (
+            <ParceiroBloqueioContrato
+              titulo="Prestação de contas"
+              texto="Extrato das operações e demonstrativo de resultados previstos na Cláusula 7.4, somente com dados apurados."
+              onIrParaContrato={() => setTelaAtiva('contrato')}
+            />
+          ))}
 
         {telaAtiva !== 'visao' &&
           telaAtiva !== 'nda' &&

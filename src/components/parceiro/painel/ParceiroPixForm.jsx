@@ -48,10 +48,19 @@ export default function ParceiroPixForm({
   const [salvandoAssinatura, setSalvandoAssinatura] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 🔒 SEGURANÇA JURÍDICA: dinheiro só entra com o contrato assinado
+  // eletronicamente. Antes bastava marcar a caixinha "li e aceito" — dava pra
+  // pagar R$ 15.000 sem nenhuma assinatura registrada na trilha de auditoria.
+  const podeGerarPix = !!assinaturaRegistro && !!aceitouContrato;
+
   const gerarPix = async () => {
     const { name, phone, email, cpf } = formData;
     if (!name || !phone || !email || !cpf) {
       toast.error('Preencha todos os campos');
+      return;
+    }
+    if (!podeGerarPix) {
+      toast.error('Assine o contrato e marque o aceite antes de gerar o PIX');
       return;
     }
     const cleanCpf = cpf.replace(/\D/g, '');
@@ -244,6 +253,19 @@ export default function ParceiroPixForm({
         </label>
       </div>
 
+      {/* 📋 O que ainda falta — mesmo padrão do termo de sigilo */}
+      {!podeGerarPix && (
+        <>
+          <ul className="mb-3 space-y-1 text-[11px] text-pc-tinta-fraca">
+            {!assinaturaRegistro && <li>• Assine o contrato digitalmente.</li>}
+            {!aceitouContrato && <li>• Marque o aceite do Contrato de Parceria.</li>}
+          </ul>
+          <p className="mb-3 border border-pc-ouro/40 bg-pc-preto-2 px-3 py-2 text-[11px] font-semibold text-pc-ouro">
+            O PIX do aporte é liberado somente após a assinatura eletrônica do contrato.
+          </p>
+        </>
+      )}
+
       <div className="flex gap-3">
         <Button
           onClick={onVoltar}
@@ -254,8 +276,8 @@ export default function ParceiroPixForm({
         </Button>
         <Button
           onClick={gerarPix}
-          disabled={isProcessing || !aceitouContrato}
-          className={`flex-1 min-h-[48px] font-semibold ${aceitouContrato ? 'bg-pc-ouro text-pc-preto hover:bg-pc-ouro-claro' : 'bg-pc-preto-2 text-pc-tinta-fraca cursor-not-allowed'}`}
+          disabled={isProcessing || !podeGerarPix}
+          className={`flex-1 min-h-[48px] font-semibold ${podeGerarPix ? 'bg-pc-ouro text-pc-preto hover:bg-pc-ouro-claro' : 'bg-pc-preto-2 text-pc-tinta-fraca cursor-not-allowed'}`}
         >
           {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <>📱 Gerar PIX</>}
         </Button>
