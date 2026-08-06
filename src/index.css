@@ -35,8 +35,24 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --livoo-vinho: #1A0A14;
     --livoo-vinho-claro: #2A0F20;
     --livoo-tinta: #0b1018;
+    /* 🖤 Parceiro de Compra — captação privada (preto institucional + dourado fosco).
+       Paleta exclusiva da página do Parceiro: NÃO usar em nenhuma outra tela. */
+    --pc-preto: #0A0A0B;
+    --pc-preto-2: #111114;
+    --pc-borda: #26262B;
+    --pc-ouro: #C9A55C;
+    --pc-ouro-claro: #E4C88A;
+    --pc-tinta: #F5F5F4;
+    --pc-tinta-fraca: #9A9A96;
   }
   .dark {
+    --pc-preto: #0A0A0B;
+    --pc-preto-2: #111114;
+    --pc-borda: #26262B;
+    --pc-ouro: #C9A55C;
+    --pc-ouro-claro: #E4C88A;
+    --pc-tinta: #F5F5F4;
+    --pc-tinta-fraca: #9A9A96;
     --livoo-rosa: #D91674;
     --livoo-rosa-claro: #E3559C;
     --livoo-vinho: #1A0A14;

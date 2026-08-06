@@ -30,6 +30,15 @@ module.exports = {
   				'ouro-claro': '#F5C451',
   				'ouro-fundo': '#FDF6E3'
   			},
+  			pc: {
+  				preto: 'var(--pc-preto)',
+  				'preto-2': 'var(--pc-preto-2)',
+  				borda: 'var(--pc-borda)',
+  				ouro: 'var(--pc-ouro)',
+  				'ouro-claro': 'var(--pc-ouro-claro)',
+  				tinta: 'var(--pc-tinta)',
+  				'tinta-fraca': 'var(--pc-tinta-fraca)'
+  			},
   			livoo: {
   				rosa: 'var(--livoo-rosa)',
   				'rosa-claro': 'var(--livoo-rosa-claro)',
