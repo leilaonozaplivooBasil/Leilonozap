@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pause, Play, Gauge } from 'lucide-react';
+import { Pause, Play, Gauge, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // 🕛 Roda do ciclo operacional — mostrador de 12 meses que gira devagar sozinho.
 // Substitui a grade de 5 colunas por leitura de UMA mensagem por vez (mais limpo).
@@ -174,6 +174,23 @@ export default function ParceiroCicloRoda({ etapas }) {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-pc-borda pt-5">
+            {/* ◀ ▶ passo a passo: quem quer ler no próprio ritmo não precisa esperar o giro */}
+            <button
+              type="button"
+              onClick={() => { setPausado(true); irPara(ativo - 1); }}
+              aria-label="Etapa anterior"
+              className="flex h-11 w-11 items-center justify-center border border-pc-borda text-pc-ouro transition-colors hover:border-pc-ouro"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPausado(true); irPara(ativo + 1); }}
+              aria-label="Próxima etapa"
+              className="flex h-11 w-11 items-center justify-center border border-pc-borda text-pc-ouro transition-colors hover:border-pc-ouro"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
             <button
               type="button"
               onClick={() => setPausado((p) => !p)}
