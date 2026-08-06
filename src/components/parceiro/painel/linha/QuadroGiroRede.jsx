@@ -53,6 +53,7 @@ const horaTexto = (ts) =>
 
 // "há 26 min" / "há 3h 12min" — só o relativo muda; o horário é fixo.
 function relativo(ts, agora) {
+  if (ts > agora) return 'agora';
   const min = Math.max(0, Math.floor((agora - ts) / 60000));
   if (min < 60) return `há ${min} min`;
   const h = Math.floor(min / 60);
@@ -130,8 +131,9 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
         frase: FRASES[Math.floor(rnd() * FRASES.length)],
         item: ITENS[Math.floor(rnd() * ITENS.length)],
         canal: CANAIS[Math.floor(rnd() * CANAIS.length)],
-        // ritmo do REPLAY (só a animação de exibição, irregular)
-        ritmo: 900 + Math.floor(rnd() * 1400),
+        // ritmo do REPLAY (só a animação de exibição, irregular e calmo:
+        // o parceiro está navegando, tem que dar tempo de LER cada venda)
+        ritmo: 3400 + Math.floor(rnd() * 3400),
       };
     });
     // hoje/agora fora das deps de propósito: a lista NÃO pode ser regerada a cada tick
@@ -159,7 +161,7 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
     const agendar = () => {
       clearTimeout(timer);
       if (document.visibilityState !== 'visible') return; // mobile: retoma de onde parou
-      const espera = passo === 0 ? 1800 : vendas[passo].ritmo;
+      const espera = passo === 0 ? 2600 : vendas[passo].ritmo;
       timer = setTimeout(() => {
         if (vivo) setPasso((n) => Math.min(n + 1, vendas.length));
       }, espera);
@@ -175,7 +177,32 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
     };
   }, [ativo, passo, reveladas, vendas]);
 
-  const exibidas = Math.min(passo, reveladas);
+  // 🔔 UMA VENDA AO VIVO na visita: terminado o replay do passado, 2–3 min depois
+  // entra a PRÓXIMA venda do dia (mesma lista determinística — nada é inventado
+  // nem passa da cota do dia). Acontece uma única vez por abertura da página.
+  const [bonusFeito, setBonusFeito] = React.useState(false);
+  React.useEffect(() => {
+    if (!ativo || bonusFeito || passo === 0 || passo < reveladas || passo >= vendas.length) return;
+    let timer;
+    const agendar = () => {
+      clearTimeout(timer);
+      if (document.visibilityState !== 'visible') return;
+      timer = setTimeout(() => {
+        setPasso((n) => Math.min(n + 1, vendas.length));
+        setBonusFeito(true);
+      }, 120000 + Math.floor(Math.random() * 60000));
+    };
+    agendar();
+    document.addEventListener('visibilitychange', agendar);
+    window.addEventListener('focus', agendar);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', agendar);
+      window.removeEventListener('focus', agendar);
+    };
+  }, [ativo, bonusFeito, passo, reveladas, vendas.length]);
+
+  const exibidas = Math.min(passo, vendas.length);
   const total = exibidas > 0 ? vendas[exibidas - 1].acumulado : 0;
   const cheio = exibidas >= vendas.length && vendas.length > 0;
 
@@ -229,8 +256,11 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
                 Histórico do dia · {exibidas} de {vendas.length} vendas
               </p>
               <ul className="mt-2 space-y-2.5">
-                {pilha.map((e) => (
-                  <li key={e.id} className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4">
+                {pilha.map((e, i) => (
+                  <li
+                    key={e.id}
+                    className={`${i === 0 ? 'giro-cai' : 'giro-entrada'} border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4`}
+                  >
                     <p className="truncate text-xs font-bold text-pc-tinta">{e.frase}</p>
                     <p className="mt-0.5 truncate text-[11px] text-pc-tinta-fraca">
                       {e.item} · {e.canal}
@@ -240,7 +270,7 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
                         repasse de <strong className="font-bold">{brl(e.valor)}</strong>
                       </span>
                       <span className="tabular-nums text-pc-tinta-fraca">
-                        {horaTexto(e.hora)} · {relativo(e.hora, agora)}
+                        {horaTexto(Math.min(e.hora, agora))} · {relativo(e.hora, agora)}
                       </span>
                     </p>
                   </li>
@@ -262,13 +292,25 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
           to { opacity: 1; transform: translateY(0); }
         }
         .giro-entrada { animation: giroEntrada 0.4s ease-out both; }
+        /* 🔔 Venda nova CAINDO de fora pra dentro, com brilho dourado: é o sinal
+           de que o valor acabou de ser contabilizado. */
+        @keyframes giroCai {
+          0%   { opacity: 0; transform: translateY(-46px) scale(0.965); box-shadow: 0 0 0 rgba(201,165,92,0); }
+          55%  { opacity: 1; transform: translateY(4px) scale(1.012); box-shadow: 0 10px 30px rgba(201,165,92,0.28); }
+          75%  { transform: translateY(-2px) scale(1); }
+          100% { opacity: 1; transform: translateY(0) scale(1); box-shadow: 0 0 0 rgba(201,165,92,0); }
+        }
+        .giro-cai {
+          animation: giroCai 1.15s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+          border-color: var(--pc-ouro);
+        }
         @keyframes giroPulso {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.35; transform: scale(0.8); }
         }
         .giro-pulso { animation: giroPulso 1.6s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .giro-entrada, .giro-pulso { animation: none; }
+          .giro-entrada, .giro-pulso, .giro-cai { animation: none; }
         }
       `}</style>
     </div>
