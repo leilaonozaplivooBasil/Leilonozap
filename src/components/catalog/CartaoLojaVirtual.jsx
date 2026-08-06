@@ -20,6 +20,11 @@ export default function CartaoLojaVirtual({ parceiro }) {
   const cargo = cargoDoParceiro(parceiro);
   const mostrarContato = podeFalarComigo(parceiro);
   const ref = parceiro?.referral_code || null;
+  // 🛒 âncoras da animação de entrega (decorativa): parte da ponta do selo
+  // (ou do fim do nome, se não houver cargo) e termina no botão compartilhar
+  const cartaoRef = React.useRef(null);
+  const inicioRef = React.useRef(null);
+  const compartilharRef = React.useRef(null);
 
   const compartilhar = async () => {
     const url = `${window.location.origin}/Loja-Virtual${ref ? `?ref=${ref}` : ''}`;
@@ -36,11 +41,12 @@ export default function CartaoLojaVirtual({ parceiro }) {
 
   return (
     <section
+      ref={cartaoRef}
       className="relative mb-6 flex items-center gap-3 rounded-2xl border border-gray-700 bg-gray-800/50 p-2.5 sm:p-3"
       aria-label="Loja virtual"
     >
       {/* 🛒 carrinho de entrega atravessando o cartão (decorativo) */}
-      <CarrinhoEntrega />
+      <CarrinhoEntrega containerRef={cartaoRef} inicioRef={inicioRef} fimRef={compartilharRef} />
       {/* Foto */}
       {parceiro?.photo ? (
         <img
@@ -60,12 +66,15 @@ export default function CartaoLojaVirtual({ parceiro }) {
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-wider text-green-400 font-bold leading-none">Loja Virtual</p>
         <div className="mt-1 flex items-center gap-2.5 min-w-0">
-          <h3 className="text-white font-bold text-sm sm:text-base truncate leading-tight">
+          <h3
+            ref={cargo ? null : inicioRef}
+            className="text-white font-bold text-sm sm:text-base truncate leading-tight"
+          >
             {nome || 'Especial'}
           </h3>
           {/* Selo chapado: redondo (sem o quadrado branco atrás), no tamanho da foto */}
           {cargo && (
-            <span className="block w-11 h-11 shrink-0 overflow-hidden rounded-full">
+            <span ref={inicioRef} className="block w-11 h-11 shrink-0 overflow-hidden rounded-full">
               <SeloCargo cargo={cargo} title={levelName(cargo)} />
             </span>
           )}
@@ -81,6 +90,7 @@ export default function CartaoLojaVirtual({ parceiro }) {
       <div className="flex items-center gap-1.5 shrink-0">
         {/* Compartilhar no padrão do leilão: quadradinho verde, só o ícone */}
         <button
+          ref={compartilharRef}
           type="button"
           onClick={compartilhar}
           aria-label="Compartilhar loja"
