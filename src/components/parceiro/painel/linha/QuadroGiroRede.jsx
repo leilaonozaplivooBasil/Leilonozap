@@ -53,7 +53,7 @@ function semear(seed) {
   };
 }
 
-export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
+export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoDia }) {
   const ativo = diaAtual >= DIA_INICIO_APURACAO;
   const cotaDia = alvo / (DIA_PRIMEIRO_REPASSE - DIA_INICIO_APURACAO);
 
@@ -96,6 +96,11 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
 
   const total = indice > 0 ? vendas[indice - 1].acumulado : 0;
   const cheio = indice >= vendas.length;
+
+  // 📊 Eleva o giro de HOJE pra tela pai, pra a barra do histórico avançar junto.
+  React.useEffect(() => {
+    if (onGiroDoDia) onGiroDoDia(ativo ? total : 0);
+  }, [total, ativo, onGiroDoDia]);
 
   // Timer único: pausa fora de foco e retoma de onde parou (não pula pro fim).
   React.useEffect(() => {

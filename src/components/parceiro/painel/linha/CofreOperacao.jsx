@@ -5,13 +5,27 @@ import React from 'react';
 // reflexo interno e bolhas subindo do fundo: leitura de operação viva.
 // ⚖️ O nível representa TEMPO (fração do dia do ciclo), nunca dinheiro
 // acumulado: encher com valor sugeriria quantia já devida.
-export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo físico', marcos = [] }) {
-  const nivel = Math.max(0, Math.min(100, pct));
+export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo físico', marcos = [], hero = null }) {
+  const base = Math.max(0, Math.min(100, pct));
+  // 👆 Toque/hover: a água dá um "gole" pra cima e volta — sensação de vivo.
+  const [tocado, setTocado] = React.useState(false);
+  const reduz = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const nivel = tocado && !reduz ? Math.min(100, base + 6) : base;
+
+  const reagir = () => {
+    if (reduz) return;
+    setTocado(true);
+    setTimeout(() => setTocado(false), 700);
+  };
 
   return (
     <div className="flex items-stretch gap-3">
       {/* Cilindro */}
-      <div className="relative w-16 shrink-0 overflow-hidden border border-pc-borda bg-pc-preto sm:w-20">
+      <div
+        className="relative w-16 shrink-0 overflow-hidden border border-pc-borda bg-pc-preto sm:w-20"
+        onMouseEnter={reagir}
+        onTouchStart={reagir}
+      >
         <div className="h-[140px] w-full sm:h-[200px]">
           {/* Líquido */}
           <div
@@ -85,10 +99,11 @@ export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo f
 
       {/* Marcos reais do ciclo, ancorados na altura que ocupam no cofre */}
       <div className="relative min-w-0 flex-1">
+        {hero && <div className="mb-3">{hero}</div>}
         <span className="border border-pc-ouro/50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-pc-ouro">
           {estado}
         </span>
-        <div className="relative mt-2 h-[104px] sm:h-[164px]">
+        <div className={`relative mt-2 ${hero ? 'h-[40px] sm:h-[96px]' : 'h-[104px] sm:h-[164px]'}`}>
           {marcos.map((m) => (
             <div
               key={m.rotulo}

@@ -13,6 +13,8 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 // DEMONSTRATIVO (mesmas etapas, aporte de exemplo) para ele ver como fica.
 export default function ParceiroLinhaDoTempo({ investimento }) {
   const demonstracao = !investimento;
+  // 📊 Giro de HOJE elevado pelo quadro, pra a barra do histórico somar junto
+  const [giroDeHoje, setGiroDeHoje] = React.useState(0);
   const aporte = investimento?.amount || 15000;
   const taxa = investimento?.investmentRate || 3;
   // No modo demonstração, posiciona o ciclo no 18º dia: físico concluído e
@@ -70,7 +72,12 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
       </dl>
 
       <div className="mt-6">
-        <ContadorRentabilidade dataAssinatura={dataAssinatura} aporte={aporte} taxaMensalPct={taxa} />
+        <ContadorRentabilidade
+          dataAssinatura={dataAssinatura}
+          aporte={aporte}
+          taxaMensalPct={taxa}
+          giroDeHoje={giroDeHoje}
+        />
       </div>
 
       {/* 🛒 Giro da rede — quadro de destaque, largura cheia. Demonstrativo:
@@ -79,6 +86,7 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
         seed={investimento?.id || 'demonstracao'}
         diaAtual={Math.max(0, Math.floor(diaAtual))}
         alvo={aporte * (taxa / 100)}
+        onGiroDoDia={setGiroDeHoje}
       />
 
       {/* 🚀 Roadmap ascendente: D+0 na base, primeiro repasse no topo */}
