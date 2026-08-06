@@ -15,6 +15,13 @@ const PLAN_AMOUNTS = {
   'Plano Elite': 30000,
 };
 
+// 🖤 Plano Private: o parceiro digita o capital do aporte. O valor vem do front,
+// mas SÓ é aceito dentro da faixa e do múltiplo oficiais — validação no servidor
+// (o cliente nunca define preço nos planos de valor fixo).
+const PLANOS_VALOR_LIVRE = {
+  'Private Galpão': { min: 50000, max: 1000000, passo: 50000 },
+};
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -33,7 +40,19 @@ export default async function handler(req, res) {
     const userEmail = String(body?.user_email || '').trim();
     const userCpf = String(body?.user_cpf || '').replace(/\D/g, '');
     const planCode = String(body?.plan_code || '').trim();
-    const amount = PLAN_AMOUNTS[planCode];
+    const livre = PLANOS_VALOR_LIVRE[planCode];
+    let amount = PLAN_AMOUNTS[planCode];
+
+    if (livre) {
+      const informado = Number(body?.plan_amount) || 0;
+      if (informado < livre.min || informado > livre.max || informado % livre.passo !== 0) {
+        return res.status(200).json({
+          success: false,
+          error: `Valor do aporte inválido. Use de R$ ${livre.min.toLocaleString('pt-BR')} a R$ ${livre.max.toLocaleString('pt-BR')}, em múltiplos de R$ ${livre.passo.toLocaleString('pt-BR')}.`,
+        });
+      }
+      amount = informado;
+    }
 
     if (!licenseeId) return res.status(200).json({ success: false, error: 'Parceiro não identificado' });
     if (!amount) return res.status(200).json({ success: false, error: 'Plano inválido' });

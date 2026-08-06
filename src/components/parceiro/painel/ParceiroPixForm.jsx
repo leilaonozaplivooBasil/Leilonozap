@@ -74,6 +74,9 @@ export default function ParceiroPixForm({
         user_phone: phone,
         user_cpf: cpf,
         plan_code: plano.name,
+        // 💰 Plano Private (valor livre): o servidor valida a faixa/múltiplo.
+        // Nos planos fixos este campo é ignorado no backend.
+        plan_amount: plano.minInvestment,
       });
       const pixInfo = response?.data || response;
 
