@@ -14,6 +14,9 @@ import ParceiroTermoSigilo from '@/components/parceiro/painel/ParceiroTermoSigil
 import ParceiroOperacaoPorDentro from '@/components/parceiro/painel/ParceiroOperacaoPorDentro';
 import ParceiroAnalisador from '@/components/parceiro/painel/ParceiroAnalisador';
 import ParceiroOportunidadesDoDia from '@/components/parceiro/painel/oportunidades/ParceiroOportunidadesDoDia';
+import ParceiroContratoPlano from '@/components/parceiro/painel/contrato/ParceiroContratoPlano';
+import ParceiroLinhaDoTempo from '@/components/parceiro/painel/linha/ParceiroLinhaDoTempo';
+import ParceiroPrestacaoContas from '@/components/parceiro/painel/contas/ParceiroPrestacaoContas';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
 import {
   LayoutGrid,
@@ -413,8 +416,31 @@ export default function InvestorDashboard() {
           <ParceiroOportunidadesDoDia onParticipar={() => setShowPlansModal(true)} />
         )}
 
+        {/* 📄 Contrato e plano — sempre liberado (é a porta de entrada da contratação) */}
+        {telaAtiva === 'contrato' && (
+          <ParceiroContratoPlano
+            user={currentUser}
+            investimento={activeInvestments[0] || null}
+            onContratar={() => setShowPlansModal(true)}
+          />
+        )}
+
+        {/* 🕒 Linha do tempo do aporte (modelo demonstrativo sem plano ativo) */}
+        {telaAtiva === 'linha' && <ParceiroLinhaDoTempo investimento={activeInvestments[0] || null} />}
+
+        {/* 🧾 Prestação de contas (Cláusula 7.4) */}
+        {telaAtiva === 'contas' && (
+          <ParceiroPrestacaoContas
+            investimento={activeInvestments[0] || null}
+            onIrParaLinha={() => setTelaAtiva('linha')}
+          />
+        )}
+
         {telaAtiva !== 'visao' &&
           telaAtiva !== 'nda' &&
+          telaAtiva !== 'contrato' &&
+          telaAtiva !== 'linha' &&
+          telaAtiva !== 'contas' &&
           !(telaAtiva === 'operacao' && ndaAssinado) &&
           !(telaAtiva === 'analisador' && ndaAssinado) &&
           !(telaAtiva === 'oportunidades' && ndaAssinado) &&
