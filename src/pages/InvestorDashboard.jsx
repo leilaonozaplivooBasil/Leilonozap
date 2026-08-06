@@ -1,57 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
-import { motion, AnimatePresence } from 'framer-motion';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
-import { toast } from 'sonner';
-
-import {
-  DollarSign,
-  Package,
-  CheckCircle,
-  ArrowRight,
-  ShieldCheck,
-  Check,
-  Wallet,
-  TrendingUp,
-  Clock,
-  MapPin,
-  TestTube,
-  Store,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Copy,
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useCopiarPix } from '@/hooks/useCopiarPix';
 import ParceiroPainelNav from '@/components/parceiro/painel/ParceiroPainelNav';
 import ParceiroPainelGate from '@/components/parceiro/painel/ParceiroPainelGate';
 import ParceiroPainelResumo from '@/components/parceiro/painel/ParceiroPainelResumo';
 import ParceiroComoFunciona from '@/components/parceiro/painel/ParceiroComoFunciona';
 import ParceiroPainelEmBreve from '@/components/parceiro/painel/ParceiroPainelEmBreve';
-import ParceiroAssinatura from '@/components/parceiro/painel/ParceiroAssinatura';
+import ParceiroOperacoesAtivas from '@/components/parceiro/painel/ParceiroOperacoesAtivas';
+import ParceiroPlanosModal from '@/components/parceiro/painel/ParceiroPlanosModal';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
 
 const FeaturedProduct = base44.entities.FeaturedProduct;
 
 // 🧭 Telas do painel (padrão "tela a tela" do Painel de Alavancagem).
-// Fase 1 entrega a estrutura + o gate; as telas seguintes entram nas próximas
-// fases com estado honesto, sem número inventado.
 const TELAS = [
   { id: 'visao', rotulo: 'Visão geral' },
   {
@@ -108,9 +71,53 @@ const TELAS = [
   },
 ];
 
+const COMMON_FEATURES = [
+  'Gestão operacional integral',
+  'Produtos pré-selecionados por curadoria própria',
+  'Primeiro ciclo em até 60 dias (Cláusula 8.2)',
+  'Suporte dedicado',
+];
+
+const PORTFOLIOS = [
+  {
+    id: 1,
+    name: 'Plano Visionário',
+    minInvestment: 5000,
+    expectedReturn: 3,
+    duration: 60,
+    products: ['Eletrônicos'],
+    risk: 'Baixo',
+    description: 'Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.',
+    features: COMMON_FEATURES,
+    imageKey: 'eletronicos',
+  },
+  {
+    id: 2,
+    name: 'Plano Sócios de Ouro',
+    minInvestment: 15000,
+    expectedReturn: 3,
+    duration: 60,
+    products: ['Eletrodomésticos', 'Eletrônicos', 'Apple'],
+    risk: 'Baixo',
+    description: 'Para parceiros que buscam maior retorno com segurança.',
+    features: COMMON_FEATURES,
+    imageKey: 'eletrodomesticos',
+  },
+  {
+    id: 3,
+    name: 'Plano Elite',
+    minInvestment: 30000,
+    expectedReturn: 3,
+    duration: 60,
+    products: ['Todas as categorias'],
+    risk: 'Baixo',
+    description: 'Máximo retorno com acesso a todas as oportunidades.',
+    features: COMMON_FEATURES,
+    imageKey: 'apple',
+  },
+];
+
 export default function InvestorDashboard() {
-  const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
-  const { copiado: pixCopiado2, copiar: copiarPix2 } = useCopiarPix();
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
@@ -118,215 +125,144 @@ export default function InvestorDashboard() {
   const [activeInvestments, setActiveInvestments] = useState([]);
   const [showInvestments, setShowInvestments] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
-  const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [planoInicialIndex, setPlanoInicialIndex] = useState(0);
   const [productImages, setProductImages] = useState({});
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [pixFormData, setPixFormData] = useState({ name: '', phone: '', email: '', cpf: '' });
-  const [pixData, setPixData] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
-  const [showContract, setShowContract] = useState(false);
-  const [acceptedContract, setAcceptedContract] = useState(false);
   const [telaAtiva, setTelaAtiva] = useState('visao');
-  // ✍️ Assinatura eletrônica do contrato (Fase 2)
-  const [showAssinatura, setShowAssinatura] = useState(false);
-  const [assinaturaPng, setAssinaturaPng] = useState(null);
-  const [assinaturaRegistro, setAssinaturaRegistro] = useState(null);
-  const [salvandoAssinatura, setSalvandoAssinatura] = useState(false);
+  const [assinouContrato, setAssinouContrato] = useState(false);
 
   // 🔓 Conta validadora (homologação): vê o painel como se já tivesse assinado
   // o termo de confidencialidade e o contrato. Só visualização — nada é alterado
   // no banco nem no cadastro do usuário.
   const ehValidador = isParceiroValidador(currentUser);
 
-  // 🔐 Estágio do parceiro. Contrato assinado = plano ativo contratado OU
-  // assinatura eletrônica registrada nesta sessão.
   const ndaAssinado = ehValidador || !!currentUser?.parceiro_nda_aceito_em;
-  const contratoAssinado = ehValidador || activeInvestments.length > 0 || !!assinaturaRegistro;
+  const contratoAssinado = ehValidador || activeInvestments.length > 0 || assinouContrato;
 
-  // 🖤 Tema preto/dourado institucional escopado a esta página (mesma marca já
-  // usada na página do Parceiro). Removido ao sair — nenhuma outra tela muda.
+  // 🖤 Tema preto/dourado institucional escopado a esta página.
   useEffect(() => {
     document.body.classList.add('pc-tema');
     return () => document.body.classList.remove('pc-tema');
   }, []);
 
-  // 🔄 Função para carregar dados (reutilizável)
+  // 🔄 Carrega usuário + planos ativos (lógica inalterada)
   const loadUserData = async () => {
     try {
       const savedUserJSON = localStorage.getItem('currentUser');
-      if (savedUserJSON) {
-        const userFromStorage = JSON.parse(savedUserJSON);
+      if (!savedUserJSON) {
+        navigate(createPageUrl('Partners'));
+        return;
+      }
 
-        // ✅ SEMPRE sincroniza com o banco para pegar ativações mais recentes
-        const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
-        const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
+      const userFromStorage = JSON.parse(savedUserJSON);
+      const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
+      const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
 
-        // 🕒 Registra último acesso
-        try {
-          await base44.entities.AppUser.update(user.id, {
-            last_dashboard_access: new Date().toISOString()
-          });
-          console.log('✅ Último acesso registrado');
-        } catch (e) {
-          console.debug('Registro de acesso ignorado');
-        }
-
-        setCurrentUser(user);
-        setPixFormData({
-          name: user?.full_name || '',
-          phone: user?.phone || '',
-          email: user?.email || '',
-          cpf: user?.cpf || ''
+      try {
+        await base44.entities.AppUser.update(user.id, {
+          last_dashboard_access: new Date().toISOString(),
         });
+      } catch (e) {
+        console.debug('Registro de acesso ignorado');
+      }
 
-        // Carrega imagens dos produtos em destaque
-        try {
-          const products = await FeaturedProduct.filter({ is_active: true });
-          const imageMap = {};
-          products.forEach(product => {
-            const category = product.category?.toLowerCase();
-            if (category === 'eletrônicos' || category === 'eletronicos') {
-              imageMap.eletronicos = product.image_url;
-            } else if (category === 'eletrodomésticos' || category === 'eletrodomesticos') {
-              imageMap.eletrodomesticos = product.image_url;
-            } else if (category === 'apple') {
-              imageMap.apple = product.image_url;
-            }
-          });
-          setProductImages(imageMap);
-        } catch (error) {
-          console.error('Erro ao carregar imagens:', error);
-        }
+      setCurrentUser(user);
 
-        // ✅ Busca TODOS os planos ativos do parceiro (sistema novo + legacy)
-        const investments = [];
-
-        try {
-          // 🔍 DIAGNÓSTICO COMPLETO DO PROBLEMA
-          console.log('🔍 DEBUG - User object:', { id: user.id, email: user.email, full_name: user.full_name, role: user.role });
-
-          if (!user.id) {
-            console.error('❌ ERRO CRÍTICO: user.id está undefined!');
-            throw new Error('User ID não encontrado');
+      try {
+        const products = await FeaturedProduct.filter({ is_active: true });
+        const imageMap = {};
+        products.forEach((product) => {
+          const category = product.category?.toLowerCase();
+          if (category === 'eletrônicos' || category === 'eletronicos') {
+            imageMap.eletronicos = product.image_url;
+          } else if (category === 'eletrodomésticos' || category === 'eletrodomesticos') {
+            imageMap.eletrodomesticos = product.image_url;
+          } else if (category === 'apple') {
+            imageMap.apple = product.image_url;
           }
+        });
+        setProductImages(imageMap);
+      } catch (error) {
+        console.error('Erro ao carregar imagens:', error);
+      }
 
-          console.log('🔍 Buscando planos para user_id:', user.id);
+      const investments = [];
 
-          // 🔐 Busca via backend function (bypassa RLS corretamente)
-          const response = await getPartnerPurchases({
-            mode: 'user',
-            user_id: user.id,
-            status_filter: 'active',
-            app_user_email: user.email,
-            app_user_id: user.id
-          });
-          const purchases = response?.data?.purchases || [];
+      try {
+        if (!user.id) throw new Error('User ID não encontrado');
 
-          console.log('✅ Planos ativos encontrados:', purchases.length);
+        const response = await getPartnerPurchases({
+          mode: 'user',
+          user_id: user.id,
+          status_filter: 'active',
+          app_user_email: user.email,
+          app_user_id: user.id,
+        });
+        const purchases = response?.data?.purchases || [];
 
-          if (purchases && purchases.length > 0) {
-            console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
-              id: p.id,
-              plan: p.plan_name,
-              amount: p.plan_amount,
-              is_investment: p.is_investment,
-              rate: p.investment_rate,
-              activated_at: p.activated_at
-            })));
+        purchases.forEach((purchase) => {
+          const rate = (purchase.investment_rate || 3) / 100;
+          const periods = purchase.purchase_periods || [];
+          const paidPeriods = periods.filter((p) => p.status === 'paid').length;
+          const monthlyProfit = Math.round(purchase.plan_amount * rate);
+          const paidProfit = paidPeriods * monthlyProfit;
+          const totalEstimatedProfit = 12 * monthlyProfit;
 
-            console.log('🔄 Processando', purchases.length, 'planos...');
-
-            purchases.forEach((purchase, index) => {
-              console.log(`📦 Processando plano ${index + 1}/${purchases.length}:`, purchase.id);
-              // Se for investimento com rendimento
-              // Taxa vem da entidade (padrão 3%)
-              const rate = (purchase.investment_rate || 3) / 100;
-              // Calcula parcelas pagas do purchase_periods
-              const periods = purchase.purchase_periods || [];
-              const paidPeriods = periods.filter(p => p.status === 'paid').length;
-              const monthlyProfit = Math.round(purchase.plan_amount * rate);
-              const paidProfit = paidPeriods * monthlyProfit;
-              // Lucro total estimado = 12 parcelas (1 ano)
-              const totalEstimatedProfit = 12 * monthlyProfit;
-
-              if (purchase.is_investment) {
-                investments.push({
-                  id: purchase.id,
-                  plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
-                  amount: purchase.plan_amount,
-                  startDate: purchase.activated_at,
-                  currentStep: 0,
-                  products: [],
-                  isInvestment: true,
-                  investmentRate: purchase.investment_rate || 3,
+          investments.push({
+            id: purchase.id,
+            plan: purchase.is_investment
+              ? `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`
+              : purchase.plan_name,
+            amount: purchase.plan_amount,
+            startDate: purchase.activated_at,
+            currentStep: 0,
+            products: [],
+            isInvestment: !!purchase.is_investment,
+            investmentRate: purchase.investment_rate || 3,
+            ...(purchase.is_investment
+              ? {
                   accumulatedReturn: purchase.accumulated_return || 0,
                   withdrawalDate: purchase.withdrawal_available_date,
-                  estimatedProfit: totalEstimatedProfit,
-                  monthlyProfit,
-                  paidPeriods,
-                  paidProfit,
-                  totalPeriods: 12,
-                  purchasePeriods: periods,
-                  estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                });
-              } else {
-                investments.push({
-                  id: purchase.id,
-                  plan: purchase.plan_name,
-                  amount: purchase.plan_amount,
-                  startDate: purchase.activated_at,
-                  currentStep: 0,
-                  products: [],
-                  isInvestment: false,
-                  investmentRate: purchase.investment_rate || 3,
-                  estimatedProfit: totalEstimatedProfit,
-                  monthlyProfit,
-                  paidPeriods,
-                  paidProfit,
-                  totalPeriods: 12,
-                  purchasePeriods: periods,
-                  estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                });
-                console.log('✅ Plano de compra adicionado:', purchase.plan_name);
-              }
-            });
-
-            console.log('📊 Total de planos processados e adicionados:', investments.length);
-          } else {
-            console.log('⚠️ Nenhum plano encontrado no PartnerPlanPurchase para este usuário');
-          }
-        } catch (error) {
-          console.error('❌ Erro ao buscar PartnerPlanPurchase:', error.message);
-        }
-
-        // 2️⃣ FALLBACK: Se não encontrou nada no sistema novo, busca legacy no AppUser
-        if (investments.length === 0) {
-          if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
-            console.log('⚠️ Usando plano legacy do AppUser');
-            investments.push({
-              id: `legacy_${user.id}`,
-              plan: user.active_partner_plan,
-              amount: user.partner_plan_amount,
-              startDate: user.partner_plan_activated_at,
-              currentStep: 0,
-              products: [],
-              isInvestment: false,
-              estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
-              estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
-            });
-          }
-        }
-
-        console.log('✅ Total de investimentos carregados:', investments.length);
-        setActiveInvestments(investments);
-      } else {
-        navigate(createPageUrl("Partners"));
+                }
+              : {}),
+            estimatedProfit: totalEstimatedProfit,
+            monthlyProfit,
+            paidPeriods,
+            paidProfit,
+            totalPeriods: 12,
+            purchasePeriods: periods,
+            estimatedReturn: purchase.is_investment
+              ? purchase.withdrawal_available_date ||
+                new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+              : new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          });
+        });
+      } catch (error) {
+        console.error('❌ Erro ao buscar PartnerPlanPurchase:', error.message);
       }
+
+      // 2️⃣ FALLBACK legacy no AppUser
+      if (investments.length === 0) {
+        if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
+          investments.push({
+            id: `legacy_${user.id}`,
+            plan: user.active_partner_plan,
+            amount: user.partner_plan_amount,
+            startDate: user.partner_plan_activated_at,
+            currentStep: 0,
+            products: [],
+            isInvestment: false,
+            estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
+            estimatedReturn: new Date(
+              new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+          });
+        }
+      }
+
+      setActiveInvestments(investments);
     } catch (error) {
-      console.error("Erro ao carregar usuário:", error);
-      navigate(createPageUrl("Partners"));
+      console.error('Erro ao carregar usuário:', error);
+      navigate(createPageUrl('Partners'));
     } finally {
       setIsLoading(false);
     }
@@ -335,177 +271,30 @@ export default function InvestorDashboard() {
   useEffect(() => {
     loadUserData();
 
-    // 🔄 AUTO-REFRESH: Recarrega dados quando a página volta ao foco
-    const handleFocus = () => {
-      console.log('🔄 Página focada - recarregando planos ativos...');
-      loadUserData();
-    };
-
+    // 🔄 Recarrega ao voltar o foco (usuário volta do app do banco)
+    const handleFocus = () => loadUserData();
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
+     
   }, [navigate]);
 
-  const commonFeatures = [
-    "Gestão operacional integral",
-    "Produtos pré-selecionados por curadoria própria",
-    "Primeiro ciclo em até 60 dias (Cláusula 8.2)",
-    "Suporte dedicado"
-  ];
-
-  const portfolios = [
-    {
-      id: 1,
-      name: "Plano Visionário",
-      minInvestment: 5000,
-      expectedReturn: 3,
-      duration: 60,
-      products: ["Eletrônicos"],
-      risk: "Baixo",
-      description: "Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.",
-      features: commonFeatures,
-      imageKey: "eletronicos"
-    },
-    {
-      id: 2,
-      name: "Plano Sócios de Ouro",
-      minInvestment: 15000,
-      expectedReturn: 3,
-      duration: 60,
-      products: ["Eletrodomésticos", "Eletrônicos", "Apple"],
-      risk: "Baixo",
-      description: "Para parceiros que buscam maior retorno com segurança.",
-      features: commonFeatures,
-      imageKey: "eletrodomesticos"
-    },
-    {
-      id: 3,
-      name: "Plano Elite",
-      minInvestment: 30000,
-      expectedReturn: 3,
-      duration: 60,
-      products: ["Todas as categorias"],
-      risk: "Baixo",
-      description: "Máximo retorno com acesso a todas as oportunidades.",
-      features: commonFeatures,
-      imageKey: "apple"
-    }
-  ];
-
+  // Abre o modal já no plano escolhido na página do Parceiro
   useEffect(() => {
-    if (location.state?.package) {
-      const pkgRequested = location.state.package;
-      const matchedIdx = portfolios.findIndex(p =>
-        p.minInvestment === pkgRequested.minInvestment ||
-        p.name === pkgRequested.name
-      );
-      if (matchedIdx !== -1) {
-        setSelectedPlanIndex(matchedIdx);
-        setShowPlansModal(true);
-      }
-      // Limpar o state para não reabrir em caso de reload de página
-      navigate(location.pathname, { replace: true, state: {} });
+    if (!location.state?.package) return;
+    const pkg = location.state.package;
+    const idx = PORTFOLIOS.findIndex(
+      (p) => p.minInvestment === pkg.minInvestment || p.name === pkg.name
+    );
+    if (idx !== -1) {
+      setPlanoInicialIndex(idx);
+      setShowPlansModal(true);
     }
+    navigate(location.pathname, { replace: true, state: {} });
      
   }, [location.state?.package]);
 
-  // Se estiver carregando, mostra tela de delay
-  const getInvestmentSteps = (investment) => [
-    {
-      id: 1,
-      title: "Produto Comprado",
-      icon: Package,
-      description: "Produtos adquiridos",
-      color: "text-blue-400",
-      bgColor: "bg-blue-500/20",
-      borderColor: "border-blue-500/30",
-      daysToComplete: 5
-    },
-    {
-      id: 2,
-      title: "Entregue no Rio de Janeiro",
-      icon: MapPin,
-      description: "Produtos chegaram ao centro de distribuição",
-      color: "text-purple-400",
-      bgColor: "bg-purple-500/20",
-      borderColor: "border-purple-500/30",
-      daysToComplete: 15
-    },
-    {
-      id: 3,
-      title: "Testados e Aprovados",
-      icon: TestTube,
-      description: "Controle de qualidade concluído",
-      color: "text-orange-400",
-      bgColor: "bg-orange-500/20",
-      borderColor: "border-orange-500/30",
-      daysToComplete: 20
-    },
-    {
-      id: 4,
-      title: "Disponíveis na Loja",
-      icon: Store,
-      description: "Produtos à venda nos nossos canais",
-      color: "text-cyan-400",
-      bgColor: "bg-cyan-500/20",
-      borderColor: "border-cyan-500/30",
-      daysToComplete: 30
-    },
-    {
-      id: 5,
-      title: "Lucro Contabilizado",
-      icon: DollarSign,
-      description: investment
-        ? `${investment.paidPeriods || 0} de ${investment.totalPeriods || 12} ciclos apurados • R$ ${(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido`
-        : "Aguardando a apuração do primeiro ciclo (até 60 dias, Cláusula 8.2)",
-      color: "text-green-400",
-      bgColor: "bg-green-500/20",
-      borderColor: "border-green-500/30",
-      daysToComplete: 60
-    }
-  ];
-
-  const calculateDaysPassed = (startDate) => {
-    const start = new Date(startDate);
-    const today = new Date();
-    const diffTime = Math.abs(today - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getCurrentStep = (daysPassed) => {
-    if (daysPassed < 5) return 0;
-    if (daysPassed < 15) return 1;
-    if (daysPassed < 20) return 2;
-    if (daysPassed < 30) return 3;
-    return 4;
-  };
-
-  const getLiquidFillPercentage = (investment) => {
-    // Baseado nas parcelas pagas (12 parcelas = 100%)
-    const paid = investment?.paidPeriods || 0;
-    const total = investment?.totalPeriods || 12;
-    return Math.min((paid / total) * 100, 100);
-  };
-
-  const calculateProjection = (investment, returnRate) => {
-    const profit = investment * (returnRate / 100);
-    const total = investment + profit;
-    return { profit, total };
-  };
-
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-  const totalProfit = activeInvestments.reduce((sum, inv) => sum + (inv.estimatedProfit || 0), 0);
   const totalPaidProfit = activeInvestments.reduce((sum, inv) => sum + (inv.paidProfit || 0), 0);
-
-  useEffect(() => {
-    if (!showPlansModal || isPaused) return;
-
-    const interval = setInterval(() => {
-      setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1));
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [showPlansModal, isPaused, portfolios.length]);
 
   if (isLoading) {
     return (
@@ -518,10 +307,13 @@ export default function InvestorDashboard() {
     );
   }
 
+  const telaSelecionada = TELAS.find((t) => t.id === telaAtiva);
+
   return (
     <div className="min-h-screen bg-pc-preto text-pc-tinta">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-
+      {/* 🖥️ TELA CHEIA: sem max-w/mx-auto — o painel usa toda a largura da
+          viewport, com respiro lateral progressivo (padrão Mercado Pago). */}
+      <div className="w-full px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 xl:px-10">
         <ParceiroPainelNav
           telas={TELAS.map((t) => ({
             ...t,
@@ -550,930 +342,32 @@ export default function InvestorDashboard() {
           </>
         )}
 
-        {/* Compras Ativas */}
         {telaAtiva === 'visao' && activeInvestments.length > 0 && showInvestments && (
-          <div className="mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-pc-tinta">
-              Minhas <span className="text-pc-ouro">Operações Ativas</span>
-            </h2>
-
-            <div className="space-y-6">
-              {activeInvestments.map((investment) => {
-                const daysPassed = calculateDaysPassed(investment.startDate);
-                const currentStepIndex = getCurrentStep(daysPassed);
-                const liquidFillPercentage = getLiquidFillPercentage(investment);
-                const investmentSteps = getInvestmentSteps(investment);
-
-                return (
-                  <Card key={investment.id} className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-                    <CardHeader className="p-4 sm:p-6">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                        <div>
-                          <CardTitle className="text-lg sm:text-xl text-white mb-1">{investment.plan}</CardTitle>
-                          <p className="text-xs sm:text-sm text-gray-400">
-                            Iniciado em {new Date(investment.startDate).toLocaleDateString('pt-BR')} • {daysPassed} dias
-                          </p>
-                        </div>
-                        <div className="text-left sm:text-right w-full sm:w-auto">
-                          <p className="text-xl sm:text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
-                          <p className="text-xs sm:text-sm text-green-400 font-semibold">
-                            R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {investment.paidPeriods || 0}/{investment.totalPeriods || 12} ciclos apurados (Cláusula 8.2)
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                      {/* Timeline de Etapas */}
-                      <div>
-                        <h4 className="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">Etapas do Processo</h4>
-                        <div className="relative">
-                          {/* Linha conectora */}
-                          <div className="absolute left-5 sm:left-6 top-6 bottom-6 w-0.5 bg-gray-700" />
-
-                          <div className="space-y-3 sm:space-y-4">
-                            {investmentSteps.map((step, idx) => {
-                              const isCompleted = idx < currentStepIndex;
-                              const isCurrent = idx === currentStepIndex;
-                              const Icon = step.icon;
-
-                              return (
-                                <div key={step.id} className="relative flex items-start gap-3 sm:gap-4">
-                                  {/* Ícone */}
-                                  <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${isCompleted
-                                    ? 'bg-green-500/20 border-green-500'
-                                    : isCurrent
-                                      ? `${step.bgColor} ${step.borderColor}`
-                                      : 'bg-gray-800 border-gray-700'
-                                    }`}>
-                                    {/* Efeito de preenchimento líquido para última etapa */}
-                                    {step.id === 5 && (
-                                      <div
-                                        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-500/40 to-green-500/20 transition-all duration-1000"
-                                        style={{ height: `${liquidFillPercentage}%` }}
-                                      >
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-green-400/60 animate-pulse" />
-                                      </div>
-                                    )}
-
-                                    {isCompleted ? (
-                                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 relative z-10" />
-                                    ) : (
-                                      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isCurrent ? step.color : 'text-gray-600'} relative z-10`} />
-                                    )}
-                                  </div>
-
-                                  {/* Conteúdo */}
-                                  <div className={`flex-1 pb-3 sm:pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
-                                    <h5 className={`font-semibold mb-1 text-sm sm:text-base ${isCompleted ? 'text-green-400' : isCurrent ? step.color : 'text-gray-500'
-                                      }`}>
-                                      {step.title}
-                                      {isCompleted && ' ✓'}
-                                      {isCurrent && ' - Em andamento'}
-                                    </h5>
-                                    <p className="text-xs sm:text-sm text-gray-400">{step.description}</p>
-
-                                    {/* Barra de progresso para última etapa */}
-                                    {step.id === 5 && currentStepIndex >= 4 && (
-                                      <div className="mt-2">
-                                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                          <span>Preenchimento</span>
-                                          <span>{liquidFillPercentage.toFixed(0)}%</span>
-                                        </div>
-                                        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                                          <div
-                                            className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000"
-                                            style={{ width: `${liquidFillPercentage}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Data de Retorno */}
-                      <div className="bg-green-600/10 rounded-lg p-3 sm:p-4 border border-green-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
-                          <div>
-                            <p className="text-xs sm:text-sm text-gray-400">Encerramento do Plano (12 meses)</p>
-                            <p className="font-bold text-white text-sm sm:text-base">
-                              {new Date(investment.estimatedReturn).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-left sm:text-right w-full sm:w-auto">
-                          <p className="text-lg sm:text-xl font-bold text-green-400">
-                            R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')}
-                          </p>
-                          <p className="text-xs text-gray-400">resultado compartilhado recebido</p>
-                          <p className="text-xs text-gray-500">
-                            Capital aportado: R$ {investment.amount.toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
+          <ParceiroOperacoesAtivas investimentos={activeInvestments} />
         )}
-
-        {/* Modal de Planos - MOBILE OPTIMIZED */}
-        <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
-          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white p-3 sm:p-4 md:p-6 max-h-[95vh] overflow-y-auto">
-            <DialogHeader className="mb-3 text-center">
-              <DialogTitle className="text-xl sm:text-2xl font-bold text-center">
-                {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
-                <span className="text-green-400">Novo Plano</span>
-              </DialogTitle>
-              <p className="text-gray-400 text-xs text-center">
-                {activeInvestments.length > 0
-                  ? 'Selecione o plano para um novo aporte de capital'
-                  : 'Selecione o plano de parceria para o seu aporte'
-                }
-              </p>
-            </DialogHeader>
-
-            {/* Visualização do Contrato */}
-            {showContract ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                <div className="text-center mb-4">
-                  <img
-                    src="/brand/icon-3d.webp"
-                    alt="Leilão NoZap"
-                    className="h-16 mx-auto mb-4"
-                  />
-                  <h3 className="text-xl font-bold text-green-400">CONTRATO DE PARCERIA COMERCIAL</h3>
-                  <p className="text-gray-400 text-sm">Leia atentamente antes de prosseguir</p>
-                </div>
-
-                <ScrollArea className="h-[50vh] bg-gray-800 rounded-lg border border-gray-700 p-4">
-                  <div className="text-gray-300 text-sm space-y-4 pr-4">
-                    <h4 className="text-green-400 font-bold text-center text-base">CONTRATO DE PARCERIA COMERCIAL E PARTICIPAÇÃO EM OPERAÇÃO ESTRUTURADA DE VENDA DE PRODUTOS</h4>
-
-                    <p>Pelo presente instrumento particular, de um lado <strong className="text-white">COMPRAS FULL COMÉRCIO LTDA</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 51.544.091/0001-67, com sede em Av. das Américas, 19.005, Torre 1, Sala 1106, Barra da Tijuca, Rio de Janeiro - RJ, 22790-704, neste ato representada por sua marca <strong className="text-white">LEILÃO NOZAP</strong>, doravante denominada simplesmente PLATAFORMA, e de outro lado <strong className="text-white">PARCEIRO COMERCIAL</strong>, pessoa física ou jurídica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria Comercial e Participação em Operação Estruturada de Venda de Produtos, que se regerá pelas cláusulas e condições a seguir estabelecidas.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">1. DA QUALIFICAÇÃO E DA ATIVIDADE DA PLATAFORMA</h5>
-                    <p>1.1. A PLATAFORMA, razão social Compras Full Comércio LTDA, inscrita no CNPJ sob nº 51.544.091/0001-67, sob a marca Leilão NoZap, é uma empresa brasileira de tecnologia e operação comercial especializada na aquisição, curadoria e comercialização de produtos de alto giro, oriundos de devoluções dentro do prazo legal de 7 (sete) dias, estoques de fábrica, mostruários e lotes de estoque parado, adquiridos com desconto de 25% (vinte e cinco por cento) a 40% (quarenta por cento) sobre o valor de mercado, posteriormente comercializados por meio de equipe de vendas própria e canais digitais próprios.</p>
-                    <p>1.2. A PLATAFORMA opera com metodologia própria de curadoria, baseada em curva ABC, análise de liquidez, cálculo de rentabilidade e gestão operacional integral, garantindo o giro comercial dos produtos adquiridos.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">2. DO OBJETO</h5>
-                    <p>2.1. O presente contrato tem por objeto a formalização da parceria comercial entre a PLATAFORMA e o PARCEIRO, mediante a qual o PARCEIRO aporta capital para participação no resultado financeiro das operações comerciais estruturadas de compra e venda de produtos realizadas pela PLATAFORMA, conforme condições aqui pactuadas.</p>
-                    <p>2.2. O capital aportado pelo PARCEIRO será integralmente alocado em operações sucessivas de compra e recompra de produtos, dentro da estratégia operacional da PLATAFORMA, gerando resultados comerciais compartilhados nos termos deste instrumento.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">3. DA NATUREZA JURÍDICA DA PARCERIA</h5>
-                    <p>3.1. As partes declaram e reconhecem, de forma expressa e inequívoca, que a relação ora formalizada possui natureza estritamente comercial, caracterizando-se como parceria comercial de participação em operação estruturada de venda de produtos.</p>
-                    <p>3.2. Em nenhuma hipótese este contrato poderá ser interpretado como:</p>
-                    <ul className="list-disc list-inside ml-4 space-y-1">
-                      <li>aplicação financeira, investimento financeiro ou produto de renda fixa ou variável;</li>
-                      <li>captação de recursos junto ao público, nos termos da legislação pertinente;</li>
-                      <li>contrato de mútuo, empréstimo ou financiamento;</li>
-                      <li>promessa de rendimento, taxa de juros ou remuneração garantida sobre capital;</li>
-                      <li>contrato de sociedade, joint venture ou associação;</li>
-                      <li>relação de consumo sujeita ao Código de Defesa do Consumidor;</li>
-                      <li>relação de emprego ou trabalho subordinado;</li>
-                      <li>oferta pública de valores mobiliários nos termos da Lei nº 6.385/1976.</li>
-                    </ul>
-                    <p>3.3. O PARCEIRO declara estar ciente de que o resultado comercial compartilhado decorre exclusivamente do lucro líquido apurado nas operações de compra e venda de produtos realizadas pela PLATAFORMA, não constituindo, sob qualquer aspecto, rendimento financeiro, remuneração de capital ou taxa de juros.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">4. DA OPERAÇÃO COMERCIAL ESTRUTURADA</h5>
-                    <p>4.1. A operação comercial estruturada consiste na aquisição, pela PLATAFORMA, de produtos provenientes das seguintes origens:</p>
-                    <ul className="list-disc list-inside ml-4 space-y-1">
-                      <li>produtos devolvidos dentro do prazo legal de 7 (sete) dias;</li>
-                      <li>estoques de fábrica e produtos direto de fábrica;</li>
-                      <li>mostruários e amostras comerciais;</li>
-                      <li>lotes de estoque parado ou excedente.</li>
-                    </ul>
-                    <p>4.2. A aquisição é realizada com desconto de 25% (vinte e cinco por cento) a 40% (quarenta por cento) sobre o valor de mercado dos produtos, garantindo margem operacional favorável.</p>
-                    <p>4.3. Os produtos adquiridos são posteriormente comercializados pela PLATAFORMA por meio de equipe de vendas própria e canais digitais, com giro comercial acelerado devido à alta liquidez dos itens selecionados.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">5. DA CURADORIA E SELEÇÃO DE PRODUTOS</h5>
-                    <p>5.1. A seleção dos produtos que compõem a operação comercial é de competência exclusiva da PLATAFORMA, baseada em metodologia própria de curva ABC, análise de liquidez, cálculo de rentabilidade e gestão de risco operacional.</p>
-                    <p>5.2. O PARCEIRO não participa, não interfere e não decide sobre a escolha dos produtos a serem adquiridos, cabendo à PLATAFORMA a definição estratégica das operações comerciais.</p>
-                    <p>5.3. A PLATAFORMA manterá registro detalhado das operações realizadas, disponível para consulta pelo PARCEIRO por meio de painel digital exclusivo.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">6. DO CAPITAL APORTADO E SUA ALOCAÇÃO</h5>
-                    <p>6.1. O PARCEIRO aportará o valor correspondente ao plano de parceria selecionado no momento da adesão, conforme condições apresentadas na plataforma.</p>
-                    <p>6.2. O capital aportado será integralmente alocado em operações sucessivas de compra e recompra de produtos, dentro da estratégia operacional da PLATAFORMA, durante toda a vigência deste contrato.</p>
-                    <p>6.3. O capital aportado não poderá ser retirado antecipadamente, ressalvadas as condições de encerramento previstas na Cláusula 8.</p>
-                    <p>6.4. O aporte de capital deverá ser realizado via PIX ou transferência bancária para a conta da PLATAFORMA: <strong className="text-white">Banco Santander, Agência 0142, Conta Corrente 1030358-7</strong>, CNPJ 51.544.091/0001-67, em nome de Compras Full Comércio LTDA.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">7. DO COMPARTILHAMENTO DE LUCROS</h5>
-                    <p>7.1. Em contrapartida ao capital aportado, o PARCEIRO fará jus a uma cota de participação sobre o lucro líquido apurado nas operações comerciais realizadas pela PLATAFORMA, calculada conforme percentual estabelecido no momento da adesão e aplicada sobre o valor do capital aportado.</p>
-                    <p>7.2. O lucro compartilhado decorre exclusivamente do resultado positivo das operações de compra e venda de produtos, não constituindo rendimento financeiro, remuneração de capital, taxa de juros ou qualquer modalidade de aplicação financeira.</p>
-                    <p>7.3. O compartilhamento de lucros não está vinculado ao volume de vendas individuais do PARCEIRO, mas sim à execução operacional global da PLATAFORMA, dentro de seu modelo de negócios.</p>
-                    <p>7.4. A PLATAFORMA compromete-se a disponibilizar, por meio do painel digital exclusivo, a prestação de contas e o demonstrativo de resultados das operações comerciais realizadas.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">8. DA VIGÊNCIA E DO CICLO OPERACIONAL</h5>
-                    <p>8.1. O presente contrato terá vigência de 12 (doze) meses, contados a partir da data de aceite eletrônico pelo PARCEIRO.</p>
-                    <p>8.2. O ciclo financeiro da parceria observará as seguintes regras:</p>
-                    <p className="ml-4">a) O primeiro compartilhamento de lucros será disponibilizado ao PARCEIRO em até 60 (sessenta) dias contados da data do aporte inicial, prazo necessário para os 15 (quinze) primeiros dias destinados a testes, disponibilização e colocação à venda dos produtos na plataforma, seguidos de 45 (quarenta e cinco) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e segurança da operação;</p>
-                    <p className="ml-4">b) Após o primeiro ciclo, os compartilhamentos subsequentes ocorrerão em ciclos mensais, com disponibilização a cada 30 (trinta) dias;</p>
-                    <p className="ml-4">c) O capital aportado permanecerá alocado continuamente em novas operações de compra e recompra de produtos, enquanto vigente o contrato.</p>
-                    <p>8.3. Os valores de lucro compartilhado, apurados após o período inicial de 60 (sessenta) dias, poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
-                    <p>8.4. Ao final do prazo de 12 (doze) meses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para celebração de novo acordo, o qual poderá conter condições, prazos e critérios distintos.</p>
-                    <p>8.5. Encerrada a vigência contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO será disponibilizado para retirada em até 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">9. DAS OBRIGAÇÕES DO PARCEIRO</h5>
-                    <p>9.1. Realizar o cadastro na plataforma com informações verdadeiras, completas e atualizadas;</p>
-                    <p>9.2. Aportar o capital correspondente ao plano de parceria selecionado;</p>
-                    <p>9.3. Acompanhar as informações disponibilizadas no painel digital exclusivo;</p>
-                    <p>9.4. Manter seus dados cadastrais, bancários e de contato atualizados;</p>
-                    <p>9.5. Abster-se de interferir na seleção de produtos ou na gestão operacional da PLATAFORMA.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">10. DAS OBRIGAÇÕES DA PLATAFORMA</h5>
-                    <p>10.1. Alocar o capital aportado em operações comerciais de compra e venda de produtos;</p>
-                    <p>10.2. Realizar a curadoria, seleção e aquisição dos produtos com critérios técnicos rigorosos;</p>
-                    <p>10.3. Operar a logística, armazenamento e comercialização dos produtos;</p>
-                    <p>10.4. Garantir transparência total por meio do painel digital exclusivo;</p>
-                    <p>10.5. Efetuar o compartilhamento de lucros e a devolução do capital aportado nos prazos estabelecidos.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">11. DOS RISCOS OPERACIONAIS</h5>
-                    <p>11.1. A PLATAFORMA adota critérios rigorosos de seleção, controle e gestão, com o objetivo de mitigar riscos operacionais.</p>
-                    <p>11.2. O PARCEIRO declara estar ciente de que toda operação comercial envolve variáveis de mercado, logística e fornecedores, podendo o resultado operacional sofrer oscilações.</p>
-                    <p>11.3. A PLATAFORMA compromete-se a atuar com diligência máxima, transparência e boa-fé objetiva em todas as etapas da operação.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">12. DA CONFIDENCIALIDADE</h5>
-                    <p>12.1. As partes comprometem-se a manter sigilo absoluto sobre todas as informações estratégicas, comerciais, operacionais e financeiras a que tiverem acesso em decorrência deste contrato, obrigação que subsistirá pelo prazo de 5 (cinco) anos contados do encerramento da vigência contratual.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">13. DAS DISPOSIÇÕES GERAIS</h5>
-                    <p>13.1. O presente contrato poderá ser firmado por aceite eletrônico, mediante marcação de checkbox ou clique em botão de confirmação na plataforma, nos termos da Lei nº 14.063/2020 e da Medida Provisória nº 2.200-2/2001, ou por assinatura manual, mediante aposição da assinatura de próprio punho nos campos abaixo, sendo ambas as modalidades igualmente válidas e eficazes.</p>
-                    <p>13.2. Este contrato representa a totalidade do acordo entre as partes, prevalecendo sobre quaisquer negociações, declarações ou entendimentos prévios, verbais ou escritos.</p>
-                    <p>13.3. Qualquer modificação deste contrato deverá ser formalizada por meio de termo aditivo, com aceite eletrônico do PARCEIRO.</p>
-                    <p>13.4. A tolerância de qualquer das partes em exigir o cumprimento de qualquer cláusula deste contrato não será considerada renúncia ou novação.</p>
-                    <p>13.5. Caso qualquer cláusula deste contrato seja declarada nula ou inexequível, as demais cláusulas permanecerão plenamente válidas e eficazes.</p>
-
-                    <h5 className="text-green-400 font-bold mt-4">14. DO FORO</h5>
-                    <p>14.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ, com renúncia expressa a qualquer outro, por mais privilegiado que seja, para dirimir quaisquer questões oriundas ou relacionadas ao presente contrato.</p>
-
-                    <div className="border-t border-gray-600 mt-6 pt-4">
-                      <p className="text-gray-400 italic text-center mb-6">E, por estarem de pleno acordo, as partes manifestam seu aceite aos termos acima, seja por meio eletrônico ou por assinatura manual, declarando ter lido, compreendido e concordado com a totalidade das cláusulas deste instrumento.</p>
-
-                      <div className="grid grid-cols-2 gap-8 mt-12">
-                        <div className="text-center">
-                          <div className="border-t border-gray-400 pt-2 mt-8">
-                            <p className="text-gray-300 text-xs font-bold">COMPRAS FULL COMÉRCIO LTDA</p>
-                            <p className="text-gray-500 text-xs">CNPJ: 51.544.091/0001-67</p>
-                            <p className="text-gray-400 text-xs mt-1">Marca: Leilão NoZap</p>
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="border-t border-gray-400 pt-2 mt-8">
-                            <p className="text-gray-300 text-xs font-bold">PARCEIRO COMERCIAL</p>
-                            <p className="text-gray-500 text-xs">Nome / Assinatura</p>
-                            <p className="text-gray-400 text-xs mt-1">CPF/CNPJ: ____________________</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-center mt-6">
-                        <p className="text-gray-500 text-xs">Local e Data: _____/_____/_______</p>
-                      </div>
-
-                      <div className="text-center mt-4">
-                        <p className="text-gray-400 text-xs italic">Este contrato pode ser assinado eletronicamente, mediante aceite no checkbox acima, ou manualmente, mediante assinatura nos campos acima.</p>
-                      </div>
-                    </div>
-                  </div>
-                </ScrollArea>
-
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => setShowContract(false)}
-                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-4"
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        toast.info("Gerando PDF do contrato...");
-                        const response = await base44.functions.invoke('generateContractPDF', {
-                          format: 'base64',
-                          partner_name: pixFormData?.name || '',
-                          partner_cpf: pixFormData?.cpf || '',
-                          partner_email: pixFormData?.email || '',
-                          plan_name: selectedPlan?.name,
-                          plan_amount: selectedPlan?.minInvestment,
-                          signature_base64: assinaturaPng || undefined,
-                          ...(assinaturaRegistro || {}),
-                        });
-                        const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
-                        if (!pdfBase64) throw new Error('PDF não gerado');
-
-                        // Converte base64 para blob (funciona em todos os dispositivos)
-                        const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
-                        const byteCharacters = atob(base64Data);
-                        const byteArray = new Uint8Array(byteCharacters.length);
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                          byteArray[i] = byteCharacters.charCodeAt(i);
-                        }
-                        const blob = new Blob([byteArray], { type: 'application/pdf' });
-                        const blobUrl = URL.createObjectURL(blob);
-
-                        // Tenta Web Share API primeiro (mobile)
-                        if (navigator.share) {
-                          try {
-                            const file = new File([blob], 'Contrato_Parceria_LeilaoNoZap.pdf', { type: 'application/pdf' });
-                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                              await navigator.share({ files: [file], title: 'Contrato de Parceria' });
-                              toast.success("PDF compartilhado!");
-                              URL.revokeObjectURL(blobUrl);
-                              return;
-                            }
-                          } catch (shareErr) {
-                            // Usuário cancelou ou erro — continua para download
-                          }
-                        }
-
-                        // Fallback: download via link
-                        const a = document.createElement('a');
-                        a.href = blobUrl;
-                        a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
-                        a.target = '_blank';
-                        document.body.appendChild(a);
-                        a.click();
-                        setTimeout(() => {
-                          URL.revokeObjectURL(blobUrl);
-                          a.remove();
-                        }, 200);
-                        toast.success("Contrato PDF baixado!");
-                      } catch (error) {
-                        console.error('Erro ao baixar PDF:', error);
-                        toast.error("Erro ao gerar PDF: " + error.message);
-                      }
-                    }}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4"
-                  >
-                    📥 Baixar PDF
-                  </Button>
-                </div>
-                <Button
-                  onClick={async () => {
-                    try {
-                      toast.info("Gerando PDF para compartilhar...");
-                      const response = await base44.functions.invoke('generateContractPDF', {
-                        format: 'base64',
-                        partner_name: pixFormData?.name || '',
-                        partner_cpf: pixFormData?.cpf || '',
-                        partner_email: pixFormData?.email || '',
-                        plan_name: selectedPlan?.name,
-                        plan_amount: selectedPlan?.minInvestment,
-                        signature_base64: assinaturaPng || undefined,
-                        ...(assinaturaRegistro || {}),
-                      });
-                      const pdfBase64 = response?.data?.pdf_base64 || response?.pdf_base64;
-                      if (!pdfBase64) throw new Error('PDF não gerado');
-
-                      const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
-                      const byteCharacters = atob(base64Data);
-                      const byteArray = new Uint8Array(byteCharacters.length);
-                      for (let i = 0; i < byteCharacters.length; i++) {
-                        byteArray[i] = byteCharacters.charCodeAt(i);
-                      }
-                      const blob = new Blob([byteArray], { type: 'application/pdf' });
-                      const file = new File([blob], 'Contrato_Parceria_LeilaoNoZap.pdf', { type: 'application/pdf' });
-
-                      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-                        await navigator.share({ files: [file], title: 'Contrato de Parceria' });
-                        toast.success("PDF compartilhado!");
-                      } else {
-                        // Fallback: abre em nova aba
-                        const blobUrl = URL.createObjectURL(blob);
-                        window.open(blobUrl, '_blank');
-                        toast.info("PDF aberto em nova aba!");
-                      }
-                    } catch (error) {
-                      console.error('Erro ao compartilhar:', error);
-                      toast.error("Erro: " + error.message);
-                    }
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4"
-                >
-                  📤 Compartilhar Contrato
-                </Button>
-              </motion.div>
-            ) : !selectedPlan ? (
-              <>
-                {/* Carousel para todos os tamanhos */}
-                <div className="relative py-2"
-                  onMouseEnter={() => setIsPaused(true)}
-                  onMouseLeave={() => setIsPaused(false)}>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={selectedPlanIndex}
-                      initial={{ opacity: 0, x: 100 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex justify-center px-10"
-                    >
-                      {(() => {
-                        const portfolio = portfolios[selectedPlanIndex];
-                        const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
-
-                        return (
-                          <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
-                            {/* Imagem do Produto - ALTURA RESPONSIVA */}
-                            <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden bg-gray-900">
-                              {productImages[portfolio.imageKey] ? (
-                                <img
-                                  src={productImages[portfolio.imageKey]}
-                                  alt={portfolio.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                                  <Package className="w-16 h-16 text-gray-600" />
-                                </div>
-                              )}
-                              <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                                CURADORIA PRÓPRIA
-                              </div>
-                            </div>
-
-                            <CardContent className="p-3 sm:p-4">
-                              {/* Título e Descrição */}
-                              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
-                              <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">{portfolio.description}</p>
-
-                              {/* Cards de Valores - MOBILE OTIMIZADO */}
-                              <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
-                                <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700 col-span-2">
-                                  <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Capital do aporte</p>
-                                  <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight">
-                                    R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
-                                  </p>
-                                  <p className="text-gray-500 text-[10px] mt-1 leading-relaxed">
-                                    Participação sobre o lucro líquido apurado nas operações, conforme
-                                    percentual definido na adesão (Cláusula 7.1).
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Informações Inferiores */}
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-4 text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
-                                <span className="flex items-center gap-1">⏱️ Primeiro ciclo em até 60 dias</span>
-                                <span className="flex items-center gap-1">📦 Gestão operacional nossa</span>
-                              </div>
-
-                              {/* Botão - TAMANHO RESPONSIVO */}
-                              <Button
-                                className="w-full bg-green-600 hover:bg-green-700 text-sm sm:text-base py-3 sm:py-4 font-semibold"
-                                onClick={() => {
-                                  setSelectedPlan(portfolio);
-                                  setPixData(null);
-                                }}
-                              >
-                                Comprar Agora
-                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        );
-                      })()}
-                    </motion.div>
-                  </AnimatePresence>
-
-                  {/* Navigation Arrows - MAIORES EM MOBILE */}
-                  <button
-                    onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-                    className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
-                  >
-                    <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
-                    className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
-                  >
-                    <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </button>
-                </div>
-
-                {/* Indicators */}
-                <div className="flex justify-center gap-2 mt-3 sm:mt-4">
-                  {portfolios.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedPlanIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${idx === selectedPlanIndex
-                        ? 'w-6 bg-green-500'
-                        : 'w-1.5 bg-gray-600 hover:bg-gray-500'
-                        }`}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : !pixData ? (
-              /* Formulário PIX */
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold text-white">{selectedPlan.name}</h3>
-                  <p className="text-2xl font-bold text-green-400 mt-2">
-                    R$ {selectedPlan.minInvestment.toLocaleString('pt-BR')}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-gray-300">Nome Completo</Label>
-                    <Input
-                      value={pixFormData.name}
-                      onChange={(e) => setPixFormData({ ...pixFormData, name: e.target.value })}
-                      placeholder="João Silva"
-                      className="bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-300">Telefone</Label>
-                    <Input
-                      value={pixFormData.phone}
-                      onChange={(e) => setPixFormData({ ...pixFormData, phone: e.target.value })}
-                      placeholder="(11) 99999-9999"
-                      className="bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-300">E-mail</Label>
-                    <Input
-                      value={pixFormData.email}
-                      onChange={(e) => setPixFormData({ ...pixFormData, email: e.target.value })}
-                      placeholder="joao@email.com"
-                      type="email"
-                      className="bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-300">CPF</Label>
-                    <Input
-                      value={pixFormData.cpf}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setPixFormData({ ...pixFormData, cpf: value });
-
-                        // Valida CPF em tempo real
-                        const cleanCpf = value.replace(/\D/g, '');
-                        if (cleanCpf.length === 11) {
-                          const validateCPF = (cpf) => {
-                            if (/^(\d)\1+$/.test(cpf)) return false;
-                            let sum = 0;
-                            for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
-                            let remainder = (sum * 10) % 11;
-                            if (remainder === 10 || remainder === 11) remainder = 0;
-                            if (remainder !== parseInt(cpf[9])) return false;
-                            sum = 0;
-                            for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
-                            remainder = (sum * 10) % 11;
-                            if (remainder === 10 || remainder === 11) remainder = 0;
-                            if (remainder !== parseInt(cpf[10])) return false;
-                            return true;
-                          };
-                          if (!validateCPF(cleanCpf)) {
-                            toast.error("CPF inválido. Verifique os números.");
-                          }
-                        }
-                      }}
-                      placeholder="000.000.000-00"
-                      className="bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Botão Ler Contrato */}
-                <Button
-                  onClick={() => setShowContract(true)}
-                  variant="outline"
-                  className="w-full bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 mb-3"
-                >
-                  📄 Ler Contrato de Parceria
-                </Button>
-
-                {/* ✍️ Assinatura eletrônica do contrato */}
-                {showAssinatura ? (
-                  <div className="rounded-lg border border-pc-borda bg-pc-preto-2 p-3 mb-3">
-                    <ParceiroAssinatura
-                      nome={pixFormData?.name}
-                      salvando={salvandoAssinatura}
-                      onCancelar={() => setShowAssinatura(false)}
-                      onConfirmar={async (png) => {
-                        setSalvandoAssinatura(true);
-                        try {
-                          const resp = await base44.functions.invoke('registrarAssinaturaContrato', {
-                            user_id: currentUser?.id,
-                            nome: pixFormData?.name,
-                            cpf: pixFormData?.cpf,
-                            email: pixFormData?.email,
-                            plano: selectedPlan?.name,
-                            valor_aporte: selectedPlan?.minInvestment,
-                            assinatura_png: png,
-                          });
-                          const dados = resp?.data || resp;
-                          if (!dados?.success) {
-                            toast.error(dados?.error || 'Não foi possível registrar a assinatura');
-                            return;
-                          }
-                          setAssinaturaPng(png);
-                          setAssinaturaRegistro(dados.assinatura);
-                          setAcceptedContract(true);
-                          setShowAssinatura(false);
-                          toast.success(`Contrato assinado. Código ${dados.assinatura.codigo_verificacao}`);
-                          if (!dados.persistido) {
-                            toast.warning('Assinatura aplicada no documento, mas o registro no servidor falhou.');
-                          }
-                        } catch (e) {
-                          toast.error('Erro ao assinar: ' + e.message);
-                        } finally {
-                          setSalvandoAssinatura(false);
-                        }
-                      }}
-                    />
-                  </div>
-                ) : assinaturaRegistro ? (
-                  <div className="rounded-lg border border-pc-ouro/40 bg-pc-preto-2 p-3 mb-3">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">Contrato assinado eletronicamente</p>
-                    <p className="mt-1 text-xs text-pc-tinta">
-                      Código de verificação {assinaturaRegistro.codigo_verificacao}
-                    </p>
-                    <p className="text-[10px] leading-relaxed text-pc-tinta-fraca">
-                      Registrado em {new Date(assinaturaRegistro.assinado_em).toLocaleString('pt-BR')} · Lei nº 14.063/2020 e MP nº 2.200-2/2001
-                    </p>
-                  </div>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      if (!pixFormData?.name || !pixFormData?.cpf || !pixFormData?.email) {
-                        toast.error('Preencha nome, CPF e e-mail antes de assinar');
-                        return;
-                      }
-                      setShowAssinatura(true);
-                    }}
-                    className="w-full min-h-[48px] bg-pc-ouro font-semibold text-pc-preto hover:bg-pc-ouro-claro mb-3"
-                  >
-                    ✍️ Assinar contrato digitalmente
-                  </Button>
-                )}
-
-                {/* Checkbox Aceitar Contrato */}
-                <div className="flex items-center space-x-3 bg-gray-800 rounded-lg p-3 border border-gray-700 mb-3">
-                  <Checkbox
-                    id="accept-contract"
-                    checked={acceptedContract}
-                    onCheckedChange={(checked) => setAcceptedContract(checked)}
-                    className="border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                  />
-                  <label
-                    htmlFor="accept-contract"
-                    className="text-sm text-gray-300 cursor-pointer leading-tight"
-                  >
-                    Li e aceito os termos do <span className="text-green-400 font-semibold">Contrato de Parceria</span>
-                  </label>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => {
-                      setSelectedPlan(null);
-                      setAcceptedContract(false);
-                    }}
-                    variant="outline"
-                    className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      const { name, phone, email, cpf } = pixFormData;
-                      if (!name || !phone || !email || !cpf) {
-                        toast.error("Preencha todos os campos");
-                        return;
-                      }
-
-                      const cleanCpf = cpf.replace(/\D/g, '');
-                      if (cleanCpf.length !== 11) {
-                        toast.error("CPF inválido. Deve ter 11 dígitos.");
-                        return;
-                      }
-
-                      const validateCPF = (cpf) => {
-                        if (cpf.length !== 11) return false;
-                        if (/^(\d)\1+$/.test(cpf)) return false;
-
-                        let sum = 0;
-                        for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
-                        let remainder = (sum * 10) % 11;
-                        if (remainder === 10 || remainder === 11) remainder = 0;
-                        if (remainder !== parseInt(cpf[9])) return false;
-
-                        sum = 0;
-                        for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
-                        remainder = (sum * 10) % 11;
-                        if (remainder === 10 || remainder === 11) remainder = 0;
-                        if (remainder !== parseInt(cpf[10])) return false;
-
-                        return true;
-                      };
-
-                      if (!validateCPF(cleanCpf)) {
-                        toast.error("CPF inválido. Verifique os números digitados.");
-                        return;
-                      }
-
-                      setIsProcessing(true);
-                      try {
-                        toast.info("Gerando QR Code PIX...");
-
-                        const response = await base44.functions.invoke('createPartnerPlanPix', {
-                          licensee_id: currentUser.id,
-                          user_name: name,
-                          user_email: email,
-                          user_phone: phone,
-                          user_cpf: cpf,
-                          plan_code: selectedPlan.name
-                        });
-
-                        console.log('🔍 Response completo:', response);
-                        console.log('🔍 response.data:', response?.data);
-
-                        // ✅ FIX: response.data já vem como objeto direto
-                        const pixInfo = response?.data || response;
-
-                        console.log('🔍 pixInfo extraído:', pixInfo);
-                        console.log('🔍 pixInfo.success:', pixInfo?.success);
-                        console.log('🔍 pixInfo.qr_code_base64:', pixInfo?.qr_code_base64 ? 'EXISTS' : 'MISSING');
-
-                        if (pixInfo?.success) {
-                          setPixData({
-                            billing_id: pixInfo.billing_id || pixInfo.payment_id,
-                            qr_code_base64: pixInfo.qr_code_base64,
-                            pix_code: pixInfo.pix_code
-                          });
-                          toast.success("✅ QR Code gerado com sucesso!");
-                        } else {
-                          const errorMsg = pixInfo?.error || "Erro ao gerar QR Code";
-                          const errorDetails = pixInfo?.details;
-                          console.error('❌ Erro ao gerar PIX:', { errorMsg, errorDetails });
-                          toast.error(errorMsg + (errorDetails ? ` - ${JSON.stringify(errorDetails)}` : ''));
-                        }
-                      } catch (error) {
-                        console.error('❌ Erro:', error);
-                        toast.error("Erro ao processar: " + error.message);
-                      } finally {
-                        setIsProcessing(false);
-                      }
-                    }}
-                    disabled={isProcessing || !acceptedContract}
-                    className={`flex-1 ${acceptedContract ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 cursor-not-allowed'}`}
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>📱 Gerar PIX</>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            ) : (
-              /* QR Code PIX */
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="space-y-4"
-              >
-                <h3 className="text-lg font-bold text-white text-center">💚 Pague com PIX</h3>
-                <div className="bg-white rounded-lg p-4">
-                  <img
-                    src={pixData.qr_code_base64}
-                    alt="QR Code PIX"
-                    className="w-64 h-64 mx-auto"
-                  />
-                </div>
-
-                {/* Botão Copiar Código PIX */}
-                <Button
-                  onClick={async () => {
-                    const ok = await copiarPix(pixData.pix_code);
-                    if (!ok) return; // não copiou: não manda o cliente pro banco sem o código
-                    // Abre o app do Banco nativo (se existir)
-                    const isAndroid = /Android/i.test(navigator.userAgent);
-                    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-                    if (isAndroid || isIOS) {
-                      // App Banco genérico
-                      setTimeout(() => {
-                        window.location.href = 'intent://pay#Intent;scheme=http;end';
-                      }, 300);
-                    }
-                  }}
-                  className={`w-full text-white font-bold py-4 text-base transition-colors ${pixCopiado ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-700 hover:bg-green-800'}`}
-                >
-                  {pixCopiado ? '✅ Código PIX copiado!' : 'Copiar Código PIX e Ir para Banco'}
-                </Button>
-
-                <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-                  <p className="text-xs text-gray-400 mb-2 font-semibold">CÓDIGO PIX (Copia e Cola):</p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={pixData.pix_code}
-                      readOnly
-                      className="text-xs bg-gray-700 border-gray-600 text-white font-mono"
-                    />
-                    <Button
-                      onClick={() => copiarPix2(pixData.pix_code)}
-                      size="icon"
-                      variant="outline"
-                      className={`flex-shrink-0 border-green-600 transition-colors ${pixCopiado2 ? 'bg-emerald-500 hover:bg-emerald-500' : 'bg-green-700 hover:bg-green-600'}`}
-                    >
-                      {pixCopiado2 ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-green-400 text-center">
-                  R$ {selectedPlan.minInvestment.toLocaleString('pt-BR')}
-                </p>
-
-                <Button
-                  onClick={async () => {
-                    setIsCheckingPayment(true);
-                    try {
-                      toast.info("Verificando pagamento PIX...");
-
-                      const response = await base44.functions.invoke('checkPartnerPlanPayment', {
-                        billing_id: pixData.billing_id
-                      });
-
-                      if (response?.data?.is_paid || response?.is_paid) {
-                        toast.success("✅ Pagamento PIX confirmado!");
-                        setShowPlansModal(false);
-                        // Recarrega dados diretamente (sem reload de página)
-                        await loadUserData();
-                      } else {
-                        toast.info("⏳ Pagamento PIX ainda não identificado. Aguarde alguns segundos e tente novamente.");
-                      }
-                    } catch (error) {
-                      toast.error("Erro ao verificar pagamento: " + error.message);
-                    } finally {
-                      setIsCheckingPayment(false);
-                    }
-                  }}
-                  disabled={isCheckingPayment}
-                  className="w-full bg-blue-600 hover:bg-blue-700 font-bold py-4"
-                >
-                  {isCheckingPayment ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>💰 Já efetuei o PIX (verificar pagamento)</>
-                  )}
-                </Button>
-
-                <Button
-                  onClick={() => {
-                    setPixData(null);
-                    setSelectedPlan(null);
-                  }}
-                  variant="outline"
-                  className="w-full bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300"
-                >
-                  Cancelar
-                </Button>
-              </motion.div>
-            )}
-
-
-          </DialogContent>
-        </Dialog>
 
         {telaAtiva === 'visao' && <ParceiroComoFunciona />}
 
-        {telaAtiva !== 'visao' && (() => {
-          const tela = TELAS.find((t) => t.id === telaAtiva);
-          if (!tela) return null;
-          return (
-            <ParceiroPainelEmBreve
-              titulo={tela.titulo}
-              texto={tela.texto}
-              exigeNda={!!tela.exigeNda && !ndaAssinado}
-              onIrParaNda={() => setTelaAtiva('nda')}
-            />
-          );
-        })()}
+        {telaAtiva !== 'visao' && telaSelecionada && (
+          <ParceiroPainelEmBreve
+            titulo={telaSelecionada.titulo}
+            texto={telaSelecionada.texto}
+            exigeNda={!!telaSelecionada.exigeNda && !ndaAssinado}
+            onIrParaNda={() => setTelaAtiva('nda')}
+          />
+        )}
+
+        <ParceiroPlanosModal
+          open={showPlansModal}
+          onOpenChange={setShowPlansModal}
+          portfolios={PORTFOLIOS}
+          productImages={productImages}
+          currentUser={currentUser}
+          planoInicialIndex={planoInicialIndex}
+          temPlanosAtivos={activeInvestments.length > 0}
+          onPagamentoConfirmado={loadUserData}
+          onContratoAssinado={() => setAssinouContrato(true)}
+        />
       </div>
     </div>
   );

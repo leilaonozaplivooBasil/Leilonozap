@@ -7,7 +7,7 @@ export default function ParceiroPainelNav({ telas, telaAtiva, onSelecionar }) {
   return (
     <nav
       aria-label="Telas do painel do parceiro"
-      className="-mx-3 mb-8 overflow-x-auto border-b border-pc-borda px-3 nz-no-scrollbar sm:mx-0 sm:px-0"
+      className="mb-8 w-full overflow-x-auto border-b border-pc-borda nz-no-scrollbar"
     >
       <ul className="flex min-w-max items-stretch gap-1">
         {telas.map((t) => {
