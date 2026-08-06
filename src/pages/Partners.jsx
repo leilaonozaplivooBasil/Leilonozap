@@ -10,6 +10,7 @@ import ParceiroCuradoria from '@/components/parceiro/ParceiroCuradoria';
 import ParceiroRelacaoEouNaoE from '@/components/parceiro/ParceiroRelacaoEouNaoE';
 import ParceiroCiclo from '@/components/parceiro/ParceiroCiclo';
 import ParceiroVitrineOperacao from '@/components/parceiro/ParceiroVitrineOperacao';
+import ParceiroCanaisVenda from '@/components/parceiro/ParceiroCanaisVenda';
 import ParceiroBoard from '@/components/parceiro/ParceiroBoard';
 import ParceiroFormalizacao from '@/components/parceiro/ParceiroFormalizacao';
 import ParceiroCTA from '@/components/parceiro/ParceiroCTA';
@@ -60,6 +61,7 @@ export default function PartnersPage() {
         <ParceiroRelacaoEouNaoE />
         <ParceiroCiclo />
         <ParceiroVitrineOperacao />
+        <ParceiroCanaisVenda />
         <ParceiroBoard />
         <ParceiroFormalizacao />
         <ParceiroCTA onSolicitarAcesso={irParaPainel} onAcessarPainel={irParaPainel} />
