@@ -1,4 +1,5 @@
 import React from 'react';
+import ParceiroShareButton from './ParceiroShareButton';
 
 // Bloco 10 — os dois caminhos: solicitar acesso ou entrar no painel do parceiro.
 export default function ParceiroCTA({ onSolicitarAcesso, onAcessarPainel }) {
@@ -31,6 +32,7 @@ export default function ParceiroCTA({ onSolicitarAcesso, onAcessarPainel }) {
           >
             Já sou parceiro — acessar painel
           </button>
+          <ParceiroShareButton />
         </div>
       </div>
     </section>

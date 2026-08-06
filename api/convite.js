@@ -25,12 +25,23 @@ export default async function handler(req, res) {
       if (Array.isArray(rows) && rows[0]) { adesao = Number(rows[0].adesao_valor) || 0; pct = Number(rows[0].venda_direta_pct) || 0; }
     } catch (_) { /* segue com defaults */ }
 
-    const title = `Seja um ${cargoNome} — Leilão NoZap`;
-    const desc = adesao > 0
+    // 🖤 Parceiro de Compra é captação privada: preview institucional com imagem
+    // oficial fixa e SEM valor/comissão/projeção (regra da página /Partners).
+    const ehParceiro = cargo === 'parceiro';
+    const PARCEIRO_IMG = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/932dcb425_image.png';
+
+    const title = ehParceiro
+      ? 'Parceiro de Compra — Leilão NoZap'
+      : `Seja um ${cargoNome} — Leilão NoZap`;
+    const desc = ehParceiro
+      ? 'Operação montada, canais próprios de venda e praças em funcionamento. Conheça a estrutura por dentro.'
+      : adesao > 0
       ? `Adesão de ${money(adesao)} (100% volta em produto). Comissão de ${pct}% nas suas vendas. Cadastre-se agora e comece a ganhar.`
       : `Cadastro grátis! Comissão de ${pct}% nas suas vendas. Faça parte da rede da Leilão NoZap.`;
 
-    const ogImage = `${SITE}/api/og?cargo=${encodeURIComponent(cargo)}`;
+    const ogImage = ehParceiro ? PARCEIRO_IMG : `${SITE}/api/og?cargo=${encodeURIComponent(cargo)}`;
+    const ogW = ehParceiro ? 1024 : 1200;
+    const ogH = ehParceiro ? 1024 : 630;
     // 🎯 Cargos com página de vendas dedicada vão direto pra ela; os demais
     // (ex: parceiro, que não tem página própria) mantêm o funil /Cadastro.
     const DESTINO_DEDICADO = { influenciador: '/Licensing', vendedor: '/SejaVendedor', licenciado: '/SejaLicenciado', parceiro: '/Partners' };
@@ -53,8 +64,8 @@ export default async function handler(req, res) {
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(desc)}" />
 <meta property="og:image" content="${esc(ogImage)}" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image:width" content="${ogW}" />
+<meta property="og:image:height" content="${ogH}" />
 <meta property="og:url" content="${esc(destino)}" />
 <meta property="og:locale" content="pt_BR" />
 <meta name="twitter:card" content="summary_large_image" />
