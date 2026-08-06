@@ -35,10 +35,15 @@ export default async function handler(req, res) {
     ).split(',')[0].trim() || 'desconhecido';
     const userAgent = String(req.headers['user-agent'] || '').slice(0, 300);
     const versao = body.versao || VERSAO_CONTRATO;
+    // 📜 Mesma trilha atende dois documentos: o Contrato de Parceria (padrão) e o
+    // Termo de Confidencialidade. Só nomes conhecidos são aceitos.
+    const documento = body.documento === 'termo_confidencialidade'
+      ? 'termo_confidencialidade'
+      : 'contrato_parceria';
 
     // Hash do conteúdo assinado (identidade + documento + momento + assinatura)
     const conteudo = [
-      'contrato_parceria', versao, nome, cpf, email,
+      documento, versao, nome, cpf, email,
       body.plano || '', String(body.valor_aporte || ''), assinadoEm, ip,
       String(body.assinatura_png || '').slice(0, 5000),
     ].join('|');
@@ -49,7 +54,7 @@ export default async function handler(req, res) {
       id: oid(),
       user_id: body.user_id || null,
       nome, cpf, email,
-      documento: 'contrato_parceria',
+      documento,
       versao_contrato: versao,
       plano: body.plano || null,
       valor_aporte: body.valor_aporte || null,
@@ -57,6 +62,9 @@ export default async function handler(req, res) {
       ip,
       user_agent: userAgent,
       assinatura_png: body.assinatura_png || null,
+      // 🪪 Documentos de identificação enviados no ato (só o termo de sigilo usa)
+      doc_identidade_url: body.doc_identidade_url || null,
+      doc_cpf_url: body.doc_cpf_url || null,
       hash_documento: hash,
       codigo_verificacao: codigo,
     };
@@ -91,6 +99,7 @@ export default async function handler(req, res) {
       persistido,
       detalhe_persistencia: detalhePersistencia,
       assinatura: {
+        documento,
         assinado_em: assinadoEm,
         ip,
         user_agent: userAgent,

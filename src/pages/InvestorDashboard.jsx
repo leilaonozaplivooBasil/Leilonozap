@@ -10,6 +10,7 @@ import ParceiroComoFunciona from '@/components/parceiro/painel/ParceiroComoFunci
 import ParceiroPainelEmBreve from '@/components/parceiro/painel/ParceiroPainelEmBreve';
 import ParceiroOperacoesAtivas from '@/components/parceiro/painel/ParceiroOperacoesAtivas';
 import ParceiroPlanosModal from '@/components/parceiro/painel/ParceiroPlanosModal';
+import ParceiroTermoSigilo from '@/components/parceiro/painel/ParceiroTermoSigilo';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
 import {
   LayoutGrid,
@@ -153,13 +154,16 @@ export default function InvestorDashboard() {
   const [productImages, setProductImages] = useState({});
   const [telaAtiva, setTelaAtiva] = useState('visao');
   const [assinouContrato, setAssinouContrato] = useState(false);
+  // 📜 Registro do Termo de Confidencialidade (trilha de auditoria). Fonte de
+  // verdade de "assinou o sigilo" — é o que libera Operação/Analisador/Oportunidades.
+  const [registroSigilo, setRegistroSigilo] = useState(null);
 
   // 🔓 Conta validadora (homologação): vê o painel como se já tivesse assinado
   // o termo de confidencialidade e o contrato. Só visualização — nada é alterado
   // no banco nem no cadastro do usuário.
   const ehValidador = isParceiroValidador(currentUser);
 
-  const ndaAssinado = ehValidador || !!currentUser?.parceiro_nda_aceito_em;
+  const ndaAssinado = ehValidador || !!registroSigilo || !!currentUser?.parceiro_nda_aceito_em;
   const contratoAssinado = ehValidador || activeInvestments.length > 0 || assinouContrato;
 
   // 🖤 Tema preto/dourado institucional escopado a esta página.
@@ -190,6 +194,18 @@ export default function InvestorDashboard() {
       }
 
       setCurrentUser(user);
+
+      // 📜 Já assinou o Termo de Confidencialidade? (somente leitura)
+      try {
+        const resp = await base44.functions.invoke('consultarAssinaturaSigilo', {
+          user_id: user.id,
+          documento: 'termo_confidencialidade',
+        });
+        const reg = resp?.registro || resp?.data?.registro || null;
+        if (reg) setRegistroSigilo(reg);
+      } catch (e) {
+        console.debug('Consulta do termo de sigilo indisponível');
+      }
 
       try {
         const products = await FeaturedProduct.filter({ is_active: true });
@@ -374,7 +390,16 @@ export default function InvestorDashboard() {
 
         {telaAtiva === 'visao' && <ParceiroComoFunciona />}
 
-        {telaAtiva !== 'visao' && telaSelecionada && (
+        {telaAtiva === 'nda' && (
+          <ParceiroTermoSigilo
+            user={currentUser}
+            registro={registroSigilo}
+            liberadoValidacao={ehValidador}
+            onAssinado={(reg) => setRegistroSigilo(reg)}
+          />
+        )}
+
+        {telaAtiva !== 'visao' && telaAtiva !== 'nda' && telaSelecionada && (
           <ParceiroPainelEmBreve
             titulo={telaSelecionada.titulo}
             texto={telaSelecionada.texto}
