@@ -130,6 +130,8 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
         frase: FRASES[Math.floor(rnd() * FRASES.length)],
         item: ITENS[Math.floor(rnd() * ITENS.length)],
         canal: CANAIS[Math.floor(rnd() * CANAIS.length)],
+        // ritmo do REPLAY (só a animação de exibição, irregular)
+        ritmo: 900 + Math.floor(rnd() * 1400),
       };
     });
     // hoje/agora fora das deps de propósito: a lista NÃO pode ser regerada a cada tick
@@ -142,15 +144,47 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
     if (vendas[i].hora <= agora) reveladas = i + 1;
     else break;
   }
-  const total = reveladas > 0 ? vendas[reveladas - 1].acumulado : 0;
-  const cheio = reveladas >= vendas.length && vendas.length > 0;
+  // 🎬 REPLAY DO DIA: abre em R$ 0,00 e as vendas já ocorridas caem uma a uma,
+  // com os horários REAIS delas, somando na frente do parceiro até alcançar o
+  // valor de agora. Depois disso segue ao vivo (cada nova venda entra na hora).
+  const [passo, setPasso] = React.useState(0);
+  React.useEffect(() => {
+    setPasso(0);
+  }, [sementeDia, cotaDia]);
+
+  React.useEffect(() => {
+    if (!ativo || passo >= reveladas || vendas.length === 0) return;
+    let timer;
+    let vivo = true;
+    const agendar = () => {
+      clearTimeout(timer);
+      if (document.visibilityState !== 'visible') return; // mobile: retoma de onde parou
+      const espera = passo === 0 ? 1800 : vendas[passo].ritmo;
+      timer = setTimeout(() => {
+        if (vivo) setPasso((n) => Math.min(n + 1, vendas.length));
+      }, espera);
+    };
+    agendar();
+    document.addEventListener('visibilitychange', agendar);
+    window.addEventListener('focus', agendar);
+    return () => {
+      vivo = false;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', agendar);
+      window.removeEventListener('focus', agendar);
+    };
+  }, [ativo, passo, reveladas, vendas]);
+
+  const exibidas = Math.min(passo, reveladas);
+  const total = exibidas > 0 ? vendas[exibidas - 1].acumulado : 0;
+  const cheio = exibidas >= vendas.length && vendas.length > 0;
 
   // 📊 Eleva o giro de HOJE pra tela pai, pra a barra do histórico avançar junto.
   React.useEffect(() => {
     if (onGiroDoDia) onGiroDoDia(ativo ? total : 0);
   }, [total, ativo, onGiroDoDia]);
 
-  const pilha = vendas.slice(Math.max(0, reveladas - MAX_PILHA), reveladas).reverse();
+  const pilha = vendas.slice(Math.max(0, exibidas - MAX_PILHA), exibidas).reverse();
 
   return (
     <div className="mt-6 border border-pc-ouro/40 bg-pc-preto-2 p-5 sm:p-7">
@@ -182,15 +216,17 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
             />
           </div>
 
-          {reveladas === 0 ? (
+          {exibidas === 0 ? (
             <p className="mt-4 flex items-center gap-2 text-[11px] text-pc-tinta-fraca">
               <span className="giro-pulso h-1.5 w-1.5 shrink-0 rounded-full bg-pc-ouro" />
-              O giro do dia começa às {horaTexto(vendas[0]?.hora || agora)}.
+              {reveladas === 0
+                ? `O giro do dia começa às ${horaTexto(vendas[0]?.hora || agora)}.`
+                : 'Carregando o giro do dia...'}
             </p>
           ) : (
             <>
               <p className="mt-4 text-[10px] uppercase tracking-[0.14em] text-pc-tinta-fraca">
-                Histórico do dia · {reveladas} de {vendas.length} vendas
+                Histórico do dia · {exibidas} de {vendas.length} vendas
               </p>
               <ul className="mt-2 space-y-2.5">
                 {pilha.map((e) => (
