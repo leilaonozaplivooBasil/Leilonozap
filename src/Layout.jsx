@@ -27,7 +27,7 @@ import { base44 } from '@/api/base44Client';
 import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
-import { saveReferral, getReferral } from "@/lib/referral";
+import { saveReferral, getReferral, clearReferral } from "@/lib/referral";
 import AdminTopNav from "@/components/layout/AdminTopNav";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
@@ -201,6 +201,11 @@ export default function Layout({ children, currentPageName }) {
 
     // 🔧 CRÍTICO: Limpa referralCode do sessionStorage para evitar conflito no próximo login
     sessionStorage.removeItem('referralCode');
+
+    // 👑 REGRA DE DONO ÚNICO — sair da conta apaga o link de indicação guardado.
+    // Sem isso, o próximo usuário do MESMO aparelho herdava o dono do anterior
+    // (caso "TTT", 06/08/2026: link de teste de 2025 aparecia pra outra conta).
+    clearReferral();
 
     setCurrentUser(null);
 
@@ -962,6 +967,14 @@ export default function Layout({ children, currentPageName }) {
             onSuccess={(user) => {
               setCurrentUser(user);
               setShowLoginModal(false);
+
+              // 👑 REGRA DE DONO ÚNICO — quem JÁ TEM dono no cadastro (referred_by_id)
+              // não precisa do link: apaga pra não exibir/atribuir a um dono alheio.
+              // ⚠️ Quem NÃO tem dono mantém o link intacto: ele é o carimbo da primeira
+              // atribuição e apagar aqui tiraria a comissão do vendedor que trouxe o cliente.
+              if (user?.referred_by_id) {
+                clearReferral();
+              }
               
               // 🔧 CRÍTICO: Reforça URL se usuário é vendedor
               if (user?.is_seller === true && user?.referral_code) {

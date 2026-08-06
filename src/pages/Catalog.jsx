@@ -199,8 +199,56 @@ export default function Catalog() {
     setFilteredProducts(filtered);
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
 
+  // 🎴 Monta o cartão da Loja Virtual a partir de UM AppUser (dono resolvido).
+  // Extraído pra o cartão poder vir do cadastro (dono real) ou do link, sem duplicar código.
+  const aplicarDonoNoCartao = React.useCallback(async (licensee) => {
+    let photoUrl = licensee.profile_photo_url || licensee.avatar_url;
+    try {
+      const stores = await Store.filter({ email: licensee.email });
+      if (stores && stores.length > 0 && stores[0].logo_url) {
+        photoUrl = stores[0].logo_url;
+      }
+    } catch (storeError) {
+      console.debug('Store não encontrada, usando foto do perfil');
+    }
+
+    if (licensee.phone) setLicenseePhone(licensee.phone);
+
+    setLicenseeData({
+      name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
+      photo: photoUrl,
+      phone: licensee.phone,
+      // cargo real + código: o cartão usa pra decidir o "Falar Comigo" e o selo
+      career_levels: licensee.career_levels,
+      primary_career_level: licensee.primary_career_level,
+      referral_code: licensee.referral_code
+    });
+  }, []);
+
   const loadLicenseePhone = React.useCallback(async () => {
     try {
+      // 👑 REGRA DE DONO ÚNICO — o dono do cliente é o referred_by_id do CADASTRO.
+      // Um link antigo guardado no aparelho NÃO pode mais exibir outro dono (caso "TTT",
+      // 06/08/2026: link de teste de 2025 no celular mostrava um cadastro alheio).
+      // O link segue mandando para VISITANTE e para quem ainda não tem dono.
+      try {
+        const savedUser = localStorage.getItem('currentUser');
+        const logado = savedUser ? JSON.parse(savedUser) : null;
+        // ⚠️ EXCEÇÃO: vendedor/licenciado é dono da PRÓPRIA loja — o cartão continua
+        // sendo ele mesmo, mesmo que ele também tenha um indicador. Regra atual preservada.
+        const eDonoDeLoja = (logado?.is_seller === true || logado?.role === 'licensee') && !!logado?.referral_code;
+        if (logado?.referred_by_id && !eDonoDeLoja) {
+          const donos = await AppUser.filter({ id: logado.referred_by_id });
+          if (donos && donos.length > 0) {
+            await aplicarDonoNoCartao(donos[0]);
+            console.log('✅ Cartão pelo dono REAL do cadastro:', donos[0].full_name);
+            return;
+          }
+        }
+      } catch (e) {
+        console.debug('Sem dono no cadastro, seguindo pela regra do link');
+      }
+
       let refCode = getReferral();
       
       // Se não há ref no sessionStorage, tenta pegar da URL diretamente
@@ -234,45 +282,13 @@ export default function Catalog() {
       // Busca em AppUser
       const licensees = await AppUser.filter({ referral_code: refCode });
       if (licensees && licensees.length > 0) {
-        const licensee = licensees[0];
-        
-        // Busca foto do Store (vendedor/lojista)
-        let photoUrl = licensee.profile_photo_url || licensee.avatar_url;
-        
-        try {
-          const stores = await Store.filter({ email: licensee.email });
-          if (stores && stores.length > 0 && stores[0].logo_url) {
-            photoUrl = stores[0].logo_url;
-            console.log('✅ Foto carregada do cadastro de lojista');
-          }
-        } catch (storeError) {
-          console.debug('Store não encontrada, usando foto do perfil');
-        }
-        
-        if (licensee.phone) {
-          setLicenseePhone(licensee.phone);
-        }
-        
-        setLicenseeData({
-          name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
-          photo: photoUrl,
-          phone: licensee.phone,
-          // cargo real + código: o cartão usa pra decidir o "Falar Comigo" e o selo
-          career_levels: licensee.career_levels,
-          primary_career_level: licensee.primary_career_level,
-          referral_code: licensee.referral_code
-        });
-        
-        console.log('✅ Dados do licenciado:', {
-          name: licensee.full_name,
-          photo: photoUrl,
-          phone: licensee.phone
-        });
+        await aplicarDonoNoCartao(licensees[0]);
+        console.log('✅ Cartão pelo link de indicação:', licensees[0].full_name);
       }
     } catch (error) {
       console.debug('Erro ao buscar dados do licenciado:', error);
     }
-  }, []);
+  }, [aplicarDonoNoCartao]);
 
   const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
     try {
