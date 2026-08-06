@@ -4,6 +4,7 @@ import ParceiroSecao from './ParceiroSecao';
 import ParceiroTourLoja from './ParceiroTourLoja';
 import ParceiroTourExpansao from './ParceiroTourExpansao';
 import ParceiroComoChegamos from './ParceiroComoChegamos';
+import ParceiroRoadmapLinha from './ParceiroRoadmapLinha';
 
 // 🛣️ Bloco 07 — por onde o produto curado gira, com os percursos em destaque
 // no topo (a ação principal precisa ser vista de cara, não no pé do cartão).
@@ -128,7 +129,7 @@ export default function ParceiroCanaisVenda() {
                 {/* Meta de alcance + base de cálculo conservadora */}
                 <div className="mt-5 border-t border-pc-ouro/25 pt-5">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">
-                    Meta {c.prazo}
+                    Meta alcançável {c.prazo}
                   </p>
                   <p className="mt-1.5 text-xl font-bold leading-tight text-pc-tinta sm:text-2xl">
                     {c.meta}
@@ -142,10 +143,14 @@ export default function ParceiroCanaisVenda() {
           })}
         </div>
 
+        <ParceiroRoadmapLinha />
+
         <ParceiroComoChegamos itens={COMO_CHEGAMOS} />
 
         <p className="mt-8 border-t border-pc-borda pt-6 text-[10px] leading-relaxed text-pc-tinta-fraca sm:text-xs">
-          Os números acima são <strong className="text-pc-tinta">metas de operação do roadmap 2026</strong>,
+          Os marcos de <strong className="text-pc-tinta">Jul/2026</strong> já estão concluídos.
+          Os demais números são <strong className="text-pc-tinta">metas de operação do roadmap 2026</strong>
+          {' '}(meta mínima conforme memorando e meta alcançável por canal),
           construídas sobre base de cálculo conservadora por usuário e por vendedor.
           Não constituem garantia de resultado, promessa de rendimento nem oferta pública.
           Condições comerciais e números consolidados são tratados somente após cadastro
