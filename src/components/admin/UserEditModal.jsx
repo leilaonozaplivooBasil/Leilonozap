@@ -197,9 +197,10 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 // Carteira do Sócio Executivo (1% sobre a própria estrutura)
                 ...buildExecutiveUpdate(executiveOwnerId || null, { pinned: executivePinned }),
             };
-            if (newReferrerId) {
-                updatePayload.referred_by_id = newReferrerId;
-            }
+            // ⚠️ Antes o indicador só era gravado quando havia alguém escolhido — então
+            // escolher "Sem indicação" não salvava nada e a árvore continuava igual.
+            // Agora o vínculo SEMPRE vai no payload (inclusive vazio = sem indicador).
+            updatePayload.referred_by_id = newReferrerId;
 
             // Update direto via Supabase (AppUser tem RLS null — funciona com anon key)
             await AppUser.update(user.id, updatePayload);

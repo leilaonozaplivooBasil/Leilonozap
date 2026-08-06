@@ -84,6 +84,7 @@ export default function TreeHierarchy({
   onPromote,
   onRelink,
   onDetach,
+  onAtualizado,
   allUsers,
   fullHeight = false,
 }) {
@@ -1122,8 +1123,13 @@ export default function TreeHierarchy({
                 </div>
               </div>
 
-              {/* 🔐 senha / reset / link público — só o super admin vê */}
-              <AcessoSuperAdmin user={selected} />
+              {/* 🔐 senha / reset / link público — só o super admin vê.
+                  "Indicado por" vem da própria árvore (selectedParent). */}
+              <AcessoSuperAdmin
+                user={selected}
+                indicadoPor={selectedParent?.full_name}
+                onAtualizado={onAtualizado}
+              />
 
               {/* equipe direta */}
               {selected.children.length > 0 && (

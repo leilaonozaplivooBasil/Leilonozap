@@ -26,6 +26,8 @@ const ALLOWED = [
   'career_levels', 'primary_career_level', 'display_first_name',
   'display_last_name', 'avatar_url', 'profile_photo_url', 'enabled_panels',
   'is_seller', 'store_name',
+  // link público da pessoa (usado pelo cartão da árvore quando ela ainda não tem código)
+  'referral_code', 'store_slug',
   // 'active' = arquivar/reativar usuário sem apagar histórico (painel da rede)
   'active',
   // crédito manual de comissão pelo Painel de Controle

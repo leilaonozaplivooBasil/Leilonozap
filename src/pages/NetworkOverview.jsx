@@ -1708,6 +1708,7 @@ export default function NetworkOverview() {
                         onPromote={handlePromote}
                         onRelink={handleRelink}
                         onDetach={handleDetachUser}
+                        onAtualizado={fetchData}
                         allUsers={allUsers}
                       />
                     ) : (
