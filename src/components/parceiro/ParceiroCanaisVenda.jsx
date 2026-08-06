@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Store, Users, Gavel } from 'lucide-react';
 import ParceiroSecao from './ParceiroSecao';
-import ParceiroPreviaCanal from './ParceiroPreviaCanal';
+import ParceiroTourLoja from './ParceiroTourLoja';
 
 // 🛣️ Bloco 07 — por onde o produto curado gira.
 // ⚠️ PROIBIDO aqui: comissão, percentual, faturamento, ticket médio, projeção,
@@ -14,7 +14,7 @@ const CANAIS = [
     titulo: 'Loja Virtual',
     texto:
       'Canal digital próprio da empresa. Recebe o item curado, com ficha, foto tratada e posicionamento definido pela operação — sem depender de marketplace de terceiros.',
-    botao: 'Ver prévia da loja',
+    botao: 'Percorrer a Loja Virtual',
   },
   {
     id: 'licenciados',
@@ -32,12 +32,12 @@ const CANAIS = [
     titulo: 'Leilão',
     texto:
       'Canal direto da empresa, com disputa em tempo real. Usado para acelerar o giro de lotes e definir saída rápida quando a operação precisa de velocidade.',
-    botao: 'Ver prévia dos leilões',
+    botao: null,
   },
 ];
 
 export default function ParceiroCanaisVenda() {
-  const [previa, setPrevia] = useState(null);
+  const [tourAberto, setTourAberto] = useState(false);
 
   return (
     <>
@@ -64,7 +64,7 @@ export default function ParceiroCanaisVenda() {
                 {c.botao && (
                   <button
                     type="button"
-                    onClick={() => setPrevia(c.id)}
+                    onClick={() => setTourAberto(true)}
                     className="mt-6 flex min-h-[44px] w-full items-center justify-center border border-pc-ouro px-4 text-xs font-semibold uppercase tracking-[0.15em] text-pc-ouro transition-colors hover:bg-pc-ouro hover:text-pc-preto"
                   >
                     {c.botao}
@@ -76,7 +76,7 @@ export default function ParceiroCanaisVenda() {
         </div>
       </ParceiroSecao>
 
-      {previa && <ParceiroPreviaCanal canal={previa} onClose={() => setPrevia(null)} />}
+      {tourAberto && <ParceiroTourLoja onClose={() => setTourAberto(false)} />}
     </>
   );
 }

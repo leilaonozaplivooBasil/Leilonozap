@@ -10,7 +10,7 @@ const MEMBROS = [
   {
     cargo: 'Fundador e CEO',
     nome: "Luiz Sant'Anna",
-    bio: "Ex-Fuzileiro Naval, com trajetória em Sky e Nextel. Originou mais de R$ 100M no mercado financeiro e captou R$ 22M em ambiente digital. Fundador da X-EOS. Representante legal signatário dos contratos.",
+    bio: "Fuzileiro Naval da Reserva, com trajetória em Sky e Nextel. Originou mais de R$ 100M no mercado financeiro e captou R$ 22M em ambiente digital. Fundador da X-EOS. Representante legal signatário dos contratos.",
     foto: FOTO_LUIZ,
   },
   {
