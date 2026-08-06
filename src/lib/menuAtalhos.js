@@ -18,7 +18,12 @@ import { resolveUserPanels } from "@/lib/panelResolver";
 // Painéis promovidos a azulejo (os outros ficam na Visão Geral).
 // A chave é a mesma do PANEL_METADATA — o rótulo é curto para caber em 1 linha.
 const PAINEIS_EM_ATALHO = {
-  licenciado: { rotulo: "Licenciado", icon: Briefcase },
+  // 🚀 PAINEL DE ALAVANCAGEM — nome neutro de propósito: este azulejo é a porta
+  // ÚNICA de toda a rede (influenciador, vendedor, licenciado, parceiro, ponto de
+  // retirada, loja física, distribuidor e cargos de topo). Chamar de "Licenciado"
+  // dava a impressão de ser só de um cargo. A liberação continua vindo de
+  // resolveUserPanels (painel 'licenciado'), que já cobre todos esses cargos.
+  licenciado: { rotulo: "Alavancagem", icon: Briefcase },
   arrematante: { rotulo: "Arremates", icon: Gavel },
 };
 
