@@ -24,7 +24,7 @@ const MEMBROS = [
     cargo: 'Diretor de Tecnologia',
     vinculo: 'Sócio fundador',
     nome: 'Diogo Archanjo',
-    bio: 'CMO da Phizchat e CEO da Ingoobrasil. Responsável pela arquitetura tecnológica, escalabilidade de tráfego e pela esteira digital que sustenta os canais próprios de venda.',
+    bio: 'CMO da Phizchat, CEO da Ingoobrasil e CEO da Livoo Live. Responsável pela arquitetura tecnológica, escalabilidade de tráfego e pela esteira digital que sustenta os canais próprios de venda.',
     foto: FOTO_DIOGO,
   },
 ];
