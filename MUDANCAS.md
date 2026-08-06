@@ -12,6 +12,79 @@
 
 ---
 
+## 06/08/2026 — 🗄️ COFRE DOS DOCUMENTOS ASSINADOS + 🔒 BRECHA DE LEITURA FECHADA
+
+### O que mudou (5 arquivos novos, 1 campo adicionado)
+
+| Arquivo | O que é |
+|---|---|
+| `supabase/migrations/20260806_documentos_assinados_storage.sql` | **NOVO** — bucket **privado** `documentos-assinados`, 3 colunas de ponteiro em `contrato_assinaturas` e **derrubada da policy de leitura pública** |
+| `api/_lib/documentoAssinado.js` | **NOVO** — fonte única: caminho do arquivo, gravação no cofre, link assinado, checagem de quem pode ver |
+| `api/_lib/driveCopia.js` | **NOVO** — cópia no Google Drive, **best-effort** (nunca lança, nunca bloqueia) |
+| `api/functions/arquivarDocumentoAssinado.js` | **NOVO** 🟡 — gera o PDF uma vez, grava no cofre, guarda o caminho |
+| `api/functions/getDocumentoAssinadoUrl.js` | **NOVO** 🟢 — link de leitura de **5 minutos**, só para o dono ou admin |
+| `api/functions/registrarAssinaturaContrato.js` | **+1 campo** na resposta: `id` do registro (necessário para arquivar). Nada existente mudou |
+
+### 🔒 A brecha que estava aberta (anterior a este trabalho)
+
+A policy de `SELECT` em `contrato_assinaturas` era **`using (true)`**: qualquer requisição com a
+chave anon lia assinatura de **terceiros** — nome, CPF, IP, imagem da assinatura e as URLs dos
+documentos de identidade. Dado pessoal sensível exposto (LGPD).
+
+**Conferido por leitura ANTES de trancar:** toda leitura do app passa por função de servidor com
+`service_role` (`consultarAssinaturaSigilo`, `registrarAssinaturaContrato`), e a `service_role`
+**ignora RLS**. Nenhuma tela lê essa tabela direto com chave anon — verificado em
+`ParceiroTermoAssinado.jsx`, `ParceiroPainelGate.jsx` e `ParceiroDocumentoModal.jsx`.
+Portanto derrubar a policy **não quebra o painel**.
+
+### Como o cofre foi desenhado
+
+- Bucket **`public = false`**: o PDF **não tem URL pública**. Sem passar pelo servidor, ninguém
+  alcança o arquivo — nem por link solto, nem por buscador.
+- **Nenhuma policy** criada para o bucket: `anon` e `authenticated` não leem nem escrevem.
+  Só `service_role`.
+- **Autorização no servidor**, não no navegador: `getDocumentoAssinadoUrl` só libera para o
+  próprio signatário ou para admin/super_admin, e o **cargo é lido no banco** — nada vindo do
+  navegador é aceito como prova.
+- **Idempotente:** registro já arquivado devolve o que existe, sem regravar nem duplicar.
+- **Aditivo:** se o arquivamento falhar, o caminho antigo (gerar o PDF na hora) continua
+  atendendo o parceiro. Nada deixa de funcionar.
+
+### ⚠️ Ordem obrigatória de aplicação
+
+Escrever o `.sql` **não executa nada**. A migração precisa ser rodada no **SQL Editor do
+Supabase** — antes dela, o arquivamento falha porque as colunas e o bucket não existem.
+
+### Google Drive — declarado como pendente, não como pronto
+
+A cópia no Drive só liga quando `GOOGLE_DRIVE_REFRESH_TOKEN` (e opcionalmente
+`GOOGLE_DRIVE_FOLDER_ID`) existirem **na Vercel** — o cofre de segredos do Base44 **não alcança**
+as rotas `/api` (regra já registrada no PONTO 81). Sem eles, o cofre oficial funciona normal e a
+resposta avisa `Drive ainda não configurado`.
+
+### NÃO foi tocado
+
+Comissão, carteira, saldo, pagamento, lance, checkout, frete, estoque, auth · geração de PDF
+(`contratoPdf.js`, `termoSigiloPdf.js`, `generateContractPDF`, `generateNdaPDF`) · fluxo de
+assinatura, validação de CPF, ativação de plano · **nenhuma tela alterada** · nenhuma outra tabela.
+
+### ⚠️ Validação declarada
+
+`/api/functions/*` **não executa no ambiente de preview** (limitação já registrada) — as duas
+funções novas **não foram testadas automaticamente**. Validado por leitura: os nomes exportados de
+`contratoPdf.js`/`termoSigiloPdf.js` conferem com os imports, e não existe leitor da tabela com
+chave anon. **Teste real em produção, nesta ordem:** rodar a migração → assinar um documento →
+chamar `arquivarDocumentoAssinado` → conferir o arquivo no bucket → chamar
+`getDocumentoAssinadoUrl` com o id de OUTRO usuário e confirmar a recusa.
+
+### Risco
+
+🟡 **Médio** — banco de produção, mas a parte de dados é **aditiva e idempotente** e a parte de
+segurança **fecha** acesso em vez de abrir. Pior cenário de falha do arquivamento = continua
+gerando o PDF na hora, exatamente como já era.
+
+---
+
 ## 05/08/2026 — ✅ PONTO 89 (BLOCO 2): 2 ROTINAS SAÍRAM DO BANCO ANTIGO + CASCA DE FAVORITOS DESCOBERTA
 
 ### Arquivos alterados
