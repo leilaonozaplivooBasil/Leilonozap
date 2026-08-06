@@ -2,6 +2,7 @@ import React from 'react';
 import ParceiroSecao from './ParceiroSecao';
 import ParceiroLamina from './ParceiroLamina';
 import ParceiroDetalhe from './ParceiroDetalhe';
+import ParceiroCicloRoda from './ParceiroCicloRoda';
 
 const IMG_CICLO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a5ded50b6_generated_image.png';
 
@@ -27,15 +28,9 @@ export default function ParceiroCiclo() {
         </p>
       </div>
 
-      <ol className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
-        {ETAPAS.map((e, i) => (
-          <li key={e.quando} className={`border-t pt-5 ${i < 3 ? 'border-pc-ouro' : 'border-pc-borda'}`}>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro sm:text-xs">{e.quando}</p>
-            <h3 className="mt-3 text-base font-bold text-pc-tinta sm:text-lg">{e.titulo}</h3>
-            <p className="mt-3 text-xs leading-relaxed text-pc-tinta-fraca sm:text-sm">{e.texto}</p>
-          </li>
-        ))}
-      </ol>
+      {/* As cinco etapas saíram da grade de 5 colunas (densa) e agora giram na
+          roda de 12 meses: uma mensagem por vez, no ritmo de quem lê. */}
+      <ParceiroCicloRoda etapas={ETAPAS} />
 
       <div className="mt-14">
         <ParceiroLamina
