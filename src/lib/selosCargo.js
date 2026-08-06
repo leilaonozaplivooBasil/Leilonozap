@@ -35,6 +35,19 @@ export function getSeloCargo(cargo) {
   return SELOS[normalizeLevel(cargo || 'usuario')] || null;
 }
 
+// 👑 Selos por ROLE do sistema (não é cargo de carreira). Super Admin tem o seu.
+const SELOS_ROLE = {
+  super_admin: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a7b1ee883_generated_image.png',
+};
+
+/**
+ * Selo de quem é o usuário: primeiro o selo da ROLE (Super Admin),
+ * senão o selo do cargo de carreira. null se não houver nenhum.
+ */
+export function getSeloUsuario(user) {
+  return SELOS_ROLE[user?.role] || getSeloCargo(user?.primary_career_level || 'usuario');
+}
+
 /** Foto de perfil real da pessoa (a que ela mesma cadastrou). null se não tiver. */
 export function getFotoPerfil(user) {
   return user?.avatar_url || user?.profile_photo_url || null;

@@ -1,5 +1,6 @@
 import React from "react";
 import { getRoleBadge } from "@/lib/roleBadge";
+import { getSeloUsuario } from "@/lib/selosCargo";
 
 function getInitials(name = "") {
   return name.trim().split(/\s+/).slice(0, 2).map((n) => n[0]).join("").toUpperCase() || "?";
@@ -12,6 +13,7 @@ export default function MobileUserHeader({ user }) {
   const avatarColor = user?.avatar_color || "linear-gradient(135deg, #10b981, #f59e0b)";
   const badge = getRoleBadge(user);
   const BadgeIcon = badge.icon;
+  const seloUrl = getSeloUsuario(user);
 
   return (
     <div className="flex items-center gap-3 p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -25,11 +27,15 @@ export default function MobileUserHeader({ user }) {
         <p className="text-sm font-bold text-white truncate">{fullName}</p>
         <p className="text-xs text-gray-400 truncate">{user?.email || ""}</p>
       </div>
-      <div
-        className={`flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 font-slab text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow}`}
-      >
-        <BadgeIcon className="h-3 w-3" />
-        {badge.label}
+      {/* 🏅 selo oficial logo abaixo do cargo (mesmo padrão do menu desktop) */}
+      <div className="flex flex-shrink-0 flex-col items-center gap-1.5">
+        <div
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-slab text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow}`}
+        >
+          <BadgeIcon className="h-3 w-3" />
+          {badge.label}
+        </div>
+        {seloUrl && <img src={seloUrl} alt="" title={badge.label} className="h-9 w-9 rounded-full object-cover ring-1 ring-white/15" />}
       </div>
     </div>
   );

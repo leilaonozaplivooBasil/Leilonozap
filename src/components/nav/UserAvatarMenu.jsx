@@ -21,6 +21,8 @@ import MinhaContaGrid from "@/components/nav/MinhaContaGrid";
 // 🏷️ Selo e cargos de rede vêm da fonte ÚNICA compartilhada com o menu mobile —
 // era a duplicação que fazia a Loja Física aparecer como "LICENCIADO" aqui.
 import { getRedeCargo, REDE_META, getRoleBadge } from "@/lib/roleBadge";
+// 🏅 Selo oficial de quem é o usuário (Super Admin, Distribuidor, CEO…)
+import { getSeloUsuario } from "@/lib/selosCargo";
 
 function getInitials(name = "") {
   return name
@@ -106,6 +108,7 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
   const roleKey = effectiveUser.role || "user";
   const badge = getRoleBadge(effectiveUser);
   const BadgeIcon = badge.icon;
+  const seloUrl = getSeloUsuario(effectiveUser);
 
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -159,11 +162,22 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
             <p className="text-sm font-bold text-white truncate">{fullName}</p>
             <p className="text-xs text-gray-400 truncate">{email}</p>
           </div>
-          <div
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-slab font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow} flex-shrink-0`}
-          >
-            <BadgeIcon className="w-3 h-3" />
-            {badge.label}
+          {/* 🏅 Foto fica onde sempre esteve; o SELO oficial entra do lado do cargo */}
+          <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+            <div
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-slab font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow}`}
+            >
+              <BadgeIcon className="w-3 h-3" />
+              {badge.label}
+            </div>
+            {seloUrl && (
+              <img
+                src={seloUrl}
+                alt=""
+                title={badge.label}
+                className="w-9 h-9 rounded-full object-cover ring-1 ring-white/15"
+              />
+            )}
           </div>
         </div>
 
