@@ -75,13 +75,13 @@ export default function ParceiroPlanosModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white p-3 sm:p-4 md:p-6 max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl bg-pc-preto border border-pc-borda text-pc-tinta p-3 sm:p-4 md:p-6 max-h-[95vh] overflow-y-auto">
         <DialogHeader className="mb-3 text-center">
-          <DialogTitle className="text-xl sm:text-2xl font-bold text-center">
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-center text-pc-tinta">
             {temPlanosAtivos ? 'Contratar ' : 'Escolha Seu '}
-            <span className="text-green-400">Novo Plano</span>
+            <span className="text-pc-ouro">Novo Plano</span>
           </DialogTitle>
-          <p className="text-gray-400 text-xs text-center">
+          <p className="text-pc-tinta-fraca text-xs text-center">
             {temPlanosAtivos
               ? 'Selecione o plano para um novo aporte de capital'
               : 'Selecione o plano de parceria para o seu aporte'}

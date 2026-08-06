@@ -133,43 +133,43 @@ export default function ParceiroPixForm({
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-white">{plano.name}</h3>
-        <p className="text-2xl font-bold text-green-400 mt-2">
+        <h3 className="text-xl font-bold text-pc-tinta">{plano.name}</h3>
+        <p className="text-2xl font-bold text-pc-ouro mt-2">
           R$ {plano.minInvestment.toLocaleString('pt-BR')}
         </p>
       </div>
 
       <div className="space-y-3">
         <div>
-          <Label className="text-gray-300">Nome Completo</Label>
+          <Label className="text-pc-tinta-fraca">Nome Completo</Label>
           <Input
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="João Silva"
-            className="bg-gray-700 border-gray-600 text-white"
+            className="bg-pc-preto border-pc-borda text-pc-tinta"
           />
         </div>
         <div>
-          <Label className="text-gray-300">Telefone</Label>
+          <Label className="text-pc-tinta-fraca">Telefone</Label>
           <Input
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="(11) 99999-9999"
-            className="bg-gray-700 border-gray-600 text-white"
+            className="bg-pc-preto border-pc-borda text-pc-tinta"
           />
         </div>
         <div>
-          <Label className="text-gray-300">E-mail</Label>
+          <Label className="text-pc-tinta-fraca">E-mail</Label>
           <Input
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="joao@email.com"
             type="email"
-            className="bg-gray-700 border-gray-600 text-white"
+            className="bg-pc-preto border-pc-borda text-pc-tinta"
           />
         </div>
         <div>
-          <Label className="text-gray-300">CPF</Label>
+          <Label className="text-pc-tinta-fraca">CPF</Label>
           <Input
             value={formData.cpf}
             onChange={(e) => {
@@ -181,7 +181,7 @@ export default function ParceiroPixForm({
               }
             }}
             placeholder="000.000.000-00"
-            className="bg-gray-700 border-gray-600 text-white"
+            className="bg-pc-preto border-pc-borda text-pc-tinta"
           />
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function ParceiroPixForm({
       <Button
         onClick={onLerContrato}
         variant="outline"
-        className="w-full bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 mb-3"
+        className="w-full min-h-[48px] bg-pc-preto-2 border-pc-borda text-pc-tinta hover:border-pc-ouro hover:bg-pc-preto-2 mb-3"
       >
         📄 Ler Contrato de Parceria
       </Button>
@@ -229,15 +229,15 @@ export default function ParceiroPixForm({
         </Button>
       )}
 
-      <div className="flex items-center space-x-3 bg-gray-800 rounded-lg p-3 border border-gray-700 mb-3">
+      <div className="flex items-center space-x-3 bg-pc-preto-2 p-3 border border-pc-borda mb-3">
         <Checkbox
           id="accept-contract"
           checked={aceitouContrato}
           onCheckedChange={(checked) => setAceitouContrato(checked)}
-          className="border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+          className="border-pc-ouro data-[state=checked]:bg-pc-ouro data-[state=checked]:border-pc-ouro"
         />
-        <label htmlFor="accept-contract" className="text-sm text-gray-300 cursor-pointer leading-tight">
-          Li e aceito os termos do <span className="text-green-400 font-semibold">Contrato de Parceria</span>
+        <label htmlFor="accept-contract" className="text-sm text-pc-tinta cursor-pointer leading-tight">
+          Li e aceito os termos do <span className="text-pc-ouro font-semibold">Contrato de Parceria</span>
         </label>
       </div>
 
@@ -245,14 +245,14 @@ export default function ParceiroPixForm({
         <Button
           onClick={onVoltar}
           variant="outline"
-          className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+          className="flex-1 min-h-[48px] bg-pc-preto-2 border-pc-borda text-pc-tinta hover:border-pc-ouro hover:bg-pc-preto-2"
         >
           Voltar
         </Button>
         <Button
           onClick={gerarPix}
           disabled={isProcessing || !aceitouContrato}
-          className={`flex-1 ${aceitouContrato ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 cursor-not-allowed'}`}
+          className={`flex-1 min-h-[48px] font-semibold ${aceitouContrato ? 'bg-pc-ouro text-pc-preto hover:bg-pc-ouro-claro' : 'bg-pc-preto-2 text-pc-tinta-fraca cursor-not-allowed'}`}
         >
           {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <>📱 Gerar PIX</>}
         </Button>

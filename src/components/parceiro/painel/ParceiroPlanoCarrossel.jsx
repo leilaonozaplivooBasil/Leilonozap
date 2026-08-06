@@ -32,48 +32,50 @@ export default function ParceiroPlanoCarrossel({
             transition={{ duration: 0.3 }}
             className="flex justify-center px-10"
           >
-            <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
-              <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden bg-gray-900">
+            <Card className="bg-pc-preto-2 border border-pc-borda w-full max-w-md overflow-hidden">
+              <div className="relative h-64 sm:h-80 md:h-96 overflow-hidden bg-pc-preto">
                 {productImages[portfolio.imageKey] ? (
                   <img
                     src={productImages[portfolio.imageKey]}
                     alt={portfolio.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                    <Package className="w-16 h-16 text-gray-600" />
+                  <div className="w-full h-full flex items-center justify-center bg-pc-preto-2">
+                    <Package className="w-16 h-16 text-pc-tinta-fraca" />
                   </div>
                 )}
-                <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+                <div className="absolute top-2 sm:top-4 right-2 sm:right-4 border border-pc-ouro bg-pc-preto/80 text-pc-ouro px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em]">
                   CURADORIA PRÓPRIA
                 </div>
               </div>
 
               <CardContent className="p-3 sm:p-4">
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
-                <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">{portfolio.description}</p>
+                <h3 className="text-xl sm:text-2xl font-bold text-pc-tinta mb-2">{portfolio.name}</h3>
+                <p className="text-pc-tinta-fraca text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">{portfolio.description}</p>
 
                 <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
-                  <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700 col-span-2">
-                    <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Capital do aporte</p>
-                    <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight">
+                  <div className="bg-pc-preto p-2 sm:p-3 border border-pc-borda col-span-2">
+                    <p className="text-pc-ouro text-[10px] sm:text-xs uppercase tracking-[0.15em] mb-1">Capital do aporte</p>
+                    <p className="text-base sm:text-xl md:text-2xl font-bold text-pc-tinta leading-tight">
                       R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                     </p>
-                    <p className="text-gray-500 text-[10px] mt-1 leading-relaxed">
+                    <p className="text-pc-tinta-fraca text-[10px] mt-1 leading-relaxed">
                       Participação sobre o lucro líquido apurado nas operações, conforme
                       percentual definido na adesão (Cláusula 7.1).
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-4 text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-4 text-xs sm:text-sm text-pc-tinta-fraca mb-3 sm:mb-4">
                   <span className="flex items-center gap-1">⏱️ Primeiro ciclo em até 60 dias</span>
                   <span className="flex items-center gap-1">📦 Gestão operacional nossa</span>
                 </div>
 
                 <Button
-                  className="w-full bg-green-600 hover:bg-green-700 text-sm sm:text-base py-3 sm:py-4 font-semibold"
+                  className="w-full min-h-[48px] bg-transparent border border-pc-ouro text-pc-ouro hover:bg-pc-ouro hover:text-pc-preto text-sm sm:text-base py-3 sm:py-4 font-semibold"
                   onClick={() => onEscolher(portfolio)}
                 >
                   Comprar Agora
@@ -86,14 +88,14 @@ export default function ParceiroPlanoCarrossel({
 
         <button
           onClick={() => setIndice((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-          className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+          className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-11 h-11 sm:w-12 sm:h-12 bg-pc-preto-2 border border-pc-borda rounded-full flex items-center justify-center text-pc-ouro transition-colors hover:border-pc-ouro"
         >
           <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
         <button
           onClick={() => setIndice((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
-          className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+          className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-11 h-11 sm:w-12 sm:h-12 bg-pc-preto-2 border border-pc-borda rounded-full flex items-center justify-center text-pc-ouro transition-colors hover:border-pc-ouro"
         >
           <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
@@ -105,7 +107,7 @@ export default function ParceiroPlanoCarrossel({
             key={idx}
             onClick={() => setIndice(idx)}
             className={`h-1.5 rounded-full transition-all duration-300 ${
-              idx === indice ? 'w-6 bg-green-500' : 'w-1.5 bg-gray-600 hover:bg-gray-500'
+              idx === indice ? 'w-6 bg-pc-ouro' : 'w-1.5 bg-pc-borda hover:bg-pc-tinta-fraca'
             }`}
           />
         ))}

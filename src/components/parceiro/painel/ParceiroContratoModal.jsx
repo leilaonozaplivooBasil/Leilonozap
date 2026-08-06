@@ -89,24 +89,24 @@ export default function ParceiroContratoModal({ dadosPdf, onVoltar }) {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="text-center mb-4">
         <img src="/brand/icon-3d.webp" alt="Leilão NoZap" className="h-16 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-green-400">CONTRATO DE PARCERIA COMERCIAL</h3>
-        <p className="text-gray-400 text-sm">Leia atentamente antes de prosseguir</p>
+        <h3 className="text-xl font-bold text-pc-ouro">CONTRATO DE PARCERIA COMERCIAL</h3>
+        <p className="text-pc-tinta-fraca text-sm">Leia atentamente antes de prosseguir</p>
       </div>
 
-      <ScrollArea className="h-[50vh] bg-gray-800 rounded-lg border border-gray-700 p-4">
+      <ScrollArea className="h-[50vh] bg-pc-preto-2 border border-pc-borda p-4">
         <ParceiroContratoTexto />
       </ScrollArea>
 
       <div className="flex gap-3">
-        <Button onClick={onVoltar} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-4">
+        <Button onClick={onVoltar} className="flex-1 min-h-[48px] bg-pc-preto-2 border border-pc-borda hover:border-pc-ouro text-pc-tinta font-bold py-4">
           Voltar
         </Button>
-        <Button onClick={baixar} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4">
-          📥 Baixar PDF
+        <Button onClick={baixar} className="flex-1 min-h-[48px] bg-pc-ouro text-pc-preto hover:bg-pc-ouro-claro font-bold py-4">
+          Baixar PDF
         </Button>
       </div>
-      <Button onClick={compartilhar} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4">
-        📤 Compartilhar Contrato
+      <Button onClick={compartilhar} className="w-full min-h-[48px] bg-transparent border border-pc-ouro text-pc-ouro hover:bg-pc-ouro hover:text-pc-preto font-bold py-4">
+        Compartilhar Contrato
       </Button>
     </motion.div>
   );
