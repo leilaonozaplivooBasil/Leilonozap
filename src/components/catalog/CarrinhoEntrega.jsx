@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Truck } from 'lucide-react';
 
 /**
  * 🛒 CarrinhoEntrega — animação de entrega no cartão da Loja Virtual.
@@ -81,17 +81,32 @@ export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef }) {
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl" aria-hidden>
+      {/* 🚚 "Envio para todo Brasil" — aparece no meio do cartão junto com o
+          carrinho e some junto com ele (mesma duração/curva do ciclo) */}
+      <motion.div
+        key={`envio-${ciclo}`}
+        className="absolute inset-0 flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 1, 0] }}
+        transition={{ duration: DURACAO + 0.4, times: [0, 0.22, 0.88, 1], ease: 'easeInOut' }}
+      >
+        <span className="inline-flex items-center gap-1 text-[10.5px] text-gray-400">
+          <Truck className="w-3 h-3 text-green-400 shrink-0" />Envio para todo Brasil
+        </span>
+      </motion.div>
+
       {/* rastro: linha verde que segue o carrinho e se apaga por trás */}
       <motion.div
         key={`linha-${ciclo}`}
-        className="absolute h-[2px] rounded-full"
+        className="absolute h-[3px] rounded-full"
         style={{
           left: rota.x,
           top: rota.y,
-          background: 'linear-gradient(to right, rgba(34,197,94,0), rgba(34,197,94,0.55))',
+          // rastro um pouco mais longo: o trecho transparente começa mais cedo
+          background: 'linear-gradient(to right, rgba(34,197,94,0) 0%, rgba(34,197,94,0.30) 45%, rgba(34,197,94,0.6) 100%)',
         }}
         initial={{ width: 0, opacity: 0 }}
-        animate={{ width: [0, rota.dist * 0.85, rota.dist], opacity: [0, 0.9, 0.9, 0] }}
+        animate={{ width: [0, rota.dist * 0.85, rota.dist + 6], opacity: [0, 0.9, 0.9, 0] }}
         transition={{ duration: DURACAO + 0.4, times: [0, 0.55, 0.88, 1], ease: 'easeInOut' }}
       />
 
@@ -99,7 +114,7 @@ export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef }) {
       <motion.div
         key={`carrinho-${ciclo}`}
         className="absolute"
-        style={{ left: rota.x, top: rota.y - 8 }}
+        style={{ left: rota.x, top: rota.y - 10 }}
         initial={{ x: 0, y: -34, opacity: 0 }}
         animate={{ x: [0, 0, rota.dist, rota.dist], y: [-34, 0, 0, 0], opacity: [0, 1, 1, 0] }}
         transition={{ duration: DURACAO + 0.4, times: [0, 0.22, 0.88, 1], ease: 'easeInOut' }}
@@ -108,7 +123,7 @@ export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef }) {
           agendar(PAUSA_ENTRE_CICLOS);
         }}
       >
-        <ShoppingCart className="w-4 h-4 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.7)]" />
+        <ShoppingCart className="w-5 h-5 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.7)]" />
         {/* fumacinha de entrega */}
         {[0, 1, 2].map((i) => (
           <motion.span

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Truck, Share2 } from 'lucide-react';
+import { MessageCircle, Share2 } from 'lucide-react';
 import CarrinhoEntrega from '@/components/catalog/CarrinhoEntrega';
 import { toast } from 'sonner';
 import { copyLink } from '@/lib/clipboard';
@@ -79,11 +79,8 @@ export default function CartaoLojaVirtual({ parceiro }) {
             </span>
           )}
         </div>
-        <div className="mt-1 flex items-center gap-x-4 text-[10.5px] text-gray-400">
-          <span className="inline-flex items-center gap-1">
-            <Truck className="w-3 h-3 text-green-400 shrink-0" />Envio para todo Brasil
-          </span>
-        </div>
+        {/* 🚚 "Envio para todo Brasil" saiu daqui: agora aparece no meio do cartão
+            junto com o carrinho da animação (CarrinhoEntrega) e some com ele. */}
       </div>
 
       {/* Ações */}
