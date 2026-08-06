@@ -9,11 +9,11 @@ import { useEffect, useRef, useState } from 'react';
 // checagem também acontece em 'visibilitychange' e 'focus' (voltar do banco).
 // Falha de rede é silenciosa — nunca aparece erro pro usuário.
 
-// 💸 Custo: eram 60s × cada aba aberta × cada usuário — muita requisição só pra
-// perguntar "mudou?". 5 minutos continua pegando o deploy novo rápido, e o
-// usuário que volta do background é checado NA HORA (visibilitychange/focus),
-// que é o caminho real de quase toda atualização percebida.
-const INTERVALO = 300000; // 5 min
+// ⏱️ 06/08 — o intervalo foi elevado a 5 min por custo de requisição, mas isso
+// deixou o aviso demorando até 5 MINUTOS pra quem está com a tela aberta (sem
+// sair e voltar, visibilitychange/focus nunca disparam). Voltou pra 60s: é uma
+// requisição minúscula (version.json) e a percepção de atualização é imediata.
+const INTERVALO = 60000; // 1 min
 
 export function useAppVersion() {
   const [temAtualizacao, setTemAtualizacao] = useState(false);
