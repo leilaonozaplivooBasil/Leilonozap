@@ -11,7 +11,7 @@
 // ⚠️ Nada de permissão é criado aqui: os painéis vêm de resolveUserPanels,
 // que continua sendo a única autoridade sobre o que cada cargo libera.
 
-import { ShoppingCart, Briefcase, Gavel, User as UserIcon } from "lucide-react";
+import { ShoppingCart, Briefcase, Gavel, Heart, User as UserIcon } from "lucide-react";
 import { SECTORS } from "@/lib/sectors";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -60,7 +60,11 @@ export function getAtalhos({ user, cartCount = 0 } = {}) {
     }
   });
 
-  // 4) Meu Perfil
+  // 4) Favoritos — sai da lista de texto "Minha Conta" e vira azulejo, no mesmo
+  // padrão dos outros. Mesmo destino de sempre (Leilões filtrando favoritos).
+  atalhos.push({ key: "favoritos", rotulo: "Favoritos", icon: Heart, target: { to: "/Home?favorites=1" } });
+
+  // 5) Meu Perfil
   atalhos.push({ key: "perfil", rotulo: "Meu Perfil", icon: UserIcon, target: { page: "Profile" } });
 
   return atalhos;

@@ -3,16 +3,16 @@ import { getAtalhos } from "@/lib/menuAtalhos";
 import SectorLink from "@/components/nav/SectorLink";
 
 // Paleta oficial (idêntica ao NavDesktop) — azulejo 3D verde da marca.
-const P = { forest: "#4d724b", sage: "#99c198", beige: "#dabb98", navy: "#21222b", gray: "#9da7b5" };
+export const P = { forest: "#4d724b", sage: "#99c198", beige: "#dabb98", navy: "#21222b", gray: "#9da7b5" };
 
-const TILE = {
+export const TILE = {
   background: `linear-gradient(150deg, ${P.sage} 0%, ${P.forest} 62%, #3c5a3a 100%)`,
   border: "1px solid rgba(255,255,255,0.28)",
   boxShadow: "0 5px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -3px 6px rgba(0,0,0,0.25)",
 };
 
 // Rótulo pequeno, 1 linha, sem quebra.
-function Rotulo({ children, tom }) {
+export function Rotulo({ children, tom }) {
   return (
     <span
       className="font-slab text-[9px] font-bold uppercase tracking-[0.10em] leading-none whitespace-nowrap"

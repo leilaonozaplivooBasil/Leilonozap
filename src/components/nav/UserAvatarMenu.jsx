@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,12 +14,10 @@ import {
   ChevronDown,
   ShoppingBag,
   Truck,
-  Package,
-  Wallet as WalletIcon,
   Map as MapIcon,
-  Heart,
 } from "lucide-react";
 import AtalhosGrid from "@/components/nav/AtalhosGrid";
+import MinhaContaGrid from "@/components/nav/MinhaContaGrid";
 // 🏷️ Selo e cargos de rede vêm da fonte ÚNICA compartilhada com o menu mobile —
 // era a duplicação que fazia a Loja Física aparecer como "LICENCIADO" aqui.
 import { getRedeCargo, REDE_META, getRoleBadge } from "@/lib/roleBadge";
@@ -170,13 +167,8 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
         </div>
 
-        {/* ===== Atalhos — MESMA grade do menu mobile (fonte única: @/lib/menuAtalhos) ===== */}
-        <div className="p-3 pb-0">
-          <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Atalhos</p>
-          <AtalhosGrid user={effectiveUser} cartCount={cartCount} onNavigate={() => setMenuOpen(false)} colunas={4} />
-        </div>
-
-        {/* ===== Visão Geral (admin) — mini visão canvas ===== */}
+        {/* ===== Visão Geral (admin) — mini visão canvas.
+             Vem ANTES dos atalhos: é o acesso de comando de quem tem painel. ===== */}
         {["admin", "super_admin"].includes(roleKey) && (
           <div className="p-3 pb-0">
             <button
@@ -227,31 +219,22 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
         )}
 
+        {/* ===== Atalhos — MESMA grade do menu mobile (fonte única: @/lib/menuAtalhos) ===== */}
+        <div className="p-3 pb-0">
+          <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Atalhos</p>
+          <AtalhosGrid user={effectiveUser} cartCount={cartCount} onNavigate={() => setMenuOpen(false)} colunas={4} />
+        </div>
+
+        {/* ===== Minha Conta — mesmos azulejos dos Atalhos (Favoritos migrou pra grade) ===== */}
+        <div className="p-3 pb-0">
+          <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Minha Conta</p>
+          <MinhaContaGrid onNavigate={() => setMenuOpen(false)} colunas={4} />
+        </div>
+
         <DropdownMenuSeparator className="bg-white/5 mt-3 mb-0" />
 
-        {/* ===== Minha conta — itens idênticos ao menu mobile ===== */}
+        {/* ===== Sair — texto separado, nunca azulejo ===== */}
         <div className="p-2">
-          <DropdownMenuItem
-            onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
-            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
-          >
-            <Package className="w-4 h-4" />
-            Meus Pedidos
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
-            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
-          >
-            <WalletIcon className="w-4 h-4" />
-            Carteira
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => navigate(createPageUrl("Home") + "?favorites=1")}
-            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
-          >
-            <Heart className="w-4 h-4" />
-            Favoritos
-          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onLogout}
             className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 hover:text-red-300 rounded-md gap-3 px-3 py-2"
