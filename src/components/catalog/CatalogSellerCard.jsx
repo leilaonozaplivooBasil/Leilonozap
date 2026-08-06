@@ -1,6 +1,8 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { MessageCircle, Package, Truck } from "lucide-react";
-import { linkWhatsParceiro } from "@/lib/contatoParceiro";
+import { podeFalarComigo } from "@/lib/contatoParceiro";
+import { getReferral } from "@/lib/referral";
 
 /**
  * CatalogSellerCard — barra compacta do vendedor/licenciado.
@@ -16,7 +18,9 @@ export default function CatalogSellerCard({ licenseeData, productCount = 0 }) {
   const photo = hasLicensee ? licenseeData.photo : null;
 
   // 🔒 Contato direto só a partir de Vendedor oficial (regra única em contatoParceiro).
-  const waHref = linkWhatsParceiro(licenseeData);
+  // NUNCA link direto pro WhatsApp: passa pela página de aviso antifraude.
+  const mostrarContato = podeFalarComigo(licenseeData);
+  const ref = licenseeData?.referral_code || getReferral();
 
   return (
     <section
@@ -59,18 +63,16 @@ export default function CatalogSellerCard({ licenseeData, productCount = 0 }) {
           </div>
         </div>
 
-        {/* CTA WhatsApp compacto */}
-        {waHref && (
-          <a
-            href={waHref}
-            target="_blank"
-            rel="noopener noreferrer"
+        {/* CTA compacto — abre o aviso antes do WhatsApp */}
+        {mostrarContato && (
+          <Link
+            to={`/falar-com-parceiro${ref ? `?ref=${ref}` : ''}`}
             className="inline-flex items-center justify-center gap-1.5 h-9 px-3 sm:px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg transition-colors flex-shrink-0"
-            aria-label="Falar com o vendedor no WhatsApp"
+            aria-label="Falar com o vendedor"
           >
             <MessageCircle className="w-4 h-4" />
             <span className="hidden sm:inline">Falar Comigo</span>
-          </a>
+          </Link>
         )}
       </div>
     </section>

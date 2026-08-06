@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, ArrowLeft, BadgeCheck, ShieldAlert } from 'lucide-react';
+import { MessageCircle, ArrowLeft, BadgeCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import SeloCargo from '@/components/network/SeloCargo';
 import AvisoAntifraude from '@/components/catalog/AvisoAntifraude';
@@ -17,6 +17,7 @@ export default function FalarComParceiro() {
   const ref = new URLSearchParams(window.location.search).get('ref');
   const [parceiro, setParceiro] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [entendi, setEntendi] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -56,7 +57,7 @@ export default function FalarComParceiro() {
         ) : (
           <>
             {/* Quem a pessoa vai contatar */}
-            {liberado ? (
+            {liberado && (
               <section className="flex items-center gap-3 rounded-2xl border border-gray-700 bg-gray-800/60 p-3 sm:p-4">
                 {parceiro.photo ? (
                   <img src={parceiro.photo} alt={parceiro.name} className="w-14 h-14 rounded-xl object-cover border border-green-500/40 shrink-0" />
@@ -79,33 +80,43 @@ export default function FalarComParceiro() {
                   </div>
                 )}
               </section>
-            ) : (
-              <section className="rounded-2xl border border-gray-700 bg-gray-800/60 p-4">
-                <p className="flex items-center gap-2 text-white font-bold">
-                  <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
-                  Contato direto não disponível
-                </p>
-                <p className="mt-1.5 text-[13px] text-gray-300 leading-relaxed">
-                  Esta loja não tem contato direto por WhatsApp. O atendimento é feito pela própria
-                  plataforma — compre com segurança pela Loja Virtual.
-                </p>
-              </section>
             )}
 
             <div className="mt-4">
               <AvisoAntifraude />
             </div>
 
-            <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
+            {/* Quadradinho "Entendi" — libera o botão de continuar pro WhatsApp */}
+            {liberado && (
+              <label className="mt-4 flex items-start gap-3 cursor-pointer rounded-xl border border-gray-700 bg-gray-800/60 p-3.5">
+                <input
+                  type="checkbox"
+                  checked={entendi}
+                  onChange={(e) => setEntendi(e.target.checked)}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-green-500 cursor-pointer"
+                />
+                <span className="text-[13.5px] leading-relaxed text-gray-200 font-semibold">
+                  Entendi. Vou pagar somente dentro da plataforma e não vou enviar dinheiro por fora.
+                </span>
+              </label>
+            )}
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-2.5">
               {liberado && (
                 <a
-                  href={whats}
+                  href={entendi ? whats : undefined}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-h-[52px] flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold transition-colors"
+                  aria-disabled={!entendi}
+                  onClick={(e) => { if (!entendi) e.preventDefault(); }}
+                  className={`flex-1 min-h-[52px] flex items-center justify-center gap-2 rounded-xl font-bold transition-colors ${
+                    entendi
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-gray-800 border border-gray-700 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   <MessageCircle className="w-5 h-5" />
-                  Entendi, falar no WhatsApp
+                  Entendi, continuar
                 </a>
               )}
               <Link

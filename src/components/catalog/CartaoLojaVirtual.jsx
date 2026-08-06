@@ -53,12 +53,18 @@ export default function CartaoLojaVirtual({ parceiro, productCount = 0 }) {
         </div>
       )}
 
-      {/* Loja Virtual em cima · nome embaixo */}
+      {/* Loja Virtual em cima · nome embaixo, com o selo chapado colado no nome */}
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-wider text-green-400 font-bold leading-none">Loja Virtual</p>
-        <h3 className="text-white font-bold text-sm sm:text-base truncate leading-tight mt-0.5">
-          {nome || 'Especial'}
-        </h3>
+        <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+          <h3 className="text-white font-bold text-sm sm:text-base truncate leading-tight">
+            {nome || 'Especial'}
+          </h3>
+          {/* Selo chapado: sem moldura, sem caixa — só o selo ao lado do nome */}
+          {cargo && (
+            <SeloCargo cargo={cargo} title={levelName(cargo)} className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
+          )}
+        </div>
         <div className="mt-0.5 flex items-center gap-x-2.5 text-[10.5px] text-gray-400">
           <span className="inline-flex items-center gap-1">
             <Package className="w-3 h-3 text-green-400 shrink-0" />{productCount} produtos
@@ -70,24 +76,17 @@ export default function CartaoLojaVirtual({ parceiro, productCount = 0 }) {
         </div>
       </div>
 
-      {/* Selo oficial do cargo, ao lado */}
-      {cargo && (
-        <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0" title={levelName(cargo)}>
-          <SeloCargo cargo={cargo} title={levelName(cargo)} />
-        </div>
-      )}
-
       {/* Ações */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* Compartilhar no padrão do leilão: quadradinho verde, só o ícone */}
         <button
           type="button"
           onClick={compartilhar}
           aria-label="Compartilhar loja"
           title="Compartilhar loja"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 px-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-100 text-xs font-semibold transition-colors"
+          className="grid h-9 w-9 place-items-center rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors active:scale-95"
         >
           <Share2 className="w-4 h-4" />
-          <span className="hidden lg:inline">Compartilhar</span>
         </button>
         {mostrarContato && (
           <Link

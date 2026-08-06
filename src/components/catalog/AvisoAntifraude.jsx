@@ -34,9 +34,14 @@ export default function AvisoAntifraude() {
     <div className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/30 p-4 sm:p-5">
       <div className="flex items-center gap-2.5">
         <ShieldAlert className="w-6 h-6 text-amber-400 shrink-0" />
-        <h2 className="text-amber-300 font-black text-base sm:text-lg uppercase tracking-wide">
-          Atenção — leia antes de continuar
-        </h2>
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-400/90 leading-none">
+            Aviso importante
+          </p>
+          <h2 className="mt-1 text-amber-300 font-black text-base sm:text-lg uppercase tracking-wide">
+            Atenção — leia antes de continuar
+          </h2>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
