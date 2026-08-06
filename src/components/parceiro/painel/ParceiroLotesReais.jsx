@@ -17,13 +17,14 @@ export default function ParceiroLotesReais() {
     (async () => {
       try {
         const dados = await base44.entities.LoteRecebido.list('-created_date', 50);
+        // Só os lotes grandes de leilão do Mercado Livre (LOTE 58, 51, 46-48, 09/04).
+        // Lotes pequenos de estoque (maquiagem, relógio) não entram na vitrine.
         const melhores = (dados || [])
           .filter((r) => (r.marketplace || r.origem) === 'Mercado Livre')
+          .filter((r) => /^lote\s+(\d|arrematado)/i.test((r.nome_lote || '').trim()))
           .map(normalizarLoteRecebido)
-          // só lotes com leitura completa (itens lidos da planilha) e economia real
           .filter((l) => l.itens.length > 0 && l.valorMercado > 0 && l.custoTotal > 0)
-          .sort((a, b) => (b.economiaPct || 0) - (a.economiaPct || 0))
-          .slice(0, 5);
+          .sort((a, b) => (b.economiaPct || 0) - (a.economiaPct || 0));
         if (ativo) setLotes(melhores);
       } catch (e) {
         console.debug('Lotes reais indisponíveis:', e?.message);
@@ -38,7 +39,9 @@ export default function ParceiroLotesReais() {
 
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-bold text-pc-tinta sm:text-xl">Lotes que já arrematamos</h2>
+      <h2 className="text-lg font-bold text-pc-tinta sm:text-xl">
+        Um pouco do que já arrematamos
+      </h2>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
         Lotes reais do Mercado Livre já comprados pela operação. Toque em um lote para ver o
         analisador completo: custo, grades, cenários de venda e item por item.
