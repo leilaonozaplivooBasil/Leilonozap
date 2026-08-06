@@ -1,23 +1,24 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, User as UserIcon, ChevronRight, Map, Truck } from "lucide-react";
-import { resolveUserPanels } from "@/lib/panelResolver";
 import { getRedeCargo, REDE_META } from "@/lib/roleBadge";
-import MobileSectorTiles from "@/components/nav/MobileSectorTiles";
+import AtalhosGrid from "@/components/nav/AtalhosGrid";
 import MobileUserHeader from "@/components/nav/MobileUserHeader";
-import MobilePanelCards from "@/components/nav/MobilePanelCards";
 import MobileAccountLinks from "@/components/nav/MobileAccountLinks";
 
 /**
  * 📱 NavMobile — MENU MOBILE PADRÃO ÚNICO (todos os perfis usam o mesmo esqueleto)
  *
  *   1. Perfil        — avatar, nome, e-mail e selo do cargo real
- *   2. Atalhos       — grade Comprar / Leilões / Lucre / Rank / Carrinho (igual desktop)
- *   3. Visão Geral   — mapa do painel (só admin / super admin)
+ *   2. Atalhos       — azulejos: Comprar / Leilões / Lucre / Rank / Carrinho /
+ *                      Licenciado / Arremates / Perfil (fonte única: @/lib/menuAtalhos)
+ *   3. Visão Geral   — mapa do painel + demais painéis (só admin / super admin)
  *   4. Meu Painel    — painel próprio do cargo de rede (quem tem)
- *   5. Acessar como  — cards dos painéis liberados (TODOS, inclusive admin)
- *   6. Minha Conta   — Pedidos, Arremates, Carteira, Favoritos, Perfil (iguais p/ todos)
- *   7. Sair
+ *   5. Minha Conta   — Meus Pedidos, Carteira, Favoritos
+ *   6. Sair
+ *
+ * A seção "Também acessar como…" foi REMOVIDA: repetia painéis que agora são
+ * azulejo (Loja Virtual = Comprar, Arrematante = Arremates) ou vivem na Visão Geral.
  *
  * ⚠️ Antes cada perfil via um menu diferente: admin só tinha a Visão Geral (sem
  * nenhum "acessar como"), o usuário via acordeões em caixa alta + Rank em card
@@ -67,12 +68,6 @@ export default function NavMobile({
   const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
   const RedeIcon = redeMeta?.icon || Truck;
 
-  // Painéis liberados. Quando o cargo de rede JÁ é licenciado, o card "Painel do
-  // Licenciado" sairia duplicado (o próprio /painel já é dele) — filtramos só esse.
-  const panels = userLogged
-    ? resolveUserPanels(currentUser).filter((p) => !(redeCargo === "licenciado" && p.key === "licenciado"))
-    : [];
-
   const go = (route) => { onClose(); navigate(route); };
 
   return (
@@ -106,7 +101,9 @@ export default function NavMobile({
           <div className="flex-1 overflow-y-auto p-4">
             {/* ===== 2. Atalhos (todos os perfis, inclusive visitante) ===== */}
             <p className="font-bold text-[10px] uppercase tracking-wider px-1 mb-2 text-gray-500">Atalhos</p>
-            <MobileSectorTiles onNavigate={onClose} cartCount={cartCount} />
+            <div className="mb-3">
+              <AtalhosGrid user={currentUser} cartCount={cartCount} onNavigate={onClose} />
+            </div>
 
             {/* ===== 3. Visão Geral (admin) ===== */}
             {userLogged && isAdmin && (
@@ -118,7 +115,7 @@ export default function NavMobile({
                 <Map className="h-5 w-5 flex-shrink-0 text-emerald-400" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-extrabold uppercase tracking-wide text-emerald-300">Visão Geral</p>
-                  <p className="truncate text-[11px] text-gray-400">Mapa de todo o painel</p>
+                  <p className="truncate text-[11px] text-gray-400">Mapa do painel e todos os acessos</p>
                 </div>
                 <ChevronRight className="h-4 w-4 flex-shrink-0 text-emerald-400/70" />
               </button>
@@ -142,17 +139,7 @@ export default function NavMobile({
               </div>
             )}
 
-            {/* ===== 5. Acessar como... ===== */}
-            {userLogged && (
-              <MobilePanelCards
-                panels={panels}
-                storeName={currentUser.store_name}
-                titulo={redeMeta ? "Também acessar como..." : "Acessar como..."}
-                onGo={go}
-              />
-            )}
-
-            {/* ===== 6. Minha Conta ===== */}
+            {/* ===== 5. Minha Conta ===== */}
             {userLogged && <MobileAccountLinks onClose={onClose} />}
 
             {/* ===== Entrar (visitante) ===== */}
@@ -171,7 +158,7 @@ export default function NavMobile({
               </button>
             )}
 
-            {/* ===== 7. Sair ===== */}
+            {/* ===== 6. Sair ===== */}
             {userLogged && (
               <button
                 onClick={() => { onClose(); onLogout(); }}

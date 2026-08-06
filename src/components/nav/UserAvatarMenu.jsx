@@ -29,7 +29,7 @@ import {
   Map as MapIcon,
   Heart,
 } from "lucide-react";
-import { resolveUserPanels } from "@/lib/panelResolver";
+import AtalhosGrid from "@/components/nav/AtalhosGrid";
 // 🏷️ Selo e cargos de rede vêm da fonte ÚNICA compartilhada com o menu mobile —
 // era a duplicação que fazia a Loja Física aparecer como "LICENCIADO" aqui.
 import { getRedeCargo, REDE_META, getRoleBadge } from "@/lib/roleBadge";
@@ -93,6 +93,15 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
 
   const [menuOpen, setMenuOpen] = React.useState(false);
 
+  // 🛒 Mesmo contador do menu mobile (lido do mesmo localStorage do Layout)
+  const cartCount = React.useMemo(() => {
+    if (!menuOpen) return 0;
+    try {
+      const c = JSON.parse(localStorage.getItem("catalogCart") || "[]");
+      return c.reduce((s, i) => s + (i.quantity || 1), 0);
+    } catch { return 0; }
+  }, [menuOpen]);
+
   // ===== VISITANTE — não logado =====
   if (!effectiveUser || !effectiveUser.email) {
     return (
@@ -117,7 +126,6 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
 
   // ===== LOGADO =====
   // 🛡️ FASE 4.6 — Usa effectiveUser (currentUser OU fallback do localStorage)
-  const panels = resolveUserPanels(effectiveUser);
   const fullName = effectiveUser.full_name || effectiveUser.display_first_name || "Usuário";
   const email = effectiveUser.email;
   const initials = getInitials(fullName);
@@ -136,10 +144,6 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
   const roleKey = effectiveUser.role || "user";
   const badge = getRoleBadge(effectiveUser);
   const BadgeIcon = badge.icon;
-
-  // Painéis liberados (mesma regra do mobile). Quando o cargo de rede JÁ é
-  // licenciado, o card duplicaria o /painel dele — só esse é filtrado.
-  const panelCards = panels.filter((p) => !(redeCargo === "licenciado" && p.key === "licenciado"));
 
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -201,6 +205,12 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
         </div>
 
+        {/* ===== Atalhos — MESMA grade do menu mobile (fonte única: @/lib/menuAtalhos) ===== */}
+        <div className="p-3 pb-0">
+          <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Atalhos</p>
+          <AtalhosGrid user={effectiveUser} cartCount={cartCount} onNavigate={() => setMenuOpen(false)} colunas={4} />
+        </div>
+
         {/* ===== Visão Geral (admin) — mini visão canvas ===== */}
         {["admin", "super_admin"].includes(roleKey) && (
           <div className="p-3 pb-0">
@@ -252,39 +262,6 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
         )}
 
-        {/* ===== Acessar como... — mesmos cards do menu mobile (padrão único) =====
-            ⚠️ Antes o desktop resolvia os painéis mas NÃO os exibia: o admin ficava
-            sem acesso ao Painel do Licenciado / Lojista / Loja Virtual por aqui. */}
-        {panelCards.length > 0 && (
-          <div className="p-3 pb-0">
-            <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-              {redeMeta ? "Também acessar como..." : "Acessar como..."}
-            </p>
-            <div className="space-y-1.5">
-              {panelCards.map((panel) => {
-                const accent = PANEL_ACCENT[panel.key] || PANEL_ACCENT.arrematante;
-                const Icon = ICON_MAP[panel.iconName] || UserIcon;
-                const subtitle = panel.key === "lojista" && effectiveUser.store_name
-                  ? `Loja: ${effectiveUser.store_name}`
-                  : panel.description;
-                return (
-                  <button
-                    key={panel.key}
-                    onClick={() => { setMenuOpen(false); navigate(panel.route); }}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-lg border ${accent.border} ${accent.bg} text-left transition-all duration-200`}
-                  >
-                    <Icon className={`w-4 h-4 ${accent.icon} flex-shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-bold ${accent.text} truncate`}>{panel.title}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{subtitle}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         <DropdownMenuSeparator className="bg-white/5 mt-3 mb-0" />
 
         {/* ===== Minha conta — itens idênticos ao menu mobile ===== */}
@@ -295,13 +272,6 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           >
             <Package className="w-4 h-4" />
             Meus Pedidos
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => navigate("/painel-arrematante")}
-            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10 focus:bg-emerald-500/10 hover:text-emerald-200 rounded-md gap-3 px-3 py-2"
-          >
-            <Gavel className="w-4 h-4" />
-            Meus Arremates
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => window.dispatchEvent(new CustomEvent('openWallet'))}
@@ -316,13 +286,6 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           >
             <Heart className="w-4 h-4" />
             Favoritos
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => navigate(createPageUrl("Profile"))}
-            className="cursor-pointer font-slab text-xs font-bold uppercase tracking-wide text-gray-300 hover:bg-white/5 focus:bg-white/5 hover:text-white rounded-md gap-3 px-3 py-2"
-          >
-            <UserIcon className="w-4 h-4" />
-            Meu Perfil
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onLogout}

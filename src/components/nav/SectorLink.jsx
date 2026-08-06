@@ -12,8 +12,11 @@ export default function SectorLink({ target, className, onClick, children }) {
       </a>
     );
   }
+  // Rota crua (ex.: "/rankpremiado", "/Licensing") — usada pelos atalhos de painel,
+  // cujas rotas já vêm prontas do panelResolver.
+  const destino = target?.to ? target.to : createPageUrl(target.page) + (target.query || "");
   return (
-    <Link to={createPageUrl(target.page) + (target.query || "")} className={className} onClick={onClick}>
+    <Link to={destino} className={className} onClick={onClick}>
       {children}
     </Link>
   );
