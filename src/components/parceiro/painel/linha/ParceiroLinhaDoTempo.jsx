@@ -2,7 +2,7 @@ import React from 'react';
 import { History, Info } from 'lucide-react';
 import { real } from '@/lib/operacaoNumeros';
 import { ETAPAS, DIAS_CICLO_FISICO, DIA_PRIMEIRO_REPASSE } from './etapasOperacao';
-import EtapaLinha from './EtapaLinha';
+import RoadmapAscendente from './RoadmapAscendente';
 import ContadorRentabilidade from './ContadorRentabilidade';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -68,11 +68,8 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
         <ContadorRentabilidade dataAssinatura={dataAssinatura} aporte={aporte} taxaMensalPct={taxa} />
       </div>
 
-      <ol className="mt-8 border border-pc-borda bg-pc-preto-2 p-5 sm:p-6">
-        {etapas.map((e, i) => (
-          <EtapaLinha key={e.id} etapa={e} diaAtual={diaAtual} ultima={i === etapas.length - 1} />
-        ))}
-      </ol>
+      {/* 🚀 Roadmap ascendente: D+0 na base, primeiro repasse no topo */}
+      <RoadmapAscendente etapas={etapas} diaAtual={diaAtual} />
 
       <p className="mt-4 text-[11px] leading-relaxed text-pc-tinta-fraca">
         Prazos de referência da operação. Leilão, transporte e curadoria podem variar por lote — qualquer
