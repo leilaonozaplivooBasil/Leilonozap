@@ -5,12 +5,12 @@ import ContadorReservaRepasse from './ContadorReservaRepasse';
 
 // 🛒 QUADRO "GIRO DA FORÇA DE VENDA" — acompanhamento DEMONSTRATIVO do giro.
 //
-// ⚖️ Coerência da cota diária: a janela de apuração é D+10 → D+30 (20 dias),
-// então a COTA DO DIA é o repasse previsto do ciclo dividido por 20. As vendas
-// somam em fatias irregulares até fechar EXATAMENTE a cota do dia — e param.
+// Abre SEMPRE em R$ 0,00, dá tempo do parceiro ler, e então as vendas começam a
+// cair uma a uma (R$ 1,00 a R$ 3,50), somando até fechar EXATAMENTE a cota do dia.
+// ⚖️ A cota do dia = repasse previsto do ciclo ÷ 20 dias de apuração (D+10→D+30).
 // Nada aqui apura valor: o repasse é o previsto no contrato, pago no fechamento.
-// 📱 Um único timer, pausado fora de foco. Ao voltar, o acumulado é recalculado
-// pela hora atual (mobile congela timers em background).
+// 📱 Um único timer, pausado fora de foco; ao voltar retoma de onde parou (nunca
+// despeja vendas acumuladas de uma vez).
 
 const FRASES = [
   'Acabaram de comprar na loja',
@@ -37,9 +37,7 @@ const ITENS = [
 const CANAIS = ['Loja Virtual', 'Licenciado', 'Vendedor', 'Influencer'];
 
 const MAX_PILHA = 6;
-const FATIAS = 12;
-// Cota considerada "fechável" às 22h: quem abre depois disso já vê a meta atendida.
-const HORA_FECHAMENTO = 22;
+const TICKET_MEDIO = 2.2;
 
 const brl = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(v || 0);
@@ -55,13 +53,6 @@ function semear(seed) {
   };
 }
 
-// Fração da cota que já deveria estar contabilizada nesta hora do dia
-function fracaoDoDia() {
-  const agora = new Date();
-  const horas = agora.getHours() + agora.getMinutes() / 60;
-  return Math.min(1, horas / HORA_FECHAMENTO);
-}
-
 export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
   const ativo = diaAtual >= DIA_INICIO_APURACAO;
   const cotaDia = alvo / (DIA_PRIMEIRO_REPASSE - DIA_INICIO_APURACAO);
@@ -69,51 +60,46 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
   // Semente do DIA: mesmo ritmo dentro do dia, dia seguinte reinicia sozinho.
   const sementeDia = `${seed || 'demo'}-${new Date().toISOString().slice(0, 10)}`;
 
-  // Fatias irregulares que somam EXATAMENTE a cota do dia (a última fecha a conta)
-  const fatias = React.useMemo(() => {
+  // Vendas pequenas e irregulares (R$ 1,00–3,50) que somam EXATAMENTE a cota.
+  const { vendas, esperaInicial } = React.useMemo(() => {
     const rnd = semear(sementeDia);
-    const pesos = Array.from({ length: FATIAS }, () => 0.4 + rnd());
-    const soma = pesos.reduce((a, b) => a + b, 0);
-    let acumulado = 0;
-    return pesos.map((p, i) => {
-      const valor = i === FATIAS - 1 ? cotaDia - acumulado : Math.round(((cotaDia * p) / soma) * 100) / 100;
-      acumulado = Math.round((acumulado + valor) * 100) / 100;
-      return {
+    const inicial = 4000 + Math.floor(rnd() * 2000); // 4s a 6s de leitura
+    const lista = [];
+    let restante = Math.round(cotaDia * 100) / 100;
+    let i = 0;
+
+    while (restante > 0.005 && i < 60) {
+      const bruto = Math.round((1 + rnd() * 2.5) * 100) / 100;
+      // fecha a conta quando o que sobraria seria menor que uma venda mínima
+      const valor = restante - bruto < 1 ? Math.round(restante * 100) / 100 : bruto;
+      restante = Math.round((restante - valor) * 100) / 100;
+      lista.push({
         id: `${sementeDia}-${i}`,
-        valor: Math.max(0, valor),
-        acumulado,
+        valor,
+        acumulado: Math.round((cotaDia - restante) * 100) / 100,
         frase: FRASES[Math.floor(rnd() * FRASES.length)],
         item: ITENS[Math.floor(rnd() * ITENS.length)],
         canal: CANAIS[Math.floor(rnd() * CANAIS.length)],
         minutos: 1 + Math.floor(rnd() * 40),
-        espera: 3000 + Math.floor(rnd() * 6000), // 3s a 9s, irregular
-      };
-    });
+        espera: 5000 + Math.floor(rnd() * 7000), // 5s a 12s, irregular
+      });
+      i++;
+    }
+    return { vendas: lista, esperaInicial: inicial };
   }, [sementeDia, cotaDia]);
 
-  // Quantas fatias já deveriam ter caído nesta hora do dia
-  const indicePorHora = React.useCallback(() => {
-    if (!ativo || cotaDia <= 0) return 0;
-    const meta = cotaDia * fracaoDoDia();
-    const i = fatias.findIndex((f) => f.acumulado >= meta);
-    return i === -1 ? fatias.length : i;
-  }, [ativo, cotaDia, fatias]);
-
-  const [indice, setIndice] = React.useState(indicePorHora);
-
-  // Recalibra ao trocar de aporte/dia
+  // Começa SEMPRE em zero — nada de pré-preencher pela hora do dia.
+  const [indice, setIndice] = React.useState(0);
   React.useEffect(() => {
-    setIndice(indicePorHora());
-  }, [indicePorHora]);
+    setIndice(0);
+  }, [sementeDia, cotaDia]);
 
-  const total = indice > 0 ? fatias[indice - 1].acumulado : 0;
-  const cheio = indice >= fatias.length;
+  const total = indice > 0 ? vendas[indice - 1].acumulado : 0;
+  const cheio = indice >= vendas.length;
 
-  // Timer único: pausa fora de foco e, ao voltar, recalibra pela hora atual
+  // Timer único: pausa fora de foco e retoma de onde parou (não pula pro fim).
   React.useEffect(() => {
-    if (!ativo || cheio) return;
-    const reduz = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (reduz) return;
+    if (!ativo || cheio || vendas.length === 0) return;
 
     let timer;
     let vivo = true;
@@ -121,12 +107,10 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
     const agendar = () => {
       clearTimeout(timer);
       if (document.visibilityState !== 'visible') return;
-      // quem voltou depois de horas vê o número certo, não o congelado
-      setIndice((n) => Math.max(n, indicePorHora()));
-      const proxima = fatias[Math.min(indice, fatias.length - 1)];
+      const espera = indice === 0 ? esperaInicial : vendas[indice].espera;
       timer = setTimeout(() => {
-        if (vivo) setIndice((n) => Math.min(n + 1, fatias.length));
-      }, proxima.espera);
+        if (vivo) setIndice((n) => Math.min(n + 1, vendas.length));
+      }, espera);
     };
 
     agendar();
@@ -138,9 +122,9 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
       document.removeEventListener('visibilitychange', agendar);
       window.removeEventListener('focus', agendar);
     };
-  }, [ativo, cheio, indice, fatias, indicePorHora]);
+  }, [ativo, cheio, indice, vendas, esperaInicial]);
 
-  const pilha = fatias.slice(Math.max(0, indice - MAX_PILHA), indice).reverse();
+  const pilha = vendas.slice(Math.max(0, indice - MAX_PILHA), indice).reverse();
 
   return (
     <div className="mt-6 border border-pc-ouro/40 bg-pc-preto-2 p-5 sm:p-7">
@@ -172,19 +156,26 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
             />
           </div>
 
-          <ul className="mt-4 space-y-2.5">
-            {pilha.map((e) => (
-              <li key={e.id} className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4">
-                <p className="truncate text-xs font-bold text-pc-tinta">{e.frase}</p>
-                <p className="mt-0.5 truncate text-[11px] text-pc-tinta-fraca">
-                  {e.item} · {e.canal} · há {e.minutos} min
-                </p>
-                <p className="mt-0.5 text-[10px] text-pc-ouro">
-                  repasse de <strong className="font-bold">{brl(e.valor)}</strong>
-                </p>
-              </li>
-            ))}
-          </ul>
+          {indice === 0 ? (
+            <p className="mt-4 flex items-center gap-2 text-[11px] text-pc-tinta-fraca">
+              <span className="giro-pulso h-1.5 w-1.5 shrink-0 rounded-full bg-pc-ouro" />
+              Aguardando o próximo giro...
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-2.5">
+              {pilha.map((e) => (
+                <li key={e.id} className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4">
+                  <p className="truncate text-xs font-bold text-pc-tinta">{e.frase}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-pc-tinta-fraca">
+                    {e.item} · {e.canal} · há {e.minutos} min
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-pc-ouro">
+                    repasse de <strong className="font-bold">{brl(e.valor)}</strong>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
 
