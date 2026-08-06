@@ -3,18 +3,19 @@ import { ShoppingBag } from 'lucide-react';
 import { DIA_INICIO_APURACAO, DIA_PRIMEIRO_REPASSE } from './etapasOperacao';
 import ContadorReservaRepasse from './ContadorReservaRepasse';
 
-// 🛒 QUADRO "GIRO DA REDE AGORA" — acompanhamento DEMONSTRATIVO do giro da rede.
+// 🛒 QUADRO "GIRO DA FORÇA DE VENDA" — acompanhamento DEMONSTRATIVO do giro.
 //
-// ⚖️ Nada aqui apura valor: o repasse do parceiro é o previsto no contrato e é
-// pago no fechamento do ciclo. O contador tem TETO no repasse previsto e o
-// rodapé deixa isso explícito — não remover.
-// 📱 Um único timer, pausado quando a aba/app sai de foco (mobile congela
-// timers em background e disparar o acumulado de uma vez seria falso).
+// ⚖️ Coerência da cota diária: a janela de apuração é D+10 → D+30 (20 dias),
+// então a COTA DO DIA é o repasse previsto do ciclo dividido por 20. As vendas
+// somam em fatias irregulares até fechar EXATAMENTE a cota do dia — e param.
+// Nada aqui apura valor: o repasse é o previsto no contrato, pago no fechamento.
+// 📱 Um único timer, pausado fora de foco. Ao voltar, o acumulado é recalculado
+// pela hora atual (mobile congela timers em background).
 
 const FRASES = [
   'Acabaram de comprar na loja',
   'Mais uma venda realizada',
-  'Venda registrada na rede',
+  'Venda registrada',
   'Saiu do estoque agora',
 ];
 
@@ -33,14 +34,16 @@ const ITENS = [
   'Monitor 24" Full HD',
 ];
 
-const CANAIS = ['Loja Virtual', 'Aplicativo', 'Rede de vendedores', 'Licenciado'];
+const CANAIS = ['Loja Virtual', 'Licenciado', 'Vendedor', 'Influencer'];
 
 const MAX_PILHA = 6;
-const HISTORICO_INICIAL = 4;
-const TOTAL_EVENTOS = 60;
+const FATIAS = 12;
+// Cota considerada "fechável" às 22h: quem abre depois disso já vê a meta atendida.
+const HORA_FECHAMENTO = 22;
 
-// PRNG com semente: cada parceiro tem ritmo e ordem próprios, e estáveis entre
-// recargas — sem isso a tela "sorteia" outra coisa a cada abertura.
+const brl = (v) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(v || 0);
+
 function semear(seed) {
   let s = 0;
   const txt = String(seed || 'demo');
@@ -52,42 +55,61 @@ function semear(seed) {
   };
 }
 
+// Fração da cota que já deveria estar contabilizada nesta hora do dia
+function fracaoDoDia() {
+  const agora = new Date();
+  const horas = agora.getHours() + agora.getMinutes() / 60;
+  return Math.min(1, horas / HORA_FECHAMENTO);
+}
+
 export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
   const ativo = diaAtual >= DIA_INICIO_APURACAO;
+  const cotaDia = alvo / (DIA_PRIMEIRO_REPASSE - DIA_INICIO_APURACAO);
 
-  // Fila completa de eventos (determinística pela semente)
-  const eventos = React.useMemo(() => {
-    const rnd = semear(seed);
-    return Array.from({ length: TOTAL_EVENTOS }, (_, i) => ({
-      id: `${seed || 'demo'}-${i}`,
-      frase: FRASES[Math.floor(rnd() * FRASES.length)],
-      item: ITENS[Math.floor(rnd() * ITENS.length)],
-      canal: CANAIS[Math.floor(rnd() * CANAIS.length)],
-      minutos: 1 + Math.floor(rnd() * 40),
-      espera: 3000 + Math.floor(rnd() * 6000), // 3s a 9s, irregular
-    }));
-  }, [seed]);
+  // Semente do DIA: mesmo ritmo dentro do dia, dia seguinte reinicia sozinho.
+  const sementeDia = `${seed || 'demo'}-${new Date().toISOString().slice(0, 10)}`;
 
-  // Reserva já "acumulada" proporcional ao dia do ciclo (D+10 → D+30), pra quem
-  // abre no D+18 ver histórico e não zero. Teto = alvo.
-  const janela = DIA_PRIMEIRO_REPASSE - DIA_INICIO_APURACAO;
-  const baseReserva = React.useMemo(() => {
-    if (!ativo || !alvo) return 0;
-    const frac = Math.min(1, Math.max(0, (diaAtual - DIA_INICIO_APURACAO) / janela));
-    return alvo * frac * 0.92; // deixa margem pros degraus do ao vivo
-  }, [ativo, alvo, diaAtual, janela]);
+  // Fatias irregulares que somam EXATAMENTE a cota do dia (a última fecha a conta)
+  const fatias = React.useMemo(() => {
+    const rnd = semear(sementeDia);
+    const pesos = Array.from({ length: FATIAS }, () => 0.4 + rnd());
+    const soma = pesos.reduce((a, b) => a + b, 0);
+    let acumulado = 0;
+    return pesos.map((p, i) => {
+      const valor = i === FATIAS - 1 ? cotaDia - acumulado : Math.round(((cotaDia * p) / soma) * 100) / 100;
+      acumulado = Math.round((acumulado + valor) * 100) / 100;
+      return {
+        id: `${sementeDia}-${i}`,
+        valor: Math.max(0, valor),
+        acumulado,
+        frase: FRASES[Math.floor(rnd() * FRASES.length)],
+        item: ITENS[Math.floor(rnd() * ITENS.length)],
+        canal: CANAIS[Math.floor(rnd() * CANAIS.length)],
+        minutos: 1 + Math.floor(rnd() * 40),
+        espera: 3000 + Math.floor(rnd() * 6000), // 3s a 9s, irregular
+      };
+    });
+  }, [sementeDia, cotaDia]);
 
-  const [indice, setIndice] = React.useState(ativo ? HISTORICO_INICIAL : 0);
+  // Quantas fatias já deveriam ter caído nesta hora do dia
+  const indicePorHora = React.useCallback(() => {
+    if (!ativo || cotaDia <= 0) return 0;
+    const meta = cotaDia * fracaoDoDia();
+    const i = fatias.findIndex((f) => f.acumulado >= meta);
+    return i === -1 ? fatias.length : i;
+  }, [ativo, cotaDia, fatias]);
 
+  const [indice, setIndice] = React.useState(indicePorHora);
+
+  // Recalibra ao trocar de aporte/dia
   React.useEffect(() => {
-    setIndice(ativo ? HISTORICO_INICIAL : 0);
-  }, [ativo, seed]);
+    setIndice(indicePorHora());
+  }, [indicePorHora]);
 
-  const passoValor = alvo ? (alvo - baseReserva) / 40 : 0;
-  const reserva = Math.min(alvo, baseReserva + Math.max(0, indice - HISTORICO_INICIAL) * passoValor);
-  const cheio = alvo > 0 && reserva >= alvo;
+  const total = indice > 0 ? fatias[indice - 1].acumulado : 0;
+  const cheio = indice >= fatias.length;
 
-  // Timer único, pausado fora de foco
+  // Timer único: pausa fora de foco e, ao voltar, recalibra pela hora atual
   React.useEffect(() => {
     if (!ativo || cheio) return;
     const reduz = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
@@ -99,11 +121,12 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
     const agendar = () => {
       clearTimeout(timer);
       if (document.visibilityState !== 'visible') return;
-      const proximo = eventos[Math.min(indice, eventos.length - 1)];
+      // quem voltou depois de horas vê o número certo, não o congelado
+      setIndice((n) => Math.max(n, indicePorHora()));
+      const proxima = fatias[Math.min(indice, fatias.length - 1)];
       timer = setTimeout(() => {
-        if (!vivo) return;
-        setIndice((n) => Math.min(n + 1, eventos.length));
-      }, proximo.espera);
+        if (vivo) setIndice((n) => Math.min(n + 1, fatias.length));
+      }, proxima.espera);
     };
 
     agendar();
@@ -115,20 +138,21 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
       document.removeEventListener('visibilitychange', agendar);
       window.removeEventListener('focus', agendar);
     };
-  }, [ativo, cheio, indice, eventos]);
+  }, [ativo, cheio, indice, fatias, indicePorHora]);
 
-  // Pilha: só as 6 últimas, a mais nova em cima
-  const pilha = eventos.slice(Math.max(0, indice - MAX_PILHA), indice).reverse();
+  const pilha = fatias.slice(Math.max(0, indice - MAX_PILHA), indice).reverse();
 
   return (
     <div className="mt-6 border border-pc-ouro/40 bg-pc-preto-2 p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-pc-ouro">
-            <ShoppingBag className="h-4 w-4" strokeWidth={1.8} /> Giro da rede agora
-            {ativo && <span className="giro-pulso h-2 w-2 rounded-full bg-pc-ouro" />}
+            <ShoppingBag className="h-4 w-4" strokeWidth={1.8} /> Giro da força de venda
+            {ativo && !cheio && <span className="giro-pulso h-2 w-2 rounded-full bg-pc-ouro" />}
           </p>
-          <p className="mt-1 text-[11px] text-pc-tinta-fraca">Vendas da rede — vários lotes em operação</p>
+          <p className="mt-1 text-[11px] text-pc-tinta-fraca">
+            Loja Virtual, licenciados, vendedores e influenciadores
+          </p>
         </div>
         <span className="text-[9px] uppercase tracking-[0.14em] text-pc-tinta-fraca">Demonstrativo</span>
       </div>
@@ -140,21 +164,23 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
       ) : (
         <>
           <div className="mt-5">
-            <ContadorReservaRepasse valor={reserva} alvo={alvo} />
+            <ContadorReservaRepasse
+              valor={total}
+              cotaDia={cotaDia}
+              alvo={alvo}
+              diaRepasse={DIA_PRIMEIRO_REPASSE}
+            />
           </div>
 
           <ul className="mt-4 space-y-2.5">
             {pilha.map((e) => (
-              <li
-                key={e.id}
-                className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4"
-              >
+              <li key={e.id} className="giro-entrada border border-pc-borda bg-pc-preto px-3 py-2.5 sm:px-4">
                 <p className="truncate text-xs font-bold text-pc-tinta">{e.frase}</p>
                 <p className="mt-0.5 truncate text-[11px] text-pc-tinta-fraca">
                   {e.item} · {e.canal} · há {e.minutos} min
                 </p>
                 <p className="mt-0.5 text-[10px] text-pc-ouro">
-                  percentual reservado para o seu repasse
+                  repasse de <strong className="font-bold">{brl(e.valor)}</strong>
                 </p>
               </li>
             ))}
@@ -163,8 +189,8 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0 }) {
       )}
 
       <p className="mt-5 border-t border-pc-borda pt-3 text-[10px] leading-relaxed text-pc-tinta-fraca">
-        Acompanhamento demonstrativo do giro da rede. O repasse do ciclo é o previsto no seu contrato e é
-        pago no fechamento, com demonstrativo na Prestação de Contas.
+        Acompanhamento demonstrativo do giro da força de venda. O repasse do ciclo é o previsto no seu
+        contrato e é pago no fechamento, com demonstrativo na Prestação de Contas.
       </p>
 
       <style>{`

@@ -11,7 +11,18 @@ import OdometroValor from './OdometroValor';
 // já devida e resultado garantido — leitura que a operação não pode dar.
 export default function ContadorRentabilidade({ dataAssinatura, aporte, taxaMensalPct = 3 }) {
   const r = useRentabilidadeAcumulada(dataAssinatura, aporte, taxaMensalPct);
-  const diaMostrado = Math.min(r.diaAtual, DIA_PRIMEIRO_REPASSE);
+  // 🪡 Agulha viva: o dia é exibido FRACIONADO (uma casa), então o número e o
+  // cofre se movem ao longo do dia em vez de pular de 24 em 24 horas.
+  // O hook revalida por minuto + visibilitychange + focus — nada é recalculado
+  // aqui além da fração para exibição.
+  const diaFrac = dataAssinatura
+    ? (Date.now() - new Date(dataAssinatura).getTime()) / 86400000
+    : 0;
+  const diaMostrado = Math.max(0, Math.min(diaFrac, DIA_PRIMEIRO_REPASSE));
+  const diaTexto = diaMostrado.toLocaleString('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 
   return (
     <div className="border border-pc-ouro/50 bg-pc-preto-2 p-5 sm:p-6">
@@ -24,8 +35,8 @@ export default function ContadorRentabilidade({ dataAssinatura, aporte, taxaMens
         </span>
       </div>
 
-      <p className="mt-4 break-words font-mono text-3xl font-black tracking-tight text-pc-tinta sm:text-4xl">
-        Dia {diaMostrado}
+      <p className="mt-4 break-words font-mono text-3xl font-black tabular-nums tracking-tight text-pc-tinta sm:text-4xl">
+        Dia {diaTexto}
         <span className="text-pc-tinta-fraca"> de {DIA_PRIMEIRO_REPASSE}</span>
       </p>
 

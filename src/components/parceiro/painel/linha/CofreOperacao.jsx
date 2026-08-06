@@ -14,7 +14,7 @@ export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo f
         <div className="h-[140px] w-full sm:h-[200px]">
           {/* Líquido */}
           <div
-            className="absolute inset-x-0 bottom-0 transition-[height] duration-700 ease-out"
+            className="cofre-liquido absolute inset-x-0 bottom-0 transition-[height] duration-700 ease-out"
             style={{
               height: `${nivel}%`,
               background: 'linear-gradient(180deg, var(--pc-ouro-claro), var(--pc-ouro) 55%, #8A6A28)',
@@ -22,6 +22,8 @@ export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo f
           >
             {/* Superfície do líquido: ondula de leve pra dar sensação de operação viva */}
             <div className="cofre-superficie absolute inset-x-0 -top-1 h-2 bg-pc-ouro-claro/80" />
+            {/* 📍 Agulha: linha fina de 1px marcando o nível exato do momento */}
+            <div className="absolute inset-x-0 top-0 h-px bg-pc-ouro-claro" />
           </div>
 
           {/* Riscos da régua (decorativos) */}
@@ -34,7 +36,7 @@ export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo f
 
         {/* Dia atual dentro do cofre */}
         <span className="pointer-events-none absolute inset-x-0 top-1.5 text-center font-mono text-[10px] font-bold text-pc-tinta">
-          D+{diaAtual}
+          D+{Number(diaAtual).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
         </span>
       </div>
 
@@ -69,6 +71,7 @@ export default function CofreOperacao({ pct = 0, diaAtual = 0, estado = 'Ciclo f
         .cofre-superficie { animation: cofreOnda 2s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
           .cofre-superficie { animation: none; }
+          .cofre-liquido { transition: none; }
         }
       `}</style>
     </div>
