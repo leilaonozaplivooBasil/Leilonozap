@@ -160,25 +160,22 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white truncate">{fullName}</p>
-            <p className="text-xs text-gray-400 truncate">{email}</p>
-          </div>
-          {/* 🏅 Foto fica onde sempre esteve; o SELO oficial entra do lado do cargo */}
-          <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-            <div
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-slab font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow}`}
-            >
+            {/* cargo/role em texto discreto sob o nome (a plaquinha amarela saiu) */}
+            <p className="flex items-center gap-1 text-[11px] font-slab font-bold uppercase tracking-wide text-amber-300/90 truncate">
               <BadgeIcon className="w-3 h-3" />
               {badge.label}
-            </div>
-            {seloUrl && (
-              <img
-                src={seloUrl}
-                alt=""
-                title={badge.label}
-                className="w-9 h-9 rounded-full object-cover ring-1 ring-white/15"
-              />
-            )}
+            </p>
+            <p className="text-xs text-gray-400 truncate">{email}</p>
           </div>
+          {/* 🏅 SELO OFICIAL do cargo (ex: CEO) — identidade visual no lugar do chip */}
+          {seloUrl && (
+            <img
+              src={seloUrl}
+              alt=""
+              title={badge.label}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            />
+          )}
         </div>
 
         {/* ===== Visão Geral (admin) — mini visão canvas.

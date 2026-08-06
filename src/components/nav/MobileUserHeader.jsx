@@ -25,18 +25,15 @@ export default function MobileUserHeader({ user }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-white truncate">{fullName}</p>
-        <p className="text-xs text-gray-400 truncate">{user?.email || ""}</p>
-      </div>
-      {/* 🏅 selo oficial logo abaixo do cargo (mesmo padrão do menu desktop) */}
-      <div className="flex flex-shrink-0 flex-col items-center gap-1.5">
-        <div
-          className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-slab text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/25 ${badge.grad} ${badge.text} ${badge.glow}`}
-        >
+        {/* cargo/role em texto discreto sob o nome (mesmo padrão do menu desktop) */}
+        <p className="flex items-center gap-1 truncate font-slab text-[11px] font-bold uppercase tracking-wide text-amber-300/90">
           <BadgeIcon className="h-3 w-3" />
           {badge.label}
-        </div>
-        {seloUrl && <img src={seloUrl} alt="" title={badge.label} className="h-9 w-9 rounded-full object-cover ring-1 ring-white/15" />}
+        </p>
+        <p className="text-xs text-gray-400 truncate">{user?.email || ""}</p>
       </div>
+      {/* 🏅 SELO OFICIAL do cargo (ex: CEO) */}
+      {seloUrl && <img src={seloUrl} alt="" title={badge.label} className="h-12 w-12 flex-shrink-0 rounded-full object-cover" />}
     </div>
   );
 }

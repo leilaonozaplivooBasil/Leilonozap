@@ -45,7 +45,9 @@ const SELOS_ROLE = {
  * senão o selo do cargo de carreira. null se não houver nenhum.
  */
 export function getSeloUsuario(user) {
-  return SELOS_ROLE[user?.role] || getSeloCargo(user?.primary_career_level || 'usuario');
+  // O CARGO manda: o Super Admin que é CEO usa o selo de CEO. O selo de role
+  // só entra quando a pessoa não tem cargo de carreira com selo.
+  return getSeloCargo(user?.primary_career_level) || SELOS_ROLE[user?.role] || null;
 }
 
 /** Foto de perfil real da pessoa (a que ela mesma cadastrou). null se não tiver. */
