@@ -29,7 +29,7 @@ export default function ParceiroLoteLinha({ lote, onAbrir }) {
           ['Custo total', real(lote.custoTotal)],
           ['Valor de mercado', real(lote.valorMercado)],
           ['Itens', `${lote.quantidade}`],
-          ['Custo por unidade', real(lote.custoUnitario)],
+          ['VPU · por unidade', real(lote.custoUnitario)],
         ].map(([rotulo, valor]) => (
           <div key={rotulo} className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.12em] text-pc-tinta-fraca">{rotulo}</p>

@@ -9,18 +9,26 @@ import { real } from '@/lib/operacaoNumeros';
 export default function ParceiroLoteDetalheModal({ lote, onFechar }) {
   if (!lote) return null;
 
+  // 🧾 Só mostramos a linha que EXISTE no registro do lote. Lote antigo, cadastrado
+  // apenas com o custo total (arremate e taxa do leiloeiro já embutidos), não pode
+  // exibir "Arremate R$ 0" e "Taxa 0%" — isso passaria informação errada ao parceiro.
   const linhas = [
     ['Origem', lote.origem || lote.marketplace || '—'],
     ['Data', lote.data ? new Date(lote.data).toLocaleDateString('pt-BR') : '—'],
-    ['Arremate', real(lote.arremate)],
-    ['Taxa do leilão', `${lote.taxaPct || 0}% · ${real(lote.taxaValor)}`],
-    ['Frete', real(lote.frete)],
-    ['Outros custos', real(lote.outros)],
-    ['Custo total', real(lote.custoTotal)],
+    ...(lote.arremate > 0 ? [['Arremate', real(lote.arremate)]] : []),
+    ...(lote.taxaPct > 0
+      ? [['Taxa do leiloeiro', `${lote.taxaPct}% · ${real(lote.taxaValor)}`]]
+      : []),
+    ...(lote.frete > 0 ? [['Frete', real(lote.frete)]] : []),
+    ...(lote.outros > 0 ? [['Outros custos', real(lote.outros)]] : []),
+    [
+      lote.arremate > 0 ? 'Custo total' : 'Custo total (arremate + taxa + frete inclusos)',
+      real(lote.custoTotal),
+    ],
     ['Valor de mercado', real(lote.valorMercado)],
     ['Quantidade', `${lote.quantidade || 0} itens`],
-    ['Custo por unidade', real(lote.custoUnitario)],
-    ['Local de coleta', lote.localColeta || '—'],
+    ['VPU · valor por unidade', real(lote.custoUnitario)],
+    ...(lote.localColeta ? [['Local de coleta', lote.localColeta]] : []),
   ];
 
   return (
