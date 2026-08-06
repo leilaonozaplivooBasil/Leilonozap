@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Zap, ChevronRight } from 'lucide-react';
+import { Zap, ChevronRight, Package } from 'lucide-react';
 import foguinho from '@/assets/foguinho.webp';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -54,7 +54,7 @@ function FlashCard({ p, onOpenDetails }) {
 
 // Faixa "Ofertas Relâmpago" estilo Shopee, identidade Leila (verde+dourado).
 // onOpenDetails: abre o produto expandido na própria página (modal) em vez de navegar.
-export default function OfertasRelampago({ products = [], onOpenDetails }) {
+export default function OfertasRelampago({ products = [], onOpenDetails, totalProdutosTexto = null }) {
   const navigate = useNavigate();
   const [left, setLeft] = React.useState(0);
 
@@ -94,7 +94,13 @@ export default function OfertasRelampago({ products = [], onOpenDetails }) {
           <img src={foguinho} alt="" aria-hidden className="w-5 h-5 sm:w-9 sm:h-9 shrink-0 -my-1 object-contain" /> OFERTAS RELÂMPAGO
         </span>
         <span className="flex items-center gap-1 shrink-0"><Box v={h} /><span className="text-white font-black">:</span><Box v={m} /><span className="text-white font-black">:</span><Box v={s} /></span>
-        <button onClick={() => navigate(createPageUrl('Catalog'))} className="ml-auto min-h-[44px] sm:min-h-0 -my-2 sm:my-0 px-1 text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0">
+        {/* total REAL de produtos da loja, colado no "Ver Tudo" */}
+        {totalProdutosTexto && (
+          <span className="ml-auto flex items-center gap-1 text-[10.5px] sm:text-xs text-gray-300 whitespace-nowrap">
+            <Package className="w-3 h-3 text-green-400 shrink-0" />{totalProdutosTexto}
+          </span>
+        )}
+        <button onClick={() => navigate(createPageUrl('Catalog'))} className={`${totalProdutosTexto ? 'ml-1 sm:ml-2' : 'ml-auto'} min-h-[44px] sm:min-h-0 -my-2 sm:my-0 px-1 text-green-400 text-xs sm:text-sm font-semibold flex items-center hover:text-green-300 shrink-0`}>
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>

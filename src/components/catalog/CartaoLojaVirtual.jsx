@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Package, Truck, Share2 } from 'lucide-react';
+import { MessageCircle, Truck, Share2 } from 'lucide-react';
+import CarrinhoEntrega from '@/components/catalog/CarrinhoEntrega';
 import { toast } from 'sonner';
 import { copyLink } from '@/lib/clipboard';
 import SeloCargo from '@/components/network/SeloCargo';
@@ -14,7 +15,7 @@ import { levelName } from '@/lib/careerLevels';
  * "Falar Comigo" NÃO vai direto pro WhatsApp: passa pela página de aviso
  * antifraude (/falar-com-parceiro) e só aparece a partir de Vendedor oficial.
  */
-export default function CartaoLojaVirtual({ parceiro, productCount = 0 }) {
+export default function CartaoLojaVirtual({ parceiro }) {
   const nome = parceiro?.name || null;
   const cargo = cargoDoParceiro(parceiro);
   const mostrarContato = podeFalarComigo(parceiro);
@@ -35,9 +36,11 @@ export default function CartaoLojaVirtual({ parceiro, productCount = 0 }) {
 
   return (
     <section
-      className="mb-6 flex items-center gap-3 rounded-2xl border border-gray-700 bg-gray-800/50 p-2.5 sm:p-3"
+      className="relative mb-6 flex items-center gap-3 rounded-2xl border border-gray-700 bg-gray-800/50 p-2.5 sm:p-3"
       aria-label="Loja virtual"
     >
+      {/* 🛒 carrinho de entrega atravessando o cartão (decorativo) */}
+      <CarrinhoEntrega />
       {/* Foto */}
       {parceiro?.photo ? (
         <img
@@ -69,10 +72,6 @@ export default function CartaoLojaVirtual({ parceiro, productCount = 0 }) {
         </div>
         <div className="mt-1 flex items-center gap-x-4 text-[10.5px] text-gray-400">
           <span className="inline-flex items-center gap-1">
-            <Package className="w-3 h-3 text-green-400 shrink-0" />{productCount} produtos
-          </span>
-          <span className="text-gray-600 hidden sm:inline">·</span>
-          <span className="hidden sm:inline-flex items-center gap-1">
             <Truck className="w-3 h-3 text-green-400 shrink-0" />Envio para todo Brasil
           </span>
         </div>

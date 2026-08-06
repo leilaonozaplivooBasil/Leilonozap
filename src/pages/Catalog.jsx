@@ -20,6 +20,7 @@ import OfertasRelampago from '../components/loja/OfertasRelampago';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { getReferral, saveReferral } from '@/lib/referral';
 import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
+import useTotalProdutosLoja, { textoTotalProdutos } from '@/hooks/useTotalProdutosLoja';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -50,6 +51,8 @@ export default function Catalog() {
   const [loadingMore, setLoadingMore] = useState(false);
   // 🔍 produto aberto EXPANDIDO na própria página (modal) — sem navegar (pedido Gabriel 25/07)
   const [detailsProduct, setDetailsProduct] = useState(null);
+  // 📦 total REAL de produtos da loja (contagem no banco, não o array paginado)
+  const totalProdutos = useTotalProdutosLoja();
   const openDetails = useCallback((product) => setDetailsProduct(product), []);
 
   // média da loja (resolve o lojista pelo ref) — passada pros cards
@@ -651,11 +654,15 @@ export default function Catalog() {
         />
 
         {/* OFERTAS RELÂMPAGO */}
-        <OfertasRelampago products={products} onOpenDetails={openDetails} />
+        <OfertasRelampago
+          products={products}
+          onOpenDetails={openDetails}
+          totalProdutosTexto={textoTotalProdutos(totalProdutos)}
+        />
 
         {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
             "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
-        <CartaoLojaVirtual parceiro={licenseeData} productCount={products.length} />
+        <CartaoLojaVirtual parceiro={licenseeData} />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
