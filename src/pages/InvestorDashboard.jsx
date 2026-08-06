@@ -12,6 +12,7 @@ import ParceiroOperacoesAtivas from '@/components/parceiro/painel/ParceiroOperac
 import ParceiroPlanosModal from '@/components/parceiro/painel/ParceiroPlanosModal';
 import ParceiroTermoSigilo from '@/components/parceiro/painel/ParceiroTermoSigilo';
 import ParceiroOperacaoPorDentro from '@/components/parceiro/painel/ParceiroOperacaoPorDentro';
+import ParceiroAnalisador from '@/components/parceiro/painel/ParceiroAnalisador';
 import { isParceiroValidador } from '@/lib/parceiroValidadores';
 import {
   LayoutGrid,
@@ -403,7 +404,14 @@ export default function InvestorDashboard() {
         {/* 🏭 FASE 2 — A operação por dentro (liberada após o termo de sigilo) */}
         {telaAtiva === 'operacao' && ndaAssinado && <ParceiroOperacaoPorDentro />}
 
-        {telaAtiva !== 'visao' && telaAtiva !== 'nda' && !(telaAtiva === 'operacao' && ndaAssinado) && telaSelecionada && (
+        {/* 📊 FASE 3 — Analisador de lotes em modo consulta (mesmo gate do sigilo) */}
+        {telaAtiva === 'analisador' && ndaAssinado && <ParceiroAnalisador />}
+
+        {telaAtiva !== 'visao' &&
+          telaAtiva !== 'nda' &&
+          !(telaAtiva === 'operacao' && ndaAssinado) &&
+          !(telaAtiva === 'analisador' && ndaAssinado) &&
+          telaSelecionada && (
           <ParceiroPainelEmBreve
             titulo={telaSelecionada.titulo}
             texto={telaSelecionada.texto}
