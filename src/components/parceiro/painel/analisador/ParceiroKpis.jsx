@@ -23,7 +23,9 @@ export default function ParceiroKpis({ quantidade, valorMercado, custoTotal }) {
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
             {k.label}
           </p>
-          <p className="text-lg font-black text-gray-200 sm:text-xl">{k.valor}</p>
+          <p className="break-words text-base font-black leading-tight text-gray-200 sm:text-lg">
+            {k.valor}
+          </p>
         </div>
       ))}
     </div>

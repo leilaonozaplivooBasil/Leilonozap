@@ -44,7 +44,24 @@ function comporCustosPadrao(custoTotal) {
 // 💰 Custos REAIS gravados no campo observacoes do lote no momento da compra, no
 // formato "Arremate: R$ X | Taxa: 7% (R$ Y) | Frete: R$ Z | Outros: R$ W".
 // É a fonte fiel — só cai na média do Rio quando o lote não tem essa anotação.
-const dinheiro = (s) => parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+// ⚠️ As anotações têm DOIS formatos: brasileiro ("1.885,80") e americano
+// ("18666.00", como o Analisador interno gravou). Tratar tudo como brasileiro
+// multiplicava o arremate por 100 (era a causa da economia negativa).
+const dinheiro = (s) => {
+  const t = String(s || '').trim();
+  if (!t) return 0;
+  if (t.includes(',')) {
+    // formato BR: ponto é separador de milhar, vírgula é decimal
+    return parseFloat(t.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  const partes = t.split('.');
+  if (partes.length > 1 && partes[partes.length - 1].length <= 2) {
+    // último grupo com 1–2 dígitos ⇒ ponto é decimal (ex: 18666.00)
+    return parseFloat(partes.slice(0, -1).join('') + '.' + partes[partes.length - 1]) || 0;
+  }
+  // sem vírgula e grupos de 3 dígitos ⇒ ponto é milhar (ex: 2.500)
+  return parseFloat(t.replace(/\./g, '')) || 0;
+};
 
 function custosDasObservacoes(obs) {
   if (!obs) return null;
