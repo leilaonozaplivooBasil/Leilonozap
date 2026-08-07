@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Lock, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getReferral } from '@/lib/referral';
+import ParceiroGoogleBotao from './ParceiroGoogleBotao';
 
 // 🖤 MODAL DE ACESSO — cadastro da plataforma na lâmina preta da captação privada.
 // Usa a MESMA rota server-side do cadastro público (publicRegister), sem criar
@@ -19,6 +20,33 @@ export default function ParceiroAcessoModal({ onFechar, onSucesso }) {
   const campo =
     'mt-1.5 h-12 w-full border border-pc-borda bg-pc-preto px-3 text-sm text-pc-tinta outline-none placeholder:text-pc-tinta-fraca/60 focus:border-pc-ouro';
   const rotulo = 'text-[10px] uppercase tracking-[0.18em] text-pc-tinta-fraca';
+
+  // 🔓 Quem já é usuário do Leilão NoZap entra com a conta existente (mesma
+  // rota de login do site) — sem criar cadastro duplicado.
+  const entrarComConta = async () => {
+    setErro('');
+    if (!ciente) return setErro('É necessário aceitar o termo de confidencialidade.');
+    if (!email.includes('@') || senha.length < 6)
+      return setErro('Preencha e-mail e senha para entrar.');
+    setEnviando(true);
+    try {
+      const r = await base44.functions.invoke('login', {
+        email: email.toLowerCase().trim(),
+        password: senha,
+      });
+      if (!r?.success) {
+        setErro(r?.error || 'E-mail ou senha incorretos.');
+        setEnviando(false);
+        return;
+      }
+      localStorage.setItem('currentUser', JSON.stringify(r.user));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      onSucesso(r.user);
+    } catch {
+      setErro('Falha de conexão. Tente novamente em alguns segundos.');
+      setEnviando(false);
+    }
+  };
 
   const enviar = async (e) => {
     e.preventDefault();
@@ -83,6 +111,44 @@ export default function ParceiroAcessoModal({ onFechar, onSucesso }) {
         </div>
 
         <div className="space-y-4 p-5">
+          {/* ✅ Ciência primeiro: vale para o Google e para o cadastro por e-mail */}
+          <label className="flex cursor-pointer items-start gap-3 border border-pc-borda bg-pc-preto-2 p-3">
+            <input
+              type="checkbox"
+              checked={ciente}
+              onChange={(e) => { setCiente(e.target.checked); setErro(''); }}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[#C9A55C]"
+            />
+            <span className="text-[11px] leading-relaxed text-pc-tinta-fraca">
+              <span className="font-bold text-pc-tinta">Estou ciente</span> de que se trata de{' '}
+              <span className="text-pc-ouro">captação privada e confidencial</span>, dirigida
+              exclusivamente a convidados identificados, que não constitui oferta pública nem
+              promessa de rentabilidade, e me comprometo a não divulgar, reproduzir ou compartilhar
+              as informações, documentos e valores apresentados no ambiente restrito.
+            </span>
+          </label>
+
+          {/* 🔑 Cadastro/entrada com Google (mesma conta do Leilão NoZap) */}
+          <ParceiroGoogleBotao
+            bloqueado={!ciente}
+            aviso="Marque o aceite acima para continuar com o Google."
+            onErro={(m) => setErro(m)}
+            onSucesso={(u) => onSucesso(u)}
+          />
+          {!ciente && (
+            <p className="text-center text-[10px] uppercase tracking-[0.14em] text-pc-tinta-fraca">
+              Marque o aceite para liberar o acesso
+            </p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-pc-borda" />
+            <span className="text-[10px] uppercase tracking-[0.18em] text-pc-tinta-fraca">
+              ou com e-mail
+            </span>
+            <span className="h-px flex-1 bg-pc-borda" />
+          </div>
+
           <div>
             <label className={rotulo} htmlFor="pc-nome">Nome completo</label>
             <input id="pc-nome" className={campo} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Seu nome" autoComplete="name" />
@@ -106,22 +172,6 @@ export default function ParceiroAcessoModal({ onFechar, onSucesso }) {
             </div>
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 border border-pc-borda bg-pc-preto-2 p-3">
-            <input
-              type="checkbox"
-              checked={ciente}
-              onChange={(e) => setCiente(e.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 accent-[#C9A55C]"
-            />
-            <span className="text-[11px] leading-relaxed text-pc-tinta-fraca">
-              <span className="font-bold text-pc-tinta">Estou ciente</span> de que se trata de{' '}
-              <span className="text-pc-ouro">captação privada e confidencial</span>, dirigida
-              exclusivamente a convidados identificados, que não constitui oferta pública nem
-              promessa de rentabilidade, e me comprometo a não divulgar, reproduzir ou compartilhar
-              as informações, documentos e valores apresentados no ambiente restrito.
-            </span>
-          </label>
-
           {erro && (
             <p className="border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300">{erro}</p>
           )}
@@ -133,6 +183,15 @@ export default function ParceiroAcessoModal({ onFechar, onSucesso }) {
           >
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
             {enviando ? 'Registrando acesso' : 'Aceitar e acessar'}
+          </button>
+
+          <button
+            type="button"
+            onClick={entrarComConta}
+            disabled={enviando}
+            className="min-h-[44px] w-full border border-pc-borda text-[11px] uppercase tracking-[0.14em] text-pc-tinta-fraca hover:text-pc-tinta disabled:opacity-60"
+          >
+            Já tenho conta — entrar com e-mail e senha
           </button>
 
           <p className="text-center text-[10px] leading-relaxed text-pc-tinta-fraca">

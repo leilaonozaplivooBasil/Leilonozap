@@ -6,14 +6,14 @@ const RETRATOS = [
   {
     papel: 'Parceiro de compra',
     titulo: 'Quem entra com o capital',
-    foto: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/88194d8ad_generated_image.png',
+    foto: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/c771970f8_generated_image.png',
     fala:
       'O parceiro aloca capital em uma operação já rodando: lote comprado abaixo do valor de mercado, revendido pelos canais da empresa e resultado apurado no fechamento do ciclo. Ele não opera, não estoca e não vende — acompanha tudo pelo painel.',
   },
   {
     papel: 'Sócios da operação',
     titulo: 'Quem executa a operação',
-    foto: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3e55d8070_generated_image.png',
+    foto: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/f4f9f437f_generated_image.png',
     fala:
       'A empresa responde por compra, curadoria, logística, precificação e venda, com estrutura própria e contrato assinado entre as partes. Cada ciclo é prestado em conta aberta: o que entrou, o que saiu e o que foi apurado.',
   },
