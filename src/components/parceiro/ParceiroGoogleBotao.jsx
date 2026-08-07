@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { getReferral } from '@/lib/referral';
+import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 
 // 🔑 ENTRAR/CADASTRAR COM GOOGLE na lâmina preta da captação privada.
 // Reusa exatamente o mesmo fluxo do site (getGoogleClientId + googleLogin com
@@ -8,6 +9,7 @@ import { getReferral } from '@/lib/referral';
 export default function ParceiroGoogleBotao({ onSucesso, onErro, bloqueado, aviso }) {
   const alvo = useRef(null);
   const [indisponivel, setIndisponivel] = useState(false);
+  const [validando, setValidando] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -18,6 +20,7 @@ export default function ParceiroGoogleBotao({ onSucesso, onErro, bloqueado, avis
         onErro?.(aviso || 'É necessário aceitar o termo de confidencialidade.');
         return;
       }
+      setValidando(true);
       try {
         const r = await base44.functions.invoke('googleLogin', {
           credential: resposta.credential,
@@ -25,13 +28,26 @@ export default function ParceiroGoogleBotao({ onSucesso, onErro, bloqueado, avis
         });
         if (!r?.success) {
           onErro?.(r?.error || 'Não foi possível entrar com o Google.');
+          setValidando(false);
           return;
+        }
+        // ⏱️ Registra lentidão do servidor (só acima de 2,5s).
+        if (Number(r.duracao_ms) > 2500) {
+          base44.entities.SystemLog.create({
+            step: 'Login_Google_Lento',
+            status: 'warning',
+            message: `Login com Google levou ${r.duracao_ms}ms no servidor`,
+            component_name: 'ParceiroGoogleBotao',
+            execution_time_ms: Number(r.duracao_ms),
+            payload: { email: r.user?.email },
+          }).catch(() => {});
         }
         localStorage.setItem('currentUser', JSON.stringify(r.user));
         sessionStorage.setItem('isLoggedIn', 'true');
         onSucesso?.(r.user);
       } catch (e) {
         onErro?.('Falha de conexão com o Google. Tente novamente.');
+        setValidando(false);
       }
     };
 
@@ -57,12 +73,15 @@ export default function ParceiroGoogleBotao({ onSucesso, onErro, bloqueado, avis
       }
     };
 
+    // ⚡ Client ID em cache desenha o botão na hora; a confirmação vem depois.
+    const emCache = clientIdEmCache();
+    if (emCache) desenhar(emCache);
     (async () => {
-      try {
-        const res = await base44.functions.invoke('getGoogleClientId', {});
-        if (res?.clientId) desenhar(res.clientId);
-        else setIndisponivel(true);
-      } catch {
+      const clientId = await buscarClientId(base44);
+      if (cancelado) return;
+      if (clientId) {
+        if (clientId !== emCache) desenhar(clientId);
+      } else if (!emCache) {
         setIndisponivel(true);
       }
     })();
@@ -76,8 +95,13 @@ export default function ParceiroGoogleBotao({ onSucesso, onErro, bloqueado, avis
   if (indisponivel) return null;
 
   return (
-    <div className={bloqueado ? 'pointer-events-none opacity-50' : ''}>
+    <div className={bloqueado || validando ? 'pointer-events-none opacity-50' : ''}>
       <div ref={alvo} className="flex justify-center" />
+      {validando && (
+        <p className="mt-2 text-center text-[11px] uppercase tracking-[0.14em] text-pc-tinta-fraca">
+          Validando sua conta Google...
+        </p>
+      )}
     </div>
   );
 }

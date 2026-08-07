@@ -12,10 +12,37 @@ function sb(path, opts = {}) {
   });
 }
 
+// 👀 Lê o e-mail que VEM DENTRO do token, sem validar nada, só para ADIANTAR a
+// busca no banco em paralelo com a validação oficial no Google.
+// ⚠️ REGRA DE SEGURANÇA: este valor JAMAIS decide login. O usuário adiantado só
+// é aproveitado se o e-mail CONFIRMADO pelo Google for exatamente o mesmo.
+function espiarEmail(credential) {
+  try {
+    const parte = String(credential).split('.')[1];
+    if (!parte) return null;
+    const json = Buffer.from(parte.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    const email = JSON.parse(json)?.email;
+    return email ? String(email).toLowerCase().trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function buscarPorEmail(email) {
+  try {
+    const r = await sb(`app_users?select=*&email=eq.${encodeURIComponent(email)}&limit=1`);
+    const j = await r.json();
+    return Array.isArray(j) ? j[0] || null : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
 
+  const t0 = Date.now();
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const credential = body?.credential;
@@ -27,8 +54,16 @@ export default async function handler(req, res) {
     if (!credential) return res.status(400).json({ success: false, error: 'Token do Google não informado.' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    // Verifica o ID token direto com o Google (não precisa de client secret pra isso)
-    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    // ⚡ PARALELO (06/08/2026 — otimização de lentidão): a validação no Google e a
+    // busca do usuário saem JUNTAS. Antes era em fila (validar → buscar), somando
+    // as duas latências. As validações abaixo continuam sendo a ÚNICA fonte de
+    // verdade — nada é aceito com base no e-mail espiado.
+    const emailEspiado = espiarEmail(credential);
+    const [verifyRes, userAdiantado] = await Promise.all([
+      fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`),
+      emailEspiado ? buscarPorEmail(emailEspiado) : Promise.resolve(null),
+    ]);
+
     if (!verifyRes.ok) {
       return res.status(401).json({ success: false, error: 'Token do Google inválido ou expirado.' });
     }
@@ -49,20 +84,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Não foi possível obter o e-mail da conta Google.' });
     }
 
-    const existing = await (await sb(`app_users?select=*&email=eq.${encodeURIComponent(email)}&limit=1`)).json();
-    let user = Array.isArray(existing) ? existing[0] : null;
+    // Aproveita o adiantamento SÓ se o e-mail confirmado bater; senão busca do zero.
+    let user = userAdiantado && String(userAdiantado.email || '').toLowerCase() === email ? userAdiantado : null;
+    if (!user) user = await buscarPorEmail(email);
 
     if (!user) {
       // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém entra solto — sem link de indicação,
       // o cadastro fica sob o Leilão NoZap - Site Oficial (raiz da árvore).
-      let referred_by_id = null;
-      if (ref_code) {
-        const ind = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`)).json();
-        if (Array.isArray(ind) && ind[0]) referred_by_id = ind[0].id;
-      }
+      // ⚡ As duas consultas saem em paralelo, mas a PRECEDÊNCIA é a mesma de antes:
+      // indicador do link primeiro; Site Oficial só quando não há link válido.
+      const [porLink, siteOficial] = await Promise.all([
+        ref_code
+          ? sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`).then((r) => r.json()).catch(() => null)
+          : Promise.resolve(null),
+        sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1').then((r) => r.json()).catch(() => null),
+      ]);
+      let referred_by_id = Array.isArray(porLink) && porLink[0] ? porLink[0].id : null;
       if (!referred_by_id) {
-        const site = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json();
-        referred_by_id = Array.isArray(site) && site[0] ? site[0].id : null;
+        referred_by_id = Array.isArray(siteOficial) && siteOficial[0] ? siteOficial[0].id : null;
       }
       const created = await (await sb('app_users', {
         method: 'POST',
@@ -82,8 +121,10 @@ export default async function handler(req, res) {
     if (!user) return res.status(500).json({ success: false, error: 'Não foi possível criar/recuperar o usuário.' });
 
     delete user.password; // jamais devolve senha/hash
-    return res.status(200).json({ success: true, user });
+    // ⏱️ duracao_ms: o front registra no log do sistema quando passa do limite,
+    // pra a lentidão do Google deixar de ser invisível.
+    return res.status(200).json({ success: true, user, duracao_ms: Date.now() - t0 });
   } catch (e) {
-    return res.status(200).json({ success: false, error: 'Erro ao entrar com Google', details: String(e?.message || e) });
+    return res.status(200).json({ success: false, error: 'Erro ao entrar com Google', details: String(e?.message || e), duracao_ms: Date.now() - t0 });
   }
 }

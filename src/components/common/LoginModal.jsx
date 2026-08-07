@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { getReferral } from '@/lib/referral';
+import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 
 const AppUser = base44.entities.AppUser;
 const SendEmail = (params) => base44.integrations.Core.SendEmail(params);
@@ -53,10 +54,23 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
 
-      setTimeout(() => {
-        if (onSuccess) onSuccess(user);
-        onClose();
-      }, 300);
+      // ⏱️ Lentidão do Google deixa rastro (só quando passa de 2,5s, pra não
+      // encher o log a cada login normal).
+      if (Number(result.duracao_ms) > 2500) {
+        base44.entities.SystemLog.create({
+          step: 'Login_Google_Lento',
+          status: 'warning',
+          message: `Login com Google levou ${result.duracao_ms}ms no servidor`,
+          component_name: 'LoginModal',
+          execution_time_ms: Number(result.duracao_ms),
+          payload: { email: user?.email }
+        }).catch(() => {});
+      }
+
+      // ⚡ Sem espera artificial: antes havia 300ms de setTimeout aqui, somando
+      // atraso a um fluxo que já era lento.
+      if (onSuccess) onSuccess(user);
+      onClose();
     } catch (error) {
       console.error("[LOGIN GOOGLE] Erro:", error);
       setErrorMessage("❌ Erro ao entrar com Google. Tente novamente.");
@@ -91,14 +105,13 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       }
     };
 
+    // ⚡ Desenha JÁ com o Client ID guardado (sem esperar servidor) e confirma
+    // em segundo plano. Só a primeira vez do aparelho depende da ida ao servidor.
+    const emCache = clientIdEmCache();
+    if (emCache) renderGoogleButton(emCache);
     (async () => {
-      try {
-        const res = await base44.functions.invoke('getGoogleClientId', {});
-        const clientId = res?.clientId;
-        if (clientId) renderGoogleButton(clientId);
-      } catch (error) {
-        console.debug('Login com Google indisponível:', error?.message);
-      }
+      const clientId = await buscarClientId(base44);
+      if (clientId && clientId !== emCache) renderGoogleButton(clientId);
     })();
 
     return () => { cancelled = true; };
@@ -648,7 +661,16 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             <div className={`flex-1 h-px ${isSaiDeBaixo ? 'bg-gray-300' : 'bg-gray-700'}`} />
           </div>
 
-          <div id="googleSignInBtn" className="flex justify-center" />
+          {/* Bloqueia o botão e avisa o que está acontecendo durante a validação —
+              sem isso o usuário achava que não clicou e clicava de novo. */}
+          <div className={isLogging ? 'pointer-events-none opacity-60' : ''}>
+            <div id="googleSignInBtn" className="flex justify-center" />
+          </div>
+          {isLogging && (
+            <p className={`text-center text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>
+              Validando sua conta Google...
+            </p>
+          )}
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4 sm:gap-3">
