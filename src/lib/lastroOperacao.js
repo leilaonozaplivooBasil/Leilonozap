@@ -28,17 +28,17 @@ export const PCT_VENDA_SOBRE_MERCADO = 80;
 export const PCT_REPASSE_PARCEIRO_CICLO = 3;
 export const PCT_ORCAMENTO_PARCEIROS = PREMISSAS.pctParceirosCompra;
 export const PCT_COMISSAO_REDE = PREMISSAS.pctComissaoRede;
-export const PCT_ESTRUTURA_VENDA = PREMISSAS.pctDespesaOperacional;
+// 🏗️ ESTRUTURA DE VENDA E OPERAÇÃO = 5% da receita.
+// A estrutura é custo FIXO em valor absoluto (PREMISSAS.despesaFixaMensal
+// R$ 48.000 · ESCALA_1M.despesaFixa R$ 55.000 sobre R$ 1M de receita = 5,5%).
+// No volume da operação em escala ela representa 5% — é esse o percentual
+// apresentado no memorial (decisão da diretoria em 06/08/2026).
+export const PCT_ESTRUTURA_VENDA = 5;
 export const PCT_IMPOSTO = PREMISSAS.aliquotaSimples;
 // 🔀 A linha de PARCEIROS DE COMPRA (5% da receita) se divide em:
-//    3% = repasse aos parceiros · 2% = distribuído na estrutura da força de venda.
+//    3% = parceiro de compra · 2% = estrutura do braço operacional.
 export const PCT_PARCEIRO_REPASSE = 3;
 export const PCT_PARCEIRO_ESTRUTURA = 2;
-// 📉 ESTRUTURA NA ESCALA: a estrutura é um custo FIXO em valor absoluto
-// (PREMISSAS.despesaFixaMensal R$ 48.000 · ESCALA_1M.despesaFixa R$ 55.000 sobre
-// R$ 1M de receita = 5,5%). Hoje ela pesa 20% porque o volume ainda é pequeno;
-// com o volume em escala o MESMO custo passa a representar ~5% da receita.
-export const PCT_ESTRUTURA_ESCALA = 5;
 
 // 💰 Real sem centavos — padrão dos documentos institucionais do Parceiro
 export function brl(valor) {
@@ -86,11 +86,6 @@ export function resumirLastro(lotes = []) {
   // 🧾 Lucro = residual da DRE. A soma das linhas fecha exatamente na receita.
   const lucro = receita - capital - comissaoRede - estruturaVenda - orcamentoParceiros - imposto;
 
-  // 📉 Mesmo lote com a estrutura já diluída pela escala (5% em vez de 20%)
-  const estruturaEscala = receita * (PCT_ESTRUTURA_ESCALA / 100);
-  const lucroEscala =
-    receita - capital - comissaoRede - estruturaEscala - orcamentoParceiros - imposto;
-
   return {
     lotes: lista.length,
     itens,
@@ -107,11 +102,6 @@ export function resumirLastro(lotes = []) {
     // 🔀 destinação da linha de parceiros de compra
     parceiroRepasseFatia: receita * (PCT_PARCEIRO_REPASSE / 100),
     parceiroEstruturaFatia: receita * (PCT_PARCEIRO_ESTRUTURA / 100),
-    // 📉 cenário com estrutura diluída pela escala
-    estruturaEscala,
-    lucroEscala,
-    margemEscalaPct: receita > 0 ? (lucroEscala / receita) * 100 : 0,
-    roiEscalaPct: capital > 0 ? (lucroEscala / capital) * 100 : 0,
     // 🛒 quanto da lista foi efetivamente pago (capital ÷ valor de mercado)
     pctPagoDaLista: lastro > 0 ? (capital / lastro) * 100 : 0,
     descontoDaListaPct: lastro > 0 ? 100 - (capital / lastro) * 100 : 0,

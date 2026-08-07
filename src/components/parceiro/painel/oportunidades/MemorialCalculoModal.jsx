@@ -1,19 +1,20 @@
 import React from 'react';
-import { X, ShieldCheck } from 'lucide-react';
+import { X } from 'lucide-react';
 import {
   brl,
   pctBr,
-  vezes,
   PCT_VENDA_SOBRE_MERCADO,
   PCT_COMISSAO_REDE,
   PCT_ESTRUTURA_VENDA,
   PCT_ORCAMENTO_PARCEIROS,
   PCT_IMPOSTO,
   PCT_REPASSE_PARCEIRO_CICLO,
+  PCT_PARCEIRO_REPASSE,
+  PCT_PARCEIRO_ESTRUTURA,
 } from '@/lib/lastroOperacao';
 import CompraDaListaCard from './CompraDaListaCard';
-import CenarioEscalaCard from './CenarioEscalaCard';
 import NotaTributariaBotao from './NotaTributariaBotao';
+import PoderSegurancaGrid from './PoderSegurancaGrid';
 
 // 🧾 MEMORIAL DO CÁLCULO — abre no clique do "Entenda o cálculo".
 // Só EXIBE o resumo já calculado (`r`). Nenhuma conta nova aqui, nenhuma escrita.
@@ -42,13 +43,17 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
     },
     {
       rotulo: 'Estrutura de venda e operação',
-      nota: `${pctBr(PCT_ESTRUTURA_VENDA)} da receita HOJE — custo fixo, cai com a escala (veja abaixo)`,
+      nota: `${pctBr(PCT_ESTRUTURA_VENDA)} da receita`,
       valor: r.estruturaVenda,
       sinal: '−',
     },
     {
       rotulo: 'Parceiros de compra',
-      nota: `${pctBr(PCT_ORCAMENTO_PARCEIROS)} da receita — daqui sai o seu repasse, que é calculado sobre o capital aportado`,
+      nota: `${pctBr(PCT_ORCAMENTO_PARCEIROS)} da receita = ${pctBr(
+        PCT_PARCEIRO_REPASSE
+      )} parceiro de compra + ${pctBr(
+        PCT_PARCEIRO_ESTRUTURA
+      )} estrutura do braço operacional`,
       valor: r.orcamentoParceiros,
       sinal: '−',
     },
@@ -136,11 +141,6 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             </div>
           </div>
 
-          {/* 📉 Estrutura: 20% hoje → 5% na escala */}
-          <div className="mt-5">
-            <CenarioEscalaCard resumo={r} />
-          </div>
-
           {/* 🏛️ Transição tributária (clique para abrir) */}
           <NotaTributariaBotao />
 
@@ -181,29 +181,8 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             </p>
           </div>
 
-          {/* 🛡️ Poder de segurança */}
-          <div className="mt-4 border border-pc-borda bg-pc-preto-2 p-3 sm:p-4">
-            <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-pc-ouro">
-              <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={1.8} /> Poder de segurança
-            </p>
-            <ul className="mt-2 space-y-2 text-[11px] leading-relaxed text-pc-tinta sm:text-xs">
-              <li>
-                <strong className="text-pc-ouro">{vezes(r.coberturaRepasse)} de folga:</strong> a
-                reserva de {brl(r.orcamentoParceiros)} cobre {vezes(r.coberturaRepasse)} o repasse
-                comprometido de {brl(r.repasse)}.
-              </li>
-              <li>
-                <strong className="text-pc-ouro">{vezes(r.multiploLastro)} de lastro:</strong> o
-                capital de {brl(r.capital)} está representado por {brl(r.lastro)} em mercadoria real
-                — bem físico, com valor de mercado, não promessa.
-              </li>
-              <li>
-                <strong className="text-pc-ouro">Lucro depois de tudo:</strong> o repasse não sai do
-                lucro apertado — ele já está dentro da conta, e ainda restam {brl(r.lucro)} para a
-                operação.
-              </li>
-            </ul>
-          </div>
+          {/* 🛡️ Poder de segurança — visual, número grande */}
+          <PoderSegurancaGrid resumo={r} />
 
           <p className="mt-4 border-t border-pc-borda pt-3 text-[10px] leading-relaxed text-pc-tinta-fraca">
             Valores de referência/projeção calculados sobre os lotes publicados, com venda a{' '}
