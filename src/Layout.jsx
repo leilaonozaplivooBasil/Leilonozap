@@ -872,7 +872,7 @@ export default function Layout({ children, currentPageName }) {
 
               {/* BOTÃO MOBILE */}
               {!isLojistaPage && (
-                <div className="flex md:hidden items-center gap-2">
+                <div className="flex lg:hidden items-center gap-2">
                   {/* 📱 PONTO 82 — CompareAQUI e Livoo saíram DAQUI: no mobile eles
                       aparecem com nome dentro da barra de ações do bloco "Leilões
                       Ativos" (HeroAcoesLeiloes). Tê-los nos dois lugares era

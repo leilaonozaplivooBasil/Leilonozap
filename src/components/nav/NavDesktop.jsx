@@ -61,7 +61,14 @@ export default function NavDesktop({
   const sectorActive = (s) => (s.href?.page ? isActive(s.href.page) : false) || s.items.some((i) => i.page && isActive(i.page));
 
   return (
-    <div className="hidden md:flex items-center">
+    // 📐 06/08 — TABLET: este cabeçalho completo aparecia já em 768px, mas os
+    // setores centrais são posicionados em 42% da largura (absoluto) enquanto o
+    // cluster direito é fluido. Entre 768px e 1023px os dois NÃO cabem e se
+    // sobrepõem ("RANK PREMIADO" virava "K PREMIADO" por cima dos ícones).
+    // Agora o cabeçalho completo só entra a partir de lg (1024px+); no tablet
+    // vale o cabeçalho compacto com menu, que já estava correto. Desktop
+    // inalterado.
+    <div className="hidden lg:flex items-center">
       {/* === SETORES CENTRAIS — centralizados no meio da navbar (absolute no header).
           items-center + tile 38px + label colado: o conjunto (~54px) fica centrado
           no h-16 do header, no MESMO eixo do carrinho/avatar/rank. === */}
