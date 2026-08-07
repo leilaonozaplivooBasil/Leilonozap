@@ -121,11 +121,10 @@ export function resumirLastro(lotes = []) {
     fatiaCapitalPct: lastro > 0 ? Math.min(100, (capital / lastro) * 100) : 0,
     // ROI do ciclo (Retorno sobre o Investimento): lucro ÷ capital aportado
     roiPct: capital > 0 ? (lucro / capital) * 100 : 0,
-    // 🛡️ Folga: quantas vezes a fatia de 3% destinada a REPASSE cobre o repasse
-    // comprometido. Usa só a fatia de repasse (não os 5% cheios) — leitura mais
-    // conservadora, coerente com a divisão 3% repasse + 2% estrutura.
-    coberturaRepasse:
-      repasse > 0 ? (receita * (PCT_PARCEIRO_REPASSE / 100)) / repasse : 0,
+    // 🛡️ Folga: quantas vezes o orçamento de parceiros de compra (5% da receita)
+    // cobre o repasse comprometido. O repasse é 3% SOBRE O CAPITAL APORTADO —
+    // base diferente da receita, por isso a reserva inteira é o que o cobre.
+    coberturaRepasse: repasse > 0 ? orcamentoParceiros / repasse : 0,
     // o capital de giro volta no fechamento do ciclo e é realocado
     capitalDeVolta: capital,
   };
