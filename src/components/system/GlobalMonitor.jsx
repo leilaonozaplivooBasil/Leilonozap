@@ -54,9 +54,20 @@ export default function GlobalMonitor() {
 
   // ============= INTERCEPTA TODOS OS ERROS =============
   useEffect(() => {
+    // 🛡️ BLINDAGEM CONTRA EMPILHAMENTO DE CAMADAS DE REDE
+    // O monitor troca window.fetch por uma camada própria. Se essa troca
+    // acontecer mais de uma vez (remontagem do componente, recarga a quente do
+    // preview, duas instâncias do monitor), as camadas se empilham uma dentro da
+    // outra e TODA requisição passa a atravessar N camadas — o que estoura a
+    // pilha de execução do navegador ("Maximum call stack size exceeded",
+    // observado em 07/08/2026 numa gravação de log via entityWrite).
+    // Regra: a camada instalada leva uma bandeira. Se já existir camada com
+    // bandeira, esta montagem NÃO instala outra — reaproveita a que está lá.
     const originalFetch = window.fetch;
-    
-    window.fetch = async (...args) => {
+    const jaTemCamada = typeof originalFetch === 'function' && originalFetch.__nozapMonitorFetch === true;
+    let camadaInstaladaAqui = false;
+
+    const camadaMonitor = async (...args) => {
       const startTime = Date.now();
       
       try {
@@ -170,7 +181,14 @@ export default function GlobalMonitor() {
         throw error;
       }
     };
-    
+
+    // Só instala se ainda não houver camada do monitor ativa.
+    if (!jaTemCamada) {
+      camadaMonitor.__nozapMonitorFetch = true;
+      window.fetch = camadaMonitor;
+      camadaInstaladaAqui = true;
+    }
+
     // Intercepta erros do console
     const originalError = console.error;
     console.error = (...args) => {
@@ -205,7 +223,12 @@ export default function GlobalMonitor() {
     
     // Cleanup
     return () => {
-      window.fetch = originalFetch;
+      // Só devolve o fetch original se a camada ativa for EXATAMENTE a que esta
+      // montagem instalou. Sem essa checagem, um desmonte podia derrubar a
+      // camada de outra instância (ou reinstalar uma camada antiga por cima).
+      if (camadaInstaladaAqui && window.fetch === camadaMonitor) {
+        window.fetch = originalFetch;
+      }
       console.error = originalError;
     };
   }, []);
