@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Package, X, ArrowLeft, Plus,
   Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2, PackagePlus,
-  Paperclip, Boxes, Inbox
+  Paperclip, Boxes, Inbox, CalendarClock
 } from 'lucide-react';
+import PublicarOportunidadeModal from '@/components/lotes/PublicarOportunidadeModal';
 import { gerarProdutosDoLote } from '@/functions/gerarProdutosDoLote';
 import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
 import { useNavigate } from 'react-router-dom';
@@ -57,6 +58,9 @@ export default function EstoqueLotes() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [loteParaGerar, setLoteParaGerar] = useState(null); // lote no modal de confirmação de geração de produtos
   const [isGerando, setIsGerando] = useState(false);
+  // ♻️ Republicação de lote do histórico nas Oportunidades do Dia (nova data/hora)
+  const [loteParaPublicar, setLoteParaPublicar] = useState(null);
+  const [isPublicando, setIsPublicando] = useState(false);
 
   const [form, setForm] = useState({
     nome_lote: '',
@@ -202,6 +206,29 @@ export default function EstoqueLotes() {
       toast.error(`Erro ao gerar produtos: ${e.message}`);
     } finally {
       setIsGerando(false);
+    }
+  };
+
+  // ♻️ REPUBLICAR NA OPORTUNIDADE DO DIA — atualiza o MESMO registro do lote com a
+  // data/hora nova (nunca cria lote novo, nunca duplica). O lote permanece no
+  // histórico e volta a aparecer no painel do Parceiro conforme a nova data.
+  const handleConfirmarPublicacao = async (dados) => {
+    if (!loteParaPublicar) return;
+    setIsPublicando(true);
+    try {
+      await writeLote('update', {
+        id: loteParaPublicar.id,
+        data: { ...dados, publicado_parceiro: true },
+      });
+      toast.success(
+        `Lote publicado nas Oportunidades do Dia para ${new Date(dados.data_leilao).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+      );
+      setLoteParaPublicar(null);
+      await loadLotes();
+    } catch (e) {
+      toast.error('Não foi possível publicar: ' + (e?.message || 'erro desconhecido'));
+    } finally {
+      setIsPublicando(false);
     }
   };
 
@@ -387,6 +414,31 @@ export default function EstoqueLotes() {
                           </Badge>
                         )}
 
+                        {/* ♻️ Republicar / remarcar na Oportunidade do Dia */}
+                        {(() => {
+                          const agendado =
+                            lote.publicado_parceiro &&
+                            lote.data_leilao &&
+                            new Date(lote.data_leilao).getTime() > Date.now();
+                          return (
+                            <Button
+                              size="sm"
+                              onClick={() => setLoteParaPublicar(lote)}
+                              className={`min-h-[40px] font-bold ${agendado ? 'bg-gray-700 hover:bg-gray-600' : 'bg-amber-600 hover:bg-amber-500'}`}
+                              title={
+                                agendado
+                                  ? `Já publicado para ${new Date(lote.data_leilao).toLocaleString('pt-BR')} — clique para remarcar a data`
+                                  : 'Publicar este lote nas Oportunidades do Dia com data e horário novos'
+                              }
+                            >
+                              <CalendarClock className="w-4 h-4 mr-1" />
+                              {agendado
+                                ? `Remarcar (${new Date(lote.data_leilao).toLocaleDateString('pt-BR')})`
+                                : 'Republicar na Oportunidade do Dia'}
+                            </Button>
+                          );
+                        })()}
+
                         {/* Excluir */}
                         <Button
                           size="sm"
@@ -406,6 +458,35 @@ export default function EstoqueLotes() {
           </div>
         )}
       </div>
+
+      {/* MODAL REPUBLICAR NA OPORTUNIDADE DO DIA (mesmo modal do Analisador) */}
+      {loteParaPublicar && (
+        <PublicarOportunidadeModal
+          lote={{
+            nomeLote: loteParaPublicar.nome_lote,
+            quantidadeTotal: loteParaPublicar.quantidade_total || 0,
+            valorMercadoTotal: loteParaPublicar.valor_mercado_total || 0,
+          }}
+          custoTotal={loteParaPublicar.custo_total || loteParaPublicar.valor_lote || 0}
+          freteSugerido={loteParaPublicar.frete_oportunidade || 0}
+          economiaPct={
+            loteParaPublicar.valor_mercado_total > 0 && (loteParaPublicar.custo_total || loteParaPublicar.valor_lote)
+              ? (1 - (loteParaPublicar.custo_total || loteParaPublicar.valor_lote) / loteParaPublicar.valor_mercado_total) * 100
+              : null
+          }
+          inicial={{
+            lance_entrada: loteParaPublicar.lance_entrada,
+            frete_oportunidade: loteParaPublicar.frete_oportunidade,
+            vagas: loteParaPublicar.vagas,
+            observacao_parceiro: loteParaPublicar.observacao_parceiro,
+          }}
+          titulo="Republicar na Oportunidade do Dia"
+          textoConfirmar="Publicar com esta data"
+          salvando={isPublicando}
+          onConfirmar={handleConfirmarPublicacao}
+          onFechar={() => !isPublicando && setLoteParaPublicar(null)}
+        />
+      )}
 
       {/* MODAL CONFIRMAR EXCLUSÃO */}
       {loteParaExcluir && (

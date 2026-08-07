@@ -6,6 +6,10 @@ const brl = (v) =>
 
 // 🌟 Publicação de um lote analisado nas "Oportunidades do Dia" do Parceiro.
 // UI + validação apenas: quem grava é o Analisador (mesmo caminho de escrita já usado).
+// ♻️ 06/08/2026 — `inicial`, `titulo` e `textoConfirmar` são OPCIONAIS: existem só
+// para a republicação de um lote do histórico (Estoque de Lotes) reaproveitar este
+// mesmo modal já preenchido. Sem eles, o comportamento do Analisador é idêntico ao
+// de antes. A data/hora NUNCA é pré-preenchida: republicar exige informar a nova.
 export default function PublicarOportunidadeModal({
   lote,
   custoTotal,
@@ -14,13 +18,20 @@ export default function PublicarOportunidadeModal({
   salvando,
   onConfirmar,
   onFechar,
+  inicial = {},
+  titulo = 'Publicar nas Oportunidades do Dia',
+  textoConfirmar = 'Publicar oportunidade',
 }) {
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('');
-  const [lance, setLance] = useState(String(Math.round(custoTotal || 0)));
-  const [frete, setFrete] = useState(String(Math.round(freteSugerido || 0)));
-  const [vagas, setVagas] = useState('');
-  const [observacao, setObservacao] = useState('');
+  const [lance, setLance] = useState(
+    String(Math.round(inicial.lance_entrada || custoTotal || 0))
+  );
+  const [frete, setFrete] = useState(
+    String(Math.round(inicial.frete_oportunidade || freteSugerido || 0))
+  );
+  const [vagas, setVagas] = useState(inicial.vagas ? String(inicial.vagas) : '');
+  const [observacao, setObservacao] = useState(inicial.observacao_parceiro || '');
   const [erro, setErro] = useState('');
 
   const confirmar = () => {
@@ -62,7 +73,7 @@ export default function PublicarOportunidadeModal({
         >
           <div className="min-w-0">
             <h3 className="flex items-center gap-2 text-base font-bold text-white">
-              <Sparkles size={18} className="text-amber-400" /> Publicar nas Oportunidades do Dia
+              <Sparkles size={18} className="text-amber-400" /> {titulo}
             </h3>
             <p className="mt-0.5 truncate text-xs text-gray-400">{lote?.nomeLote}</p>
           </div>
@@ -180,7 +191,7 @@ export default function PublicarOportunidadeModal({
             onClick={confirmar}
             className="min-h-[44px] flex-1 rounded-xl bg-amber-600 text-sm font-bold text-white hover:bg-amber-500 disabled:opacity-60"
           >
-            {salvando ? 'Publicando...' : 'Publicar oportunidade'}
+            {salvando ? 'Publicando...' : textoConfirmar}
           </button>
         </div>
       </div>
