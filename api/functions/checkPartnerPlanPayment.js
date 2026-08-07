@@ -34,6 +34,18 @@ export default async function handler(req, res) {
         }).catch(() => {});
         return res.status(200).json({ is_paid: true, data: { is_paid: true } });
       }
+      // 🖤 SOMENTE LEITURA: informa ao front quando a cobrança já nasceu/ficou
+      // recusada (ex.: rejected_high_risk em aporte alto). Sem isso a tela fica
+      // "aguardando confirmação" para sempre num PIX que não pode ser pago.
+      if (r.ok && ['rejected', 'cancelled'].includes(pay?.status)) {
+        const out = {
+          is_paid: false,
+          is_rejected: true,
+          status: pay.status,
+          status_detail: pay.status_detail || null,
+        };
+        return res.status(200).json({ ...out, data: out });
+      }
     }
     return res.status(200).json({ is_paid: false, data: { is_paid: false } });
   } catch (e) {

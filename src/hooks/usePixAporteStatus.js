@@ -17,7 +17,12 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
   const [verificando, setVerificando] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
   const [expirado, setExpirado] = useState(false);
+  // 🖤 Cobrança recusada pelo Mercado Pago (ex.: rejected_high_risk): o PIX
+  // existe mas nunca poderá ser pago — a tela precisa dizer isso e o motivo.
+  const [recusado, setRecusado] = useState(false);
+  const [motivoRecusa, setMotivoRecusa] = useState(null);
   const emVooRef = useRef(false);
+  const recusadoRef = useRef(false);
   const confirmadoRef = useRef(false);
   const inicioRef = useRef(Date.now());
   const onConfirmadoRef = useRef(onConfirmado);
@@ -25,7 +30,7 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
 
   // Uma única rotina de checagem, compartilhada pelo ciclo e pelos eventos.
   const verificar = async () => {
-    if (!billingId || confirmadoRef.current || emVooRef.current) return false;
+    if (!billingId || confirmadoRef.current || recusadoRef.current || emVooRef.current) return false;
     emVooRef.current = true;
     setVerificando(true);
     try {
@@ -39,6 +44,12 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
         onConfirmadoRef.current?.();
         return true;
       }
+      const dados = resp?.data || resp || {};
+      if (dados.is_rejected) {
+        recusadoRef.current = true;
+        setRecusado(true);
+        setMotivoRecusa(dados.status_detail || dados.status || null);
+      }
       return false;
     } catch {
       return false; // rede oscilou: o próximo ciclo tenta de novo
@@ -51,14 +62,17 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
   useEffect(() => {
     if (!billingId) return;
     confirmadoRef.current = false;
+    recusadoRef.current = false;
     setConfirmado(false);
+    setRecusado(false);
+    setMotivoRecusa(null);
     setExpirado(false);
     inicioRef.current = Date.now();
 
     const expirou = () => Date.now() - inicioRef.current > LIMITE_MS;
 
     const ciclo = setInterval(() => {
-      if (confirmadoRef.current) return;
+      if (confirmadoRef.current || recusadoRef.current) return;
       if (expirou()) {
         setExpirado(true);
         clearInterval(ciclo);
@@ -70,7 +84,7 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
 
     // 📱 Voltou do app do banco: confere IMEDIATAMENTE
     const aoVoltar = () => {
-      if (confirmadoRef.current || expirou()) return;
+      if (confirmadoRef.current || recusadoRef.current || expirou()) return;
       if (document.visibilityState === 'visible') verificar();
     };
     document.addEventListener('visibilitychange', aoVoltar);
@@ -84,5 +98,5 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
      
   }, [billingId]);
 
-  return { verificando, confirmado, expirado, verificarAgora: verificar };
+  return { verificando, confirmado, expirado, recusado, motivoRecusa, verificarAgora: verificar };
 }

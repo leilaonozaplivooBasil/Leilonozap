@@ -8,6 +8,7 @@ import { base44 } from '@/api/base44Client';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import usePixAporteStatus from '@/hooks/usePixAporteStatus';
 import ParceiroPixConfirmado from './ParceiroPixConfirmado';
+import ParceiroPixRecusado from './ParceiroPixRecusado';
 
 // 💚 Tela do QR Code PIX do aporte + verificação de pagamento.
 // ⚠️ Lógica financeira copiada 1:1 de InvestorDashboard (mesma function
@@ -19,9 +20,12 @@ export default function ParceiroPixQrCode({ pixData, valor, plano, onCancelar, o
 
   // 🔄 Confirmação automática: ciclo de 8s + checagem imediata ao voltar do
   // app do banco. O botão manual abaixo continua existindo.
-  const { verificando, confirmado, expirado } = usePixAporteStatus(pixData?.billing_id, () => {
-    toast.success('✅ Pagamento PIX confirmado!');
-  });
+  const { verificando, confirmado, expirado, recusado, motivoRecusa } = usePixAporteStatus(
+    pixData?.billing_id,
+    () => {
+      toast.success('✅ Pagamento PIX confirmado!');
+    }
+  );
 
   // ✅ Confirmado: mostra o comprovante antes de fechar o modal
   if (confirmado) {
@@ -31,6 +35,13 @@ export default function ParceiroPixQrCode({ pixData, valor, plano, onCancelar, o
         valor={valor}
         onConcluir={onPagamentoConfirmado}
       />
+    );
+  }
+
+  // ❌ Cobrança recusada pelo Mercado Pago: mostra o motivo em vez de girar sem fim
+  if (recusado) {
+    return (
+      <ParceiroPixRecusado valor={valor} motivoDetalhe={motivoRecusa} onGerarNovo={onCancelar} />
     );
   }
 
@@ -108,6 +119,9 @@ export default function ParceiroPixQrCode({ pixData, valor, plano, onCancelar, o
             if (response?.data?.is_paid || response?.is_paid) {
               toast.success('✅ Pagamento PIX confirmado!');
               await onPagamentoConfirmado();
+            } else if (response?.data?.is_rejected || response?.is_rejected) {
+              // o próprio ciclo automático já troca a tela pelo aviso com o motivo
+              toast.error('Cobrança recusada pelo Mercado Pago. Veja o motivo na tela.');
             } else {
               toast.info('⏳ Pagamento PIX ainda não identificado. Aguarde alguns segundos e tente novamente.');
             }
