@@ -32,6 +32,26 @@ export function getStoredUser() {
   }
 }
 
+/**
+ * Grava a sessão no navegador E avisa o cabeçalho na MESMA aba.
+ *
+ * ⚠️ Por que existe: gravar em localStorage não notifica a própria aba (o evento
+ * 'storage' só chega nas OUTRAS abas). Telas que gravavam a sessão e navegavam
+ * sem recarregar deixavam o cabeçalho mostrando "Entrar" até o usuário atualizar
+ * a página. O evento 'sessionChanged' resolve isso sem recarregar nada.
+ *
+ * Não altera cargo, comissão, saldo nem qualquer regra de negócio.
+ */
+export function saveSession(user) {
+  if (!user?.id || !user?.email) return null;
+  try {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    sessionStorage.setItem('isLoggedIn', 'true');
+    window.dispatchEvent(new CustomEvent('sessionChanged', { detail: user }));
+  } catch (_) { /* storage indisponível: segue sem quebrar o fluxo */ }
+  return user;
+}
+
 /** true se existe sessão válida no navegador. */
 export function hasSession() {
   return getStoredUser() !== null;

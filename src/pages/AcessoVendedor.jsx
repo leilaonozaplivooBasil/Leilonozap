@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import bcrypt from 'bcryptjs';
 import { Eye, EyeOff, CheckCircle, AlertCircle, Lock, Loader2 } from 'lucide-react';
+import { saveSession } from '@/lib/session';
 
 export default function AcessoVendedor() {
   const navigate = useNavigate();
@@ -94,8 +95,7 @@ export default function AcessoVendedor() {
 
       const updatedUser = { ...seller };
       delete updatedUser.password;
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      sessionStorage.setItem('isLoggedIn', 'true');
+      saveSession(updatedUser);
 
       setView('success');
       setTimeout(() => { navigate('/SellerPanel'); }, 2000);

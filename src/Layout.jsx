@@ -599,6 +599,19 @@ export default function Layout({ children, currentPageName }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // 🔔 SESSÃO NA MESMA ABA: telas que fazem login/cadastro e navegam SEM recarregar
+  // (funil /Cadastro, painel do Vendedor, primeiro acesso do Vendedor) avisam por
+  // 'sessionChanged' — o evento 'storage' acima só chega nas OUTRAS abas.
+  // Passa pelo safeMergeUser: o anti-downgrade de admin continua valendo.
+  useEffect(() => {
+    const onSessionChanged = (e) => {
+      const u = e?.detail;
+      if (u?.id && u?.email) setCurrentUser(prev => safeMergeUser(u, prev));
+    };
+    window.addEventListener('sessionChanged', onSessionChanged);
+    return () => window.removeEventListener('sessionChanged', onSessionChanged);
+  }, [safeMergeUser]);
+
   // 🛡️ SYNC SESSIONSTORE: Se localStorage foi limpo (logout em outra aba), limpa sessionStorage também
   useEffect(() => {
     const handleStorageChange = (e) => {

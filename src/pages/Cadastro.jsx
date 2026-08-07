@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
+import { saveSession } from '@/lib/session';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -118,7 +119,8 @@ export default function Cadastro() {
       });
       if (!r?.success) { toast.error(r?.error || 'Erro ao cadastrar.'); setSending(false); return; }
       const user = r.user;
-      localStorage.setItem('currentUser', JSON.stringify(user));
+      // grava a sessão completa (com o marcador de aba) e avisa o cabeçalho na hora
+      saveSession(user);
       setCreatedUser(user);
       if (r.needs_adesao || isPaid) {
         toast.success('Cadastro criado! Falta só o pagamento da adesão.');

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
+import { saveSession } from '@/lib/session';
 
 export default function SellerLoginForm({ onSuccess }) {
   const [email, setEmail] = useState('');
@@ -33,9 +34,8 @@ export default function SellerLoginForm({ onSuccess }) {
         return;
       }
 
-      // Salva com o ID real do banco
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      sessionStorage.setItem('isLoggedIn', 'true');
+      // Salva com o ID real do banco e avisa o cabeçalho na mesma aba
+      saveSession(user);
 
       onSuccess(user);
     } catch (err) {
