@@ -28,6 +28,8 @@ import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
 import { saveReferral, getReferral, clearReferral } from "@/lib/referral";
+// 🔐 Ao sair da conta, o aparelho deixa de ser "aparelho autorizado" da captação privada
+import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 import AdminTopNav from "@/components/layout/AdminTopNav";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
@@ -206,6 +208,12 @@ export default function Layout({ children, currentPageName }) {
     // Sem isso, o próximo usuário do MESMO aparelho herdava o dono do anterior
     // (caso "TTT", 06/08/2026: link de teste de 2025 aparecia pra outra conta).
     clearReferral();
+
+    // 🔐 CAPTAÇÃO PRIVADA — sair da conta REVOGA o acesso à apresentação do
+    // Parceiro neste aparelho. Sem isso, a marca de ciência ficava para sempre e
+    // qualquer pessoa (ou o mesmo usuário deslogado) reabria conteúdo
+    // confidencial só clicando no link. Vazamento reportado em 07/08/2026.
+    limparAceiteParceiro();
 
     setCurrentUser(null);
 

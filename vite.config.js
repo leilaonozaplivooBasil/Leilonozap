@@ -22,6 +22,10 @@ const versionStampPlugin = () => ({
 // https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   logLevel: 'error',
+  // 🔖 Carimbo da versão DENTRO do bundle. É a referência real de comparação:
+  // sem isso, um aparelho preso em cache antigo nunca descobre que está velho
+  // (ver comentário em src/hooks/useAppVersion.js).
+  define: { __BUILD_VERSION__: JSON.stringify(BUILD_VERSION) },
   // produção: remove console.* e debugger do bundle (mantém em dev)
   esbuild: command === 'build' ? { drop: ['console', 'debugger'] } : {},
   plugins: [

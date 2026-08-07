@@ -1,3 +1,6 @@
+/* global __BUILD_VERSION__ */
+// __BUILD_VERSION__ é injetada pelo vite.config.js no momento do build
+// (define). Não é import: é substituída no código pelo carimbo do deploy.
 import { useEffect, useRef, useState } from 'react';
 
 // 🔄 CAMADA 1 — detecção de novo deploy.
@@ -15,9 +18,21 @@ import { useEffect, useRef, useState } from 'react';
 // requisição minúscula (version.json) e a percepção de atualização é imediata.
 const INTERVALO = 60000; // 1 min
 
+// 🚨 CAUSA-RAIZ CORRIGIDA (07/08/2026): antes a referência de comparação era a
+// PRIMEIRA leitura feita na própria sessão. Um aparelho preso numa versão ANTIGA
+// abria o app, lia a versão NOVA do servidor, guardava como "minha referência" e
+// concluía que estava atualizado — nunca se atualizava. Só detectava deploy que
+// acontecia com a aba aberta na frente da pessoa. Era exatamente o caso de quem
+// abre pelo LINK no navegador (a aba nunca é realmente fechada), enquanto o app
+// instalado se atualizava sozinho ao ser reaberto de fato.
+// Agora a referência é a versão do BUILD que está rodando (carimbada no bundle):
+// se o servidor tem outra, o aparelho SABE que está velho e se atualiza.
+const VERSAO_DO_BUILD =
+  typeof __BUILD_VERSION__ !== 'undefined' ? String(__BUILD_VERSION__) : null;
+
 export function useAppVersion() {
   const [temAtualizacao, setTemAtualizacao] = useState(false);
-  const versaoInicial = useRef(null);
+  const versaoInicial = useRef(VERSAO_DO_BUILD);
 
   useEffect(() => {
     let cancelado = false;

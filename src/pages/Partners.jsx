@@ -15,7 +15,7 @@ import ParceiroBoard from '@/components/parceiro/ParceiroBoard';
 import ParceiroFormalizacao from '@/components/parceiro/ParceiroFormalizacao';
 import ParceiroCTA from '@/components/parceiro/ParceiroCTA';
 import ParceiroDisclaimer from '@/components/parceiro/ParceiroDisclaimer';
-import { temAceiteParceiro } from '@/lib/parceiroAcesso';
+import { acessoParceiroLiberado, usuarioLocal } from '@/lib/parceiroAcesso';
 
 // 🖤 PARCEIRO DE COMPRA — vitrine pública de captação privada.
 // ⚠️ REGRA PERMANENTE: esta página NÃO exibe valor financeiro algum
@@ -38,22 +38,38 @@ export default function PartnersPage() {
     return () => document.body.classList.remove('pc-tema');
   }, []);
 
-  // 🔐 PORTA OBRIGATÓRIA: quem não passou por /AcessoParceiro (cadastro + ciência
-  // de que é captação privada) não vê a apresentação — volta pra porta de entrada.
+  // 🔐 PORTA OBRIGATÓRIA: só entra quem está LOGADO AGORA e já declarou ciência
+  // de que é captação privada. Sem sessão ativa → volta pra porta de entrada,
+  // sem renderizar um pixel do conteúdo confidencial.
+  //
+  // 📱 Revalida ao voltar do segundo plano e ao focar a aba: se a sessão caiu ou
+  // a pessoa saiu da conta em outra aba, a apresentação fecha na hora.
   useEffect(() => {
-    let user = null;
-    try {
-      const savedUserJSON = localStorage.getItem('currentUser');
-      user = savedUserJSON ? JSON.parse(savedUserJSON) : null;
-    } catch (error) {
-      user = null;
-    }
-    setCurrentUser(user);
-    if (temAceiteParceiro(user)) {
-      setLiberado(true);
-    } else {
-      navigate('/AcessoParceiro', { replace: true });
-    }
+    const conferir = () => {
+      setCurrentUser(usuarioLocal());
+      if (acessoParceiroLiberado()) {
+        setLiberado(true);
+      } else {
+        setLiberado(false);
+        navigate('/AcessoParceiro', { replace: true });
+      }
+    };
+
+    conferir();
+    const aoVoltar = () => { if (!document.hidden) conferir(); };
+    // 'storage' = saiu da conta em OUTRA aba; 'sessionChanged' = na mesma aba.
+    // Com a apresentação já aberta, a sessão pode cair sem remontar a página —
+    // por isso a reconferência é por evento, não só na montagem.
+    document.addEventListener('visibilitychange', aoVoltar);
+    window.addEventListener('focus', conferir);
+    window.addEventListener('storage', conferir);
+    window.addEventListener('sessionChanged', conferir);
+    return () => {
+      document.removeEventListener('visibilitychange', aoVoltar);
+      window.removeEventListener('focus', conferir);
+      window.removeEventListener('storage', conferir);
+      window.removeEventListener('sessionChanged', conferir);
+    };
   }, [navigate]);
 
   const handleLoginSuccess = (user) => {
