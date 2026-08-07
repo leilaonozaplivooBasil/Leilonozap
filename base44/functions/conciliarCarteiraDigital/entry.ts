@@ -222,6 +222,61 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ══════════ MODO LANCES — ETAPA 4 da investigação (somente leitura) ══════════
+    // Para os leilões liderados pelas contas subreservadas, lê TODOS os lances e
+    // compara com o reservado. Prova/derruba a hipótese "reserva não acompanha o lance".
+    if (modo === 'lances') {
+      const emails = (limite_divergencias === 'luiz' || limite_divergencias === 'luiz_resumo')
+        ? ['luizsantanna@tttcorporate.com']
+        : limite_divergencias === 'alex'
+          ? ['alexandrewlk@gmail.com']
+          : ['luizsantanna@tttcorporate.com', 'alexandrewlk@gmail.com'];
+      const uRes = await get(`app_users?select=id,email,saldo_disponivel,saldo_reservado&email=in.(${emails.join(',')})`);
+      const users = Array.isArray(uRes.body) ? uRes.body : [];
+
+      const aRes = await get('auctions?select=id,title,status,end_time,winner_id,current_price,starting_price,increment,frete_reservado_valor&status=eq.active&limit=3000');
+      const ativos = (Array.isArray(aRes.body) ? aRes.body : []).filter((a: any) => {
+        const t = a.end_time ? Date.parse(a.end_time) : NaN;
+        return Number.isFinite(t) ? t > Date.now() : true;
+      });
+
+      const saida: any[] = [];
+      for (const u of users) {
+        const lidera = ativos.filter((a: any) => a.winner_id === u.id);
+        const detalhe: any[] = [];
+        for (const a of lidera) {
+          const mRes = await get(`auction_messages?select=sender_id,sender_name,bid_amount,frete_amount,timestamp,created_date&auction_id=eq.${encodeURIComponent(a.id)}&message_type=eq.bid&limit=500`);
+          const lances = Array.isArray(mRes.body) ? mRes.body : [];
+          const meus = lances.filter((m: any) => m.sender_id === u.id);
+          detalhe.push({
+            auction_id: a.id, titulo: a.title,
+            preco_atual: cent(a.current_price), inicial: cent(a.starting_price), incremento: cent(a.increment),
+            frete_no_leilao: cent(a.frete_reservado_valor),
+            total_lances_no_leilao: lances.length,
+            meus_lances: meus.length,
+            soma_meus_lances: cent(meus.reduce((s: number, m: any) => s + (Number(m.bid_amount) || 0), 0)),
+            soma_meus_fretes: cent(meus.reduce((s: number, m: any) => s + (Number(m.frete_amount) || 0), 0)),
+            meu_ultimo_lance: meus.length ? cent(meus[meus.length - 1].bid_amount) : null,
+            ...(limite_divergencias === 'resumo' || limite_divergencias === 'luiz_resumo' ? {} : {
+              meus_valores: meus.map((m: any) => ({ v: cent(m.bid_amount), frete: cent(m.frete_amount), quando: m.timestamp || m.created_date })),
+              outros_lances: lances.filter((m: any) => m.sender_id !== u.id).map((m: any) => ({ quem: m.sender_name, v: cent(m.bid_amount), frete: cent(m.frete_amount), quando: m.timestamp || m.created_date })),
+            }),
+          });
+        }
+        const esperado = cent(detalhe.reduce((s, d) => s + d.preco_atual + d.frete_no_leilao, 0));
+        const esperadoSemFrete = cent(detalhe.reduce((s, d) => s + d.preco_atual, 0));
+        saida.push({
+          email: u.email, reservado: cent(u.saldo_reservado), disponivel: cent(u.saldo_disponivel),
+          esperado_com_frete: esperado, esperado_sem_frete: esperadoSemFrete,
+          dif_com_frete: cent(u.saldo_reservado - esperado),
+          dif_sem_frete: cent(u.saldo_reservado - esperadoSemFrete),
+          soma_fretes_dos_leiloes: cent(detalhe.reduce((s, d) => s + d.frete_no_leilao, 0)),
+          leiloes: detalhe,
+        });
+      }
+      return Response.json({ escrita_realizada: 'NENHUMA — somente GET', contas: saida });
+    }
+
     // ══════════ PASSO 0 — a fonte tem dado real? ══════════
     const inventario: Record<string, any> = {};
     for (const t of ['digital_wallets', 'digital_wallet_transactions', 'mercado_pago_payments', 'auctions', 'app_users']) {
