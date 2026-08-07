@@ -1,4 +1,4 @@
-// 🏛️ LASTRO E ROE DA OPERAÇÃO — fonte ÚNICA dos cálculos exibidos no bloco
+// 🏛️ LASTRO E ROI DA OPERAÇÃO — fonte ÚNICA dos cálculos exibidos no bloco
 // "Oportunidades do Dia" do painel do Parceiro.
 //
 // ⚠️ NADA aqui grava, paga, comissiona ou altera dado real. É APRESENTAÇÃO:
@@ -14,16 +14,22 @@
 //    operação paga de verdade e contradiria o contador do ciclo do parceiro.
 //  • Orçamento de parceiros de compra = 5% da receita (PREMISSAS.pctParceirosCompra).
 //    Serve para demonstrar FOLGA DE PAGAMENTO (cobertura do repasse).
-//  • Lucro da operação = margem líquida por lote de operacaoNumeros.POR_LOTE
-//    (4.952 / 80.000 = 6,19% da receita).
+//  • Lucro da operação = RESIDUAL da DRE (receita − aquisição real − comissão de
+//    rede − estrutura de venda − parceiros de compra − imposto). Calculado assim
+//    a conta FECHA na tela: a soma das linhas dá exatamente a receita. Os
+//    percentuais de cada linha são os de operacaoNumeros (PREMISSAS/POR_LOTE):
+//    comissão de rede 30%, despesa operacional 20%, parceiros de compra 5% e
+//    imposto 7,56% (Simples, PGDAS-D 06/2026) — todos sobre a receita.
 //  • ROI do ciclo (Retorno sobre o Investimento) = lucro ÷ capital aportado.
 
-import { PREMISSAS, POR_LOTE } from '@/lib/operacaoNumeros';
+import { PREMISSAS } from '@/lib/operacaoNumeros';
 
 export const PCT_VENDA_SOBRE_MERCADO = 80;
 export const PCT_REPASSE_PARCEIRO_CICLO = 3;
 export const PCT_ORCAMENTO_PARCEIROS = PREMISSAS.pctParceirosCompra;
-export const PCT_LUCRO_SOBRE_RECEITA = (POR_LOTE.lucro / POR_LOTE.receita) * 100;
+export const PCT_COMISSAO_REDE = PREMISSAS.pctComissaoRede;
+export const PCT_ESTRUTURA_VENDA = PREMISSAS.pctDespesaOperacional;
+export const PCT_IMPOSTO = PREMISSAS.aliquotaSimples;
 
 // 💰 Real sem centavos — padrão dos documentos institucionais do Parceiro
 export function brl(valor) {
@@ -65,7 +71,11 @@ export function resumirLastro(lotes = []) {
   const receita = lastro * (PCT_VENDA_SOBRE_MERCADO / 100);
   const repasse = capital * (PCT_REPASSE_PARCEIRO_CICLO / 100);
   const orcamentoParceiros = receita * (PCT_ORCAMENTO_PARCEIROS / 100);
-  const lucro = receita * (PCT_LUCRO_SOBRE_RECEITA / 100);
+  const comissaoRede = receita * (PCT_COMISSAO_REDE / 100);
+  const estruturaVenda = receita * (PCT_ESTRUTURA_VENDA / 100);
+  const imposto = receita * (PCT_IMPOSTO / 100);
+  // 🧾 Lucro = residual da DRE. A soma das linhas fecha exatamente na receita.
+  const lucro = receita - capital - comissaoRede - estruturaVenda - orcamentoParceiros - imposto;
 
   return {
     lotes: lista.length,
@@ -75,7 +85,11 @@ export function resumirLastro(lotes = []) {
     receita,
     repasse,
     orcamentoParceiros,
+    comissaoRede,
+    estruturaVenda,
+    imposto,
     lucro,
+    margemPct: receita > 0 ? (lucro / receita) * 100 : 0,
     // quantas vezes o valor de mercado cobre o capital necessário
     multiploLastro: capital > 0 ? lastro / capital : 0,
     // fatia do capital dentro do lastro (para a barra visual)

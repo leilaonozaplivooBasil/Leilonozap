@@ -1,5 +1,6 @@
-import React from 'react';
-import { Gem, ShieldCheck, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Gem, ShieldCheck, RefreshCw, Calculator } from 'lucide-react';
+import MemorialCalculoModal from './MemorialCalculoModal';
 import {
   resumirLastro,
   brl,
@@ -14,6 +15,7 @@ import {
 // Mostra, em linguagem direta: com quanto a operação entra, quanto de mercado
 // isso carrega, o que volta no fechamento e qual o retorno sobre o capital.
 export default function LastroDoDia({ oportunidades = [] }) {
+  const [memorial, setMemorial] = useState(false);
   if (!oportunidades.length) return null;
   const r = resumirLastro(oportunidades);
 
@@ -103,6 +105,18 @@ export default function LastroDoDia({ oportunidades = [] }) {
           </p>
         </div>
       </div>
+
+      {/* 🧾 CLIQUE AQUI E ENTENDA O CÁLCULO — abre a conta linha a linha */}
+      <button
+        type="button"
+        onClick={() => setMemorial(true)}
+        className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 border border-pc-ouro bg-pc-ouro/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-pc-ouro transition-colors hover:bg-pc-ouro/20 sm:text-sm"
+      >
+        <Calculator className="h-4 w-4 shrink-0" strokeWidth={2} />
+        Clique aqui e entenda o cálculo
+      </button>
+
+      {memorial && <MemorialCalculoModal resumo={r} onFechar={() => setMemorial(false)} />}
 
       {/* 📋 GRADE DE MÉTRICAS */}
       <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-4 border-t border-pc-borda pt-4 sm:grid-cols-2 xl:grid-cols-3">
