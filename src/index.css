@@ -65,6 +65,51 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
    removida ao sair — nenhum componente global é alterado e NENHUMA outra tela
    muda de aparência. Serve para o rodapé e o flutuante (que são renderizados
    fora da árvore da página, pelo Layout) acompanharem o preto institucional. */
+/* Barra do topo (cabeçalho do site) preta nas páginas do Parceiro de Compra.
+   A nav é renderizada pelo Layout, fora da árvore da página — por isso o tema
+   chega nela por aqui, sem alterar o Layout e sem afetar nenhuma outra tela. */
+body.pc-tema nav {
+  background: var(--pc-preto) !important;
+  border-bottom: 1px solid var(--pc-borda) !important;
+  box-shadow: none !important;
+}
+/* Chips e botões do cabeçalho perdem o verde/gradiente do site e entram no preto */
+body.pc-tema nav button,
+body.pc-tema nav a {
+  background-image: none !important;
+  background-color: var(--pc-preto-2) !important;
+  border-color: var(--pc-borda) !important;
+  color: var(--pc-tinta) !important;
+}
+/* a logo não é botão: nunca recebe placa */
+body.pc-tema nav img {
+  background: transparent !important;
+}
+
+/* 🖤 CADASTRO OFICIAL EM VERSÃO PRETA (contexto Parceiro de Compra).
+   É a MESMA página /Register, com os MESMOS campos, validações e regras —
+   só a pintura muda. Nada aqui altera comportamento. */
+.pc-cadastro { background: var(--pc-preto) !important; }
+.pc-cadastro [class*="bg-gray-8"],
+.pc-cadastro [class*="bg-gray-9"] {
+  background-color: var(--pc-preto-2) !important;
+  border-color: var(--pc-borda) !important;
+}
+.pc-cadastro input,
+.pc-cadastro [class*="bg-gray-7"] {
+  background-color: var(--pc-preto) !important;
+  border-color: var(--pc-borda) !important;
+  color: var(--pc-tinta) !important;
+}
+.pc-cadastro [class*="text-green-4"] { color: var(--pc-ouro) !important; }
+.pc-cadastro [class*="text-gray-3"],
+.pc-cadastro [class*="text-gray-4"] { color: var(--pc-tinta-fraca) !important; }
+.pc-cadastro [class*="bg-green-6"] {
+  background-color: var(--pc-ouro) !important;
+  color: var(--pc-preto) !important;
+}
+.pc-cadastro [class*="bg-green-6"]:hover { background-color: var(--pc-ouro-claro) !important; }
+
 body.pc-tema footer {
   background: var(--pc-preto) !important;
   border-top: 1px solid var(--pc-borda) !important;

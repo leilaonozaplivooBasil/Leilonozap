@@ -10,6 +10,7 @@ import { createPageUrl } from '@/utils';
 import { getReferral } from '@/lib/referral';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { registrarAceiteTermo } from '@/lib/termoAdesao';
+import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 
 const AppUser = base44.entities.AppUser;
 
@@ -39,12 +40,22 @@ export default function Register() {
   const [showTermo, setShowTermo] = useState(false);
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
+  // 🖤 Mesmo cadastro, pintura preta quando a pessoa vem da captação privada
+  // (Parceiro de Compra). Só visual — campos, validações e regras idênticos.
+  const isParceiro = sessionStorage.getItem('registerTemaParceiro') === '1';
+
+  useEffect(() => {
+    if (!isParceiro) return;
+    document.body.classList.add('pc-tema');
+    return () => document.body.classList.remove('pc-tema');
+  }, [isParceiro]);
 
   // 🔀 Pra onde voltar depois do cadastro (ex: quem veio do checkout de Vendedor)
   const redirectAfterAuth = () => {
     const returnTo = sessionStorage.getItem('registerReturnTo');
     if (returnTo) {
       sessionStorage.removeItem('registerReturnTo');
+      sessionStorage.removeItem('registerTemaParceiro');
       window.location.href = returnTo;
       return;
     }
@@ -76,7 +87,8 @@ export default function Register() {
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
       registrarAceiteTermo(user);
-      setTimeout(redirectAfterAuth, 300);
+      // ⚡ Sem espera artificial (eram 300ms somados a um fluxo já lento).
+      redirectAfterAuth();
     } catch (error) {
       setErrorMessage("❌ Erro ao continuar com Google. Tente novamente.");
       setIsGoogleLoading(false);
@@ -99,14 +111,12 @@ export default function Register() {
         setTimeout(() => renderGoogleButton(clientId), 250);
       }
     };
+    // ⚡ Desenha já com o Client ID guardado e confirma em segundo plano.
+    const emCache = clientIdEmCache();
+    if (emCache) renderGoogleButton(emCache);
     (async () => {
-      try {
-        const res = await base44.functions.invoke('getGoogleClientId', {});
-        const clientId = res?.clientId;
-        if (clientId) renderGoogleButton(clientId);
-      } catch (error) {
-        console.debug('Cadastro com Google indisponível:', error?.message);
-      }
+      const clientId = await buscarClientId(base44);
+      if (clientId && clientId !== emCache) renderGoogleButton(clientId);
     })();
     return () => { cancelled = true; };
   }, []);
@@ -332,7 +342,7 @@ export default function Register() {
   };
 
   return (
-    <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-white' : 'bg-gray-900'} py-8 px-4`}>
+    <div className={`min-h-screen ${isParceiro ? 'pc-cadastro' : ''} ${isSaiDeBaixo ? 'bg-white' : 'bg-gray-900'} py-8 px-4`}>
       <div className="max-w-5xl mx-auto">
         <Button
           variant="ghost"
