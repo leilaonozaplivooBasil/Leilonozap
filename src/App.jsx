@@ -79,6 +79,8 @@ const TermsOfUse = React.lazy(() => import('@/pages/TermsOfUse'));
 const IntegracaoMelhorEnvio = React.lazy(() => import('@/pages/IntegracaoMelhorEnvio'));
 // 📞 Ponte antifraude antes de abrir o WhatsApp do parceiro (Loja Virtual)
 const FalarComParceiro = React.lazy(() => import('@/pages/FalarComParceiro'));
+// 🖤 Porta da captação privada: cadastro + ciência antes de liberar /Partners
+const AcessoParceiro = React.lazy(() => import('@/pages/AcessoParceiro'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -374,6 +376,11 @@ const AuthenticatedApp = () => {
         <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
           <IntegracaoMelhorEnvio />
         </RequireRole>
+      } />
+      <Route path="/AcessoParceiro" element={
+        <LayoutWrapper currentPageName="AcessoParceiro">
+          <AcessoParceiro />
+        </LayoutWrapper>
       } />
       <Route path="/falar-com-parceiro" element={
         <LayoutWrapper currentPageName="FalarComParceiro">

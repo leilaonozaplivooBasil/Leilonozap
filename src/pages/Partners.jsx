@@ -15,9 +15,7 @@ import ParceiroBoard from '@/components/parceiro/ParceiroBoard';
 import ParceiroFormalizacao from '@/components/parceiro/ParceiroFormalizacao';
 import ParceiroCTA from '@/components/parceiro/ParceiroCTA';
 import ParceiroDisclaimer from '@/components/parceiro/ParceiroDisclaimer';
-import ParceiroRetratos from '@/components/parceiro/ParceiroRetratos';
-import ParceiroBaseLegal from '@/components/parceiro/ParceiroBaseLegal';
-import ParceiroAcessoModal from '@/components/parceiro/ParceiroAcessoModal';
+import { temAceiteParceiro } from '@/lib/parceiroAcesso';
 
 // 🖤 PARCEIRO DE COMPRA — vitrine pública de captação privada.
 // ⚠️ REGRA PERMANENTE: esta página NÃO exibe valor financeiro algum
@@ -29,8 +27,8 @@ export default function PartnersPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  // 🖤 Modal de cadastro na lâmina preta (visitante clicando em "Solicitar acesso")
-  const [showAcessoModal, setShowAcessoModal] = useState(false);
+  // 🔐 Só renderiza a apresentação depois de conferir cadastro + ciência
+  const [liberado, setLiberado] = useState(false);
 
   // 🖤 Tema preto exclusivo desta página: marca o body enquanto ela está montada
   // e limpa ao sair. Alcança rodapé/flutuante (que vivem no Layout) sem alterar
@@ -40,14 +38,23 @@ export default function PartnersPage() {
     return () => document.body.classList.remove('pc-tema');
   }, []);
 
+  // 🔐 PORTA OBRIGATÓRIA: quem não passou por /AcessoParceiro (cadastro + ciência
+  // de que é captação privada) não vê a apresentação — volta pra porta de entrada.
   useEffect(() => {
+    let user = null;
     try {
       const savedUserJSON = localStorage.getItem('currentUser');
-      setCurrentUser(savedUserJSON ? JSON.parse(savedUserJSON) : null);
+      user = savedUserJSON ? JSON.parse(savedUserJSON) : null;
     } catch (error) {
-      setCurrentUser(null);
+      user = null;
     }
-  }, []);
+    setCurrentUser(user);
+    if (temAceiteParceiro(user)) {
+      setLiberado(true);
+    } else {
+      navigate('/AcessoParceiro', { replace: true });
+    }
+  }, [navigate]);
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
@@ -55,21 +62,21 @@ export default function PartnersPage() {
     setTimeout(() => navigate(createPageUrl('InvestorDashboard')), 500);
   };
 
-  // Já logado vai direto pro painel; visitante faz o cadastro na lâmina preta
-  // (com o aceite de confidencialidade) antes de entrar no ambiente restrito.
+  // Já logado vai direto pro painel; visitante abre o login (comportamento original)
   const irParaPainel = () => {
     if (currentUser) {
       navigate(createPageUrl('InvestorDashboard'));
       return;
     }
-    setShowAcessoModal(true);
+    setShowLoginModal(true);
   };
+
+  if (!liberado) return <div className="min-h-screen bg-pc-preto" />;
 
   return (
     <>
       <div className="min-h-screen bg-pc-preto">
         <ParceiroAbertura onSolicitarAcesso={irParaPainel} />
-        <ParceiroRetratos />
         <ParceiroTracao />
         <ParceiroOrigens />
         <ParceiroCuradoria />
@@ -80,19 +87,8 @@ export default function PartnersPage() {
         <ParceiroBoard />
         <ParceiroFormalizacao />
         <ParceiroCTA onSolicitarAcesso={irParaPainel} onAcessarPainel={irParaPainel} />
-        <ParceiroBaseLegal />
         <ParceiroDisclaimer />
       </div>
-
-      {showAcessoModal && (
-        <ParceiroAcessoModal
-          onFechar={() => setShowAcessoModal(false)}
-          onSucesso={(user) => {
-            setShowAcessoModal(false);
-            handleLoginSuccess(user);
-          }}
-        />
-      )}
 
       {showLoginModal && (
         <LoginModal
