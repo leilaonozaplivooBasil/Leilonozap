@@ -17,7 +17,10 @@ const MEMBROS = [
     cargo: 'Diretor de Operação Estruturada',
     vinculo: 'Sócio fundador',
     nome: 'Luciano Pinheiro',
-    bio: 'Sócio da Trino Instituição de Pagamentos. Histórico em negociação de contratos B2B de grande porte, incluindo parcerias com indústrias como a EMS. Responde pela governança financeira da operação.',
+    // ⚠️ 06/08/2026 — pedido da diretoria: a menção à indústria parceira saiu da
+    // lâmina pública (não pode constar). O vínculo institucional citado agora é o
+    // Orizen Group. Não acrescentar nomes de terceiros aqui sem autorização.
+    bio: 'Sócio da Trino Instituição de Pagamentos e do Orizen Group. Histórico em negociação e estruturação de contratos B2B de grande porte com indústria e varejo. Responde pela governança financeira da operação.',
     foto: FOTO_LUCIANO,
   },
   {
