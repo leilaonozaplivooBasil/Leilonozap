@@ -125,6 +125,103 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ══════════ MODO RESERVADO — CONCILIAÇÃO 2 contra a FONTE REAL ══════════
+    // A fonte oficial (digital_wallets.held_balance) está vazia. A reserva em uso
+    // vive em app_users.saldo_reservado. Aqui provamos se ela tem lastro em lance ativo.
+    // ⚠️ winner_id em leilão ATIVO = LÍDER ATUAL, nunca vencedor (VERDADE.md).
+    if (modo === 'reservado') {
+      const colsU = await colunas('app_users');
+      const temReservado = colsU.includes('saldo_reservado');
+      const temAlocado = colsU.includes('saldo_alocado');
+      if (!temReservado) {
+        return Response.json({ veredito: '⛔ NÃO VERIFICADO — coluna app_users.saldo_reservado não existe', colunas: colsU });
+      }
+
+      const selU = ['id', 'email', 'full_name', 'saldo_disponivel', 'saldo_reservado', temAlocado ? 'saldo_alocado' : null].filter(Boolean).join(',');
+      const uAll = await get(`app_users?select=${selU}&limit=500`);
+      const todos = Array.isArray(uAll.body) ? uAll.body : [];
+      const contas = todos.filter((u: any) => Number(u.saldo_reservado) > 0);
+
+      const colsA = await colunas('auctions');
+      const selA = ['id', 'title', 'status', 'end_time', 'winner_id', 'current_price',
+        colsA.includes('lot_status') ? 'lot_status' : null,
+        colsA.includes('order_status') ? 'order_status' : null,
+        colsA.includes('frete_reservado_valor') ? 'frete_reservado_valor' : null,
+      ].filter(Boolean).join(',');
+      const aRes = await get(`auctions?select=${selA}&limit=3000`);
+      const leiloes = Array.isArray(aRes.body) ? aRes.body : [];
+
+      const agora = Date.now();
+      const ehAtivo = (a: any) => {
+        if (String(a.status) !== 'active') return false;
+        const t = a.end_time ? Date.parse(a.end_time) : NaN;
+        return Number.isFinite(t) ? t > agora : true;
+      };
+      const ativos = leiloes.filter(ehAtivo);
+
+      const linhas = contas.map((u: any) => {
+        const lidera = ativos.filter((a: any) => a.winner_id === u.id);
+        const esperado = cent(lidera.reduce((s: number, a: any) =>
+          s + (Number(a.current_price) || 0) + (Number(a.frete_reservado_valor) || 0), 0));
+        const reservado = cent(u.saldo_reservado);
+        const dif = cent(reservado - esperado);
+        let classificacao: string;
+        if (Math.abs(dif) < 0.01) classificacao = '✅ COM LASTRO';
+        else if (lidera.length === 0) classificacao = '🔴 TRAVADO (não lidera nenhum leilão ativo)';
+        else if (dif > 0) classificacao = '🟡 DIVERGENTE (reservado acima do lance)';
+        else classificacao = '🟠 SUBRESERVADO (reservado abaixo do lance)';
+        return {
+          email: u.email, nome: u.full_name, reservado, esperado, diferenca: dif,
+          saldo_disponivel: cent(u.saldo_disponivel),
+          leiloes_ativos_liderados: lidera.length,
+          detalhe_leiloes: lidera.map((a: any) => ({ id: a.id, titulo: a.title, lance: cent(a.current_price), frete: cent(a.frete_reservado_valor), fim: a.end_time })),
+          classificacao,
+        };
+      });
+
+      const soma = (f: (l: any) => boolean) => cent(linhas.filter(f).reduce((s, l) => s + l.reservado, 0));
+      const travado = soma((l) => l.classificacao.startsWith('🔴'));
+
+      // PASSO 5 — campo órfão
+      const comAlocado = temAlocado ? todos.filter((u: any) => Number(u.saldo_alocado) > 0) : [];
+
+      // PASSO 6 — grafia dupla de cancelado
+      const csR = await get('catalog_sales?select=status&limit=2000');
+      const csRows = Array.isArray(csR.body) ? csR.body : [];
+      const grafia = {
+        cancelled_ingles: csRows.filter((r: any) => r.status === 'cancelled').length,
+        canceled_americano: csRows.filter((r: any) => r.status === 'canceled').length,
+      };
+      const grafiaLeilao = {
+        cancelled_ingles: leiloes.filter((a: any) => a.status === 'cancelled' || a.lot_status === 'cancelled').length,
+        canceled_americano: leiloes.filter((a: any) => a.status === 'canceled' || a.lot_status === 'cancelado').length,
+      };
+
+      return Response.json({
+        escrita_realizada: 'NENHUMA — somente GET. Nenhum saldo devolvido, liberado ou movido.',
+        fonte_usada: 'app_users.saldo_reservado x auctions (digital_wallets está vazia)',
+        volumes: { contas_lidas: todos.length, contas_com_reserva: contas.length, leiloes_lidos: leiloes.length, leiloes_ativos: ativos.length },
+        totais: {
+          soma_reservada: cent(linhas.reduce((s, l) => s + l.reservado, 0)),
+          soma_com_lastro: soma((l) => l.classificacao.startsWith('✅')),
+          soma_travada_exposicao_real: travado,
+          soma_divergente: soma((l) => l.classificacao.startsWith('🟡')),
+          soma_subreservada: soma((l) => l.classificacao.startsWith('🟠')),
+        },
+        por_conta: linhas
+          .sort((a, b) => b.reservado - a.reservado)
+          .map((l) => (limite_divergencias === 'resumo' ? { ...l, detalhe_leiloes: `${l.detalhe_leiloes.length} leilão(ões)` } : l))
+          .filter(() => limite_divergencias !== 'so_meta'),
+        campo_orfao: {
+          coluna_saldo_alocado_existe: temAlocado,
+          contas_com_saldo_alocado_maior_que_zero: comAlocado.length,
+          soma_saldo_alocado: cent(comAlocado.reduce((s: number, u: any) => s + (Number(u.saldo_alocado) || 0), 0)),
+          nota: 'A gravação usa saldo_reservado; o schema oficial documenta saldo_alocado como "capital travado em lances ativos". Divergência apenas REPORTADA, não corrigida.',
+        },
+        grafia_dupla_cancelado: { catalog_sales: grafia, auctions: grafiaLeilao },
+      });
+    }
+
     // ══════════ PASSO 0 — a fonte tem dado real? ══════════
     const inventario: Record<string, any> = {};
     for (const t of ['digital_wallets', 'digital_wallet_transactions', 'mercado_pago_payments', 'auctions', 'app_users']) {
