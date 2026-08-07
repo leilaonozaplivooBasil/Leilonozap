@@ -3,6 +3,7 @@ import { FileSignature, ShieldCheck, ScrollText, Info, Check } from 'lucide-reac
 import { real } from '@/lib/operacaoNumeros';
 import ParceiroDocumentoModal from '../ParceiroDocumentoModal';
 import ParceiroContratoTexto from '../ParceiroContratoTexto';
+import ParceiroMeusAportes from './ParceiroMeusAportes';
 
 // 📄 CONTRATO E PLANO — estado contratual do parceiro, leitura integral do
 // contrato (dentro da tela, sem sair do site) e porta de entrada para contratar.
@@ -88,6 +89,9 @@ export default function ParceiroContratoPlano({ user, investimento, onContratar 
           </button>
         </div>
       </div>
+
+      {/* Extrato dos aportes DO PRÓPRIO parceiro (nunca mostra aporte de terceiros) */}
+      <ParceiroMeusAportes user={user} />
 
       {/* Validade jurídica */}
       <div className="mt-6 border border-pc-borda bg-pc-preto-2 p-5">

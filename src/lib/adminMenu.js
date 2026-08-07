@@ -30,6 +30,7 @@ import {
   ArrowLeftRight,
   CreditCard,
   ClipboardCheck,
+  Receipt,
   Handshake,
   Users,
   UsersRound,
@@ -107,6 +108,8 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Configurar Pagamentos", pageName: "PaymentSettings", icon: CreditCard },
         { title: "Auditoria de Comissões", pageName: "CommissionPilot", icon: ClipboardCheck },
         { title: "Ativar Planos de Parceiros", pageName: "PartnerPlanActivation", icon: Handshake },
+        // 💰 Extrato de aportes do Parceiro de Compra (espelho do Mercado Pago)
+        { title: "Aportes de Parceiros", pageName: "AportesParceiro", icon: Receipt },
         { title: "Metas (CEO)", pageName: "Metas", icon: Target },
       ],
     },
