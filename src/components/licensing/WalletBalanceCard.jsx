@@ -15,15 +15,18 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
           <div className="w-full md:w-auto">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border mb-3 ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-nz-verde border-nz-verde/20 bg-nz-verde-fundo'}`}>
-              <Wallet className="w-3 h-3" /> Saldo Disponível
+              <Wallet className="w-3 h-3" /> Comissão a receber
             </span>
             <div className="flex items-baseline gap-3 mb-2">
               <span className="text-5xl font-black text-gray-900 tracking-tight">
                 R$ {totalAvailable.toFixed(2)}
               </span>
             </div>
+            {/* ITEM 1 DA AUDITORIA — este número é COMISSÃO, não é o saldo da
+                carteira digital. Nomes iguais para grandezas diferentes faziam o
+                usuário achar que o sistema tinha perdido dinheiro dele. */}
             <p className="text-xs mb-4 text-gray-500">
-              Use em Leilões ou na Loja Virtual — 100% digital, sem burocracia.
+              das suas vendas · saque a partir de R$ 30
             </p>
 
             <div className="h-px bg-gray-100 my-2 max-w-[320px]" />

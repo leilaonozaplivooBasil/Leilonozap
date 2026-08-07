@@ -346,7 +346,8 @@ export default function PainelDistribuidor() {
               <Stat icon={ShoppingCart} label="Vendas" value={money(lojaStats?.vendas_valor || 0)} sub="online + PDV" color="text-green-400" />
               <Stat icon={TrendingUp} label="Comissões" value={money(lojaStats?.comissao || 0)} sub="acumuladas" color="text-yellow-400" />
               <Stat icon={Users} label="Minha árvore" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
-              <Stat icon={Wallet} label="Saldo" value={money(lojaStats?.saldo || 0)} sub="pra sacar" color="text-emerald-400" />
+              {/* ITEM 1 DA AUDITORIA — aqui é a CARTEIRA DIGITAL, não comissão */}
+              <Stat icon={Wallet} label="Saldo da carteira" value={money(lojaStats?.saldo || 0)} sub="disponível pra usar na plataforma" color="text-emerald-400" />
             </div>
             <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
             <SectionLabel>⚡ Atalhos</SectionLabel>
@@ -412,7 +413,8 @@ export default function PainelDistribuidor() {
               <Stat icon={Truck} label="Pedidos a despachar" value={stats.pedidos_abrir} sub="aguardando envio" color={stats.pedidos_abrir > 0 ? 'text-orange-400' : 'text-white'} />
               <Stat icon={ShoppingCart} label="Vendas (pedidos)" value={money(stats.vendas_valor)} sub="online + PDV" color="text-white" />
               <Stat icon={TrendingUp} label="Comissões" value={money(stats.comissao)} sub="acumuladas" color="text-yellow-400" />
-              <Stat icon={Wallet} label="Saldo disponível" value={money(stats.saldo)} sub="pra sacar" color="text-emerald-400" />
+              {/* ITEM 1 DA AUDITORIA — aqui é a CARTEIRA DIGITAL, não comissão */}
+              <Stat icon={Wallet} label="Saldo da carteira" value={money(stats.saldo)} sub="disponível pra usar na plataforma" color="text-emerald-400" />
             </div>
 
             {/* REDE & EQUIPE */}

@@ -53,6 +53,7 @@ import { VALID_LICENSING_TABS } from '@/lib/licensingTabs';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
+import TabelaComissoesLeilao from '../components/licensing/TabelaComissoesLeilao';
 import SalesTrendChart from '../components/licensing/SalesTrendChart';
 import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
@@ -1185,38 +1186,12 @@ const DashboardContent = ({ user, isAdmin }) => {
                             </TabsList>
 
                             <TabsContent value="leilao" className="mt-4">
-                              {myAuctions.length === 0 ?
-                                <p className={`text-center py-8 ${'text-gray-500'}`}>
-                                  Arremates dos indicados: 0
-                                </p> :
-
-                                <div className="overflow-x-auto">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow className={'border-gray-200'}>
-                                        <TableHead className={'text-gray-500'}>Produto</TableHead>
-                                        <TableHead className={'text-gray-500'}>Arrematante</TableHead>
-                                        <TableHead className={'text-gray-500'}>Valor</TableHead>
-                                        <TableHead className={'text-gray-500'}>Comissão (5%)</TableHead>
-                                        <TableHead className={'text-gray-500'}>Data</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {myAuctions.map((auction) =>
-                                        <TableRow key={auction.id} className={'border-gray-200'}>
-                                          <TableCell className={'text-gray-900 text-sm'}>{auction.title}</TableCell>
-                                          <TableCell className={'text-gray-700 text-sm'}>{auction.winner_name}</TableCell>
-                                          <TableCell className={'text-gray-900 font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
-                                          <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.05).toFixed(2)}</TableCell>
-                                          <TableCell className={'text-gray-500 text-sm'}>
-                                            {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              }
+                              {/* ITEM 2 DA AUDITORIA — a comissão exibida vem do extrato
+                                  oficial (CommissionRecord), não é mais calculada na tela. */}
+                              <TabelaComissoesLeilao
+                                arremates={myAuctions}
+                                registrosComissao={myCommissionRecords}
+                              />
                             </TabsContent>
 
                             <TabsContent value="catalogo" className="mt-4">
