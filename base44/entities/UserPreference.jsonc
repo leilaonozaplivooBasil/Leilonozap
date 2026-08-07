@@ -30,6 +30,11 @@
       ],
       "default": "all",
       "description": "Prefer\u00eancia de origem do produto"
+    },
+    "parceiro_demo_inicio": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "\u00c2ncora do MODO DEMONSTRA\u00c7\u00c3O da Linha do Tempo do Parceiro: data em que a demonstra\u00e7\u00e3o passou a contar (simula o dia do aporte). Fica na conta para o dia do ciclo ser o mesmo no celular, no computador e no app. N\u00e3o \u00e9 aporte real, n\u00e3o gera valor devido."
     }
   },
   "required": [

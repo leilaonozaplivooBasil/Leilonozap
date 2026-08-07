@@ -5,6 +5,11 @@ import { ETAPAS, DIAS_CICLO_FISICO, DIA_PRIMEIRO_REPASSE } from './etapasOperaca
 import RoadmapAscendente from './RoadmapAscendente';
 import ContadorRentabilidade from './ContadorRentabilidade';
 import QuadroGiroRede from './QuadroGiroRede';
+import {
+  useAncoraDemonstracao,
+  useRelogioDoCiclo,
+  diaDoCiclo,
+} from '@/lib/ancoraDemonstracaoParceiro';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -17,12 +22,18 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
   const [giroDeHoje, setGiroDeHoje] = React.useState(0);
   const aporte = investimento?.amount || 15000;
   const taxa = investimento?.investmentRate || 3;
-  // No modo demonstração, posiciona o ciclo no 18º dia: físico concluído e
-  // capital já rentabilizando — é exatamente o que se quer ver.
-  const dataAssinatura = investimento?.startDate || new Date(Date.now() - 18 * DIA_MS).toISOString();
+  // 🎬 MODO DEMONSTRAÇÃO: conta como se o depósito tivesse entrado no dia em que
+  // a pessoa abriu a tela pela primeira vez — e ANDA a partir dali (D+1, D+2 ...
+  // D+30), igual ao aporte real. A âncora fica na conta (não no aparelho).
+  // Antes era "agora menos 18 dias", recalculado a cada abertura: travava em D+18.
+  const ancoraDemo = useAncoraDemonstracao(demonstracao);
+  // ⏱️ Relógio próprio: garante a virada do dia sem recarregar a página
+  // (e revalida ao voltar do segundo plano no celular).
+  const agora = useRelogioDoCiclo();
+  const dataAssinatura = investimento?.startDate || ancoraDemo;
 
   const base = new Date(dataAssinatura).getTime();
-  const diaAtual = (Date.now() - base) / DIA_MS;
+  const diaAtual = diaDoCiclo(dataAssinatura, agora);
 
   const etapas = ETAPAS.map((e) => ({ ...e, dataPrevista: new Date(base + e.dia * DIA_MS).toISOString() }));
   const fisicasConcluidas = etapas.filter((e) => e.dia <= DIAS_CICLO_FISICO && diaAtual >= e.dia).length;
@@ -49,9 +60,10 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-pc-ouro" />
           <p className="text-xs leading-relaxed text-pc-tinta-fraca">
             <strong className="text-pc-ouro">MODELO DEMONSTRATIVO.</strong> Você ainda não tem plano ativo:
-            esta é a simulação de um aporte de {real(aporte)} assinado há 18 dias, para você ver
-            exatamente como a sua linha do tempo será acompanhada. Ao contratar, ela passa a usar as
-            suas datas reais.
+            esta é a simulação de um aporte de {real(aporte)} como se o depósito tivesse entrado no dia
+            em que você abriu esta tela. A contagem avança sozinha, um dia por dia, até o repasse do{' '}
+            {DIA_PRIMEIRO_REPASSE}º dia — exatamente como vai acontecer com o seu aporte. Ao contratar,
+            ela passa a contar da data real do seu depósito.
           </p>
         </div>
       )}
