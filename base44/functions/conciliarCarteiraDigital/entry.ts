@@ -67,8 +67,63 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY ausentes' }, { status: 500 });
     }
 
-    const { limite_divergencias } = await req.json().catch(() => ({}));
+    const { limite_divergencias, modo } = await req.json().catch(() => ({}));
     const LIM = Number(limite_divergencias) || 15;
+
+    // ══════════ MODO DESCOBRIR — mapear ONDE o dinheiro realmente mora ══════════
+    // Roda ANTES de qualquer conta. Em banco com dualidade, assumir a fonte errada
+    // é exactly como nasce um relatório falso. Só GET, só contagem e amostra.
+    if (modo === 'descobrir') {
+      const candidatas = [
+        'digital_wallets', 'digital_wallet_transactions', 'wallets', 'wallet_transactions',
+        'mercado_pago_payments', 'mercadopago_payments', 'mp_payments', 'payments',
+        'asaas_payments', 'catalog_sales', 'commission_records', 'withdrawal_requests',
+        'balance_transfers', 'auction_messages',
+      ];
+      const mapa: Record<string, any> = {};
+      for (const t of candidatas) {
+        const c = await contar(t);
+        mapa[t] = c.existe ? { total: c.total, colunas: c.total ? await colunas(t) : [] } : { inexistente: true, status: c.status };
+      }
+
+      // app_users: onde o saldo aparenta viver de fato
+      const colsUsers = await colunas('app_users');
+      const camposSaldo = colsUsers.filter((c) => /saldo|balance|held|commission/i.test(c));
+      const uRes = await get(`app_users?select=${['id', 'email', ...camposSaldo].join(',')}&limit=100`);
+      const users = Array.isArray(uRes.body) ? uRes.body : [];
+      const somaCampos: Record<string, number> = {};
+      const contasComValor: Record<string, number> = {};
+      for (const campo of camposSaldo) {
+        somaCampos[campo] = cent(users.reduce((s: number, u: any) => s + (Number(u[campo]) || 0), 0));
+        contasComValor[campo] = users.filter((u: any) => Number(u[campo]) > 0).length;
+      }
+
+      // catalog_sales: quais "kind" existem (é lá que o depósito parece ser registrado)
+      const csCols = await colunas('catalog_sales');
+      let kinds: Record<string, number> = {};
+      if (csCols.includes('kind')) {
+        const r = await get('catalog_sales?select=kind,status&limit=2000');
+        for (const row of (Array.isArray(r.body) ? r.body : [])) {
+          const k = `${row.kind || 'null'} / ${row.status || 'null'}`;
+          kinds[k] = (kinds[k] || 0) + 1;
+        }
+      }
+
+      if (modo === 'descobrir' && limite_divergencias === 'so_saldos') {
+        return Response.json({
+          modo: 'DESCOBRIR (só saldos) — somente leitura',
+          app_users: { campos_de_dinheiro: camposSaldo, soma_por_campo: somaCampos, contas_com_valor_maior_que_zero: contasComValor, amostra_lida: users.length },
+          catalog_sales_kind_status: kinds,
+        });
+      }
+
+      return Response.json({
+        modo: 'DESCOBRIR — somente leitura, nenhuma conciliação, nada gravado',
+        tabelas: mapa,
+        app_users: { campos_de_dinheiro: camposSaldo, soma_por_campo: somaCampos, contas_com_valor_maior_que_zero: contasComValor, amostra_lida: users.length },
+        catalog_sales_kind_status: kinds,
+      });
+    }
 
     // ══════════ PASSO 0 — a fonte tem dado real? ══════════
     const inventario: Record<string, any> = {};
