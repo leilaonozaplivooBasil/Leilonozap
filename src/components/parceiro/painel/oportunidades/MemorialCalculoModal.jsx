@@ -10,7 +10,12 @@ import {
   PCT_ORCAMENTO_PARCEIROS,
   PCT_IMPOSTO,
   PCT_REPASSE_PARCEIRO_CICLO,
+  PCT_PARCEIRO_REPASSE,
+  PCT_PARCEIRO_ESTRUTURA,
 } from '@/lib/lastroOperacao';
+import CompraDaListaCard from './CompraDaListaCard';
+import CenarioEscalaCard from './CenarioEscalaCard';
+import NotaTributariaBotao from './NotaTributariaBotao';
 
 // 🧾 MEMORIAL DO CÁLCULO — abre no clique do "Entenda o cálculo".
 // Só EXIBE o resumo já calculado (`r`). Nenhuma conta nova aqui, nenhuma escrita.
@@ -26,32 +31,38 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
       destaque: true,
     },
     {
-      rotulo: 'Compra do estoque (arremate + frete)',
-      nota: 'é o capital que entra na operação',
+      rotulo: 'Retorno do capital de giro (arremate + frete)',
+      nota: 'não é despesa: volta para a operação e compra o próximo lote',
       valor: r.capital,
       sinal: '−',
     },
     {
       rotulo: 'Comissão da força de venda',
-      nota: `${pctBr(PCT_COMISSAO_REDE)} da receita`,
+      nota: `${pctBr(PCT_COMISSAO_REDE)} da receita — já inclui os ${pctBr(
+        PCT_PARCEIRO_ESTRUTURA
+      )} distribuídos na estrutura da rede`,
       valor: r.comissaoRede,
       sinal: '−',
     },
     {
       rotulo: 'Estrutura de venda e operação',
-      nota: `${pctBr(PCT_ESTRUTURA_VENDA)} da receita — equipe, logística, plataforma`,
+      nota: `${pctBr(PCT_ESTRUTURA_VENDA)} da receita HOJE — custo fixo, cai com a escala (veja abaixo)`,
       valor: r.estruturaVenda,
       sinal: '−',
     },
     {
       rotulo: 'Parceiros de compra',
-      nota: `${pctBr(PCT_ORCAMENTO_PARCEIROS)} da receita — daqui sai o seu repasse`,
+      nota: `${pctBr(PCT_ORCAMENTO_PARCEIROS)} da receita: ${pctBr(
+        PCT_PARCEIRO_REPASSE
+      )} de repasse aos parceiros (${brl(r.parceiroRepasseFatia)}) + ${pctBr(
+        PCT_PARCEIRO_ESTRUTURA
+      )} distribuídos na estrutura da força de venda (${brl(r.parceiroEstruturaFatia)})`,
       valor: r.orcamentoParceiros,
       sinal: '−',
     },
     {
       rotulo: 'Imposto',
-      nota: `${pctBr(PCT_IMPOSTO)} da receita — Simples Nacional, PGDAS-D 06/2026`,
+      nota: `${pctBr(PCT_IMPOSTO)} da receita — o que a operação paga HOJE (Simples Nacional, PGDAS-D 06/2026)`,
       valor: r.imposto,
       sinal: '−',
     },
@@ -87,8 +98,11 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
         </div>
 
         <div className="p-4 sm:p-6">
+          {/* 🛒 Começa na compra: mercado × pago × % */}
+          <CompraDaListaCard resumo={r} />
+
           {/* 🧾 A DRE linha a linha */}
-          <div className="divide-y divide-pc-borda border border-pc-borda">
+          <div className="mt-5 divide-y divide-pc-borda border border-pc-borda">
             {linhas.map((l) => (
               <div
                 key={l.rotulo}
@@ -130,6 +144,14 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             </div>
           </div>
 
+          {/* 📉 Estrutura: 20% hoje → 5% na escala */}
+          <div className="mt-5">
+            <CenarioEscalaCard resumo={r} />
+          </div>
+
+          {/* 🏛️ Transição tributária (clique para abrir) */}
+          <NotaTributariaBotao />
+
           {/* 🔁 Capital de giro + ROI */}
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="border border-pc-borda bg-pc-preto-2 p-3 sm:p-4">
@@ -162,8 +184,9 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             <p className="mt-1 text-xl font-black text-pc-ouro sm:text-2xl">{brl(r.repasse)}</p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-pc-tinta-fraca sm:text-xs">
               {pctBr(PCT_REPASSE_PARCEIRO_CICLO)} sobre o capital aportado, por ciclo de 30 dias — a
-              mesma regra do contador que você vê no seu ciclo. Ele é pago de dentro da linha de
-              parceiros de compra, que neste volume reserva {brl(r.orcamentoParceiros)}.
+              mesma regra do contador que você vê no seu ciclo. Ele é pago de dentro da fatia de{' '}
+              {pctBr(PCT_PARCEIRO_REPASSE)} da receita destinada a repasses, que neste volume
+              reserva {brl(r.parceiroRepasseFatia)}.
             </p>
           </div>
 
@@ -175,8 +198,8 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             <ul className="mt-2 space-y-2 text-[11px] leading-relaxed text-pc-tinta sm:text-xs">
               <li>
                 <strong className="text-pc-ouro">{vezes(r.coberturaRepasse)} de folga:</strong> a
-                reserva de {brl(r.orcamentoParceiros)} cobre {vezes(r.coberturaRepasse)} o repasse
-                comprometido de {brl(r.repasse)}.
+                reserva de repasse de {brl(r.parceiroRepasseFatia)} cobre{' '}
+                {vezes(r.coberturaRepasse)} o repasse comprometido de {brl(r.repasse)}.
               </li>
               <li>
                 <strong className="text-pc-ouro">{vezes(r.multiploLastro)} de lastro:</strong> o

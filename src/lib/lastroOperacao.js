@@ -30,6 +30,15 @@ export const PCT_ORCAMENTO_PARCEIROS = PREMISSAS.pctParceirosCompra;
 export const PCT_COMISSAO_REDE = PREMISSAS.pctComissaoRede;
 export const PCT_ESTRUTURA_VENDA = PREMISSAS.pctDespesaOperacional;
 export const PCT_IMPOSTO = PREMISSAS.aliquotaSimples;
+// 🔀 A linha de PARCEIROS DE COMPRA (5% da receita) se divide em:
+//    3% = repasse aos parceiros · 2% = distribuído na estrutura da força de venda.
+export const PCT_PARCEIRO_REPASSE = 3;
+export const PCT_PARCEIRO_ESTRUTURA = 2;
+// 📉 ESTRUTURA NA ESCALA: a estrutura é um custo FIXO em valor absoluto
+// (PREMISSAS.despesaFixaMensal R$ 48.000 · ESCALA_1M.despesaFixa R$ 55.000 sobre
+// R$ 1M de receita = 5,5%). Hoje ela pesa 20% porque o volume ainda é pequeno;
+// com o volume em escala o MESMO custo passa a representar ~5% da receita.
+export const PCT_ESTRUTURA_ESCALA = 5;
 
 // 💰 Real sem centavos — padrão dos documentos institucionais do Parceiro
 export function brl(valor) {
@@ -77,6 +86,11 @@ export function resumirLastro(lotes = []) {
   // 🧾 Lucro = residual da DRE. A soma das linhas fecha exatamente na receita.
   const lucro = receita - capital - comissaoRede - estruturaVenda - orcamentoParceiros - imposto;
 
+  // 📉 Mesmo lote com a estrutura já diluída pela escala (5% em vez de 20%)
+  const estruturaEscala = receita * (PCT_ESTRUTURA_ESCALA / 100);
+  const lucroEscala =
+    receita - capital - comissaoRede - estruturaEscala - orcamentoParceiros - imposto;
+
   return {
     lotes: lista.length,
     itens,
@@ -90,14 +104,28 @@ export function resumirLastro(lotes = []) {
     imposto,
     lucro,
     margemPct: receita > 0 ? (lucro / receita) * 100 : 0,
+    // 🔀 destinação da linha de parceiros de compra
+    parceiroRepasseFatia: receita * (PCT_PARCEIRO_REPASSE / 100),
+    parceiroEstruturaFatia: receita * (PCT_PARCEIRO_ESTRUTURA / 100),
+    // 📉 cenário com estrutura diluída pela escala
+    estruturaEscala,
+    lucroEscala,
+    margemEscalaPct: receita > 0 ? (lucroEscala / receita) * 100 : 0,
+    roiEscalaPct: capital > 0 ? (lucroEscala / capital) * 100 : 0,
+    // 🛒 quanto da lista foi efetivamente pago (capital ÷ valor de mercado)
+    pctPagoDaLista: lastro > 0 ? (capital / lastro) * 100 : 0,
+    descontoDaListaPct: lastro > 0 ? 100 - (capital / lastro) * 100 : 0,
     // quantas vezes o valor de mercado cobre o capital necessário
     multiploLastro: capital > 0 ? lastro / capital : 0,
     // fatia do capital dentro do lastro (para a barra visual)
     fatiaCapitalPct: lastro > 0 ? Math.min(100, (capital / lastro) * 100) : 0,
     // ROI do ciclo (Retorno sobre o Investimento): lucro ÷ capital aportado
     roiPct: capital > 0 ? (lucro / capital) * 100 : 0,
-    // folga: quantas vezes o orçamento de parceiros cobre o repasse comprometido
-    coberturaRepasse: repasse > 0 ? orcamentoParceiros / repasse : 0,
+    // 🛡️ Folga: quantas vezes a fatia de 3% destinada a REPASSE cobre o repasse
+    // comprometido. Usa só a fatia de repasse (não os 5% cheios) — leitura mais
+    // conservadora, coerente com a divisão 3% repasse + 2% estrutura.
+    coberturaRepasse:
+      repasse > 0 ? (receita * (PCT_PARCEIRO_REPASSE / 100)) / repasse : 0,
     // o capital de giro volta no fechamento do ciclo e é realocado
     capitalDeVolta: capital,
   };
