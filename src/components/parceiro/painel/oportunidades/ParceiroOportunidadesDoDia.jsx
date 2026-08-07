@@ -4,12 +4,16 @@ import { base44 } from '@/api/base44Client';
 import { normalizarLoteRecebido } from '@/lib/loteParceiro';
 import OportunidadeCard from './OportunidadeCard';
 import OportunidadeDetalheModal from './OportunidadeDetalheModal';
-import CapacidadeAporteHoje from './CapacidadeAporteHoje';
+import LastroDoDia from './LastroDoDia';
+import HistoricoVolumeMes from './HistoricoVolumeMes';
+import { doMesCorrente } from '@/lib/lastroOperacao';
 
 // 🌟 Oportunidades do Dia — vitrine SOMENTE LEITURA dos lotes que a operação
 // publicou para comprar em conjunto. Nenhuma escrita acontece nesta tela.
 export default function ParceiroOportunidadesDoDia({ onParticipar }) {
   const [oportunidades, setOportunidades] = useState([]);
+  // 📅 Mesma consulta, sem filtro de data futura: serve o histórico do mês.
+  const [lotesDoMes, setLotesDoMes] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [aberta, setAberta] = useState(null);
 
@@ -21,7 +25,7 @@ export default function ParceiroOportunidadesDoDia({ onParticipar }) {
         100
       );
       const agora = Date.now();
-      const lista = (dados || [])
+      const todos = (dados || [])
         .map((r) => ({
           ...normalizarLoteRecebido(r),
           dataLeilao: r.data_leilao || null,
@@ -29,10 +33,12 @@ export default function ParceiroOportunidadesDoDia({ onParticipar }) {
           freteOportunidade: Number(r.frete_oportunidade) || 0,
           vagas: Number(r.vagas) || 0,
           observacaoParceiro: r.observacao_parceiro || null,
-        }))
+        }));
+      const lista = todos
         .filter((o) => o.dataLeilao && new Date(o.dataLeilao).getTime() > agora)
         .sort((a, b) => new Date(a.dataLeilao) - new Date(b.dataLeilao));
       setOportunidades(lista);
+      setLotesDoMes(doMesCorrente(todos));
     } catch (e) {
       console.debug('Oportunidades indisponíveis:', e?.message);
     } finally {
@@ -58,9 +64,7 @@ export default function ParceiroOportunidadesDoDia({ onParticipar }) {
         Oportunidades do dia
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca">
-        Lotes que a operação vai disputar nos próximos leilões. Toque em uma oportunidade para ver
-        o analisador completo — custo, grades, categorias e cenários de venda — e o horário exato do
-        lance.
+        Lotes que a operação vai disputar. Toque para ver o analisador completo.
       </p>
 
       {carregando ? (
@@ -72,7 +76,8 @@ export default function ParceiroOportunidadesDoDia({ onParticipar }) {
         </p>
       ) : (
         <>
-        <CapacidadeAporteHoje oportunidades={oportunidades} />
+        <LastroDoDia oportunidades={oportunidades} />
+        <HistoricoVolumeMes lotesDoMes={lotesDoMes} />
         <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {oportunidades.map((o) => (
             <OportunidadeCard key={o.id} oportunidade={o} onAbrir={setAberta} />
