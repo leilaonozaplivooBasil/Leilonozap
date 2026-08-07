@@ -262,3 +262,65 @@ quarentena do `processCatalogCommission`.
 > ✅ **A partir de 01/08/2026 o banco de comissão está limpo, consistente e em
 > conformidade com a regra oficial.** Qualquer divergência daqui pra frente é
 > fato novo, não herança.
+
+---
+
+## 8. ✅ ALINHAR-HISTORICO-CATALOGO — EXECUTADO EM 07/08/2026
+
+**Autorizado explicitamente pelo dono.** Fecha uma ponta que a ZERAGEM de 04/08
+deixou aberta.
+
+### 8.1 O que ficou faltando em 04/08
+
+A ZERAGEM recalculou `total_commissions_generated`, mas **não** recalculou o campo
+irmão **`catalog_total_commissions_generated`**. Ele continuou com o valor da era
+do motor legado de 26% — valor pré-agosto, portanto teste, sobrevivendo dentro de
+contas reais e contrariando a seção 7 item 4 do `VERDADE.md`
+("registro pré-agosto que apareça é defeito, não histórico").
+
+### 8.2 O que foi feito
+
+Campo recalculado a partir da **única fonte válida**: soma de `commission_records`
+com `sale_type = 'catalog'`, `status` em (`confirmed`, `paid`) e
+`created_date >= 2026-08-01`.
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Contas com o campo divergente | **19** | **0** |
+| Soma dos campos históricos de catálogo | R$ 539,36 | **R$ 60,22** |
+| Resíduo pré-agosto eliminado | — | **R$ 479,14** |
+| Contas gravadas / falhas | — | **19 / 0** |
+
+**Validação cruzada:** a função apurou **246 registros = R$ 60,22** lendo o banco
+de forma independente — número idêntico ao cravado na seção 7.2. Confirma que a
+base limpa de 04/08 permanece intacta.
+
+### 8.3 Dois achados registrados
+
+1. **A maior distorção não era a maior conta.** `creiciane.silva65` (Elyon) tinha
+   **R$ 177,82** no campo com **zero** comissão válida — 100% resíduo do motor
+   legado.
+2. **Cinco contas estavam para BAIXO, não para cima** (Beatriz 0,38 · Diana 0,06 ·
+   Iara 0,12 e outras): tinham comissão válida de agosto e o campo em **zero**.
+   Nessas o alinhamento **subiu** o valor — para o valor real, apurado.
+   👉 Lição: um campo de histórico não alimentado engana tanto quanto um inflado.
+
+### 8.4 O que NÃO foi tocado
+
+`commission_balance` · `catalog_commission_balance` ·
+`total_commissions_generated` · `digital_wallets` / `held_balance` ·
+`commission_records` (zero INSERT/UPDATE/DELETE) · `catalog_sales` · `auctions` ·
+percentuais oficiais · motores em quarentena.
+
+**Nenhum saldo mudou. Nenhum saque foi afetado.** A alteração foi em **um único
+campo de leitura histórica**.
+
+### 8.5 Rastro
+
+- **Função:** `alinharHistoricoCatalogo` — `dry_run: true` por padrão.
+- **Escrita por ID, uma a uma** — nunca UPDATE em massa por data
+  (trava técnica da seção 4 do `RETRATO-BANCO-ANTIGO-ANTES-EXPURGO-05AGO2026.md`).
+- **Conferência por releitura independente** após gravar: 19/19 conferem.
+- **Prova final:** nova simulação pós-execução retornou
+  **`contas_divergentes: 0`** e **`residuo_a_eliminar: 0`**.
+- Banco: Supabase REST + `service_role` (`VERDADE.md` §2).
