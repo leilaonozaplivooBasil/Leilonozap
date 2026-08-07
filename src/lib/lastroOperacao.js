@@ -28,15 +28,13 @@ export const PCT_VENDA_SOBRE_MERCADO = 80;
 export const PCT_REPASSE_PARCEIRO_CICLO = 3;
 export const PCT_ORCAMENTO_PARCEIROS = PREMISSAS.pctParceirosCompra;
 export const PCT_COMISSAO_REDE = PREMISSAS.pctComissaoRede;
-// 🏗️ ESTRUTURA DE VENDA E OPERAÇÃO = 5% da receita.
-// A estrutura é custo FIXO em valor absoluto (PREMISSAS.despesaFixaMensal
-// R$ 48.000 · ESCALA_1M.despesaFixa R$ 55.000 sobre R$ 1M de receita = 5,5%).
-// No volume da operação em escala ela representa 5% — é esse o percentual
-// apresentado no memorial (decisão da diretoria em 06/08/2026).
-export const PCT_ESTRUTURA_VENDA = 5;
 export const PCT_IMPOSTO = PREMISSAS.aliquotaSimples;
-// 🔀 A linha de PARCEIROS DE COMPRA (5% da receita) se divide em:
-//    3% = parceiro de compra · 2% = estrutura do braço operacional.
+// 🔀 PARCEIROS DE COMPRA = 5% sobre o CAPITAL APORTADO (não sobre a receita),
+// dividido em: 3% para o parceiro de compra + 2% para a estrutura do braço
+// operacional da captação. Regra confirmada pela diretoria em 06/08/2026.
+// ❌ NÃO existe linha separada de "estrutura de venda e operação" na DRE do
+// memorial: a estrutura desse braço JÁ É os 2% aqui dentro.
+export const PCT_PARCEIRO_COMPRA_TOTAL = 5;
 export const PCT_PARCEIRO_REPASSE = 3;
 export const PCT_PARCEIRO_ESTRUTURA = 2;
 
@@ -79,12 +77,12 @@ export function resumirLastro(lotes = []) {
 
   const receita = lastro * (PCT_VENDA_SOBRE_MERCADO / 100);
   const repasse = capital * (PCT_REPASSE_PARCEIRO_CICLO / 100);
-  const orcamentoParceiros = receita * (PCT_ORCAMENTO_PARCEIROS / 100);
+  // 💼 5% SOBRE O CAPITAL APORTADO (3% parceiro de compra + 2% estrutura do braço)
+  const orcamentoParceiros = capital * (PCT_PARCEIRO_COMPRA_TOTAL / 100);
   const comissaoRede = receita * (PCT_COMISSAO_REDE / 100);
-  const estruturaVenda = receita * (PCT_ESTRUTURA_VENDA / 100);
   const imposto = receita * (PCT_IMPOSTO / 100);
   // 🧾 Lucro = residual da DRE. A soma das linhas fecha exatamente na receita.
-  const lucro = receita - capital - comissaoRede - estruturaVenda - orcamentoParceiros - imposto;
+  const lucro = receita - capital - comissaoRede - orcamentoParceiros - imposto;
 
   return {
     lotes: lista.length,
@@ -95,13 +93,12 @@ export function resumirLastro(lotes = []) {
     repasse,
     orcamentoParceiros,
     comissaoRede,
-    estruturaVenda,
     imposto,
     lucro,
     margemPct: receita > 0 ? (lucro / receita) * 100 : 0,
-    // 🔀 destinação da linha de parceiros de compra
-    parceiroRepasseFatia: receita * (PCT_PARCEIRO_REPASSE / 100),
-    parceiroEstruturaFatia: receita * (PCT_PARCEIRO_ESTRUTURA / 100),
+    // 🔀 destinação dos 5% sobre o capital aportado
+    parceiroRepasseFatia: capital * (PCT_PARCEIRO_REPASSE / 100),
+    parceiroEstruturaFatia: capital * (PCT_PARCEIRO_ESTRUTURA / 100),
     // 🛒 quanto da lista foi efetivamente pago (capital ÷ valor de mercado)
     pctPagoDaLista: lastro > 0 ? (capital / lastro) * 100 : 0,
     descontoDaListaPct: lastro > 0 ? 100 - (capital / lastro) * 100 : 0,
@@ -111,10 +108,9 @@ export function resumirLastro(lotes = []) {
     fatiaCapitalPct: lastro > 0 ? Math.min(100, (capital / lastro) * 100) : 0,
     // ROI do ciclo (Retorno sobre o Investimento): lucro ÷ capital aportado
     roiPct: capital > 0 ? (lucro / capital) * 100 : 0,
-    // 🛡️ Folga: quantas vezes o orçamento de parceiros de compra (5% da receita)
-    // cobre o repasse comprometido. O repasse é 3% SOBRE O CAPITAL APORTADO —
-    // base diferente da receita, por isso a reserva inteira é o que o cobre.
-    coberturaRepasse: repasse > 0 ? orcamentoParceiros / repasse : 0,
+    // 🛡️ Folga real: quantas vezes o LUCRO da operação cobre o repasse
+    // comprometido ao parceiro. Não existe "reserva" — o repasse é pago do lucro.
+    coberturaRepasse: repasse > 0 ? lucro / repasse : 0,
     // o capital de giro volta no fechamento do ciclo e é realocado
     capitalDeVolta: capital,
   };

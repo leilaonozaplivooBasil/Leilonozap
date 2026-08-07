@@ -5,8 +5,7 @@ import {
   pctBr,
   PCT_VENDA_SOBRE_MERCADO,
   PCT_COMISSAO_REDE,
-  PCT_ESTRUTURA_VENDA,
-  PCT_ORCAMENTO_PARCEIROS,
+  PCT_PARCEIRO_COMPRA_TOTAL,
   PCT_IMPOSTO,
   PCT_REPASSE_PARCEIRO_CICLO,
   PCT_PARCEIRO_REPASSE,
@@ -42,20 +41,20 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
       sinal: '−',
     },
     {
-      rotulo: 'Estrutura de venda e operação',
-      nota: `${pctBr(PCT_ESTRUTURA_VENDA)} da receita`,
-      valor: r.estruturaVenda,
-      sinal: '−',
-    },
-    {
       rotulo: 'Parceiros de compra',
-      nota: `${pctBr(PCT_ORCAMENTO_PARCEIROS)} da receita = ${pctBr(
-        PCT_PARCEIRO_REPASSE
-      )} parceiro de compra + ${pctBr(
-        PCT_PARCEIRO_ESTRUTURA
-      )} estrutura do braço operacional`,
+      nota: `${pctBr(PCT_PARCEIRO_COMPRA_TOTAL)} sobre o capital aportado (${brl(r.capital)})`,
       valor: r.orcamentoParceiros,
       sinal: '−',
+      filhos: [
+        {
+          rotulo: `Parceiro de compra · ${pctBr(PCT_PARCEIRO_REPASSE)} do aporte`,
+          valor: r.parceiroRepasseFatia,
+        },
+        {
+          rotulo: `Estrutura do braço operacional · ${pctBr(PCT_PARCEIRO_ESTRUTURA)} do aporte`,
+          valor: r.parceiroEstruturaFatia,
+        },
+      ],
     },
     {
       rotulo: 'Imposto',
@@ -101,27 +100,45 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
           {/* 🧾 A DRE linha a linha */}
           <div className="mt-5 divide-y divide-pc-borda border border-pc-borda">
             {linhas.map((l) => (
-              <div
-                key={l.rotulo}
-                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 p-3 sm:p-4"
-              >
-                <div className="min-w-0 flex-1">
+              <div key={l.rotulo} className="p-3 sm:p-4">
+                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-xs font-bold sm:text-sm ${
+                        l.destaque ? 'text-pc-ouro' : 'text-pc-tinta'
+                      }`}
+                    >
+                      {l.rotulo}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-pc-tinta-fraca">
+                      {l.nota}
+                    </p>
+                  </div>
                   <p
-                    className={`text-xs font-bold sm:text-sm ${
+                    className={`shrink-0 text-sm font-bold sm:text-base ${
                       l.destaque ? 'text-pc-ouro' : 'text-pc-tinta'
                     }`}
                   >
-                    {l.rotulo}
+                    {l.sinal} {brl(l.valor)}
                   </p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-pc-tinta-fraca">{l.nota}</p>
                 </div>
-                <p
-                  className={`shrink-0 text-sm font-bold sm:text-base ${
-                    l.destaque ? 'text-pc-ouro' : 'text-pc-tinta'
-                  }`}
-                >
-                  {l.sinal} {brl(l.valor)}
-                </p>
+
+                {/* ↳ divisão interna da linha (ex.: 3% parceiro + 2% estrutura) */}
+                {l.filhos && (
+                  <div className="mt-2 space-y-1.5 border-l border-pc-ouro/40 pl-3">
+                    {l.filhos.map((f) => (
+                      <div
+                        key={f.rotulo}
+                        className="flex flex-wrap items-baseline justify-between gap-x-3"
+                      >
+                        <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-pc-tinta-fraca">
+                          ↳ {f.rotulo}
+                        </p>
+                        <p className="shrink-0 text-[11px] font-bold text-pc-ouro">{brl(f.valor)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
 
@@ -176,8 +193,8 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             <p className="mt-1 text-xl font-black text-pc-ouro sm:text-2xl">{brl(r.repasse)}</p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-pc-tinta-fraca sm:text-xs">
               {pctBr(PCT_REPASSE_PARCEIRO_CICLO)} sobre o capital aportado, por ciclo de 30 dias — a
-              mesma regra do contador que você vê no seu ciclo. Ele é pago de dentro da linha de
-              parceiros de compra, que neste volume reserva {brl(r.orcamentoParceiros)}.
+              mesma regra do contador que você vê no seu ciclo. É pago do lucro da operação, que
+              neste ciclo é de {brl(r.lucro)}.
             </p>
           </div>
 

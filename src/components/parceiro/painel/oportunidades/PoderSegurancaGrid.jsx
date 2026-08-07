@@ -11,7 +11,7 @@ export default function PoderSegurancaGrid({ resumo: r }) {
     {
       valor: vezes(r.coberturaRepasse),
       titulo: 'Folga de pagamento',
-      texto: `Reserva de ${brl(r.orcamentoParceiros)} para um repasse de ${brl(r.repasse)}.`,
+      texto: `Lucro de ${brl(r.lucro)} para pagar um repasse de ${brl(r.repasse)}.`,
     },
     {
       valor: vezes(r.multiploLastro),

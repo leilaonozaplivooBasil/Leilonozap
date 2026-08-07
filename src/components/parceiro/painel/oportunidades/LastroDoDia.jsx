@@ -143,8 +143,8 @@ export default function LastroDoDia({ oportunidades = [] }) {
           <strong className="font-bold text-pc-ouro">
             {vezes(r.coberturaRepasse)} de folga de pagamento.
           </strong>{' '}
-          A operação reserva {brl(r.orcamentoParceiros)} para remunerar parceiros de compra neste
-          volume, e o repasse comprometido é de {brl(r.repasse)}.
+          A operação lucra {brl(r.lucro)} neste ciclo e o repasse comprometido ao parceiro é de{' '}
+          {brl(r.repasse)}.
         </p>
       </div>
 
