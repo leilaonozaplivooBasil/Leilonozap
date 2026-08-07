@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart3 } from 'lucide-react';
 import { resumirLastro, brl, vezes, inteiro } from '@/lib/lastroOperacao';
+import LucroAcumuladoMes from './LucroAcumuladoMes';
 
 const MES = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
 
@@ -44,6 +45,9 @@ export default function HistoricoVolumeMes({ lotesDoMes = [] }) {
           </div>
         ))}
       </div>
+
+      {/* 📈 quanto isso vira de lucro e ROI se arrematarmos tudo */}
+      <LucroAcumuladoMes resumo={r} />
 
       <p className="mt-4 border-t border-pc-borda pt-3 text-[10px] leading-relaxed text-pc-tinta-fraca">
         Acumulado dos lotes publicados no mês. Valores de referência/projeção — não constituem
