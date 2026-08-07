@@ -16,7 +16,7 @@
 //    Serve para demonstrar FOLGA DE PAGAMENTO (cobertura do repasse).
 //  • Lucro da operação = margem líquida por lote de operacaoNumeros.POR_LOTE
 //    (4.952 / 80.000 = 6,19% da receita).
-//  • ROE do ciclo = lucro da operação ÷ capital aportado.
+//  • ROI do ciclo (Retorno sobre o Investimento) = lucro ÷ capital aportado.
 
 import { PREMISSAS, POR_LOTE } from '@/lib/operacaoNumeros';
 
@@ -80,8 +80,8 @@ export function resumirLastro(lotes = []) {
     multiploLastro: capital > 0 ? lastro / capital : 0,
     // fatia do capital dentro do lastro (para a barra visual)
     fatiaCapitalPct: lastro > 0 ? Math.min(100, (capital / lastro) * 100) : 0,
-    // ROE do ciclo: lucro da operação sobre o capital aportado
-    roePct: capital > 0 ? (lucro / capital) * 100 : 0,
+    // ROI do ciclo (Retorno sobre o Investimento): lucro ÷ capital aportado
+    roiPct: capital > 0 ? (lucro / capital) * 100 : 0,
     // folga: quantas vezes o orçamento de parceiros cobre o repasse comprometido
     coberturaRepasse: repasse > 0 ? orcamentoParceiros / repasse : 0,
     // o capital de giro volta no fechamento do ciclo e é realocado

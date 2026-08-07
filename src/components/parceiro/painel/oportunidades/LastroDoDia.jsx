@@ -93,10 +93,10 @@ export default function LastroDoDia({ oportunidades = [] }) {
           </p>
         </div>
         <div className="border border-pc-ouro/40 bg-pc-preto p-3 sm:p-4">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-pc-ouro">
-            ROE projetado do ciclo
+          <p className="text-[10px] uppercase leading-snug tracking-[0.14em] text-pc-ouro">
+            ROI do ciclo · retorno sobre o investimento
           </p>
-          <p className="mt-1 text-xl font-black text-pc-ouro sm:text-2xl">{pctBr(r.roePct)}</p>
+          <p className="mt-1 text-xl font-black text-pc-ouro sm:text-2xl">{pctBr(r.roiPct)}</p>
           <p className="mt-1 text-[11px] leading-relaxed text-pc-tinta-fraca">
             Lucro de {brl(r.lucro)} sobre {brl(r.capital)} de capital aportado, já depois de
             comissões, impostos e repasses.
