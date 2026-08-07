@@ -39,6 +39,8 @@ const EstoqueLotes = React.lazy(() => import('@/pages/EstoqueLotes'));
 const Evoluir = React.lazy(() => import('@/pages/Evoluir'));
 const Carteira = React.lazy(() => import('@/pages/Carteira'));
 const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
+// 💰 Extrato de Aportes do Parceiro de Compra (leitura + conciliação com o Mercado Pago)
+const AportesParceiro = React.lazy(() => import('@/pages/AportesParceiro'));
 const PainelDistribuidor = React.lazy(() => import('@/pages/PainelDistribuidor'));
 const Cadastro = React.lazy(() => import('@/pages/Cadastro'));
 const ConcursoLeilaoNozap = React.lazy(() => import('@/pages/ConcursoLeilaoNozap'));
@@ -225,6 +227,13 @@ const AuthenticatedApp = () => {
       <Route path="/Metas" element={<LayoutWrapper currentPageName="GestaoMetas"><GestaoMetas /></LayoutWrapper>} />
       <Route path="/painel/estoque" element={<LayoutWrapper currentPageName="MeuEstoque"><MeuEstoque /></LayoutWrapper>} />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
+      <Route path="/AportesParceiro" element={
+        <LayoutWrapper currentPageName="AportesParceiro">
+          <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <AportesParceiro />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/portal/arrematante" element={<PortalArrematante />} />
       <Route path="/portal/loja-virtual" element={<PortalLojaVirtual />} />
       <Route path="/portal/licenciado" element={<PortalLicenciado />} />
