@@ -1,0 +1,51 @@
+{
+  "name": "GiroVendaAoVivo",
+  "type": "object",
+  "properties": {
+    "seed": {
+      "type": "string",
+      "description": "Identificador do aporte/demonstra\u00e7\u00e3o ao qual o giro pertence"
+    },
+    "data_local": {
+      "type": "string",
+      "description": "Data local do giro no formato YYYY-M-D (fuso do parceiro)"
+    },
+    "dia_ciclo": {
+      "type": "number",
+      "description": "Dia do ciclo de 30 dias em que a venda caiu"
+    },
+    "indice": {
+      "type": "number",
+      "description": "Posi\u00e7\u00e3o da venda na lista determin\u00edstica do dia"
+    },
+    "hora_real": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Hor\u00e1rio real em que a venda foi contabilizada ao vivo (nunca \u00e9 sobrescrito)"
+    }
+  },
+  "required": [
+    "seed",
+    "data_local",
+    "indice",
+    "hora_real"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

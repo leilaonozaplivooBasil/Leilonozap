@@ -2,6 +2,7 @@ import React from 'react';
 import { ShoppingBag } from 'lucide-react';
 import { DIA_INICIO_APURACAO, DIA_PRIMEIRO_REPASSE } from './etapasOperacao';
 import ContadorReservaRepasse from './ContadorReservaRepasse';
+import useVendasAoVivo from './useVendasAoVivo';
 
 // 🛒 QUADRO "GIRO DA FORÇA DE VENDA" — acompanhamento DEMONSTRATIVO do giro.
 //
@@ -21,6 +22,9 @@ const FRASES = [
   'Mais uma venda realizada',
   'Venda registrada',
   'Saiu do estoque agora',
+  'Pedido pago e confirmado',
+  'Produto vendido na vitrine',
+  'Fechou pedido agora',
 ];
 
 const ITENS = [
@@ -36,6 +40,22 @@ const ITENS = [
   'Smartwatch Fitness',
   'Panela Elétrica de Arroz',
   'Monitor 24" Full HD',
+  'Batedeira Planetária',
+  'Sanduicheira Grill',
+  'Chaleira Elétrica',
+  'Fone Over-Ear',
+  'Purificador de Água',
+  'Grill Elétrico 1500W',
+  'Secador de Cabelo 2000W',
+  'Umidificador de Ar',
+  'Máquina de Costura Portátil',
+  'Balança Digital de Cozinha',
+  'Robô Aspirador',
+  'Barbeador Elétrico',
+  'Teclado Mecânico Gamer',
+  'Webcam Full HD',
+  'Ferro de Passar a Vapor',
+  'Espremedor de Frutas',
 ];
 
 const CANAIS = ['Loja Virtual', 'Licenciado', 'Vendedor', 'Influencer'];
@@ -96,20 +116,21 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
   const dataLocal = `${hoje.getFullYear()}-${hoje.getMonth() + 1}-${hoje.getDate()}`;
   const sementeDia = `${seed || 'demo'}-d${diaAtual}-${dataLocal}`;
 
-  // 🔔 ANTECIPAÇÃO GRAVADA: a venda que "cai ao vivo" enquanto o parceiro olha a
-  // tela passa a ter horário REAL (o momento em que caiu), guardado no aparelho.
-  // Sem isso ela era só efeito visual e desaparecia no F5 — o histórico voltava
-  // atrás e o saldo diminuía, o que destrói a confiança.
-  const chaveAntecipada = `giro-antecipada-${sementeDia}`;
-  const [antecipada, setAntecipada] = React.useState(null);
-  React.useEffect(() => {
-    try {
-      const bruto = localStorage.getItem(chaveAntecipada);
-      setAntecipada(bruto ? JSON.parse(bruto) : null);
-    } catch {
-      setAntecipada(null);
-    }
-  }, [chaveAntecipada]);
+  // 🔔 ANTECIPAÇÃO GRAVADA NO BANCO: a venda que "cai ao vivo" enquanto o parceiro
+  // olha a tela ganha horário REAL, igual em qualquer aparelho (ver useVendasAoVivo).
+  const { registros, gravar } = useVendasAoVivo({
+    seed: seed || 'demo',
+    dataLocal,
+    diaCiclo: diaAtual,
+  });
+  const horasReais = React.useMemo(() => {
+    const m = {};
+    registros.forEach((r) => {
+      const ts = new Date(r.hora).getTime();
+      if (!m[r.indice] || ts < m[r.indice]) m[r.indice] = ts;
+    });
+    return m;
+  }, [registros]);
 
   // 🔒 Lista determinística do dia: valores + horários fixos, gerados de uma vez.
   const vendas = React.useMemo(() => {
@@ -151,14 +172,15 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
         ritmo: 3400 + Math.floor(rnd() * 3400),
       };
     });
-    // a venda antecipada ao vivo assume o horário real em que caiu (nunca volta atrás)
-    if (antecipada && lista[antecipada.i]) {
-      lista[antecipada.i].hora = Math.min(lista[antecipada.i].hora, antecipada.hora);
-    }
+    // vendas que caíram ao vivo assumem o horário real em que caíram (nunca volta atrás)
+    Object.entries(horasReais).forEach(([i, ts]) => {
+      const item = lista[Number(i)];
+      if (item) item.hora = Math.min(item.hora, ts);
+    });
     return lista;
     // hoje/agora fora das deps de propósito: a lista NÃO pode ser regerada a cada tick
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sementeDia, cotaDia, antecipada]);
+  }, [sementeDia, cotaDia, horasReais]);
 
   // Só entram as vendas cujo horário já passou — o resto chega ao longo do dia.
   let reveladas = 0;
@@ -197,22 +219,26 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
     };
   }, [ativo, passo, reveladas, vendas]);
 
-  // 🔔 UMA VENDA AO VIVO na visita: terminado o replay do passado, 2–3 min depois
-  // entra a PRÓXIMA venda do dia (mesma lista determinística — nada é inventado
-  // nem passa da cota do dia). Acontece uma única vez por abertura da página.
-  // A antecipação é GRAVADA (uma por dia): ao atualizar a página ela continua no
-  // histórico, com horário real, e o saldo do dia não volta atrás.
+  // 🔔 ATÉ 3 VENDAS AO VIVO POR VISITA: terminado o replay do passado, a 1ª cai em
+  // 2–3 min (garantida) e as outras duas em 6–10 min cada. Sempre a PRÓXIMA venda
+  // da lista determinística do dia — nada é inventado e nada passa da cota do dia
+  // (quando a lista termina, para de antecipar). Cada uma é gravada com hora real.
+  const aoVivoNaVisita = React.useRef(0);
   React.useEffect(() => {
-    if (!ativo || antecipada || passo === 0 || passo < reveladas || passo >= vendas.length) return;
+    if (!ativo || passo === 0 || passo < reveladas || passo >= vendas.length) return;
+    if (aoVivoNaVisita.current >= 3) return;
     let timer;
     const agendar = () => {
       clearTimeout(timer);
       if (document.visibilityState !== 'visible') return;
+      const espera =
+        aoVivoNaVisita.current === 0
+          ? 120000 + Math.floor(Math.random() * 60000) // 2–3 min
+          : 360000 + Math.floor(Math.random() * 240000); // 6–10 min
       timer = setTimeout(() => {
-        const registro = { i: passo, hora: Date.now() };
-        try { localStorage.setItem(chaveAntecipada, JSON.stringify(registro)); } catch {}
-        setAntecipada(registro);
-      }, 120000 + Math.floor(Math.random() * 60000));
+        aoVivoNaVisita.current += 1;
+        gravar(passo);
+      }, espera);
     };
     agendar();
     document.addEventListener('visibilitychange', agendar);
@@ -222,7 +248,7 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
       document.removeEventListener('visibilitychange', agendar);
       window.removeEventListener('focus', agendar);
     };
-  }, [ativo, antecipada, passo, reveladas, vendas.length, chaveAntecipada]);
+  }, [ativo, passo, reveladas, vendas.length, gravar]);
 
   const exibidas = Math.min(passo, vendas.length);
   const total = exibidas > 0 ? vendas[exibidas - 1].acumulado : 0;
