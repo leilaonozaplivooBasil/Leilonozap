@@ -92,11 +92,14 @@ export default function AdminTopNav({ config, currentPageName }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, [openSection, showAll, closeAll]);
 
+  // Aceita o item inteiro: alguns painéis moram em rota própria (ex: /painel/pdv)
+  // e não têm página no roteador padrão — antes esses itens davam 404.
   const go = useCallback(
-    (pageName) => {
+    (item) => {
       closeAll();
       setPaletteOpen(false);
-      navigate(createPageUrl(pageName));
+      if (typeof item === 'string') { navigate(createPageUrl(item)); return; }
+      navigate(item?.route || createPageUrl(item?.pageName));
     },
     [navigate, closeAll]
   );
@@ -263,10 +266,10 @@ export default function AdminTopNav({ config, currentPageName }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1.5">
                 {(openedSection.items || []).map((item) => (
                   <MenuTile
-                    key={item.pageName}
+                    key={item.pageName || item.route}
                     item={item}
                     active={item.pageName === currentPageName}
-                    onClick={() => go(item.pageName)}
+                    onClick={() => go(item)}
                   />
                 ))}
               </div>
@@ -313,11 +316,11 @@ export default function AdminTopNav({ config, currentPageName }) {
                     <div className="space-y-0.5">
                       {(section.items || []).map((item) => (
                         <MenuTile
-                          key={item.pageName}
+                          key={item.pageName || item.route}
                           item={item}
                           compact
                           active={item.pageName === currentPageName}
-                          onClick={() => go(item.pageName)}
+                          onClick={() => go(item)}
                         />
                       ))}
                     </div>
@@ -419,7 +422,7 @@ function CommandPalette({ items, onClose, onSelect }) {
     } else if (e.key === "Enter") {
       e.preventDefault();
       const item = results[index];
-      if (item) onSelect(item.pageName);
+      if (item) onSelect(item);
     }
   };
 
@@ -466,11 +469,11 @@ function CommandPalette({ items, onClose, onSelect }) {
               const Icon = item.icon;
               return (
                 <button
-                  key={`${item.category}-${item.pageName}`}
+                  key={`${item.category}-${item.pageName || item.route}`}
                   data-idx={i}
                   type="button"
                   onMouseEnter={() => setIndex(i)}
-                  onClick={() => onSelect(item.pageName)}
+                  onClick={() => onSelect(item)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                     i === index ? "bg-emerald-500/12" : ""
                   }`}

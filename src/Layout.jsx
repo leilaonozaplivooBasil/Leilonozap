@@ -61,8 +61,12 @@ const PAGINAS_TEMA_CLARO = new Set([
   'MyCatalogOrders', 'MyWinnings', 'TirarPedido', 'PedidosDistribuidor', 'MeuEstoque',
   'GestaoMetas', 'PainelArrematante', 'ProductManagement', 'CatalogManagement',
   'CatalogOrdersAdmin', 'PromoCreator', 'NetworkOverview', 'RegisterBatches',
+  // ⚠️ 'PainelArrematante' NÃO entra aqui: a tela é escura por desenho (fundo
+  // preto/verde-escuro). Forçá-la ao tema claro deixava o Voltar cinza-claro
+  // sobre branco — praticamente invisível (print do Gabriel, 08/08/2026).
   'EstoqueLotes', 'GestaoLotes', 'SellerPanel', 'CuponsAdmin', 'AdminLancesAutorizados',
   'AnaliseLoteEstoque', 'UserManagement', 'AdminUsers', 'AdminWithdrawals',
+
 ]);
 
 export default function Layout({ children, currentPageName }) {

@@ -3,7 +3,8 @@ import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { ArrowLeft, Target, Search, Trophy, Trash2, Loader2, User as UserIcon } from 'lucide-react';
+import BotaoVoltar from '@/components/common/BotaoVoltar';
+import { Target, Search, Trophy, Trash2, Loader2, User as UserIcon } from 'lucide-react';
 
 const CARGO = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor', fundador: 'Fundador', ceo: 'CEO', funcionario: 'Funcionário' };
 
@@ -65,9 +66,12 @@ export default function GestaoMetas() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-950 border-b border-gray-800 px-6 py-4 sticky top-16 z-20">
+      {/* topo gruda logo abaixo da barra do site — que tem 56px no celular e 64px no desktop */}
+      <div className="bg-gray-950 border-b border-gray-800 px-6 py-4 sticky top-14 sm:top-16 z-20">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button onClick={() => navigate('/painel')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-700"><ArrowLeft className="w-4 h-4" /> Voltar</button>
+          {/* ↩️ botão voltar único do sistema (era um botão próprio desta tela, que
+              não sumia com a barra do painel e voltava sempre pro /painel) */}
+          <BotaoVoltar destino="/painel" />
           <div className="w-9 h-9 rounded-xl bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center"><Target className="w-5 h-5 text-yellow-300" /></div>
           <div><h1 className="text-xl font-black leading-none">Metas (CEO)</h1><p className="text-xs text-gray-500 mt-0.5">Defina metas por categoria</p></div>
         </div>

@@ -63,7 +63,9 @@ const CONTEXTS = {
       { title: "Banners", pageName: "BannerManagement", icon: ImageIcon },
       { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
       { title: "PrecificaVivo", pageName: "PrecificaVivoPainel", icon: TrendingUp },
-      { title: "PDV", pageName: "PDV", icon: Receipt },
+      // 🐞 08/08/2026: apontava para a página "PDV", que NÃO existe no roteador —
+      // o clique caía em "página não encontrada". A tela real é /painel/pdv.
+      { title: "PDV", route: "/painel/pdv", icon: Receipt },
       { title: "Config. Pagamentos", pageName: "PaymentSettings", icon: CreditCard },
     ],
   },

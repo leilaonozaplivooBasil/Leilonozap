@@ -144,7 +144,8 @@ export default function TirarPedido() {
     /* ☀️ Tema claro institucional (mesmo do Painel de Alavancagem) */
     <div className="min-h-screen bg-white text-nz-tinta nz-painel">
       {/* header */}
-      <div className="bg-white border-b border-nz-borda px-6 py-4 sticky top-16 z-20">
+      {/* topo gruda logo abaixo da barra do site — 56px no celular, 64px no desktop */}
+      <div className="bg-white border-b border-nz-borda px-6 py-4 sticky top-14 sm:top-16 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* ↩️ botão voltar único do sistema (era um botão próprio desta tela) */}
@@ -172,7 +173,7 @@ export default function TirarPedido() {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Buscar produto por nome ou SKU/lote…"
-              className="w-full bg-gray-950 border border-gray-700 rounded-xl pl-11 pr-4 py-3.5 text-white outline-none focus:border-green-500"
+              className="w-full bg-white border border-nz-borda rounded-xl pl-11 pr-4 py-3.5 text-nz-tinta outline-none focus:border-green-500"
             />
             {searching && <Loader2 className="w-4 h-4 animate-spin text-gray-500 absolute right-3 top-1/2 -translate-y-1/2" />}
           </div>
@@ -180,8 +181,8 @@ export default function TirarPedido() {
           {results.length > 0 && (
             <div className="space-y-2 mb-4">
               {results.map((p) => (
-                <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center gap-3 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 rounded-xl p-3 text-left transition-colors">
-                  <span className="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center gap-3 bg-white hover:bg-nz-cinza-fundo border border-nz-borda rounded-xl p-3 text-left transition-colors">
+                  <span className="w-10 h-10 rounded-lg bg-nz-cinza-fundo flex items-center justify-center overflow-hidden flex-shrink-0">
                     {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-gray-400" />}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -198,7 +199,7 @@ export default function TirarPedido() {
             <p className="text-gray-500 text-sm">Nenhum produto encontrado.</p>
           )}
           {!term && cart.length === 0 && (
-            <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-10 text-center text-gray-400">
+            <div className="bg-nz-cinza-fundo border border-dashed border-nz-borda rounded-xl p-10 text-center text-nz-tinta-fraca">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
               Busque um produto para começar o pedido.
             </div>
@@ -209,7 +210,7 @@ export default function TirarPedido() {
         </div>
 
         {/* carrinho / fechamento */}
-        <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-4 h-fit lg:sticky lg:top-28">
+        <div className="bg-white border border-nz-borda rounded-2xl p-4 h-fit lg:sticky lg:top-28 shadow-sm">
           <h2 className="font-bold mb-3 flex items-center gap-2"><ShoppingCart className="w-4 h-4 text-green-400" /> Pedido ({cart.length})</h2>
 
           {cart.length === 0 ? (
@@ -217,16 +218,16 @@ export default function TirarPedido() {
           ) : (
             <div className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto">
               {cart.map((x) => (
-                <div key={x.id} className="bg-gray-900/60 rounded-lg p-2.5">
+                <div key={x.id} className="bg-nz-cinza-fundo border border-nz-borda rounded-lg p-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-sm font-medium flex-1 min-w-0 truncate">{x.description}</div>
                     <button onClick={() => remove(x.id)} className="text-gray-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                   <div className="flex items-center justify-between mt-2 gap-2">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setQty(x.id, x.qty - 1)} className="w-7 h-7 rounded bg-gray-700 hover:bg-gray-600 flex items-center justify-center"><Minus className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setQty(x.id, x.qty - 1)} className="w-9 h-9 rounded bg-white border border-nz-borda hover:bg-nz-cinza-fundo flex items-center justify-center"><Minus className="w-3.5 h-3.5" /></button>
                       <span className="w-8 text-center text-sm font-bold">{x.qty}</span>
-                      <button onClick={() => setQty(x.id, x.qty + 1)} className="w-7 h-7 rounded bg-gray-700 hover:bg-gray-600 flex items-center justify-center"><Plus className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setQty(x.id, x.qty + 1)} className="w-9 h-9 rounded bg-white border border-nz-borda hover:bg-nz-cinza-fundo flex items-center justify-center"><Plus className="w-3.5 h-3.5" /></button>
                     </div>
                     <div className="flex items-center gap-1 text-sm">
                       <span className="text-gray-500 text-xs">R$</span>
@@ -236,7 +237,7 @@ export default function TirarPedido() {
                         onChange={(e) => setPriceText(x.id, e.target.value)}
                         onBlur={(e) => setPriceText(x.id, toText(parseBRL(e.target.value)))}
                         placeholder="0,00"
-                        className="w-24 bg-gray-950 border border-gray-700 rounded px-2 py-1 text-right text-sm outline-none focus:border-green-500"
+                        className="w-24 bg-white border border-nz-borda rounded px-2 py-1 text-right text-sm outline-none focus:border-green-500"
                       />
                     </div>
                   </div>
@@ -256,12 +257,12 @@ export default function TirarPedido() {
                 </div>
               ) : (
                 <div>
-                  <input value={sellerQuery} onChange={(e) => setSellerQuery(e.target.value)} placeholder="Filtrar por nome, e-mail ou cargo…" className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500 mb-1" />
-                  <div className="border border-gray-800 rounded-lg max-h-56 overflow-y-auto bg-gray-950/60">
+                  <input value={sellerQuery} onChange={(e) => setSellerQuery(e.target.value)} placeholder="Filtrar por nome, e-mail ou cargo…" className="w-full bg-white border border-nz-borda rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500 mb-1" />
+                  <div className="border border-nz-borda rounded-lg max-h-56 overflow-y-auto bg-white">
                     {sellerOptions.length === 0 ? (
                       <div className="px-3 py-3 text-xs text-gray-500">{sellers.length ? 'Nenhum login encontrado.' : 'Carregando logins da rede…'}</div>
                     ) : sellerOptions.map((s) => (
-                      <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 hover:bg-gray-800 text-sm border-b border-gray-800/60 last:border-0 flex items-center justify-between gap-2">
+                      <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 min-h-[44px] hover:bg-nz-cinza-fundo text-sm border-b border-nz-borda last:border-0 flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="truncate font-medium flex items-center gap-1.5">{s.full_name || s.email}{s.cupula && <span className="text-[8px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold">CÚPULA</span>}</div>
                           <div className="text-[10px] text-gray-500 truncate">{s.email}</div>
@@ -278,11 +279,11 @@ export default function TirarPedido() {
 
           {/* cliente */}
           <div className="space-y-2 mb-3">
-            <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-3">
+            <div className="flex items-center gap-2 bg-white border border-nz-borda rounded-lg px-3">
               <UserIcon className="w-4 h-4 text-gray-500" />
               <input value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} placeholder="Cliente (opcional)" className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
             </div>
-            <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-3">
+            <div className="flex items-center gap-2 bg-white border border-nz-borda rounded-lg px-3">
               <Phone className="w-4 h-4 text-gray-500" />
               <input value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} placeholder="WhatsApp (opcional)" className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
             </div>
@@ -291,7 +292,7 @@ export default function TirarPedido() {
           {/* pagamento */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[['dinheiro', 'Dinheiro', Banknote], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
-              <button key={k} onClick={() => setPayment(k)} className={`py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-300' : 'border-gray-700 text-gray-300'}`}>
+              <button key={k} onClick={() => setPayment(k)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}>
                 <Icon className="w-4 h-4" /> {label}
               </button>
             ))}
@@ -299,8 +300,8 @@ export default function TirarPedido() {
 
           {/* entrega */}
           <div className="grid grid-cols-2 gap-2 mb-4">
-            <button onClick={() => setDelivered(true)} className={`py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${delivered ? 'border-green-500 bg-green-500/10 text-green-300' : 'border-gray-700 text-gray-300'}`}><Store className="w-4 h-4" /> Retirada no balcão</button>
-            <button onClick={() => setDelivered(false)} className={`py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${!delivered ? 'border-green-500 bg-green-500/10 text-green-300' : 'border-gray-700 text-gray-300'}`}><Truck className="w-4 h-4" /> Entregar depois</button>
+            <button onClick={() => setDelivered(true)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${delivered ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}><Store className="w-4 h-4" /> Retirada no balcão</button>
+            <button onClick={() => setDelivered(false)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${!delivered ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}><Truck className="w-4 h-4" /> Entregar depois</button>
           </div>
 
           <div className="flex items-center justify-between mb-3">

@@ -1,6 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import BotaoVoltar from "@/components/common/BotaoVoltar";
 
 /**
  * 🎨 PortalPageHeader — Cabeçalho padrão para os 9 painéis do Portal.
@@ -27,8 +26,6 @@ export default function PortalPageHeader({
   actions = null,
   badge = null,
 }) {
-  const navigate = useNavigate();
-
   // 🎨 FASE 5 — PALETA INSTITUCIONAL ÚNICA (fim do azul, 08/08/2026)
   // Antes cada painel escolhia sua cor (azul, ciano, violeta, roxo) e o sistema
   // parecia oito produtos diferentes. Agora existem só DUAS famílias: verde da
@@ -51,24 +48,13 @@ export default function PortalPageHeader({
 
   const colors = colorMap[accentColor] || VERDE;
 
-  // Botão de voltar só quando NÃO existe a barra de abas do painel na tela.
-  // Com a barra presente, a navegação já é feita pelas abas — o "voltar" virava
-  // um clique inútil (e confuso: dava a impressão de estar "dentro" de algo).
-  const dentroDoPainel =
-    typeof document !== 'undefined' && document.body?.dataset?.painelNav === '1';
-
+  // ↩️ 08/08/2026: era um botão próprio (link cinza) que checava a barra do painel
+  // UMA vez, sem reagir — às vezes aparecia quando não devia. Agora usa o botão
+  // voltar único do sistema, que observa a barra e se esconde sozinho: mesma
+  // aparência e mesmo comportamento em todo o app.
   return (
     <div className="mb-6 sm:mb-8">
-      {/* Botão Voltar — só fora do painel de abas (ver 'dentroDoPainel' acima) */}
-      {!dentroDoPainel && (
-        <button
-          onClick={() => navigate(backTo)}
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4 min-h-[44px] -ml-1 px-2 rounded-md hover:bg-white/5"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>{backLabel}</span>
-        </button>
-      )}
+      <div className="mb-4"><BotaoVoltar texto={backLabel} destino={backTo} /></div>
 
       {/* Header principal */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
