@@ -60,6 +60,73 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   🎨 PALETA INSTITUCIONAL DO PAINEL — VERDE + MARROM
+   Regra única que padroniza TODAS as telas internas de uma vez, em vez
+   de editar tela por tela. Só troca COR (pintura): não muda layout, não
+   muda lógica, não muda nenhum texto.
+   Escopo: .nz-painel (telas de trabalho) e o miolo das telas que abrem
+   com a barra do painel no topo (body[data-painel-nav] main).
+   Vermelho, laranja e amarelo NÃO entram: ali a cor tem significado
+   (erro, alerta, grade "Bom") e trocar esconderia informação.
+   Marcas próprias (Livoo rosa, Parceiro preto) ficam de fora por terem
+   escopo próprio (body.pc-tema / classes livoo-*).
+   ═══════════════════════════════════════════════════════════════ */
+.nz-painel [class*="text-blue-"], body[data-painel-nav] main [class*="text-blue-"],
+.nz-painel [class*="text-sky-"], body[data-painel-nav] main [class*="text-sky-"],
+.nz-painel [class*="text-cyan-"], body[data-painel-nav] main [class*="text-cyan-"] {
+  color: #2E9D63 !important;
+}
+.nz-painel [class*="text-purple-"], body[data-painel-nav] main [class*="text-purple-"],
+.nz-painel [class*="text-violet-"], body[data-painel-nav] main [class*="text-violet-"],
+.nz-painel [class*="text-indigo-"], body[data-painel-nav] main [class*="text-indigo-"],
+.nz-painel [class*="text-pink-"], body[data-painel-nav] main [class*="text-pink-"],
+.nz-painel [class*="text-fuchsia-"], body[data-painel-nav] main [class*="text-fuchsia-"] {
+  color: #B8875F !important;
+}
+.nz-painel [class*="bg-blue-"], body[data-painel-nav] main [class*="bg-blue-"],
+.nz-painel [class*="bg-sky-"], body[data-painel-nav] main [class*="bg-sky-"],
+.nz-painel [class*="bg-cyan-"], body[data-painel-nav] main [class*="bg-cyan-"] {
+  background-color: #1B7A48 !important;
+}
+.nz-painel [class*="bg-purple-"], body[data-painel-nav] main [class*="bg-purple-"],
+.nz-painel [class*="bg-violet-"], body[data-painel-nav] main [class*="bg-violet-"],
+.nz-painel [class*="bg-indigo-"], body[data-painel-nav] main [class*="bg-indigo-"],
+.nz-painel [class*="bg-pink-"], body[data-painel-nav] main [class*="bg-pink-"],
+.nz-painel [class*="bg-fuchsia-"], body[data-painel-nav] main [class*="bg-fuchsia-"] {
+  background-color: #96603E !important;
+}
+.nz-painel [class*="border-blue-"], body[data-painel-nav] main [class*="border-blue-"],
+.nz-painel [class*="border-sky-"], body[data-painel-nav] main [class*="border-sky-"],
+.nz-painel [class*="border-cyan-"], body[data-painel-nav] main [class*="border-cyan-"] {
+  border-color: rgba(46, 157, 99, 0.45) !important;
+}
+.nz-painel [class*="border-purple-"], body[data-painel-nav] main [class*="border-purple-"],
+.nz-painel [class*="border-violet-"], body[data-painel-nav] main [class*="border-violet-"],
+.nz-painel [class*="border-indigo-"], body[data-painel-nav] main [class*="border-indigo-"],
+.nz-painel [class*="border-pink-"], body[data-painel-nav] main [class*="border-pink-"] {
+  border-color: rgba(184, 135, 95, 0.45) !important;
+}
+/* caixas de seleção e barras de progresso nativas */
+.nz-painel [class*="accent-blue-"], body[data-painel-nav] main [class*="accent-blue-"],
+.nz-painel [class*="accent-sky-"], body[data-painel-nav] main [class*="accent-sky-"] {
+  accent-color: #1B7A48 !important;
+}
+/* faixas suaves (fundo com transparência) continuam suaves, só mudam de cor */
+.nz-painel [class*="bg-blue-500/1"], .nz-painel [class*="bg-blue-500/2"],
+.nz-painel [class*="bg-blue-900/"], .nz-painel [class*="bg-blue-950/"],
+body[data-painel-nav] main [class*="bg-blue-500/1"],
+body[data-painel-nav] main [class*="bg-blue-900/"],
+body[data-painel-nav] main [class*="bg-blue-950/"] {
+  background-color: rgba(27, 122, 72, 0.16) !important;
+}
+.nz-painel [class*="bg-purple-500/1"], .nz-painel [class*="bg-violet-500/1"],
+.nz-painel [class*="bg-purple-900/"], .nz-painel [class*="bg-violet-900/"],
+body[data-painel-nav] main [class*="bg-purple-500/1"],
+body[data-painel-nav] main [class*="bg-violet-500/1"] {
+  background-color: rgba(150, 96, 62, 0.18) !important;
+}
+
 /* 🖤 TEMA EXCLUSIVO DA PÁGINA DO PARCEIRO (/Partners).
    A marca `pc-tema` é colocada no <body> só enquanto a página está aberta e
    removida ao sair — nenhum componente global é alterado e NENHUMA outra tela

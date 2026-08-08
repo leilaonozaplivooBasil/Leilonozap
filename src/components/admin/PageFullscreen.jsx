@@ -26,7 +26,7 @@ export default function PageFullscreen({ children }) {
   if (isFullscreen) {
     return (
       <>
-        <div className="fixed inset-0 z-[90] bg-gray-950 overflow-auto">
+        <div className="nz-painel fixed inset-0 z-[90] bg-gray-950 overflow-auto">
           {children}
         </div>
         <button
@@ -42,7 +42,9 @@ export default function PageFullscreen({ children }) {
 
   return (
     <>
-      {children}
+      {/* 🎨 Marca de escopo da paleta institucional do painel (verde + marrom).
+          Só pintura: nenhuma regra de layout, nenhuma lógica alterada. */}
+      <div className="nz-painel">{children}</div>
       <button
         onClick={toggle}
         className="fixed z-[100] bottom-5 left-5 flex items-center gap-1.5 rounded-lg bg-[#0C1F16]/90 border border-white/10 px-3 py-2 text-[12px] font-medium text-gray-300 hover:text-white hover:border-emerald-500/30 backdrop-blur transition-all shadow-lg"
