@@ -113,9 +113,14 @@ export default function Carteira() {
                   Cores em style: o tema claro do painel reescreve classes de cor. */}
               <p
                 className="text-sm font-semibold rounded-xl p-3.5"
-                style={{ background: 'linear-gradient(90deg, #F35B12 0%, #FFA000 100%)', color: '#111111' }}
+                style={{
+                  // 🔥 laranjão puxando pro escuro à direita: dá lastro pra letra BRANCA
+                  background: 'linear-gradient(90deg, #F35B12 0%, #C42A05 100%)',
+                  color: '#FFFFFF',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.35)',
+                }}
               >
-                Pra sacar com segurança, valide sua identidade. <strong style={{ color: '#111111' }}>O saque só vai pro PIX do seu CPF.</strong>
+                Pra sacar com segurança, valide sua identidade. <strong style={{ color: '#FFFFFF' }}>O saque só vai pro PIX do seu CPF.</strong>
               </p>
               <div>
                 <label className="text-xs text-gray-400">CPF (sua chave PIX de saque)</label>
