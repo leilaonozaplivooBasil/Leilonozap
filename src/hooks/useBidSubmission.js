@@ -220,6 +220,15 @@ export default function useBidSubmission({
             ? "Erro ao enviar lance (falha de rede)."
             : (atomicData?.message || "Erro ao enviar lance.");
         console.error("❌ [BID] submitAtomicBid falhou:", atomicData);
+        // 💰 Sem dinheiro pro lance + frete: devolve a reserva e abre o aviso de saldo
+        // (em vez do alerta genérico de erro) — a trava é feita no servidor.
+        if (atomicData?.saldo_insuficiente) {
+          await releaseHold("saldo insuficiente para lance + frete");
+          setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+          lastMessageCountRef.current--;
+          setShowLowBalanceModal(true);
+          return;
+        }
         trackEvent('lance_falha', { auction_id: auctionId, valor: bidAmount, erro: atomicData?.error || (atomicData?.conflict ? 'conflict' : 'desconhecido') });
         alert(atomicData?.conflict ? "Outro lance foi dado!" : diagMsg);
         await releaseHold("lance rejeitado (outro lance venceu a corrida)");

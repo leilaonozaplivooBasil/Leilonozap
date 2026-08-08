@@ -104,7 +104,7 @@ export default async function handler(req, res) {
     }
 
     // Identidade: valida que o usuário existe (substitui o auth.me() do Base44)
-    const userResp = await sb(`app_users?select=id,full_name,nickname&id=eq.${encodeURIComponent(userId)}&limit=1`);
+    const userResp = await sb(`app_users?select=id,full_name,nickname,saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(userId)}&limit=1`);
     const user = Array.isArray(userResp.data) ? userResp.data[0] : null;
     if (!user) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
@@ -179,6 +179,39 @@ export default async function handler(req, res) {
         success: false,
         message: `Lance mínimo: R$ ${minBid.toFixed(2)}`,
         current_state: { current_price: currentPrice, min_bid: minBid, winner_name: auction.winner_name },
+      });
+    }
+
+    // 💰 TRAVA DE DINHEIRO NO SERVIDOR (08/08/2026, pedido do dono).
+    // Antes, o servidor CONFIAVA que o navegador já tinha reservado o saldo: se a reserva
+    // falhasse, fosse pulada, ou a função fosse chamada direto, o lance entrava sem dinheiro
+    // — foi assim que uma conta ficou liderando R$ 119,80 tendo só R$ 100,00 (o frete de cada
+    // lance nunca chegou a ser cobrado). Agora a conta é fechada AQUI, antes de gravar
+    // qualquer coisa: tudo o que a pessoa tem (livre + reservado) precisa cobrir a soma de
+    // TODOS os lances em que ela está na frente, com o frete de cada um, incluindo este.
+    // Nada de saldo é movido aqui — quem reserva continua sendo o reserveBidBalance.
+    const dinheiroTotal = money(Number(user.saldo_disponivel || 0) + Number(user.saldo_reservado || 0));
+    const lideraResp = await sb(
+      `auctions?select=id,current_price,frete_reservado_valor&status=eq.active&winner_id=eq.${encodeURIComponent(userId)}`
+    );
+    const lidera = Array.isArray(lideraResp.data) ? lideraResp.data : [];
+    // o leilão atual entra pelo valor NOVO (este lance), não pelo antigo
+    const jaComprometido = lidera
+      .filter((a) => String(a.id) !== auctionId)
+      .reduce((s, a) => money(s + money(a.current_price) + money(a.frete_reservado_valor)), 0);
+    const precisaTer = money(jaComprometido + money(bidAmount) + money(freteValor));
+
+    if (precisaTer > dinheiroTotal) {
+      const falta = money(precisaTer - dinheiroTotal);
+      return res.status(200).json({
+        success: false,
+        saldo_insuficiente: true,
+        message: freteValor > 0
+          ? `Saldo insuficiente. Este lance é R$ ${money(bidAmount).toFixed(2).replace('.', ',')} + R$ ${money(freteValor).toFixed(2).replace('.', ',')} de frete. Faltam R$ ${falta.toFixed(2).replace('.', ',')}.`
+          : `Saldo insuficiente. Faltam R$ ${falta.toFixed(2).replace('.', ',')}.`,
+        required: precisaTer,
+        balance: dinheiroTotal,
+        deficit: falta,
       });
     }
 
