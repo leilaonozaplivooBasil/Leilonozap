@@ -14,6 +14,7 @@ import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
 import DetalhesPedidoModal from '@/components/catalog/DetalhesPedidoModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
+import MinhasComprasHeader from '@/components/catalog/MinhasComprasHeader';
 
 export default function MyCatalogOrders() {
   const [orders, setOrders] = useState([]);
@@ -262,33 +263,28 @@ export default function MyCatalogOrders() {
           {/* ↩️ FASE 3 — passa a usar o botão voltar único do sistema */}
           <div className="mb-4"><BotaoVoltar destino="/Loja-Virtual" tema="claro" /></div>
 
-          <div className="flex items-center gap-3 sm:gap-4 mb-2">
-            <div className="p-2.5 sm:p-3 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">
-              <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">Minhas Compras — Loja Virtual</h1>
-              <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
-                {orders.length} pedido{orders.length !== 1 ? 's' : ''} no total
-              </p>
-            </div>
-          </div>
+          {/* 🖤💚 mesmo padrão de topo da Visão Geral, com resumo dos pedidos */}
+          <MinhasComprasHeader
+            total={orders.length}
+            pagos={orders.filter((o) => o.status === 'paid').length}
+            valorPago={orders.filter((o) => o.status === 'paid').reduce((s, o) => s + (Number(o.total_amount) || 0), 0)}
+          />
         </div>
 
         {orders.length === 0 ? (
-          <div className="text-center py-16 bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-white/5">
-            <ShoppingBag className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Você ainda não fez nenhum pedido</h2>
-            <p className="text-gray-400 mb-6">Explore nossa loja virtual e faça sua primeira compra!</p>
+          <div className="text-center py-16 bg-white border border-nz-borda rounded-2xl shadow-sm">
+            <ShoppingBag className="w-16 h-16 mx-auto text-nz-verde/40 mb-4" />
+            <h2 className="text-xl font-bold text-nz-tinta mb-2">Você ainda não fez nenhum pedido</h2>
+            <p className="text-nz-tinta-fraca mb-6">Explore nossa loja virtual e faça sua primeira compra!</p>
             <Link to={createPageUrl("Catalog")}>
-              <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500">Ver Loja Virtual</Button>
+              <Button className="bg-nz-verde hover:bg-nz-verde-claro text-white">Ver Loja Virtual</Button>
             </Link>
           </div>
         ) : (
           <>
             {/* Filtros */}
             <div className="mb-8 flex flex-wrap gap-2 items-center">
-              <div className="flex items-center gap-2 mr-2 text-gray-400 text-sm">
+              <div className="flex items-center gap-2 mr-2 text-nz-tinta-fraca text-sm">
                 <Filter className="w-4 h-4" />
                 <span className="font-semibold">Filtrar:</span>
               </div>
@@ -296,16 +292,18 @@ export default function MyCatalogOrders() {
                 <button
                   key={option.id}
                   onClick={() => setActiveFilter(option.id)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${activeFilter === option.id
-                      ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-                      : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
-                    }`}
+                  className="px-4 py-2 rounded-full font-semibold text-sm transition-colors flex items-center gap-2 min-h-[40px] border"
+                  style={activeFilter === option.id
+                    ? { background: '#1B7A48', borderColor: '#1B7A48', color: '#FFFFFF' }
+                    : { background: '#FFFFFF', borderColor: '#DDE4DF', color: '#5C6B62' }}
                 >
                   {option.label}
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeFilter === option.id
-                      ? 'bg-white/20'
-                      : 'bg-gray-700'
-                    }`}>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={activeFilter === option.id
+                      ? { background: 'rgba(255,255,255,0.22)', color: '#FFFFFF' }
+                      : { background: '#F1F7F3', color: '#1B7A48' }}
+                  >
                     {option.count}
                   </span>
                 </button>
@@ -325,9 +323,9 @@ export default function MyCatalogOrders() {
 
             {/* Cards */}
             {filteredOrders.length === 0 ? (
-              <div className="text-center py-12 bg-gray-800/20 rounded-xl border border-white/5">
-                <Package className="w-12 h-12 mx-auto text-gray-600 mb-3" />
-                <p className="text-gray-400">Nenhum pedido nesta categoria</p>
+              <div className="text-center py-12 bg-white rounded-2xl border border-nz-borda shadow-sm">
+                <Package className="w-12 h-12 mx-auto text-nz-verde/40 mb-3" />
+                <p className="text-nz-tinta-fraca">Nenhum pedido nesta categoria</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
