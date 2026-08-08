@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { registrarLog } from '@/lib/logDedupe';
+import { instalarCamadaRede, definirAviso, mediaDesempenho } from '@/lib/camadaRede';
 
 /**
  * 🛡️ IA PROTETORA GLOBAL
@@ -14,9 +15,6 @@ export default function GlobalMonitor() {
   const [status, setStatus] = useState('ok'); // ok, warning, critical
   const [showAlert, setShowAlert] = useState(false);
   
-  const requestCountRef = useRef({ count: 0, resetTime: Date.now() });
-  const errorLogRef = useRef([]);
-  const performanceRef = useRef([]);
 
   // ============= CAPTURA ERROS GLOBAIS E LOGA =============
   useEffect(() => {
@@ -52,185 +50,19 @@ export default function GlobalMonitor() {
     };
   }, []);
 
-  // ============= INTERCEPTA TODOS OS ERROS =============
+  // ============= CAMADA DE REDE (instalação ÚNICA) =============
+  // 🛡️ CAUSA-RAIZ CORRIGIDA (08/08/2026 — "Maximum call stack size exceeded"
+  // em /api/functions/entityWrite): a camada era instalada e desinstalada a cada
+  // montagem deste componente. Como cada rota monta o seu próprio Layout, o
+  // monitor remonta a cada navegação e, com Sentry/analytics também embrulhando
+  // window.fetch, a bandeira de proteção ficava escondida — cada navegação
+  // empilhava uma camada. Agora a camada vive em @/lib/camadaRede: instala UMA
+  // vez por aba e NUNCA sai. Aqui só ligamos o aviso na tela.
   useEffect(() => {
-    // 🛡️ BLINDAGEM CONTRA EMPILHAMENTO DE CAMADAS DE REDE
-    // O monitor troca window.fetch por uma camada própria. Se essa troca
-    // acontecer mais de uma vez (remontagem do componente, recarga a quente do
-    // preview, duas instâncias do monitor), as camadas se empilham uma dentro da
-    // outra e TODA requisição passa a atravessar N camadas — o que estoura a
-    // pilha de execução do navegador ("Maximum call stack size exceeded",
-    // observado em 07/08/2026 numa gravação de log via entityWrite).
-    // Regra: a camada instalada leva uma bandeira. Se já existir camada com
-    // bandeira, esta montagem NÃO instala outra — reaproveita a que está lá.
-    const originalFetch = window.fetch;
-    const jaTemCamada = typeof originalFetch === 'function' && originalFetch.__nozapMonitorFetch === true;
-    let camadaInstaladaAqui = false;
-
-    const camadaMonitor = async (...args) => {
-      const startTime = Date.now();
-      
-      try {
-        // Conta requisições
-        requestCountRef.current.count++;
-        
-        // Reset a cada minuto
-        if (Date.now() - requestCountRef.current.resetTime > 60000) {
-          const rpm = requestCountRef.current.count;
-          
-          if (rpm > 50) {
-            addIssue({
-              level: 'warning',
-              type: 'rate_limit_risk',
-              message: `${rpm} requisições/min - RISCO DE RATE LIMIT!`,
-              location: 'Global',
-              timestamp: new Date().toISOString(),
-              prompt: `ATENÇÃO: Detectadas ${rpm} requisições por minuto.\n\nAÇÃO NECESSÁRIA:\n1. Aumentar intervalos de sincronização\n2. Implementar cache local\n3. Reduzir chamadas desnecessárias\n\nSUGESTÃO: Intervalo mínimo de 60-90 segundos entre syncs.`
-            });
-          }
-          
-          requestCountRef.current = { count: 0, resetTime: Date.now() };
-        }
-        
-        const response = await originalFetch(...args);
-        const endTime = Date.now();
-        const duration = endTime - startTime;
-        
-        // Monitora performance
-        performanceRef.current.push({ url: args[0], duration, timestamp: Date.now() });
-        if (performanceRef.current.length > 100) performanceRef.current.shift();
-        
-        // Detecta requisições lentas
-        if (duration > 3000) {
-          addIssue({
-            level: 'warning',
-            type: 'slow_request',
-            message: `Requisição lenta: ${duration}ms`,
-            location: args[0],
-            timestamp: new Date().toISOString(),
-            prompt: `Requisição demorou ${duration}ms:\n${args[0]}\n\nPOSSÍVEIS CAUSAS:\n1. Muitos dados sendo buscados\n2. Filtros ineficientes\n3. Problema de rede\n\nSUGESTÃO: Reduzir limit de registros ou adicionar paginação.`
-          });
-        }
-        
-        // Detecta Rate Limit
-        if (response.status === 429) {
-          addIssue({
-            level: 'critical',
-            type: 'rate_limit',
-            message: '🔴 RATE LIMIT ATINGIDO!',
-            location: args[0],
-            timestamp: new Date().toISOString(),
-            prompt: `🔴 RATE LIMIT CRÍTICO\n\nURL: ${args[0]}\n\nCORREÇÃO IMEDIATA:\n1. PARAR todas as sincronizações por 2 minutos\n2. AUMENTAR intervalo para 90-120 segundos\n3. IMPLEMENTAR backoff exponencial\n4. REMOVER chamadas desnecessárias\n\nCÓDIGO SUGERIDO:\nconst SYNC_INTERVAL = 90000; // 90 segundos\nlet retryDelay = 90000;\n\nif (error.status === 429) {\n  retryDelay = retryDelay * 2; // Dobra o tempo\n  setTimeout(syncData, retryDelay);\n}`
-          });
-        }
-        
-        return response;
-        
-      } catch (error) {
-        const endTime = Date.now();
-        const requestUrl = typeof args[0] === 'string' ? args[0] : '';
-        
-        // Ignora erros de fetch de imagens externas (CORS esperado no compartilhamento)
-        const isExternalImageFetch = requestUrl.includes('gstatic.com') ||
-          requestUrl.includes('encrypted-tbn') ||
-          requestUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i) ||
-          requestUrl.includes('shopping?q=tbn');
-
-        // Ignora erros de rede transitórios e não-acionáveis ("Load failed" no Safari,
-        // "Failed to fetch" no Chrome, requisições abortadas em navegação/unmount).
-        // São blips de conexão — logamos, mas NÃO assustamos o usuário com toast crítico.
-        const msg = String(error?.message || '').toLowerCase();
-        const isTransientNetwork =
-          error?.name === 'AbortError' ||
-          msg.includes('load failed') ||
-          msg.includes('failed to fetch') ||
-          msg.includes('networkerror') ||
-          msg.includes('network connection was lost') ||
-          msg.includes('cancelled') ||
-          msg.includes('aborted');
-
-        if (!isExternalImageFetch) {
-          errorLogRef.current.push({
-            error: error.message,
-            url: requestUrl,
-            timestamp: Date.now(),
-            duration: endTime - startTime
-          });
-
-          // O guard veio deste lado: sem ele, uma oscilação de rede virava alerta
-          // crítico. O diagnóstico detalhado (ad blocker, VPN, DNS) veio do Santana.
-          if (!isTransientNetwork) {
-          
-            const isNetworkError = error.message === 'Failed to fetch' || error.message?.includes('NetworkError') || error.message?.includes('Network request failed');
-
-            addIssue({
-              level: 'critical',
-              type: isNetworkError ? 'network_error' : 'request_error',
-              message: isNetworkError
-                ? '🌐 Erro de rede — conexão bloqueada ou interrompida'
-                : `Erro na requisição: ${error.message}`,
-              location: requestUrl,
-              timestamp: new Date().toISOString(),
-              prompt: isNetworkError
-                ? `ERRO DE REDE: ${error.message}\n\nURL: ${requestUrl}\n\nDIAGNÓSTICO: O navegador não conseguiu completar a requisição (não é erro do servidor).\n\nCAUSAS MAIS PROVÁVEIS:\n1. 🚫 Ad blocker (uBlock, Brave Shields, AdGuard) bloqueando o domínio\n   → SOLUÇÃO: Desativar ad blocker para este site\n2. 🔌 Extensão de navegador interceptando chamadas\n   → SOLUÇÃO: Testar em modo anônimo (Ctrl+Shift+N)\n3. 🛡️ VPN/Proxy/Firewall bloqueando supabase.co\n   → SOLUÇÃO: Desativar VPN e testar\n4. 📡 Conexão instável ou DNS incorreto\n   → SOLUÇÃO: Testar em outra rede (4G vs WiFi) ou mudar DNS (8.8.8.8)\n\nAÇÃO IMEDIATA: Abrir em modo anônimo. Se funcionar, é extensão/ad blocker.`
-                : `ERRO DE REQUISIÇÃO:\n${error.message}\n\nURL: ${requestUrl}\n\nVERIFICAR:\n1. Conexão com internet\n2. URL correta\n3. Permissões de acesso\n4. Se entidade existe no banco`
-            });
-          }
-        }
-
-        throw error;
-      }
-    };
-
-    // Só instala se ainda não houver camada do monitor ativa.
-    if (!jaTemCamada) {
-      camadaMonitor.__nozapMonitorFetch = true;
-      window.fetch = camadaMonitor;
-      camadaInstaladaAqui = true;
-    }
-
-    // Intercepta erros do console
-    const originalError = console.error;
-    console.error = (...args) => {
-      const errorMessage = args.join(' ');
-      
-      // Detecta loops infinitos
-      if (errorMessage.includes('Maximum update depth exceeded')) {
-        addIssue({
-          level: 'critical',
-          type: 'infinite_loop',
-          message: '🔴 LOOP INFINITO DETECTADO!',
-          location: 'React Component',
-          timestamp: new Date().toISOString(),
-          prompt: `🔴 LOOP INFINITO DE RENDERIZAÇÃO\n\nCAUSA: useEffect com dependências circulares\n\nCORREÇÃO:\n1. Usar useRef para valores que não precisam re-render\n2. Memoizar callbacks com useCallback\n3. Verificar arrays de dependências\n\nEXEMPLO:\n// ❌ ERRADO:\nuseEffect(() => {\n  setData(processData(data));\n}, [data]); // Loop!\n\n// ✅ CORRETO:\nconst dataRef = useRef(data);\nuseEffect(() => {\n  dataRef.current = data;\n}, [data]);\n\nconst processedData = useMemo(() => processData(data), [data]);`
-        });
-      }
-      
-      // Detecta erros de hook
-      if (errorMessage.includes('rendered more hooks')) {
-        addIssue({
-          level: 'critical',
-          type: 'hook_error',
-          message: 'Erro de React Hooks',
-          location: 'React Component',
-          timestamp: new Date().toISOString(),
-          prompt: `ERRO DE HOOKS:\n${errorMessage}\n\nREGRAS DOS HOOKS:\n1. Sempre no topo da função\n2. Nunca dentro de condicionais\n3. Nunca em loops\n4. Ordem sempre a mesma\n\nVERIFICAR:\n- Hooks dentro de if/else\n- Hooks em callbacks\n- Número de hooks mudando`
-        });
-      }
-      
-      originalError(...args);
-    };
-    
-    // Cleanup
-    return () => {
-      // Só devolve o fetch original se a camada ativa for EXATAMENTE a que esta
-      // montagem instalou. Sem essa checagem, um desmonte podia derrubar a
-      // camada de outra instância (ou reinstalar uma camada antiga por cima).
-      if (camadaInstaladaAqui && window.fetch === camadaMonitor) {
-        window.fetch = originalFetch;
-      }
-      console.error = originalError;
-    };
+    // Sem limpeza no desmonte: na troca de rota o Layout antigo desmonta e o
+    // novo monta: apagar o aviso aqui poderia deixar o monitor mudo.
+    definirAviso(addIssue);
+    instalarCamadaRede();
   }, []);
 
   // ============= ADICIONA ISSUE =============
@@ -294,9 +126,9 @@ export default function GlobalMonitor() {
   // ============= MONITORA PERFORMANCE =============
   useEffect(() => {
     const checkPerformance = setInterval(() => {
-      if (performanceRef.current.length > 10) {
-        const avgDuration = performanceRef.current.reduce((sum, p) => sum + p.duration, 0) / performanceRef.current.length;
-        
+      {
+        const avgDuration = mediaDesempenho();
+
         if (avgDuration > 2000) {
           addIssue({
             level: 'warning',

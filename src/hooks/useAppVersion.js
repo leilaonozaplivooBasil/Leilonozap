@@ -27,6 +27,10 @@ const VERSAO_DO_BUILD =
 // NUNCA mais se recarrega sozinho nessa versão-alvo, só por toque do usuário.
 const K_TARGET = 'nz_update_target';
 const K_TRIES = 'nz_update_tries';
+// 🚪 SAÍDA DE EMERGÊNCIA JÁ USADA para esta versão-alvo (08/08/2026).
+// Se nem o "Forçar" (que remove o service worker travado) trouxe a versão nova,
+// paramos de oferecer botão e mostramos UMA mensagem honesta — sem loop.
+const K_FORCED = 'nz_update_forced';
 export const MAX_TENTATIVAS = 2;
 
 const ler = (k) => {
@@ -51,15 +55,23 @@ export function marcarTentativa(versaoAlvo) {
   return total;
 }
 
+// Registra que a saída de emergência (remover o service worker) já foi usada
+// para esta versão-alvo. Se ela falhar, não insistimos mais.
+export function marcarForcado(versaoAlvo) {
+  gravar(K_FORCED, String(versaoAlvo || ''));
+}
+
 function limparMarcas() {
   apagar(K_TARGET);
   apagar(K_TRIES);
+  apagar(K_FORCED);
 }
 
 export function useAppVersion() {
   const [temAtualizacao, setTemAtualizacao] = useState(false);
   const [versaoServidor, setVersaoServidor] = useState(null);
   const [esgotado, setEsgotado] = useState(false);
+  const [forcadoFalhou, setForcadoFalhou] = useState(false);
   const versaoInicial = useRef(VERSAO_DO_BUILD);
 
   useEffect(() => {
@@ -97,6 +109,7 @@ export function useAppVersion() {
           limparMarcas();
           setTemAtualizacao(false);
           setEsgotado(false);
+          setForcadoFalhou(false);
           return;
         }
         setVersaoServidor(String(v));
@@ -105,6 +118,9 @@ export function useAppVersion() {
         const alvo = ler(K_TARGET);
         const gastas = Number(ler(K_TRIES)) || 0;
         setEsgotado(alvo === String(v) && gastas >= MAX_TENTATIVAS);
+        // Já usamos a saída de emergência nesta versão e continuamos velhos?
+        // Então NÃO existe mais botão pra oferecer — só a mensagem honesta.
+        setForcadoFalhou(ler(K_FORCED) === String(v));
       } catch {
         // silêncio total (offline, CDN instável, etc.)
       }
@@ -124,7 +140,7 @@ export function useAppVersion() {
     };
   }, []);
 
-  return { temAtualizacao, versaoServidor, esgotado };
+  return { temAtualizacao, versaoServidor, esgotado, forcadoFalhou };
 }
 
 export default useAppVersion;
