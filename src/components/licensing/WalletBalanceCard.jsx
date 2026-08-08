@@ -15,7 +15,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
       <CardContent className="relative p-6 md:px-10 md:py-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
           <div className="w-full md:w-auto">
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border mb-3 ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-nz-fogo border-nz-fogo/25 bg-nz-fogo-fundo'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border mb-3 ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-nz-verde border-nz-verde/20 bg-nz-verde-fundo'}`}>
               <Wallet className="w-3 h-3" /> Comissão a receber
             </span>
             <div className="flex items-baseline gap-3 mb-2">
@@ -47,7 +47,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
                 onClick={onUseNow}
                 className={`text-white font-semibold h-11 text-sm shadow-sm flex-1 min-w-[130px] ${isSaiDeBaixo ?
                   'bg-red-600 hover:bg-red-700' :
-                  'bg-nz-fogo hover:bg-nz-fogo-escuro'}`}>
+                  'bg-nz-verde-claro hover:bg-nz-verde'}`}>
                 <Zap className="w-4 h-4 mr-2" />
                 Usar Agora
               </Button>

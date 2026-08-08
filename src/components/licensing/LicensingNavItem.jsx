@@ -7,8 +7,8 @@ export default function LicensingNavItem({ item, active, onSelect }) {
   const Icon = item.icon;
   const classe = `flex flex-col items-center gap-1 py-2.5 min-h-[44px] rounded-xl border transition-colors w-full ${
     active
-      ? 'bg-nz-verde-fundo text-nz-verde border-nz-verde/30'
-      : 'text-gray-400 border-nz-marrom/15 hover:bg-nz-marrom-fundo/40 hover:text-gray-600'
+      ? 'bg-white/10 text-nz-fogo-claro border-nz-fogo/40'
+      : 'text-white/70 border-white/10 hover:bg-white/10 hover:text-nz-fogo-claro'
   }`;
 
   const conteudo = (
