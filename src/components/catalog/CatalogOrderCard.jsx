@@ -41,8 +41,16 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
       <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/30 text-white overflow-hidden flex flex-col h-full hover:border-green-500/40 hover:shadow-xl hover:shadow-green-500/20 transition-all duration-300">
 
         {/* IMAGEM - Destaque Principal */}
-        <div className="relative w-full bg-gradient-to-b from-gray-600/30 to-gray-900/60 px-5 pt-6 pb-5 flex justify-center">
-          <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-gray-900/40 border border-white/20 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg shadow-black/40">
+        {/* ⬛ Vitrine preta (mesmo preto da barra da Loja Virtual): a foto do produto
+            ganha destaque. Cor em style porque o tema claro do painel repinta classes. */}
+        <div
+          className="relative w-full px-5 pt-6 pb-5 flex justify-center"
+          style={{ background: 'linear-gradient(180deg, #2A2B35 0%, #21222B 100%)' }}
+        >
+          <div
+            className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/15 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg shadow-black/40"
+            style={{ background: '#15161C' }}
+          >
             <img
               src={mainImage}
               alt={order.product_title}
@@ -81,7 +89,13 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
 
         {/* STATUS */}
         <div className="px-4 pb-3">
-          <Badge className={`flex items-center gap-1.5 text-xs font-semibold ${config.color} border w-full justify-center py-1.5`}>
+          <Badge
+            className={`flex items-center gap-1.5 text-xs font-semibold ${config.color} border w-full justify-center py-1.5`}
+            /* 🔥 Cancelado no laranja fogo da marca (era vermelho apagado) */
+            style={['canceled', 'cancelado'].includes(order.status)
+              ? { background: '#FFF1E3', borderColor: '#F35B12', color: '#C42A05' }
+              : undefined}
+          >
             <config.icon className="w-3 h-3" />
             <span>{config.text}</span>
           </Badge>
@@ -154,7 +168,9 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
         {onDeleteClick && (order.status === 'pending_payment' || order.status === 'canceled') && (
           <button
             onClick={(e) => { e.stopPropagation(); onDeleteClick(order); }}
-            className="mx-4 mb-4 py-2 px-3 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium text-xs transition-all duration-300 flex items-center justify-center gap-1.5"
+            /* 🗑️ Excluir em vermelho firme — ação destrutiva precisa ser inequívoca */
+            className="mx-4 mb-4 py-2 px-3 rounded-lg font-semibold text-xs transition-all duration-300 flex items-center justify-center gap-1.5"
+            style={{ background: '#DC2626', border: '1px solid #B91C1C', color: '#FFFFFF' }}
           >
             <Trash2 className="w-3.5 h-3.5" />
             Excluir Pedido
