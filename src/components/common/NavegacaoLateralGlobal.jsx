@@ -19,10 +19,12 @@ export default function NavegacaoLateralGlobal({ user }) {
   const destinoDe = (item) => (item.type === 'tab' ? `/Licensing?tab=${item.value}` : item.to);
 
   return (
-    <aside
-      className="hidden md:flex flex-col items-center w-24 shrink-0 bg-nz-preto-barra border-r border-black/40 py-4 gap-1 sticky overflow-y-auto"
-      style={{ top: 64, height: 'calc(100vh - 64px)' }}
-    >
+    // 🖤 Faixa escura em toda a altura do conteúdo; o menu segue fixo dentro dela.
+    <aside className="hidden md:block w-24 shrink-0 self-stretch bg-nz-preto-barra border-r border-black/40" style={{ minHeight: 'calc(100vh - 64px)' }}>
+      <div
+        className="flex flex-col items-center py-4 gap-1 sticky overflow-y-auto"
+        style={{ top: 64, maxHeight: 'calc(100vh - 64px)' }}
+      >
       <nav className="flex flex-col gap-3 w-full px-2 pb-12">
         {grupos.map((grupo) => (
           <div key={grupo.title} className="flex flex-col gap-1 pt-3 first:pt-0">
@@ -52,6 +54,7 @@ export default function NavegacaoLateralGlobal({ user }) {
           </div>
         ))}
       </nav>
+      </div>
     </aside>
   );
 }
