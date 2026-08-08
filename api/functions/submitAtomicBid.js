@@ -38,41 +38,11 @@ async function sb(path, method = 'GET', body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// Devolve `amount` de saldo_reservado → saldo_disponivel do usuário (mesma lógica de
-// api/_lib/bidHold.js, inline). Nunca lança erro — falha aqui não pode derrubar o lance.
-async function releaseHold(userId, amount) {
-  const uid = String(userId || '').trim();
-  const valor = money(amount);
-  if (!uid || valor <= 0) return { released: 0, reason: 'parametros_invalidos' };
-  try {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const userResp = await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(uid)}&limit=1`);
-      const user = Array.isArray(userResp.data) ? userResp.data[0] : null;
-      if (!user) return { released: 0, reason: 'usuario_nao_encontrado' };
-
-      const disponivel = money(user.saldo_disponivel);
-      const reservado = money(user.saldo_reservado);
-      const liberar = money(Math.min(valor, reservado));
-      if (liberar <= 0) return { released: 0, reason: 'sem_reserva' };
-
-      const dispFilter = disponivel === 0 ? `or(saldo_disponivel.eq.0,saldo_disponivel.is.null)` : `saldo_disponivel.eq.${disponivel}`;
-      const resFilter = reservado === 0 ? `or(saldo_reservado.eq.0,saldo_reservado.is.null)` : `saldo_reservado.eq.${reservado}`;
-      const patchResp = await sb(
-        `app_users?id=eq.${encodeURIComponent(uid)}&and=(${dispFilter},${resFilter})`,
-        'PATCH',
-        { saldo_disponivel: money(disponivel + liberar), saldo_reservado: money(reservado - liberar) }
-      );
-      const row = Array.isArray(patchResp.data) ? patchResp.data[0] : null;
-      if (row) {
-        return { released: liberar, new_balance: money(row.saldo_disponivel), new_held: money(row.saldo_reservado) };
-      }
-      // corrida: alguém mexeu no saldo entre a leitura e a escrita — tenta de novo
-    }
-    return { released: 0, reason: 'corrida' };
-  } catch (e) {
-    return { released: 0, reason: String(e?.message || e) };
-  }
-}
+// ⚠️ A função releaseHold foi REMOVIDA daqui em 08/08/2026 (regra oficial do dono):
+// ser coberto não devolve mais o dinheiro, então este arquivo não libera reserva
+// nenhuma. A devolução legítima acontece em dois lugares, e só neles:
+//   • encerramento do leilão  → finalizeAuction
+//   • rollback de lance que falhou → endpoint releaseBidHold
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -273,23 +243,25 @@ export default async function handler(req, res) {
       });
     }
 
-    // 🔓 DEVOLUÇÃO DA RESERVA DO LÍDER ANTERIOR — no servidor, no mesmo instante em que
-    // este lance venceu. Antes isso dependia do navegador de quem dava o próximo lance,
-    // então quem era coberto e não voltava a dar lance ficava com o dinheiro travado.
-    // Libera EXATAMENTE o preço anterior daquele leilão (regra por leilão preservada:
-    // nunca "tudo", para não tocar em reservas de outros leilões do mesmo usuário).
-    // 🚚 Libera lance + frete que estavam reservados para o líder anterior
-    // (o frete dele foi lido ANTES deste PATCH sobrescrever com o novo valor).
-    const previousFrete = Number(auction.frete_reservado_valor) || 0;
-    let released = null;
-    if (auction.winner_id && (currentPrice > 0 || previousFrete > 0)) {
-      released = await releaseHold(auction.winner_id, currentPrice + previousFrete);
-    }
+    // 🔒 REGRA OFICIAL 08/08/2026 — SER COBERTO **NÃO** DEVOLVE O DINHEIRO.
+    // Antes, no instante em que este lance vencia, a reserva do líder anterior era
+    // devolvida para o saldo disponível dele. Isso deixava lance vivo na sala SEM
+    // lastro na carteira: quem era coberto ficava com o dinheiro solto e, se voltasse
+    // a vencer, não havia valor travado para honrar o arremate (auditoria de 08/08
+    // achou 4 contas nessa situação, 2 delas com reserva ZERO e lance de pé).
+    //
+    // Pela regra do dono: o valor do lance fica RESERVADO até o LEILÃO ENCERRAR.
+    // • Não venceu  → a devolução acontece no encerramento (finalizeAuction).
+    // • Venceu      → o reservado é consumido no arremate.
+    // Só o valor do LANCE fica preso — nunca o saldo total da carteira.
+    //
+    // ⚠️ NÃO reintroduzir releaseHold aqui. A devolução por rollback de lance que
+    // FALHOU continua existindo e é outra coisa: roda pelo endpoint releaseBidHold.
 
     return res.status(200).json({
       success: true,
       message: 'Lance registrado com sucesso!',
-      released_previous: released,
+      released_previous: null,
       new_state: {
         current_price: patchedRow.current_price,
         winner_name: patchedRow.winner_name,

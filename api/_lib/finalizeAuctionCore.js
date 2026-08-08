@@ -46,6 +46,45 @@ export function resultPayload(auction, extra = {}) {
   };
 }
 
+// Devolve `valor` de saldo_reservado → saldo_disponivel de UMA conta, com trava
+// otimista (só grava se os dois saldos ainda estiverem como foram lidos). Nunca
+// devolve mais do que está reservado e nunca lança erro — falha aqui não pode
+// impedir o encerramento do leilão. Retorna quanto foi efetivamente devolvido.
+async function devolverReserva(userId, valor) {
+  const uid = String(userId || '').trim();
+  const pedido = money(valor);
+  if (!uid || pedido <= 0) return 0;
+  try {
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const rows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${enc(uid)}&limit=1`)).json();
+      const u = Array.isArray(rows) ? rows[0] : null;
+      if (!u) return 0;
+      const disponivel = money(u.saldo_disponivel);
+      const reservado = money(u.saldo_reservado);
+      const liberar = money(Math.min(pedido, reservado));
+      if (liberar <= 0) return 0;
+      // coluna nunca inicializada fica NULL, e "eq.0" nunca casa com NULL
+      const fDisp = disponivel === 0 ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)' : `saldo_disponivel.eq.${disponivel}`;
+      const fRes = reservado === 0 ? 'or(saldo_reservado.eq.0,saldo_reservado.is.null)' : `saldo_reservado.eq.${reservado}`;
+      const patch = await sb(`app_users?id=eq.${enc(uid)}&and=(${fDisp},${fRes})`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          saldo_disponivel: money(disponivel + liberar),
+          saldo_reservado: money(reservado - liberar),
+        }),
+      });
+      const updated = await patch.json().catch(() => []);
+      if (Array.isArray(updated) && updated[0]) return liberar;
+      // corrida: o saldo mudou entre a leitura e a escrita — tenta de novo
+    }
+    return 0;
+  } catch (e) {
+    console.warn('[FINALIZE] devolverReserva:', e?.message);
+    return 0;
+  }
+}
+
 // Executa o arremate de UM leilão já validado como active/processing e vencido.
 // Retorna o payload consolidado (mesmo shape do finalizeAuction original).
 export async function finalizeOneAuction(auction) {
@@ -154,6 +193,34 @@ export async function finalizeOneAuction(auction) {
     }
   }
 
+  // 🔓 DEVOLUÇÃO DAS RESERVAS DE QUEM NÃO VENCEU — REGRA OFICIAL 08/08/2026.
+  // A partir de 08/08 ser coberto NÃO devolve mais o dinheiro (submitAtomicBid deixou
+  // de liberar na cobertura): o valor do lance fica preso até o leilão ACABAR. Este é,
+  // portanto, o ÚNICO momento em que o perdedor recebe de volta — sem este bloco o
+  // dinheiro ficaria travado para sempre.
+  // • Devolve SÓ o valor do lance (+ o frete daquele lance), nunca o saldo total.
+  // • Um por conta: o MAIOR lance de cada perdedor naquele leilão.
+  // • O vencedor NÃO entra aqui — a reserva dele é consumida no arremate.
+  // Roda depois do claim atômico, que garante um único finalizador — sem risco de
+  // devolver duas vezes.
+  const reservasDevolvidas = [];
+  try {
+    const todosLances = await (await sb(
+      `auction_messages?select=sender_id,bid_amount,frete_amount&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&limit=1000`
+    )).json();
+    const maiorPorUsuario = {};
+    for (const m of (Array.isArray(todosLances) ? todosLances : [])) {
+      const uid = m.sender_id;
+      if (!uid || uid === winnerId) continue; // vencedor fora: reserva vira pagamento
+      const total = money((Number(m.bid_amount) || 0) + (Number(m.frete_amount) || 0));
+      if (!maiorPorUsuario[uid] || total > maiorPorUsuario[uid]) maiorPorUsuario[uid] = total;
+    }
+    for (const uid of Object.keys(maiorPorUsuario)) {
+      const devolvido = await devolverReserva(uid, maiorPorUsuario[uid]);
+      if (devolvido > 0) reservasDevolvidas.push({ user_id: uid, valor: devolvido });
+    }
+  } catch (e) { console.warn('[FINALIZE] devolução de reservas:', e?.message); }
+
   // 💬 Mensagem de encerramento no chat — idempotente (só se ainda não existir).
   // Com vencedor: card de vitória. Sem lances: o mesmo card renderiza o modo
   // "encerrado sem lances" no cliente (winner: null).
@@ -207,5 +274,6 @@ export async function finalizeOneAuction(auction) {
   return resultPayload(finalAuction, {
     winner: winnerData,
     victory_message_created: victoryMessageCreated,
+    reservas_devolvidas: reservasDevolvidas,
   });
 }
