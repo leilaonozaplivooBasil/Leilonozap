@@ -179,20 +179,23 @@ export default async function handler(req, res) {
     const walletOwnerId = employerId || actorId;
     let saldoRestante = null;
     if (paymentMethod === 'saldo') {
-      const wArr = await (await sb(`app_users?select=id,saldo_disponivel&id=eq.${encodeURIComponent(walletOwnerId)}&limit=1`)).json();
-      const saldoAtual = round2(Array.isArray(wArr) && wArr[0] ? wArr[0].saldo_disponivel : 0);
+      // ⚠️ REGRA OFICIAL (08/08/2026): no balcão SÓ o saldo de COMISSÃO paga o pedido.
+      // saldo_disponivel é crédito de DEPÓSITO/LEILÃO — pode estar lastreando lance vivo
+      // e gastá-lo aqui deixava o leilão descoberto. Fonte única: commission_balance.
+      const wArr = await (await sb(`app_users?select=id,commission_balance&id=eq.${encodeURIComponent(walletOwnerId)}&limit=1`)).json();
+      const saldoAtual = round2(Array.isArray(wArr) && wArr[0] ? wArr[0].commission_balance : 0);
       if (saldoAtual < total) {
-        return res.status(200).json({ success: false, error: `Saldo insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${total.toFixed(2)}. Compre saldo da plataforma para vender no balcão.`, saldo: saldoAtual });
+        return res.status(200).json({ success: false, error: `Comissão insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${total.toFixed(2)}. No balcão só o saldo de comissão paga o pedido — depósito de leilão é crédito para dar lance.`, saldo: saldoAtual });
       }
-      const deb = await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}&saldo_disponivel=gte.${total}`, {
+      const deb = await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}&commission_balance=gte.${total}`, {
         method: 'PATCH', headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ saldo_disponivel: round2(saldoAtual - total) }),
+        body: JSON.stringify({ commission_balance: round2(saldoAtual - total) }),
       });
       const debOk = deb.ok ? await deb.json() : null;
       if (!Array.isArray(debOk) || !debOk.length) {
-        return res.status(200).json({ success: false, error: 'Não foi possível debitar o saldo. Tente novamente.' });
+        return res.status(200).json({ success: false, error: 'Não foi possível debitar a comissão. Tente novamente.' });
       }
-      saldoRestante = round2(debOk[0].saldo_disponivel);
+      saldoRestante = round2(debOk[0].commission_balance);
     }
 
     // insere a venda (tenta com campos extras; se coluna não existir, cai pro mínimo)
@@ -203,7 +206,7 @@ export default async function handler(req, res) {
       if (!r.ok) {
         // venda não gravou → devolve o saldo debitado (nada de dinheiro sumido)
         if (paymentMethod === 'saldo' && saldoRestante != null) {
-          await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ saldo_disponivel: round2(saldoRestante + total) }) });
+          await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: round2(saldoRestante + total) }) });
         }
         const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao gravar venda', details: t.slice(0, 200) });
       }
