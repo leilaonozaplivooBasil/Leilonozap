@@ -44,7 +44,13 @@ export default async function handler(req, res) {
     const isAdmin = ['admin', 'super_admin'].includes(actor.role);
     const hasStock = Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK_CARGOS.includes(c));
     const isEmployee = actor.is_pdv_operator === true && actor.active !== false;
-    if (!isAdmin && !hasStock && !isEmployee) return res.status(403).json({ success: false, error: 'Sem permissão para tirar pedido' });
+    // 🔓 REGRA OFICIAL (Gabriel, 08/08/2026): tirar pedido vale DO VENDEDOR PARA CIMA —
+    // o cara está na rua, com o cliente na frente, e precisa fechar a venda ali.
+    // O influenciador é o único de fora: ele divulga, não vende estoque.
+    const cargosAtor = [...(Array.isArray(actor.career_levels) ? actor.career_levels : []), actor.primary_career_level].filter(Boolean);
+    const soInfluenciador = cargosAtor.length > 0 && cargosAtor.every((c) => ['influenciador', 'influencer'].includes(c));
+    if (soInfluenciador) return res.status(403).json({ success: false, error: 'O perfil de influenciador não tira pedido de estoque. Evolua para vendedor.' });
+    if (!isAdmin && !hasStock && !isEmployee && !cargosAtor.length) return res.status(403).json({ success: false, error: 'Sem permissão para tirar pedido' });
     const employerId = isEmployee ? (actor.employer_id || null) : null;
     // dono de loja (loja_fisica/ponto/parceiro) vende do PRÓPRIO store_inventory
     const isStoreOwner = ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(actor.primary_career_level);
@@ -199,24 +205,27 @@ export default async function handler(req, res) {
     // então dois pedidos ao mesmo tempo nunca deixam a carteira negativa.
     const walletOwnerId = employerId || actorId;
     let saldoRestante = null;
-    if (paymentMethod === 'saldo') {
-      // ⚠️ REGRA OFICIAL (08/08/2026): no balcão SÓ o saldo de COMISSÃO paga o pedido.
-      // saldo_disponivel é crédito de DEPÓSITO/LEILÃO — pode estar lastreando lance vivo
-      // e gastá-lo aqui deixava o leilão descoberto. Fonte única: commission_balance.
-      const wArr = await (await sb(`app_users?select=id,commission_balance&id=eq.${encodeURIComponent(walletOwnerId)}&limit=1`)).json();
-      const saldoAtual = round2(Array.isArray(wArr) && wArr[0] ? wArr[0].commission_balance : 0);
+    // ⚠️ REGRA OFICIAL (08/08/2026): no balcão o pedido é pago pelo saldo de COMISSÃO
+    // ou pelo SALDO DE OPERAÇÃO (dinheiro que ele recebeu do cliente e depositou).
+    // saldo_disponivel continua FORA: é crédito de leilão e pode estar lastreando
+    // lance vivo — gastá-lo aqui deixaria o leilão descoberto.
+    const colSaldo = paymentMethod === 'operacao' ? 'saldo_operacao' : 'commission_balance';
+    if (paymentMethod === 'saldo' || paymentMethod === 'operacao') {
+      const nomeSaldo = paymentMethod === 'operacao' ? 'Saldo de operação' : 'Saldo de comissão';
+      const wArr = await (await sb(`app_users?select=id,${colSaldo}&id=eq.${encodeURIComponent(walletOwnerId)}&limit=1`)).json();
+      const saldoAtual = round2(Array.isArray(wArr) && wArr[0] ? wArr[0][colSaldo] : 0);
       if (saldoAtual < total) {
-        return res.status(200).json({ success: false, error: `Comissão insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${total.toFixed(2)}. No balcão só o saldo de comissão paga o pedido — depósito de leilão é crédito para dar lance.`, saldo: saldoAtual });
+        return res.status(200).json({ success: false, error: `${nomeSaldo} insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${total.toFixed(2)}. Faltam R$ ${(total - saldoAtual).toFixed(2)} — deposite saldo para fechar o pedido.`, saldo: saldoAtual });
       }
-      const deb = await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}&commission_balance=gte.${total}`, {
+      const deb = await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}&${colSaldo}=gte.${total}`, {
         method: 'PATCH', headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ commission_balance: round2(saldoAtual - total) }),
+        body: JSON.stringify({ [colSaldo]: round2(saldoAtual - total) }),
       });
       const debOk = deb.ok ? await deb.json() : null;
       if (!Array.isArray(debOk) || !debOk.length) {
-        return res.status(200).json({ success: false, error: 'Não foi possível debitar a comissão. Tente novamente.' });
+        return res.status(200).json({ success: false, error: 'Não foi possível debitar o saldo. Tente novamente.' });
       }
-      saldoRestante = round2(debOk[0].commission_balance);
+      saldoRestante = round2(debOk[0][colSaldo]);
     }
 
     // insere a venda (tenta com campos extras; se coluna não existir, cai pro mínimo)
@@ -226,8 +235,9 @@ export default async function handler(req, res) {
       r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(minimal) });
       if (!r.ok) {
         // venda não gravou → devolve o saldo debitado (nada de dinheiro sumido)
-        if (paymentMethod === 'saldo' && saldoRestante != null) {
-          await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: round2(saldoRestante + total) }) });
+        if (saldoRestante != null) {
+          // devolve na MESMA carteira que foi debitada — nada de dinheiro trocando de bolso
+          await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ [colSaldo]: round2(saldoRestante + total) }) });
         }
         const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao gravar venda', details: t.slice(0, 200) });
       }

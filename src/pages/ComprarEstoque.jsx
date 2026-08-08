@@ -7,6 +7,7 @@ import { ShoppingBag, Loader2 } from 'lucide-react';
 import VitrineReposicao from '@/components/reposicao/VitrineReposicao';
 import ResumoReposicao from '@/components/reposicao/ResumoReposicao';
 import PixReposicaoModal from '@/components/reposicao/PixReposicaoModal';
+import DepositoOperacaoModal from '@/components/wallet/DepositoOperacaoModal';
 
 // 🏪 COMPRAR ESTOQUE (reposição) — o lojista compra do estoque central pagando o
 // preço de venda menos o percentual da licença dele. Frete por conta dele.
@@ -41,6 +42,9 @@ export default function ComprarEstoque() {
   const [enviando, setEnviando] = useState(false);
   const [pix, setPix] = useState(null);
   const [totalPix, setTotalPix] = useState(0);
+  // 💵 saldo de operação (dinheiro recebido do cliente e depositado aqui)
+  const [saldoOperacao, setSaldoOperacao] = useState(0);
+  const [deposito, setDeposito] = useState(false);
 
   // usuário + desconto da licença + saldo de comissão
   useEffect(() => {
@@ -58,8 +62,9 @@ export default function ComprarEstoque() {
         if (melhor === null || pct > melhorPct) { melhor = c; melhorPct = pct; }
       });
       setDesconto({ pct: melhorPct, nome: levels[melhor]?.nome || '' });
-      const { data: me } = await supabase.from('app_users').select('commission_balance').eq('id', u.id).maybeSingle();
+      const { data: me } = await supabase.from('app_users').select('commission_balance,saldo_operacao').eq('id', u.id).maybeSingle();
       setSaldo(Number(me?.commission_balance) || 0);
+      setSaldoOperacao(Number(me?.saldo_operacao) || 0);
     })();
   }, []);
 
@@ -159,9 +164,10 @@ export default function ComprarEstoque() {
     setEnviando(false);
     if (!r?.success) return toast.error(r?.error || 'Não foi possível fechar o pedido.');
 
-    if (forma === 'saldo') {
+    if (forma === 'saldo' || forma === 'operacao') {
       toast.success('Pedido pago! A mercadoria já entrou no seu estoque.');
-      setSaldo(Number(r.saldo_restante) || 0);
+      if (forma === 'operacao') setSaldoOperacao(Number(r.saldo_restante) || 0);
+      else setSaldo(Number(r.saldo_restante) || 0);
       setItens([]); setOpcoesFrete([]); setFreteId(null);
       carregarProdutos(termo);
       return;
@@ -170,8 +176,20 @@ export default function ComprarEstoque() {
     if (forma === 'pix' && r.pix) { setPix(r.pix); setTotalPix(Number(r.total) || 0); }
   };
 
+  // 🔄 relê as duas carteiras do banco (depois de depósito confirmado ou pedido pago)
+  const recarregarSaldos = useCallback(async () => {
+    if (!user?.id) return;
+    const { data: me } = await supabase.from('app_users').select('commission_balance,saldo_operacao').eq('id', user.id).maybeSingle();
+    setSaldo(Number(me?.commission_balance) || 0);
+    setSaldoOperacao(Number(me?.saldo_operacao) || 0);
+  }, [user]);
+
   const pixConfirmado = () => {
-    setPix(null); setItens([]); setOpcoesFrete([]); setFreteId(null);
+    const eraDeposito = pix?.tipo === 'deposito';
+    setPix(null);
+    recarregarSaldos();
+    if (eraDeposito) { toast.success('Depósito confirmado! O saldo já está na sua conta.'); return; }
+    setItens([]); setOpcoesFrete([]); setFreteId(null);
     carregarProdutos(termo);
   };
 
@@ -225,6 +243,8 @@ export default function ComprarEstoque() {
             cotando={cotando}
             onCotar={cotarFrete}
             saldo={saldo}
+            saldoOperacao={saldoOperacao}
+            onDepositar={() => setDeposito(true)}
             enviando={enviando}
             onPagar={pagar}
           />
@@ -237,7 +257,23 @@ export default function ComprarEstoque() {
         </div>
       )}
 
-      {pix && <PixReposicaoModal pix={pix} total={totalPix} onConfirmado={pixConfirmado} onFechar={() => setPix(null)} />}
+      {deposito && (
+        <DepositoOperacaoModal
+          userId={user.id}
+          onFechar={() => setDeposito(false)}
+          onPix={({ pix: p, total }) => { setDeposito(false); setPix({ ...p, tipo: 'deposito' }); setTotalPix(Number(total) || 0); }}
+        />
+      )}
+
+      {pix && (
+        <PixReposicaoModal
+          pix={pix}
+          total={totalPix}
+          mensagem={pix.tipo === 'deposito' ? 'Assim que o pagamento cair, o saldo entra na sua conta automaticamente.' : undefined}
+          onConfirmado={pixConfirmado}
+          onFechar={() => setPix(null)}
+        />
+      )}
     </div>
   );
 }

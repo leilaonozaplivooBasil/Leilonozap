@@ -7,7 +7,9 @@ import { Loader2, Copy, X, CheckCircle2 } from 'lucide-react';
 // PIX do pedido de reposição. A checagem do pagamento não depende só do relógio:
 // no celular o cronômetro congela em segundo plano, então também conferimos toda
 // vez que o app volta pra frente (visibilitychange/focus).
-export default function PixReposicaoModal({ pix, total, onConfirmado, onFechar }) {
+// `mensagem` troca só o texto de espera: o mesmo modal serve pro pedido de
+// mercadoria e pro depósito de saldo (onde falar em "estoque" seria mentira).
+export default function PixReposicaoModal({ pix, total, onConfirmado, onFechar, mensagem }) {
   const [conferindo, setConferindo] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const pronto = useRef(false);
@@ -19,7 +21,7 @@ export default function PixReposicaoModal({ pix, total, onConfirmado, onFechar }
       const r = await base44.functions.invoke('checkPaymentStatus', { payment_id: pix.payment_id });
       if (r?.status === 'confirmed') {
         pronto.current = true;
-        toast.success('Pagamento confirmado! A mercadoria já entrou no seu estoque.');
+        toast.success('Pagamento confirmado!');
         onConfirmado?.();
       }
     } catch (_) { /* segue tentando */ }
@@ -64,7 +66,7 @@ export default function PixReposicaoModal({ pix, total, onConfirmado, onFechar }
 
         <p className="text-[11px] text-gray-500 text-center mt-3 flex items-center justify-center gap-1.5">
           {conferindo ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-          Assim que o pagamento cair, a mercadoria entra no seu estoque automaticamente.
+          {mensagem || 'Assim que o pagamento cair, a mercadoria entra no seu estoque automaticamente.'}
         </p>
         <button onClick={conferir} className="w-full mt-2 min-h-[44px] text-xs font-bold text-nz-verde">Já paguei — conferir agora</button>
       </div>

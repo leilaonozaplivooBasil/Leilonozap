@@ -1,13 +1,13 @@
 import React from 'react';
 import { money } from '@/lib/format';
-import { Trash2, Minus, Plus, Loader2, Truck, Store, Wallet, QrCode, CreditCard } from 'lucide-react';
+import { Trash2, Minus, Plus, Loader2, Truck, Store, Wallet, QrCode, CreditCard, Banknote } from 'lucide-react';
 
 // Resumo do pedido de reposição: itens, desconto da licença, frete e pagamento.
 // O servidor recalcula tudo antes de cobrar — aqui é só a vitrine da conta.
 export default function ResumoReposicao({
   itens, descontoPct, licencaNome, onQtd, onRemover,
   entrega, onEntrega, cep, onCep, opcoesFrete, freteId, onFreteId, cotando, onCotar,
-  saldo, enviando, onPagar,
+  saldo, saldoOperacao = 0, onDepositar, enviando, onPagar,
 }) {
   const bruto = itens.reduce((s, i) => s + (Number(i.preco) || 0) * i.qtd, 0);
   const desconto = bruto * (Number(descontoPct) || 0) / 100;
@@ -84,6 +84,16 @@ export default function ResumoReposicao({
           {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />} Pagar com saldo de comissão
         </button>
         <p className="text-[11px] text-center text-gray-500">Seu saldo de comissão: <b>{money(saldo)}</b></p>
+
+        {/* 💵 Saldo de operação: o dinheiro que ele recebeu do cliente na rua e depositou aqui */}
+        <button onClick={() => onPagar('operacao')} disabled={!podePagar} className="w-full min-h-[48px] rounded-xl border-2 border-nz-verde bg-green-500/10 text-nz-verde font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40">
+          <Banknote className="w-4 h-4" /> Pagar com saldo de operação
+        </button>
+        <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
+          <span>Saldo de operação: <b>{money(saldoOperacao)}</b></span>
+          <button onClick={onDepositar} className="min-h-[32px] px-2 rounded-lg bg-nz-cinza-fundo font-bold text-nz-tinta">Depositar</button>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => onPagar('pix')} disabled={!podePagar} className="min-h-[48px] rounded-xl border border-nz-borda bg-white text-nz-tinta font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"><QrCode className="w-4 h-4" /> PIX</button>
           <button onClick={() => onPagar('card')} disabled={!podePagar} className="min-h-[48px] rounded-xl border border-nz-borda bg-white text-nz-tinta font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"><CreditCard className="w-4 h-4" /> Cartão</button>

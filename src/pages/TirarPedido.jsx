@@ -9,9 +9,11 @@ import BotaoVoltar from '@/components/common/BotaoVoltar';
 import PixPdvModal from '@/components/pdv/PixPdvModal';
 import NotaPedido from '@/components/pdv/NotaPedido';
 import SeletorLicenca from '@/components/pdv/SeletorLicenca';
+import DepositoOperacaoModal from '@/components/wallet/DepositoOperacaoModal';
+import PixReposicaoModal from '@/components/reposicao/PixReposicaoModal';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
-  Package, User as UserIcon, Phone, CreditCard, Wallet, QrCode, Store, Truck
+  Package, User as UserIcon, Phone, CreditCard, Wallet, QrCode, Store, Truck, Banknote
 } from 'lucide-react';
 
 const priceOf = (p) => Number(p.price_catalog || p.selling_price_retail || 0);
@@ -42,6 +44,9 @@ export default function TirarPedido() {
   const [customer, setCustomer] = useState({ name: '', phone: '' });
   const [payment, setPayment] = useState('saldo');
   const [saldo, setSaldo] = useState(0); // saldo da carteira do balcão (compra saldo da plataforma)
+  const [saldoOperacao, setSaldoOperacao] = useState(0); // dinheiro recebido do cliente e depositado
+  const [deposito, setDeposito] = useState(false);
+  const [pixDeposito, setPixDeposito] = useState(null);
   const [delivered, setDelivered] = useState(true); // retirada no balcão por padrão
   const [processing, setProcessing] = useState(false);
   const [todayTotal, setTodayTotal] = useState(0);
@@ -72,8 +77,11 @@ export default function TirarPedido() {
     // arrematar) e pode estar comprometido em lance vivo. Esse dinheiro NÃO compra na
     // loja física. O único saldo que paga pedido é commission_balance — o mesmo card
     // "Comissões de vendas" da tela Minha Carteira.
-    const { data: w } = await supabase.from('app_users').select('commission_balance').eq('id', u.id).maybeSingle();
+    // 💵 além da comissão, o SALDO DE OPERAÇÃO: dinheiro que ele recebeu do cliente
+    // na rua e depositou aqui. Os dois pagam pedido; leilão continua de fora.
+    const { data: w } = await supabase.from('app_users').select('commission_balance,saldo_operacao').eq('id', u.id).maybeSingle();
     setSaldo(Number(w?.commission_balance) || 0);
+    setSaldoOperacao(Number(w?.saldo_operacao) || 0);
   };
 
   // 🏪 A loja aparece INTEIRA por padrão (sem digitar nada), em ordem alfabética.
@@ -185,7 +193,8 @@ export default function TirarPedido() {
   const total = Math.round(cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0) * 100) / 100;
   const comissaoPct = Number(comprador?.comissao_pct) || 0;
   const comissaoValor = Math.round(total * comissaoPct) / 100;
-  const saldoInsuficiente = payment === 'saldo' && total > saldo;
+  const carteiraAtual = payment === 'operacao' ? saldoOperacao : saldo;
+  const saldoInsuficiente = (payment === 'saldo' || payment === 'operacao') && total > carteiraAtual;
 
   // limpa o balcão pro próximo pedido (chamado após fechar/confirmar)
   const limpar = () => { setCart([]); setCustomer({ name: '', phone: '' }); setComprador(null); loadToday(); };
@@ -264,6 +273,10 @@ export default function TirarPedido() {
             <div>
               <div className="text-[11px] text-gray-500 uppercase">Saldo de comissão</div>
               <div className={`text-lg font-black ${saldo > 0 ? 'text-nz-verde' : 'text-red-500'}`}>{money(saldo)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-gray-500 uppercase">Saldo de operação</div>
+              <button onClick={() => setDeposito(true)} className="text-lg font-black text-nz-tinta underline decoration-dotted">{money(saldoOperacao)}</button>
             </div>
           </div>
         </div>
@@ -384,8 +397,8 @@ export default function TirarPedido() {
           </div>
 
           {/* pagamento */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {[['saldo', 'Saldo', Wallet], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            {[['saldo', 'Comissão', Wallet], ['operacao', 'Operação', Banknote], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
               <button key={k} onClick={() => setPayment(k)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}>
                 <Icon className="w-4 h-4" /> {label}
               </button>
@@ -408,7 +421,8 @@ export default function TirarPedido() {
           )}
           {saldoInsuficiente && (
             <div className="mb-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700 font-semibold">
-              Comissão insuficiente ({money(saldo)}). No balcão só o saldo de comissão paga o pedido — depósito de leilão é crédito para dar lance, não compra na loja.
+              Saldo insuficiente ({money(carteiraAtual)}). Faltam {money(total - carteiraAtual)}.
+              <button onClick={() => setDeposito(true)} className="ml-1 underline">Depositar saldo</button>
             </div>
           )}
 
@@ -427,6 +441,24 @@ export default function TirarPedido() {
       {pix && <PixPdvModal pix={pix} total={pix.snapshot?.total || total} onConfirmed={pixConfirmado} onCancel={pixCancelado} />}
       {/* 🧾 nota de pedido — envio em tempo real no WhatsApp do cliente */}
       {nota && <NotaPedido nota={nota} onClose={() => setNota(null)} />}
+
+      {/* 💵 depósito do saldo de operação (dinheiro que ele recebeu do cliente) */}
+      {deposito && (
+        <DepositoOperacaoModal
+          userId={user.id}
+          onFechar={() => setDeposito(false)}
+          onPix={({ pix: p, total: t }) => { setDeposito(false); setPixDeposito({ pix: p, total: t }); }}
+        />
+      )}
+      {pixDeposito && (
+        <PixReposicaoModal
+          pix={pixDeposito.pix}
+          total={pixDeposito.total}
+          mensagem="Assim que o pagamento cair, o saldo entra na sua conta automaticamente."
+          onConfirmado={() => { setPixDeposito(null); toast.success('Depósito confirmado! O saldo já está na sua conta.'); loadToday(); }}
+          onFechar={() => setPixDeposito(null)}
+        />
+      )}
     </div>
   );
 }

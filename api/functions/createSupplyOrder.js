@@ -37,14 +37,24 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
     const items = Array.isArray(body?.items) ? body.items : [];
-    const paymentMethod = ['saldo', 'pix', 'card'].includes(body?.payment_method) ? body.payment_method : 'pix';
+    // 'saldo' = comissão (sacável) · 'operacao' = dinheiro depositado da rua (não sacável)
+    const paymentMethod = ['saldo', 'operacao', 'pix', 'card'].includes(body?.payment_method) ? body.payment_method : 'pix';
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Operador e itens são obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     // ── 1) quem está comprando e qual o desconto da licença dele ──────────────
-    const uArr = await (await sb(`app_users?select=id,full_name,email,phone,commission_balance,career_levels,primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
+    const uArr = await (await sb(`app_users?select=id,full_name,email,phone,commission_balance,saldo_operacao,career_levels,primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
     const loja = Array.isArray(uArr) ? uArr[0] : null;
     if (!loja) return res.status(403).json({ success: false, error: 'Usuário inválido' });
+
+    // 🔓 REGRA OFICIAL (Gabriel, 08/08/2026): estoque próprio vale DO VENDEDOR PARA CIMA.
+    // O influenciador divulga, não estoca — por isso é o único cargo de fora.
+    const cargos = [...(Array.isArray(loja.career_levels) ? loja.career_levels : []), loja.primary_career_level].filter(Boolean);
+    const SEM_ESTOQUE = ['influenciador', 'influencer'];
+    const soInfluenciador = cargos.length > 0 && cargos.every((c) => SEM_ESTOQUE.includes(c));
+    if (soInfluenciador) {
+      return res.status(200).json({ success: false, error: 'O perfil de influenciador não trabalha com estoque próprio. Evolua para vendedor para comprar mercadoria.' });
+    }
 
     const levelsArr = await (await sb('career_levels?select=id,nome,venda_direta_pct')).json();
     const levels = {};
@@ -127,17 +137,19 @@ export default async function handler(req, res) {
     };
 
     // ── 5) pagamento ──────────────────────────────────────────────────────────
-    if (paymentMethod === 'saldo') {
-      // Débito condicional no banco: só passa se a comissão ainda cobrir o valor,
+    if (paymentMethod === 'saldo' || paymentMethod === 'operacao') {
+      // Débito condicional no banco: só passa se a carteira ainda cobrir o valor,
       // então dois pedidos ao mesmo tempo nunca deixam a carteira negativa.
-      const saldoAtual = round2(loja.commission_balance);
+      const col = paymentMethod === 'operacao' ? 'saldo_operacao' : 'commission_balance';
+      const nome = paymentMethod === 'operacao' ? 'Saldo de operação' : 'Saldo de comissão';
+      const saldoAtual = round2(loja[col]);
       if (saldoAtual < totalCobrado) {
         await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'canceled' }) });
-        return res.status(200).json({ success: false, error: `Saldo de comissão insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${totalCobrado.toFixed(2)}. Deposite saldo por PIX ou pague este pedido no PIX/cartão.`, saldo: saldoAtual });
+        return res.status(200).json({ success: false, error: `${nome} insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${totalCobrado.toFixed(2)}. Faltam R$ ${(totalCobrado - saldoAtual).toFixed(2)} — deposite saldo ou pague este pedido no PIX/cartão.`, saldo: saldoAtual });
       }
-      const deb = await sb(`app_users?id=eq.${encodeURIComponent(loja.id)}&commission_balance=gte.${totalCobrado}`, {
+      const deb = await sb(`app_users?id=eq.${encodeURIComponent(loja.id)}&${col}=gte.${totalCobrado}`, {
         method: 'PATCH', headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ commission_balance: round2(saldoAtual - totalCobrado) }),
+        body: JSON.stringify({ [col]: round2(saldoAtual - totalCobrado) }),
       });
       const debOk = deb.ok ? await deb.json() : null;
       if (!Array.isArray(debOk) || !debOk.length) {
@@ -149,12 +161,12 @@ export default async function handler(req, res) {
       });
       const flipped = await flip.json().catch(() => []);
       if (!Array.isArray(flipped) || !flipped.length) {
-        // não conseguiu confirmar o pedido: devolve o dinheiro, nada some
-        await sb(`app_users?id=eq.${encodeURIComponent(loja.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_balance: saldoAtual }) });
+        // não conseguiu confirmar o pedido: devolve o dinheiro na MESMA carteira, nada some
+        await sb(`app_users?id=eq.${encodeURIComponent(loja.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ [col]: saldoAtual }) });
         return res.status(200).json({ success: false, error: 'Não foi possível confirmar o pedido. Nada foi cobrado.' });
       }
       const ap = await aplicarReposicao(flipped[0]);
-      return res.status(200).json({ success: true, pago: true, ...resumo, saldo_restante: round2(saldoAtual - totalCobrado), estoque: ap });
+      return res.status(200).json({ success: true, pago: true, ...resumo, carteira: col, saldo_restante: round2(saldoAtual - totalCobrado), estoque: ap });
     }
 
     if (!MP_TOKEN) return res.status(500).json({ success: false, error: 'Pagamento indisponível no momento' });

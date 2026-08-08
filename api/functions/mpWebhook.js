@@ -20,7 +20,11 @@ const round2 = (n) => Math.round(n * 100) / 100;
 //   wallet_deposit -> saldo_disponivel (carteira digital, usada em arremate/lance)
 //   commission_deposit -> commission_balance (carteira de comissões, usada no 'Pagar com saldo' da loja)
 async function creditWalletDeposit(sale) {
-  const col = sale.kind === 'commission_deposit' ? 'commission_balance' : 'saldo_disponivel';
+  // 💵 operacao_deposit → saldo_operacao: dinheiro recebido do cliente na rua,
+  // usado para pagar pedidos. Não sacável (só mercadoria ou transferência).
+  const col = sale.kind === 'commission_deposit' ? 'commission_balance'
+    : sale.kind === 'operacao_deposit' ? 'saldo_operacao'
+    : 'saldo_disponivel';
   const amount = round2(Number(sale.total_amount || sale.sale_price) || 0);
   if (!sale.buyer_id || amount <= 0) return { credited: 0, skipped: true };
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -187,6 +191,11 @@ export default async function handler(req, res) {
       // 🎟️ Bônus de 10% creditado na carteira (recolhido se o usuário arrematar)
       const bonus = await creditarBonusPassaporte(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r, bonus });
+    }
+    if (sale.kind === 'operacao_deposit') {
+      // 💵 saldo de operação: só credita. Sem comissão, sem bônus, sem estoque.
+      const r = await creditWalletDeposit(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, operacao: true, ...r });
     }
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)

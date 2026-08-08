@@ -33,16 +33,20 @@ export const VALID_LICENSING_TABS = [...LICENSING_TABS.map((t) => t.value), 'min
 //
 // ⛔ FORA daqui por decisão do dono: Parceiro de Compra (captação privada,
 // preto/dourado, acesso por sessão) e Live Shop (vitrine ao vivo co-branded).
-const CARGOS_ESTOQUE = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+// 🔓 REGRA OFICIAL (Gabriel, 08/08/2026): estoque próprio e PDV valem DO VENDEDOR
+// PARA CIMA. O vendedor pode ter um estoque mínimo em casa e fechar pedido com o
+// cliente na rua, recebendo em dinheiro. O influenciador é o ÚNICO de fora:
+// ele divulga, não estoca e não tira pedido.
+const CARGOS_SEM_OPERACAO = ['influenciador', 'influencer', 'usuario'];
 
-// Reaproveita a MESMA regra de cargo já usada no Layout.jsx — nenhum sistema
-// novo de permissão. enabled_panels (Super Admin) tem a palavra final quando
-// estiver preenchido.
+// enabled_panels (Super Admin) continua com a palavra final quando preenchido.
 export function podeVerOperacao(user) {
   if (!user) return false;
   const painels = Array.isArray(user.enabled_panels) ? user.enabled_panels : [];
   if (painels.length > 0) return painels.includes('lojista');
-  return normalizeLevels(user.career_levels).some((c) => CARGOS_ESTOQUE.includes(c));
+  const cargos = normalizeLevels(user.career_levels);
+  if (!cargos.length) return false;
+  return !cargos.every((c) => CARGOS_SEM_OPERACAO.includes(c));
 }
 
 export function getLicensingGroups(user) {
