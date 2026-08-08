@@ -76,9 +76,16 @@ export default function EvolucaoDiaria({ userId }) {
           <div className="text-xl font-black text-emerald-400">{money(totalMes)}</div>
           <div className="text-[10px] text-gray-500">{pctMes}% da meta</div>
         </div>
-        <div className={`rounded-xl p-4 border ${faltaMes > 0 ? 'bg-orange-900/25 border-orange-500/30' : 'bg-emerald-900/30 border-emerald-500/40'}`}>
-          <div className="text-[11px] flex items-center gap-1.5 mb-1" style={{ color: faltaMes > 0 ? '#fdba74' : '#6ee7b7' }}><Target className="w-3.5 h-3.5" /> {faltaMes > 0 ? 'Falta pra meta do mês' : 'Meta do mês batida! 🎉'}</div>
-          <div className="text-xl font-black" style={{ color: faltaMes > 0 ? '#fb923c' : '#34d399' }}>{money(faltaMes)}</div>
+        {/* 🔧 Antes: laranja claro sobre fundo laranja — o número sumia. Agora o cartão
+            é do mesmo material dos vizinhos e o fogo entra só na tinta + borda. */}
+        <div
+          className="rounded-xl p-4 border"
+          style={faltaMes > 0
+            ? { background: '#FFFFFF', borderColor: 'rgba(243,91,18,0.45)' }
+            : { background: '#FFFFFF', borderColor: 'rgba(27,122,72,0.45)' }}
+        >
+          <div className="text-[11px] flex items-center gap-1.5 mb-1" style={{ color: faltaMes > 0 ? '#C42A05' : '#1B7A48' }}><Target className="w-3.5 h-3.5" /> {faltaMes > 0 ? 'Falta pra meta do mês' : 'Meta do mês batida! 🎉'}</div>
+          <div className="text-xl font-black" style={{ color: faltaMes > 0 ? '#C42A05' : '#1B7A48' }}>{money(faltaMes)}</div>
           <div className="text-[10px] text-gray-500">{faltaMes > 0 ? `${money(faltaMes / Math.max(1, dados.length - passados.length))}/dia restante` : 'bateu 🚀'}</div>
         </div>
         <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">

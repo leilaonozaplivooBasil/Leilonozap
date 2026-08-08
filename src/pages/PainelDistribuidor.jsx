@@ -12,7 +12,6 @@ import EvolucaoDiaria from '@/components/painel/EvolucaoDiaria';
 import EvolucaoVendedores from '@/components/painel/EvolucaoVendedores';
 import VendasAuditoria from '@/components/painel/VendasAuditoria';
 import RegiaoCard from '@/components/painel/RegiaoCard';
-import EntrarAoVivo from '@/components/livoo/EntrarAoVivo';
 import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
@@ -231,8 +230,8 @@ export default function PainelDistribuidor() {
     { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Árvore', icon: Network },
-    { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
-    { id: 'estoque', label: 'Meu Estoque', icon: Package, route: '/painel/estoque', star: true },
+    /* 🧭 PDV e Estoque saíram DAQUI: já existem na lateral de ícones do sistema
+       (mesma tela, dois caminhos = informação repetida). Continuam nos atalhos. */
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
     { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
     { id: 'ranking', label: 'Ranking', icon: Trophy },
@@ -244,9 +243,9 @@ export default function PainelDistribuidor() {
     { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Árvore', icon: Network },
-    { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
+    /* 🧭 PDV e Produtos & Estoque saíram DAQUI: já estão na lateral de ícones do
+       sistema. Ficam acessíveis pelos atalhos e pelo botão "Tirar pedido". */
     { id: 'funcionarios', label: 'Funcionários (PDV)', icon: UserCog },
-    { id: 'produtos', label: 'Produtos & Estoque', icon: Package, ext: true },
     { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
@@ -322,7 +321,6 @@ export default function PainelDistribuidor() {
             <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
             {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <RegiaoCard user={user} />
-            <EntrarAoVivo user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão da Operação</h1>
@@ -366,7 +364,6 @@ export default function PainelDistribuidor() {
             <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
             {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <RegiaoCard user={user} />
-            <EntrarAoVivo user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão da Operação</h1>
