@@ -193,31 +193,33 @@ export async function finalizeOneAuction(auction) {
     }
   }
 
-  // 🔓 DEVOLUÇÃO DAS RESERVAS DE QUEM NÃO VENCEU — REGRA OFICIAL 08/08/2026.
-  // A partir de 08/08 ser coberto NÃO devolve mais o dinheiro (submitAtomicBid deixou
-  // de liberar na cobertura): o valor do lance fica preso até o leilão ACABAR. Este é,
-  // portanto, o ÚNICO momento em que o perdedor recebe de volta — sem este bloco o
-  // dinheiro ficaria travado para sempre.
-  // • Devolve SÓ o valor do lance (+ o frete daquele lance), nunca o saldo total.
-  // • Um por conta: o MAIOR lance de cada perdedor naquele leilão.
-  // • O vencedor NÃO entra aqui — a reserva dele é consumida no arremate.
-  // Roda depois do claim atômico, que garante um único finalizador — sem risco de
-  // devolver duas vezes.
+  // 🔓 DEVOLUÇÃO DE RESERVA NO MARTELO — REGRA OFICIAL CORRIGIDA (08/08/2026).
+  //
+  // Ser coberto DEVOLVE o dinheiro NA HORA: o submitAtomicBid libera a reserva do
+  // líder anterior no mesmo instante em que o lance novo vence. Ou seja: quem foi
+  // coberto durante o leilão JÁ RECEBEU e não pode receber de novo aqui.
+  //
+  // ⚠️ POR QUE ISTO MUDOU: a versão anterior devolvia o maior lance de TODOS os
+  // perdedores. Como a devolução só é limitada pelo saldo_reservado TOTAL da conta,
+  // ela podia sacar a reserva de OUTRO leilão em que a pessoa está liderando AGORA —
+  // soltando dinheiro que devia estar travado e deixando um lance vivo sem lastro.
+  //
+  // Portanto, aqui devolve-se para UMA única conta: o líder que ainda estava com o
+  // dinheiro preso NESTE leilão no momento do encerramento (auction.winner_id lido
+  // ANTES do claim), e somente quando ele não for o vencedor final.
+  // • Valor = lance dele + frete_reservado_valor deste leilão (mesma base do
+  //   submitAtomicBid ao cobrir).
+  // • O vencedor final NÃO entra: a reserva dele é consumida como pagamento.
+  // • Idempotente: roda depois do claim atômico, que garante um único finalizador.
   const reservasDevolvidas = [];
   try {
-    const todosLances = await (await sb(
-      `auction_messages?select=sender_id,bid_amount,frete_amount&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&limit=1000`
-    )).json();
-    const maiorPorUsuario = {};
-    for (const m of (Array.isArray(todosLances) ? todosLances : [])) {
-      const uid = m.sender_id;
-      if (!uid || uid === winnerId) continue; // vencedor fora: reserva vira pagamento
-      const total = money((Number(m.bid_amount) || 0) + (Number(m.frete_amount) || 0));
-      if (!maiorPorUsuario[uid] || total > maiorPorUsuario[uid]) maiorPorUsuario[uid] = total;
-    }
-    for (const uid of Object.keys(maiorPorUsuario)) {
-      const devolvido = await devolverReserva(uid, maiorPorUsuario[uid]);
-      if (devolvido > 0) reservasDevolvidas.push({ user_id: uid, valor: devolvido });
+    const liderPreso = auction.winner_id || null;
+    if (liderPreso && liderPreso !== winnerId) {
+      const valorPreso = money(
+        (Number(auction.current_price) || 0) + (Number(auction.frete_reservado_valor) || 0)
+      );
+      const devolvido = await devolverReserva(liderPreso, valorPreso);
+      if (devolvido > 0) reservasDevolvidas.push({ user_id: liderPreso, valor: devolvido });
     }
   } catch (e) { console.warn('[FINALIZE] devolução de reservas:', e?.message); }
 
