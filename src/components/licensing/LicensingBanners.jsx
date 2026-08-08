@@ -5,7 +5,7 @@ import { Megaphone, ArrowRight, ExternalLink } from 'lucide-react';
 export default function LicensingBanners({ onCopyLink, shareLink }) {
   return (
     <div className="mb-8">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white p-6 md:p-8 min-h-[160px] flex flex-col justify-between">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-nz-fogo-claro via-nz-fogo to-nz-fogo-escuro text-white p-6 md:p-8 min-h-[160px] flex flex-col justify-between">
         <Megaphone className="w-8 h-8 opacity-90" />
         <div>
           <p className="text-lg md:text-xl font-bold leading-snug mb-1">Divulgue seu link e ganhe comissão</p>
@@ -14,7 +14,7 @@ export default function LicensingBanners({ onCopyLink, shareLink }) {
             <button
               type="button"
               onClick={onCopyLink}
-              className="inline-flex items-center gap-2 text-sm font-semibold bg-white text-emerald-700 rounded-full px-4 py-2 hover:bg-emerald-50 transition-colors">
+              className="inline-flex items-center gap-2 text-sm font-semibold bg-white text-nz-fogo-escuro rounded-full px-4 py-2 hover:bg-nz-fogo-fundo transition-colors">
               Compartilhar link <ArrowRight className="w-4 h-4" />
             </button>
             <a

@@ -20,6 +20,13 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --nz-tinta: #0D1310;
     --nz-tinta-fraca: #5C6B62;
     --nz-borda: #DDE4DF;
+    /* 🔥 COR DO FOGO DA LOGO — usada na carteira e no banner de divulgação */
+    --nz-fogo: #F35B12;
+    --nz-fogo-claro: #FFA000;
+    --nz-fogo-escuro: #C42A05;
+    --nz-fogo-fundo: #FFF1E3;
+    /* ⬛ Preto da barra do topo — a lateral usa a MESMA cor */
+    --nz-preto-barra: #21222B;
     --nz-marrom: #96603E;
     --nz-marrom-claro: #B8875F;
     --nz-marrom-fundo: #F2E6D6;
