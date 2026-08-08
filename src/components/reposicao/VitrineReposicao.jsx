@@ -5,7 +5,7 @@ import { Search, Package, Loader2, Plus } from 'lucide-react';
 // Vitrine do estoque central dentro do pedido de reposição.
 // Mostra sempre o preço da casa e, ao lado, quanto o lojista paga com o desconto
 // da licença dele — o preço de venda NUNCA muda, o que muda é o que ele paga.
-export default function VitrineReposicao({ produtos, carregando, termo, onTermo, descontoPct, onAdd }) {
+export default function VitrineReposicao({ produtos, carregando, termo, onTermo, descontoPct, onAdd, filtros = null }) {
   return (
     <div>
       <div className="relative mb-3">
@@ -18,9 +18,7 @@ export default function VitrineReposicao({ produtos, carregando, termo, onTermo,
         />
       </div>
 
-      {!carregando && produtos.length > 0 && (
-        <p className="text-xs text-gray-500 mb-3">{produtos.length} produtos disponíveis no estoque central</p>
-      )}
+      {filtros}
 
       {carregando ? (
         <div className="flex items-center gap-2 text-gray-500 py-10 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Carregando produtos…</div>

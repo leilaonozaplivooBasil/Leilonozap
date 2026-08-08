@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import FiltrosVitrine from '@/components/common/FiltrosVitrine';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
@@ -100,7 +101,7 @@ export default function TirarPedido() {
           for (let from = 0; from < 20000; from += PAGE) {
             let query = supabase
               .from('products')
-              .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
+              .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls,category')
               .gt('quantity', 0)
               .order('description', { ascending: true })
               .range(from, from + PAGE - 1);
@@ -134,6 +135,35 @@ export default function TirarPedido() {
     const t = setTimeout(() => doSearch(term), 350);
     return () => clearTimeout(t);
   }, [term, doSearch]);
+
+  // 🔎 Filtros da vitrine do balcão — só reorganizam o que já está carregado
+  const [categoria, setCategoria] = useState('');
+  const [ordem, setOrdem] = useState('az');
+  const [precoMax, setPrecoMax] = useState('');
+  const [comFoto, setComFoto] = useState(false);
+
+  const categorias = useMemo(
+    () => [...new Set(results.map((p) => p.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [results]
+  );
+
+  const vitrine = useMemo(() => {
+    const teto = Number(String(precoMax).replace(',', '.'));
+    const lista = results.filter((p) =>
+      (!categoria || p.category === categoria) &&
+      (!comFoto || !!p.image_urls?.[0]) &&
+      (!teto || priceOf(p) <= teto)
+    );
+    const nome = (p) => String(p.description || '').trim();
+    const cmp = {
+      az: (a, b) => nome(a).localeCompare(nome(b), 'pt-BR', { sensitivity: 'base' }),
+      za: (a, b) => nome(b).localeCompare(nome(a), 'pt-BR', { sensitivity: 'base' }),
+      menor: (a, b) => priceOf(a) - priceOf(b),
+      maior: (a, b) => priceOf(b) - priceOf(a),
+      estoque: (a, b) => (Number(b.quantity) || 0) - (Number(a.quantity) || 0),
+    }[ordem];
+    return cmp ? [...lista].sort(cmp) : lista;
+  }, [results, categoria, ordem, precoMax, comFoto]);
 
   const addToCart = (p) => {
     setCart((prev) => {
@@ -257,9 +287,20 @@ export default function TirarPedido() {
           </div>
 
           {results.length > 0 && (
+            <FiltrosVitrine
+              categorias={categorias}
+              categoria={categoria} onCategoria={setCategoria}
+              ordem={ordem} onOrdem={setOrdem}
+              precoMax={precoMax} onPrecoMax={setPrecoMax}
+              comFoto={comFoto} onComFoto={setComFoto}
+              total={vitrine.length}
+            />
+          )}
+
+          {vitrine.length > 0 && (
             <div className="space-y-2 mb-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
-              <p className="text-[11px] text-nz-tinta-fraca sticky top-0 bg-white py-1">{results.length} produtos {term ? 'encontrados' : 'na loja'} · clique para adicionar</p>
-              {results.map((p) => (
+              <p className="text-[11px] text-nz-tinta-fraca sticky top-0 bg-white py-1">{vitrine.length} produtos {term ? 'encontrados' : 'na loja'} · clique para adicionar</p>
+              {vitrine.map((p) => (
                 <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center gap-3 bg-white hover:bg-nz-cinza-fundo border border-nz-borda rounded-xl p-3 text-left transition-colors">
                   <span className="w-10 h-10 rounded-lg bg-nz-cinza-fundo flex items-center justify-center overflow-hidden flex-shrink-0">
                     {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-gray-400" />}
@@ -274,7 +315,7 @@ export default function TirarPedido() {
               ))}
             </div>
           )}
-          {!searching && results.length === 0 && (
+          {!searching && vitrine.length === 0 && (
             <div className="bg-nz-cinza-fundo border border-dashed border-nz-borda rounded-xl p-10 text-center text-nz-tinta-fraca">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
               {term ? 'Nenhum produto encontrado com esse filtro.' : 'Nenhum produto disponível no estoque.'}

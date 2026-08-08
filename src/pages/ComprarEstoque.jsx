@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import FiltrosVitrine from '@/components/common/FiltrosVitrine';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -83,6 +84,7 @@ export default function ComprarEstoque() {
         descricao: p.description || 'Produto',
         preco: Number(p.price_catalog) > 0 ? Number(p.price_catalog) : Number(p.selling_price_retail) || 0,
         quantidade: Number(p.quantity) || 0,
+        categoria: p.category || '',
         imagem: imagemDe(p),
       })).filter((p) => p.preco > 0));
     } catch (e) { console.error(e); }
@@ -90,6 +92,35 @@ export default function ComprarEstoque() {
   }, []);
 
   useEffect(() => { const t = setTimeout(() => carregarProdutos(termo), 350); return () => clearTimeout(t); }, [termo, carregarProdutos]);
+
+  // 🔎 Filtros da vitrine (categoria, ordem, teto de preço, só com foto)
+  const [categoria, setCategoria] = useState('');
+  const [ordem, setOrdem] = useState('az');
+  const [precoMax, setPrecoMax] = useState('');
+  const [comFoto, setComFoto] = useState(false);
+
+  const categorias = useMemo(
+    () => [...new Set(produtos.map((p) => p.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [produtos]
+  );
+
+  const produtosFiltrados = useMemo(() => {
+    const teto = Number(String(precoMax).replace(',', '.'));
+    let lista = produtos.filter((p) =>
+      (!categoria || p.categoria === categoria) &&
+      (!comFoto || !!p.imagem) &&
+      (!teto || p.preco <= teto)
+    );
+    const nome = (p) => String(p.descricao || '').trim();
+    const cmp = {
+      az: (a, b) => nome(a).localeCompare(nome(b), 'pt-BR', { sensitivity: 'base' }),
+      za: (a, b) => nome(b).localeCompare(nome(a), 'pt-BR', { sensitivity: 'base' }),
+      menor: (a, b) => a.preco - b.preco,
+      maior: (a, b) => b.preco - a.preco,
+      estoque: (a, b) => b.quantidade - a.quantidade,
+    }[ordem];
+    return cmp ? [...lista].sort(cmp) : lista;
+  }, [produtos, categoria, ordem, precoMax, comFoto]);
 
   const adicionar = (p) => {
     setItens((prev) => {
@@ -160,12 +191,22 @@ export default function ComprarEstoque() {
 
       <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         <VitrineReposicao
-          produtos={produtos}
+          produtos={produtosFiltrados}
           carregando={carregando}
           termo={termo}
           onTermo={setTermo}
           descontoPct={desconto.pct}
           onAdd={adicionar}
+          filtros={(
+            <FiltrosVitrine
+              categorias={categorias}
+              categoria={categoria} onCategoria={setCategoria}
+              ordem={ordem} onOrdem={setOrdem}
+              precoMax={precoMax} onPrecoMax={setPrecoMax}
+              comFoto={comFoto} onComFoto={setComFoto}
+              total={produtosFiltrados.length}
+            />
+          )}
         />
         <div className="lg:sticky lg:top-20 lg:self-start">
           <ResumoReposicao
