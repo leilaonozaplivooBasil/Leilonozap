@@ -83,21 +83,33 @@ export default function TirarPedido() {
       const isStore = u && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
       if (isStore) {
         // dono de loja vende do PRÓPRIO estoque (store_inventory)
-        const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q: termo, lim: 300 });
+        const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q: termo, lim: 5000 });
         setResults((data || [])
           .filter((x) => x.ativo && Number(x.quantidade) > 0)
           .map((x) => ({ id: x.product_id, description: x.descricao, price_catalog: x.preco, quantity: x.quantidade, lot: '', image_urls: x.imagem ? [x.imagem] : [] }))
-          .sort((a, b) => String(a.description || '').localeCompare(String(b.description || ''), 'pt-BR')));
+          .sort((a, b) => String(a.description || '').trim().localeCompare(String(b.description || '').trim(), 'pt-BR', { sensitivity: 'base', numeric: true })));
       } else {
-        let query = supabase
-          .from('products')
-          .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
-          .gt('quantity', 0)
-          .order('description', { ascending: true })
-          .limit(300);
-        if (termo) query = query.or(`description.ilike.%${termo}%,lot.ilike.%${termo}%`);
-        const { data } = await query;
-        setResults(data || []);
+        // 📦 LOJA INTEIRA: o Supabase entrega no máximo 1.000 linhas por requisição —
+        // com +1.500 produtos, uma chamada só cortava a loja. Aqui pagina em blocos
+        // de 1.000 até acabar, então ordena A→Z ignorando acento/maiúscula.
+        const PAGE = 1000;
+        const todos = [];
+        for (let from = 0; from < 20000; from += PAGE) {
+          let query = supabase
+            .from('products')
+            .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
+            .gt('quantity', 0)
+            .order('description', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (termo) query = query.or(`description.ilike.%${termo}%,lot.ilike.%${termo}%`);
+          const { data, error } = await query;
+          if (error) break;
+          todos.push(...(data || []));
+          if (!data || data.length < PAGE) break;
+        }
+        setResults(todos.sort((a, b) =>
+          String(a.description || '').trim().localeCompare(String(b.description || '').trim(), 'pt-BR', { sensitivity: 'base', numeric: true })
+        ));
       }
     } catch (e) { console.error(e); }
     setSearching(false);
