@@ -15,6 +15,14 @@ const CACHE_PRESERVADO = 'supabase-imagens';
 
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ⏳ TEMPO-LIMITE POR ESPERA (08/08/2026 — banner preso em "Atualizando...").
+// No app instalado (WebView) e em aba que ficou em segundo plano, as promessas
+// do service worker e do cache podem NUNCA responder. Sem limite, a recarga
+// jamais era chamada e o spinner ficava eterno. Aqui toda espera tem prazo:
+// estourou, segue em frente.
+const comLimite = (promessa, ms = 2000) =>
+  Promise.race([Promise.resolve(promessa).catch(() => null), pausa(ms).then(() => null)]);
+
 function recarregar(versaoAlvo) {
   const params = new URLSearchParams(window.location.search);
   if (versaoAlvo) params.set('nzv', String(versaoAlvo));
@@ -35,12 +43,12 @@ function recarregar(versaoAlvo) {
 async function atualizarNormal(versaoAlvo) {
   try {
     if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.update().catch(() => {})));
+      const regs = (await comLimite(navigator.serviceWorker.getRegistrations())) || [];
+      await comLimite(Promise.all(regs.map((r) => r.update().catch(() => {}))));
       // Se um worker novo ficou "em espera", manda assumir agora.
       const limite = Date.now() + 5000;
       while (Date.now() < limite) {
-        const atuais = await navigator.serviceWorker.getRegistrations();
+        const atuais = (await comLimite(navigator.serviceWorker.getRegistrations())) || [];
         const esperando = atuais.find((r) => r.waiting);
         if (esperando) {
           try { esperando.waiting.postMessage({ type: 'SKIP_WAITING' }); } catch { /* worker sem canal */ }
@@ -63,13 +71,13 @@ async function atualizarNormal(versaoAlvo) {
 async function forcarTrocaDeVersao(versaoAlvo) {
   try {
     if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister().catch(() => {})));
+      const regs = (await comLimite(navigator.serviceWorker.getRegistrations())) || [];
+      await comLimite(Promise.all(regs.map((r) => r.unregister().catch(() => {}))));
     }
     if ('caches' in window) {
-      const chaves = await caches.keys();
-      await Promise.all(
-        chaves.filter((k) => k !== CACHE_PRESERVADO).map((k) => caches.delete(k))
+      const chaves = (await comLimite(caches.keys())) || [];
+      await comLimite(
+        Promise.all(chaves.filter((k) => k !== CACHE_PRESERVADO).map((k) => caches.delete(k)))
       );
     }
   } catch { /* ainda assim recarrega */ }
@@ -84,6 +92,15 @@ export default function AtualizacaoDisponivel() {
   const [segundos, setSegundos] = useState(null);
   // Se a aba estava atrás/campo em foco na hora, este contador reinicia o ciclo
   const [ciclo, setCiclo] = useState(0);
+  // 🛟 A tentativa terminou sem trocar de versão (a página continua viva).
+  // Existe para o botão VOLTAR a funcionar — nunca mais spinner permanente.
+  const [travou, setTravou] = useState(false);
+  // 🎯 Versão-alvo SEMPRE a mais recente conhecida: se um 2º deploy sobe por
+  // cima durante a troca, a recarga não pode mirar a versão antiga.
+  const versaoRef = React.useRef(null);
+  React.useEffect(() => {
+    if (versaoServidor) versaoRef.current = versaoServidor;
+  }, [versaoServidor]);
 
   // Limpa o ?nzv= da URL depois que a carga nova subiu (não poluir links).
   useEffect(() => {
@@ -103,16 +120,31 @@ export default function AtualizacaoDisponivel() {
   const atualizarAgora = React.useCallback(() => {
     if (atualizando) return;
     setAtualizando(true);
+    setTravou(false);
     setSegundos(null);
-    marcarTentativa(versaoServidor);
-    if (esgotado) {
-      // via normal já falhou 2x → saída de emergência (uma única vez)
-      marcarForcado(versaoServidor);
-      forcarTrocaDeVersao(versaoServidor);
+    const alvo = versaoRef.current || versaoServidor;
+    marcarTentativa(alvo);
+
+    // 🛟 REDE DE SEGURANÇA (o coração da correção): aconteça o que acontecer lá
+    // dentro, em 6s a página recarrega de verdade — a recarga nunca fica
+    // inalcançável. Se a troca normal for rápida, a página já saiu e este
+    // temporizador morre junto com ela.
+    setTimeout(() => recarregar(versaoRef.current || alvo), 6000);
+    // 🚫 SPINNER ETERNO PROIBIDO: se em 10s ainda estamos aqui, a tentativa
+    // falhou — devolve o botão ao usuário com uma mensagem honesta.
+    setTimeout(() => {
+      setAtualizando(false);
+      setTravou(true);
+    }, 10000);
+
+    if (esgotado || travou) {
+      // via normal já falhou → saída de emergência (remove o worker travado)
+      marcarForcado(alvo);
+      forcarTrocaDeVersao(alvo);
     } else {
-      atualizarNormal(versaoServidor);
+      atualizarNormal(alvo);
     }
-  }, [atualizando, esgotado, versaoServidor]);
+  }, [atualizando, esgotado, travou, versaoServidor]);
 
   // ⏱️ AUTOMÁTICO COM CONTAGEM (pedido 08/08/2026): o aviso aparece, conta 4s e
   // atualiza sozinho — no app instalado e no link, é o mesmo código.
@@ -123,7 +155,9 @@ export default function AtualizacaoDisponivel() {
   // 'forcadoFalhou' e nada mais se recarrega sozinho.
   // ⚠️ Telas de dinheiro/lance continuam FORA: ali só recarrega por toque.
   useEffect(() => {
-    if (!temAtualizacao || forcadoFalhou || atualizando) {
+    // 'travou' entra aqui: depois de uma tentativa frustrada o app NÃO fica
+    // recontando sozinho — a decisão volta para o toque do usuário.
+    if (!temAtualizacao || forcadoFalhou || atualizando || travou) {
       setSegundos(null);
       return;
     }
@@ -151,7 +185,7 @@ export default function AtualizacaoDisponivel() {
       clearInterval(tique);
       clearTimeout(t);
     };
-  }, [temAtualizacao, forcadoFalhou, atualizando, versaoServidor, ciclo, atualizarAgora]);
+  }, [temAtualizacao, forcadoFalhou, atualizando, travou, versaoServidor, ciclo, atualizarAgora]);
 
   if (!temAtualizacao || dispensado) return null;
 
@@ -184,11 +218,13 @@ export default function AtualizacaoDisponivel() {
         <span className="text-sm font-medium flex-1">
           {atualizando
             ? 'Atualizando o aplicativo...'
-            : segundos !== null
-              ? `Nova versão — atualizando em ${segundos}s`
-              : esgotado
-                ? 'Atualização pendente — toque para atualizar'
-                : 'Nova versão disponível'}
+            : travou
+              ? 'Não conseguimos atualizar — toque para forçar'
+              : segundos !== null
+                ? `Nova versão — atualizando em ${segundos}s`
+                : esgotado
+                  ? 'Atualização pendente — toque para atualizar'
+                  : 'Nova versão disponível'}
         </span>
         <button
           type="button"
@@ -197,7 +233,7 @@ export default function AtualizacaoDisponivel() {
           className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-full px-4 text-sm font-bold bg-nz-verde hover:bg-nz-verde-claro transition-colors active:scale-[.97] disabled:opacity-80"
         >
           {atualizando && <Loader2 className="h-4 w-4 animate-spin" />}
-          {atualizando ? 'Atualizando...' : esgotado ? 'Forçar' : 'Atualizar agora'}
+          {atualizando ? 'Atualizando...' : (esgotado || travou) ? 'Forçar' : 'Atualizar agora'}
         </button>
       </div>
     </div>
