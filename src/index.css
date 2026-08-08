@@ -61,6 +61,131 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   ☀️ TEMA CLARO INSTITUCIONAL DO PAINEL — BRANCO + VERDE + MARROM
+   Fundo branco clínico, tinta escura, cores da logo. Uma regra única
+   para todas as telas de trabalho, em vez de repintar tela por tela.
+   ESCOPO: .nz-painel (telas de trabalho) e o miolo das telas que abrem
+   com a barra do painel no topo. A Visão da Operação fica FORA: ela
+   continua escura e pode se proteger com a classe .nz-escuro.
+   SÓ PINTURA: nenhuma regra de layout, nenhuma lógica alterada.
+   CONTRASTE: ao clarear o fundo, a tinta escurece na mesma regra —
+   por isso as trocas de texto e de fundo andam sempre juntas aqui.
+   ═══════════════════════════════════════════════════════════════ */
+.nz-painel:not(.nz-escuro),
+body[data-painel-nav] main > *:not(.nz-escuro) {
+  background-color: #FFFFFF;
+  color: var(--nz-tinta);
+}
+/* fundos escuros → branco (cartão) e cinza clarinho (respiro da página) */
+.nz-painel:not(.nz-escuro) [class*="bg-gray-9"],
+.nz-painel:not(.nz-escuro) [class*="bg-slate-9"],
+.nz-painel:not(.nz-escuro) [class*="bg-zinc-9"],
+.nz-painel:not(.nz-escuro) [class*="bg-neutral-9"],
+body[data-painel-nav] main [class*="bg-gray-9"]:not(.nz-escuro),
+body[data-painel-nav] main [class*="bg-slate-9"]:not(.nz-escuro) {
+  background-color: #FFFFFF !important;
+}
+.nz-painel:not(.nz-escuro) [class*="bg-gray-8"],
+.nz-painel:not(.nz-escuro) [class*="bg-gray-7"],
+.nz-painel:not(.nz-escuro) [class*="bg-slate-8"],
+.nz-painel:not(.nz-escuro) [class*="bg-zinc-8"],
+body[data-painel-nav] main [class*="bg-gray-8"]:not(.nz-escuro),
+body[data-painel-nav] main [class*="bg-gray-7"]:not(.nz-escuro) {
+  background-color: var(--nz-cinza-fundo) !important;
+}
+/* onde o fundo virou claro, a tinta escurece junto — inclusive em botões
+   e caixas que têm fundo próprio (a guarda de texto abaixo os ignora) */
+.nz-painel:not(.nz-escuro) [class*="bg-gray-7"],
+.nz-painel:not(.nz-escuro) [class*="bg-gray-8"],
+.nz-painel:not(.nz-escuro) [class*="bg-gray-9"],
+.nz-painel:not(.nz-escuro) [class*="bg-slate-8"],
+.nz-painel:not(.nz-escuro) [class*="bg-slate-9"],
+body[data-painel-nav] main [class*="bg-gray-7"],
+body[data-painel-nav] main [class*="bg-gray-8"],
+body[data-painel-nav] main [class*="bg-gray-9"] {
+  color: var(--nz-tinta) !important;
+}
+/* cabeçalho de tabela: marrom escuro sobre claro, como combinado */
+.nz-painel:not(.nz-escuro) thead [class*="bg-gray-"],
+.nz-painel:not(.nz-escuro) thead th,
+body[data-painel-nav] main thead th {
+  background-color: var(--nz-marrom-fundo) !important;
+  color: var(--nz-marrom-escuro) !important;
+  border-color: var(--nz-borda) !important;
+}
+/* tinta: textos claros viram tinta escura — só quando NÃO estão sobre
+   um fundo colorido próprio (botão verde continua com letra branca) */
+.nz-painel:not(.nz-escuro) [class*="text-white"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-gray-1"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-gray-2"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-slate-1"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-slate-2"]:not([class*="bg-"]),
+body[data-painel-nav] main [class*="text-white"]:not([class*="bg-"]),
+body[data-painel-nav] main [class*="text-gray-1"]:not([class*="bg-"]),
+body[data-painel-nav] main [class*="text-gray-2"]:not([class*="bg-"]) {
+  color: var(--nz-tinta) !important;
+}
+.nz-painel:not(.nz-escuro) [class*="text-gray-3"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-gray-4"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-gray-5"]:not([class*="bg-"]),
+.nz-painel:not(.nz-escuro) [class*="text-slate-4"]:not([class*="bg-"]),
+body[data-painel-nav] main [class*="text-gray-3"]:not([class*="bg-"]),
+body[data-painel-nav] main [class*="text-gray-4"]:not([class*="bg-"]),
+body[data-painel-nav] main [class*="text-gray-5"]:not([class*="bg-"]) {
+  color: var(--nz-tinta-fraca) !important;
+}
+/* bordas e divisórias entram no tom da marca */
+.nz-painel:not(.nz-escuro) [class*="border-gray-"],
+.nz-painel:not(.nz-escuro) [class*="border-slate-"],
+.nz-painel:not(.nz-escuro) [class*="divide-gray-"],
+body[data-painel-nav] main [class*="border-gray-"],
+body[data-painel-nav] main [class*="border-slate-"] {
+  border-color: var(--nz-borda) !important;
+}
+/* campos de digitação: branco com borda da marca */
+.nz-painel:not(.nz-escuro) input,
+.nz-painel:not(.nz-escuro) textarea,
+.nz-painel:not(.nz-escuro) select,
+body[data-painel-nav] main input,
+body[data-painel-nav] main textarea,
+body[data-painel-nav] main select {
+  background-color: #FFFFFF !important;
+  border-color: var(--nz-borda) !important;
+  color: var(--nz-tinta) !important;
+}
+/* verde institucional: ação principal e valor positivo */
+.nz-painel:not(.nz-escuro) [class*="text-green-"],
+.nz-painel:not(.nz-escuro) [class*="text-emerald-"],
+body[data-painel-nav] main [class*="text-green-"],
+body[data-painel-nav] main [class*="text-emerald-"] {
+  color: var(--nz-verde) !important;
+}
+/* faixas com degradê escuro (cabeçalhos de página) também clareiam —
+   sem isso o título ficava tinta escura sobre fundo escuro, ilegível */
+.nz-painel:not(.nz-escuro) [class*="from-gray-9"],
+.nz-painel:not(.nz-escuro) [class*="from-gray-8"],
+.nz-painel:not(.nz-escuro) [class*="from-slate-9"],
+.nz-painel:not(.nz-escuro) [class*="via-gray-9"],
+body[data-painel-nav] main [class*="from-gray-9"],
+body[data-painel-nav] main [class*="from-gray-8"] {
+  background-image: linear-gradient(to right, #FFFFFF, var(--nz-cinza-fundo)) !important;
+  border-color: var(--nz-borda) !important;
+}
+/* amarelo/âmbar sobre branco perde leitura: escurece para o tom do
+   fogo da marca, mantendo o mesmo significado de energia/atenção */
+.nz-painel:not(.nz-escuro) [class*="text-yellow-"],
+.nz-painel:not(.nz-escuro) [class*="text-amber-"],
+body[data-painel-nav] main [class*="text-yellow-"],
+body[data-painel-nav] main [class*="text-amber-"] {
+  color: #B45309 !important;
+}
+/* linhas zebradas discretas nas tabelas densas */
+.nz-painel:not(.nz-escuro) tbody tr:nth-child(even),
+body[data-painel-nav] main tbody tr:nth-child(even) {
+  background-color: var(--nz-cinza-fundo);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    🎨 PALETA INSTITUCIONAL DO PAINEL — VERDE + MARROM
    Regra única que padroniza TODAS as telas internas de uma vez, em vez
    de editar tela por tela. Só troca COR (pintura): não muda layout, não
