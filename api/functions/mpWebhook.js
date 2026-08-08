@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+import { settlePdvPixSale } from '../_lib/pdvSettle.js';
 import { debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
 import { creditarBonusPassaporte } from '../_lib/passaporteBonus.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
@@ -156,6 +157,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
     }
 
+    // 🏪 PDV (balcão) pago com PIX real: só AGORA baixa estoque e paga comissão
+    if (sale.source === 'pdv') {
+      const r = await settlePdvPixSale(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
     if (sale.kind === 'passaporte') {
       // Passaporte de Lances (modelo A): credita o valor pago + 10% de bônus NA HORA.
       // Sem acessos e sem validade — o crédito fica na carteira até ser usado.

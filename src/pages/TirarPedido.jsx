@@ -5,6 +5,8 @@ import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
+import PixPdvModal from '@/components/pdv/PixPdvModal';
+import NotaPedido from '@/components/pdv/NotaPedido';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
   Package, User as UserIcon, Phone, CreditCard, Banknote, QrCode, Store, Truck
@@ -45,6 +47,8 @@ export default function TirarPedido() {
   const [sellers, setSellers] = useState([]);
   const [sellerQuery, setSellerQuery] = useState('');
   const [vendedor, setVendedor] = useState(null); // { id, full_name, primary_career_level }
+  const [pix, setPix] = useState(null); // cobrança PIX aberta { payment_id, pix_code, qr_code_base64, sale_id, snapshot }
+  const [nota, setNota] = useState(null); // nota de pedido pra mostrar/enviar no WhatsApp
   const isStore = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
 
   useEffect(() => {
@@ -62,7 +66,8 @@ export default function TirarPedido() {
   const loadToday = async (u = user) => {
     if (!u?.id) return;
     const start = new Date(); start.setHours(0, 0, 0, 0);
-    const { data } = await supabase.from('catalog_sales').select('total_amount').eq('source', 'pdv').eq('seller_id', u.id).gte('created_at', start.toISOString());
+    // pedidos PIX aguardando pagamento e cancelados NÃO contam como venda do dia
+    const { data } = await supabase.from('catalog_sales').select('total_amount').eq('source', 'pdv').eq('seller_id', u.id).gte('created_at', start.toISOString()).not('status', 'in', '("pending_payment","canceled","cancelled")');
     const list = data || [];
     setTodayCount(list.length);
     setTodayTotal(list.reduce((s, x) => s + (Number(x.total_amount) || 0), 0));
@@ -117,10 +122,19 @@ export default function TirarPedido() {
     return !q || (s.full_name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q) || (s.primary_career_level || '').toLowerCase().includes(q);
   });
 
+  // limpa o balcão pro próximo pedido (chamado após fechar/confirmar)
+  const limpar = () => { setCart([]); setCustomer({ name: '', phone: '' }); setVendedor(null); setSellerQuery(''); loadToday(); };
+
   const finalize = async () => {
     if (!user?.id) { toast.error('Faça login.'); return; }
     if (!cart.length) { toast.error('Adicione produtos ao pedido.'); return; }
     setProcessing(true);
+    // 🧾 retrato do pedido ANTES de limpar — vira a nota e alimenta o modal do PIX
+    const snapshot = {
+      items: cart.map((x) => ({ description: x.description, qty: x.qty, unit: parseBRL(x.priceText) })),
+      total, customer: { ...customer }, payment, vendedor: vendedor?.full_name || null,
+      storeName: user.store_name || user.full_name || 'Leilão NoZap',
+    };
     try {
       const r = await base44.functions.invoke('createPdvOrder', {
         actorId: user.id,
@@ -131,11 +145,32 @@ export default function TirarPedido() {
         vendedor_id: vendedor?.id || null,
       });
       if (!r?.success) { toast.error(r?.error || 'Falha ao finalizar'); setProcessing(false); return; }
-      toast.success(`Pedido fechado! ${money(r.total)}${r.comissao ? ` · comissão ${money(r.comissao)}` : ''}`);
-      setCart([]); setCustomer({ name: '', phone: '' }); setVendedor(null); setSellerQuery('');
-      loadToday();
+      if (r.pix) {
+        // 💳 PIX real: o pedido fica AGUARDANDO — QR na tela, confirmação automática
+        setPix({ ...r.pix, sale_id: r.sale_id, snapshot: { ...snapshot, total: r.total, saleId: r.sale_id } });
+      } else {
+        toast.success(`Pedido fechado! ${money(r.total)}${r.comissao ? ` · comissão ${money(r.comissao)}` : ''}`);
+        setNota({ ...snapshot, total: r.total, saleId: r.sale_id });
+        limpar();
+      }
     } catch (e) { toast.error('Erro ao finalizar'); }
     setProcessing(false);
+  };
+
+  // pagamento PIX caiu (webhook confirmou) → mostra a nota e libera o balcão
+  const pixConfirmado = () => {
+    const snap = pix?.snapshot;
+    setPix(null);
+    toast.success('Pagamento PIX confirmado!');
+    if (snap) setNota(snap);
+    limpar();
+  };
+  // cliente desistiu / não pagou → cancela o pedido pendente (o carrinho fica intacto)
+  const pixCancelado = async () => {
+    const saleId = pix?.sale_id;
+    setPix(null);
+    if (saleId) { try { await base44.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
+    toast('Cobrança PIX cancelada.');
   };
 
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
@@ -314,6 +349,11 @@ export default function TirarPedido() {
           </button>
         </div>
       </div>
+
+      {/* 💳 PIX real no balcão — QR + confirmação automática */}
+      {pix && <PixPdvModal pix={pix} total={pix.snapshot?.total || total} onConfirmed={pixConfirmado} onCancel={pixCancelado} />}
+      {/* 🧾 nota de pedido — envio em tempo real no WhatsApp do cliente */}
+      {nota && <NotaPedido nota={nota} onClose={() => setNota(null)} />}
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
+const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
 
@@ -90,6 +92,60 @@ export default async function handler(req, res) {
     const saleId = oid();
     const title = lines.length === 1 ? lines[0].p.description : `${lines[0].p.description} +${lines.length - 1} item(ns)`;
     const itemsJson = lines.map((ln) => ({ product_id: ln.p.id, title: String(ln.p.description || '').slice(0, 200), qty: ln.qty, unit: ln.unit }));
+
+    // 💳 PIX REAL (Mercado Pago) — o pedido nasce 'pending_payment' e NÃO baixa estoque
+    // nem paga comissão. Isso só acontece quando o dinheiro CAI de verdade:
+    // mpWebhook → settlePdvPixSale (api/_lib/pdvSettle.js). Acaba o "paguei sem pagar".
+    if (paymentMethod === 'pix') {
+      if (!MP_TOKEN) return res.status(500).json({ success: false, error: 'Mercado Pago não configurado' });
+      if (total < 1) return res.status(200).json({ success: false, error: 'Valor mínimo do PIX: R$ 1,00' });
+      const pending = {
+        id: saleId, base44_id: saleId, kind: 'produto', source: 'pdv',
+        seller_id: sellerId, operator_id: actorId,
+        buyer_name: customer.name || 'Cliente balcão', buyer_email: customer.email || null, buyer_phone: customer.phone || null,
+        product_title: String(title).slice(0, 300), sale_price: total, total_amount: total, quantity: totalQty,
+        items_json: itemsJson, status: 'pending_payment', payment_method: 'pix',
+        // dados que o settle precisa na confirmação (fonte do estoque + entrega)
+        raw_base44: { pdv: true, is_store_owner: isStoreOwner, delivered, operator_id: actorId, items: itemsJson },
+      };
+      let ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(pending) });
+      if (!ins.ok) {
+        // fallback sem colunas extras — raw_base44 e items_json ficam (o settle depende deles)
+        const { operator_id, buyer_email, ...menor } = pending;
+        ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(menor) });
+        if (!ins.ok) { const t = await ins.text(); return res.status(200).json({ success: false, error: 'Falha ao criar pedido', details: t.slice(0, 200) }); }
+      }
+      // cria a cobrança PIX no MP (mesmo motor da Loja Virtual)
+      const [first, ...rest] = String(customer.name || 'Cliente Balcão').trim().split(/\s+/);
+      const mp = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': saleId },
+        body: JSON.stringify({
+          transaction_amount: total,
+          description: `PDV Balcão - ${title}`.slice(0, 200),
+          additional_info: { items: itemsJson.map((l) => ({ title: String(l.title).slice(0, 120), quantity: l.qty, unit_price: l.unit })) },
+          payment_method_id: 'pix',
+          notification_url: `${BASE_URL}/api/functions/mpWebhook`,
+          external_reference: saleId,
+          payer: { email: customer.email || `pdv+${saleId.slice(0, 8)}@leilaonozap.net`, first_name: first || 'Cliente', last_name: rest.join(' ') || 'Balcão' },
+        }),
+      });
+      const pay = await mp.json();
+      if (!mp.ok || !pay?.id) {
+        // não deixa pedido órfão: cancela o pending recém-criado
+        await sb(`catalog_sales?id=eq.${saleId}&status=eq.pending_payment`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'canceled' }) });
+        return res.status(200).json({ success: false, error: 'Falha ao gerar PIX', details: (pay?.message || JSON.stringify(pay)).slice(0, 300) });
+      }
+      const td = pay.point_of_interaction?.transaction_data || {};
+      await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+        mp_payment_id: String(pay.id), pix_qr: td.qr_code || null, pix_qr_base64: td.qr_code_base64 || null, pix_ticket_url: td.ticket_url || null,
+      }) });
+      return res.status(200).json({
+        success: true, pending: true, sale_id: saleId, total, items: lines.length,
+        pix: { payment_id: String(pay.id), pix_code: td.qr_code || null, qr_code_base64: td.qr_code_base64 || null, ticket_url: td.ticket_url || null },
+      });
+    }
+
     const sale = {
       id: saleId, base44_id: saleId, kind: 'produto', source: 'pdv',
       seller_id: sellerId, operator_id: actorId,
