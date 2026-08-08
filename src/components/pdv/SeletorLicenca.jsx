@@ -9,6 +9,11 @@ import { User as UserIcon, Trash2, Loader2, BadgePercent } from 'lucide-react';
 // O percentual mostrado aqui é só espelho — quem calcula de verdade é o servidor.
 const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+// Escada da rede, do menor para o maior — espelho da mesma lista do servidor
+// (api/_lib/networkChain.js). Aqui serve só para MOSTRAR o degrau na tela; o
+// percentual de cada cargo continua vindo do banco (career_levels).
+const REDE = ['usuario', 'influenciador', 'vendedor', 'licenciado', 'parceiro', 'ponto_retirada', 'loja_fisica', 'distribuidor'];
+
 export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }) {
   const [q, setQ] = useState('');
   const [users, setUsers] = useState([]);
@@ -32,7 +37,23 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
     return () => { vivo = false; };
   }, []);
 
-  // melhor licença da pessoa (maior desconto entre os cargos que ela tem)
+  // 🪜 REGRA DO DEGRAU (espelho da regra do servidor): o teto é o cargo DESTE balcão, e
+  // quem compra tendo cargo igual ou maior é atendido como o degrau imediatamente abaixo
+  // dele — assim a casa nunca fica com 0%. Aqui é só a vitrine; quem paga é o servidor.
+  const { tetoPct, degrauPct } = useMemo(() => {
+    const dono = users.find((u) => String(u.id) === String(ownerId));
+    const cargos = [...(Array.isArray(dono?.career_levels) ? dono.career_levels : []), dono?.primary_career_level].filter(Boolean);
+    let melhorId = null; let melhorPct = 0;
+    cargos.forEach((c) => {
+      if (!REDE.includes(c)) return;
+      const pct = Number(levels[c]?.venda_direta_pct || 0);
+      if (melhorId === null || pct > melhorPct) { melhorId = c; melhorPct = pct; }
+    });
+    const i = REDE.indexOf(melhorId);
+    return { tetoPct: melhorPct, degrauPct: i > 0 ? Number(levels[REDE[i - 1]]?.venda_direta_pct || 0) : 0 };
+  }, [users, ownerId, levels]);
+
+  // melhor licença da pessoa (maior percentual entre os cargos que ela tem)
   const enfeitar = useMemo(() => (u) => {
     const cargos = [...(Array.isArray(u.career_levels) ? u.career_levels : []), u.primary_career_level].filter(Boolean);
     let melhor = null;
@@ -40,12 +61,16 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
       const lv = levels[c];
       if (lv && (!melhor || (Number(lv.venda_direta_pct) || 0) > (Number(melhor.venda_direta_pct) || 0))) melhor = lv;
     });
+    const bruto = Number(melhor?.venda_direta_pct) || 0;
+    // comprando de si mesmo o balcão leva o teto inteiro — o degrau não se aplica
+    const aplicaDegrau = tetoPct > 0 && bruto >= tetoPct && String(u.id) !== String(ownerId);
+    const efetivo = aplicaDegrau ? Math.min(bruto, degrauPct) : bruto;
     return {
       id: u.id, full_name: u.full_name, email: u.email,
       nivel: melhor?.id || 'usuario', nivel_nome: melhor?.nome || 'Usuário',
-      comissao_pct: Number(melhor?.venda_direta_pct) || 0,
+      comissao_pct: efetivo, comissao_pct_licenca: bruto, degrau: aplicaDegrau && efetivo !== bruto,
     };
-  }, [levels]);
+  }, [levels, tetoPct, degrauPct, ownerId]);
 
   // árvore abaixo do balcão (recrutou OU indicou, em qualquer profundidade)
   const { rede, outras } = useMemo(() => {
@@ -108,6 +133,7 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
         </div>
         <p className="text-[10px] text-gray-500 mt-1">
           Preço cheio no balcão. {comprador.comissao_pct}% volta como comissão pro escritório virtual dele; o restante do teto fica neste balcão.
+          {comprador.degrau && ` Como o cargo dele (${comprador.comissao_pct_licenca}%) alcança o deste balcão, ele é atendido um degrau abaixo — assim a casa não fica sem comissão.`}
         </p>
       </div>
     );
@@ -124,6 +150,7 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
       </div>
       <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-700 font-bold shrink-0 flex items-center gap-1">
         <BadgePercent className="w-3 h-3" />{p.comissao_pct}%
+        {p.degrau && <span className="text-[9px] font-normal text-gray-500 line-through">{p.comissao_pct_licenca}%</span>}
       </span>
     </button>
   );
