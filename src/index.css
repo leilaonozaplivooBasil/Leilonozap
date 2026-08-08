@@ -170,6 +170,10 @@ body[data-painel-nav] main [class*="from-gray-9"],
 body[data-painel-nav] main [class*="from-gray-8"] {
   background-image: linear-gradient(to right, #FFFFFF, var(--nz-cinza-fundo)) !important;
   border-color: var(--nz-borda) !important;
+  /* A tinta precisa vir JUNTO com o fundo: quando a faixa clareia mas a letra
+     continua branca (herdada do container), o título simplesmente some — foi o
+     caso de "Quanto mais alto..." no Evoluir Nível (08/08/2026). */
+  color: var(--nz-tinta) !important;
 }
 /* amarelo/âmbar sobre branco perde leitura: escurece para o tom do
    fogo da marca, mantendo o mesmo significado de energia/atenção */
@@ -178,6 +182,17 @@ body[data-painel-nav] main [class*="from-gray-8"] {
 body[data-painel-nav] main [class*="text-yellow-"],
 body[data-painel-nav] main [class*="text-amber-"] {
   color: #B45309 !important;
+}
+/* 🔤 TÍTULO EM DEGRADÊ SOME NO TEMA CLARO — CORREÇÃO DEFINITIVA.
+   Vários títulos usam letra "vazada" com degradê claro por trás (branco→cinza).
+   Sobre fundo escuro fica lindo; ao clarear o fundo o texto vira branco sobre
+   branco e SOME (caso "Meus Arremates", 08/08/2026). Aqui a letra volta a ser
+   tinta sólida escura sempre que a tela estiver no tema claro do painel. */
+.nz-painel:not(.nz-escuro) [class*="text-transparent"],
+body[data-painel-nav] main [class*="text-transparent"] {
+  color: var(--nz-tinta) !important;
+  -webkit-text-fill-color: var(--nz-tinta) !important;
+  background-image: none !important;
 }
 /* linhas zebradas discretas nas tabelas densas */
 .nz-painel:not(.nz-escuro) tbody tr:nth-child(even),

@@ -176,6 +176,35 @@ export function getSidebarConfigForUser(currentUser, currentPageName, adminMenuI
   const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin";
   if (!isAdmin) return empty;
 
+  // 🧭 PADRÃO ÚNICO DAS TELAS DA LATERAL (08/08/2026).
+  // Antes, a barra do painel aparecia nestas telas por acidente — só porque o
+  // NOME da página constava no menu de admin. Resultado: "Meus Arremates" tinha
+  // barra e "Carteira" não, sem critério, e o usuário reclamou (com razão) da
+  // bagunça. Agora a decisão é explícita: estas telas SEMPRE mostram a barra,
+  // porque desde que o botão "Voltar" foi retirado do sistema ela é a única
+  // saída. /painel fica fora de propósito: tem lateral própria e duas
+  // navegações na mesma tela seria pior que nenhuma.
+  const PAGINAS_COM_BARRA_FIXA = new Set([
+    "MyWinnings",
+    "MyCatalogOrders",
+    "Carteira",
+    "PainelArrematante",
+    "AddFunds",
+    "WalletHistory",
+    "Evoluir",
+  ]);
+  if (PAGINAS_COM_BARRA_FIXA.has(currentPageName)) {
+    return {
+      showSidebar: true,
+      categorized: true,
+      context: "admin",
+      title: currentUser.role === "super_admin"
+        ? "Painel de Controle (Super Admin)"
+        : "Painel de Controle (Admin)",
+      items: adminMenuItems,
+    };
+  }
+
   // 🛍️ LOJA VIRTUAL: nunca mostrar sidebar admin dentro da Loja.
   // A Loja é ambiente do cliente — admin acessa igual cliente vê. Ferramentas
   // admin da loja continuam acessíveis via rotas diretas e dropdown do avatar.

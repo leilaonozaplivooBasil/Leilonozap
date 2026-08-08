@@ -64,7 +64,10 @@ export default function Evoluir() {
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando…</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-10 px-4">
+    // ☀️ Tela no padrão claro do painel: a cor da letra é definida aqui, no
+    // próprio arquivo, para o título não depender de regra global (era branco
+    // herdado do container e sumia sobre o fundo claro).
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-nz-tinta py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-3">

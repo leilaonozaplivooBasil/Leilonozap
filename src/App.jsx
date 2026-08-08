@@ -208,7 +208,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
-      <Route path="/Evoluir" element={<Evoluir />} />
+      <Route path="/Evoluir" element={<LayoutWrapper currentPageName="Evoluir"><Evoluir /></LayoutWrapper>} />
       <Route path="/Cadastro" element={<Cadastro />} />
       <Route path="/rankpremiado" element={<ConcursoLeilaoNozap />} />
       {/* ⚠️ /concursoleilaonozap NÃO pode redirecionar pra /rankpremiado: são os DOIS
@@ -220,7 +220,10 @@ const AuthenticatedApp = () => {
       <Route path="/Passaporte" element={<PassaporteLances />} />
       {/* 🏪 Vitrine pública por loja da rede (standalone, sem Layout) */}
       <Route path="/loja/:slug" element={<LojaVitrine />} />
-      <Route path="/Carteira" element={<Carteira />} />
+      {/* 🧭 PADRÃO ÚNICO: estas telas abriam "soltas" (sem barra do topo e sem
+          lateral). Sem o botão Voltar, o usuário ficaria preso — agora entram
+          no mesmo Layout das demais e recebem a navegação padrão. */}
+      <Route path="/Carteira" element={<LayoutWrapper currentPageName="Carteira"><Carteira /></LayoutWrapper>} />
       <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pedidos" element={<LayoutWrapper currentPageName="PedidosDistribuidor"><PedidosDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />

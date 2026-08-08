@@ -41,6 +41,14 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
     else navigate(destino);
   };
 
+  // 🚫 DECISÃO DO DONO (08/08/2026): o sistema NÃO tem mais botão "Voltar" em
+  // tela nenhuma. A saída é sempre a navegação persistente (barra do painel no
+  // topo / lateral). Desligar aqui, num lugar só, garante o padrão em TODAS as
+  // telas de uma vez — sem risco de sobrar uma esquecida. O componente segue no
+  // projeto (as telas continuam podendo chamá-lo) apenas não desenha nada.
+  return null;
+
+  // eslint-disable-next-line no-unreachable
   if (temBarraDoPainel) return null;
 
   const cor = tema === 'claro'

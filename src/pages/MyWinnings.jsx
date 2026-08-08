@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import BotaoVoltar from '@/components/common/BotaoVoltar';
 
 
 
@@ -172,13 +171,14 @@ export default function MyWinningsPage() {
                 {/* Header Redesenhado */}
                 <div className="mb-8 sm:mb-10">
                     {/* ↩️ FASE 3 — saída padrão: esta tela não tinha botão voltar nenhum */}
-                    <div className="mb-4"><BotaoVoltar destino="/leiloes" /></div>
                     <div className="flex items-center gap-4 mb-3">
                         <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-3 rounded-2xl shadow-lg shadow-yellow-500/25">
                             <Trophy className="w-8 h-8 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                            {/* 🎯 Título em tinta sólida: o degradê branco→cinza sumia
+                                quando a tela entra no tema claro do painel. */}
+                            <h1 className="text-3xl sm:text-4xl font-black text-nz-tinta">
                                 Meus Arremates
                             </h1>
                             <p className="text-gray-400 text-sm sm:text-base mt-1">
