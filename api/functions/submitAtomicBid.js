@@ -38,11 +38,46 @@ async function sb(path, method = 'GET', body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// ⚠️ A função releaseHold foi REMOVIDA daqui em 08/08/2026 (regra oficial do dono):
-// ser coberto não devolve mais o dinheiro, então este arquivo não libera reserva
-// nenhuma. A devolução legítima acontece em dois lugares, e só neles:
-//   • encerramento do leilão  → finalizeAuction
-//   • rollback de lance que falhou → endpoint releaseBidHold
+// 🔄 REGRA OFICIAL CORRIGIDA (08/08/2026, pelo dono):
+// Ser coberto DEVOLVE o dinheiro na hora — para a pessoa poder relançar. O que
+// NÃO acontece é esse dinheiro virar saldo de compra da Loja Virtual: ele fica
+// comprometido até o leilão encerrar. Esse bloqueio para a loja NÃO é feito aqui
+// (nem por coluna): é calculado a partir dos lances vivos em _lib/compromissoLeilao.js
+// e aplicado no checkout da loja. Assim o lance nunca trava e a loja nunca gasta
+// dinheiro que ainda está em disputa.
+//
+// Devolve saldo_reservado → saldo_disponivel do líder ANTERIOR, com trava otimista
+// (só grava se os dois saldos estiverem como foram lidos). Nunca devolve mais do que
+// está reservado e nunca derruba o lance: falha aqui é registrada e seguimos.
+async function releaseHold(userId, valor) {
+  const uid = String(userId || '').trim();
+  const pedido = money(valor);
+  if (!uid || pedido <= 0) return 0;
+  try {
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const r = await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(uid)}&limit=1`);
+      const u = Array.isArray(r.data) ? r.data[0] : null;
+      if (!u) return 0;
+      const disponivel = money(u.saldo_disponivel);
+      const reservado = money(u.saldo_reservado);
+      const liberar = money(Math.min(pedido, reservado));
+      if (liberar <= 0) return 0;
+      // coluna nunca inicializada fica NULL, e "eq.0" jamais casa com NULL
+      const fDisp = disponivel === 0 ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)' : `saldo_disponivel.eq.${disponivel}`;
+      const fRes = reservado === 0 ? 'or(saldo_reservado.eq.0,saldo_reservado.is.null)' : `saldo_reservado.eq.${reservado}`;
+      const patch = await sb(`app_users?id=eq.${encodeURIComponent(uid)}&and=(${fDisp},${fRes})`, 'PATCH', {
+        saldo_disponivel: money(disponivel + liberar),
+        saldo_reservado: money(reservado - liberar),
+      });
+      if (Array.isArray(patch.data) && patch.data[0]) return liberar;
+      // corrida: o saldo mudou entre a leitura e a escrita — tenta de novo
+    }
+    return 0;
+  } catch (e) {
+    console.warn('[BID] releaseHold:', e?.message);
+    return 0;
+  }
+}
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -243,25 +278,24 @@ export default async function handler(req, res) {
       });
     }
 
-    // 🔒 REGRA OFICIAL 08/08/2026 — SER COBERTO **NÃO** DEVOLVE O DINHEIRO.
-    // Antes, no instante em que este lance vencia, a reserva do líder anterior era
-    // devolvida para o saldo disponível dele. Isso deixava lance vivo na sala SEM
-    // lastro na carteira: quem era coberto ficava com o dinheiro solto e, se voltasse
-    // a vencer, não havia valor travado para honrar o arremate (auditoria de 08/08
-    // achou 4 contas nessa situação, 2 delas com reserva ZERO e lance de pé).
-    //
-    // Pela regra do dono: o valor do lance fica RESERVADO até o LEILÃO ENCERRAR.
-    // • Não venceu  → a devolução acontece no encerramento (finalizeAuction).
-    // • Venceu      → o reservado é consumido no arremate.
-    // Só o valor do LANCE fica preso — nunca o saldo total da carteira.
-    //
-    // ⚠️ NÃO reintroduzir releaseHold aqui. A devolução por rollback de lance que
-    // FALHOU continua existindo e é outra coisa: roda pelo endpoint releaseBidHold.
+    // 🔄 DEVOLUÇÃO AO LÍDER ANTERIOR — este lance acabou de cobrir o dele.
+    // O dinheiro volta AGORA para o saldo dele, para que possa relançar sem esperar
+    // o leilão acabar (regra do dono, 08/08/2026). O que continua preso é o uso
+    // desse dinheiro na Loja Virtual, e isso é resolvido no checkout da loja pelo
+    // cálculo de compromisso (_lib/compromissoLeilao.js) — não aqui.
+    // Devolve o lance + o frete que ele tinha reservado junto. Só roda DEPOIS do
+    // PATCH atômico ter vencido a corrida: se o lance não valeu, nada é devolvido.
+    let releasedPrevious = null;
+    if (auction.winner_id && auction.winner_id !== userId) {
+      const valorAnterior = money(Number(auction.current_price || 0) + Number(auction.frete_reservado_valor || 0));
+      const devolvido = await releaseHold(auction.winner_id, valorAnterior);
+      if (devolvido > 0) releasedPrevious = { user_id: auction.winner_id, valor: devolvido };
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Lance registrado com sucesso!',
-      released_previous: null,
+      released_previous: releasedPrevious,
       new_state: {
         current_price: patchedRow.current_price,
         winner_name: patchedRow.winner_name,

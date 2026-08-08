@@ -1,5 +1,7 @@
 // debitWalletBalance — debita saldo gastável (app_users.saldo_disponivel) de forma ATÔMICA (compare-and-swap).
 // Usado pelo arremate/compra rápida na sala do leilão. Só debita se houver saldo suficiente.
+import { compromissoEmLeiloes } from '../_lib/compromissoLeilao.js';
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -20,6 +22,29 @@ export default async function handler(req, res) {
     const amount = money(body?.amount);
     if (!userId || amount <= 0) return res.status(400).json({ success: false, error: 'Dados inválidos' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
+
+    // 🔒 COMPRA NA LOJA VIRTUAL — REGRA DOS TRÊS ESTADOS (08/08/2026).
+    // Quem chama com escopo 'loja' só pode gastar o dinheiro LIVRE: o que está
+    // comprometido em leilão ainda rolando serve para relançar, não para comprar.
+    // O arremate/compra na sala do leilão NÃO manda escopo e segue como sempre —
+    // ali o dinheiro do leilão é justamente o que deve ser usado.
+    if (String(body?.escopo || '') === 'loja') {
+      const comprometido = await compromissoEmLeiloes(userId);
+      if (comprometido > 0) {
+        const rows = await (await sb(`app_users?select=saldo_disponivel&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+        const disponivel = money(Array.isArray(rows) ? rows[0]?.saldo_disponivel : 0);
+        const livre = money(Math.max(0, disponivel - comprometido));
+        if (amount > livre) {
+          return res.status(200).json({
+            success: false,
+            error: `Você tem ${money(comprometido).toFixed(2).replace('.', ',')} em disputa em leilões que ainda não encerraram. Esse valor libera para a loja quando cada leilão terminar.`,
+            balance: disponivel,
+            saldo_livre_loja: livre,
+            saldo_comprometido_leilao: comprometido,
+          });
+        }
+      }
+    }
 
     // compare-and-swap: lê saldo, tenta gravar novo valor GUARDANDO o valor antigo.
     // Se outra operação alterou o saldo no meio, 0 linhas voltam e a gente relê e tenta de novo.

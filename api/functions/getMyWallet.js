@@ -1,5 +1,7 @@
 // getMyWallet — devolve a carteira do PRÓPRIO usuário (saldo, extrato de comissões, saques, KYC).
 // Lê as tabelas financeiras via service_role (elas são privadas pra anon).
+import { compromissoEmLeiloes } from '../_lib/compromissoLeilao.js';
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 function sb(path, opts = {}) {
@@ -31,9 +33,20 @@ export default async function handler(req, res) {
     const withdrawals = await (await sb(`withdrawal_requests?select=valor,status,requested_at,reviewed_at,reject_reason&user_id=eq.${encodeURIComponent(userId)}&order=requested_at.desc&limit=50`)).json();
     const kyc = (await (await sb(`kyc_data?select=submitted_at,reviewed_at,reject_reason&user_id=eq.${encodeURIComponent(userId)}&limit=1`)).json())[0] || null;
 
+    // 🔒 REGRA DOS TRÊS ESTADOS (08/08/2026): parte do saldo disponível pode estar
+    // comprometida em leilão ainda rolando (a pessoa foi coberta e o dinheiro voltou
+    // para relançar). Esse pedaço dá lance, mas NÃO compra na Loja Virtual.
+    let saldo_comprometido_leilao = 0;
+    try { saldo_comprometido_leilao = await compromissoEmLeiloes(userId); } catch (_) { /* nunca derruba a carteira */ }
+    const saldo_livre_loja = Math.round(Math.max(0, (Number(user.saldo_disponivel) || 0) - saldo_comprometido_leilao) * 100) / 100;
+
     return res.status(200).json({
       success: true,
       saldo_disponivel: Number(user.saldo_disponivel) || 0,
+      // quanto do disponível está preso a leilões em andamento (não gasta na loja)
+      saldo_comprometido_leilao,
+      // o ÚNICO valor que a Loja Virtual pode gastar
+      saldo_livre_loja,
       saldo_alocado: Number(user.saldo_alocado) || 0,
       // 💰 dinheiro travado em lances ativos (mesma coluna usada por reserveBidBalance/releaseHold).
       // Campo ADITIVO: saldo_alocado continua intacto para quem já o consome (investidor).
