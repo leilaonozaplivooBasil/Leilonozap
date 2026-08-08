@@ -51,6 +51,20 @@ import { Menu, ShoppingCart as CartIcon, Wallet as WalletIcon } from "lucide-rea
 
 
 
+// ☀️ TELAS DE TRABALHO NO TEMA CLARO INSTITUCIONAL (08/08/2026)
+// A referência visual é o Painel de Alavancagem (/Licensing): fundo branco,
+// cartões brancos, verde da marca. Em vez de repintar tela por tela, marcamos
+// aqui quais páginas entram no tema — a regra .nz-painel do index.css faz a
+// pintura. FORA da lista (continuam como estão): Recepção, Loja Virtual
+// pública, sala de leilão, Live Shop, páginas do Parceiro e a Visão da Operação.
+const PAGINAS_TEMA_CLARO = new Set([
+  'MyCatalogOrders', 'MyWinnings', 'TirarPedido', 'PedidosDistribuidor', 'MeuEstoque',
+  'GestaoMetas', 'PainelArrematante', 'ProductManagement', 'CatalogManagement',
+  'CatalogOrdersAdmin', 'PromoCreator', 'NetworkOverview', 'RegisterBatches',
+  'EstoqueLotes', 'GestaoLotes', 'SellerPanel', 'CuponsAdmin', 'AdminLancesAutorizados',
+  'AnaliseLoteEstoque', 'UserManagement', 'AdminUsers', 'AdminWithdrawals',
+]);
+
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -951,7 +965,7 @@ export default function Layout({ children, currentPageName }) {
           onLogout={handleLogout}
         />
 
-        <main className={isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")}>
+        <main className={`${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''}`}>
           {/* 26/07 — MENU DO PAINEL NO TOPO (substitui a sidebar lateral de 240px):
               barra de comando sticky com mega-menu por seção, grade completa e
               busca por Cmd+K. Libera a largura inteira da tela para o conteúdo. */}

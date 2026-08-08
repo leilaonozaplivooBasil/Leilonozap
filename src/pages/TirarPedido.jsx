@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import BotaoVoltar from '@/components/common/BotaoVoltar';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
   Package, User as UserIcon, Phone, CreditCard, Banknote, QrCode, Store, Truck
@@ -140,12 +141,14 @@ export default function TirarPedido() {
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    /* ☀️ Tema claro institucional (mesmo do Painel de Alavancagem) */
+    <div className="min-h-screen bg-white text-nz-tinta nz-painel">
       {/* header */}
-      <div className="bg-gray-950 border-b border-gray-800 px-6 py-4 sticky top-16 z-20">
+      <div className="bg-white border-b border-nz-borda px-6 py-4 sticky top-16 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/painel')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-700"><ArrowLeft className="w-4 h-4" /> Voltar</button>
+            {/* ↩️ botão voltar único do sistema (era um botão próprio desta tela) */}
+            <BotaoVoltar destino="/painel" tema="claro" />
             <div className="w-9 h-9 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center"><ShoppingCart className="w-5 h-5 text-green-400" /></div>
             <div>
               <h1 className="text-xl font-black leading-none">PDV — Tirar Pedido</h1>

@@ -254,12 +254,13 @@ export default function MyCatalogOrders() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white p-3 sm:p-4 md:p-6 lg:p-8">
+    /* ☀️ Tema claro institucional (mesmo do Painel de Alavancagem) */
+    <div className="min-h-screen bg-white text-nz-tinta nz-painel p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 sm:mb-10">
           {/* ↩️ FASE 3 — passa a usar o botão voltar único do sistema */}
-          <div className="mb-4"><BotaoVoltar destino="/Loja-Virtual" /></div>
+          <div className="mb-4"><BotaoVoltar destino="/Loja-Virtual" tema="claro" /></div>
 
           <div className="flex items-center gap-3 sm:gap-4 mb-2">
             <div className="p-2.5 sm:p-3 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">

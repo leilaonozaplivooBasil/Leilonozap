@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 // ↩️ BOTÃO VOLTAR ÚNICO DO SISTEMA (FASE 3).
@@ -11,9 +11,18 @@ import { ArrowLeft } from 'lucide-react';
 // abrir do WhatsApp, PWA recém-aberto), cai no destino de segurança.
 export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'escuro', className = '' }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // 🐞 CAUSA-RAIZ DO "VOLTAR QUE NÃO VOLTA" (08/08/2026):
+  // a checagem era window.history.length > 1 — que conta o histórico do NAVEGADOR
+  // inteiro (abas anteriores, editor, links de fora). Como quase sempre é > 1, o
+  // botão chamava navigate(-1) e voltava para uma página FORA do app — no
+  // preview/iframe e no PWA isso não mostra mudança nenhuma: parece que o clique
+  // morreu. Agora usamos a chave de navegação do próprio app: quando a pessoa
+  // ENTROU direto pela URL (link do WhatsApp, PWA recém-aberto), a chave é
+  // 'default' — não há para onde voltar dentro do app, então vai pro destino.
   const voltar = () => {
-    if (window.history.length > 1) navigate(-1);
+    if (location.key && location.key !== 'default') navigate(-1);
     else navigate(destino);
   };
 

@@ -78,10 +78,11 @@ export default function Carteira() {
   const aprovado = w?.kyc_status === 'aprovado';
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white py-8 px-4">
+    /* ☀️ Tema claro institucional (mesmo do Painel de Alavancagem) */
+    <div className="min-h-screen bg-white text-nz-tinta nz-painel py-8 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* ↩️ FASE 3 — saída padrão: esta tela não tinha botão voltar nenhum */}
-        <BotaoVoltar destino="/Licensing" />
+        <BotaoVoltar destino="/Licensing" tema="claro" />
         {/* Header — cartão de identidade, mesmo estilo do Perfil */}
         <div
           className="relative overflow-hidden rounded-2xl border border-white/10 p-6 sm:p-8 shadow-lg shadow-black/20"
