@@ -66,7 +66,7 @@ export async function settlePdvPixSale(sale) {
       const rr = await pagarComissaoBalcao({
         saleId: sale.id, produtoTitulo: sale.product_title,
         base: Number(raw.total_bruto) || Number(sale.total_amount) || 0,
-        comprador, balcao, levels: tabelas.levels, ov: tabelas.ov,
+        comprador, balcao, levels: tabelas.levels,
       });
       commission = rr?.total ?? 0;
       if (commission > 0) {

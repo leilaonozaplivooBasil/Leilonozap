@@ -102,30 +102,50 @@ const temCargo = (u, cargo) => {
   return (ALIAS[cargo] || [cargo]).some((c) => meus.includes(c));
 };
 
-/**
- * Calcula a distribuição de UMA venda. Função pura — dá pra simular e auditar.
- * @param {{id:string,total_amount:number,seller_id:string}} sale
- * @param {Array} users lista de contas (id, full_name, career_levels, referred_by_id)
- */
-export function calcularComissao(sale, users) {
-  const valor = Number(sale.total_amount) || 0;
-  const byId = new Map(users.map((u) => [u.id, u]));
-  const assignments = [];
-  let companyPercent = 0;
-
-  if (!valor) return { assignments: [], companyPercent: TOTAL_PCT, companyAmount: 0, total: 0 };
-
-  // cadeia da venda: âncora (quem vendeu) + uplines. Protege contra ciclo e ponteiro quebrado.
+/** Cadeia da venda: âncora (quem vendeu) + uplines. Protege contra ciclo e ponteiro quebrado. */
+function montarCadeia(sellerId, byId) {
   const chain = [];
   const vistos = new Set();
-  let cur = sale.seller_id ? byId.get(sale.seller_id) : null;
+  let cur = sellerId ? byId.get(sellerId) : null;
   while (cur && !vistos.has(cur.id) && chain.length < 50) {
     chain.push(cur);
     vistos.add(cur.id);
     cur = cur.referred_by_id ? byId.get(cur.referred_by_id) : null;
   }
+  return chain;
+}
 
+/**
+ * 👑 TOPO (10%) — MOTOR ÚNICO DO ECOSSISTEMA.
+ *
+ * REGRA SOBERANA (Santana/Gabriel, 08/08/2026): existe UM ÚNICO TOPO para toda a
+ * cadeia — Brasil e mundo. Ele recebe de TODOS os distribuidores, em TODA venda:
+ * leilão, loja virtual e balcão físico. Não importa qual distribuidor vendeu, quem
+ * está levando, a linha do comprador nem o meio de pagamento (dinheiro, cartão,
+ * PIX ou SALDO — saldo é dinheiro). O topo NUNCA é suprimido nem diluído.
+ *
+ *   GOVERNANÇA (9%) — pool por CARGO: paga mesmo na venda orgânica, sem cadeia.
+ *   EXECUTIVO (1%)  — o único que NÃO é pool: ganha só sobre a PRÓPRIA estrutura
+ *                     (ex.: Ribeiro em Bangu, Luiz Santana no Recreio). Sem
+ *                     executivo na estrutura, a fatia fica com a empresa.
+ *
+ * Extraído de dentro de calcularComissao em 08/08/2026 para que a venda de BALCÃO
+ * (api/_lib/pdvBalcao.js) consumisse EXATAMENTE este cálculo, em vez de ter um
+ * segundo topo com regra própria. O resultado da loja online é idêntico ao de
+ * antes — só saiu do lugar, nenhum percentual mudou.
+ *
+ * @returns {{assignments: Array, companyPercent: number}}
+ */
+export function calcularTopo(sale, users) {
+  const valor = Number(sale.total_amount) || 0;
+  const assignments = [];
+  let companyPercent = 0;
+  if (!valor) return { assignments, companyPercent: 0 };
+
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const chain = montarCadeia(sale.seller_id, byId);
   const elegiveisPool = users.filter((u) => u.full_name !== EMPRESA);
+
   // 💰 Pool sem perda de centavo: divide a fatia em CENTAVOS INTEIROS pelo método do maior
   // resto. Antes, round2 por pessoa engolia frações (1% ÷ 7 fundadores numa venda de R$ 2,00
   // = R$ 0,00286 → R$ 0,00 pra todo mundo, e o dinheiro sumia). Agora a soma dos centavos
@@ -154,8 +174,8 @@ export function calcularComissao(sale, users) {
     }
   };
 
-  // 1) TOPO (10%) — "o topo recebe SEMPRE" (Santana, 14/07): governança + gestão são pagos
-  //    mesmo na venda orgânica (sem cadeia), porque ganham pelo CARGO, não por indicação.
+  // GOVERNANÇA (9%) — "o topo recebe SEMPRE" (Santana, 14/07): pago mesmo na venda
+  // orgânica (sem cadeia), porque ganham pelo CARGO, não por indicação.
   for (const p of POOLS) pagarPool(p.id, p.pct, 'governanca');
 
   // Executivo (1%): ganha "exclusivamente sobre a PRÓPRIA estrutura". NUNCA é pool —
@@ -180,6 +200,33 @@ export function calcularComissao(sale, users) {
   } else {
     companyPercent += PCT_EXECUTIVO;
   }
+
+  return { assignments, companyPercent };
+}
+
+/**
+ * Calcula a distribuição de UMA venda. Função pura — dá pra simular e auditar.
+ * @param {{id:string,total_amount:number,seller_id:string}} sale
+ * @param {Array} users lista de contas (id, full_name, career_levels, referred_by_id)
+ */
+export function calcularComissao(sale, users) {
+  const valor = Number(sale.total_amount) || 0;
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const assignments = [];
+  let companyPercent = 0;
+
+  if (!valor) return { assignments: [], companyPercent: TOTAL_PCT, companyAmount: 0, total: 0 };
+
+  const chain = montarCadeia(sale.seller_id, byId);
+
+  // 1) TOPO (10%) — governança (9%) + executivo da estrutura (1%).
+  //    O cálculo mora em calcularTopo() (acima), que é o MOTOR ÚNICO do topo:
+  //    a venda de balcão (pdvBalcao.js) consome exatamente esta mesma função,
+  //    então online e presencial pagam o topo pela mesma régua. Nada mudou aqui
+  //    em valores — o bloco só saiu de dentro desta função para poder ser reusado.
+  const topo = calcularTopo(sale, users);
+  assignments.push(...topo.assignments);
+  companyPercent += topo.companyPercent;
 
   // 2) OPERAÇÃO + COMERCIAL (20%) — CADEIA TELESCÓPICA.
   //    Âncora (quem vendeu) leva o % de venda direta do cargo mais alto que tem.

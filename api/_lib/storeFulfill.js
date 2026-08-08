@@ -63,10 +63,27 @@ async function payStoreCommissions(sale) {
     await sb('commission_records', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(linhas) });
   }
   // crédito ATÔMICO por pessoa (commission_balance += amount no banco)
+  // 💸 CRÉDITO CONFERIDO (correção 08/08/2026): antes o crédito era disparado sem olhar
+  // o retorno. Se um falhasse, o commission_record existia mas o saldo NÃO caía — e a
+  // guarda de idempotência (sale_id) impedia qualquer reprocessamento. Dinheiro que
+  // aparecia no extrato e nunca no saldo, em silêncio. Agora o que não cai é marcado
+  // como 'pending' na venda e pode ser reprocessado depois SEM pagar em dobro.
   const porPessoa = {};
   for (const a of assignments) porPessoa[a.user_id] = round2((porPessoa[a.user_id] || 0) + a.amount);
   for (const [uid, amount] of Object.entries(porPessoa)) {
-    if (amount > 0.001) await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: uid, _amount: amount }) });
+    if (amount <= 0.001) continue;
+    let ok = false;
+    try {
+      const res = await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: uid, _amount: amount }) });
+      ok = res.ok;
+    } catch (_) { ok = false; }
+    if (!ok) {
+      total = round2(total - amount);
+      await sb(`commission_records?sale_id=eq.${encodeURIComponent(sale.id)}&user_id=eq.${encodeURIComponent(uid)}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'pending' }),
+      });
+      console.error(`[LOJA] Comissão NÃO creditada (marcada como pendente): venda ${sale.id}, pessoa ${uid}, R$ ${amount}`);
+    }
   }
   return round2(total);
 }

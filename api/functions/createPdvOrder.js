@@ -93,7 +93,25 @@ export default async function handler(req, res) {
       tabelas = await carregarTabelasBalcao();
       comissaoInfo = comissaoDaLicenca(comprador, tabelas.levels);
     }
-    sellerId = isStoreOwner ? actorId : (sellerId || employerId || actorId);
+
+    // 🔐 QUEM PAGA É QUEM RECEBE (correção 08/08/2026).
+    // O rebate do balcão ia para o dono cadastrado do produto (distribuidor_id),
+    // enquanto o débito em saldo saía de quem estava operando (employer/actor).
+    // Produto de OUTRO distribuidor = carteira A paga e comissão vai pra B, sem
+    // travar e sem avisar. Agora o balcão da operação é quem responde por ela, e
+    // divergência trava o pedido em vez de pagar para o lado errado.
+    // Admin/super_admin é exceção: ele opera EM NOME do distribuidor dono do
+    // produto (não é o balcão), então segue o comportamento de sempre.
+    const donoProduto = sellerId; // veio do distribuidor_id dos itens (se houver)
+    if (!isStoreOwner && !isAdmin) {
+      const balcaoOperacao = employerId || actorId;
+      if (donoProduto && String(donoProduto) !== String(balcaoOperacao)) {
+        return res.status(200).json({ success: false, error: 'Este produto pertence a outro distribuidor. O pedido não pode ser fechado neste balcão — quem paga tem que ser quem recebe a comissão.' });
+      }
+      sellerId = balcaoOperacao;
+    } else {
+      sellerId = isStoreOwner ? actorId : (donoProduto || employerId || actorId);
+    }
 
     // 🧑‍💼 venda vinculada a um vendedor da rede → a venda passa a ser DELE (e ele ganha comissão)
     let vendedor = null;
@@ -227,7 +245,7 @@ export default async function handler(req, res) {
     }
 
     // 💰 COMISSÃO da venda física.
-    let comissao = 0; let rateio = null;
+    let comissao = 0; let rateio = null; let comissaoErro = null;
     try {
       if (comprador) {
         // 🏪 LICENÇA IDENTIFICADA: comprador recebe o % da licença dele no escritório virtual
@@ -235,7 +253,7 @@ export default async function handler(req, res) {
         const balcao = await buscarUsuario(sellerId);
         rateio = await pagarComissaoBalcao({
           saleId, produtoTitulo: sale.product_title, base: totalBruto,
-          comprador, balcao, levels: tabelas.levels, ov: tabelas.ov,
+          comprador, balcao, levels: tabelas.levels,
         });
         comissao = rateio?.total ?? 0;
       } else {
@@ -249,10 +267,12 @@ export default async function handler(req, res) {
       }
       if (comissao > 0) await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: comissao }) });
     } catch (e) {
-      console.warn('PDV: comissão falhou (venda segue gravada):', e?.message);
+      // ⚠️ não engolir: a venda vale, mas a comissão precisa ser vista e reprocessada.
+      comissaoErro = String(e?.message || e).slice(0, 200);
+      console.error(`[PDV] COMISSÃO FALHOU na venda ${saleId} (venda gravada, comissão pendente):`, comissaoErro);
     }
 
-    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, saldo_restante: saldoRestante, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao });
+    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, saldo_restante: saldoRestante, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao, comissao_erro: comissaoErro, comissoes_pendentes: rateio?.pendentes || 0 });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao tirar pedido', details: String(e?.message || e) });
   }

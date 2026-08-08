@@ -4,19 +4,33 @@
 // o valor cheio e recebe o percentual da PRÓPRIA licença como COMISSÃO no escritório
 // virtual dele; o que sobra até o teto do balcão fica com o balcão que atendeu.
 //
-// Por que é diferente do online:
+// 👑 TOPO 10% — REGRA SOBERANA (Santana/Gabriel, 08/08/2026):
+// existe UM ÚNICO TOPO para toda a cadeia, no Brasil e no mundo. Ele recebe de TODOS
+// os distribuidores, em TODA venda — leilão, loja virtual e balcão físico —, não
+// importa qual distribuidor vendeu, quem está levando, a linha do comprador nem o
+// meio de pagamento (dinheiro, cartão, PIX ou SALDO — saldo é dinheiro).
+// Por isso o topo daqui NÃO é calculado neste arquivo: ele vem de calcularTopo()
+// do api/_lib/arvoreOficial.js, o MESMO motor da loja online. Um topo só, uma régua só.
+//
+// ⚠️ BUG CORRIGIDO EM 08/08/2026: antes, quando a licença do comprador era
+// identificada, a venda pagava SÓ o teto do balcão (20%) e o topo simplesmente não
+// era pago. Sem identificar, caía no motor online e pagava 30%. A mesma venda física
+// custava 20% ou 30% dependendo de um clique do operador — e o topo, que é
+// inegociável, ficava de fora. Agora os dois caminhos pagam topo 10% + cadeia 20%.
+//
+// Por que a CADEIA é diferente do online:
 // no online a comissão anda pela árvore inteira de quem comprou. No balcão, NÃO:
 // o produto é do balcão (ele comprou o lote, tem o estoque, entregou na hora), então
 // o rebate é SEMPRE dele — independente de o comprador ser de outra estrutura.
-// Quem é de outra linha e quer que a comissão suba pela linha dele compra na Loja Virtual.
+// Quem é de outra linha e quer que a cadeia suba pela linha dele compra na Loja Virtual.
 //
-// Exemplos que esta função reproduz (escada oficial da career_levels):
+// Exemplos que esta função reproduz na CADEIA (escada oficial da career_levels):
 //   influenciador (5%) no balcão do distribuidor (20%) → 5% comissão pro influenciador + 15% pro balcão
 //   influenciador de OUTRA estrutura no mesmo balcão   → idêntico: 5% + 15% (linha não importa)
 //   distribuidor (20%) comprando em outro balcão       → 20% pro comprador, 0% pro balcão
-//
-// ⚠️ NADA aqui é usado pela loja online. O online continua no storeFulfill/arvoreOficial.
+// Em TODOS eles, os 10% do topo sobem por cima, sempre.
 import { bestSellingLevel } from './networkChain.js';
+import { calcularTopo } from './arvoreOficial.js';
 import { oid } from './oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -24,6 +38,7 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 const CAMPOS_USER = 'id,full_name,email,career_levels,primary_career_level,recruited_by_id,referred_by_id';
+const EMPRESA = 'Leilão NoZap - Site Oficial';
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -32,17 +47,16 @@ function sb(path, opts = {}) {
   });
 }
 
-/** Escada oficial + rebates: SEMPRE lidos do banco, nunca chumbados no código. */
+/** Escada oficial da cadeia: SEMPRE lida do banco, nunca chumbada no código. */
 export async function carregarTabelasBalcao() {
-  const [levelsArr, ovRows] = await Promise.all([
-    (await sb('career_levels?select=id,nome,venda_direta_pct')).json(),
-    (await sb('commission_overrides?select=earner_level,on_level,pct&condicao=eq.direto')).json(),
-  ]);
+  // ⚠️ commission_overrides NÃO é lido aqui (limpeza 08/08/2026): a tabela de rebate
+  // da rede não se aplica ao balcão — a cadeia física é comprador x casa, dentro do
+  // teto do cargo do balcão. Antes o `ov` era carregado e passado adiante sem NUNCA
+  // ser usado, o que fazia parecer que override de rede valia no balcão. Não vale.
+  const levelsArr = await (await sb('career_levels?select=id,nome,venda_direta_pct')).json();
   const levels = {};
   (Array.isArray(levelsArr) ? levelsArr : []).forEach((l) => { levels[l.id] = l; });
-  const ov = {};
-  (Array.isArray(ovRows) ? ovRows : []).forEach((r) => { (ov[r.earner_level] = ov[r.earner_level] || {})[r.on_level] = Number(r.pct) || 0; });
-  return { levels, ov };
+  return { levels };
 }
 
 export async function buscarUsuario(id) {
@@ -59,10 +73,10 @@ export function comissaoDaLicenca(user, levels) {
 
 /**
  * Paga a comissão da venda de balcão sobre o valor CHEIO cobrado.
- * Comprador identificado → % da licença dele no escritório virtual dele.
- * Balcão → o que sobra até o teto do próprio cargo. Linha/estrutura NÃO importa.
+ * TOPO  → sempre 10%, pelo motor único (arvoreOficial.calcularTopo).
+ * CADEIA → comprador leva o % da licença dele; balcão fica com o resto do teto.
  */
-export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprador, balcao, levels, ov }) {
+export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprador, balcao, levels }) {
   const valor = Number(base) || 0;
   if (!valor || !comprador || !balcao) return { total: 0, linhas: [] };
 
@@ -70,6 +84,36 @@ export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprad
   const jaTem = await (await sb(`commission_records?select=id&sale_id=eq.${encodeURIComponent(saleId)}&limit=1`)).json();
   if (Array.isArray(jaTem) && jaTem.length) return { total: 0, linhas: [], jaPago: true };
 
+  const now = new Date().toISOString();
+  const registros = [];
+  const novoRegistro = (userId, userName, papel, pct, amount) => {
+    const id = oid();
+    return {
+      id, base44_id: id, sale_id: saleId, user_id: userId, user_name: userName,
+      role: papel, percent: Math.round((Number(pct) || 0) * 1000) / 1000, amount, sale_amount: valor,
+      sale_type: 'catalog', status: 'confirmed', product_title: produtoTitulo || null,
+      anchor_user_id: balcao.id, anchor_user_name: balcao.full_name, created_date: now,
+    };
+  };
+
+  // ── 1) TOPO (10%) — motor único, o mesmo da loja online ────────────────────────
+  // A "âncora" da venda é o BALCÃO: é a estrutura dele que define qual Sócio
+  // Executivo recebe o 1% (Ribeiro em Bangu, Luiz Santana no Recreio). Os 9% de
+  // governança são pool por cargo e caem sempre, venha de onde vier a venda.
+  // ⚠️ o SELECT é o MESMO campo a campo do storeFulfill (loja online), de propósito:
+  // pedir uma coluna que ainda não existe faz o PostgREST devolver erro, o topo viria
+  // vazio e o balcão pagaria 0% de topo em silêncio. A carteira executiva é lida de
+  // licenciado_context pelo próprio motor, então não precisa de coluna dedicada aqui.
+  const usersAtivos = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id,licenciado_context&active=neq.false&limit=2000')).json();
+  let topo = { assignments: [], companyPercent: 0 };
+  if (Array.isArray(usersAtivos) && usersAtivos.length) {
+    topo = calcularTopo({ id: saleId, total_amount: valor, seller_id: balcao.id }, usersAtivos);
+  }
+  for (const a of topo.assignments) {
+    if (a.amount > 0.001) registros.push(novoRegistro(a.user_id, a.user_name, a.role, a.percent, a.amount));
+  }
+
+  // ── 2) CADEIA (até o teto do cargo do balcão) ──────────────────────────────────
   const tetoPct = Number(bestSellingLevel(balcao, levels).pct) || 0;
   const compradorPct = Number(bestSellingLevel(comprador, levels).pct) || 0;
 
@@ -83,41 +127,58 @@ export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprad
     pedacos.push({ user: comprador, pct: pctComprador, papel: 'balcao_comprador' });
   }
   if (pctBalcao > 0.001) pedacos.push({ user: balcao, pct: pctBalcao, papel: 'balcao_casa' });
-  // comprando de si mesmo: uma linha só, com o teto inteiro
+  // comprando de si mesmo: uma linha só, com o teto inteiro (o topo entra por cima)
   if (String(comprador.id) === String(balcao.id)) {
     pedacos.length = 0;
     if (tetoPct > 0.001) pedacos.push({ user: balcao, pct: tetoPct, papel: 'balcao_casa' });
   }
-  if (!pedacos.length) return { total: 0, linhas: [], teto_pct: tetoPct };
 
-  const now = new Date().toISOString();
-  const registros = [];
-  let total = 0;
   for (const p of pedacos) {
     const amount = round2(valor * p.pct / 100);
     if (amount <= 0.001) continue;
-    const id = oid();
-    registros.push({
-      id, base44_id: id, sale_id: saleId, user_id: p.user.id, user_name: p.user.full_name,
-      role: p.papel, percent: Math.round(p.pct * 1000) / 1000, amount, sale_amount: valor,
-      sale_type: 'catalog', status: 'confirmed', product_title: produtoTitulo || null,
-      anchor_user_id: balcao.id, anchor_user_name: balcao.full_name, created_date: now,
-    });
-    total = round2(total + amount);
+    registros.push(novoRegistro(p.user.id, p.user.full_name, p.papel, p.pct, amount));
   }
 
-  if (registros.length) {
-    await sb('commission_records', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(registros) });
-    for (const r of registros) {
-      await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: r.user_id, _amount: r.amount }) });
+  if (!registros.length) return { total: 0, linhas: [], teto_pct: tetoPct };
+
+  // ── 3) GRAVA E CREDITA — com conferência ───────────────────────────────────────
+  const ins = await sb('commission_records', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(registros) });
+  if (!ins.ok) {
+    const t = await ins.text();
+    throw new Error(`Falha ao gravar comissão do balcão: ${t.slice(0, 200)}`);
+  }
+
+  // 💸 CRÉDITO CONFERIDO (correção 08/08/2026): antes o crédito era disparado sem
+  // olhar o retorno. Se um falhasse, o registro existia mas o saldo NÃO caía — e a
+  // guarda de idempotência acima impedia qualquer reprocessamento. Dinheiro que
+  // aparecia no extrato e nunca no saldo, em silêncio. Agora, o que não cair fica
+  // marcado como 'pending' e pode ser reprocessado depois SEM pagar em dobro.
+  let total = 0;
+  const naoCreditados = [];
+  for (const r of registros) {
+    let ok = false;
+    try {
+      const res = await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: r.user_id, _amount: r.amount }) });
+      ok = res.ok;
+    } catch (_) { ok = false; }
+    if (ok) {
+      total = round2(total + r.amount);
+    } else {
+      naoCreditados.push(r);
+      await sb(`commission_records?id=eq.${encodeURIComponent(r.id)}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'pending' }),
+      });
+      console.error(`[PDV] Comissão NÃO creditada (marcada como pendente): venda ${saleId}, pessoa ${r.user_id}, R$ ${r.amount}`);
     }
   }
 
   return {
     total,
+    topo_pct: round2(topo.assignments.reduce((s, a) => s + (Number(a.percent) || 0), 0)),
     comprador_pct: pctComprador,
     balcao_pct: pctBalcao,
     teto_pct: tetoPct,
-    linhas: registros.map((r) => ({ nome: r.user_name, pct: r.percent, valor: r.amount })),
+    pendentes: naoCreditados.length,
+    linhas: registros.map((r) => ({ nome: r.user_name, papel: r.role, pct: r.percent, valor: r.amount })),
   };
 }
