@@ -80,6 +80,10 @@ export default function AtualizacaoDisponivel() {
   const { temAtualizacao, versaoServidor, esgotado, forcadoFalhou } = useAppVersion();
   const [atualizando, setAtualizando] = useState(false);
   const [dispensado, setDispensado] = useState(false);
+  // ⏱️ Contagem visível antes de atualizar sozinho (o usuário VÊ que vai acontecer)
+  const [segundos, setSegundos] = useState(null);
+  // Se a aba estava atrás/campo em foco na hora, este contador reinicia o ciclo
+  const [ciclo, setCiclo] = useState(0);
 
   // Limpa o ?nzv= da URL depois que a carga nova subiu (não poluir links).
   useEffect(() => {
@@ -96,9 +100,10 @@ export default function AtualizacaoDisponivel() {
 
   // Feedback imediato no toque: o usuário vê que o comando foi aceito mesmo
   // que a troca leve um instante (rede lenta / worker sendo substituído).
-  const atualizarAgora = () => {
+  const atualizarAgora = React.useCallback(() => {
     if (atualizando) return;
     setAtualizando(true);
+    setSegundos(null);
     marcarTentativa(versaoServidor);
     if (esgotado) {
       // via normal já falhou 2x → saída de emergência (uma única vez)
@@ -107,23 +112,46 @@ export default function AtualizacaoDisponivel() {
     } else {
       atualizarNormal(versaoServidor);
     }
-  };
+  }, [atualizando, esgotado, versaoServidor]);
 
-  // Auto-atualização silenciosa: só em rota tranquila, só com a aba na frente,
-  // só sem campo em foco — e NUNCA depois de 2 tentativas gastas (fim do loop).
+  // ⏱️ AUTOMÁTICO COM CONTAGEM (pedido 08/08/2026): o aviso aparece, conta 4s e
+  // atualiza sozinho — no app instalado e no link, é o mesmo código.
+  //
+  // ⚠️ ANTI-LOOP PRESERVADO: quando as 2 recargas normais da versão-alvo já
+  // foram gastas (esgotado), o automático NÃO insiste no caminho que falhou —
+  // ele usa a saída de emergência UMA vez. Se nem ela resolver, entra o
+  // 'forcadoFalhou' e nada mais se recarrega sozinho.
+  // ⚠️ Telas de dinheiro/lance continuam FORA: ali só recarrega por toque.
   useEffect(() => {
-    if (!temAtualizacao || esgotado || forcadoFalhou) return;
+    if (!temAtualizacao || forcadoFalhou || atualizando) {
+      setSegundos(null);
+      return;
+    }
     const rota = (window.location.pathname + window.location.search).toLowerCase();
-    if (CRITICAS.some((c) => rota.includes(c))) return;
+    if (CRITICAS.some((c) => rota.includes(c))) {
+      setSegundos(null);
+      return;
+    }
+    setSegundos(4);
+    const tique = setInterval(() => {
+      setSegundos((s) => (s === null ? null : Math.max(0, s - 1)));
+    }, 1000);
     const t = setTimeout(() => {
-      if (document.visibilityState !== 'visible') return;
       const tag = (document.activeElement?.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) return;
-      marcarTentativa(versaoServidor);
-      atualizarNormal(versaoServidor);
-    }, 8000);
-    return () => clearTimeout(t);
-  }, [temAtualizacao, esgotado, forcadoFalhou, versaoServidor]);
+      const digitando =
+        tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable;
+      // Aba atrás ou usuário digitando: não atrapalha — reinicia a contagem.
+      if (document.visibilityState !== 'visible' || digitando) {
+        setCiclo((c) => c + 1);
+        return;
+      }
+      atualizarAgora();
+    }, 4000);
+    return () => {
+      clearInterval(tique);
+      clearTimeout(t);
+    };
+  }, [temAtualizacao, forcadoFalhou, atualizando, versaoServidor, ciclo, atualizarAgora]);
 
   if (!temAtualizacao || dispensado) return null;
 
@@ -154,7 +182,13 @@ export default function AtualizacaoDisponivel() {
       <div className="flex items-center gap-3 max-w-md w-full sm:w-auto px-4 py-3 rounded-2xl bg-nz-tinta text-white shadow-2xl">
         <RefreshCw className="w-4 h-4 shrink-0 text-nz-verde-claro" />
         <span className="text-sm font-medium flex-1">
-          {esgotado ? 'Atualização pendente — toque para forçar' : 'Nova versão disponível'}
+          {atualizando
+            ? 'Atualizando o aplicativo...'
+            : segundos !== null
+              ? `Nova versão — atualizando em ${segundos}s`
+              : esgotado
+                ? 'Atualização pendente — toque para atualizar'
+                : 'Nova versão disponível'}
         </span>
         <button
           type="button"
