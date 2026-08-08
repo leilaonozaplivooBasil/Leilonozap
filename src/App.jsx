@@ -233,7 +233,8 @@ const AuthenticatedApp = () => {
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />
       <Route path="/Metas" element={<LayoutWrapper currentPageName="GestaoMetas"><GestaoMetas /></LayoutWrapper>} />
       <Route path="/painel/estoque" element={<LayoutWrapper currentPageName="MeuEstoque"><MeuEstoque /></LayoutWrapper>} />
-      <Route path="/painel/comprar-estoque" element={<LayoutWrapper currentPageName="ComprarEstoque"><ComprarEstoque /></LayoutWrapper>} />
+      {/* 🧭 A compra virou aba do estoque — o link antigo continua valendo e leva pra aba certa */}
+      <Route path="/painel/comprar-estoque" element={<Navigate to="/painel/estoque?aba=comprar" replace />} />
       <Route path="/painel/consignado" element={
         <LayoutWrapper currentPageName="AdminConsignado">
           <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">

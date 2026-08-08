@@ -1,25 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { money } from '@/lib/format';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
   Package, Loader2, Search, Plus, Minus, Trash2,
-  Box, RefreshCw, PackagePlus
+  Box, RefreshCw
 } from 'lucide-react';
-// 🤝 mercadoria da casa que está na mão dele: dívida, prazo e devolução
-import ConsignadoCard from '@/components/consignado/ConsignadoCard';
+// 🧭 Estoque virou UMA tela só: o que é meu, comprar e pedir consignado.
+import AbasEstoque from '@/components/estoque/AbasEstoque';
+import PedirConsignado from '@/components/estoque/PedirConsignado';
+import ComprarEstoque from '@/pages/ComprarEstoque';
 
 
 export default function MeuEstoque() {
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [tab, setTab] = useState('meu'); // meu | catalogo
+  // aba vem da URL: quem chega por /painel/estoque?aba=comprar cai direto na compra
+  const [aba, setAba] = useState(() => {
+    const a = new URLSearchParams(window.location.search).get('aba');
+    return ['meu', 'comprar', 'consignado'].includes(a) ? a : 'meu';
+  });
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [term, setTerm] = useState('');
   const [busy, setBusy] = useState('');
+
+  const trocarAba = (nova) => {
+    setAba(nova);
+    // mantém a aba na URL para o link ser compartilhável e o voltar funcionar
+    window.history.replaceState(null, '', nova === 'meu' ? '/painel/estoque' : `/painel/estoque?aba=${nova}`);
+  };
 
   const isLojaFisica = user && (user.primary_career_level === 'loja_fisica' || (Array.isArray(user.career_levels) && user.career_levels.includes('loja_fisica')));
 
@@ -35,7 +45,17 @@ export default function MeuEstoque() {
     setLoading(true);
     try {
       const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q: q || '', lim: 400 });
-      setItems(data || []);
+      const lista = data || [];
+      // 🏷️ Origem de cada peça: COMPRADO (já é dele) ou CONSIGNADO (ainda deve).
+      // Vem do store_inventory e casa pela linha (inv_id). Se não casar, o item
+      // aparece sem selo — nunca some da lista.
+      const { data: inv } = await supabase
+        .from('store_inventory').select('id,origem,divida_aberta').eq('owner_id', u.id);
+      const porId = {}; (inv || []).forEach((r) => { porId[r.id] = r; });
+      setItems(lista.map((it) => {
+        const r = porId[it.inv_id];
+        return { ...it, origem: r?.origem || null, divida: Number(r?.divida_aberta) || 0 };
+      }));
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -82,20 +102,14 @@ export default function MeuEstoque() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        {/* 🏪 O antigo "Solicitar do distribuidor" colocava o produto na loja SEM pagar e
-            SEM baixar do estoque central. Agora ele leva ao pedido de reposição de
-            verdade: compra com o desconto da licença, e o estoque só entra com o
-            pagamento confirmado. */}
-        <div className="flex gap-2 mb-5">
-          <button onClick={() => navigate('/painel/comprar-estoque')} className="min-h-[44px] px-4 rounded-lg text-sm font-semibold bg-green-600 hover:bg-green-700 flex items-center gap-2">
-            <PackagePlus className="w-4 h-4" /> Comprar estoque
-          </button>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <div className="mb-5">
+          <AbasEstoque aba={aba} onAba={trocarAba} />
         </div>
 
-        <ConsignadoCard user={user} />
+        {aba === 'consignado' && <PedirConsignado user={user} />}
 
-        {tab === 'meu' && (
+        {aba === 'meu' && (
           <>
             <div className="relative mb-4 max-w-md">
               <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -124,7 +138,17 @@ export default function MeuEstoque() {
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             <span className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">{it.imagem ? <img src={it.imagem} alt="" className="w-full h-full object-cover" /> : <Package className="w-4 h-4 text-gray-400" />}</span>
-                            <span className="max-w-[320px] truncate">{it.descricao}</span>
+                            <div className="min-w-0">
+                              <span className="block max-w-[320px] truncate">{it.descricao}</span>
+                              {/* 🏷️ de quem é a peça: comprada (dele) ou consignada (ainda devendo) */}
+                              {it.origem === 'consignado' ? (
+                                <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                  CONSIGNADO{it.divida > 0 ? ` · devo ${money(it.divida)}` : ''}
+                                </span>
+                              ) : it.origem === 'comprado' ? (
+                                <span className="text-[10px] font-bold text-green-300 bg-green-500/15 px-1.5 py-0.5 rounded mt-0.5 inline-block">COMPRADO</span>
+                              ) : null}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-right text-green-400 font-semibold">{money(it.preco)}</td>
@@ -151,6 +175,9 @@ export default function MeuEstoque() {
             )}
           </>
         )}
+
+        {/* 🛒 A compra virou aba: mesma tela de sempre, agora sem sair do estoque */}
+        {aba === 'comprar' && <ComprarEstoque embutido />}
 
       </div>
     </div>
