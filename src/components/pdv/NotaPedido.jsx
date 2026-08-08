@@ -2,7 +2,7 @@ import React from 'react';
 import { money } from '@/lib/format';
 import { CheckCircle2, MessageCircle, X } from 'lucide-react';
 
-const PAY_LABEL = { dinheiro: 'Dinheiro', pix: 'PIX', cartao: 'Cartão' };
+const PAY_LABEL = { saldo: 'Saldo', dinheiro: 'Dinheiro', pix: 'PIX', cartao: 'Cartão' };
 const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
 
 // 🧾 Nota de pedido do PDV: resumo da compra pro cliente, com envio em tempo real

@@ -10,7 +10,7 @@ import NotaPedido from '@/components/pdv/NotaPedido';
 import SeletorLicenca from '@/components/pdv/SeletorLicenca';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
-  Package, User as UserIcon, Phone, CreditCard, Banknote, QrCode, Store, Truck
+  Package, User as UserIcon, Phone, CreditCard, Wallet, QrCode, Store, Truck
 } from 'lucide-react';
 
 const priceOf = (p) => Number(p.price_catalog || p.selling_price_retail || 0);
@@ -39,7 +39,8 @@ export default function TirarPedido() {
   const [searching, setSearching] = useState(false);
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState({ name: '', phone: '' });
-  const [payment, setPayment] = useState('dinheiro');
+  const [payment, setPayment] = useState('saldo');
+  const [saldo, setSaldo] = useState(0); // saldo da carteira do balcão (compra saldo da plataforma)
   const [delivered, setDelivered] = useState(true); // retirada no balcão por padrão
   const [processing, setProcessing] = useState(false);
   const [todayTotal, setTodayTotal] = useState(0);
@@ -65,6 +66,9 @@ export default function TirarPedido() {
     const list = data || [];
     setTodayCount(list.length);
     setTodayTotal(list.reduce((s, x) => s + (Number(x.total_amount) || 0), 0));
+    // 💳 saldo do balcão — é com ele que a venda física é paga
+    const { data: w } = await supabase.from('app_users').select('saldo_disponivel').eq('id', u.id).maybeSingle();
+    setSaldo(Number(w?.saldo_disponivel) || 0);
   };
 
   // 🏪 A loja aparece INTEIRA por padrão (sem digitar nada), em ordem alfabética.
@@ -142,12 +146,12 @@ export default function TirarPedido() {
   const setPriceText = (id, raw) => setCart((prev) => prev.map((x) => (x.id === id ? { ...x, priceText: String(raw).replace(/[^\d.,]/g, '') } : x)));
   const remove = (id) => setCart((prev) => prev.filter((x) => x.id !== id));
 
-  // o preço digitado é sempre o CHEIO; o desconto da licença entra por cima (e o servidor
-  // recalcula do mesmo jeito — a tela aqui é só o espelho do que vai ser cobrado).
-  const totalBruto = cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0);
-  const descontoPct = Number(comprador?.desconto_pct) || 0;
-  const descontoValor = Math.round(totalBruto * descontoPct) / 100;
-  const total = Math.round((totalBruto - descontoValor) * 100) / 100;
+  // 🏪 no balcão NÃO existe desconto: o cliente paga o preço cheio. O percentual da licença
+  // de quem compra volta como COMISSÃO no escritório virtual dele (calculado no servidor).
+  const total = Math.round(cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0) * 100) / 100;
+  const comissaoPct = Number(comprador?.comissao_pct) || 0;
+  const comissaoValor = Math.round(total * comissaoPct) / 100;
+  const saldoInsuficiente = payment === 'saldo' && total > saldo;
 
   // limpa o balcão pro próximo pedido (chamado após fechar/confirmar)
   const limpar = () => { setCart([]); setCustomer({ name: '', phone: '' }); setComprador(null); loadToday(); };
@@ -158,7 +162,7 @@ export default function TirarPedido() {
     setProcessing(true);
     // 🧾 retrato do pedido ANTES de limpar — vira a nota e alimenta o modal do PIX
     const snapshot = {
-      items: cart.map((x) => ({ description: x.description, qty: x.qty, unit: Math.round(parseBRL(x.priceText) * (1 - descontoPct / 100) * 100) / 100 })),
+      items: cart.map((x) => ({ description: x.description, qty: x.qty, unit: Math.round(parseBRL(x.priceText) * 100) / 100 })),
       total, customer: { ...customer }, payment, vendedor: comprador?.full_name || null,
       storeName: user.store_name || user.full_name || 'Leilão NoZap',
     };
@@ -218,9 +222,15 @@ export default function TirarPedido() {
               <p className="text-xs text-gray-500 mt-0.5">Distribuidor 01 · {user.full_name}</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-[11px] text-gray-500 uppercase">Vendas hoje</div>
-            <div className="text-lg font-black text-green-400">{money(todayTotal)} <span className="text-xs text-gray-500">· {todayCount}</span></div>
+          <div className="flex items-center gap-5 text-right">
+            <div>
+              <div className="text-[11px] text-gray-500 uppercase">Vendas hoje</div>
+              <div className="text-lg font-black text-green-400">{money(todayTotal)} <span className="text-xs text-gray-500">· {todayCount}</span></div>
+            </div>
+            <div>
+              <div className="text-[11px] text-gray-500 uppercase">Saldo disponível</div>
+              <div className={`text-lg font-black ${saldo > 0 ? 'text-nz-verde' : 'text-red-500'}`}>{money(saldo)}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -305,8 +315,8 @@ export default function TirarPedido() {
             </div>
           )}
 
-          {/* quem está levando (licença): leva o desconto do próprio cargo; o restante do
-              teto sobe pela linha DESTE balcão */}
+          {/* escritório da comissão: quem compra recebe o % da própria licença e o balcão
+              fica com o restante do teto — sem desconto no preço */}
           {!isStore && (
             <SeletorLicenca
               ownerId={user.id}
@@ -330,7 +340,7 @@ export default function TirarPedido() {
 
           {/* pagamento */}
           <div className="grid grid-cols-3 gap-2 mb-3">
-            {[['dinheiro', 'Dinheiro', Banknote], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
+            {[['saldo', 'Saldo', Wallet], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
               <button key={k} onClick={() => setPayment(k)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}>
                 <Icon className="w-4 h-4" /> {label}
               </button>
@@ -343,14 +353,17 @@ export default function TirarPedido() {
             <button onClick={() => setDelivered(false)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${!delivered ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}><Truck className="w-4 h-4" /> Entregar depois</button>
           </div>
 
-          {descontoPct > 0 && (
+          {comissaoPct > 0 && (
             <div className="mb-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs">
-              <div className="flex items-center justify-between text-nz-tinta-fraca">
-                <span>Subtotal</span><span className="line-through">{money(totalBruto)}</span>
-              </div>
               <div className="flex items-center justify-between font-bold text-green-700">
-                <span>{comprador?.nivel_nome} · {descontoPct}% aplicado</span><span>− {money(descontoValor)}</span>
+                <span>{comprador?.nivel_nome} · {comissaoPct}% de comissão</span><span>{money(comissaoValor)}</span>
               </div>
+              <p className="text-[10px] text-nz-tinta-fraca mt-0.5">Sem desconto no preço — esse valor cai no escritório virtual dele.</p>
+            </div>
+          )}
+          {saldoInsuficiente && (
+            <div className="mb-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700 font-semibold">
+              Saldo insuficiente ({money(saldo)}). Compre saldo da plataforma para vender no balcão.
             </div>
           )}
 
@@ -359,7 +372,7 @@ export default function TirarPedido() {
             <span className="text-2xl font-black text-green-400">{money(total)}</span>
           </div>
 
-          <button onClick={finalize} disabled={processing || !cart.length} className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 font-black flex items-center justify-center gap-2">
+          <button onClick={finalize} disabled={processing || !cart.length || saldoInsuficiente} className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 font-black flex items-center justify-center gap-2">
             {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Fechar pedido
           </button>
         </div>

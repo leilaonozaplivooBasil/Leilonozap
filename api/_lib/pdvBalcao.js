@@ -1,23 +1,22 @@
 // pdvBalcao — REGRA EXCLUSIVA DA VENDA FÍSICA (balcão / PDV).
 //
-// A REGRA, em uma frase: quem compra no balcão leva o desconto da PRÓPRIA licença
-// e todo o restante até o teto do balcão sobe pela LINHA DO BALCÃO.
+// A REGRA, em uma frase: NO BALCÃO NÃO EXISTE DESCONTO NO PREÇO. Quem compra paga
+// o valor cheio e recebe o percentual da PRÓPRIA licença como COMISSÃO no escritório
+// virtual dele; o que sobra até o teto do balcão fica com o balcão que atendeu.
 //
-// Por que isso existe separado do online:
-// no online a comissão anda pela árvore de quem comprou, onde quer que ele esteja.
-// No físico isso dava briga: um influenciador do Recreio comprando em Bangu faria o
-// dinheiro sair da mão de quem bancou o lote, tem o estoque e entregou o produto.
-// Então, no balcão, o comprador ganha na hora (desconto no preço) e o restante fica
-// na casa que atendeu — quebrado na cadeia se houver gente da estrutura do balcão
-// no meio do caminho.
+// Por que é diferente do online:
+// no online a comissão anda pela árvore inteira de quem comprou. No balcão, NÃO:
+// o produto é do balcão (ele comprou o lote, tem o estoque, entregou na hora), então
+// o rebate é SEMPRE dele — independente de o comprador ser de outra estrutura.
+// Quem é de outra linha e quer que a comissão suba pela linha dele compra na Loja Virtual.
 //
-// Exemplos que esta função tem que reproduzir (escada oficial da career_levels):
-//   influenciador (5%) direto no balcão do distribuidor (20%) → 5% desconto + 15% distribuidor
-//   influenciador → licenciado de Bangu → distribuidor                → 5% + 8% + 7% = 20%
-//   distribuidor (20%) comprando em outro balcão      → 20% desconto, 0% sobe
+// Exemplos que esta função reproduz (escada oficial da career_levels):
+//   influenciador (5%) no balcão do distribuidor (20%) → 5% comissão pro influenciador + 15% pro balcão
+//   influenciador de OUTRA estrutura no mesmo balcão   → idêntico: 5% + 15% (linha não importa)
+//   distribuidor (20%) comprando em outro balcão       → 20% pro comprador, 0% pro balcão
 //
 // ⚠️ NADA aqui é usado pela loja online. O online continua no storeFulfill/arvoreOficial.
-import { bestSellingLevel, overridePct } from './networkChain.js';
+import { bestSellingLevel } from './networkChain.js';
 import { oid } from './oid.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -52,35 +51,16 @@ export async function buscarUsuario(id) {
   return Array.isArray(arr) ? arr[0] || null : null;
 }
 
-/** Percentual de desconto que a pessoa leva no balcão (o da licença dela). */
-export function descontoDaLicenca(user, levels) {
+/** Percentual de COMISSÃO da própria licença da pessoa (não é desconto no preço). */
+export function comissaoDaLicenca(user, levels) {
   const { level, pct } = bestSellingLevel(user, levels);
   return { level, nome: levels[level]?.nome || level, pct: Number(pct) || 0 };
 }
 
 /**
- * Sobe do comprador até o balcão. Devolve os ancestrais na ordem (pai, avô, …) terminando
- * no próprio balcão — ou null quando o comprador é de OUTRA estrutura.
- */
-export async function linhaAteBalcao(comprador, balcaoId) {
-  const linha = [];
-  let node = comprador;
-  for (let i = 0; i < 12; i++) {
-    const paiId = node?.recruited_by_id || node?.referred_by_id;
-    if (!paiId) return null;
-    const pai = await buscarUsuario(paiId);
-    if (!pai) return null;
-    linha.push(pai);
-    if (String(pai.id) === String(balcaoId)) return linha;
-    node = pai;
-  }
-  return null;
-}
-
-/**
- * Paga a comissão da venda de balcão.
- * `base` é o valor CHEIO (sem o desconto do comprador) — é sobre ele que o bloco
- * do teto é calculado, então desconto + comissões sempre fecham no teto do balcão.
+ * Paga a comissão da venda de balcão sobre o valor CHEIO cobrado.
+ * Comprador identificado → % da licença dele no escritório virtual dele.
+ * Balcão → o que sobra até o teto do próprio cargo. Linha/estrutura NÃO importa.
  */
 export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprador, balcao, levels, ov }) {
   const valor = Number(base) || 0;
@@ -91,27 +71,24 @@ export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprad
   if (Array.isArray(jaTem) && jaTem.length) return { total: 0, linhas: [], jaPago: true };
 
   const tetoPct = Number(bestSellingLevel(balcao, levels).pct) || 0;
-  const descontoPct = Number(bestSellingLevel(comprador, levels).pct) || 0;
-  const restantePct = Math.max(0, round2(tetoPct - descontoPct));
-  if (restantePct <= 0) return { total: 0, linhas: [], restante_pct: 0 };
+  const compradorPct = Number(bestSellingLevel(comprador, levels).pct) || 0;
 
-  const linha = await linhaAteBalcao(comprador, balcao.id);
-  const mesmaEstrutura = Array.isArray(linha);
+  // 🏪 O comprador leva a comissão da licença dele (limitada ao teto do balcão — não dá
+  // pra tirar do balcão mais do que ele mesmo tem de margem) e o balcão fica com o resto.
+  const pctComprador = Math.min(compradorPct, tetoPct);
+  const pctBalcao = Math.max(0, round2(tetoPct - pctComprador));
 
-  // monta os pedaços: intermediários da estrutura do balcão + o saldo pro balcão
   const pedacos = [];
-  let usado = 0;
-  if (mesmaEstrutura) {
-    let filho = comprador;
-    for (const ancestral of linha) {
-      if (String(ancestral.id) === String(balcao.id)) break; // o balcão recebe o saldo, no fim
-      const pct = Math.min(Number(overridePct(ov, ancestral, filho)) || 0, restantePct - usado);
-      if (pct > 0.001) { pedacos.push({ user: ancestral, pct, papel: 'balcao_override' }); usado = round2(usado + pct); }
-      filho = ancestral;
-    }
+  if (pctComprador > 0.001 && String(comprador.id) !== String(balcao.id)) {
+    pedacos.push({ user: comprador, pct: pctComprador, papel: 'balcao_comprador' });
   }
-  const pctBalcao = round2(restantePct - usado);
   if (pctBalcao > 0.001) pedacos.push({ user: balcao, pct: pctBalcao, papel: 'balcao_casa' });
+  // comprando de si mesmo: uma linha só, com o teto inteiro
+  if (String(comprador.id) === String(balcao.id)) {
+    pedacos.length = 0;
+    if (tetoPct > 0.001) pedacos.push({ user: balcao, pct: tetoPct, papel: 'balcao_casa' });
+  }
+  if (!pedacos.length) return { total: 0, linhas: [], teto_pct: tetoPct };
 
   const now = new Date().toISOString();
   const registros = [];
@@ -138,10 +115,9 @@ export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprad
 
   return {
     total,
-    desconto_pct: descontoPct,
-    restante_pct: restantePct,
+    comprador_pct: pctComprador,
+    balcao_pct: pctBalcao,
     teto_pct: tetoPct,
-    mesma_estrutura: mesmaEstrutura,
     linhas: registros.map((r) => ({ nome: r.user_name, pct: r.percent, valor: r.amount })),
   };
 }

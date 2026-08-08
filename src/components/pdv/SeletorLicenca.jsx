@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { User as UserIcon, Trash2, Loader2, BadgePercent } from 'lucide-react';
 
-// Seletor "Quem está levando (licença)" do balcão.
-// Lê a base direto (mesmo caminho da lista antiga de logins, que funcionava em
-// qualquer ambiente): mostra a ÁRVORE INTEIRA abaixo do balcão e, ao digitar,
-// TAMBÉM qualquer pessoa cadastrada em outras estruturas.
-// O desconto mostrado aqui é só espelho — quem calcula de verdade é o servidor.
+// Seletor "Para qual escritório vai a comissão?" do balcão.
+// Mostra o PRÓPRIO operador (compra de si mesmo), a árvore inteira abaixo dele e,
+// ao digitar, qualquer pessoa cadastrada em outras estruturas — no balcão a linha
+// não muda nada: o comprador leva a comissão da licença dele e o balcão o restante.
+// O percentual mostrado aqui é só espelho — quem calcula de verdade é o servidor.
 const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }) {
@@ -43,7 +43,7 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
     return {
       id: u.id, full_name: u.full_name, email: u.email,
       nivel: melhor?.id || 'usuario', nivel_nome: melhor?.nome || 'Usuário',
-      desconto_pct: Number(melhor?.venda_direta_pct) || 0,
+      comissao_pct: Number(melhor?.venda_direta_pct) || 0,
     };
   }, [levels]);
 
@@ -80,7 +80,13 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
       return node?.id === u.id ? null : node?.full_name || null;
     };
 
-    const minha = users.filter((u) => daRede.has(u.id) && casa(u)).map(enfeitar).sort(ordenar).slice(0, 400);
+    // 👤 o próprio operador entra no topo: ele também compra no próprio balcão
+    const eu = users.find((u) => String(u.id) === String(ownerId));
+    const euItem = eu && casa(eu) ? { ...enfeitar(eu), euMesmo: true } : null;
+    const minha = [
+      ...(euItem ? [euItem] : []),
+      ...users.filter((u) => daRede.has(u.id) && casa(u)).map(enfeitar).sort(ordenar).slice(0, 400),
+    ];
     // fora da rede só aparece quando digita — senão vira lista infinita no balcão
     const fora = termo
       ? users.filter((u) => u.id !== ownerId && !daRede.has(u.id) && casa(u))
@@ -92,19 +98,17 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
   if (comprador) {
     return (
       <div className="mb-3">
-        <label className="text-[11px] text-gray-500 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Quem está levando (licença)</label>
+        <label className="text-[11px] text-gray-500 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Para qual escritório vai a comissão?</label>
         <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
           <span className="text-sm text-green-800 truncate">
-            {comprador.full_name}
-            <span className="text-[10px] text-green-700/80"> · {comprador.nivel_nome} · {comprador.desconto_pct}% de desconto</span>
+            {comprador.euMesmo ? 'Eu mesmo — ' : ''}{comprador.full_name}
+            <span className="text-[10px] text-green-700/80"> · {comprador.nivel_nome} · {comprador.comissao_pct}% de comissão</span>
           </span>
           <button onClick={onClear} className="text-gray-500 hover:text-red-500 min-h-[44px] px-2"><Trash2 className="w-4 h-4" /></button>
         </div>
-        {comprador.estrutura && (
-          <p className="text-[10px] text-orange-600 mt-1">
-            É da estrutura de {comprador.estrutura} — desconto aplicado aqui, o restante fica neste balcão.
-          </p>
-        )}
+        <p className="text-[10px] text-gray-500 mt-1">
+          Preço cheio no balcão. {comprador.comissao_pct}% volta como comissão pro escritório virtual dele; o restante do teto fica neste balcão.
+        </p>
       </div>
     );
   }
@@ -115,18 +119,18 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
       className="w-full text-left px-3 py-2 min-h-[44px] hover:bg-nz-cinza-fundo text-sm border-b border-nz-borda last:border-0 flex items-center justify-between gap-2"
     >
       <div className="min-w-0">
-        <div className="truncate font-medium">{p.full_name || p.email}</div>
-        <div className="text-[10px] text-gray-500 truncate">{p.email}{deOutra && p.estrutura ? ` · estrutura de ${p.estrutura}` : ''}</div>
+        <div className="truncate font-medium">{p.euMesmo ? `Eu mesmo — ${p.full_name || p.email}` : (p.full_name || p.email)}</div>
+        <div className="text-[10px] text-gray-500 truncate">{p.euMesmo ? 'comissão volta pro meu escritório' : p.email}{deOutra && p.estrutura ? ` · estrutura de ${p.estrutura}` : ''}</div>
       </div>
       <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-700 font-bold shrink-0 flex items-center gap-1">
-        <BadgePercent className="w-3 h-3" />{p.desconto_pct}%
+        <BadgePercent className="w-3 h-3" />{p.comissao_pct}%
       </span>
     </button>
   );
 
   return (
     <div className="mb-3">
-      <label className="text-[11px] text-gray-500 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Quem está levando (licença) — opcional</label>
+      <label className="text-[11px] text-gray-500 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Para qual escritório vai a comissão? — opcional</label>
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}

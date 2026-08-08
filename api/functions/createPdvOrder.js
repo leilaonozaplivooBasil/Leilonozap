@@ -3,8 +3,8 @@
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
-// 🏪 regra EXCLUSIVA do balcão: desconto da licença de quem leva + restante pela linha do balcão
-import { carregarTabelasBalcao, buscarUsuario, descontoDaLicenca, pagarComissaoBalcao } from '../_lib/pdvBalcao.js';
+// 🏪 regra EXCLUSIVA do balcão: preço cheio + comissão da licença de quem compra e rebate do balcão
+import { carregarTabelasBalcao, buscarUsuario, comissaoDaLicenca, pagarComissaoBalcao } from '../_lib/pdvBalcao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -82,25 +82,16 @@ export default async function handler(req, res) {
     if (!lines.length) return res.status(400).json({ success: false, error: 'Nenhum produto válido' });
     total = round2(total);
 
-    // 🏷️ DESCONTO DE BALCÃO — quem se identifica leva o percentual da PRÓPRIA licença.
-    // O preço vem do cliente como valor CHEIO; o desconto é aplicado AQUI, no servidor,
-    // pra ninguém conseguir forjar preço nem descontar duas vezes.
-    let totalBruto = total;
-    let comprador = null, tabelas = null, descontoInfo = null;
+    // 🏷️ BALCÃO NÃO TEM DESCONTO NO PREÇO. Quem se identifica paga o valor cheio e recebe
+    // o percentual da própria licença como COMISSÃO no escritório virtual dele (pagamento
+    // acontece mais abaixo, junto com o rebate do balcão).
+    const totalBruto = total;
+    let comprador = null, tabelas = null, comissaoInfo = null;
     if (compradorId) {
       comprador = await buscarUsuario(compradorId);
       if (!comprador) return res.status(200).json({ success: false, error: 'Pessoa da licença não encontrada' });
       tabelas = await carregarTabelasBalcao();
-      descontoInfo = descontoDaLicenca(comprador, tabelas.levels);
-      if (descontoInfo.pct > 0) {
-        total = 0;
-        for (const ln of lines) {
-          ln.unitBruto = ln.unit;
-          ln.unit = round2(ln.unitBruto * (1 - descontoInfo.pct / 100));
-          total += ln.unit * ln.qty;
-        }
-        total = round2(total);
-      }
+      comissaoInfo = comissaoDaLicenca(comprador, tabelas.levels);
     }
     sellerId = isStoreOwner ? actorId : (sellerId || employerId || actorId);
 
@@ -167,7 +158,7 @@ export default async function handler(req, res) {
         mp_payment_id: String(pay.id), pix_qr: td.qr_code || null, pix_qr_base64: td.qr_code_base64 || null, pix_ticket_url: td.ticket_url || null,
       }) });
       return res.status(200).json({
-        success: true, pending: true, sale_id: saleId, total, total_bruto: totalBruto, desconto: descontoInfo, items: lines.length,
+        success: true, pending: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, items: lines.length,
         pix: { payment_id: String(pay.id), pix_code: td.qr_code || null, qr_code_base64: td.qr_code_base64 || null, ticket_url: td.ticket_url || null },
       });
     }
@@ -181,12 +172,41 @@ export default async function handler(req, res) {
       status: delivered ? 'entregue' : 'paid', payment_method: paymentMethod,
       ...(delivered ? { delivered_at: now } : {}),
     };
+    // 💳 PAGAMENTO EM SALDO — o balcão compra saldo da plataforma antes e a venda física
+    // debita da carteira DELE (o cliente pagou em dinheiro/máquina no balcão).
+    // Débito condicional no próprio banco: só passa se o saldo ainda cobrir o valor,
+    // então dois pedidos ao mesmo tempo nunca deixam a carteira negativa.
+    const walletOwnerId = employerId || actorId;
+    let saldoRestante = null;
+    if (paymentMethod === 'saldo') {
+      const wArr = await (await sb(`app_users?select=id,saldo_disponivel&id=eq.${encodeURIComponent(walletOwnerId)}&limit=1`)).json();
+      const saldoAtual = round2(Array.isArray(wArr) && wArr[0] ? wArr[0].saldo_disponivel : 0);
+      if (saldoAtual < total) {
+        return res.status(200).json({ success: false, error: `Saldo insuficiente. Disponível: R$ ${saldoAtual.toFixed(2)} · Pedido: R$ ${total.toFixed(2)}. Compre saldo da plataforma para vender no balcão.`, saldo: saldoAtual });
+      }
+      const deb = await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}&saldo_disponivel=gte.${total}`, {
+        method: 'PATCH', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ saldo_disponivel: round2(saldoAtual - total) }),
+      });
+      const debOk = deb.ok ? await deb.json() : null;
+      if (!Array.isArray(debOk) || !debOk.length) {
+        return res.status(200).json({ success: false, error: 'Não foi possível debitar o saldo. Tente novamente.' });
+      }
+      saldoRestante = round2(debOk[0].saldo_disponivel);
+    }
+
     // insere a venda (tenta com campos extras; se coluna não existir, cai pro mínimo)
     let r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(sale) });
     if (!r.ok) {
       const minimal = { id: saleId, base44_id: saleId, kind: 'produto', seller_id: sellerId, buyer_name: sale.buyer_name, product_title: sale.product_title, sale_price: total, total_amount: total, quantity: totalQty, status: sale.status, payment_method: paymentMethod };
       r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(minimal) });
-      if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao gravar venda', details: t.slice(0, 200) }); }
+      if (!r.ok) {
+        // venda não gravou → devolve o saldo debitado (nada de dinheiro sumido)
+        if (paymentMethod === 'saldo' && saldoRestante != null) {
+          await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ saldo_disponivel: round2(saldoRestante + total) }) });
+        }
+        const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao gravar venda', details: t.slice(0, 200) });
+      }
     }
 
     // baixa estoque de cada item (loja → store_inventory; distribuidor → products). qty=0 → inativo.
@@ -203,16 +223,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // 💰 COMISSÃO — venda de balcão paga IGUAL à loja online: mesma ÁRVORE OFICIAL (30%).
-    // Distribuidor, Loja Física e Ponto de Retirada têm loja física e vendem pelo PDV; o split
-    // é o mesmo da venda online (20% cadeia + 10% topo), conforme licença e cargo de cada um.
-    // (Antes usava payDirectCommissions — motor legado com teto de 20% e regra diferente.)
+    // 💰 COMISSÃO da venda física.
     let comissao = 0; let rateio = null;
     try {
       if (comprador) {
-        // 🏪 VENDA DE BALCÃO COM LICENÇA IDENTIFICADA: o comprador já levou o desconto dele
-        // no preço; o que sobra do teto sobe pela LINHA DO BALCÃO (intermediários da estrutura
-        // do balcão pegam o rebate deles, o distribuidor fica com o saldo).
+        // 🏪 LICENÇA IDENTIFICADA: comprador recebe o % da licença dele no escritório virtual
+        // e o balcão fica com o restante do teto — independente da linha/estrutura do comprador.
         const balcao = await buscarUsuario(sellerId);
         rateio = await pagarComissaoBalcao({
           saleId, produtoTitulo: sale.product_title, base: totalBruto,
@@ -233,7 +249,7 @@ export default async function handler(req, res) {
       console.warn('PDV: comissão falhou (venda segue gravada):', e?.message);
     }
 
-    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, desconto: descontoInfo, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao });
+    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, saldo_restante: saldoRestante, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao tirar pedido', details: String(e?.message || e) });
   }
