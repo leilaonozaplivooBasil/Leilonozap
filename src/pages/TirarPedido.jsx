@@ -87,28 +87,41 @@ export default function TirarPedido() {
         setResults((data || [])
           .filter((x) => x.ativo && Number(x.quantidade) > 0)
           .map((x) => ({ id: x.product_id, description: x.descricao, price_catalog: x.preco, quantity: x.quantidade, lot: '', image_urls: x.imagem ? [x.imagem] : [] }))
-          .sort((a, b) => String(a.description || '').trim().localeCompare(String(b.description || '').trim(), 'pt-BR', { sensitivity: 'base', numeric: true })));
+          .sort((a, b) => String(a.description || '').trim().localeCompare(String(b.description || '').trim(), 'pt-BR', { sensitivity: 'base' })));
       } else {
         // 📦 LOJA INTEIRA: o Supabase entrega no máximo 1.000 linhas por requisição —
         // com +1.500 produtos, uma chamada só cortava a loja. Aqui pagina em blocos
         // de 1.000 até acabar, então ordena A→Z ignorando acento/maiúscula.
         const PAGE = 1000;
-        const todos = [];
-        for (let from = 0; from < 20000; from += PAGE) {
-          let query = supabase
-            .from('products')
-            .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
-            .gt('quantity', 0)
-            .order('description', { ascending: true })
-            .range(from, from + PAGE - 1);
-          if (termo) query = query.or(`description.ilike.%${termo}%,lot.ilike.%${termo}%`);
-          const { data, error } = await query;
-          if (error) break;
-          todos.push(...(data || []));
-          if (!data || data.length < PAGE) break;
+        const puxar = async (filtro) => {
+          const todos = [];
+          for (let from = 0; from < 20000; from += PAGE) {
+            let query = supabase
+              .from('products')
+              .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
+              .gt('quantity', 0)
+              .order('description', { ascending: true })
+              .range(from, from + PAGE - 1);
+            if (filtro) query = query.or(filtro);
+            const { data, error } = await query;
+            if (error) break;
+            todos.push(...(data || []));
+            if (!data || data.length < PAGE) break;
+          }
+          return todos;
+        };
+        // 🔤 Digitou "A" → tem que vir o que COMEÇA com A (nome do produto), não
+        // qualquer nome que contenha a letra no meio. Só se não achar nada pelo
+        // começo é que cai na busca por dentro do nome / SKU-lote.
+        let todos = [];
+        if (termo) {
+          todos = await puxar(`description.ilike.${termo}%`);
+          if (!todos.length) todos = await puxar(`description.ilike.%${termo}%,lot.ilike.%${termo}%`);
+        } else {
+          todos = await puxar(null);
         }
         setResults(todos.sort((a, b) =>
-          String(a.description || '').trim().localeCompare(String(b.description || '').trim(), 'pt-BR', { sensitivity: 'base', numeric: true })
+          String(a.description || '').trim().localeCompare(String(b.description || '').trim(), 'pt-BR', { sensitivity: 'base' })
         ));
       }
     } catch (e) { console.error(e); }
