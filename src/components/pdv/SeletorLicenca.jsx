@@ -1,32 +1,93 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import React, { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { User as UserIcon, Trash2, Loader2, BadgePercent } from 'lucide-react';
 
 // Seletor "Quem está levando (licença)" do balcão.
-// Mostra a ÁRVORE INTEIRA abaixo do balcão e, ao digitar, também gente de outras
-// estruturas — nesse caso avisando na tela pra onde vai a comissão.
+// Lê a base direto (mesmo caminho da lista antiga de logins, que funcionava em
+// qualquer ambiente): mostra a ÁRVORE INTEIRA abaixo do balcão e, ao digitar,
+// TAMBÉM qualquer pessoa cadastrada em outras estruturas.
+// O desconto mostrado aqui é só espelho — quem calcula de verdade é o servidor.
+const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }) {
   const [q, setQ] = useState('');
-  const [rede, setRede] = useState([]);
-  const [outras, setOutras] = useState([]);
-  const [carregando, setCarregando] = useState(false);
-
-  const carregar = useCallback(async (termo) => {
-    if (!ownerId) return;
-    setCarregando(true);
-    try {
-      const r = await base44.functions.invoke('pdvNetworkTree', { ownerId, q: termo });
-      setRede(r?.minha_rede || []);
-      setOutras(r?.outras_estruturas || []);
-    } catch (_) { /* balcão continua funcionando sem o seletor */ }
-    setCarregando(false);
-  }, [ownerId]);
+  const [users, setUsers] = useState([]);
+  const [levels, setLevels] = useState({});
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    if (comprador) return;
-    const t = setTimeout(() => carregar(q), 300);
-    return () => clearTimeout(t);
-  }, [q, comprador, carregar]);
+    let vivo = true;
+    (async () => {
+      const [u, l] = await Promise.all([
+        supabase.from('app_users').select('id,full_name,email,career_levels,primary_career_level,recruited_by_id,referred_by_id').range(0, 4999),
+        supabase.from('career_levels').select('id,nome,venda_direta_pct'),
+      ]);
+      if (!vivo) return;
+      setUsers(Array.isArray(u.data) ? u.data : []);
+      const map = {};
+      (Array.isArray(l.data) ? l.data : []).forEach((x) => { map[x.id] = x; });
+      setLevels(map);
+      setCarregando(false);
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  // melhor licença da pessoa (maior desconto entre os cargos que ela tem)
+  const enfeitar = useMemo(() => (u) => {
+    const cargos = [...(Array.isArray(u.career_levels) ? u.career_levels : []), u.primary_career_level].filter(Boolean);
+    let melhor = null;
+    cargos.forEach((c) => {
+      const lv = levels[c];
+      if (lv && (!melhor || (Number(lv.venda_direta_pct) || 0) > (Number(melhor.venda_direta_pct) || 0))) melhor = lv;
+    });
+    return {
+      id: u.id, full_name: u.full_name, email: u.email,
+      nivel: melhor?.id || 'usuario', nivel_nome: melhor?.nome || 'Usuário',
+      desconto_pct: Number(melhor?.venda_direta_pct) || 0,
+    };
+  }, [levels]);
+
+  // árvore abaixo do balcão (recrutou OU indicou, em qualquer profundidade)
+  const { rede, outras } = useMemo(() => {
+    if (!users.length) return { rede: [], outras: [] };
+    const filhos = {};
+    const porId = {};
+    users.forEach((u) => {
+      porId[u.id] = u;
+      const pai = u.recruited_by_id || u.referred_by_id;
+      if (pai) (filhos[pai] = filhos[pai] || []).push(u);
+    });
+    const daRede = new Set();
+    const fila = [...(filhos[ownerId] || [])];
+    while (fila.length) {
+      const u = fila.shift();
+      if (daRede.has(u.id)) continue;
+      daRede.add(u.id);
+      (filhos[u.id] || []).forEach((f) => { if (!daRede.has(f.id)) fila.push(f); });
+    }
+    const termo = norm(q);
+    const casa = (u) => !termo || norm(u.full_name).includes(termo) || norm(u.email).includes(termo)
+      || norm(enfeitar(u).nivel_nome).includes(termo);
+    const ordenar = (a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR', { sensitivity: 'base' });
+
+    const estruturaDe = (u) => {
+      let node = u;
+      for (let i = 0; i < 12; i++) {
+        const paiId = node.recruited_by_id || node.referred_by_id;
+        if (!paiId || !porId[paiId]) break;
+        node = porId[paiId];
+      }
+      return node?.id === u.id ? null : node?.full_name || null;
+    };
+
+    const minha = users.filter((u) => daRede.has(u.id) && casa(u)).map(enfeitar).sort(ordenar).slice(0, 400);
+    // fora da rede só aparece quando digita — senão vira lista infinita no balcão
+    const fora = termo
+      ? users.filter((u) => u.id !== ownerId && !daRede.has(u.id) && casa(u))
+        .sort(ordenar).slice(0, 40).map((u) => ({ ...enfeitar(u), estrutura: estruturaDe(u) }))
+      : [];
+    return { rede: minha, outras: fora };
+  }, [users, ownerId, q, enfeitar]);
 
   if (comprador) {
     return (
@@ -69,13 +130,13 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Filtrar por nome, e-mail ou cargo…"
+        placeholder="Buscar qualquer cadastro por nome, e-mail ou cargo…"
         className="w-full bg-white border border-nz-borda rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500 mb-1"
       />
       <div className="border border-nz-borda rounded-lg max-h-64 overflow-y-auto bg-white">
-        {carregando && <div className="px-3 py-3 text-xs text-gray-500 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Carregando a rede…</div>}
+        {carregando && <div className="px-3 py-3 text-xs text-gray-500 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Carregando os cadastros…</div>}
         {!carregando && !rede.length && !outras.length && (
-          <div className="px-3 py-3 text-xs text-gray-500">Nenhum login encontrado.</div>
+          <div className="px-3 py-3 text-xs text-gray-500">Nenhum cadastro com esse nome.</div>
         )}
         {rede.length > 0 && <div className="px-3 py-1.5 text-[10px] font-bold uppercase text-gray-500 bg-nz-cinza-fundo">Minha rede</div>}
         {rede.map((p) => <Linha key={p.id} p={p} />)}
