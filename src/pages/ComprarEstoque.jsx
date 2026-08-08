@@ -139,7 +139,7 @@ export default function ComprarEstoque() {
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-nz-borda px-4 sm:px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-3">
+        <div className="max-w-[1600px] mx-auto flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center"><ShoppingBag className="w-5 h-5 text-nz-verde" /></div>
           <div>
             <h1 className="text-xl font-black text-nz-tinta leading-none">Comprar estoque</h1>
@@ -148,7 +148,7 @@ export default function ComprarEstoque() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         <VitrineReposicao
           produtos={produtos}
           carregando={carregando}

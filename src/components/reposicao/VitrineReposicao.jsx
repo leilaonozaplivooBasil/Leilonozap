@@ -23,29 +23,29 @@ export default function VitrineReposicao({ produtos, carregando, termo, onTermo,
       ) : produtos.length === 0 ? (
         <div className="border border-dashed border-nz-borda rounded-xl p-8 text-center text-gray-500 text-sm">Nenhum produto disponível com esse nome.</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {produtos.map((p) => {
             const cheio = Number(p.preco) || 0;
             const meu = cheio * (1 - (Number(descontoPct) || 0) / 100);
             return (
-              <div key={p.id} className="bg-white border border-nz-borda rounded-xl p-3 flex gap-3">
-                <span className="w-20 h-20 rounded-lg bg-nz-preto-barra flex items-center justify-center overflow-hidden shrink-0">
+              <div key={p.id} className="bg-white border border-nz-borda rounded-2xl overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
+                {/* 🖼️ Foto grande em cima: a vitrine é pra bater o olho e reconhecer o produto */}
+                <div className="relative aspect-square bg-nz-preto-barra flex items-center justify-center">
                   {p.imagem
-                    ? <img src={p.imagem} alt={p.descricao} className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    : <Package className="w-5 h-5 text-white/50" />}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-nz-tinta line-clamp-2 leading-snug">{p.descricao}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">Preço de venda {money(cheio)} · {p.quantidade} em estoque</p>
-                  <div className="flex items-center justify-between gap-2 mt-1.5">
-                    <span className="text-sm font-black text-nz-verde">{money(meu)}</span>
-                    <button
-                      onClick={() => onAdd(p)}
-                      className="min-h-[44px] px-3 rounded-lg bg-nz-verde hover:opacity-90 text-white text-xs font-bold flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Adicionar
-                    </button>
-                  </div>
+                    ? <img src={p.imagem} alt={p.descricao} className="w-full h-full object-contain p-2" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    : <Package className="w-8 h-8 text-white/40" />}
+                  <span className="absolute top-2 left-2 bg-white/95 text-nz-tinta text-[10px] font-bold px-2 py-1 rounded-full">{p.quantidade} em estoque</span>
+                </div>
+                <div className="p-3 flex flex-col flex-1">
+                  <p className="text-sm font-medium text-nz-tinta line-clamp-2 leading-snug min-h-[2.5rem]">{p.descricao}</p>
+                  <p className="text-[11px] text-gray-400 line-through mt-1">{money(cheio)}</p>
+                  <p className="text-lg font-black text-nz-verde leading-tight">{money(meu)}</p>
+                  <button
+                    onClick={() => onAdd(p)}
+                    className="mt-2.5 w-full min-h-[44px] rounded-xl bg-nz-verde hover:opacity-90 text-white text-sm font-bold flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" /> Adicionar
+                  </button>
                 </div>
               </div>
             );
