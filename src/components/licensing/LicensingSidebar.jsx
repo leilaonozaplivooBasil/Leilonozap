@@ -13,7 +13,10 @@ export default function LicensingSidebar({ user, shortName, activeTab, onTabChan
   const grupos = getLicensingGroups(user);
 
   return (
-    <aside className="hidden md:flex flex-col items-center w-24 shrink-0 bg-nz-preto-barra border-r border-black/40 py-5 gap-1 sticky top-14 md:top-16 h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] overflow-y-auto">
+    <aside
+      className="hidden md:flex flex-col items-center w-24 shrink-0 bg-nz-preto-barra border-r border-black/40 py-5 gap-1 sticky overflow-y-auto"
+      style={{ top: 64, height: 'calc(100vh - 64px)' }}
+    >
       <div className="w-10 h-10 rounded-full bg-nz-verde text-white flex items-center justify-center font-bold text-sm mb-1 overflow-hidden shrink-0">
         {user?.avatar_url ? (
           <img src={user.avatar_url} alt={shortName} className="w-full h-full object-cover" />

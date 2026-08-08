@@ -19,11 +19,14 @@ export default function NavegacaoLateralGlobal({ user }) {
   const destinoDe = (item) => (item.type === 'tab' ? `/Licensing?tab=${item.value}` : item.to);
 
   return (
-    <aside className="hidden md:flex flex-col items-center w-24 shrink-0 bg-nz-preto-barra border-r border-black/40 py-4 gap-1 sticky top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] overflow-y-auto">
-      <nav className="flex flex-col gap-3 w-full px-2 pb-6">
+    <aside
+      className="hidden md:flex flex-col items-center w-24 shrink-0 bg-nz-preto-barra border-r border-black/40 py-4 gap-1 sticky overflow-y-auto"
+      style={{ top: 64, height: 'calc(100vh - 64px)' }}
+    >
+      <nav className="flex flex-col gap-3 w-full px-2 pb-12">
         {grupos.map((grupo) => (
-          <div key={grupo.title} className="flex flex-col gap-1">
-            <p className="text-[8px] font-bold uppercase tracking-wider text-white/40 text-center">
+          <div key={grupo.title} className="flex flex-col gap-1 pt-3 first:pt-0">
+            <p className="text-[8px] font-bold uppercase tracking-wider text-white/40 text-center mb-1">
               {grupo.title}
             </p>
             {grupo.items.map((item) => {
@@ -37,8 +40,8 @@ export default function NavegacaoLateralGlobal({ user }) {
                   title={item.label}
                   className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center transition-colors ${
                     ativo
-                      ? 'bg-white/10 text-nz-fogo-claro'
-                      : 'text-white/70 hover:bg-white/10 hover:text-nz-fogo-claro'
+                      ? 'bg-white/10 text-nz-verde-claro'
+                      : 'text-white/70 hover:bg-white/10 hover:text-nz-verde-claro'
                   }`}
                 >
                   {Icone && <Icone className="w-5 h-5" />}
