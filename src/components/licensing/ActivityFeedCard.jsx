@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Gavel } from 'lucide-react';
+import IconeAtividade from './IconeAtividade';
 
 const STATUS_STYLE = {
   pending: 'text-orange-500',
@@ -35,7 +35,7 @@ export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
               return (
                 <div key={rec.id} className="flex items-center gap-3 px-4 py-3">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${accent}`}>
-                    {isCatalog ? <Package className="w-4 h-4" /> : <Gavel className="w-4 h-4" />}
+                    <IconeAtividade tipo={isCatalog ? 'catalog' : 'auction'} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{rec.product_title || (isCatalog ? 'Venda Loja Virtual' : 'Comissão de Leilão')}</p>
