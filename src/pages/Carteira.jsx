@@ -7,6 +7,7 @@ import { Wallet, ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loade
 import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 import PassaporteCard from '@/components/wallet/PassaporteCard';
 import CarteiraDeslogada from '@/components/wallet/CarteiraDeslogada';
+import BotaoVoltar from '@/components/common/BotaoVoltar';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -79,6 +80,8 @@ export default function Carteira() {
   return (
     <div className="min-h-screen bg-gray-900 text-white py-8 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
+        {/* ↩️ FASE 3 — saída padrão: esta tela não tinha botão voltar nenhum */}
+        <BotaoVoltar destino="/Licensing" />
         {/* Header — cartão de identidade, mesmo estilo do Perfil */}
         <div
           className="relative overflow-hidden rounded-2xl border border-white/10 p-6 sm:p-8 shadow-lg shadow-black/20"

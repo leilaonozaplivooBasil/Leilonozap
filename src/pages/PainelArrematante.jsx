@@ -6,6 +6,7 @@ import ResumoCards from '@/components/arrematante/ResumoCards';
 import DisputandoAgora from '@/components/arrematante/DisputandoAgora';
 import ExtratoLances from '@/components/arrematante/ExtratoLances';
 import UltimosArremates from '@/components/arrematante/UltimosArremates';
+import BotaoVoltar from '@/components/common/BotaoVoltar';
 
 // 🎯 PAINEL DO ARREMATANTE — página 100% de LEITURA.
 // Mostra onde o usuário está disputando agora, quanto tem livre/reservado,
@@ -41,6 +42,8 @@ export default function PainelArrematante() {
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white p-3 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
         <header>
+          {/* ↩️ FASE 3 — saída padrão: esta tela não tinha botão voltar nenhum */}
+          <div className="mb-4"><BotaoVoltar destino="/leiloes" /></div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">Painel do Arrematante</h1>
           <p className="text-sm text-gray-400 mt-1">
             Olá, {(user.display_first_name || user.full_name || '').split(' ')[0]} — aqui está tudo o que você está disputando.

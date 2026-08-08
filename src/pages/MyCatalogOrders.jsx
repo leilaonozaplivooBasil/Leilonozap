@@ -13,6 +13,7 @@ import { supabase } from '@/api/supabaseClient';
 import CatalogOrderCard from '@/components/catalog/CatalogOrderCard';
 import DetalhesPedidoModal from '@/components/catalog/DetalhesPedidoModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import BotaoVoltar from '@/components/common/BotaoVoltar';
 
 export default function MyCatalogOrders() {
   const [orders, setOrders] = useState([]);
@@ -257,21 +258,15 @@ export default function MyCatalogOrders() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 sm:mb-10">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-white mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          {/* ↩️ FASE 3 — passa a usar o botão voltar único do sistema */}
+          <div className="mb-4"><BotaoVoltar destino="/Loja-Virtual" /></div>
 
           <div className="flex items-center gap-3 sm:gap-4 mb-2">
             <div className="p-2.5 sm:p-3 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">
               <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">Meus Pedidos — Loja Virtual</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">Minhas Compras — Loja Virtual</h1>
               <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
                 {orders.length} pedido{orders.length !== 1 ? 's' : ''} no total
               </p>

@@ -52,7 +52,7 @@ export function getLicensingGroups(user) {
       items: [
         { type: 'tab', value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard },
         { type: 'link', to: '/Carteira', label: 'Carteira', icon: Wallet },
-        { type: 'link', to: '/MyCatalogOrders', label: 'Meus Pedidos', icon: Package },
+        { type: 'link', to: '/MyCatalogOrders', label: 'Minhas Compras', icon: Package },
       ],
     },
     {
@@ -84,7 +84,7 @@ export function getLicensingGroups(user) {
 
   grupos.push(
     {
-      title: 'Crescer',
+      title: 'Carreira',
       items: [
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
