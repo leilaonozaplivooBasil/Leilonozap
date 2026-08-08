@@ -579,7 +579,7 @@ export default function ProductManagement() {
   };
 
   const depositBadge = (dep) => {
-    const map = { Bangu: 'bg-blue-500/15 text-blue-300 border border-blue-500/30', Oficina: 'bg-orange-500/15 text-orange-300 border border-orange-500/30', Recreio: 'bg-purple-500/15 text-purple-300 border border-purple-500/30', Shopmix: 'bg-pink-500/15 text-pink-300 border border-pink-500/30' };
+    const map = { Bangu: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30', Oficina: 'bg-orange-500/15 text-orange-300 border border-orange-500/30', Recreio: 'bg-amber-500/15 text-amber-300 border border-amber-500/30', Shopmix: 'bg-amber-500/15 text-amber-300 border border-amber-500/30' };
     return map[dep] || 'bg-gray-700 text-gray-300';
   };
 
@@ -619,13 +619,13 @@ export default function ProductManagement() {
                   <Plus className="w-4 h-4 mr-2 text-emerald-400" /> Novo Produto
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("AddCatalogProduct"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
-                  <BookOpen className="w-4 h-4 mr-2 text-violet-400" /> Loja Virtual
+                  <BookOpen className="w-4 h-4 mr-2 text-amber-400" /> Loja Virtual
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("CreateAuction"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
-                  <TrendingUp className="w-4 h-4 mr-2 text-blue-400" /> Criar Leilão
+                  <TrendingUp className="w-4 h-4 mr-2 text-emerald-400" /> Criar Leilão
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("RegisterBatches"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
-                  <PackagePlus className="w-4 h-4 mr-2 text-blue-400" /> Registrar Lotes
+                  <PackagePlus className="w-4 h-4 mr-2 text-emerald-400" /> Registrar Lotes
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("PDV"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <DollarSign className="w-4 h-4 mr-2 text-green-400" /> PDV
@@ -634,7 +634,7 @@ export default function ProductManagement() {
                   <ShoppingCart className="w-4 h-4 mr-2 text-green-400" /> Pedidos do Catálogo
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("ProductOperationHistory"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
-                  <BookOpen className="w-4 h-4 mr-2 text-purple-400" /> Histórico de Operação
+                  <BookOpen className="w-4 h-4 mr-2 text-amber-400" /> Histórico de Operação
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={async () => {
@@ -711,7 +711,7 @@ export default function ProductManagement() {
                   disabled={isLoadingData}
                   className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
                 >
-                  <RefreshCw className={`w-4 h-4 mr-2 text-cyan-400 ${isLoadingData ? 'animate-spin' : ''}`} /> Recarregar Dados
+                  <RefreshCw className={`w-4 h-4 mr-2 text-emerald-400 ${isLoadingData ? 'animate-spin' : ''}`} /> Recarregar Dados
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -785,9 +785,9 @@ export default function ProductManagement() {
         <TooltipProvider>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total de Unidades', value: filteredProducts.reduce((s, p) => s + (p.quantity || 0) + (p.quantity_sold || 0), 0).toLocaleString(), icon: Package, color: 'text-blue-400', bg: 'from-blue-500/10 to-transparent', border: 'border-blue-500/20', tooltip: 'Soma de todas as unidades (em estoque + vendidas).' },
+              { label: 'Total de Unidades', value: filteredProducts.reduce((s, p) => s + (p.quantity || 0) + (p.quantity_sold || 0), 0).toLocaleString(), icon: Package, color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/20', tooltip: 'Soma de todas as unidades (em estoque + vendidas).' },
               { label: 'Testados & Aprovados', value: filteredProducts.reduce((s, p) => s + (p.qty_perfeito || 0) + (p.qty_bom || 0), 0).toLocaleString(), icon: TrendingUp, color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/20', tooltip: 'Perfeito + Bom — prontos para venda.' },
-              { label: 'Qtd Vendidos', value: stats.totalSold.toLocaleString(), icon: ShoppingCart, color: 'text-violet-400', bg: 'from-violet-500/10 to-transparent', border: 'border-violet-500/20', tooltip: 'Total de unidades que já saíram do estoque via vendas.' },
+              { label: 'Qtd Vendidos', value: stats.totalSold.toLocaleString(), icon: ShoppingCart, color: 'text-amber-400', bg: 'from-amber-500/10 to-transparent', border: 'border-amber-500/20', tooltip: 'Total de unidades que já saíram do estoque via vendas.' },
               { label: 'Saldo em Estoque', value: stats.inStock.toLocaleString(), icon: Package, color: 'text-amber-400', bg: 'from-amber-500/10 to-transparent', border: 'border-amber-500/20', tooltip: 'Unidades disponíveis no estoque atual.' },
             ].map(({ label, value, icon: Icon, color, bg, border, tooltip }) => (
               <Tooltip key={label}>
@@ -811,8 +811,8 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {[
               { label: 'Ticket Médio', value: `R$ ${stats.averageTicketFunctional.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-orange-300', border: 'border-orange-500/25', accent: 'bg-orange-500', tooltip: 'Valor médio por unidade dos produtos Perfeito ou Bom.' },
-              { label: 'Capital em Estoque', value: `R$ ${stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-sky-300', border: 'border-sky-500/25', accent: 'bg-sky-500', tooltip: 'Soma do custo de todos os produtos em estoque.' },
-              { label: 'Receita Potencial', value: `R$ ${stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-indigo-300', border: 'border-indigo-500/25', accent: 'bg-indigo-500', tooltip: 'Receita máxima vendendo todos os Perfeito + Bom.' },
+              { label: 'Capital em Estoque', value: `R$ ${stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-amber-300', border: 'border-amber-500/25', accent: 'bg-amber-500', tooltip: 'Soma do custo de todos os produtos em estoque.' },
+              { label: 'Receita Potencial', value: `R$ ${stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-amber-300', border: 'border-amber-500/25', accent: 'bg-amber-500', tooltip: 'Receita máxima vendendo todos os Perfeito + Bom.' },
               { label: 'Faturado', value: `R$ ${stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-emerald-300', border: 'border-emerald-500/25', accent: 'bg-emerald-500', tooltip: 'Total arrecadado com vendas realizadas.' },
               { label: 'Lucro Líquido', value: `R$ ${stats.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-green-300', border: 'border-green-500/25', accent: 'bg-green-500', tooltip: 'Diferença entre valor faturado e custo dos produtos.' },
             ].map(({ label, value, color, border, accent, tooltip }) => (
@@ -840,8 +840,8 @@ export default function ProductManagement() {
 
           {/* BARRA DE AÇÕES EM LOTE */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-950/60 border-b border-blue-800/50 flex-wrap">
-              <span className="text-sm font-semibold text-blue-300">{selectedIds.size} selecionado(s)</span>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-emerald-950/60 border-b border-emerald-800/50 flex-wrap">
+              <span className="text-sm font-semibold text-emerald-300">{selectedIds.size} selecionado(s)</span>
               <Button
                 size="sm"
                 onClick={() => {
@@ -855,7 +855,7 @@ export default function ProductManagement() {
                     navigate(createPageUrl("CreateAuction") + `?product_ids=${ids.join(',')}`);
                   }
                 }}
-                className="bg-blue-600 hover:bg-blue-500 text-white border-0 h-7 text-xs px-3"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 h-7 text-xs px-3"
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Colocar em Leilão
@@ -871,7 +871,7 @@ export default function ProductManagement() {
                     alert('Selecione apenas 1 produto para colocar no Catálogo');
                   }
                 }}
-                className="bg-violet-600 hover:bg-violet-500 text-white border-0 h-7 text-xs px-3"
+                className="bg-amber-600 hover:bg-amber-500 text-white border-0 h-7 text-xs px-3"
               >
                 <BookOpen className="w-3.5 h-3.5 mr-1.5" />
                 Loja Virtual
@@ -927,7 +927,7 @@ export default function ProductManagement() {
                       type="checkbox"
                       checked={currentProducts.length > 0 && selectedIds.size === currentProducts.length}
                       onChange={toggleSelectAll}
-                      className="accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+                      className="accent-emerald-500 w-3.5 h-3.5 cursor-pointer"
                     />
                   </th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Data</th>
@@ -941,11 +941,11 @@ export default function ProductManagement() {
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wider" style={{width:'130px'}}>Obs.</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>C. Total</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'80px'}}>C. Unit.</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-purple-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Mercado</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-sky-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Venda</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-amber-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Mercado</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-amber-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Venda</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Estoque</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Vendidos</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-blue-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Vl. Venda</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Vl. Venda</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'80px'}}>Lucro</th>
                   <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Ações</th>
                 </tr>
@@ -954,14 +954,14 @@ export default function ProductManagement() {
                 {currentProducts.map((product, index) => (
                   <tr
                     key={product.id}
-                    className={`hover:bg-gray-800/50 transition-colors cursor-pointer group ${selectedIds.has(product.id) ? 'bg-blue-950/30' : index % 2 === 0 ? 'bg-transparent' : 'bg-gray-900/40'}`}
+                    className={`hover:bg-gray-800/50 transition-colors cursor-pointer group ${selectedIds.has(product.id) ? 'bg-emerald-950/30' : index % 2 === 0 ? 'bg-transparent' : 'bg-gray-900/40'}`}
                   >
                     <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedIds.has(product.id)}
                         onChange={() => toggleSelect(product.id)}
-                        className="accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+                        className="accent-emerald-500 w-3.5 h-3.5 cursor-pointer"
                       />
                     </td>
                     <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{product.date || '—'}</td>
@@ -985,10 +985,10 @@ export default function ProductManagement() {
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-col gap-0.5">
                         {product.catalog_active && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 whitespace-nowrap inline-flex items-center gap-1"><ShoppingCart className="w-2.5 h-2.5" />Loja</span>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap inline-flex items-center gap-1"><ShoppingCart className="w-2.5 h-2.5" />Loja</span>
                         )}
                         {(product.linked_auctions?.length > 0) && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap inline-flex items-center gap-1"><Gavel className="w-2.5 h-2.5" />Leilão ({product.linked_auctions.length})</span>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap inline-flex items-center gap-1"><Gavel className="w-2.5 h-2.5" />Leilão ({product.linked_auctions.length})</span>
                         )}
                         {!product.catalog_active && !(product.linked_auctions?.length > 0) && (
                           <span className="text-[10px] text-gray-700">—</span>
@@ -1022,14 +1022,14 @@ export default function ProductManagement() {
                         <div className={expandedNotes[product.id] ? 'text-gray-400' : 'truncate text-gray-600'}>{product.notes}</div>
                       ) : <span className="text-gray-800">—</span>}
                       {product.notes && product.notes.length > 30 && (
-                        <span className="text-blue-600 text-xs ml-1">{expandedNotes[product.id] ? '▲' : '▼'}</span>
+                        <span className="text-emerald-600 text-xs ml-1">{expandedNotes[product.id] ? '▲' : '▼'}</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.cost_price || 0))}</td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       R$ {(() => { const tq = (product.quantity || 0) + (product.quantity_sold || 0); return tq > 0 ? ((product.cost_price || 0) / tq).toFixed(2) : (product.cost_price || 0).toFixed(2); })()}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-purple-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
+                    <td className="px-3 py-2.5 text-right text-amber-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       {(product.market_value || 0) > 0
                         ? <span>R$ {fmtBR(product.market_value)}</span>
                         : <span className="text-gray-600">—</span>}
@@ -1043,7 +1043,7 @@ export default function ProductManagement() {
                       <span className="font-bold text-white">{(product.quantity || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
-                    <td className="px-3 py-2.5 text-right text-sky-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.sold_amount || 0))}</td>
+                    <td className="px-3 py-2.5 text-right text-amber-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {fmtBR((product.sold_amount || 0))}</td>
                     <td className="px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className={(product.profit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                         R$ {fmtBR((product.profit || 0))}
@@ -1068,14 +1068,14 @@ export default function ProductManagement() {
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setGoogleShoppingProduct(product.description); setShowGoogleShopping(true); }}
-                          className="w-7 h-7 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white flex items-center justify-center transition-all"
+                          className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all"
                           title="Google Shopping"
                         >
                           <ShoppingCart className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(createPageUrl("AddCatalogProduct"), { state: { sourceProduct: product } }); }}
-                          className="w-7 h-7 rounded-lg bg-violet-600/20 hover:bg-violet-600 text-violet-400 hover:text-white flex items-center justify-center transition-all"
+                          className="w-7 h-7 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white flex items-center justify-center transition-all"
                           title="Loja Virtual"
                         >
                           <BookOpen className="w-3.5 h-3.5" />
@@ -1087,7 +1087,7 @@ export default function ProductManagement() {
                             const mlParam = sourceUrl ? `&ml_url=${encodeURIComponent(sourceUrl)}` : '';
                             navigate(createPageUrl("CreateAuction") + `?product_id=${product.id}${mlParam}`);
                           }}
-                          className="w-7 h-7 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white flex items-center justify-center transition-all"
+                          className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all"
                           title="Criar Leilão"
                         >
                           <TrendingUp className="w-3.5 h-3.5" />
@@ -1320,7 +1320,7 @@ export default function ProductManagement() {
                       <select
                         value={formData.deposit_name}
                         onChange={(e) => setFormData({ ...formData, deposit_name: e.target.value })}
-                        className="w-full bg-gray-700 text-white rounded-md px-3 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-gray-700 text-white rounded-md px-3 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value="Bangu">Bangu</option>
                         <option value="Oficina">Oficina</option>
@@ -1449,7 +1449,7 @@ export default function ProductManagement() {
                               const mlParam = sourceUrl ? `&ml_url=${encodeURIComponent(sourceUrl)}` : '';
                               navigate(createPageUrl("CreateAuction") + `?product_id=${editingProduct.id}${mlParam}`);
                             }}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-emerald-600 hover:bg-emerald-700"
                           >
                             <Plus className="w-4 h-4 mr-2" />
                             Colocar em Leilão
@@ -1468,7 +1468,7 @@ export default function ProductManagement() {
                                 setEditingProduct(null);
                                 setTimeout(() => loadData(), 500);
                               }}
-                              className="bg-violet-700 hover:bg-violet-800"
+                              className="bg-amber-700 hover:bg-amber-800"
                             >
                               <ShoppingCart className="w-4 h-4 mr-2" />Retirar da Loja
                             </Button>
@@ -1488,7 +1488,7 @@ export default function ProductManagement() {
                                 setEditingProduct(null);
                                 setTimeout(() => loadData(), 500);
                               }}
-                              className="bg-blue-700 hover:bg-blue-800"
+                              className="bg-emerald-700 hover:bg-emerald-800"
                             >
                               <Gavel className="w-4 h-4 mr-2" />Retirar do Leilão
                             </Button>
