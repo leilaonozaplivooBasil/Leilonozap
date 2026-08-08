@@ -98,7 +98,12 @@ export async function fulfillStoreOrder(sale) {
   if (typeof items === 'string') { try { items = JSON.parse(items); } catch { items = []; } }
   items = Array.isArray(items) ? items : [];
   // venda de item único (checkout direto / arremate) não tem items_json — usa o product_id da venda
-  if (!items.length && sale.product_id) items = [{ product_id: sale.product_id, qty: Number(sale.quantity) || 1 }];
+  // ⚠️ o `unit` precisa vir junto: sem ele o repasse calcularia margem sobre zero
+  // e o lojista receberia só o custo de volta, sem o lucro dele.
+  if (!items.length && sale.product_id) {
+    const q = Number(sale.quantity) || 1;
+    items = [{ product_id: sale.product_id, qty: q, unit: round2((Number(sale.sale_price) || (Number(sale.total_amount) || 0) / q)) }];
+  }
   // PDV já baixou o estoque item a item na hora da venda — não baixar de novo
   if (sale.skipStock) items = [];
   // 📦 baixa pela regra única: primeiro o estoque PRÓPRIO do vendedor
