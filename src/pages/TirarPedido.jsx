@@ -73,24 +73,30 @@ export default function TirarPedido() {
     setTodayTotal(list.reduce((s, x) => s + (Number(x.total_amount) || 0), 0));
   };
 
+  // 🏪 A loja aparece INTEIRA por padrão (sem digitar nada), em ordem alfabética.
+  // Digitar apenas FILTRA essa mesma vitrine — o balcão nunca fica vazio.
   const doSearch = useCallback(async (q) => {
-    if (!q || q.trim().length < 1) { setResults([]); return; }
+    const termo = String(q || '').trim();
     setSearching(true);
     try {
       const u = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; } })();
       const isStore = u && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level);
       if (isStore) {
         // dono de loja vende do PRÓPRIO estoque (store_inventory)
-        const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q, lim: 20 });
-        setResults((data || []).filter((x) => x.ativo && Number(x.quantidade) > 0).map((x) => ({
-          id: x.product_id, description: x.descricao, price_catalog: x.preco, quantity: x.quantidade, lot: '', image_urls: x.imagem ? [x.imagem] : [],
-        })));
+        const { data } = await supabase.rpc('loja_estoque', { _owner: u.id, q: termo, lim: 300 });
+        setResults((data || [])
+          .filter((x) => x.ativo && Number(x.quantidade) > 0)
+          .map((x) => ({ id: x.product_id, description: x.descricao, price_catalog: x.preco, quantity: x.quantidade, lot: '', image_urls: x.imagem ? [x.imagem] : [] }))
+          .sort((a, b) => String(a.description || '').localeCompare(String(b.description || ''), 'pt-BR')));
       } else {
-        const { data } = await supabase
+        let query = supabase
           .from('products')
           .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
-          .or(`description.ilike.%${q}%,lot.ilike.%${q}%`)
-          .limit(20);
+          .gt('quantity', 0)
+          .order('description', { ascending: true })
+          .limit(300);
+        if (termo) query = query.or(`description.ilike.%${termo}%,lot.ilike.%${termo}%`);
+        const { data } = await query;
         setResults(data || []);
       }
     } catch (e) { console.error(e); }
@@ -108,8 +114,9 @@ export default function TirarPedido() {
       if (ex) return prev.map((x) => (x.id === p.id ? { ...x, qty: x.qty + 1 } : x));
       return [...prev, { id: p.id, description: p.description, priceText: toText(priceOf(p)), qty: 1, stock: Number(p.quantity) || 0 }];
     });
-    setTerm(''); setResults([]);
-    toast.success('Item adicionado. Pode buscar e adicionar mais.');
+    // a vitrine PERMANECE na tela (não limpa mais a lista) — dá pra clicar em vários itens seguidos
+    setTerm('');
+    toast.success('Item adicionado. Pode continuar clicando nos produtos.');
   };
   const setQty = (id, qty) => setCart((prev) => prev.map((x) => (x.id === id ? { ...x, qty: Math.max(1, qty) } : x)));
   // mantém o texto cru (aceita vírgula) — só converte pra número no total/fechamento
@@ -198,23 +205,26 @@ export default function TirarPedido() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 grid lg:grid-cols-[1fr_380px] gap-6">
-        {/* busca + resultados */}
-        <div>
+      {/* 🖥️ Enquadramento: largura cheia e coluna do Pedido SEMPRE ao lado (não empurra pra baixo).
+          A vitrine rola dentro da própria coluna, o painel do pedido fica fixo à direita. */}
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px] gap-5 items-start">
+        {/* busca + vitrine da loja */}
+        <div className="min-w-0">
           <div className="relative mb-4">
             <Search className="w-5 h-5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               autoFocus
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              placeholder="Buscar produto por nome ou SKU/lote…"
+              placeholder="Filtrar a loja por nome ou SKU/lote…"
               className="w-full bg-white border border-nz-borda rounded-xl pl-11 pr-4 py-3.5 text-nz-tinta outline-none focus:border-green-500"
             />
             {searching && <Loader2 className="w-4 h-4 animate-spin text-gray-500 absolute right-3 top-1/2 -translate-y-1/2" />}
           </div>
 
           {results.length > 0 && (
-            <div className="space-y-2 mb-4">
+            <div className="space-y-2 mb-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+              <p className="text-[11px] text-nz-tinta-fraca sticky top-0 bg-white py-1">{results.length} produtos {term ? 'encontrados' : 'na loja'} · clique para adicionar</p>
               {results.map((p) => (
                 <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center gap-3 bg-white hover:bg-nz-cinza-fundo border border-nz-borda rounded-xl p-3 text-left transition-colors">
                   <span className="w-10 h-10 rounded-lg bg-nz-cinza-fundo flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -230,22 +240,16 @@ export default function TirarPedido() {
               ))}
             </div>
           )}
-          {term.length >= 2 && !searching && results.length === 0 && (
-            <p className="text-gray-500 text-sm">Nenhum produto encontrado.</p>
-          )}
-          {!term && cart.length === 0 && (
+          {!searching && results.length === 0 && (
             <div className="bg-nz-cinza-fundo border border-dashed border-nz-borda rounded-xl p-10 text-center text-nz-tinta-fraca">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              Busque um produto para começar o pedido.
+              {term ? 'Nenhum produto encontrado com esse filtro.' : 'Nenhum produto disponível no estoque.'}
             </div>
-          )}
-          {!term && cart.length > 0 && (
-            <p className="text-[12px] text-green-400/80 flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> Busque acima pra adicionar <strong>mais itens</strong> no mesmo pedido.</p>
           )}
         </div>
 
         {/* carrinho / fechamento */}
-        <div className="bg-white border border-nz-borda rounded-2xl p-4 h-fit lg:sticky lg:top-28 shadow-sm">
+        <div className="bg-white border border-nz-borda rounded-2xl p-4 h-fit lg:sticky lg:top-28 shadow-sm lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
           <h2 className="font-bold mb-3 flex items-center gap-2"><ShoppingCart className="w-4 h-4 text-green-400" /> Pedido ({cart.length})</h2>
 
           {cart.length === 0 ? (
