@@ -8,7 +8,9 @@ export default function CarteiraSaldosUnificados({ w }) {
   const cartoes = [
     { label: 'Depósitos / Leilão', valor: w?.saldo_disponivel, nota: 'Crédito para dar lances e comprar' },
     { label: 'Comissões de vendas', valor: w?.commission_balance, nota: 'Disponível para sacar ou usar na loja' },
-    { label: 'Reservado em lances', valor: w?.saldo_alocado, nota: 'Travado enquanto você é o líder' },
+    // 💰 número REAL do lance travado é saldo_reservado (usado por reserveBidBalance /
+    // releaseBidHold). saldo_alocado é a coluna do investidor — não é lance.
+    { label: 'Reservado em lances', valor: w?.saldo_reservado, nota: 'Travado enquanto você é o líder' },
     { label: 'A liberar (suas vendas)', valor: w?.saldo_a_liberar, nota: 'Libera na confirmação (PIX 7d · cartão 14d)' },
   ];
 

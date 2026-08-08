@@ -109,9 +109,13 @@ export default function Carteira() {
           ) : (
             <div className="space-y-3">
               {w?.kyc_status === 'reprovado' && w?.kyc?.reject_reason && <p className="text-sm text-red-400">Reprovado: {w.kyc.reject_reason}. Reenvie.</p>}
-              {/* 🔥 Único ponto laranja/fogo da tela: o aviso de identidade pendente */}
-              <p className="text-sm rounded-xl border border-nz-fogo/40 bg-nz-fogo-fundo text-nz-fogo-escuro p-3">
-                Pra sacar com segurança, valide sua identidade. <strong>O saque só vai pro PIX do seu CPF.</strong>
+              {/* 🔥 BARRA LARANJÃO DE FOGO (igual "Minhas Compras") com letra preta.
+                  Cores em style: o tema claro do painel reescreve classes de cor. */}
+              <p
+                className="text-sm font-semibold rounded-xl p-3.5"
+                style={{ background: 'linear-gradient(90deg, #F35B12 0%, #FFA000 100%)', color: '#111111' }}
+              >
+                Pra sacar com segurança, valide sua identidade. <strong style={{ color: '#111111' }}>O saque só vai pro PIX do seu CPF.</strong>
               </p>
               <div>
                 <label className="text-xs text-gray-400">CPF (sua chave PIX de saque)</label>
