@@ -65,10 +65,20 @@ export default function ComprarEstoque() {
   const carregarProdutos = useCallback(async (q) => {
     setCarregando(true);
     try {
-      let query = supabase.from('products').select('*').gt('quantity', 0).limit(60);
-      if (q) query = query.ilike('description', `%${q}%`);
-      const { data } = await query;
-      setProdutos((data || []).map((p) => ({
+      // 📦 Vitrine completa: traz TODO o estoque central com peça disponível
+      // (antes vinham só 60 itens e o lojista não enxergava o resto do estoque).
+      // Busca em páginas de 1000 para não bater no teto de linhas do banco.
+      const linhas = [];
+      for (let pagina = 0; pagina < 12; pagina++) {
+        let query = supabase.from('products').select('*').gt('quantity', 0)
+          .order('description', { ascending: true })
+          .range(pagina * 1000, pagina * 1000 + 999);
+        if (q) query = query.ilike('description', `%${q}%`);
+        const { data } = await query;
+        linhas.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      setProdutos(linhas.map((p) => ({
         id: p.id,
         descricao: p.description || 'Produto',
         preco: Number(p.price_catalog) > 0 ? Number(p.price_catalog) : Number(p.selling_price_retail) || 0,

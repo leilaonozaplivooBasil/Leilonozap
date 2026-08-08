@@ -18,6 +18,10 @@ export default function VitrineReposicao({ produtos, carregando, termo, onTermo,
         />
       </div>
 
+      {!carregando && produtos.length > 0 && (
+        <p className="text-xs text-gray-500 mb-3">{produtos.length} produtos disponíveis no estoque central</p>
+      )}
+
       {carregando ? (
         <div className="flex items-center gap-2 text-gray-500 py-10 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Carregando produtos…</div>
       ) : produtos.length === 0 ? (
