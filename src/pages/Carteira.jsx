@@ -10,6 +10,9 @@ import CarteiraDeslogada from '@/components/wallet/CarteiraDeslogada';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import CarteiraHeader from '@/components/wallet/CarteiraHeader';
 import CarteiraSaldosUnificados from '@/components/wallet/CarteiraSaldosUnificados';
+// 📦 estoque próprio: crédito travado + extrato das vendas do estoque dele
+import CreditoEstoqueCard from '@/components/wallet/CreditoEstoqueCard';
+import ExtratoEstoqueProprio from '@/components/wallet/ExtratoEstoqueProprio';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -93,6 +96,9 @@ export default function Carteira() {
             depósito/leilão, comissões de vendas, reservado em lances e a liberar. */}
         <CarteiraSaldosUnificados w={w} />
 
+        {/* 📦 Crédito de Estoque (travado) — só aparece pra quem tem estoque próprio */}
+        <CreditoEstoqueCard user={user} />
+
         {/* 🎟️ Cupom Passaporte — só aparece se o usuário tiver crédito */}
         <PassaporteCard user={user} />
 
@@ -175,6 +181,9 @@ export default function Carteira() {
 
         {/* 📄 EXTRATO DE COMISSÕES — transparência: data, produto, quem vendeu, cargo, % e ganho.
             Antes aqui só aparecia "Override (3%)", sem dizer de qual venda veio. */}
+        {/* 🧾 Vendas do meu estoque — custo devolvido e lucro separados */}
+        <ExtratoEstoqueProprio user={user} />
+
         <ExtratoComissoes user={user} />
       </div>
     </div>

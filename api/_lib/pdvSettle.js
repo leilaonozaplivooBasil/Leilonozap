@@ -4,6 +4,9 @@
 // Chamado 1x pelo mpWebhook (o flip atômico lá garante execução única).
 import { fulfillStoreOrder } from './storeFulfill.js';
 import { carregarTabelasBalcao, buscarUsuario, pagarComissaoBalcao } from './pdvBalcao.js';
+// 📦 mesma regra de baixa da loja virtual: estoque próprio primeiro, central depois
+import { baixarItensDaVenda } from './baixaEstoque.js';
+import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,34 +28,9 @@ export async function settlePdvPixSale(sale) {
   const isStoreOwner = raw.is_store_owner === true;
   const ownerId = raw.operator_id || sale.seller_id;
 
-  // baixa o estoque item a item — MESMA regra do fluxo Dinheiro/Cartão do PDV:
-  // dono de loja baixa do PRÓPRIO store_inventory; distribuidor baixa de products.
-  for (const it of items) {
-    const pid = String(it.product_id || '');
-    if (!pid) continue;
-    const qty = Math.max(1, Number(it.qty) || 1);
-    if (isStoreOwner) {
-      const siArr = await (await sb(`store_inventory?select=id,quantity&owner_id=eq.${encodeURIComponent(ownerId)}&product_id=eq.${encodeURIComponent(pid)}&limit=1`)).json();
-      const si = Array.isArray(siArr) ? siArr[0] : null;
-      if (si) {
-        const newQty = Math.max(0, (Number(si.quantity) || 0) - qty);
-        await sb(`store_inventory?id=eq.${encodeURIComponent(si.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, active: newQty > 0, updated_at: now }) });
-      }
-    } else {
-      const pArr = await (await sb(`products?select=id,quantity,quantity_sold,sold_amount&id=eq.${encodeURIComponent(pid)}&limit=1`)).json();
-      const p = Array.isArray(pArr) ? pArr[0] : null;
-      if (p) {
-        const newQty = Math.max(0, (Number(p.quantity) || 0) - qty);
-        await sb(`products?id=eq.${encodeURIComponent(pid)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
-          quantity: newQty,
-          quantity_sold: (Number(p.quantity_sold) || 0) + qty,
-          sold_amount: round2((Number(p.sold_amount) || 0) + (Number(it.unit) || 0) * qty),
-          status: newQty > 0 ? 'ESTOQUE' : 'VENDIDO',
-          updated_date: now,
-        }) });
-      }
-    }
-  }
+  // 📦 baixa pela REGRA ÚNICA (api/_lib/baixaEstoque.js): o estoque próprio do
+  // balcão (comprado → consignado) sai primeiro; o que faltar sai do central.
+  const { consumos } = await baixarItensDaVenda({ ownerId, items });
 
   // 💰 comissão pela ÁRVORE OFICIAL (mesmo motor da loja) — estoque já baixado acima
   let commission = 0;
@@ -78,6 +56,15 @@ export async function settlePdvPixSale(sale) {
     }
   } catch (e) {
     console.warn('PDV PIX: comissão falhou (venda segue paga):', e?.message);
+  }
+
+  // 💸 mercadoria que era do balcão: custo destravado + margem voltam pra conta dele
+  if (consumos.length) {
+    try {
+      await liberarRepasseEstoqueProprio({ sale, ownerId, consumos, comissaoTotal: commission });
+    } catch (e) {
+      console.error(`[PDV] Repasse de estoque próprio falhou na venda ${sale.id}:`, e?.message);
+    }
   }
 
   // retirada no balcão → entregue na hora (o flip do webhook já marcou 'paid')

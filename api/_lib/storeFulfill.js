@@ -3,6 +3,9 @@
 // Idempotência fica por conta do webhook (só chama 1x).
 import { calcularComissao } from './arvoreOficial.js';
 import { oid } from './oid.js';
+// 📦 regra ÚNICA de baixa (estoque próprio do vendedor tem prioridade sobre o central)
+import { baixarItensDaVenda } from './baixaEstoque.js';
+import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -98,30 +101,23 @@ export async function fulfillStoreOrder(sale) {
   if (!items.length && sale.product_id) items = [{ product_id: sale.product_id, qty: Number(sale.quantity) || 1 }];
   // PDV já baixou o estoque item a item na hora da venda — não baixar de novo
   if (sale.skipStock) items = [];
-  let baixados = 0;
-  for (const it of items) {
-    const pid = String(it.product_id || '');
-    const qty = Math.max(1, Number(it.qty) || Number(it.quantity) || 1);
-    if (!pid) continue;
-    // estoque da loja do vendedor (se ele tiver inventário próprio)
-    const siArr = await (await sb(`store_inventory?select=id,quantity&owner_id=eq.${encodeURIComponent(sale.seller_id)}&product_id=eq.${encodeURIComponent(pid)}&limit=1`)).json();
-    const si = Array.isArray(siArr) ? siArr[0] : null;
-    if (si) {
-      const newQty = Math.max(0, (Number(si.quantity) || 0) - qty);
-      await sb(`store_inventory?id=eq.${encodeURIComponent(si.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, active: newQty > 0, updated_at: now }) });
-      baixados++;
-    }
-    // estoque GERAL do catálogo (admin/dono da plataforma) — baixa junto quando o pagamento confirma
-    try {
-      const pArr = await (await sb(`products?select=id,quantity&id=eq.${encodeURIComponent(pid)}&limit=1`)).json();
-      const p = Array.isArray(pArr) ? pArr[0] : null;
-      if (p && p.quantity !== null && p.quantity !== undefined) {
-        const newPQty = Math.max(0, (Number(p.quantity) || 0) - qty);
-        await sb(`products?id=eq.${encodeURIComponent(pid)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newPQty }) });
-      }
-    } catch (_) { /* estoque geral indisponível — não bloqueia a venda */ }
+  // 📦 baixa pela regra única: primeiro o estoque PRÓPRIO do vendedor
+  // (comprado → consignado), só depois o estoque central.
+  let consumos = [];
+  if (items.length) {
+    const r = await baixarItensDaVenda({ ownerId: sale.seller_id, items });
+    consumos = r.consumos;
   }
+  const baixados = items.length;
   const commission = await payStoreCommissions(sale);
+  // 💸 o que era do lojista volta pra conta dele (custo destravado + margem)
+  if (consumos.length) {
+    try {
+      await liberarRepasseEstoqueProprio({ sale, ownerId: sale.seller_id, consumos, comissaoTotal: commission });
+    } catch (e) {
+      console.error(`[LOJA] Repasse de estoque próprio falhou na venda ${sale.id}:`, e?.message);
+    }
+  }
   await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission, fulfillment_status: 'a_enviar' }) });
   return { loja: true, baixados, commission };
 }

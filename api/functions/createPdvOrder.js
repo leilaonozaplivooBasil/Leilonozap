@@ -5,6 +5,9 @@ import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 // 🏪 regra EXCLUSIVA do balcão: preço cheio + comissão da licença de quem compra e rebate do balcão
 import { carregarTabelasBalcao, buscarUsuario, comissaoDaLicenca, pagarComissaoBalcao } from '../_lib/pdvBalcao.js';
+// 📦 regra única de baixa + repasse do estoque próprio (comprado/consignado)
+import { baixarItensDaVenda } from '../_lib/baixaEstoque.js';
+import { liberarRepasseEstoqueProprio } from '../_lib/repasseEstoqueProprio.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -230,19 +233,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // baixa estoque de cada item (loja → store_inventory; distribuidor → products). qty=0 → inativo.
-    for (const ln of lines) {
-      if (isStoreOwner && ln.si) {
-        const newQty = Math.max(0, (Number(ln.si.quantity) || 0) - ln.qty);
-        await sb(`store_inventory?id=eq.${encodeURIComponent(ln.si.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, active: newQty > 0, updated_at: now }) });
-      } else {
-        const p = ln.p;
-        const newQty = Math.max(0, (Number(p.quantity) || 0) - ln.qty);
-        const newSold = (Number(p.quantity_sold) || 0) + ln.qty;
-        const newSoldAmount = round2((Number(p.sold_amount) || 0) + ln.unit * ln.qty);
-        await sb(`products?id=eq.${encodeURIComponent(p.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ quantity: newQty, quantity_sold: newSold, sold_amount: newSoldAmount, status: newQty > 0 ? 'ESTOQUE' : 'VENDIDO', updated_date: now }) });
-      }
-    }
+    // 📦 baixa pela REGRA ÚNICA (api/_lib/baixaEstoque.js): o estoque PRÓPRIO do balcão
+    // (comprado → consignado) sai primeiro; o que faltar sai do estoque central.
+    const donoEstoque = isStoreOwner ? actorId : sellerId;
+    const { consumos } = await baixarItensDaVenda({ ownerId: donoEstoque, items: itemsJson });
 
     // 💰 COMISSÃO da venda física.
     let comissao = 0; let rateio = null; let comissaoErro = null;
@@ -270,6 +264,15 @@ export default async function handler(req, res) {
       // ⚠️ não engolir: a venda vale, mas a comissão precisa ser vista e reprocessada.
       comissaoErro = String(e?.message || e).slice(0, 200);
       console.error(`[PDV] COMISSÃO FALHOU na venda ${saleId} (venda gravada, comissão pendente):`, comissaoErro);
+    }
+
+    // 💸 mercadoria que era do balcão: custo destravado + margem voltam pra conta dele
+    if (consumos.length) {
+      try {
+        await liberarRepasseEstoqueProprio({ sale: { ...sale, total_amount: total }, ownerId: donoEstoque, consumos, comissaoTotal: comissao });
+      } catch (e) {
+        console.error(`[PDV] Repasse de estoque próprio falhou na venda ${saleId}:`, e?.message);
+      }
     }
 
     return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, saldo_restante: saldoRestante, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao, comissao_erro: comissaoErro, comissoes_pendentes: rateio?.pendentes || 0 });
