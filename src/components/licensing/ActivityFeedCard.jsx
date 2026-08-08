@@ -17,7 +17,6 @@ const STATUS_LABEL = {
 // colorido + valor à direita.
 export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
   const list = (Array.isArray(records) ? records : []).slice(0, 8);
-  const accent = isSaiDeBaixo ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600';
 
   return (
     <Card className="bg-white border-gray-200 shadow-sm">
@@ -34,9 +33,7 @@ export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
               const statusKey = rec.status || 'pending';
               return (
                 <div key={rec.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${accent}`}>
-                    <IconeAtividade tipo={isCatalog ? 'catalog' : 'auction'} />
-                  </div>
+                  <IconeAtividade tipo={isCatalog ? 'catalog' : 'auction'} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{rec.product_title || (isCatalog ? 'Venda Loja Virtual' : 'Comissão de Leilão')}</p>
                     <p className="text-xs text-gray-400">{new Date(rec.created_date).toLocaleString('pt-BR')}</p>

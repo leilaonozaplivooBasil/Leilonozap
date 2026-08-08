@@ -1,21 +1,23 @@
 import React from 'react';
-import { Package, Gavel } from 'lucide-react';
 
-// 🎁 Ícone da atividade, no espírito da logo: a caixinha é a venda da Loja
-// Virtual; no leilão entra o martelinho COM a caixinha por baixo (a mesma dupla
-// da marca). Só desenho — nenhuma regra de negócio aqui.
+// 🎁 Ícone da atividade com a ARTE 3D da marca: a caixinha é a venda da Loja
+// Virtual; no leilão a mesma caixinha vem com o martelinho em cima.
+// Só desenho — nenhuma regra de negócio aqui.
+const ARTE_CAIXINHA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/d61ad3ffa_generated_image.png';
+const ARTE_CAIXINHA_MARTELO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/d3d6e5208_generated_image.png';
+
 export default function IconeAtividade({ tipo }) {
   const leilao = tipo === 'auction';
   const rotulo = leilao ? 'Arremate de leilão' : 'Venda da Loja Virtual';
 
-  if (!leilao) {
-    return <Package className="w-4 h-4" title={rotulo} aria-label={rotulo} />;
-  }
-
   return (
-    <span className="relative block w-5 h-5" title={rotulo} aria-label={rotulo} role="img">
-      <Gavel className="absolute right-0 top-0 w-4 h-4 text-nz-marrom" />
-      <Package className="absolute left-0 bottom-0 w-3 h-3" />
-    </span>
+    <img
+      src={leilao ? ARTE_CAIXINHA_MARTELO : ARTE_CAIXINHA}
+      alt={rotulo}
+      title={rotulo}
+      loading="lazy"
+      decoding="async"
+      className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
+    />
   );
 }
