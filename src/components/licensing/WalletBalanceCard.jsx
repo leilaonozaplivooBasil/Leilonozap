@@ -6,9 +6,8 @@ import { Zap, Wallet, Clock, Sparkles, ArrowRightLeft } from 'lucide-react';
 // 💳 Cartão de saldo — estilo Mercado Pago (fundo claro, cards com borda
 // cinza), mantendo o selo digital verde pulsante que já existia.
 export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWithdrawalAmount, isSaiDeBaixo, onUseNow, onWithdraw, onTransfer }) {
-  // 🔥 Carteira na cor do fogo da logo (decisão do dono, 08/08/2026)
-  const accentText = isSaiDeBaixo ? 'text-red-600' : 'text-nz-fogo';
-  const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-nz-fogo-claro to-nz-fogo-escuro';
+  const accentText = isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde';
+  const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-nz-verde-claro to-nz-verde';
 
   return (
     <Card ref={cardRef} className="mb-8 bg-white border-gray-200 shadow-sm">
@@ -72,8 +71,8 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
 
           {/* Selo digital pulsante */}
           <div className="relative w-32 h-32 flex items-center justify-center flex-shrink-0 mr-2 sm:mr-6 md:mr-8">
-            <span className={`absolute inset-0 rounded-full border-2 animate-ping ${isSaiDeBaixo ? 'border-red-300' : 'border-nz-fogo/45'}`} style={{ animationDuration: '2.6s' }} />
-            <span className={`absolute inset-3 rounded-full border ${isSaiDeBaixo ? 'border-red-200' : 'border-nz-fogo/25'}`} />
+            <span className={`absolute inset-0 rounded-full border-2 animate-ping ${isSaiDeBaixo ? 'border-red-300' : 'border-nz-verde/40'}`} style={{ animationDuration: '2.6s' }} />
+            <span className={`absolute inset-3 rounded-full border ${isSaiDeBaixo ? 'border-red-200' : 'border-nz-verde/25'}`} />
             <div className={`relative w-24 h-24 rounded-full flex items-center justify-center shadow-xl bg-gradient-to-br ${accentBg}`}>
               <Wallet className="w-10 h-10 text-white drop-shadow-lg" />
               <Sparkles className={`w-5 h-5 absolute -top-1 -right-1 text-white ${isSaiDeBaixo ? '' : 'animate-pulse'}`} />
