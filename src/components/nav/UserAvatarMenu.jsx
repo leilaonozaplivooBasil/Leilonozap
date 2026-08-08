@@ -219,7 +219,7 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
              Usuário"… Substitui o azulejo "Alavancagem", que saiu da grade. ===== */}
         <div className="p-3 pb-0">
           <button
-            onClick={() => { setMenuOpen(false); navigate(redeMeta ? "/painel" : "/Licensing"); }}
+            onClick={() => { setMenuOpen(false); navigate("/Licensing"); }}
             className="w-full flex items-center gap-3 p-3 rounded-lg border border-green-500/50 bg-green-500/10 hover:bg-green-500/15 transition-all duration-200 text-left"
           >
             <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
@@ -227,9 +227,23 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
               <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">
                 Painel do {badge.label}
               </p>
-              <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
+              <p className="text-[11px] text-gray-400 truncate">Visão geral do Painel de Alavancagem</p>
             </div>
           </button>
+
+          {/* Meu Painel (operação do cargo de rede) — vem LOGO ABAIXO da visão geral */}
+          {redeMeta && (
+            <button
+              onClick={() => { setMenuOpen(false); navigate("/painel"); }}
+              className="mt-2 w-full flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200 text-left"
+            >
+              <Truck className="w-5 h-5 text-gray-300 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-gray-200 truncate">Meu Painel</p>
+                <p className="text-[11px] text-gray-400 truncate">Operação: vendas, PDV, estoque e metas</p>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* ===== Atalhos — MESMA grade do menu mobile (fonte única: @/lib/menuAtalhos) ===== */}

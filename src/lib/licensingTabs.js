@@ -55,21 +55,10 @@ export function getLicensingGroups(user) {
         { type: 'link', to: '/MyCatalogOrders', label: 'Minhas Compras', icon: Package },
       ],
     },
-    {
-      title: 'Vender',
-      items: [
-        { type: 'tab', value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag },
-      ],
-    },
-    {
-      title: 'Leilões',
-      items: [
-        { type: 'link', to: '/painel-arrematante', label: 'Arrematante', icon: Gavel },
-        { type: 'link', to: '/MyWinnings', label: 'Meus Arremates', icon: Trophy },
-      ],
-    },
   ];
 
+  // 🧭 ORDEM POR PRIORIDADE DE USO (08/08/2026): Conta → Operação (dia a dia de
+  // quem tem loja/estoque) → Vender → Leilões → Carreira → Admin.
   if (podeVerOperacao(user)) {
     grupos.push({
       title: 'Operação',
@@ -83,6 +72,19 @@ export function getLicensingGroups(user) {
   }
 
   grupos.push(
+    {
+      title: 'Vender',
+      items: [
+        { type: 'tab', value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag },
+      ],
+    },
+    {
+      title: 'Leilões',
+      items: [
+        { type: 'link', to: '/painel-arrematante', label: 'Arrematante', icon: Gavel },
+        { type: 'link', to: '/MyWinnings', label: 'Meus Arremates', icon: Trophy },
+      ],
+    },
     {
       title: 'Carreira',
       items: [
