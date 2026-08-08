@@ -250,12 +250,12 @@ export default function CatalogManagement() {
           icon={Store}
           title="Gerenciamento da Loja Virtual"
           subtitle="Banners, produtos, destaques e configurações"
-          accentColor="blue"
+          accentColor="green"
           {..._redeBack}
         />
         
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8">
+        {/* Tabs — no celular rolam na horizontal em vez de vazar da tela */}
+        <div className="flex gap-2 mb-8 overflow-x-auto nz-no-scrollbar -mx-1 px-1 pb-1 [&>button]:flex-shrink-0">
           <Button
             onClick={() => setActiveTab('banners')}
             variant={activeTab === 'banners' ? 'default' : 'outline'}
@@ -266,7 +266,7 @@ export default function CatalogManagement() {
           <Button
             onClick={() => setActiveTab('catalog-products')}
             variant={activeTab === 'catalog-products' ? 'default' : 'outline'}
-            className={activeTab === 'catalog-products' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+            className={activeTab === 'catalog-products' ? 'bg-green-600 hover:bg-green-700' : ''}
           >
             <Package className="w-4 h-4 mr-2" />Produtos da Loja Virtual
           </Button>
@@ -280,14 +280,14 @@ export default function CatalogManagement() {
           <Button
             onClick={() => setActiveTab('produtos')}
             variant={activeTab === 'produtos' ? 'default' : 'outline'}
-            className={activeTab === 'produtos' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
+            className={activeTab === 'produtos' ? 'bg-amber-700 hover:bg-amber-800' : ''}
           >
             <Star className="w-4 h-4 mr-2" />Produtos em Destaque
           </Button>
           <Button
             onClick={() => setActiveTab('rodape')}
             variant={activeTab === 'rodape' ? 'default' : 'outline'}
-            className={activeTab === 'rodape' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+            className={activeTab === 'rodape' ? 'bg-amber-700 hover:bg-amber-800' : ''}
           >
             <FileText className="w-4 h-4 mr-2" />Rodapé
           </Button>
@@ -299,7 +299,7 @@ export default function CatalogManagement() {
 
         {activeTab === 'catalog-products' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-white">Produtos da Loja Virtual</h2>
                 <p className="text-gray-400 mt-1">
@@ -459,9 +459,11 @@ export default function CatalogManagement() {
 
         {activeTab === 'banners' && (
           <>
-            <div className="flex justify-between items-center mb-8">
+            {/* No celular o título e os dois botões não cabem lado a lado:
+                empilha (o print mostrava o título quebrado em 3 linhas). */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-8">
               <h2 className="text-2xl font-bold text-white">Banners da Loja Virtual</h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={() => setEditingBanner({ image_url: '', title: '', link_url: '', is_active: true, device_type: 'desktop' })}
                   className="bg-green-600 hover:bg-green-700"
@@ -471,7 +473,7 @@ export default function CatalogManagement() {
                 </Button>
                 <Button
                   onClick={() => setEditingBanner({ image_url: '', title: '', link_url: '', is_active: true, device_type: 'mobile' })}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-amber-700 hover:bg-amber-800"
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
                   Novo Banner Mobile
@@ -540,7 +542,7 @@ export default function CatalogManagement() {
                                   <div className="flex items-center gap-2">
                                     <h3 className="text-white font-semibold">{banner.title || 'Sem título'}</h3>
                                     {banner.device_type === 'mobile' ? (
-                                      <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full flex items-center gap-1">
+                                      <span className="px-2 py-1 bg-amber-700 text-white text-xs rounded-full flex items-center gap-1">
                                         <Smartphone className="w-3 h-3" />
                                         Mobile
                                       </span>
@@ -572,7 +574,7 @@ export default function CatalogManagement() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setEditingBanner(banner)}
-                                    className="text-blue-400 hover:text-blue-300"
+                                    className="text-emerald-400 hover:text-emerald-300"
                                   >
                                     Editar
                                   </Button>
@@ -618,14 +620,14 @@ export default function CatalogManagement() {
 
         {activeTab === 'produtos' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-white mb-2">Produtos em Destaque</h2>
                 <p className="text-gray-400">Gerencie quais produtos aparecem na seção de destaque da loja virtual (máximo 4)</p>
               </div>
               <Button
                 onClick={() => setEditingSettings(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-amber-700 hover:bg-amber-800 text-white"
               >
                 <Pencil className="w-4 h-4 mr-2" />Editar Título da Seção
               </Button>
@@ -675,7 +677,7 @@ export default function CatalogManagement() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => setEditingFeaturedProduct(product)}
-                              className="p-2 hover:bg-gray-700 rounded transition-colors text-blue-400 hover:text-blue-300"
+                              className="p-2 hover:bg-gray-700 rounded transition-colors text-emerald-400 hover:text-emerald-300"
                               title="Editar nome"
                             >
                               <Edit className="w-4 h-4" />
@@ -759,7 +761,7 @@ export default function CatalogManagement() {
                         >
                           Cancelar
                         </Button>
-                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
                           Salvar
                         </Button>
                       </div>
@@ -812,7 +814,7 @@ export default function CatalogManagement() {
                         >
                           Cancelar
                         </Button>
-                        <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
+                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
                           Salvar Alterações
                         </Button>
                       </div>
@@ -902,7 +904,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
                     <Button
                       type="button"
                       onClick={() => setShowPositionEditor(true)}
-                      className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700"
+                      className="absolute top-2 right-2 bg-amber-700 hover:bg-amber-800"
                       size="sm"
                     >
                       <Move className="w-4 h-4 mr-2" />
@@ -941,7 +943,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
                   type="button"
                   variant={formData.device_type === 'mobile' ? 'default' : 'outline'}
                   onClick={() => setFormData({ ...formData, device_type: 'mobile' })}
-                  className={formData.device_type === 'mobile' ? 'bg-blue-600' : ''}
+                  className={formData.device_type === 'mobile' ? 'bg-amber-700' : ''}
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
                   Mobile

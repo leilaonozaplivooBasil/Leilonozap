@@ -29,30 +29,46 @@ export default function PortalPageHeader({
 }) {
   const navigate = useNavigate();
 
-  // Mapa de cores (literal — Tailwind precisa encontrar as classes no source)
+  // 🎨 FASE 5 — PALETA INSTITUCIONAL ÚNICA (fim do azul, 08/08/2026)
+  // Antes cada painel escolhia sua cor (azul, ciano, violeta, roxo) e o sistema
+  // parecia oito produtos diferentes. Agora existem só DUAS famílias: verde da
+  // marca e marrom da marca. As chaves antigas continuam aceitas — apenas
+  // apontam para a família certa — então NENHUMA página precisa ser alterada.
+  const VERDE = { ring: "ring-emerald-500/20", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30" };
+  const MARROM = { ring: "ring-amber-700/20", bg: "bg-amber-700/10", text: "text-amber-500", border: "border-amber-700/30" };
+  const ALERTA = { ring: "ring-red-500/20", bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" };
+
   const colorMap = {
-    emerald: { ring: "ring-emerald-500/20", bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30" },
-    violet:  { ring: "ring-violet-500/20",  bg: "bg-violet-500/10",  text: "text-violet-400",  border: "border-violet-500/30" },
-    amber:   { ring: "ring-amber-500/20",   bg: "bg-amber-500/10",   text: "text-amber-400",   border: "border-amber-500/30" },
-    blue:    { ring: "ring-blue-500/20",    bg: "bg-blue-500/10",    text: "text-blue-400",    border: "border-blue-500/30" },
-    green:   { ring: "ring-green-500/20",   bg: "bg-green-500/10",   text: "text-green-400",   border: "border-green-500/30" },
-    purple:  { ring: "ring-purple-500/20",  bg: "bg-purple-500/10",  text: "text-purple-400",  border: "border-purple-500/30" },
-    red:     { ring: "ring-red-500/20",     bg: "bg-red-500/10",     text: "text-red-400",     border: "border-red-500/30" },
-    cyan:    { ring: "ring-cyan-500/20",    bg: "bg-cyan-500/10",    text: "text-cyan-400",    border: "border-cyan-500/30" },
+    emerald: VERDE,
+    green: VERDE,
+    blue: VERDE,   // era azul
+    cyan: VERDE,   // era ciano
+    amber: MARROM,
+    violet: MARROM, // era violeta
+    purple: MARROM, // era roxo
+    red: ALERTA,    // alerta continua vermelho (é significado, não decoração)
   };
 
-  const colors = colorMap[accentColor] || colorMap.emerald;
+  const colors = colorMap[accentColor] || VERDE;
+
+  // Botão de voltar só quando NÃO existe a barra de abas do painel na tela.
+  // Com a barra presente, a navegação já é feita pelas abas — o "voltar" virava
+  // um clique inútil (e confuso: dava a impressão de estar "dentro" de algo).
+  const dentroDoPainel =
+    typeof document !== 'undefined' && document.body?.dataset?.painelNav === '1';
 
   return (
     <div className="mb-6 sm:mb-8">
-      {/* Botão Voltar — sempre primeiro no fluxo de leitura */}
-      <button
-        onClick={() => navigate(backTo)}
-        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4 min-h-[44px] -ml-1 px-2 rounded-md hover:bg-white/5"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>{backLabel}</span>
-      </button>
+      {/* Botão Voltar — só fora do painel de abas (ver 'dentroDoPainel' acima) */}
+      {!dentroDoPainel && (
+        <button
+          onClick={() => navigate(backTo)}
+          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4 min-h-[44px] -ml-1 px-2 rounded-md hover:bg-white/5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>{backLabel}</span>
+        </button>
+      )}
 
       {/* Header principal */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">

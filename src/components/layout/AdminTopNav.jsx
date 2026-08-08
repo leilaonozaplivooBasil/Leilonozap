@@ -101,6 +101,17 @@ export default function AdminTopNav({ config, currentPageName }) {
     [navigate, closeAll]
   );
 
+  // 🧭 MARCA DE PRESENÇA DA BARRA DO PAINEL (FASE 5 — 08/08/2026)
+  // Enquanto esta barra existe na tela, a página está sendo acessada PELAS ABAS
+  // do painel — então o botão "Voltar ao Painel" dentro da página é redundante
+  // (clicar na aba já troca a tela). O PortalPageHeader lê esta marca e esconde
+  // o próprio botão de voltar. É só sinalização visual: nada de lógica.
+  useEffect(() => {
+    if (!config?.showSidebar) return;
+    document.body.dataset.painelNav = '1';
+    return () => { delete document.body.dataset.painelNav; };
+  }, [config?.showSidebar]);
+
   if (!config || !config.showSidebar) return null;
 
   const openedSection = sections.find((s) => s.title === openSection) || null;
@@ -111,7 +122,9 @@ export default function AdminTopNav({ config, currentPageName }) {
         ref={rootRef}
         className="sticky top-14 sm:top-16 z-40"
         style={{
-          background: "rgba(10, 15, 28, 0.88)",
+          // 🎨 FASE 5 — fim do azul: era azul-marinho (10,15,28) e pintava de azul
+          // o topo de TODAS as telas do painel. Agora é o escuro neutro da marca.
+          background: "rgba(12, 31, 22, 0.90)",
           backdropFilter: "blur(24px) saturate(1.6)",
           WebkitBackdropFilter: "blur(24px) saturate(1.6)",
           borderBottom: "1px solid rgba(16, 185, 129, 0.14)",
@@ -221,7 +234,8 @@ export default function AdminTopNav({ config, currentPageName }) {
             className="absolute left-0 right-0 top-full border-t border-emerald-500/10 animate-in fade-in slide-in-from-top-1 duration-150"
             style={{
               // Fundo sólido: painel flutua sobre o conteúdo e precisa cobrir por completo
-              background: "#0a0f1c",
+              // (FASE 5 — era azul-marinho #0a0f1c; agora escuro neutro da marca)
+              background: "#0C1F16",
               boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
             }}
           >
@@ -266,7 +280,8 @@ export default function AdminTopNav({ config, currentPageName }) {
             className="absolute left-0 right-0 top-full border-t border-emerald-500/10 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150"
             style={{
               // Fundo sólido: painel flutua sobre o conteúdo e precisa cobrir por completo
-              background: "#0a0f1c",
+              // (FASE 5 — era azul-marinho #0a0f1c; agora escuro neutro da marca)
+              background: "#0C1F16",
               boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
             }}
           >
@@ -416,7 +431,7 @@ function CommandPalette({ items, onClose, onSelect }) {
       <div
         className="w-full max-w-xl rounded-2xl overflow-hidden border border-white/10 animate-in zoom-in-95 duration-150"
         style={{
-          background: "#0c111e",
+          background: "#0C1F16",
           boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
         }}
         onClick={(e) => e.stopPropagation()}
