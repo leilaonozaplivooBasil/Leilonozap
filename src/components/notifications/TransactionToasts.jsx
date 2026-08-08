@@ -5,7 +5,25 @@ import { base44 } from '@/api/base44Client';
 import { X, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 
 const SEEN_KEY = 'txNotifySeenIds';
-const POLL_MS = 15000;
+// ⏱️ RITMO DA CONSULTA (08/08/2026 — rate limit em getTransactionNotifications):
+// antes eram 15s FIXOS, em toda aba aberta e mesmo com a aba no fundo — ~240
+// chamadas por hora POR ABA, o que sozinho estourava o limite do endpoint.
+// Agora: 90s a 120s (sorteado, pra abas diferentes não baterem juntas), aba no
+// fundo não consulta, e limite atingido = pausa + espera dobrada (backoff).
+const POLL_MIN_MS = 90000;
+const POLL_MAX_MS = 120000;
+const PAUSA_RATE_LIMIT_MS = 120000; // 2 min parados quando o limite é atingido
+const ESPERA_MAX_MS = 10 * 60 * 1000; // teto do backoff: 10 min
+const proximoIntervalo = () =>
+  POLL_MIN_MS + Math.floor(Math.random() * (POLL_MAX_MS - POLL_MIN_MS));
+
+// Reconhece "limite atingido" tanto por status quanto por texto da resposta.
+function ehRateLimit(erro, dados) {
+  const status = erro?.status || erro?.response?.status || dados?.status;
+  if (status === 429) return true;
+  const texto = `${erro?.message || ''} ${dados?.error || ''}`.toLowerCase();
+  return texto.includes('429') || texto.includes('rate limit') || texto.includes('too many requests');
+}
 const AUTO_HIDE_MS = 8000; // fica no mínimo 5s na tela e some sozinho (sem sujar); X fecha antes
 const MAX_VISIBLE = 3;
 
@@ -68,8 +86,16 @@ export default function TransactionToasts() {
         const user = JSON.parse(savedUser);
         if (!user?.id) return;
 
-        const result = await base44.functions.invoke('getTransactionNotifications', { user_id: user.id });
+        let result;
+        try {
+          result = await base44.functions.invoke('getTransactionNotifications', { user_id: user.id });
+        } catch (erro) {
+          // Limite atingido: para de insistir e dobra a espera (backoff exponencial).
+          if (ehRateLimit(erro, null)) return 'limite';
+          return 'erro';
+        }
         const data = result?.data || result;
+        if (ehRateLimit(null, data)) return 'limite';
         if (!data?.success || !Array.isArray(data.events)) return;
 
         const seen = getSeen();
@@ -97,9 +123,62 @@ export default function TransactionToasts() {
       } catch { /* silencioso */ }
     };
 
-    poll();
-    const interval = setInterval(poll, POLL_MS);
-    return () => { alive = false; clearInterval(interval); Object.values(timersRef.current).forEach(clearTimeout); };
+    // 🔁 Ciclo próprio (setTimeout que se reagenda) em vez de setInterval fixo:
+    // permite espera variável, pausa e backoff. Aba no fundo NÃO consulta — só
+    // reagenda; ao voltar pra frente faz uma checagem imediata (regra mobile:
+    // setInterval é congelado em segundo plano no celular).
+    let timer = null;
+    let esperaExtra = 0; // acumulada pelo backoff quando dá limite/erro
+
+    const agendar = (ms) => {
+      if (!alive) return;
+      clearTimeout(timer);
+      timer = setTimeout(ciclo, ms);
+    };
+
+    const ciclo = async () => {
+      if (!alive) return;
+      if (document.visibilityState !== 'visible') {
+        agendar(proximoIntervalo()); // aba no fundo: nem tenta
+        return;
+      }
+      const resultado = await poll();
+      if (!alive) return;
+      if (resultado === 'limite') {
+        // pausa de 2 min e, nas próximas falhas, o dobro (até 10 min)
+        esperaExtra = Math.min(esperaExtra ? esperaExtra * 2 : PAUSA_RATE_LIMIT_MS, ESPERA_MAX_MS);
+        agendar(esperaExtra);
+        return;
+      }
+      if (resultado === 'erro') {
+        esperaExtra = Math.min(esperaExtra ? esperaExtra * 2 : POLL_MIN_MS, ESPERA_MAX_MS);
+        agendar(esperaExtra);
+        return;
+      }
+      esperaExtra = 0; // deu certo: volta ao ritmo normal
+      agendar(proximoIntervalo());
+    };
+
+    // Ao voltar pro app (celular saindo do fundo / troca de aba): checa na hora,
+    // respeitando um mínimo de 30s pra não virar uma nova enxurrada de chamadas.
+    let ultimaVolta = 0;
+    const aoVoltar = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - ultimaVolta < 30000) return;
+      ultimaVolta = Date.now();
+      agendar(600);
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
+    window.addEventListener('focus', aoVoltar);
+
+    ciclo();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', aoVoltar);
+      window.removeEventListener('focus', aoVoltar);
+      Object.values(timersRef.current).forEach(clearTimeout);
+    };
   }, [dismiss]);
 
   if (toasts.length === 0) return null;
