@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Package, Loader2, Search, Plus, Minus, Trash2, Check,
+  Package, Loader2, Search, Plus, Minus, Trash2,
   Box, RefreshCw, PackagePlus
 } from 'lucide-react';
 
@@ -18,10 +18,6 @@ export default function MeuEstoque() {
   const [loading, setLoading] = useState(true);
   const [term, setTerm] = useState('');
   const [busy, setBusy] = useState('');
-  // catálogo (solicitar do distribuidor) — só loja_fisica
-  const [catTerm, setCatTerm] = useState('');
-  const [catalog, setCatalog] = useState([]);
-  const [catLoading, setCatLoading] = useState(false);
 
   const isLojaFisica = user && (user.primary_career_level === 'loja_fisica' || (Array.isArray(user.career_levels) && user.career_levels.includes('loja_fisica')));
 
@@ -63,26 +59,6 @@ export default function MeuEstoque() {
     setBusy('');
   };
 
-  // catálogo do distribuidor
-  const loadCatalog = useCallback(async (q) => {
-    if (!user?.referred_by_id) return;
-    setCatLoading(true);
-    try {
-      const { data } = await supabase.rpc('loja_catalogo', { _owner: user.id, dist_id: user.referred_by_id, q: q || '', lim: 200 });
-      setCatalog(data || []);
-    } catch (e) { console.error(e); }
-    setCatLoading(false);
-  }, [user]);
-  useEffect(() => { if (tab === 'catalogo' && user) { const t = setTimeout(() => loadCatalog(catTerm), 350); return () => clearTimeout(t); } }, [catTerm, tab, user, loadCatalog]);
-
-  const solicitar = async (c) => {
-    setBusy(c.product_id);
-    const r = await base44.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'add', owner_id: user.id, product_id: c.product_id, quantity: 1 });
-    if (r?.success) { toast.success('Adicionado à sua loja!'); setCatalog((p) => p.map((x) => (x.product_id === c.product_id ? { ...x, na_loja: true } : x))); }
-    else toast.error(r?.error || 'Falha');
-    setBusy('');
-  };
-
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
 
   const ativos = items.filter((i) => i.ativo).length;
@@ -105,12 +81,15 @@ export default function MeuEstoque() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-6">
-        {isLojaFisica && (
-          <div className="flex gap-2 mb-5">
-            <button onClick={() => setTab('meu')} className={`px-4 py-2 rounded-lg text-sm font-semibold ${tab === 'meu' ? 'bg-green-600' : 'bg-gray-800 text-gray-300'}`}>📦 Minha loja</button>
-            <button onClick={() => setTab('catalogo')} className={`px-4 py-2 rounded-lg text-sm font-semibold ${tab === 'catalogo' ? 'bg-green-600' : 'bg-gray-800 text-gray-300'}`}>➕ Solicitar do distribuidor</button>
-          </div>
-        )}
+        {/* 🏪 O antigo "Solicitar do distribuidor" colocava o produto na loja SEM pagar e
+            SEM baixar do estoque central. Agora ele leva ao pedido de reposição de
+            verdade: compra com o desconto da licença, e o estoque só entra com o
+            pagamento confirmado. */}
+        <div className="flex gap-2 mb-5">
+          <button onClick={() => navigate('/painel/comprar-estoque')} className="min-h-[44px] px-4 rounded-lg text-sm font-semibold bg-green-600 hover:bg-green-700 flex items-center gap-2">
+            <PackagePlus className="w-4 h-4" /> Comprar estoque
+          </button>
+        </div>
 
         {tab === 'meu' && (
           <>
@@ -169,33 +148,6 @@ export default function MeuEstoque() {
           </>
         )}
 
-        {tab === 'catalogo' && isLojaFisica && (
-          <>
-            <p className="text-sm text-gray-400 mb-3">Catálogo do distribuidor. Solicite o que você tem na sua loja mas ainda não está aqui.</p>
-            <div className="relative mb-4 max-w-md">
-              <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input value={catTerm} onChange={(e) => setCatTerm(e.target.value)} placeholder="Buscar no catálogo do distribuidor…" className="w-full bg-gray-950 border border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm outline-none focus:border-green-500" />
-            </div>
-            {catLoading ? (
-              <div className="flex items-center gap-2 text-gray-400 py-8"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
-            ) : (
-              <div className="space-y-2">
-                {catalog.map((c) => (
-                  <div key={c.product_id} className="bg-gray-800/60 border border-gray-700 rounded-xl p-3 flex items-center gap-3">
-                    <span className="w-9 h-9 rounded bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">{c.imagem ? <img src={c.imagem} alt="" className="w-full h-full object-cover" /> : <Package className="w-4 h-4 text-gray-400" />}</span>
-                    <div className="flex-1 min-w-0"><div className="text-sm truncate">{c.descricao}</div><div className="text-[11px] text-green-400">{money(c.preco)}</div></div>
-                    {c.na_loja ? (
-                      <span className="text-[11px] text-green-300 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Na minha loja</span>
-                    ) : (
-                      <button onClick={() => solicitar(c)} disabled={busy === c.product_id} className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-1.5"><PackagePlus className="w-4 h-4" /> Solicitar</button>
-                    )}
-                  </div>
-                ))}
-                {catalog.length === 0 && <p className="text-gray-500 text-sm">Nada encontrado.</p>}
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );

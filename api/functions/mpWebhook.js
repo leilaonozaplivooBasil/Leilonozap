@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { settlePdvPixSale } from '../_lib/pdvSettle.js';
+// 🏪 Reposição de estoque do lojista (compra firme): entra estoque, não paga comissão.
+import { aplicarReposicao } from '../_lib/supplySettle.js';
 import { debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
 import { creditarBonusPassaporte } from '../_lib/passaporteBonus.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
@@ -161,6 +163,13 @@ export default async function handler(req, res) {
     if (sale.source === 'pdv') {
       const r = await settlePdvPixSale(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
+    }
+    // 🏪 REPOSIÇÃO DE ESTOQUE (compra firme do lojista): a mercadoria só sai do
+    // estoque central e entra no estoque da loja agora, com o dinheiro confirmado.
+    // Abastecimento NÃO é venda ao consumidor: nenhuma comissão é paga aqui.
+    if (sale.kind === 'reposicao') {
+      const r = await aplicarReposicao(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, reposicao: true, ...r });
     }
     if (sale.kind === 'passaporte') {
       // Passaporte de Lances (modelo A): credita o valor pago + 10% de bônus NA HORA.

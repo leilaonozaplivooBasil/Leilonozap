@@ -50,6 +50,8 @@ const PedidosDistribuidor = React.lazy(() => import('@/pages/PedidosDistribuidor
 const TirarPedido = React.lazy(() => import('@/pages/TirarPedido'));
 const GestaoMetas = React.lazy(() => import('@/pages/GestaoMetas'));
 const MeuEstoque = React.lazy(() => import('@/pages/MeuEstoque'));
+// 🏪 Reposição: o lojista compra do estoque central com o desconto da licença dele
+const ComprarEstoque = React.lazy(() => import('@/pages/ComprarEstoque'));
 const ImageOptimizer = React.lazy(() => import('@/pages/ImageOptimizer'));
 const VisualizarLote = React.lazy(() => import('@/pages/VisualizarLote'));
 const SentinelNoZap = React.lazy(() => import('@/pages/SentinelNoZap'));
@@ -229,6 +231,7 @@ const AuthenticatedApp = () => {
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />
       <Route path="/Metas" element={<LayoutWrapper currentPageName="GestaoMetas"><GestaoMetas /></LayoutWrapper>} />
       <Route path="/painel/estoque" element={<LayoutWrapper currentPageName="MeuEstoque"><MeuEstoque /></LayoutWrapper>} />
+      <Route path="/painel/comprar-estoque" element={<LayoutWrapper currentPageName="ComprarEstoque"><ComprarEstoque /></LayoutWrapper>} />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
       <Route path="/AportesParceiro" element={
         <LayoutWrapper currentPageName="AportesParceiro">
