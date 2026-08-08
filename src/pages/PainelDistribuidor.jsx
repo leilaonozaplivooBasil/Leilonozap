@@ -228,7 +228,7 @@ export default function PainelDistribuidor() {
 
   const isLoja = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
   const MENU = isLoja ? [
-    { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Árvore', icon: Network },
     { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
@@ -241,7 +241,7 @@ export default function PainelDistribuidor() {
     { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
     { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ] : [
-    { id: 'visao', label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
     { id: 'rede', label: 'Minha Árvore', icon: Network },
     { id: 'pdv', label: 'PDV · Tirar Pedido', icon: ShoppingCart, route: ROUTES.pdv, star: true },
@@ -266,7 +266,7 @@ export default function PainelDistribuidor() {
 
   const cargoNome = CARGO_LABEL[user.primary_career_level] || user.primary_career_level;
 
-  const currentLabel = (MENU.find((m) => m.id === tab)?.label) || 'Visão Geral';
+  const currentLabel = (MENU.find((m) => m.id === tab)?.label) || 'Visão da Operação';
   return (
     <div className="min-h-screen bg-gray-900 text-white md:flex">
       {/* TOPO MOBILE — hambúrguer + seção atual + atalho pedido */}
@@ -325,7 +325,7 @@ export default function PainelDistribuidor() {
             <EntrarAoVivo user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
-                <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
+                <h1 className="text-2xl font-black mb-1">Visão da Operação</h1>
                 <p className="text-gray-400 text-sm">{user.store_name || user.full_name} · {cargoNome}</p>
               </div>
               <div className="flex gap-2">
@@ -369,7 +369,7 @@ export default function PainelDistribuidor() {
             <EntrarAoVivo user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
-                <h1 className="text-2xl font-black mb-1">Visão Geral</h1>
+                <h1 className="text-2xl font-black mb-1">Visão da Operação</h1>
                 <p className="text-gray-400 text-sm">Retrato da operação do Distribuidor 01 (Bangu).</p>
               </div>
               <div className="flex gap-2">
