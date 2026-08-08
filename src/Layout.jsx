@@ -31,6 +31,8 @@ import { saveReferral, getReferral, clearReferral } from "@/lib/referral";
 // 🔐 Ao sair da conta, o aparelho deixa de ser "aparelho autorizado" da captação privada
 import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 import AdminTopNav from "@/components/layout/AdminTopNav";
+// 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
+import NavegacaoLateralGlobal from "@/components/common/NavegacaoLateralGlobal";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
@@ -971,7 +973,15 @@ export default function Layout({ children, currentPageName }) {
           onLogout={handleLogout}
         />
 
-        <main className={`${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''}`}>
+        {/* 🧭 A lateral de ícones acompanha o conteúdo em todas as telas internas.
+            Fora dela: abertura/Recepção (vitrine pública), o próprio Painel de
+            Alavancagem (que já tem a mesma lateral) e a sala de leilão (tela
+            travada de lance, onde uma coluna extra atrapalharia o lance). */}
+        <div className="flex">
+        {isLoggedIn && !isLandingPage && !['Recepcao', 'Licensing', 'AuctionRoom'].includes(currentPageName) && (
+          <NavegacaoLateralGlobal user={currentUser} />
+        )}
+        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''}`}>
           {/* 26/07 — MENU DO PAINEL NO TOPO (substitui a sidebar lateral de 240px):
               barra de comando sticky com mega-menu por seção, grade completa e
               busca por Cmd+K. Libera a largura inteira da tela para o conteúdo. */}
@@ -983,6 +993,7 @@ export default function Layout({ children, currentPageName }) {
           {/* FASE 4.6 — PanelSwitcherCard removido: troca de painel só pelo dropdown do avatar (UserAvatarMenu) */}
           {children}
         </main>
+        </div>
         {/* 🔒 Na sala de leilão o rodapé some: ele ficava abaixo da barra de lance e
             fazia a página "levantar"/rolar. Na sala só o chat rola. */}
         {currentPageName !== 'AuctionRoom' && <Footer />}

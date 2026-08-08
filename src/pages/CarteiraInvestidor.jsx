@@ -122,9 +122,7 @@ export default function CarteiraInvestidor() {
                     )}
 
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate(-1)} className="flex items-center gap-2 bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-slate-400 hover:text-white hover:border-slate-500 transition-colors">
-                            <ArrowLeft size={16} /> Voltar
-                        </button>
+                        {/* ↩️ Voltar removido: navegação pela lateral de ícones */}
                         <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                             Central de Capital e <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Saldo</span>
                         </h1>

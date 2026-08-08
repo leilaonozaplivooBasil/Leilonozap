@@ -100,12 +100,7 @@ export default function MarketplaceLotes() {
                             className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                         />
                     </div>
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 bg-[#161b22] border border-[#30363d] rounded-lg px-4 py-2.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
-                    >
-                        <ArrowLeft size={16} /> Voltar
-                    </button>
+                    {/* ↩️ Voltar removido: navegação pela lateral de ícones */}
                     <button
                         onClick={loadLotes}
                         className="bg-[#161b22] border border-[#30363d] rounded-lg px-4 py-2.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"

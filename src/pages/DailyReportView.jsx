@@ -175,9 +175,7 @@ export default function DailyReportView() {
       <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-3 sm:p-4 shadow-lg print:bg-white print:text-black">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate(createPageUrl('PDV'))} className="text-white hover:bg-green-800/50 print:hidden">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
-            </Button>
+            {/* ↩️ Voltar removido: navegação pela lateral de ícones */}
             <div>
               <h1 className="text-lg sm:text-xl font-bold">📊 Relatório de Vendas - {dateParam}</h1>
               <p className="text-sm opacity-80">{allSales.length} vendas registradas</p>

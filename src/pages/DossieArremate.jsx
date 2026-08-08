@@ -15,10 +15,8 @@ export default function DossieArremate() {
       {/* Toolbar — escondida na impressão */}
       <div className="sticky top-16 z-40 bg-white border-b border-slate-200 shadow-sm print:hidden">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="text-slate-700">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          {/* ↩️ Voltar removido: navegação pela lateral de ícones */}
+          <span />
           <Button onClick={handlePrint} className="bg-slate-900 hover:bg-slate-800 text-white">
             <Printer className="w-4 h-4 mr-2" />
             Imprimir / Salvar PDF

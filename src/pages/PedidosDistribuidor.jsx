@@ -118,7 +118,7 @@ export default function PedidosDistribuidor() {
       <div className="bg-gray-950 border-b border-gray-800 px-6 py-4 sticky top-16 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/painel')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-700"><ArrowLeft className="w-4 h-4" /> Voltar</button>
+            {/* ↩️ Voltar removido: navegação pela lateral de ícones */}
             <div className="w-9 h-9 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center"><Truck className="w-5 h-5 text-green-400" /></div>
             <div>
               <h1 className="text-xl font-black leading-none">Pedidos & Envio</h1>

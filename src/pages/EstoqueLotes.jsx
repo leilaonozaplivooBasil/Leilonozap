@@ -252,14 +252,7 @@ export default function EstoqueLotes() {
         {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate(createPageUrl('RegisterBatches'))}
-              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
+            {/* ↩️ Voltar removido: a navegação agora é a lateral de ícones */}
             <h1 className="text-3xl font-bold text-white flex items-center gap-2"><Boxes className="w-7 h-7 text-blue-400" />Estoque de Lotes Recebidos</h1>
           </div>
           <Button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700">
