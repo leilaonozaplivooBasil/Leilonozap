@@ -29,8 +29,10 @@ export default function VitrineReposicao({ produtos, carregando, termo, onTermo,
             const meu = cheio * (1 - (Number(descontoPct) || 0) / 100);
             return (
               <div key={p.id} className="bg-white border border-nz-borda rounded-xl p-3 flex gap-3">
-                <span className="w-14 h-14 rounded-lg bg-nz-preto-barra flex items-center justify-center overflow-hidden shrink-0">
-                  {p.imagem ? <img src={p.imagem} alt="" className="w-full h-full object-cover" loading="lazy" /> : <Package className="w-5 h-5 text-white/50" />}
+                <span className="w-20 h-20 rounded-lg bg-nz-preto-barra flex items-center justify-center overflow-hidden shrink-0">
+                  {p.imagem
+                    ? <img src={p.imagem} alt={p.descricao} className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    : <Package className="w-5 h-5 text-white/50" />}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-nz-tinta line-clamp-2 leading-snug">{p.descricao}</p>

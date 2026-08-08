@@ -15,7 +15,14 @@ import PixReposicaoModal from '@/components/reposicao/PixReposicaoModal';
 // Escada da rede, do menor para o maior — espelho da lista do servidor.
 const REDE = ['usuario', 'influenciador', 'vendedor', 'licenciado', 'parceiro', 'ponto_retirada', 'loja_fisica', 'distribuidor'];
 
-const imagemDe = (p) => p?.image_url || p?.imagem || (Array.isArray(p?.images) ? p.images[0] : null) || p?.foto || null;
+// 📷 A foto do produto mora em products.image_urls (lista). O card estava caindo
+// sempre no ícone de caixa porque procurava campos que não existem nessa tabela.
+const imagemDe = (p) => {
+  const u = p?.image_urls;
+  if (Array.isArray(u)) return u.find((x) => typeof x === 'string' && x.startsWith('http')) || null;
+  if (typeof u === 'string' && u.startsWith('http')) return u;
+  return null;
+};
 
 export default function ComprarEstoque() {
   const [user, setUser] = useState(null);
