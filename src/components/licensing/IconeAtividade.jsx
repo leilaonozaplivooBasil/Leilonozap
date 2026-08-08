@@ -4,8 +4,10 @@ import React from 'react';
 // fundo transparente, sem placa atrás — a caixinha fica chapada no branco do
 // cartão. Caixa de papelão = venda da Loja Virtual; caixa com martelinho =
 // arremate de leilão. Só desenho, nenhuma regra de negócio aqui.
-const ARTE_CAIXINHA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/cd1f4cb65_image.png';
-const ARTE_CAIXINHA_MARTELO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/b0fd9d138_image.png';
+// Fundo BRANCO puro (não xadrez): os arquivos recortados enviados traziam o
+// quadriculado gravado na própria imagem e ele aparecia atrás da caixa.
+const ARTE_CAIXINHA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a3c7f9747_generated_image.png';
+const ARTE_CAIXINHA_MARTELO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/93def40f3_generated_image.png';
 
 export default function IconeAtividade({ tipo }) {
   const leilao = tipo === 'auction';
