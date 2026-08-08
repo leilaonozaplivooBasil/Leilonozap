@@ -27,9 +27,10 @@
 // Exemplos que esta função reproduz na CADEIA (escada oficial da career_levels):
 //   influenciador (5%) no balcão do distribuidor (20%) → 5% comissão pro influenciador + 15% pro balcão
 //   influenciador de OUTRA estrutura no mesmo balcão   → idêntico: 5% + 15% (linha não importa)
-//   distribuidor (20%) comprando em outro balcão       → 20% pro comprador, 0% pro balcão
+//   distribuidor (20%) no balcão de outro distribuidor → REGRA DO DEGRAU: ele é atendido
+//     como loja física (19%) e o balcão fica com 1% — a casa nunca sai zerada da venda
 // Em TODOS eles, os 10% do topo sobem por cima, sempre.
-import { bestSellingLevel } from './networkChain.js';
+import { bestSellingLevel, REDE } from './networkChain.js';
 import { calcularTopo } from './arvoreOficial.js';
 import { oid } from './oid.js';
 
@@ -63,6 +64,23 @@ export async function buscarUsuario(id) {
   if (!id) return null;
   const arr = await (await sb(`app_users?select=${CAMPOS_USER}&id=eq.${encodeURIComponent(id)}&limit=1`)).json();
   return Array.isArray(arr) ? arr[0] || null : null;
+}
+
+/**
+ * REGRA DO DEGRAU (Gabriel, 08/08/2026) — "ninguém fica ferido".
+ * Quando quem compra tem cargo IGUAL OU MAIOR que o balcão, ele levava o teto inteiro
+ * e o balcão — que comprou o lote, atendeu e entregou — ficava com ZERO de comissão.
+ * Agora, nesse encontro, o comprador é atendido como o degrau IMEDIATAMENTE ABAIXO do
+ * cargo do balcão na escada da rede, e a diferença fica com a casa.
+ *   distribuidor no balcão distribuidor    → comprador como loja física (19%) · balcão 1%
+ *   distribuidor no balcão loja física     → comprador como ponto de retirada (16%) · balcão 3%
+ * Quem compra sendo MENOR que o balcão não muda nada: leva o próprio percentual.
+ * A escada vem do banco (career_levels), nunca chumbada aqui.
+ */
+export function pctDegrauAbaixo(levelBalcao, levels) {
+  const i = REDE.indexOf(levelBalcao);
+  if (i <= 0) return 0; // balcão no primeiro degrau (ou fora da rede): não há degrau abaixo
+  return Number(levels[REDE[i - 1]]?.venda_direta_pct || 0);
 }
 
 /** Percentual de COMISSÃO da própria licença da pessoa (não é desconto no preço). */
@@ -114,12 +132,16 @@ export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprad
   }
 
   // ── 2) CADEIA (até o teto do cargo do balcão) ──────────────────────────────────
-  const tetoPct = Number(bestSellingLevel(balcao, levels).pct) || 0;
+  const balcaoLevel = bestSellingLevel(balcao, levels);
+  const tetoPct = Number(balcaoLevel.pct) || 0;
   const compradorPct = Number(bestSellingLevel(comprador, levels).pct) || 0;
 
-  // 🏪 O comprador leva a comissão da licença dele (limitada ao teto do balcão — não dá
-  // pra tirar do balcão mais do que ele mesmo tem de margem) e o balcão fica com o resto.
-  const pctComprador = Math.min(compradorPct, tetoPct);
+  // 🏪 Comprador MENOR que o balcão: leva o percentual da própria licença e o balcão
+  // fica com o resto do teto. Comprador IGUAL OU MAIOR: entra a REGRA DO DEGRAU — ele é
+  // atendido como o degrau imediatamente abaixo do balcão, para a casa nunca ficar zerada.
+  const pctComprador = compradorPct >= tetoPct
+    ? Math.min(compradorPct, pctDegrauAbaixo(balcaoLevel.level, levels))
+    : compradorPct;
   const pctBalcao = Math.max(0, round2(tetoPct - pctComprador));
 
   const pedacos = [];
