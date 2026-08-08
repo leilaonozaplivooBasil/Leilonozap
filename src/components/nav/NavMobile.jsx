@@ -117,7 +117,25 @@ export default function NavMobile({
               </button>
             )}
 
-            {/* ===== 3. Meu Painel (cargo de rede) ===== */}
+            {/* ===== 3. Painel do cargo (Visão Geral) — MESMO destino do desktop.
+                 Faltava aqui: no celular o menu ia direto pro "Meu Painel" e a
+                 pessoa nunca chegava na visão geral do Painel de Alavancagem. ===== */}
+            {userLogged && (
+              <button
+                onClick={() => go("/Licensing")}
+                className="mt-2 w-full flex min-h-[56px] items-center gap-3 p-3 rounded-xl border border-green-500/50 text-left transition-all duration-200 active:scale-[0.98]"
+                style={{ background: "rgba(16,185,129,0.10)" }}
+              >
+                <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">Visão Geral</p>
+                  <p className="text-[11px] text-gray-400 truncate">Painel de Alavancagem</p>
+                </div>
+                <ChevronRight className="h-4 w-4 flex-shrink-0 text-green-400/70" />
+              </button>
+            )}
+
+            {/* ===== 4. Meu Painel (cargo de rede) ===== */}
             {userLogged && redeMeta && (
               <div className="mt-2">
                 <p className="font-bold text-[10px] uppercase tracking-wider px-4 mb-2 text-gray-500">Meu Painel</p>

@@ -73,6 +73,16 @@ const PAGINAS_TEMA_CLARO = new Set([
 
 ]);
 
+// 🧭 ÁREA DE PAINEL — as únicas telas onde a lateral de ícones aparece.
+// Home dos Leilões, Recepção, Loja Virtual, sala de leilão, Live Shop,
+// Parceiro e qualquer página pública ficam de fora. O Painel de Alavancagem
+// (Licensing) também: ele já tem a lateral própria dele.
+const PAGINAS_COM_LATERAL = new Set([
+  'PainelDistribuidor', 'TirarPedido', 'PedidosDistribuidor', 'MeuEstoque',
+  'GestaoMetas', 'Carteira', 'MyCatalogOrders', 'Evoluir', 'PainelArrematante',
+  'AdminConsignado',
+]);
+
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -973,12 +983,13 @@ export default function Layout({ children, currentPageName }) {
           onLogout={handleLogout}
         />
 
-        {/* 🧭 A lateral de ícones acompanha o conteúdo em todas as telas internas.
-            Fora dela: abertura/Recepção (vitrine pública), o próprio Painel de
-            Alavancagem (que já tem a mesma lateral) e a sala de leilão (tela
-            travada de lance, onde uma coluna extra atrapalharia o lance). */}
+        {/* 🧭 A lateral de ícones é DO PAINEL, não do site (08/08/2026).
+            Antes ela era desenhada por lista de EXCLUSÃO — aparecia em toda tela
+            de quem estava logado — e por isso invadiu a Home dos Leilões e ficou
+            empilhada com a navegação do próprio painel ("painel dentro do
+            painel"). Agora é lista fechada: fora de PAGINAS_COM_LATERAL, nunca. */}
         <div className="flex">
-        {isLoggedIn && !isLandingPage && !['Recepcao', 'Licensing', 'AuctionRoom'].includes(currentPageName) && (
+        {isLoggedIn && !isLandingPage && PAGINAS_COM_LATERAL.has(currentPageName) && (
           <NavegacaoLateralGlobal user={currentUser} />
         )}
         <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''}`}>
