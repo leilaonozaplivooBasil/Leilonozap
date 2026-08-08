@@ -13,6 +13,21 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 🧭 BOTÃO REDUNDANTE SOME (08/08/2026): quando a barra do painel está na
+  // tela, ela já é a navegação — um "Voltar" ao lado dela é botão sobrando.
+  // A barra deixa uma marca no documento ao aparecer; aqui só observamos essa
+  // marca. Abrindo a MESMA tela por link direto (WhatsApp, PWA, URL colada)
+  // não há barra nenhuma — e o Voltar continua aparecendo, senão a pessoa
+  // fica sem saída.
+  const [temBarraDoPainel, setTemBarraDoPainel] = React.useState(false);
+  React.useEffect(() => {
+    const ler = () => setTemBarraDoPainel(!!document.body.dataset.painelNav);
+    ler();
+    const observador = new MutationObserver(ler);
+    observador.observe(document.body, { attributes: true, attributeFilter: ['data-painel-nav'] });
+    return () => observador.disconnect();
+  }, []);
+
   // 🐞 CAUSA-RAIZ DO "VOLTAR QUE NÃO VOLTA" (08/08/2026):
   // a checagem era window.history.length > 1 — que conta o histórico do NAVEGADOR
   // inteiro (abas anteriores, editor, links de fora). Como quase sempre é > 1, o
@@ -25,6 +40,8 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
     if (location.key && location.key !== 'default') navigate(-1);
     else navigate(destino);
   };
+
+  if (temBarraDoPainel) return null;
 
   const cor = tema === 'claro'
     ? 'bg-white border-nz-borda text-gray-600 hover:bg-nz-cinza-fundo hover:text-nz-verde'

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { money } from '@/lib/format';
 import { base44 } from '@/api/base44Client';
+import { buscarRegiao } from '@/lib/regiaoInteligenciaCache';
 import { MapPin, Users2, TrendingUp, Network, Loader2 } from 'lucide-react';
 
 const num = (n) => Number(n || 0).toLocaleString('pt-BR');
@@ -11,20 +12,26 @@ export default function RegiaoCard({ user }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const cep = (user?.address_zip_code || user?.cep || '').replace(/\D/g, '');
+  const cidade = user?.address_city || '';
+  const uf = user?.address_state || '';
+
+  // 🛰️ Uma consulta por região a cada 2 minutos, no máximo. O porteiro
+  // (regiaoInteligenciaCache) guarda a resposta, junta pedidos simultâneos e
+  // dá espera crescente quando a API recusa — era daqui que vinha a rajada
+  // que estourava o limite e mostrava o alerta vermelho sobre o painel.
+  // As dependências agora são os VALORES (cep/cidade/uf), não o objeto do
+  // usuário: antes, qualquer re-render do painel podia pedir tudo de novo.
   useEffect(() => {
-    const cep = (user?.address_zip_code || user?.cep || '').replace(/\D/g, '');
-    const cidade = user?.address_city || '';
     if (!cep && !cidade) { setLoading(false); setData({ available: false }); return; }
     let alive = true;
-    (async () => {
-      try {
-        const r = await base44.functions.invoke('regiaoInteligencia', { cep, cidade, uf: user?.address_state || '' });
-        if (alive) setData(r || { available: false });
-      } catch { if (alive) setData({ available: false }); }
-      if (alive) setLoading(false);
-    })();
+    buscarRegiao(base44, { cep, cidade, uf }).then((r) => {
+      if (!alive) return;
+      setData(r);
+      setLoading(false);
+    });
     return () => { alive = false; };
-  }, [user]);
+  }, [cep, cidade, uf]);
 
   if (loading) return (
     <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-5 mb-6 flex items-center gap-2 text-gray-400 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Carregando inteligência da região…</div>
