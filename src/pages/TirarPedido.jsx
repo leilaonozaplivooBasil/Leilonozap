@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import PixPdvModal from '@/components/pdv/PixPdvModal';
 import NotaPedido from '@/components/pdv/NotaPedido';
+import SeletorLicenca from '@/components/pdv/SeletorLicenca';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
   Package, User as UserIcon, Phone, CreditCard, Banknote, QrCode, Store, Truck
@@ -43,10 +44,9 @@ export default function TirarPedido() {
   const [processing, setProcessing] = useState(false);
   const [todayTotal, setTodayTotal] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
-  // 🧑‍💼 vincular a um vendedor (comissão) — opcional
-  const [sellers, setSellers] = useState([]);
-  const [sellerQuery, setSellerQuery] = useState('');
-  const [vendedor, setVendedor] = useState(null); // { id, full_name, primary_career_level }
+  // 🏷️ quem está levando (licença) — a pessoa leva o desconto do cargo dela e o restante
+  // do teto sobe pela linha DESTE balcão. Opcional: sem seleção, a venda fica na casa.
+  const [comprador, setComprador] = useState(null); // { id, full_name, nivel_nome, desconto_pct, estrutura }
   const [pix, setPix] = useState(null); // cobrança PIX aberta { payment_id, pix_code, qr_code_base64, sale_id, snapshot }
   const [nota, setNota] = useState(null); // nota de pedido pra mostrar/enviar no WhatsApp
   const isStore = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
@@ -55,12 +55,6 @@ export default function TirarPedido() {
     let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
     setUser(u);
     loadToday(u);
-    // carrega quem pode vender por esse distribuidor: a rede + a cúpula (sócios/fundadores/CEO)
-    if (u?.id && !['loja_fisica', 'ponto_retirada', 'parceiro'].includes(u.primary_career_level)) {
-      supabase.rpc('vendedores_disponiveis', { _owner: u.id })
-        .then(({ data }) => setSellers(Array.isArray(data) ? data : []))
-        .catch(() => {});
-    }
   }, []);
 
   const loadToday = async (u = user) => {
@@ -148,14 +142,15 @@ export default function TirarPedido() {
   const setPriceText = (id, raw) => setCart((prev) => prev.map((x) => (x.id === id ? { ...x, priceText: String(raw).replace(/[^\d.,]/g, '') } : x)));
   const remove = (id) => setCart((prev) => prev.filter((x) => x.id !== id));
 
-  const total = cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0);
-  const sellerOptions = sellers.filter((s) => {
-    const q = sellerQuery.trim().toLowerCase();
-    return !q || (s.full_name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q) || (s.primary_career_level || '').toLowerCase().includes(q);
-  });
+  // o preço digitado é sempre o CHEIO; o desconto da licença entra por cima (e o servidor
+  // recalcula do mesmo jeito — a tela aqui é só o espelho do que vai ser cobrado).
+  const totalBruto = cart.reduce((s, x) => s + parseBRL(x.priceText) * x.qty, 0);
+  const descontoPct = Number(comprador?.desconto_pct) || 0;
+  const descontoValor = Math.round(totalBruto * descontoPct) / 100;
+  const total = Math.round((totalBruto - descontoValor) * 100) / 100;
 
   // limpa o balcão pro próximo pedido (chamado após fechar/confirmar)
-  const limpar = () => { setCart([]); setCustomer({ name: '', phone: '' }); setVendedor(null); setSellerQuery(''); loadToday(); };
+  const limpar = () => { setCart([]); setCustomer({ name: '', phone: '' }); setComprador(null); loadToday(); };
 
   const finalize = async () => {
     if (!user?.id) { toast.error('Faça login.'); return; }
@@ -163,8 +158,8 @@ export default function TirarPedido() {
     setProcessing(true);
     // 🧾 retrato do pedido ANTES de limpar — vira a nota e alimenta o modal do PIX
     const snapshot = {
-      items: cart.map((x) => ({ description: x.description, qty: x.qty, unit: parseBRL(x.priceText) })),
-      total, customer: { ...customer }, payment, vendedor: vendedor?.full_name || null,
+      items: cart.map((x) => ({ description: x.description, qty: x.qty, unit: Math.round(parseBRL(x.priceText) * (1 - descontoPct / 100) * 100) / 100 })),
+      total, customer: { ...customer }, payment, vendedor: comprador?.full_name || null,
       storeName: user.store_name || user.full_name || 'Leilão NoZap',
     };
     try {
@@ -174,7 +169,7 @@ export default function TirarPedido() {
         customer: { name: customer.name, phone: customer.phone },
         payment_method: payment,
         delivered,
-        vendedor_id: vendedor?.id || null,
+        comprador_id: comprador?.id || null,
       });
       if (!r?.success) { toast.error(r?.error || 'Falha ao finalizar'); setProcessing(false); return; }
       if (r.pix) {
@@ -310,35 +305,15 @@ export default function TirarPedido() {
             </div>
           )}
 
-          {/* quem vendeu? (comissão) — só pro distribuidor/operador, não pra dono de loja */}
+          {/* quem está levando (licença): leva o desconto do próprio cargo; o restante do
+              teto sobe pela linha DESTE balcão */}
           {!isStore && (
-            <div className="mb-3">
-              <label className="text-[11px] text-gray-400 flex items-center gap-1.5 mb-1"><UserIcon className="w-3 h-3" /> Quem vendeu? (comissão entra pra esse login) — opcional</label>
-              {vendedor ? (
-                <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
-                  <span className="text-sm text-green-200 truncate">{vendedor.full_name} <span className="text-[10px] text-green-400/70">· {cargoLabel(vendedor.primary_career_level)}</span></span>
-                  <button onClick={() => { setVendedor(null); setSellerQuery(''); }} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              ) : (
-                <div>
-                  <input value={sellerQuery} onChange={(e) => setSellerQuery(e.target.value)} placeholder="Filtrar por nome, e-mail ou cargo…" className="w-full bg-white border border-nz-borda rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500 mb-1" />
-                  <div className="border border-nz-borda rounded-lg max-h-56 overflow-y-auto bg-white">
-                    {sellerOptions.length === 0 ? (
-                      <div className="px-3 py-3 text-xs text-gray-500">{sellers.length ? 'Nenhum login encontrado.' : 'Carregando logins da rede…'}</div>
-                    ) : sellerOptions.map((s) => (
-                      <button key={s.id} onClick={() => { setVendedor(s); setSellerQuery(''); }} className="w-full text-left px-3 py-2 min-h-[44px] hover:bg-nz-cinza-fundo text-sm border-b border-nz-borda last:border-0 flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate font-medium flex items-center gap-1.5">{s.full_name || s.email}{s.cupula && <span className="text-[8px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-bold">CÚPULA</span>}</div>
-                          <div className="text-[10px] text-gray-500 truncate">{s.email}</div>
-                        </div>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded shrink-0 ${s.cupula ? 'bg-yellow-500/15 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>{cargoLabel(s.primary_career_level)}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-gray-500 mt-1">{sellers.length} logins vinculados ao distribuidor · sem seleção, a venda fica na casa.</p>
-                </div>
-              )}
-            </div>
+            <SeletorLicenca
+              ownerId={user.id}
+              comprador={comprador}
+              onSelect={setComprador}
+              onClear={() => setComprador(null)}
+            />
           )}
 
           {/* cliente */}
@@ -367,6 +342,17 @@ export default function TirarPedido() {
             <button onClick={() => setDelivered(true)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${delivered ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}><Store className="w-4 h-4" /> Retirada no balcão</button>
             <button onClick={() => setDelivered(false)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex items-center justify-center gap-1.5 ${!delivered ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}><Truck className="w-4 h-4" /> Entregar depois</button>
           </div>
+
+          {descontoPct > 0 && (
+            <div className="mb-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs">
+              <div className="flex items-center justify-between text-nz-tinta-fraca">
+                <span>Subtotal</span><span className="line-through">{money(totalBruto)}</span>
+              </div>
+              <div className="flex items-center justify-between font-bold text-green-700">
+                <span>{comprador?.nivel_nome} · {descontoPct}% aplicado</span><span>− {money(descontoValor)}</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between mb-3">
             <span className="text-gray-400">Total</span>

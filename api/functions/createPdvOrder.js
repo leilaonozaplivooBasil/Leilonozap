@@ -3,6 +3,8 @@
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+// 🏪 regra EXCLUSIVA do balcão: desconto da licença de quem leva + restante pela linha do balcão
+import { carregarTabelasBalcao, buscarUsuario, descontoDaLicenca, pagarComissaoBalcao } from '../_lib/pdvBalcao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -28,6 +30,7 @@ export default async function handler(req, res) {
     const paymentMethod = String(body?.payment_method || 'dinheiro');
     const delivered = !!body?.delivered; // retirada no balcão = entregue na hora
     const vendedorId = String(body?.vendedor_id || '').trim(); // venda vinculada a um vendedor (comissão)
+    const compradorId = String(body?.comprador_id || '').trim(); // quem está levando (licença) — desconto de balcão
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Operador e itens são obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -78,6 +81,27 @@ export default async function handler(req, res) {
     }
     if (!lines.length) return res.status(400).json({ success: false, error: 'Nenhum produto válido' });
     total = round2(total);
+
+    // 🏷️ DESCONTO DE BALCÃO — quem se identifica leva o percentual da PRÓPRIA licença.
+    // O preço vem do cliente como valor CHEIO; o desconto é aplicado AQUI, no servidor,
+    // pra ninguém conseguir forjar preço nem descontar duas vezes.
+    let totalBruto = total;
+    let comprador = null, tabelas = null, descontoInfo = null;
+    if (compradorId) {
+      comprador = await buscarUsuario(compradorId);
+      if (!comprador) return res.status(200).json({ success: false, error: 'Pessoa da licença não encontrada' });
+      tabelas = await carregarTabelasBalcao();
+      descontoInfo = descontoDaLicenca(comprador, tabelas.levels);
+      if (descontoInfo.pct > 0) {
+        total = 0;
+        for (const ln of lines) {
+          ln.unitBruto = ln.unit;
+          ln.unit = round2(ln.unitBruto * (1 - descontoInfo.pct / 100));
+          total += ln.unit * ln.qty;
+        }
+        total = round2(total);
+      }
+    }
     sellerId = isStoreOwner ? actorId : (sellerId || employerId || actorId);
 
     // 🧑‍💼 venda vinculada a um vendedor da rede → a venda passa a ser DELE (e ele ganha comissão)
@@ -106,7 +130,9 @@ export default async function handler(req, res) {
         product_title: String(title).slice(0, 300), sale_price: total, total_amount: total, quantity: totalQty,
         items_json: itemsJson, status: 'pending_payment', payment_method: 'pix',
         // dados que o settle precisa na confirmação (fonte do estoque + entrega)
-        raw_base44: { pdv: true, is_store_owner: isStoreOwner, delivered, operator_id: actorId, items: itemsJson },
+        // comprador_id + total_bruto viajam junto: quando o PIX confirmar, o settle paga
+        // a comissão pela MESMA regra de balcão (e sobre o valor cheio, não o descontado).
+        raw_base44: { pdv: true, is_store_owner: isStoreOwner, delivered, operator_id: actorId, items: itemsJson, comprador_id: compradorId || null, balcao_id: sellerId, total_bruto: totalBruto },
       };
       let ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(pending) });
       if (!ins.ok) {
@@ -141,7 +167,7 @@ export default async function handler(req, res) {
         mp_payment_id: String(pay.id), pix_qr: td.qr_code || null, pix_qr_base64: td.qr_code_base64 || null, pix_ticket_url: td.ticket_url || null,
       }) });
       return res.status(200).json({
-        success: true, pending: true, sale_id: saleId, total, items: lines.length,
+        success: true, pending: true, sale_id: saleId, total, total_bruto: totalBruto, desconto: descontoInfo, items: lines.length,
         pix: { payment_id: String(pay.id), pix_code: td.qr_code || null, qr_code_base64: td.qr_code_base64 || null, ticket_url: td.ticket_url || null },
       });
     }
@@ -181,21 +207,33 @@ export default async function handler(req, res) {
     // Distribuidor, Loja Física e Ponto de Retirada têm loja física e vendem pelo PDV; o split
     // é o mesmo da venda online (20% cadeia + 10% topo), conforme licença e cargo de cada um.
     // (Antes usava payDirectCommissions — motor legado com teto de 20% e regra diferente.)
-    let comissao = 0;
+    let comissao = 0; let rateio = null;
     try {
-      const rr = await fulfillStoreOrder({
-        ...sale,
-        seller_id: vendedor?.id || sellerId,
-        items_json: itemsJson,
-        skipStock: true, // o estoque já foi baixado acima, item a item
-      });
-      comissao = rr?.commission ?? 0;
+      if (comprador) {
+        // 🏪 VENDA DE BALCÃO COM LICENÇA IDENTIFICADA: o comprador já levou o desconto dele
+        // no preço; o que sobra do teto sobe pela LINHA DO BALCÃO (intermediários da estrutura
+        // do balcão pegam o rebate deles, o distribuidor fica com o saldo).
+        const balcao = await buscarUsuario(sellerId);
+        rateio = await pagarComissaoBalcao({
+          saleId, produtoTitulo: sale.product_title, base: totalBruto,
+          comprador, balcao, levels: tabelas.levels, ov: tabelas.ov,
+        });
+        comissao = rateio?.total ?? 0;
+      } else {
+        const rr = await fulfillStoreOrder({
+          ...sale,
+          seller_id: vendedor?.id || sellerId,
+          items_json: itemsJson,
+          skipStock: true, // o estoque já foi baixado acima, item a item
+        });
+        comissao = rr?.commission ?? 0;
+      }
       if (comissao > 0) await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: comissao }) });
     } catch (e) {
       console.warn('PDV: comissão falhou (venda segue gravada):', e?.message);
     }
 
-    return res.status(200).json({ success: true, sale_id: saleId, total, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || null, comissao });
+    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, desconto: descontoInfo, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao tirar pedido', details: String(e?.message || e) });
   }

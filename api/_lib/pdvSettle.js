@@ -3,6 +3,7 @@
 // enquanto o pedido está 'pending_payment' ele não vale nada (sem faturamento, sem comissão).
 // Chamado 1x pelo mpWebhook (o flip atômico lá garante execução única).
 import { fulfillStoreOrder } from './storeFulfill.js';
+import { carregarTabelasBalcao, buscarUsuario, pagarComissaoBalcao } from './pdvBalcao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -56,8 +57,25 @@ export async function settlePdvPixSale(sale) {
   // 💰 comissão pela ÁRVORE OFICIAL (mesmo motor da loja) — estoque já baixado acima
   let commission = 0;
   try {
-    const rr = await fulfillStoreOrder({ ...sale, skipStock: true });
-    commission = rr?.commission ?? 0;
+    if (raw.comprador_id) {
+      // 🏪 balcão com licença identificada: mesma regra do dinheiro/cartão — o restante do
+      // teto sobe pela linha do balcão, sobre o valor CHEIO (antes do desconto do comprador).
+      const [tabelas, comprador, balcao] = await Promise.all([
+        carregarTabelasBalcao(), buscarUsuario(raw.comprador_id), buscarUsuario(raw.balcao_id || sale.seller_id),
+      ]);
+      const rr = await pagarComissaoBalcao({
+        saleId: sale.id, produtoTitulo: sale.product_title,
+        base: Number(raw.total_bruto) || Number(sale.total_amount) || 0,
+        comprador, balcao, levels: tabelas.levels, ov: tabelas.ov,
+      });
+      commission = rr?.total ?? 0;
+      if (commission > 0) {
+        await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
+      }
+    } else {
+      const rr = await fulfillStoreOrder({ ...sale, skipStock: true });
+      commission = rr?.commission ?? 0;
+    }
   } catch (e) {
     console.warn('PDV PIX: comissão falhou (venda segue paga):', e?.message);
   }
