@@ -214,21 +214,23 @@ export default function UserAvatarMenu({ currentUser, temaClaro = false, onLogin
           </div>
         )}
 
-        {/* ===== Painel próprio do cargo de rede (destaque) ===== */}
-        {redeMeta && (
-          <div className="p-3 pb-0">
-            <button
-              onClick={() => navigate("/painel")}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-green-500/50 bg-green-500/10 hover:bg-green-500/15 transition-all duration-200 text-left"
-            >
-              <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">{redeMeta.title}</p>
-                <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
-              </div>
-            </button>
-          </div>
-        )}
+        {/* ===== Painel da pessoa (destaque) — o nome vem do CARGO dela:
+             "Painel do Distribuidor", "Painel do Influenciador", "Painel do
+             Usuário"… Substitui o azulejo "Alavancagem", que saiu da grade. ===== */}
+        <div className="p-3 pb-0">
+          <button
+            onClick={() => { setMenuOpen(false); navigate(redeMeta ? "/painel" : "/Licensing"); }}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border border-green-500/50 bg-green-500/10 hover:bg-green-500/15 transition-all duration-200 text-left"
+          >
+            <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-slab text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">
+                Painel do {badge.label}
+              </p>
+              <p className="text-[11px] text-gray-400 truncate">Financeiro, loja, rede, cadastros e links</p>
+            </div>
+          </button>
+        </div>
 
         {/* ===== Atalhos — MESMA grade do menu mobile (fonte única: @/lib/menuAtalhos) ===== */}
         <div className="p-3 pb-0">

@@ -11,7 +11,7 @@
 // ⚠️ Nada de permissão é criado aqui: os painéis vêm de resolveUserPanels,
 // que continua sendo a única autoridade sobre o que cada cargo libera.
 
-import { ShoppingCart, Briefcase, Gavel, Heart, User as UserIcon } from "lucide-react";
+import { ShoppingCart, Gavel, Heart, User as UserIcon } from "lucide-react";
 import { SECTORS } from "@/lib/sectors";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -23,7 +23,9 @@ const PAINEIS_EM_ATALHO = {
   // retirada, loja física, distribuidor e cargos de topo). Chamar de "Licenciado"
   // dava a impressão de ser só de um cargo. A liberação continua vindo de
   // resolveUserPanels (painel 'licenciado'), que já cobre todos esses cargos.
-  licenciado: { rotulo: "Alavancagem", icon: Briefcase },
+  // 🚫 08/08/2026: "Alavancagem" saiu da grade de atalhos — o painel da pessoa
+  // agora é o cartão grande no topo do menu (com o nome do cargo dela).
+  // O painel continua liberado normalmente e aparece na Visão Geral.
   arrematante: { rotulo: "Arremates", icon: Gavel },
 };
 
