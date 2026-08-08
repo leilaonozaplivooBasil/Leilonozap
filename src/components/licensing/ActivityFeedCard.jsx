@@ -36,7 +36,12 @@ export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
                   <IconeAtividade tipo={isCatalog ? 'catalog' : 'auction'} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{rec.product_title || (isCatalog ? 'Venda Loja Virtual' : 'Comissão de Leilão')}</p>
-                    <p className="text-xs text-gray-400">{new Date(rec.created_date).toLocaleString('pt-BR')}</p>
+                    {/* origem escrita discretamente ao lado da data, sem poluir a linha */}
+                    <p className="text-xs text-gray-400">
+                      <span className="text-gray-500">{isCatalog ? 'Loja Virtual' : 'Leilão'}</span>
+                      <span className="mx-1.5">·</span>
+                      {new Date(rec.created_date).toLocaleString('pt-BR')}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className={`text-xs font-medium ${STATUS_STYLE[statusKey] || 'text-gray-400'}`}>

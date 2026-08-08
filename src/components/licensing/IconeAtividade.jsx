@@ -1,39 +1,24 @@
 import React from 'react';
 
-// 🎁 Ícone da atividade desenhado em VETOR (não é foto): a caixinha de papelão é
-// a venda da Loja Virtual; no leilão ela vem com o martelinho em cima.
-// Foi feito em vetor porque as artes geradas sempre vinham com uma placa cinza
-// colada atrás — em vetor o fundo é realmente transparente e a caixa fica
-// chapada no branco do cartão. Só desenho, nenhuma regra de negócio aqui.
+// 🎁 Artes OFICIAIS validadas pelo dono (08/08/2026): PNG recortado de verdade,
+// fundo transparente, sem placa atrás — a caixinha fica chapada no branco do
+// cartão. Caixa de papelão = venda da Loja Virtual; caixa com martelinho =
+// arremate de leilão. Só desenho, nenhuma regra de negócio aqui.
+const ARTE_CAIXINHA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/cd1f4cb65_image.png';
+const ARTE_CAIXINHA_MARTELO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/b0fd9d138_image.png';
+
 export default function IconeAtividade({ tipo }) {
   const leilao = tipo === 'auction';
   const rotulo = leilao ? 'Arremate de leilão' : 'Venda da Loja Virtual';
 
   return (
-    <svg
-      viewBox="0 0 32 32"
-      role="img"
-      aria-label={rotulo}
-      className="w-7 h-7 sm:w-8 sm:h-8 shrink-0"
-    >
-      <title>{rotulo}</title>
-      {/* tampa da caixa */}
-      <path d="M4 11 16 7l12 4-12 4-12-4Z" fill="#D9A96B" />
-      {/* lateral esquerda */}
-      <path d="M4 11v11l12 4V15L4 11Z" fill="#B9834A" />
-      {/* lateral direita */}
-      <path d="M28 11v11l-12 4V15l12-4Z" fill="#C89457" />
-      {/* fita de embalagem */}
-      <path d="M16 7l4 1.4-12 4L4 11l12-4Z" fill="#EBC894" opacity="0.9" />
-      <path d="M14.6 15.5v9.6l2.8.9v-9.6l-2.8-.9Z" fill="#8C5F31" opacity="0.55" />
-      {leilao && (
-        <g>
-          {/* cabo do martelo */}
-          <path d="M19.6 5.2l5.6-3.2 1.2 2-5.6 3.2-1.2-2Z" fill="#8C5F31" />
-          {/* cabeça do martelo */}
-          <rect x="15.2" y="1.6" width="6" height="3.6" rx="1.2" transform="rotate(-30 15.2 1.6)" fill="#A9691F" />
-        </g>
-      )}
-    </svg>
+    <img
+      src={leilao ? ARTE_CAIXINHA_MARTELO : ARTE_CAIXINHA}
+      alt={rotulo}
+      title={rotulo}
+      loading="lazy"
+      decoding="async"
+      className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
+    />
   );
 }
