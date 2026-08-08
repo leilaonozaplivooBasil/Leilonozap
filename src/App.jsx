@@ -52,6 +52,8 @@ const GestaoMetas = React.lazy(() => import('@/pages/GestaoMetas'));
 const MeuEstoque = React.lazy(() => import('@/pages/MeuEstoque'));
 // 🏪 Reposição: o lojista compra do estoque central com o desconto da licença dele
 const ComprarEstoque = React.lazy(() => import('@/pages/ComprarEstoque'));
+// 🤝 Consignado: aprovação e acompanhamento da mercadoria da casa na mão da rede
+const AdminConsignado = React.lazy(() => import('@/pages/AdminConsignado'));
 const ImageOptimizer = React.lazy(() => import('@/pages/ImageOptimizer'));
 const VisualizarLote = React.lazy(() => import('@/pages/VisualizarLote'));
 const SentinelNoZap = React.lazy(() => import('@/pages/SentinelNoZap'));
@@ -232,6 +234,13 @@ const AuthenticatedApp = () => {
       <Route path="/Metas" element={<LayoutWrapper currentPageName="GestaoMetas"><GestaoMetas /></LayoutWrapper>} />
       <Route path="/painel/estoque" element={<LayoutWrapper currentPageName="MeuEstoque"><MeuEstoque /></LayoutWrapper>} />
       <Route path="/painel/comprar-estoque" element={<LayoutWrapper currentPageName="ComprarEstoque"><ComprarEstoque /></LayoutWrapper>} />
+      <Route path="/painel/consignado" element={
+        <LayoutWrapper currentPageName="AdminConsignado">
+          <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <AdminConsignado />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
       <Route path="/AportesParceiro" element={
         <LayoutWrapper currentPageName="AportesParceiro">

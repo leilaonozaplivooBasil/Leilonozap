@@ -6,6 +6,9 @@ import { oid } from './oid.js';
 // 📦 regra ÚNICA de baixa (estoque próprio do vendedor tem prioridade sobre o central)
 import { baixarItensDaVenda } from './baixaEstoque.js';
 import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
+// 🤝 venda ONLINE: o cliente pagou pela plataforma, então o custo da peça
+// consignada é retido aqui mesmo e a dívida morre — sem tocar no saldo do lojista.
+import { liquidarConsignado } from './consignadoSettle.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -115,6 +118,14 @@ export async function fulfillStoreOrder(sale) {
   }
   const baixados = items.length;
   const commission = await payStoreCommissions(sale);
+  // 🤝 peça consignada vendida online: dívida morre, retida no pagamento
+  if (consumos.some((c) => c.origem === 'consignado')) {
+    try {
+      await liquidarConsignado({ sale, ownerId: sale.seller_id, consumos, paymentMethod: 'pix' });
+    } catch (e) {
+      console.error(`[LOJA] Liquidação de consignado falhou na venda ${sale.id}:`, e?.message);
+    }
+  }
   // 💸 o que era do lojista volta pra conta dele (custo destravado + margem)
   if (consumos.length) {
     try {

@@ -8,6 +8,9 @@ import { carregarTabelasBalcao, buscarUsuario, comissaoDaLicenca, pagarComissaoB
 // 📦 regra única de baixa + repasse do estoque próprio (comprado/consignado)
 import { baixarItensDaVenda } from '../_lib/baixaEstoque.js';
 import { liberarRepasseEstoqueProprio } from '../_lib/repasseEstoqueProprio.js';
+// 🤝 consignado: a dívida da peça MORRE nesta venda. Se o cliente pagou em
+// dinheiro, o custo sai do saldo dele — e sem saldo a venda não fecha.
+import { preverConsignado, liquidarConsignado } from '../_lib/consignadoSettle.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -135,6 +138,16 @@ export default async function handler(req, res) {
     const title = lines.length === 1 ? lines[0].p.description : `${lines[0].p.description} +${lines.length - 1} item(ns)`;
     const itemsJson = lines.map((ln) => ({ product_id: ln.p.id, title: String(ln.p.description || '').slice(0, 200), qty: ln.qty, unit: ln.unit }));
 
+    // 🤝 CONSIGNADO — TRAVA ANTES DE QUALQUER COISA (regra oficial 08/08/2026).
+    // Se esta venda vai puxar peça consignada e o cliente está pagando em dinheiro
+    // (ou saldo), o custo sai do bolso dele NA HORA. Sem cobertura, a venda não sai:
+    // é assim que ninguém termina uma venda ainda devendo a mercadoria.
+    const donoEstoquePrevisto = isStoreOwner ? actorId : sellerId;
+    const previsaoConsignado = await preverConsignado({ ownerId: donoEstoquePrevisto, items: itemsJson, paymentMethod });
+    if (!previsaoConsignado.ok) {
+      return res.status(200).json({ success: false, error: previsaoConsignado.erro, consignado: true, custo_consignado: previsaoConsignado.custo, saldo: previsaoConsignado.saldo });
+    }
+
     // 💳 PIX REAL (Mercado Pago) — o pedido nasce 'pending_payment' e NÃO baixa estoque
     // nem paga comissão. Isso só acontece quando o dinheiro CAI de verdade:
     // mpWebhook → settlePdvPixSale (api/_lib/pdvSettle.js). Acaba o "paguei sem pagar".
@@ -248,6 +261,18 @@ export default async function handler(req, res) {
     const donoEstoque = isStoreOwner ? actorId : sellerId;
     const { consumos } = await baixarItensDaVenda({ ownerId: donoEstoque, items: itemsJson });
 
+    // 🤝 peça consignada vendida: a dívida dela morre AGORA (débito no saldo, já
+    // conferido pela trava acima — nunca deixa saldo negativo nem dívida sobrando)
+    let consignadoQuitado = 0;
+    if (consumos.some((c) => c.origem === 'consignado')) {
+      try {
+        const lq = await liquidarConsignado({ sale: { ...sale, id: saleId }, ownerId: donoEstoque, consumos, paymentMethod });
+        consignadoQuitado = lq?.total || 0;
+      } catch (e) {
+        console.error(`[PDV] Liquidação de consignado falhou na venda ${saleId}:`, e?.message);
+      }
+    }
+
     // 💰 COMISSÃO da venda física.
     let comissao = 0; let rateio = null; let comissaoErro = null;
     try {
@@ -285,7 +310,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, saldo_restante: saldoRestante, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao, comissao_erro: comissaoErro, comissoes_pendentes: rateio?.pendentes || 0 });
+    return res.status(200).json({ success: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, saldo_restante: saldoRestante, rateio, items: lines.length, status: sale.status, vendedor: vendedor?.full_name || comprador?.full_name || null, comissao, comissao_erro: comissaoErro, comissoes_pendentes: rateio?.pendentes || 0, consignado_quitado: consignadoQuitado });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao tirar pedido', details: String(e?.message || e) });
   }

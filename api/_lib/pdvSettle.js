@@ -7,6 +7,9 @@ import { carregarTabelasBalcao, buscarUsuario, pagarComissaoBalcao } from './pdv
 // 📦 mesma regra de baixa da loja virtual: estoque próprio primeiro, central depois
 import { baixarItensDaVenda } from './baixaEstoque.js';
 import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
+// 🤝 consignado: a dívida da peça morre nesta venda (aqui o cliente pagou PIX,
+// então o custo fica retido na plataforma — nada é debitado do saldo dele)
+import { liquidarConsignado } from './consignadoSettle.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -56,6 +59,15 @@ export async function settlePdvPixSale(sale) {
     }
   } catch (e) {
     console.warn('PDV PIX: comissão falhou (venda segue paga):', e?.message);
+  }
+
+  // 🤝 peça consignada vendida: a dívida dela morre agora, retida no próprio PIX
+  if (consumos.some((c) => c.origem === 'consignado')) {
+    try {
+      await liquidarConsignado({ sale, ownerId, consumos, paymentMethod: 'pix' });
+    } catch (e) {
+      console.error(`[PDV] Liquidação de consignado falhou na venda ${sale.id}:`, e?.message);
+    }
   }
 
   // 💸 mercadoria que era do balcão: custo destravado + margem voltam pra conta dele

@@ -8,6 +8,8 @@ import {
   Package, Loader2, Search, Plus, Minus, Trash2,
   Box, RefreshCw, PackagePlus
 } from 'lucide-react';
+// 🤝 mercadoria da casa que está na mão dele: dívida, prazo e devolução
+import ConsignadoCard from '@/components/consignado/ConsignadoCard';
 
 
 export default function MeuEstoque() {
@@ -90,6 +92,8 @@ export default function MeuEstoque() {
             <PackagePlus className="w-4 h-4" /> Comprar estoque
           </button>
         </div>
+
+        <ConsignadoCard user={user} />
 
         {tab === 'meu' && (
           <>
