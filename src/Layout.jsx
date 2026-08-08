@@ -985,7 +985,10 @@ export default function Layout({ children, currentPageName }) {
           {/* 26/07 — MENU DO PAINEL NO TOPO (substitui a sidebar lateral de 240px):
               barra de comando sticky com mega-menu por seção, grade completa e
               busca por Cmd+K. Libera a largura inteira da tela para o conteúdo. */}
-          {(() => {
+          {/* 🎛️ A barra do Painel de Controle é EXCLUSIVA do próprio Painel de
+              Controle (Visão Geral / NetworkOverview). Em qualquer outra tela ela
+              não aparece — lá a navegação é só a lateral de ícones. */}
+          {currentPageName === 'NetworkOverview' && (() => {
             const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
             if (!cfg.showSidebar) return null;
             return <AdminTopNav config={cfg} currentPageName={currentPageName} />;
