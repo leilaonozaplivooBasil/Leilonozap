@@ -3,11 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Wallet, ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 import PassaporteCard from '@/components/wallet/PassaporteCard';
 import CarteiraDeslogada from '@/components/wallet/CarteiraDeslogada';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
+import CarteiraHeader from '@/components/wallet/CarteiraHeader';
+import CarteiraSaldosUnificados from '@/components/wallet/CarteiraSaldosUnificados';
 
 const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const KYC = {
@@ -80,44 +82,16 @@ export default function Carteira() {
   return (
     /* ☀️ Tema claro institucional (mesmo do Painel de Alavancagem) */
     <div className="min-h-screen bg-white text-nz-tinta nz-painel py-8 px-4">
-      <div className="max-w-3xl mx-auto space-y-6">
+      {/* largura maior: os quatro cartões da carteira única cabem em linha no desktop */}
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* ↩️ FASE 3 — saída padrão: esta tela não tinha botão voltar nenhum */}
         <BotaoVoltar destino="/Licensing" tema="claro" />
-        {/* Header — cartão de identidade, mesmo estilo do Perfil */}
-        <div
-          className="relative overflow-hidden rounded-2xl border border-white/10 p-6 sm:p-8 shadow-lg shadow-black/20"
-          style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(17,24,39,0.85) 45%, rgba(17,24,39,0.4)), rgba(31,41,55,0.3)' }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-emerald-500/15 ring-2 ring-emerald-400/40 shrink-0">
-              <Wallet className="w-7 h-7 text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 mb-1">Financeiro</p>
-              <h1 className="font-slab text-2xl sm:text-3xl font-extrabold leading-tight">Minha Carteira</h1>
-            </div>
-          </div>
-        </div>
+        {/* 🖤💚 Cabeçalho no padrão da Visão Geral, com o TOTAL da carteira única */}
+        <CarteiraHeader total={(Number(w?.saldo_disponivel) || 0) + (Number(w?.commission_balance) || 0)} />
 
-        {/* Saldo — commission_balance é a fonte de verdade (sacável e usável na loja);
-            saldo_a_liberar são vendas em hold (liberam após confirmação do comprador / prazo). */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gradient-to-br from-green-500/15 to-emerald-500/5 border border-green-500/30 rounded-2xl p-5 shadow-lg shadow-black/10">
-            <div className="text-xs text-gray-400 font-medium">Disponível (sacar / usar na loja)</div>
-            <div className="text-2xl sm:text-3xl font-black text-green-400 tabular-nums mt-1">{money(w?.commission_balance)}</div>
-          </div>
-          <div className="bg-gradient-to-br from-blue-500/15 to-blue-500/5 border border-blue-500/30 rounded-2xl p-5 shadow-lg shadow-black/10">
-            <div className="text-xs text-gray-400 font-medium">A liberar (suas vendas)</div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-300 tabular-nums mt-1">{money(w?.saldo_a_liberar)}</div>
-            <div className="text-[11px] text-gray-400 mt-1.5">Libera quando o comprador confirma ou no prazo (PIX 7d · cartão 14d)</div>
-          </div>
-        </div>
-        {Number(w?.saldo_alocado) > 0 && (
-          <div className="bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 border border-yellow-500/30 rounded-2xl p-5 shadow-lg shadow-black/10">
-            <div className="text-xs text-gray-400 font-medium">Em saque (aguardando aprovação)</div>
-            <div className="text-2xl font-black text-yellow-400 tabular-nums mt-1">{money(w?.saldo_alocado)}</div>
-          </div>
-        )}
+        {/* 💰 CARTEIRA ÚNICA — os quatro saldos reais do mesmo getMyWallet:
+            depósito/leilão, comissões de vendas, reservado em lances e a liberar. */}
+        <CarteiraSaldosUnificados w={w} />
 
         {/* 🎟️ Cupom Passaporte — só aparece se o usuário tiver crédito */}
         <PassaporteCard user={user} />
@@ -135,7 +109,10 @@ export default function Carteira() {
           ) : (
             <div className="space-y-3">
               {w?.kyc_status === 'reprovado' && w?.kyc?.reject_reason && <p className="text-sm text-red-400">Reprovado: {w.kyc.reject_reason}. Reenvie.</p>}
-              <p className="text-sm text-gray-300">Pra sacar com segurança, valide sua identidade. <strong>O saque só vai pro PIX do seu CPF.</strong></p>
+              {/* 🔥 Único ponto laranja/fogo da tela: o aviso de identidade pendente */}
+              <p className="text-sm rounded-xl border border-nz-fogo/40 bg-nz-fogo-fundo text-nz-fogo-escuro p-3">
+                Pra sacar com segurança, valide sua identidade. <strong>O saque só vai pro PIX do seu CPF.</strong>
+              </p>
               <div>
                 <label className="text-xs text-gray-400">CPF (sua chave PIX de saque)</label>
                 <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" className="bg-gray-700 border-gray-600" />
@@ -149,7 +126,7 @@ export default function Carteira() {
                   </label>
                 ))}
               </div>
-              <Button onClick={enviarKyc} disabled={enviandoKyc} className="w-full bg-green-600 hover:bg-green-700">
+              <Button onClick={enviarKyc} disabled={enviandoKyc} className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white">
                 {enviandoKyc ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando…</> : 'Enviar para validação'}
               </Button>
             </div>
