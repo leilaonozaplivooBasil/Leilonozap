@@ -66,9 +66,13 @@ export default function TirarPedido() {
     const list = data || [];
     setTodayCount(list.length);
     setTodayTotal(list.reduce((s, x) => s + (Number(x.total_amount) || 0), 0));
-    // 💳 saldo do balcão — é com ele que a venda física é paga
-    const { data: w } = await supabase.from('app_users').select('saldo_disponivel').eq('id', u.id).maybeSingle();
-    setSaldo(Number(w?.saldo_disponivel) || 0);
+    // 💳 SALDO QUE PAGA NO BALCÃO = SALDO DE COMISSÃO (regra oficial 08/08/2026).
+    // ⚠️ Antes lia saldo_disponivel — que é o crédito de DEPÓSITO/LEILÃO (dar lance e
+    // arrematar) e pode estar comprometido em lance vivo. Esse dinheiro NÃO compra na
+    // loja física. O único saldo que paga pedido é commission_balance — o mesmo card
+    // "Comissões de vendas" da tela Minha Carteira.
+    const { data: w } = await supabase.from('app_users').select('commission_balance').eq('id', u.id).maybeSingle();
+    setSaldo(Number(w?.commission_balance) || 0);
   };
 
   // 🏪 A loja aparece INTEIRA por padrão (sem digitar nada), em ordem alfabética.
@@ -228,7 +232,7 @@ export default function TirarPedido() {
               <div className="text-lg font-black text-green-400">{money(todayTotal)} <span className="text-xs text-gray-500">· {todayCount}</span></div>
             </div>
             <div>
-              <div className="text-[11px] text-gray-500 uppercase">Saldo disponível</div>
+              <div className="text-[11px] text-gray-500 uppercase">Saldo de comissão</div>
               <div className={`text-lg font-black ${saldo > 0 ? 'text-nz-verde' : 'text-red-500'}`}>{money(saldo)}</div>
             </div>
           </div>
@@ -363,7 +367,7 @@ export default function TirarPedido() {
           )}
           {saldoInsuficiente && (
             <div className="mb-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-700 font-semibold">
-              Saldo insuficiente ({money(saldo)}). Compre saldo da plataforma para vender no balcão.
+              Comissão insuficiente ({money(saldo)}). No balcão só o saldo de comissão paga o pedido — depósito de leilão é crédito para dar lance, não compra na loja.
             </div>
           )}
 
