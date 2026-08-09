@@ -14,6 +14,7 @@ import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
 import PlanilhaImport from '@/components/catalog/PlanilhaImport';
 import PageFullscreen from "@/components/admin/PageFullscreen";
+import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
 
 export default function CatalogManagement() {
   const navigate = useNavigate();
@@ -23,6 +24,14 @@ export default function CatalogManagement() {
     const rede = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
     const isRede = u && Array.isArray(u.career_levels) && u.career_levels.some((c) => rede.includes(c));
     return isRede ? { backTo: '/painel', backLabel: 'Voltar ao Painel' } : {};
+  })();
+  // 🧭 quem chegou aqui pela lateral do painel continua vendo o menu escrito do
+  // painel (antes ele sumia e só a seta do navegador trazia a pessoa de volta).
+  const _painelUser = (() => {
+    let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    const rede = ['distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado'];
+    const isRede = u && Array.isArray(u.career_levels) && u.career_levels.some((c) => rede.includes(c));
+    return isRede ? u : null;
   })();
   // escrita via service_role (anon não persiste). uid = ator logado.
   const _uid = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.id; } catch { return null; } })();
@@ -244,7 +253,9 @@ export default function CatalogManagement() {
 
   return (
     <PageFullscreen>
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-900 md:flex">
+      <MenuPainelLateral user={_painelUser} />
+      <div className="flex-1 min-w-0 p-6">
       <div className="max-w-6xl mx-auto">
         <PortalPageHeader
           icon={Store}
@@ -832,6 +843,7 @@ export default function CatalogManagement() {
             <p className="text-gray-400">Em breve: configuração do rodapé</p>
           </div>
         )}
+      </div>
       </div>
     </div>
     </PageFullscreen>

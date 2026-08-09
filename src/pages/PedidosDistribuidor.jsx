@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
 import {
   ArrowLeft, Truck, Package, Loader2, MapPin, Plus, Trash2, Check, Clock,
   PackageCheck, Send, Box, RefreshCw, ShoppingBag, X
@@ -113,7 +114,10 @@ export default function PedidosDistribuidor() {
   const countBy = (s) => orders.filter((o) => o.status === s).length;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white md:flex">
+      {/* 🧭 menu escrito do painel — o mesmo do /painel, pra não sumir aqui */}
+      <MenuPainelLateral user={user} />
+      <div className="flex-1 min-w-0">
       {/* header */}
       <div className="bg-gray-950 border-b border-gray-800 px-6 py-4 sticky top-16 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
@@ -246,6 +250,7 @@ export default function PedidosDistribuidor() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
