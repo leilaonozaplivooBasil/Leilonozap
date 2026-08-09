@@ -12,10 +12,35 @@ import leilaSuporte from "@/assets/leila-suporte.webp";
 // que usa AGENT_API_KEY (disponível no runtime Deno, não no Vercel) pra falar
 // com o agente leila_atendente na API nativa da Base44.
 
+// 💬 Divide a resposta em "bolhas" curtas e as envia uma a uma, com uma pausa de
+// "digitando..." entre elas — igual conversa real de WhatsApp, em vez de uma
+// única parede de texto. Quebra por parágrafo (linha em branco); se vier um
+// parágrafo só, tenta quebrar por frase pra não ficar um bloco enorme.
+function dividirEmBolhas(texto) {
+  const paragrafos = texto.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  if (paragrafos.length > 1) return paragrafos;
+  const frases = texto.match(/[^.!?\n]+[.!?]?(\n|$)/g)?.map((f) => f.trim()).filter(Boolean) || [texto];
+  const bolhas = [];
+  let atual = "";
+  for (const frase of frases) {
+    atual = atual ? `${atual} ${frase}` : frase;
+    if (atual.length > 120) {
+      bolhas.push(atual.trim());
+      atual = "";
+    }
+  }
+  if (atual.trim()) bolhas.push(atual.trim());
+  return bolhas.length ? bolhas : [texto];
+}
+
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export default function LeilaChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // ⌨️ "digitando..." entre uma bolha e outra da mesma resposta
+  const [digitando, setDigitando] = useState(false);
   // 🧠 Mantém a MESMA conversa do início ao fim do chat (memória real do agente).
   // Sem isso, cada mensagem criava uma conversa nova e reenviava todo o histórico,
   // o que sobrecarregava o agente e travava a partir da 2ª mensagem.
@@ -62,15 +87,23 @@ export default function LeilaChat({ open, onClose }) {
         : (resp?.response || resp?.reply || resp?.message || "")).trim()
         || "Não consegui responder agora. Tente novamente.";
 
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      setLoading(false);
+      const bolhas = dividirEmBolhas(reply);
+      for (let i = 0; i < bolhas.length; i++) {
+        setDigitando(true);
+        // ⏱️ tempo de "digitação" proporcional ao tamanho da bolha, como no WhatsApp
+        await pausa(Math.min(2200, 500 + bolhas[i].length * 18));
+        setDigitando(false);
+        setMessages((prev) => [...prev, { role: "assistant", content: bolhas[i] }]);
+      }
     } catch (e) {
       console.error("[LeilaChat] erro:", e);
+      setLoading(false);
+      setDigitando(false);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Não consegui responder agora. Tente novamente." },
       ]);
-    } finally {
-      setLoading(false);
     }
   }, [input, loading, messages]);
 
@@ -108,7 +141,7 @@ export default function LeilaChat({ open, onClose }) {
             <p className="text-white font-semibold text-sm sm:text-base truncate">Leila</p>
             <p className="text-green-400 text-xs flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              {loading ? "digitando..." : "atendente online"}
+              {loading || digitando ? "digitando..." : "atendente online"}
             </p>
           </div>
           <button
@@ -150,7 +183,7 @@ export default function LeilaChat({ open, onClose }) {
               </div>
             );
           })}
-          {loading && (
+          {(loading || digitando) && (
             <div className="flex justify-start">
               <div className="bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm px-3.5 py-2 text-sm">
                 <span className="inline-flex gap-1">
