@@ -12,7 +12,7 @@ import EvolucaoDiaria from '@/components/painel/EvolucaoDiaria';
 import EvolucaoVendedores from '@/components/painel/EvolucaoVendedores';
 import VendasAuditoria from '@/components/painel/VendasAuditoria';
 import RegiaoCard from '@/components/painel/RegiaoCard';
-import ArvoreGenealogica from '@/components/painel/ArvoreGenealogica';
+import MinhaArvoreRede from '@/components/painel/MinhaArvoreRede';
 import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
@@ -496,9 +496,11 @@ export default function PainelDistribuidor() {
         {tab === 'rede' && (
           <div>
             <h1 className="text-2xl font-black mb-1">Minha Árvore Genealógica</h1>
-            {/* 🌳 08/08/2026 — a árvore agora desce TODOS os níveis a partir da própria
-                pessoa (antes só o 1º nível, e por isso aparecia "vazia"). */}
-            <ArvoreGenealogica userId={user.id} userName={user.full_name} />
+            {/* 🌳 08/08/2026 — é a MESMA árvore do Painel de Controle, replicada aqui
+                com a própria pessoa como raiz (bolinha única no topo). Admin/super
+                admin mexem igual lá; os demais cargos só acompanham. */}
+            <p className="text-gray-400 text-sm mb-4">Toda a sua rede, nível por nível, a partir de você.</p>
+            <MinhaArvoreRede user={user} />
           </div>
         )}
 

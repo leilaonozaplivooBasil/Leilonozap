@@ -201,6 +201,29 @@ body[data-painel-nav] main [class*="text-transparent"] {
   -webkit-text-fill-color: var(--nz-tinta) !important;
   background-image: none !important;
 }
+/* 🌑 BLOCO ESCURO DENTRO DO PAINEL CLARO (08/08/2026)
+   A Árvore Genealógica é a MESMA tela do Painel de Controle e precisa continuar
+   escura mesmo aparecendo dentro de um painel branco. As regras acima pintam por
+   DESCENDÊNCIA, então alcançariam o miolo da árvore e a deixariam ilegível
+   (letra branca sobre fundo branco). Aqui a pintura original é devolvida dentro
+   de .nz-escuro. Só cor: nada de layout, nada de lógica. */
+.nz-painel .nz-escuro [class*="bg-gray-950"],
+.nz-painel .nz-escuro[class*="bg-gray-950"] { background-color: #030712 !important; }
+.nz-painel .nz-escuro [class*="bg-gray-900"],
+.nz-painel .nz-escuro[class*="bg-gray-900"] { background-color: #111827 !important; }
+.nz-painel .nz-escuro [class*="bg-gray-800"],
+.nz-painel .nz-escuro[class*="bg-gray-800"] { background-color: #1f2937 !important; }
+.nz-painel .nz-escuro [class*="bg-gray-700"] { background-color: #374151 !important; }
+.nz-painel .nz-escuro [class*="text-white"] { color: #ffffff !important; }
+.nz-painel .nz-escuro [class*="text-gray-100"],
+.nz-painel .nz-escuro [class*="text-gray-200"] { color: #e5e7eb !important; }
+.nz-painel .nz-escuro [class*="text-gray-300"] { color: #d1d5db !important; }
+.nz-painel .nz-escuro [class*="text-gray-400"] { color: #9ca3af !important; }
+.nz-painel .nz-escuro [class*="text-gray-500"] { color: #6b7280 !important; }
+.nz-painel .nz-escuro [class*="border-gray-700"] { border-color: #374151 !important; }
+.nz-painel .nz-escuro [class*="border-gray-800"] { border-color: #1f2937 !important; }
+.nz-painel .nz-escuro input { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
+
 /* linhas zebradas discretas nas tabelas densas */
 .nz-painel:not(.nz-escuro) tbody tr:nth-child(even),
 body[data-painel-nav] main tbody tr:nth-child(even) {
