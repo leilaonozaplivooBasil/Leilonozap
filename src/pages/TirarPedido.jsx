@@ -109,7 +109,11 @@ export default function TirarPedido() {
           for (let from = 0; from < 20000; from += PAGE) {
             let query = supabase
               .from('products')
-              .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls,category')
+              // ⚠️ NÃO pedir "category" aqui: essa coluna NÃO existe em products
+              // (o nome real no banco é category_id). Pedir um campo inexistente
+              // faz o banco recusar a consulta inteira e a vitrine do balcão
+              // aparecia VAZIA mesmo com 2.582 produtos em estoque (08/08/2026).
+              .select('id,description,price_catalog,selling_price_retail,quantity,lot,image_urls')
               .gt('quantity', 0)
               .order('description', { ascending: true })
               .range(from, from + PAGE - 1);
