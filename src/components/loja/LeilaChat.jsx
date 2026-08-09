@@ -4,10 +4,25 @@ import ReactMarkdown from "react-markdown";
 import { base44 } from "@/api/base44Client";
 import leilaSuporte from "@/assets/leila-suporte.webp";
 
-const AGENT_NAME = "leila_atendente";
+// 🤖 Persona da Leila — atendente IA oficial do Leilão NoZap.
+// O app usa adapter Supabase (sem base44.agents), então a conversa roda via InvokeLLM
+// com o histórico mantido em estado local.
+const LEILA_SYSTEM = `Você é a Leila, a atendente IA oficial da plataforma Leilão NoZap.
+Você ajuda usuários com dúvidas sobre:
+- Leilões online (como participar, dar lances, arrematar)
+- Loja Virtual (produtos, carrinho, pedidos, frete)
+- Sistema de Alavancagem (planos de carreira, comissões, níveis)
+- Carteira digital (saldo, depósitos, saques)
+- Pedidos e rastreio
+
+REGRAS:
+- Responda sempre em português do Brasil, de forma amigável, curta e direta.
+- Não invente informações. Se não souber, diga que vai direcionar a dúvida para a equipe.
+- Nunca peça dados sensíveis (senha, CPF, número de cartão).
+- Não execute transações — apenas oriente o usuário onde fazer cada ação no app.
+- Se o usuário perguntar sobre saldo específico ou dados da conta, oriente a ir na aba "Carteira".`;
 
 export default function LeilaChat({ open, onClose }) {
-  const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,73 +30,54 @@ export default function LeilaChat({ open, onClose }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Guarda a conversa completa (addMessage precisa do objeto inteiro, não só do id)
-  const conversationRef = useRef(null);
-
-  // Cria/retoma a conversa quando o chat abre pela primeira vez
-  const ensureConversation = useCallback(async () => {
-    if (conversationRef.current) return conversationRef.current;
-    try {
-      setError(null);
-      const conv = await base44.agents.createConversation({
-        agent_name: AGENT_NAME,
-        metadata: { name: "Atendimento Leila", description: "Chat de suporte com a Leila" },
-      });
-      conversationRef.current = conv;
-      setConversationId(conv.id);
-      setMessages(conv.messages || []);
-      return conv;
-    } catch (e) {
-      console.error("[LeilaChat] createConversation falhou:", e);
-      const msg = e?.message || e?.error || String(e);
-      setError(`Não consegui iniciar a conversa: ${msg}`);
-      return null;
-    }
-  }, []);
-
-  // Quando abre: garante conversa e foca o input
-  useEffect(() => {
-    if (open) {
-      ensureConversation();
-      setTimeout(() => inputRef.current?.focus(), 200);
-    }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Subscribe ao streaming da conversa
-  useEffect(() => {
-    if (!conversationId) return;
-    const unsubscribe = base44.agents.subscribeToConversation(conversationId, (data) => {
-      setMessages(data.messages || []);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [conversationId]);
-
   // Auto-scroll para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Quando abre: foca o input
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 200);
+    } else {
+      // Reseta erro ao fechar
+      setError(null);
+    }
+  }, [open]);
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
-    const conv = await ensureConversation();
-    if (!conv) return;
     setInput("");
     setLoading(true);
     setError(null);
+
+    const newMessages = [...messages, { role: "user", content: text }];
+    setMessages(newMessages);
+
     try {
-      await base44.agents.addMessage(
-        conv,
-        { role: "user", content: text }
-      );
+      // Monta o histórico da conversa no prompt (InvokeLLM recebe um prompt único)
+      const hist = newMessages
+        .map((m) => `${m.role === "user" ? "Usuário" : "Leila"}: ${m.content}`)
+        .join("\n\n");
+
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `${LEILA_SYSTEM}\n\n--- CONVERSA ---\n${hist}\n\nLeila:`,
+      });
+
+      const reply =
+        result?.text || result?.response || result?.ok === false
+          ? (result?.error || "Não consegui responder agora. Tente novamente.")
+          : "Não consegui responder agora. Tente novamente.";
+
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
-      console.error("[LeilaChat] addMessage falhou:", e);
+      console.error("[LeilaChat] InvokeLLM falhou:", e);
+      setError("Não consegui responder agora. Tente novamente.");
+    } finally {
       setLoading(false);
-      const msg = e?.message || e?.error || String(e);
-      setError(`Não consegui enviar a mensagem: ${msg}`);
     }
-  }, [input, loading, ensureConversation]);
+  }, [input, loading, messages]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -152,21 +148,13 @@ export default function LeilaChat({ open, onClose }) {
                       : "bg-gray-800 text-gray-100 rounded-bl-sm"
                   }`}
                 >
-                  {msg.content ? (
-                    isUser ? (
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                    ) : (
-                      <div className="prose prose-sm prose-invert max-w-none break-words">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                    )
-                  ) : null}
-                  {msg.tool_calls?.map((tc, i) => (
-                    <div key={i} className="mt-1 text-[10px] text-gray-400 flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full border border-gray-500 animate-spin" />
-                      consultando {tc.name || "dados"}...
+                  {isUser ? (
+                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                  ) : (
+                    <div className="prose prose-sm prose-invert max-w-none break-words">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             );
