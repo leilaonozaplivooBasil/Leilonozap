@@ -15,23 +15,29 @@ export default function LeilaChat({ open, onClose }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Guarda a conversa completa (addMessage precisa do objeto inteiro, não só do id)
+  const conversationRef = useRef(null);
+
   // Cria/retoma a conversa quando o chat abre pela primeira vez
   const ensureConversation = useCallback(async () => {
-    if (conversationId) return conversationId;
+    if (conversationRef.current) return conversationRef.current;
     try {
       setError(null);
       const conv = await base44.agents.createConversation({
         agent_name: AGENT_NAME,
         metadata: { name: "Atendimento Leila", description: "Chat de suporte com a Leila" },
       });
+      conversationRef.current = conv;
       setConversationId(conv.id);
       setMessages(conv.messages || []);
-      return conv.id;
+      return conv;
     } catch (e) {
-      setError("Não consegui iniciar a conversa. Tente novamente em instantes.");
+      console.error("[LeilaChat] createConversation falhou:", e);
+      const msg = e?.message || e?.error || String(e);
+      setError(`Não consegui iniciar a conversa: ${msg}`);
       return null;
     }
-  }, [conversationId]);
+  }, []);
 
   // Quando abre: garante conversa e foca o input
   useEffect(() => {
@@ -59,21 +65,23 @@ export default function LeilaChat({ open, onClose }) {
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
-    const convId = await ensureConversation();
-    if (!convId) return;
+    const conv = await ensureConversation();
+    if (!conv) return;
     setInput("");
     setLoading(true);
     setError(null);
     try {
       await base44.agents.addMessage(
-        { id: convId, messages },
+        conv,
         { role: "user", content: text }
       );
     } catch (e) {
+      console.error("[LeilaChat] addMessage falhou:", e);
       setLoading(false);
-      setError("Não consegui enviar a mensagem. Tente novamente.");
+      const msg = e?.message || e?.error || String(e);
+      setError(`Não consegui enviar a mensagem: ${msg}`);
     }
-  }, [input, loading, ensureConversation, messages]);
+  }, [input, loading, ensureConversation]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
