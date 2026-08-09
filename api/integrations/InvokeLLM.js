@@ -2,7 +2,6 @@
 // parseado direto, como o SDK Base44). Auth: AI_GATEWAY_API_KEY OU VERCEL_OIDC_TOKEN. Degrada gracioso.
 const AI_KEY = process.env.AI_GATEWAY_API_KEY || '';
 const OIDC = process.env.VERCEL_OIDC_TOKEN || '';
-const MODEL = process.env.AI_MODEL || 'anthropic/claude-haiku-4-5';
 const GATEWAY = 'https://ai-gateway.vercel.sh/v1/chat/completions';
 
 export default async function handler(req, res) {
@@ -12,6 +11,8 @@ export default async function handler(req, res) {
     const prompt = String(body?.prompt || '').slice(0, 8000);
     const schema = body?.response_json_schema || body?.response_schema || null;
     if (!prompt) return res.status(400).json({ ok: false, error: 'prompt obrigatório' });
+    // Modelo pode vir do request (gemini_3_flash = free tier) ou do env, fallback haiku
+    const MODEL = body?.model || process.env.AI_MODEL || 'google/gemini-2.0-flash-001';
     const auth = AI_KEY || OIDC;
     if (!auth) return res.status(200).json({ ok: false, needs_key: true, error: 'IA não conectada (configure AI_GATEWAY_API_KEY).' });
 

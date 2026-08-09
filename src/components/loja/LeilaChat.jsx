@@ -7,13 +7,17 @@ import leilaSuporte from "@/assets/leila-suporte.webp";
 // 🤖 A persona da Leila vive no config do agente: base44/agents/leila_atendente.jsonc
 // O chat usa base44.agents (API nativa da Base44) — sem função backend intermediária.
 
+// 🤖 A persona da Leila vive no config do agente: base44/agents/leila_atendente.jsonc
+// O chat chama a Deno function "leilaChat" (base44/functions/leilaChat/entry.ts)
+// que usa AGENT_API_KEY (disponível no runtime Deno, não no Vercel) pra falar
+// com o agente leila_atendente na API nativa da Base44.
+
 export default function LeilaChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const conversationRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,23 +39,14 @@ export default function LeilaChat({ open, onClose }) {
     setMessages(newMessages);
 
     try {
-      // Cria conversa na primeira mensagem
-      if (!conversationRef.current) {
-        conversationRef.current = await base44.agents.createConversation({
-          agent_name: "leila_atendente",
-          metadata: { name: "Atendimento Leila" },
-        });
-      }
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
 
-      // Envia a mensagem e aguarda a resposta do assistente
-      const updated = await base44.agents.addMessage(conversationRef.current, {
-        role: "user",
-        content: text,
-      });
+      const resp = await base44.functions.invoke("leilaChat", { message: text, history });
 
-      const allMsgs = updated?.messages || [];
-      const lastAssistant = [...allMsgs].reverse().find((m) => m.role === "assistant");
-      const reply = lastAssistant?.content || "Não consegui responder agora. Tente novamente.";
+      const reply = (typeof resp === "string"
+        ? resp
+        : (resp?.response || resp?.reply || resp?.message || "")).trim()
+        || "Não consegui responder agora. Tente novamente.";
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {

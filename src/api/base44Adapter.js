@@ -345,12 +345,14 @@ function _logarFalhaServidor(dados) {
   } catch (_) { /* jamais propaga */ }
 }
 
+const APP_ID = '68d536db3c26ff51f79c4137';
+
 async function invokeFunction(name, body, options = {}) {
   const url = `/api/functions/${name}`;
   try {
     const resp = await fetch(url, {
       method: options.method || 'POST',
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers: { 'Content-Type': 'application/json', 'X-App-Id': APP_ID, ...(options.headers || {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await resp.text().catch(() => '');
