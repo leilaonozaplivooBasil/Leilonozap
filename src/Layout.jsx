@@ -81,6 +81,10 @@ const PAGINAS_COM_LATERAL = new Set([
   'PainelDistribuidor', 'TirarPedido', 'PedidosDistribuidor', 'MeuEstoque',
   'GestaoMetas', 'Carteira', 'MyCatalogOrders', 'Evoluir', 'PainelArrematante',
   'AdminConsignado',
+  // 🧭 08/08/2026 — "Editar Loja Virtual" é alcançada PELA lateral do painel e
+  // abria sem lateral nenhuma: o único jeito de voltar era a seta do navegador.
+  // Com a lateral, o item "Meu Painel" traz a pessoa de volta.
+  'CatalogManagement',
 ]);
 
 export default function Layout({ children, currentPageName }) {

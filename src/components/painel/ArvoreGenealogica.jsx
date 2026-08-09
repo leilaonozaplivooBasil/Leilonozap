@@ -104,9 +104,16 @@ export default function ArvoreGenealogica({ userId, userName }) {
         </div>
       )}
 
+      {/* 🌳 08/08/2026 — a árvore NUNCA aparece vazia: mesmo com ninguém abaixo,
+          a própria pessoa é desenhada como o topo (raiz) da sua árvore. */}
       {total === 0 ? (
-        <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-8 text-center text-gray-400">
-          Sua árvore está vazia. Use <b className="text-green-400">Cadastrar &amp; Vender</b> pra começar.
+        <div className="rounded-xl border border-gray-800 p-3 bg-gray-900/40">
+          <div className="flex items-center gap-2 mb-2 text-sm font-bold text-green-400">
+            <Users className="w-4 h-4" /> {userName || 'Você'} <span className="text-gray-500 font-normal">(topo da sua árvore)</span>
+          </div>
+          <div className="ml-2 pl-3 border-l border-gray-800 text-sm text-gray-400 py-2">
+            Ninguém abaixo de você ainda. Use <b className="text-green-400">Cadastrar &amp; Vender</b> pra começar.
+          </div>
         </div>
       ) : (
         <>

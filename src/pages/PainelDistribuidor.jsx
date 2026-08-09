@@ -26,10 +26,11 @@ const CARGO_LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vende
 const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
 
 // itens que abrem páginas já existentes (recursos completos do app)
+// 🧹 08/08/2026 — 'financeiro' saiu: apontava pra /Carteira, que JÁ é item próprio
+// do sistema ("Minha Carteira"). Duas portas pro mesmo dinheiro confundia.
 const EXTERNAL = {
   produtos: 'ProductManagement',
   loja: 'CatalogManagement',
-  financeiro: 'Carteira',
 };
 // rotas diretas (não passam por createPageUrl)
 const ROUTES = {
@@ -234,12 +235,12 @@ export default function PainelDistribuidor() {
     /* 🧭 PDV e Estoque saíram DAQUI: já existem na lateral de ícones do sistema
        (mesma tela, dois caminhos = informação repetida). Continuam nos atalhos. */
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
-    { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
-    { id: 'ranking', label: 'Ranking', icon: Trophy },
+    /* 🧹 FAXINA 08/08/2026 — saíram da lateral por já existirem em outro lugar:
+       Vendas/Histórico e Ranking (Central de Vendas), Financeiro & Comissões
+       (Minha Carteira) e Empresa/Perfil (tela de Perfil). As telas continuam
+       existindo; o que sumiu foi a porta repetida. */
     { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
     { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
-    { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
-    { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ] : [
     { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
@@ -250,12 +251,9 @@ export default function PainelDistribuidor() {
     { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
     { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
-    { id: 'vendas', label: 'Vendas / Histórico', icon: Receipt },
-    { id: 'ranking', label: 'Ranking', icon: Trophy },
+    /* 🧹 mesma faxina do bloco acima (lojas): sem portas repetidas na lateral. */
     { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
     { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
-    { id: 'financeiro', label: 'Financeiro & Comissões', icon: Wallet, ext: true },
-    { id: 'empresa', label: 'Empresa / Perfil', icon: Building2 },
   ];
   const onMenu = (m) => { if (m.route) navigate(m.route); else if (m.ext) navigate(createPageUrl(EXTERNAL[m.id])); else { setTab(m.id); if (m.id === 'vendas') loadVendas(); if (m.id === 'marketing') loadMarketing(); if (m.id === 'atendimento') loadAtendimento(); } };
   // clique num vendedor no ranking → abre a aba Vendas já filtrada nele
@@ -266,7 +264,10 @@ export default function PainelDistribuidor() {
 
   const cargoNome = CARGO_LABEL[user.primary_career_level] || user.primary_career_level;
 
-  const currentLabel = (MENU.find((m) => m.id === tab)?.label) || 'Visão da Operação';
+  // Abas que saíram da lateral ainda são alcançadas por atalho (ex: clicar num
+  // vendedor do ranking abre Vendas). O título do mobile precisa continuar certo.
+  const LABEL_EXTRA = { vendas: 'Vendas / Histórico', ranking: 'Ranking', empresa: 'Empresa / Perfil' };
+  const currentLabel = (MENU.find((m) => m.id === tab)?.label) || LABEL_EXTRA[tab] || 'Visão da Operação';
   return (
     <div className="min-h-screen bg-gray-900 text-white md:flex">
       {/* TOPO MOBILE — hambúrguer + seção atual + atalho pedido */}
