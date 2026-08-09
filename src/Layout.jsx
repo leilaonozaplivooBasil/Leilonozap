@@ -62,7 +62,10 @@ import { Menu, ShoppingCart as CartIcon, Wallet as WalletIcon } from "lucide-rea
 const PAGINAS_TEMA_CLARO = new Set([
   'MyCatalogOrders', 'MyWinnings', 'TirarPedido', 'PedidosDistribuidor', 'MeuEstoque',
   'GestaoMetas', 'PainelArrematante', 'ProductManagement', 'CatalogManagement',
-  'CatalogOrdersAdmin', 'PromoCreator', 'NetworkOverview', 'RegisterBatches',
+  // 🖤 NetworkOverview (Painel de Controle / Sistema de Alavancagem) SAIU do tema
+  // claro em 08/08/2026: a árvore genealógica precisa do fundo preto pra ficar
+  // legível e com a identidade certa. Ele continua escuro por desenho próprio.
+  'CatalogOrdersAdmin', 'PromoCreator', 'RegisterBatches',
   // ✅ PADRÃO ÚNICO (08/08/2026): TODAS as telas alcançadas pela lateral do
   // painel são brancas. As que eram escuras por desenho entram aqui e o tema
   // claro cuida da pintura — inclusive dos títulos em degradê, que agora viram
