@@ -1,10 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
+// ⚠️ Sem checagem de auth aqui: esta function é chamada em servidor→servidor
+// pela ponte api/_lib/base44Runtime.js (Vercel, domínio leilaonozap.net não
+// tem cookie de sessão do usuário) — mesmo padrão de buscarFotosPorImagem.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { message, history } = await req.json();
     if (!message) return Response.json({ error: 'message é obrigatório' }, { status: 400 });
