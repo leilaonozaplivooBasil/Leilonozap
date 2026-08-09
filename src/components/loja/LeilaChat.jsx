@@ -4,23 +4,8 @@ import ReactMarkdown from "react-markdown";
 import { base44 } from "@/api/base44Client";
 import leilaSuporte from "@/assets/leila-suporte.webp";
 
-// 🤖 Persona da Leila — atendente IA oficial do Leilão NoZap.
-// O app usa adapter Supabase (sem base44.agents), então a conversa roda via InvokeLLM
-// com o histórico mantido em estado local.
-const LEILA_SYSTEM = `Você é a Leila, a atendente IA oficial da plataforma Leilão NoZap.
-Você ajuda usuários com dúvidas sobre:
-- Leilões online (como participar, dar lances, arrematar)
-- Loja Virtual (produtos, carrinho, pedidos, frete)
-- Sistema de Alavancagem (planos de carreira, comissões, níveis)
-- Carteira digital (saldo, depósitos, saques)
-- Pedidos e rastreio
-
-REGRAS:
-- Responda sempre em português do Brasil, de forma amigável, curta e direta.
-- Não invente informações. Se não souber, diga que vai direcionar a dúvida para a equipe.
-- Nunca peça dados sensíveis (senha, CPF, número de cartão).
-- Não execute transações — apenas oriente o usuário onde fazer cada ação no app.
-- Se o usuário perguntar sobre saldo específico ou dados da conta, oriente a ir na aba "Carteira".`;
+// 🤖 Persona da Leila — movida para a função backend (api/functions/leilaChat.js).
+// O frontend apenas envia a mensagem + histórico e exibe a resposta.
 
 export default function LeilaChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
@@ -56,23 +41,15 @@ export default function LeilaChat({ open, onClose }) {
     setMessages(newMessages);
 
     try {
-      // Monta o histórico da conversa no prompt (InvokeLLM recebe um prompt único)
-      const hist = newMessages
-        .map((m) => `${m.role === "user" ? "Usuário" : "Leila"}: ${m.content}`)
-        .join("\n\n");
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `${LEILA_SYSTEM}\n\n--- CONVERSA ---\n${hist}\n\nLeila:`,
+      const result = await base44.functions.invoke("leilaChat", {
+        message: text,
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
       });
 
-      const reply =
-        result?.text || result?.response || result?.ok === false
-          ? (result?.error || "Não consegui responder agora. Tente novamente.")
-          : "Não consegui responder agora. Tente novamente.";
-
+      const reply = result?.response || result?.error || "Não consegui responder agora. Tente novamente.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
-      console.error("[LeilaChat] InvokeLLM falhou:", e);
+      console.error("[LeilaChat] leilaChat falhou:", e);
       setError("Não consegui responder agora. Tente novamente.");
     } finally {
       setLoading(false);
