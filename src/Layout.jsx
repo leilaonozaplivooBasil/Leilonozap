@@ -24,13 +24,11 @@ import TermoGateGlobal from "@/components/legal/TermoGateGlobal";
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
 import { base44 } from '@/api/base44Client';
-import { getSidebarConfigForUser } from "@/lib/roleSidebarConfig";
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
 import { saveReferral, getReferral, clearReferral } from "@/lib/referral";
 // 🔐 Ao sair da conta, o aparelho deixa de ser "aparelho autorizado" da captação privada
 import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
-import AdminTopNav from "@/components/layout/AdminTopNav";
 // 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
 import NavegacaoLateralGlobal from "@/components/common/NavegacaoLateralGlobal";
 import { buildAdminMenu } from "@/lib/adminMenu";
@@ -1000,17 +998,10 @@ export default function Layout({ children, currentPageName }) {
           <NavegacaoLateralGlobal user={currentUser} />
         )}
         <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''}`}>
-          {/* 26/07 — MENU DO PAINEL NO TOPO (substitui a sidebar lateral de 240px):
-              barra de comando sticky com mega-menu por seção, grade completa e
-              busca por Cmd+K. Libera a largura inteira da tela para o conteúdo. */}
-          {/* 🎛️ A barra do Painel de Controle é EXCLUSIVA do próprio Painel de
-              Controle (Visão Geral / NetworkOverview). Em qualquer outra tela ela
-              não aparece — lá a navegação é só a lateral de ícones. */}
-          {currentPageName === 'NetworkOverview' && (() => {
-            const cfg = getSidebarConfigForUser(currentUser, currentPageName, adminMenuItems);
-            if (!cfg.showSidebar) return null;
-            return <AdminTopNav config={cfg} currentPageName={currentPageName} />;
-          })()}
+          {/* 🎛️ Barra do Painel de Controle (AdminTopNav) removida do NetworkOverview
+              em 08/08/2026: a navegação por seções já existe no dropdown do avatar
+              (UserAvatarMenu → "Visão Geral" abre o MiniCanvas). A barra aqui era
+              redundante e o canvas que ela abria duplicava o do avatar. */}
           {/* FASE 4.6 — PanelSwitcherCard removido: troca de painel só pelo dropdown do avatar (UserAvatarMenu) */}
           {children}
         </main>
