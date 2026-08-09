@@ -550,6 +550,73 @@ const auth = {
   redirectToLogin() { /* no-op */ },
 };
 
+// 🤖 Agents — chama a API nativa da Base44 (autenticada pela sessão do builder).
+// No preview, o builder está logado na plataforma Base44 e a API reconhece a sessão.
+const agents = {
+  async createConversation({ agent_name, metadata }) {
+    const resp = await fetch('/api/agents/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_name, metadata }),
+    });
+    if (!resp.ok) throw new Error(`createConversation falhou: ${resp.status}`);
+    return resp.json();
+  },
+  async listConversations({ agent_name }) {
+    const resp = await fetch(`/api/agents/conversations?agent_name=${encodeURIComponent(agent_name)}`);
+    if (!resp.ok) throw new Error(`listConversations falhou: ${resp.status}`);
+    return resp.json();
+  },
+  async getConversation(conversationId) {
+    const resp = await fetch(`/api/agents/conversations/${conversationId}`);
+    if (!resp.ok) throw new Error(`getConversation falhou: ${resp.status}`);
+    return resp.json();
+  },
+  async updateConversation(conversationId, { metadata }) {
+    const resp = await fetch(`/api/agents/conversations/${conversationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metadata }),
+    });
+    if (!resp.ok) throw new Error(`updateConversation falhou: ${resp.status}`);
+    return resp.json();
+  },
+  async addMessage(conversation, { role, content, file_urls }) {
+    const convId = conversation?.id || conversation?._id || conversation;
+    const resp = await fetch(`/api/agents/conversations/${convId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, content, file_urls }),
+    });
+    if (!resp.ok) throw new Error(`addMessage falhou: ${resp.status}`);
+    return resp.json();
+  },
+  subscribeToConversation(conversationId, callback) {
+    // Polling simples — a plataforma Base44 usa SSE nativo, mas o adapter
+    // faz polling a cada 2s como fallback.
+    let active = true;
+    const poll = async () => {
+      if (!active) return;
+      try {
+        const resp = await fetch(`/api/agents/conversations/${conversationId}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          callback(data);
+        }
+      } catch { /* ignora */ }
+      if (active) setTimeout(poll, 2000);
+    };
+    poll();
+    return () => { active = false; };
+  },
+  getWhatsAppConnectURL(agent_name) {
+    return `https://app.base44.com/api/agents/${agent_name}/whatsapp/connect`;
+  },
+  getTelegramConnectURL(agent_name) {
+    return `https://app.base44.com/api/agents/${agent_name}/telegram/connect`;
+  },
+};
+
 // Analytics: stub (Base44 mandava pra plataforma deles; aqui é no-op).
 // Pra ter analytics real, plugar PostHog/Mixpanel aqui depois.
 const analytics = {
@@ -567,6 +634,7 @@ export const base44 = {
   integrations,
   auth,
   analytics,
+  agents,
   asServiceRole,
   // Mantém referência ao raw supabase pra quem quiser usar direto
   __supabase: supabase,

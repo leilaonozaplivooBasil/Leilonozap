@@ -4,29 +4,24 @@ import ReactMarkdown from "react-markdown";
 import { base44 } from "@/api/base44Client";
 import leilaSuporte from "@/assets/leila-suporte.webp";
 
-// 🤖 Persona da Leila — movida para a função backend (api/functions/leilaChat.js).
-// O frontend apenas envia a mensagem + histórico e exibe a resposta.
+// 🤖 A persona da Leila vive no config do agente: base44/agents/leila_atendente.jsonc
+// O chat usa base44.agents (API nativa da Base44) — sem função backend intermediária.
 
 export default function LeilaChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const conversationRef = useRef(null);
 
-  // Auto-scroll para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Quando abre: foca o input
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 200);
-    } else {
-      // Reseta erro ao fechar
-      setError(null);
     }
   }, [open]);
 
@@ -35,22 +30,36 @@ export default function LeilaChat({ open, onClose }) {
     if (!text || loading) return;
     setInput("");
     setLoading(true);
-    setError(null);
 
     const newMessages = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
 
     try {
-      const result = await base44.functions.invoke("leilaChat", {
-        message: text,
-        history: messages.map((m) => ({ role: m.role, content: m.content })),
+      // Cria conversa na primeira mensagem
+      if (!conversationRef.current) {
+        conversationRef.current = await base44.agents.createConversation({
+          agent_name: "leila_atendente",
+          metadata: { name: "Atendimento Leila" },
+        });
+      }
+
+      // Envia a mensagem e aguarda a resposta do assistente
+      const updated = await base44.agents.addMessage(conversationRef.current, {
+        role: "user",
+        content: text,
       });
 
-      const reply = result?.response || result?.error || "Não consegui responder agora. Tente novamente.";
+      const allMsgs = updated?.messages || [];
+      const lastAssistant = [...allMsgs].reverse().find((m) => m.role === "assistant");
+      const reply = lastAssistant?.content || "Não consegui responder agora. Tente novamente.";
+
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
-      console.error("[LeilaChat] leilaChat falhou:", e);
-      setError("Não consegui responder agora. Tente novamente.");
+      console.error("[LeilaChat] erro:", e);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Não consegui responder agora. Tente novamente." },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -67,19 +76,16 @@ export default function LeilaChat({ open, onClose }) {
 
   return (
     <>
-      {/* Overlay escuro */}
       <div
         className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      {/* Drawer lateral direito */}
       <div
         className="fixed top-0 right-0 bottom-0 z-[9999] w-full max-w-md flex flex-col bg-[#0b1018] border-l border-green-900/40 shadow-2xl"
         role="dialog"
         aria-label="Chat com a Leila"
       >
-        {/* Header */}
         <div className="flex items-center gap-3 p-3 sm:p-4 border-b border-green-900/40 bg-gradient-to-r from-[#14324a] to-[#0b1018]">
           <div className="relative shrink-0">
             <span className="block w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-green-400 shadow-lg">
@@ -106,7 +112,6 @@ export default function LeilaChat({ open, onClose }) {
           </button>
         </div>
 
-        {/* Mensagens */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
           {messages.length === 0 && !loading && (
             <div className="text-center text-gray-400 text-sm py-8">
@@ -147,13 +152,9 @@ export default function LeilaChat({ open, onClose }) {
               </div>
             </div>
           )}
-          {error && (
-            <div className="text-center text-red-400 text-xs py-2">{error}</div>
-          )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
         <div className="p-3 sm:p-4 border-t border-green-900/40 bg-[#0b1018]">
           <div className="flex items-end gap-2">
             <textarea
