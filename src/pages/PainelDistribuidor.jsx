@@ -12,6 +12,7 @@ import EvolucaoDiaria from '@/components/painel/EvolucaoDiaria';
 import EvolucaoVendedores from '@/components/painel/EvolucaoVendedores';
 import VendasAuditoria from '@/components/painel/VendasAuditoria';
 import RegiaoCard from '@/components/painel/RegiaoCard';
+import ArvoreGenealogica from '@/components/painel/ArvoreGenealogica';
 import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
@@ -494,41 +495,9 @@ export default function PainelDistribuidor() {
         {tab === 'rede' && (
           <div>
             <h1 className="text-2xl font-black mb-1">Minha Árvore Genealógica</h1>
-            <p className="text-gray-400 text-sm mb-6">{stats.rede_total} pessoa(s) cadastrada(s) abaixo de você.</p>
-            <div className="flex flex-wrap gap-2 mb-6 text-xs">
-              <span className="bg-purple-500/15 text-purple-300 rounded-full px-3 py-1">Vendedores: <b>{stats.vendedores}</b></span>
-              <span className="bg-pink-500/15 text-pink-300 rounded-full px-3 py-1">Influenciadores: <b>{stats.influenciadores}</b></span>
-              <span className="bg-blue-500/15 text-blue-300 rounded-full px-3 py-1">Licenciados: <b>{stats.licenciados}</b></span>
-              <span className="bg-yellow-500/15 text-yellow-300 rounded-full px-3 py-1">Parceiros: <b>{stats.parceiros}</b></span>
-            </div>
-            {downline.length === 0 ? (
-              <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-xl p-8 text-center text-gray-400">
-                Sua árvore está vazia. Use <button onClick={() => setTab('cadastrar')} className="text-green-400 underline">Cadastrar & Vender</button> pra começar.
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-gray-800">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-950 text-gray-400 text-xs uppercase">
-                    <tr>
-                      <th className="text-left px-4 py-3">Nome</th>
-                      <th className="text-left px-4 py-3">Cargo</th>
-                      <th className="text-left px-4 py-3 hidden md:table-cell">E-mail</th>
-                      <th className="text-left px-4 py-3 hidden md:table-cell">Entrou em</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {downline.map((p) => (
-                      <tr key={p.id} className="border-t border-gray-800 hover:bg-gray-800/40">
-                        <td className="px-4 py-3 font-medium">{p.full_name || '—'}</td>
-                        <td className="px-4 py-3"><span className="text-xs bg-gray-700 rounded-full px-2 py-0.5">{CARGO_LABEL[p.primary_career_level] || p.primary_career_level}</span></td>
-                        <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{p.email || '—'}</td>
-                        <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{(p.created_at || p.created_date) ? new Date(p.created_at || p.created_date).toLocaleDateString('pt-BR') : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {/* 🌳 08/08/2026 — a árvore agora desce TODOS os níveis a partir da própria
+                pessoa (antes só o 1º nível, e por isso aparecia "vazia"). */}
+            <ArvoreGenealogica userId={user.id} userName={user.full_name} />
           </div>
         )}
 
