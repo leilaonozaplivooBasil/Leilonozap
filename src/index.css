@@ -224,6 +224,30 @@ body[data-painel-nav] main [class*="text-transparent"] {
 .nz-painel .nz-escuro [class*="border-gray-800"] { border-color: #1f2937 !important; }
 .nz-painel .nz-escuro input { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
 
+/* 🌑 BLOCO ESCURO DENTRO DO PAINEL-NAV (08/08/2026)
+   Mesma lógica do .nz-painel .nz-escuro acima: o AdminTopNav liga a flag
+   data-painel-nav no body, que ativa as regras de tema claro em TODA a main.
+   O NetworkOverview (Painel de Controle / Sistema de Alavancagem) precisa
+   continuar escuro — a árvore genealógica perde legibilidade no branco.
+   Aqui devolvemos as cores escuras originais dentro de .nz-escuro no contexto
+   do painel-nav. Só cor: nada de layout, nada de lógica. */
+body[data-painel-nav] main .nz-escuro [class*="bg-gray-950"],
+body[data-painel-nav] main .nz-escuro[class*="bg-gray-950"] { background-color: #030712 !important; }
+body[data-painel-nav] main .nz-escuro [class*="bg-gray-900"],
+body[data-painel-nav] main .nz-escuro[class*="bg-gray-900"] { background-color: #111827 !important; }
+body[data-painel-nav] main .nz-escuro [class*="bg-gray-800"],
+body[data-painel-nav] main .nz-escuro[class*="bg-gray-800"] { background-color: #1f2937 !important; }
+body[data-painel-nav] main .nz-escuro [class*="bg-gray-700"] { background-color: #374151 !important; }
+body[data-painel-nav] main .nz-escuro [class*="text-white"] { color: #ffffff !important; }
+body[data-painel-nav] main .nz-escuro [class*="text-gray-100"],
+body[data-painel-nav] main .nz-escuro [class*="text-gray-200"] { color: #e5e7eb !important; }
+body[data-painel-nav] main .nz-escuro [class*="text-gray-300"] { color: #d1d5db !important; }
+body[data-painel-nav] main .nz-escuro [class*="text-gray-400"] { color: #9ca3af !important; }
+body[data-painel-nav] main .nz-escuro [class*="text-gray-500"] { color: #6b7280 !important; }
+body[data-painel-nav] main .nz-escuro [class*="border-gray-700"] { border-color: #374151 !important; }
+body[data-painel-nav] main .nz-escuro [class*="border-gray-800"] { border-color: #1f2937 !important; }
+body[data-painel-nav] main .nz-escuro input { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
+
 /* linhas zebradas discretas nas tabelas densas */
 .nz-painel:not(.nz-escuro) tbody tr:nth-child(even),
 body[data-painel-nav] main tbody tr:nth-child(even) {

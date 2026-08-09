@@ -1451,7 +1451,7 @@ export default function NetworkOverview() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6">
+    <div className="nz-escuro min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6">
       {/* Largura ampliada (26/07): sem sidebar lateral, a tela inteira fica para a
           gestão de usuários e a árvore genealógica. */}
       <div className="max-w-[1800px] mx-auto">
