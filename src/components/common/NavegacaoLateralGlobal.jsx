@@ -31,7 +31,9 @@ const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings', 'tab:plano-carr
 const chaveDe = (item) => (item.type === 'tab' ? `tab:${item.value}` : item.to);
 const destinoDe = (item) => (item.type === 'tab' ? `/Licensing?tab=${item.value}` : item.to);
 
-export default function NavegacaoLateralGlobal({ user }) {
+// activeTab/onTabChange só chegam quando a lateral é usada DENTRO do Painel de
+// Alavancagem: ali os itens de aba trocam a aba na hora, sem recarregar a tela.
+export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange }) {
   const location = useLocation();
   const chaveOrdem = user?.id ? `navLateralOrdem_${user.id}` : null;
   const [ordem, setOrdem] = useState([]);
@@ -90,7 +92,12 @@ export default function NavegacaoLateralGlobal({ user }) {
                     item={item}
                     indice={i}
                     to={destinoDe(item)}
-                    ativo={location.pathname.toLowerCase() === (item.to || '').toLowerCase()}
+                    aoSelecionar={onTabChange && item.type === 'tab' ? () => onTabChange(item.value) : undefined}
+                    ativo={
+                      item.type === 'tab'
+                        ? !!onTabChange && activeTab === item.value
+                        : location.pathname.toLowerCase() === (item.to || '').toLowerCase()
+                    }
                     // respiro sutil onde a lista muda de bloco original
                     separador={i > 0 && itens[i - 1].grupo !== item.grupo}
                   />

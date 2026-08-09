@@ -44,7 +44,10 @@ import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import DashboardTabsList from '../components/licensing/DashboardTabsList';
-import LicensingSidebar from '../components/licensing/LicensingSidebar';
+// 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
+// outras telas. A antiga LicensingSidebar (com títulos de seção e itens
+// repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
+import NavegacaoLateralGlobal from '@/components/common/NavegacaoLateralGlobal';
 import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
@@ -1021,9 +1024,8 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   return (
     <div className="flex bg-white min-h-screen">
-      <LicensingSidebar
+      <NavegacaoLateralGlobal
         user={user}
-        shortName={shortName}
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
