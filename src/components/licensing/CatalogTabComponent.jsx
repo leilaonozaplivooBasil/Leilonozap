@@ -35,13 +35,13 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   }, [products, searchTerm]);
 
   return (
-    // 🎨 FASE 3 — tema claro FIXO: esta aba vive dentro do Painel de Alavancagem
-    // (casca branca). Antes o tema vinha da flag isSaiDeBaixo, que é falsa na
-    // navegação normal — resultado: cartão preto dentro de uma página branca.
-    <Card className="bg-white border-nz-borda">
+    // 🌑 TEMA ESCURO FIXO (08/08/2026 — pedido Gabriel): esta é a MESMA vitrine
+    // da Loja Virtual pública, então tem que ter a MESMA cara. É a única aba do
+    // painel que fica escura; o resto da Central de Vendas continua branco.
+    <Card className="bg-gray-900 border-gray-800 nz-escuro">
       <CardHeader>
-        <CardTitle className="text-gray-900">Loja Virtual de Produtos</CardTitle>
-        <CardDescription className="text-gray-500">
+        <CardTitle className="text-white">Loja Virtual de Produtos</CardTitle>
+        <CardDescription className="text-gray-400">
           Produtos disponíveis para venda
         </CardDescription>
       </CardHeader>
@@ -57,7 +57,7 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
             placeholder="Buscar produtos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white border-gray-300 text-gray-900"
+            className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
           />
         </div>
 
@@ -66,7 +66,7 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-400">
             <Package className="w-16 h-16 mx-auto opacity-50 mb-4" />
             <p>Nenhum produto disponível</p>
           </div>
