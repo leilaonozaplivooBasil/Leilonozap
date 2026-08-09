@@ -35,18 +35,57 @@ function dividirEmBolhas(texto) {
 
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// 🧠 MEMÓRIA PERSISTENTE — antes a conversa só vivia em memória do componente:
+// ao trocar de página (o Layout remonta e LeilaChat junto) ou fechar/abrir o
+// chat depois de sair e voltar, a conversationIdRef zerava e a Leila começava
+// "do zero", repetindo a saudação como se fosse a primeira vez. Agora a
+// conversa (id + histórico visual) fica salva no localStorage, por usuário
+// logado (ou "guest" pra visitante), e é restaurada ao montar o componente.
+function chaveConversa() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("currentUser") || "null");
+    return `leilaChat_${saved?.id || "guest"}`;
+  } catch {
+    return "leilaChat_guest";
+  }
+}
+
+function carregarConversaSalva() {
+  try {
+    const raw = localStorage.getItem(chaveConversa());
+    if (!raw) return { conversationId: null, messages: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      conversationId: parsed?.conversationId || null,
+      messages: Array.isArray(parsed?.messages) ? parsed.messages : [],
+    };
+  } catch {
+    return { conversationId: null, messages: [] };
+  }
+}
+
+function salvarConversa(conversationId, messages) {
+  try {
+    localStorage.setItem(chaveConversa(), JSON.stringify({ conversationId, messages }));
+  } catch {}
+}
+
 export default function LeilaChat({ open, onClose }) {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => carregarConversaSalva().messages);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   // ⌨️ "digitando..." entre uma bolha e outra da mesma resposta
   const [digitando, setDigitando] = useState(false);
-  // 🧠 Mantém a MESMA conversa do início ao fim do chat (memória real do agente).
-  // Sem isso, cada mensagem criava uma conversa nova e reenviava todo o histórico,
-  // o que sobrecarregava o agente e travava a partir da 2ª mensagem.
-  const conversationIdRef = useRef(null);
+  // 🧠 Mantém a MESMA conversa do início ao fim do chat (memória real do agente),
+  // restaurada do localStorage — sobrevive a troca de página e reabertura do chat.
+  const conversationIdRef = useRef(carregarConversaSalva().conversationId);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // 💾 Salva a cada mudança de histórico (cobre as bolhas indo chegando uma a uma)
+  useEffect(() => {
+    salvarConversa(conversationIdRef.current, messages);
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -80,7 +119,10 @@ export default function LeilaChat({ open, onClose }) {
         user_id: userId,
       });
 
-      if (resp?.conversation_id) conversationIdRef.current = resp.conversation_id;
+      if (resp?.conversation_id) {
+        conversationIdRef.current = resp.conversation_id;
+        salvarConversa(conversationIdRef.current, newMessages);
+      }
 
       const reply = (typeof resp === "string"
         ? resp
