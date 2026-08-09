@@ -38,9 +38,14 @@ export default defineConfig(({ command }) => ({
     react(),
     versionStampPlugin(),
     // 📱 PWA: manifest + service worker (o mobile é o espelho instalável do desktop).
-    // autoUpdate: nova versão publicada assume sozinha, sem usuário preso em cache velho.
+    // registerType: 'prompt' — o worker novo fica "em espera" até o app pedir a
+    // troca. Com 'autoUpdate' o workbox força skipWaiting+clientsClaim sozinho,
+    // assumindo o controle da página NO MEIO da sessão sem aviso — é isso que
+    // causava os erros e o acúmulo de tentativas de atualização. Com 'prompt', só
+    // o banner próprio do app (AtualizacaoDisponivel/useAppVersion) decide quando
+    // trocar — igual no app instalado e no link da web.
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       // manifest.webmanifest (padrão): /manifest.json ficou envenenado no cache do
       // CDN da Vercel (servia o fallback HTML antes do arquivo existir)
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png'],
