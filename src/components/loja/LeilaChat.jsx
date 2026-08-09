@@ -16,6 +16,10 @@ export default function LeilaChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // 🧠 Mantém a MESMA conversa do início ao fim do chat (memória real do agente).
+  // Sem isso, cada mensagem criava uma conversa nova e reenviava todo o histórico,
+  // o que sobrecarregava o agente e travava a partir da 2ª mensagem.
+  const conversationIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -39,9 +43,12 @@ export default function LeilaChat({ open, onClose }) {
     setMessages(newMessages);
 
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const resp = await base44.functions.invoke("leilaChat", {
+        message: text,
+        conversation_id: conversationIdRef.current,
+      });
 
-      const resp = await base44.functions.invoke("leilaChat", { message: text, history });
+      if (resp?.conversation_id) conversationIdRef.current = resp.conversation_id;
 
       const reply = (typeof resp === "string"
         ? resp
