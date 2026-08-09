@@ -13,12 +13,46 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 // a conversa é criada UMA VEZ e reaproveitada (conversation_id vai e volta com o
 // frontend) — cada turno só manda a mensagem nova. Isso também dá memória real:
 // a conversa completa já fica salva no agente, sem precisar replay de histórico.
+// 🪪 IDENTIFICAÇÃO PELO NOME CADASTRADO (não por memória do agente): a memória
+// de longo prazo do agente é compartilhada entre todos os visitantes (todos usam
+// a mesma identidade de serviço), então ela podia "lembrar" o nome de OUTRA
+// pessoa. Corrigido: buscamos o nome real no cadastro pelo user_id enviado pelo
+// frontend e informamos explicitamente ao agente em toda mensagem.
+// ⚠️ Os usuários reais vivem no Supabase (app_users), NÃO no entity store nativo
+// do Base44 — por isso a busca é feita direto via REST do Supabase, e não via
+// base44.asServiceRole.entities (que aponta pro store interno, sem esses dados).
+async function buscarNomeCadastrado(userId) {
+  if (!userId) return null;
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceKey) return null;
+
+    const resp = await fetch(
+      `${supabaseUrl}/rest/v1/app_users?id=eq.${encodeURIComponent(userId)}&select=display_first_name,full_name,nickname`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    );
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    const user = rows?.[0];
+    if (!user) return null;
+    return user.display_first_name || (user.full_name || '').split(' ')[0] || user.nickname || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const { message, conversation_id } = await req.json();
+    const { message, conversation_id, user_id } = await req.json();
     if (!message) return Response.json({ error: 'message é obrigatório' }, { status: 400 });
+
+    const nomeCadastrado = await buscarNomeCadastrado(user_id);
+    const mensagemComContexto = nomeCadastrado
+      ? `[CONTEXTO INTERNO — não mencione que recebeu isso automaticamente: o nome cadastrado deste usuário é "${nomeCadastrado}". Use esse nome ao se dirigir a ele. Nunca pergunte o nome dele.]\n${message}`
+      : message;
 
     let conversationId = conversation_id;
     let baseMessageCount = 0;
@@ -45,7 +79,7 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.agents.addMessage({ id: conversationId }, {
       role: 'user',
-      content: message
+      content: mensagemComContexto
     });
 
     let reply = '';

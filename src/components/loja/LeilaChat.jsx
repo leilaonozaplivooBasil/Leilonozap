@@ -43,9 +43,16 @@ export default function LeilaChat({ open, onClose }) {
     setMessages(newMessages);
 
     try {
+      let userId = null;
+      try {
+        const saved = JSON.parse(localStorage.getItem("currentUser") || "null");
+        userId = saved?.id || null;
+      } catch {}
+
       const resp = await base44.functions.invoke("leilaChat", {
         message: text,
         conversation_id: conversationIdRef.current,
+        user_id: userId,
       });
 
       if (resp?.conversation_id) conversationIdRef.current = resp.conversation_id;
@@ -118,7 +125,7 @@ export default function LeilaChat({ open, onClose }) {
           {messages.length === 0 && !loading && (
             <div className="text-center text-gray-400 text-sm py-8">
               <p className="font-medium text-white mb-1">Olá! Eu sou a Leila 👋</p>
-              <p>Como posso te ajudar hoje? Pode perguntar sobre leilões, loja, comissões, pedidos...</p>
+              <p>Como posso te ajudar hoje? Pode perguntar sobre leilões, loja, pedidos, pagamentos...</p>
             </div>
           )}
           {messages.map((msg, idx) => {
