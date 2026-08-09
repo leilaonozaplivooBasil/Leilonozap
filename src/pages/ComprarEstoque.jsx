@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import FiltrosVitrine from '@/components/common/FiltrosVitrine';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
+import { lerSaldos } from '@/lib/carteiraSaldos';
 import { toast } from 'sonner';
 import { ShoppingBag, Loader2 } from 'lucide-react';
 import VitrineReposicao from '@/components/reposicao/VitrineReposicao';
@@ -64,9 +65,10 @@ export default function ComprarEstoque({ embutido = false }) {
         if (melhor === null || pct > melhorPct) { melhor = c; melhorPct = pct; }
       });
       setDesconto({ pct: melhorPct, nome: levels[melhor]?.nome || '' });
-      const { data: me } = await supabase.from('app_users').select('commission_balance,saldo_operacao').eq('id', u.id).maybeSingle();
-      setSaldo(Number(me?.commission_balance) || 0);
-      setSaldoOperacao(Number(me?.saldo_operacao) || 0);
+      // leitura separada das duas carteiras (ver src/lib/carteiraSaldos.js)
+      const { comissao, operacao } = await lerSaldos(u.id);
+      setSaldo(comissao);
+      setSaldoOperacao(operacao);
     })();
   }, []);
 
@@ -181,9 +183,9 @@ export default function ComprarEstoque({ embutido = false }) {
   // 🔄 relê as duas carteiras do banco (depois de depósito confirmado ou pedido pago)
   const recarregarSaldos = useCallback(async () => {
     if (!user?.id) return;
-    const { data: me } = await supabase.from('app_users').select('commission_balance,saldo_operacao').eq('id', user.id).maybeSingle();
-    setSaldo(Number(me?.commission_balance) || 0);
-    setSaldoOperacao(Number(me?.saldo_operacao) || 0);
+    const { comissao, operacao } = await lerSaldos(user.id);
+    setSaldo(comissao);
+    setSaldoOperacao(operacao);
   }, [user]);
 
   const pixConfirmado = () => {

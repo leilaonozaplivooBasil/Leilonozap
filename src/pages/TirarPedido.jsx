@@ -4,6 +4,7 @@ import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
+import { lerSaldos } from '@/lib/carteiraSaldos';
 import { toast } from 'sonner';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import PixPdvModal from '@/components/pdv/PixPdvModal';
@@ -79,9 +80,12 @@ export default function TirarPedido() {
     // "Comissões de vendas" da tela Minha Carteira.
     // 💵 além da comissão, o SALDO DE OPERAÇÃO: dinheiro que ele recebeu do cliente
     // na rua e depositou aqui. Os dois pagam pedido; leilão continua de fora.
-    const { data: w } = await supabase.from('app_users').select('commission_balance,saldo_operacao').eq('id', u.id).maybeSingle();
-    setSaldo(Number(w?.commission_balance) || 0);
-    setSaldoOperacao(Number(w?.saldo_operacao) || 0);
+    // ⚠️ leitura SEPARADA das duas carteiras: pedir os dois campos juntos fazia o
+    // banco recusar a consulta inteira (o saldo de operação ainda não existe lá) e
+    // a comissão real aparecia como R$ 0,00 no balcão.
+    const { comissao, operacao } = await lerSaldos(u.id);
+    setSaldo(comissao);
+    setSaldoOperacao(operacao);
   };
 
   // 🏪 A loja aparece INTEIRA por padrão (sem digitar nada), em ordem alfabética.
