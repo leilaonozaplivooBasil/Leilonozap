@@ -51,9 +51,15 @@ export default function ParceiroContratoTexto() {
 
       <h5 className="text-green-400 font-bold mt-4">6. DO CAPITAL APORTADO E SUA ALOCAÇÃO</h5>
       <p>6.1. O PARCEIRO aportará o valor correspondente ao plano de parceria selecionado no momento da adesão, conforme condições apresentadas na plataforma.</p>
-      <p>6.2. O capital aportado será integralmente alocado em operações sucessivas de compra e recompra de produtos, dentro da estratégia operacional da PLATAFORMA, durante toda a vigência deste contrato.</p>
+      <p>6.2. O capital aportado será integralmente alocado em operações sucessivas de compra e recompra de produtos durante toda a vigência deste contrato.</p>
       <p>6.3. O capital aportado não poderá ser retirado antecipadamente, ressalvadas as condições de encerramento previstas na Cláusula 8.</p>
-      <p>6.4. O aporte de capital deverá ser realizado via PIX ou transferência bancária para a conta da PLATAFORMA: <strong className="text-white">Banco Santander, Agência 0142, Conta Corrente 1030358-7</strong>, CNPJ 51.544.091/0001-67, em nome de Compras Full Comércio LTDA.</p>
+      <p>6.4. O aporte de capital poderá ser realizado diretamente pela plataforma digital ou, após a assinatura deste contrato, mediante transferência bancária ou PIX para os dados abaixo:</p>
+      <div className="ml-4 border border-gray-600 rounded-md p-3">
+        <p className="text-white font-bold">Dados Bancários para Aporte de Capital</p>
+        <p>Banco Santander · Agência 0806 · Conta Corrente 13.003234-4</p>
+        <p>CNPJ: 51.544.091/0001-67 · Compras Full Comércio LTDA</p>
+        <p>Modalidade aceita: PIX ou Transferência Bancária</p>
+      </div>
 
       <h5 className="text-green-400 font-bold mt-4">7. DO COMPARTILHAMENTO DE LUCROS</h5>
       <p>7.1. Em contrapartida ao capital aportado, o PARCEIRO fará jus a uma cota de participação sobre o lucro líquido apurado nas operações comerciais realizadas pela PLATAFORMA, calculada conforme percentual estabelecido no momento da adesão e aplicada sobre o valor do capital aportado.</p>
@@ -62,14 +68,14 @@ export default function ParceiroContratoTexto() {
       <p>7.4. A PLATAFORMA compromete-se a disponibilizar, por meio do painel digital exclusivo, a prestação de contas e o demonstrativo de resultados das operações comerciais realizadas.</p>
 
       <h5 className="text-green-400 font-bold mt-4">8. DA VIGÊNCIA E DO CICLO OPERACIONAL</h5>
-      <p>8.1. O presente contrato terá vigência de 12 (doze) meses, contados a partir da data de aceite eletrônico pelo PARCEIRO.</p>
+      <p>8.1. O presente contrato terá vigência de 12 (doze) meses de repasses, contados a partir do primeiro compartilhamento de lucros, precedidos por um período de estruturação de 30 (trinta) dias contados da data de aceite eletrônico pelo PARCEIRO.</p>
       <p>8.2. O ciclo financeiro da parceria observará as seguintes regras:</p>
-      <p className="ml-4">a) O primeiro compartilhamento de lucros será disponibilizado ao PARCEIRO em até 30 (trinta) dias contados da data do aporte inicial, prazo necessário para os 10 (dez) primeiros dias destinados à aquisição, conferência, testes, curadoria, disponibilização e colocação à venda dos produtos na plataforma, seguidos de 20 (vinte) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e segurança da operação;</p>
-      <p className="ml-4">b) Após o primeiro ciclo, os compartilhamentos subsequentes ocorrerão em ciclos mensais, com disponibilização a cada 30 (trinta) dias;</p>
-      <p className="ml-4">c) O capital aportado permanecerá alocado continuamente em novas operações de compra e recompra de produtos, enquanto vigente o contrato.</p>
-      <p>8.3. Os valores de lucro compartilhado, apurados após o período inicial de 30 (trinta) dias, poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
-      <p>8.4. Ao final do prazo de 12 (doze) meses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para celebração de novo acordo, o qual poderá conter condições, prazos e critérios distintos.</p>
-      <p>8.5. Encerrada a vigência contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO será disponibilizado para retirada em até 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.</p>
+      <p className="ml-4">a) O período de estruturação de 30 dias se divide em: 7 (sete) dias para chegada e recebimento do produto, 10 (dez) dias para catalogação e organização do estoque, e 13 (treze) dias para colocação à venda e apuração do primeiro repasse;</p>
+      <p className="ml-4">b) Após o período de estruturação, os compartilhamentos de lucro ocorrerão mensalmente, a cada 30 dias, ao longo dos 12 meses de vigência;</p>
+      <p className="ml-4">c) O capital permanecerá alocado continuamente em novas operações enquanto vigente o contrato.</p>
+      <p>8.3. Os valores de lucro compartilhado poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
+      <p>8.4. Ao final dos 12 (doze) meses de repasses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para novo acordo.</p>
+      <p>8.5. Encerrada a vigência contratual, o capital aportado será disponibilizado para retirada em até 30 (trinta) dias.</p>
 
       <h5 className="text-green-400 font-bold mt-4">9. DAS OBRIGAÇÕES DO PARCEIRO</h5>
       <p>9.1. Realizar o cadastro na plataforma com informações verdadeiras, completas e atualizadas;</p>

@@ -59,23 +59,24 @@ const SECOES = [
     '5.3. A PLATAFORMA mantera registro detalhado das operacoes realizadas, disponivel para consulta pelo PARCEIRO por meio de painel digital exclusivo.'],
   ['6. DO CAPITAL APORTADO E SUA ALOCACAO',
     '6.1. O PARCEIRO aportara o valor correspondente ao plano de parceria selecionado no momento da adesao, conforme condicoes apresentadas na plataforma.',
-    '6.2. O capital aportado sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos, dentro da estrategia operacional da PLATAFORMA, durante toda a vigencia deste contrato.',
+    '6.2. O capital aportado sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos durante toda a vigencia deste contrato.',
     '6.3. O capital aportado nao podera ser retirado antecipadamente, ressalvadas as condicoes de encerramento previstas na Clausula 8.',
-    '6.4. O aporte de capital devera ser realizado via PIX ou transferencia bancaria para a conta da PLATAFORMA: Banco Santander, Agencia 0142, Conta Corrente 1030358-7, CNPJ 51.544.091/0001-67, em nome de Compras Full Comercio LTDA.'],
+    '6.4. O aporte de capital podera ser realizado diretamente pela plataforma digital ou, apos a assinatura deste contrato, mediante transferencia bancaria ou PIX para os dados abaixo:',
+    'Dados Bancarios para Aporte de Capital - Banco Santander, Agencia 0806, Conta Corrente 13.003234-4, CNPJ: 51.544.091/0001-67, Compras Full Comercio LTDA. Modalidade aceita: PIX ou Transferencia Bancaria.'],
   ['7. DO COMPARTILHAMENTO DE LUCROS',
     '7.1. Em contrapartida ao capital aportado, o PARCEIRO fara jus a uma cota de participacao sobre o lucro liquido apurado nas operacoes comerciais realizadas pela PLATAFORMA, calculada conforme percentual estabelecido no momento da adesao e aplicada sobre o valor do capital aportado.',
     '7.2. O lucro compartilhado decorre exclusivamente do resultado positivo das operacoes de compra e venda de produtos, nao constituindo rendimento financeiro, remuneracao de capital, taxa de juros ou qualquer modalidade de aplicacao financeira.',
     '7.3. O compartilhamento de lucros nao esta vinculado ao volume de vendas individuais do PARCEIRO, mas sim a execucao operacional global da PLATAFORMA, dentro de seu modelo de negocios.',
     '7.4. A PLATAFORMA compromete-se a disponibilizar, por meio do painel digital exclusivo, a prestacao de contas e o demonstrativo de resultados das operacoes comerciais realizadas.'],
   ['8. DA VIGENCIA E DO CICLO OPERACIONAL',
-    '8.1. O presente contrato tera vigencia de 12 (doze) meses, contados a partir da data de aceite eletronico pelo PARCEIRO.',
+    '8.1. O presente contrato tera vigencia de 12 (doze) meses de repasses, contados a partir do primeiro compartilhamento de lucros, precedidos por um periodo de estruturacao de 30 (trinta) dias contados da data de aceite eletronico pelo PARCEIRO.',
     '8.2. O ciclo financeiro da parceria observara as seguintes regras:',
-    'a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 30 (trinta) dias contados da data do aporte inicial, prazo necessario para os 10 (dez) primeiros dias destinados a aquisicao, conferencia, testes, curadoria, disponibilizacao e colocacao a venda dos produtos na plataforma, seguidos de 20 (vinte) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e seguranca da operacao;',
-    'b) Apos o primeiro ciclo, os compartilhamentos subsequentes ocorrerao em ciclos mensais, com disponibilizacao a cada 30 (trinta) dias;',
-    'c) O capital aportado permanecera alocado continuamente em novas operacoes de compra e recompra de produtos, enquanto vigente o contrato.',
-    '8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 30 (trinta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.',
-    '8.4. Ao final do prazo de 12 (doze) meses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para celebracao de novo acordo, o qual podera conter condicoes, prazos e criterios distintos.',
-    '8.5. Encerrada a vigencia contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO sera disponibilizado para retirada em ate 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.'],
+    'a) O periodo de estruturacao de 30 dias se divide em: 7 (sete) dias para chegada e recebimento do produto, 10 (dez) dias para catalogacao e organizacao do estoque, e 13 (treze) dias para colocacao a venda e apuracao do primeiro repasse;',
+    'b) Apos o periodo de estruturacao, os compartilhamentos de lucro ocorrerao mensalmente, a cada 30 dias, ao longo dos 12 meses de vigencia;',
+    'c) O capital permanecera alocado continuamente em novas operacoes enquanto vigente o contrato.',
+    '8.3. Os valores de lucro compartilhado poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.',
+    '8.4. Ao final dos 12 (doze) meses de repasses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para novo acordo.',
+    '8.5. Encerrada a vigencia contratual, o capital aportado sera disponibilizado para retirada em ate 30 (trinta) dias.'],
   ['9. DAS OBRIGACOES DO PARCEIRO',
     '9.1. Realizar o cadastro na plataforma com informacoes verdadeiras, completas e atualizadas;',
     '9.2. Aportar o capital correspondente ao plano de parceria selecionado;',
@@ -108,7 +109,12 @@ const SECOES = [
 // de 60 para 30 dias (ciclo real: 10 dias operacionais + 20 de giro), alinhando o
 // contrato ao painel do parceiro. Assinaturas anteriores seguem vinculadas à
 // versão gravada no próprio registro (hash + versao), não a esta constante.
-export const VERSAO_CONTRATO = '2026-08-06-b';
+// 🗓️ Versão subiu em 10/08/2026: Clausula 6 (nova conta bancaria Ag 0806/CC
+// 13.003234-4 + aporte via transferencia apos assinatura) e Clausula 8 (12
+// meses de repasses APOS 30 dias de estruturacao 7+10+13, e capital liberado
+// em 30 dias ao final). Assinaturas anteriores seguem vinculadas à versão
+// gravada no próprio registro (hash + versao), não a esta constante.
+export const VERSAO_CONTRATO = '2026-08-10';
 
 /**
  * Gera o PDF do contrato.

@@ -150,9 +150,10 @@ Deno.serve(async (req) => {
     // Section 6
     addTitle('6. DO CAPITAL APORTADO E SUA ALOCACAO');
     addText('6.1. O PARCEIRO aportara o valor correspondente ao plano de parceria selecionado no momento da adesao, conforme condicoes apresentadas na plataforma.');
-    addText('6.2. O capital aportado sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos, dentro da estrategia operacional da PLATAFORMA, durante toda a vigencia deste contrato.');
+    addText('6.2. O capital aportado sera integralmente alocado em operacoes sucessivas de compra e recompra de produtos durante toda a vigencia deste contrato.');
     addText('6.3. O capital aportado nao podera ser retirado antecipadamente, ressalvadas as condicoes de encerramento previstas na Clausula 8.');
-    addText('6.4. O aporte de capital devera ser realizado via PIX ou transferencia bancaria para a conta da PLATAFORMA: Banco Santander, Agencia 0142, Conta Corrente 1030358-7, CNPJ 51.544.091/0001-67, em nome de Compras Full Comercio LTDA.');
+    addText('6.4. O aporte de capital podera ser realizado diretamente pela plataforma digital ou, apos a assinatura deste contrato, mediante transferencia bancaria ou PIX para os dados abaixo:');
+    addText('Dados Bancarios para Aporte de Capital - Banco Santander, Agencia 0806, Conta Corrente 13.003234-4, CNPJ: 51.544.091/0001-67, Compras Full Comercio LTDA. Modalidade aceita: PIX ou Transferencia Bancaria.');
 
     // Section 7
     addTitle('7. DO COMPARTILHAMENTO DE LUCROS');
@@ -163,14 +164,14 @@ Deno.serve(async (req) => {
 
     // Section 8
     addTitle('8. DA VIGENCIA E DO CICLO OPERACIONAL');
-    addText('8.1. O presente contrato tera vigencia de 12 (doze) meses, contados a partir da data de aceite eletronico pelo PARCEIRO.');
+    addText('8.1. O presente contrato tera vigencia de 12 (doze) meses de repasses, contados a partir do primeiro compartilhamento de lucros, precedidos por um periodo de estruturacao de 30 (trinta) dias contados da data de aceite eletronico pelo PARCEIRO.');
     addText('8.2. O ciclo financeiro da parceria observara as seguintes regras:');
-    addText('a) O primeiro compartilhamento de lucros sera disponibilizado ao PARCEIRO em ate 30 (trinta) dias contados da data do aporte inicial, prazo necessario para os 10 (dez) primeiros dias destinados a aquisicao, conferencia, testes, curadoria, disponibilizacao e colocacao a venda dos produtos na plataforma, seguidos de 20 (vinte) dias para o giro do capital de forma sadia e acelerada, garantindo previsibilidade e seguranca da operacao;');
-    addText('b) Apos o primeiro ciclo, os compartilhamentos subsequentes ocorrerao em ciclos mensais, com disponibilizacao a cada 30 (trinta) dias;');
-    addText('c) O capital aportado permanecera alocado continuamente em novas operacoes de compra e recompra de produtos, enquanto vigente o contrato.');
-    addText('8.3. Os valores de lucro compartilhado, apurados apos o periodo inicial de 30 (trinta) dias, poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.');
-    addText('8.4. Ao final do prazo de 12 (doze) meses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para celebracao de novo acordo, o qual podera conter condicoes, prazos e criterios distintos.');
-    addText('8.5. Encerrada a vigencia contratual, o valor integral correspondente ao capital aportado pelo PARCEIRO sera disponibilizado para retirada em ate 30 (trinta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.');
+    addText('a) O periodo de estruturacao de 30 dias se divide em: 7 (sete) dias para chegada e recebimento do produto, 10 (dez) dias para catalogacao e organizacao do estoque, e 13 (treze) dias para colocacao a venda e apuracao do primeiro repasse;');
+    addText('b) Apos o periodo de estruturacao, os compartilhamentos de lucro ocorrerao mensalmente, a cada 30 dias, ao longo dos 12 meses de vigencia;');
+    addText('c) O capital permanecera alocado continuamente em novas operacoes enquanto vigente o contrato.');
+    addText('8.3. Os valores de lucro compartilhado poderao ser retirados mensalmente pelo PARCEIRO, ate o termino da vigencia contratual.');
+    addText('8.4. Ao final dos 12 (doze) meses de repasses, a parceria sera automaticamente encerrada, salvo manifestacao expressa das partes para novo acordo.');
+    addText('8.5. Encerrada a vigencia contratual, o capital aportado sera disponibilizado para retirada em ate 30 (trinta) dias.');
 
     // Section 9
     addTitle('9. DAS OBRIGACOES DO PARCEIRO');
