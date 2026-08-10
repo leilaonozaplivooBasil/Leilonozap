@@ -3,10 +3,20 @@ import { RefreshCw, Loader2 } from 'lucide-react';
 import { useAppVersion, marcarTentativa, marcarForcado } from '@/hooks/useAppVersion';
 import { fastTap } from '@/lib/fastTap';
 
-// Rotas onde JAMAIS recarregamos sozinho (dinheiro / lance / operação em jogo).
+// Rotas onde JAMAIS recarregamos sozinho — só telas de TRANSAÇÃO EM ANDAMENTO
+// (lance sendo dado, pagamento/PIX aberto, pedido sendo montado no PDV).
+//
+// 🛑 CAUSA-RAIZ DO "GENTE PRESA EM VERSÃO ANTIGA" (10/08/2026): a lista antiga
+// incluía 'carteira', 'vendedor' e 'painel' — três palavras tão largas que
+// bloqueavam a atualização automática em QUASE TODO painel interno (carteira,
+// painel do distribuidor, painel/pedidos, painel/estoque, painel-arrematante,
+// vendedor...). Como são exatamente as telas que o usuário engajado mais
+// revisita, a atualização automática nunca chegava a rodar pra ele — só o
+// banner manual, fácil de ignorar. Aqui ficam só as telas onde existe MESMO
+// uma transação em andamento (lance, PIX, checkout, PDV montando pedido).
 const CRITICAS = [
-  'auction', 'checkout', 'cart', 'carrinho', 'pagamento', 'deposit', 'carteira',
-  'vendedor', 'pdv', 'painel', 'aporte', 'pix', 'transferir', 'saque',
+  'auction', 'checkout', 'cart', 'carrinho', 'pagamento', 'deposit',
+  'pdv', 'aporte', 'pix', 'transferir', 'saque',
   'withdraw', 'lance', 'parceiro',
 ];
 
@@ -153,7 +163,7 @@ export default function AtualizacaoDisponivel() {
   // foram gastas (esgotado), o automático NÃO insiste no caminho que falhou —
   // ele usa a saída de emergência UMA vez. Se nem ela resolver, entra o
   // 'forcadoFalhou' e nada mais se recarrega sozinho.
-  // ⚠️ Telas de dinheiro/lance continuam FORA: ali só recarrega por toque.
+  // ⚠️ Telas com transação em andamento continuam FORA: ali só recarrega por toque.
   useEffect(() => {
     // 'travou' entra aqui: depois de uma tentativa frustrada o app NÃO fica
     // recontando sozinho — a decisão volta para o toque do usuário.
