@@ -81,11 +81,20 @@ export default defineConfig(({ command }) => ({
         // png/svg/webp em TODO build (custo de CPU de build na Vercel) e ainda
         // empurrava tudo pro celular na primeira visita. As imagens continuam
         // ganhando cache pelo runtimeCaching abaixo, sob demanda.
-        globPatterns: ['**/*.{js,css,html,ico,woff2}'],
+        //
+        // 🛑 CAUSA-RAIZ DEFINITIVA DO "TRAVOU NA ATUALIZAÇÃO" (10/08/2026):
+        // o html ERA precacheado e o navigateFallback servia essa cópia salva
+        // pra TODA navegação. Se o service worker não conseguisse se auto-
+        // atualizar (comum em navegadores embutidos, tipo o do WhatsApp), o app
+        // ficava servindo o casco antigo PRA SEMPRE — inclusive o próprio bundle
+        // JS com a lógica de atualização, então nem o botão "Forçar" adiantava:
+        // o código que resolveria o problema nunca chegava a ser baixado.
+        // Removido 'html' do precache e o navigateFallback: a Vercel já faz o
+        // fallback de SPA no servidor (rewrite em vercel.json), então a
+        // navegação passa a ir DIRETO pra rede sempre que online, sempre
+        // pegando o index.html mais novo (que referencia os bundles certos).
+        globPatterns: ['**/*.{js,css,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        // SPA fallback do SW igual ao vercel.json: tudo que não é /api cai no index
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
         // dados dinâmicos (Base44/Supabase) NUNCA em cache — sempre rede
         runtimeCaching: [
           {
