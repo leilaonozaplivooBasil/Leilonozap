@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, User as UserIcon, ChevronRight, Map, Truck } from "lucide-react";
-import { getRedeCargo, REDE_META } from "@/lib/roleBadge";
+import { getRedeCargo, REDE_META, getRoleBadge } from "@/lib/roleBadge";
 import AtalhosGrid from "@/components/nav/AtalhosGrid";
 import MobileUserHeader from "@/components/nav/MobileUserHeader";
 import MinhaContaGrid from "@/components/nav/MinhaContaGrid";
@@ -68,6 +68,9 @@ export default function NavMobile({
   const redeCargo = userLogged ? getRedeCargo(currentUser) : null;
   const redeMeta = redeCargo ? REDE_META[redeCargo] : null;
   const RedeIcon = redeMeta?.icon || Truck;
+  // 🏷️ Mesmo rótulo do desktop ("Painel do {cargo}") — antes os dois cartões
+  // diziam "VISÃO GERAL" e pareciam duplicados (relatado 10/08/2026).
+  const badge = userLogged ? getRoleBadge(currentUser) : null;
 
   const go = (route) => { onClose(); navigate(route); };
 
@@ -128,8 +131,10 @@ export default function NavMobile({
               >
                 <RedeIcon className="w-5 h-5 text-green-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">Visão Geral</p>
-                  <p className="text-[11px] text-gray-400 truncate">Painel de Alavancagem</p>
+                  <p className="text-sm font-extrabold uppercase tracking-wide text-green-300 truncate">
+                    Painel do {badge?.label || "Usuário"}
+                  </p>
+                  <p className="text-[11px] text-gray-400 truncate">Visão geral do Painel de Alavancagem</p>
                 </div>
                 <ChevronRight className="h-4 w-4 flex-shrink-0 text-green-400/70" />
               </button>
