@@ -15,10 +15,14 @@ import { fastTap } from '@/lib/fastTap';
 // banner manual, fácil de ignorar. Aqui ficam só as telas onde existe MESMO
 // uma transação em andamento (lance, PIX, checkout, PDV montando pedido).
 const CRITICAS = [
-  'auction', 'checkout', 'cart', 'carrinho', 'pagamento', 'deposit',
+  'auction', 'checkout', 'carrinho', 'pagamento', 'deposit',
   'pdv', 'aporte', 'pix', 'transferir', 'saque',
   'withdraw', 'lance', 'parceiro',
 ];
+// ⚠️ 'cart' foi tirado da lista de substring acima de propósito: como palavra
+// solta ela também bate dentro de "carteira" (cart-eira), bloqueando a
+// Carteira sem querer. A rota /Cart (carrinho em inglês) é conferida abaixo
+// por SEGMENTO EXATO da URL, não por substring.
 
 // Cache de imagens preservado: apagá-lo faria o celular baixar tudo de novo.
 const CACHE_PRESERVADO = 'supabase-imagens';
@@ -172,7 +176,8 @@ export default function AtualizacaoDisponivel() {
       return;
     }
     const rota = (window.location.pathname + window.location.search).toLowerCase();
-    if (CRITICAS.some((c) => rota.includes(c))) {
+    const segmentos = window.location.pathname.toLowerCase().split('/').filter(Boolean);
+    if (CRITICAS.some((c) => rota.includes(c)) || segmentos.includes('cart')) {
       setSegundos(null);
       return;
     }

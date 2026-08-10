@@ -1010,7 +1010,7 @@ export default function ConcursoLeilaoNozap() {
 
         {/* DASHBOARD GRID — ranking é o conteúdo principal (esquerda no desktop);
             no celular o cadastro/painel pessoal vem primeiro pra não enterrar a conversão */}
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12 bg-white grid lg:grid-cols-[1.5fr_1fr] gap-4 items-start">
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12 grid lg:grid-cols-[1.5fr_1fr] gap-4 items-start">
           <div className="flex flex-col gap-4 order-2 lg:order-1 min-w-0">
             {(liveOn || config.live_horario) && LiveBlock}
             {RankingBlock}
