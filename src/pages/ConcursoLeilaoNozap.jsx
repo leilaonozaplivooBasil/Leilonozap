@@ -56,8 +56,8 @@ function fileToSmallDataUrl(file, max = 256, q = 0.72) {
 }
 function Avatar({ url, nome, size = 32 }) {
   const s = { width: size, height: size };
-  if (url) return <img src={url} alt={nome} style={s} className="rounded-full object-cover border border-nz-borda" />;
-  return <div style={s} className="rounded-full flex items-center justify-center font-black text-white border border-nz-borda bg-nz-verde">{(nome || '?')[0].toUpperCase()}</div>;
+  if (url) return <img src={url} alt={nome} style={s} className="rounded-full object-cover border border-white/10" />;
+  return <div style={s} className="rounded-full flex items-center justify-center font-black text-white border border-white/10 bg-nz-verde">{(nome || '?')[0].toUpperCase()}</div>;
 }
 // Badge de posição (dourado/prata/bronze pro pódio) — substitui os emojis de medalha.
 function PosBadge({ pos, size = 26 }) {
@@ -440,7 +440,7 @@ export default function ConcursoLeilaoNozap() {
   }
 
   // Cartão claro padrão da vitrine (branco + borda suave) — base do tema claro.
-  const CARD = { background: '#ffffff', border: '1px solid #DDE4DF' };
+  const CARD = { background: '#2c2d38', border: '1px solid rgba(218,187,152,.25)' };
   const rankingVisible = rankExpanded ? data.ranking.slice(0, 50) : data.ranking.slice(0, 5);
   // Prêmio por posição (pódio top 10) — agora visível pro público: cria desejo de subir
   const premioPos = {}; (Array.isArray(data.premios) ? data.premios : []).forEach((p) => { if (p.premio) premioPos[p.posicao] = p.premio; });
@@ -450,11 +450,11 @@ export default function ConcursoLeilaoNozap() {
 
   // ------ blocos reaproveitados nas duas colunas ------
   const LiveBlock = (
-    <div className="rounded-2xl overflow-hidden bg-white" style={{ border: '1px solid rgba(233,30,131,.25)' }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: '#21222b', border: '1px solid rgba(233,30,131,.25)' }}>
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-lg grid place-items-center text-white" style={{ background: LIVOO_GRAD, boxShadow: '0 4px 12px rgba(233,30,131,.3)' }}><Radio className="w-4 h-4" /></span>
-          <b className="text-sm tracking-wide text-nz-tinta">Livoo <span style={{ color: '#E91E83' }}>Live</span></b>
+          <b className="text-sm tracking-wide text-gray-100">Livoo <span style={{ color: '#E91E83' }}>Live</span></b>
         </div>
         {liveOn && (
           <span className="text-[11px] font-black text-white px-2.5 py-1 rounded-full inline-flex items-center gap-1.5" style={{ background: 'rgba(233,30,131,.9)' }}>
@@ -485,8 +485,8 @@ export default function ConcursoLeilaoNozap() {
         <div className="flex items-center gap-3 p-4">
           <span className="w-11 h-11 rounded-xl grid place-items-center" style={{ background: 'rgba(233,30,131,.10)', color: '#E91E83' }}><Radio className="w-5 h-5" /></span>
           <div className="min-w-0">
-            <p className="font-bold text-sm text-nz-tinta">Nenhuma live agora</p>
-            <p className="text-[12px] text-nz-tinta-fraca">{config.live_horario ? <>Próxima live: <b style={{ color: '#D91674' }}>{config.live_horario}</b></> : 'Quando começar, o botão de assistir aparece aqui.'}</p>
+            <p className="font-bold text-sm text-gray-100">Nenhuma live agora</p>
+            <p className="text-[12px] text-gray-400">{config.live_horario ? <>Próxima live: <b style={{ color: '#D91674' }}>{config.live_horario}</b></> : 'Quando começar, o botão de assistir aparece aqui.'}</p>
           </div>
         </div>
       )}
@@ -498,17 +498,17 @@ export default function ConcursoLeilaoNozap() {
   const heroAtivo = !!config.produto_nome;
   const DestaqueBlock = ((!heroAtivo && config.produto_nome) || config.propaganda) ? (
     <div className="rounded-2xl p-4" style={CARD}>
-      <p className="text-[11px] font-bold uppercase tracking-wide text-nz-tinta-fraca mb-3 flex items-center gap-2"><Gift className="w-3.5 h-3.5" /> Destaque / Sorteio do dia</p>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-3 flex items-center gap-2"><Gift className="w-3.5 h-3.5" /> Destaque / Sorteio do dia</p>
       {!heroAtivo && config.produto_nome && (
         <div className="flex items-center gap-3">
-          {config.produto_foto ? <img src={config.produto_foto} alt="" className="w-16 h-16 rounded-xl object-cover border border-nz-borda" /> : <span className="w-16 h-16 rounded-xl grid place-items-center bg-nz-ouro-fundo border border-nz-ouro-claro"><Gift className="w-7 h-7 text-nz-ouro" /></span>}
+          {config.produto_foto ? <img src={config.produto_foto} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/10" /> : <span className="w-16 h-16 rounded-xl grid place-items-center bg-nz-ouro-fundo border border-nz-ouro-claro"><Gift className="w-7 h-7 text-nz-ouro" /></span>}
           <div>
-            <p className="font-black text-nz-tinta">{config.produto_nome}</p>
+            <p className="font-black text-gray-100">{config.produto_nome}</p>
             {config.produto_valor > 0 && <p className="text-xs text-nz-ouro">{money(config.produto_valor)}</p>}
           </div>
         </div>
       )}
-      {config.propaganda && <p className="text-xs text-nz-tinta-fraca mt-3 whitespace-pre-wrap flex gap-2"><Megaphone className="w-4 h-4 text-nz-ouro shrink-0 mt-0.5" /> {config.propaganda}</p>}
+      {config.propaganda && <p className="text-xs text-gray-400 mt-3 whitespace-pre-wrap flex gap-2"><Megaphone className="w-4 h-4 text-nz-ouro shrink-0 mt-0.5" /> {config.propaganda}</p>}
     </div>
   ) : null;
 
@@ -521,15 +521,15 @@ export default function ConcursoLeilaoNozap() {
           <input type="file" accept="image/*" className="hidden" onChange={trocarFoto} />
         </label>
         <div>
-          <p className="font-black text-nz-tinta">{me?.nome || 'Seu painel'}</p>
-          <p className="text-xs text-nz-tinta-fraca">Seu link de divulgação</p>
+          <p className="font-black text-gray-100">{me?.nome || 'Seu painel'}</p>
+          <p className="text-xs text-gray-400">Seu link de divulgação</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 mt-3">
         {[['dia', 'Hoje'], ['semana', 'Semana'], ['mes', 'Mês']].map(([k, l]) => (
-          <div key={k} className="bg-nz-cinza-fundo rounded-lg p-2 text-center border border-nz-borda">
-            <p className="text-[10px] text-nz-tinta-fraca uppercase">{l}</p>
-            <div className="my-1 h-6 flex items-center justify-center">{me?.periodos?.[k]?.posicao ? <PosBadge pos={me.periodos[k].posicao} size={24} /> : <span className="text-nz-tinta-fraca">—</span>}</div>
+          <div key={k} className="bg-white/5 rounded-lg p-2 text-center border border-white/10">
+            <p className="text-[10px] text-gray-400 uppercase">{l}</p>
+            <div className="my-1 h-6 flex items-center justify-center">{me?.periodos?.[k]?.posicao ? <PosBadge pos={me.periodos[k].posicao} size={24} /> : <span className="text-gray-400">—</span>}</div>
             {/* Quantas pessoas cada um indicou é parâmetro de conversão: só o admin vê. */}
             {isAdmin && <p className="text-[10px] text-nz-ouro flex items-center justify-center gap-1"><Users className="w-3 h-3" />{me?.periodos?.[k]?.pontos || 0}</p>}
           </div>
@@ -556,7 +556,7 @@ export default function ConcursoLeilaoNozap() {
         title="Tocar para copiar"
       >
         <Link2 className="w-4 h-4 text-nz-ouro shrink-0" />
-        <span className="flex-1 min-w-0 truncate text-nz-tinta">{myLink.replace(/^https?:\/\//, '')}</span>
+        <span className="flex-1 min-w-0 truncate text-gray-100">{myLink.replace(/^https?:\/\//, '')}</span>
         <span className={`shrink-0 inline-flex items-center gap-1 font-black text-[11px] uppercase ${linkCopied ? 'text-nz-verde' : 'text-nz-ouro'}`}>
           {linkCopied ? <><Check className="w-3.5 h-3.5" /> Copiado!</> : <><Copy className="w-3.5 h-3.5" /> Copiar</>}
         </span>
@@ -572,19 +572,19 @@ export default function ConcursoLeilaoNozap() {
 
   const FormPanel = (
     <div id="cadastro-form" className="rounded-2xl p-5" style={CARD}>
-      <p className="font-black text-lg mb-1 flex items-center gap-2 text-nz-tinta"><Trophy className="w-5 h-5 text-nz-ouro" /> Participe agora</p>
-      <p className="text-xs text-nz-tinta-fraca mb-4">Preencha pra gerar seu link. O CPF é só pra validar o prêmio, não aparece pra ninguém.</p>
+      <p className="font-black text-lg mb-1 flex items-center gap-2 text-gray-100"><Trophy className="w-5 h-5 text-nz-ouro" /> Participe agora</p>
+      <p className="text-xs text-gray-400 mb-4">Preencha pra gerar seu link. O CPF é só pra validar o prêmio, não aparece pra ninguém.</p>
       <label className="flex flex-col items-center gap-2 cursor-pointer mb-4">
-        {form.foto ? <img src={form.foto} alt="sua foto" className="w-24 h-24 rounded-full object-cover border-2 border-nz-ouro-claro" /> : <div className="w-24 h-24 rounded-full bg-nz-cinza-fundo border-2 border-dashed border-nz-borda flex items-center justify-center"><Camera className="w-8 h-8 text-nz-tinta-fraca" /></div>}
-        <span className="text-xs text-nz-tinta-fraca font-semibold">{form.foto ? 'Trocar foto' : 'Adicionar sua foto (deixa o ranking mais legal!)'}</span>
+        {form.foto ? <img src={form.foto} alt="sua foto" className="w-24 h-24 rounded-full object-cover border-2 border-nz-ouro-claro" /> : <div className="w-24 h-24 rounded-full bg-white/5 border-2 border-dashed border-white/10 flex items-center justify-center"><Camera className="w-8 h-8 text-gray-400" /></div>}
+        <span className="text-xs text-gray-400 font-semibold">{form.foto ? 'Trocar foto' : 'Adicionar sua foto (deixa o ranking mais legal!)'}</span>
         <input type="file" accept="image/*" className="hidden" onChange={handleFormPhoto} />
       </label>
       <div className="space-y-3">
-        <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full bg-nz-cinza-fundo border border-nz-borda text-nz-tinta rounded-lg px-4 py-3 outline-none focus:border-nz-verde" />
-        <input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })} inputMode="numeric" placeholder="CPF" className="w-full bg-nz-cinza-fundo border border-nz-borda text-nz-tinta rounded-lg px-4 py-3 outline-none focus:border-nz-verde" />
-        <input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskZap(e.target.value) })} inputMode="numeric" placeholder="WhatsApp (com DDD)" className="w-full bg-nz-cinza-fundo border border-nz-borda text-nz-tinta rounded-lg px-4 py-3 outline-none focus:border-nz-verde" />
+        <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full bg-white/5 border border-white/10 text-gray-100 rounded-lg px-4 py-3 outline-none focus:border-nz-verde" />
+        <input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })} inputMode="numeric" placeholder="CPF" className="w-full bg-white/5 border border-white/10 text-gray-100 rounded-lg px-4 py-3 outline-none focus:border-nz-verde" />
+        <input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskZap(e.target.value) })} inputMode="numeric" placeholder="WhatsApp (com DDD)" className="w-full bg-white/5 border border-white/10 text-gray-100 rounded-lg px-4 py-3 outline-none focus:border-nz-verde" />
       </div>
-      {err && <p className="text-red-600 text-sm mt-2">{err}</p>}
+      {err && <p className="text-red-400 text-sm mt-2">{err}</p>}
       <button onClick={register} disabled={saving} className="mt-4 w-full py-4 rounded-full font-black text-lg text-white bg-nz-verde hover:bg-nz-verde-claro transition-colors disabled:opacity-60">{saving ? 'Gerando seu link...' : 'GERAR MEU LINK'}</button>
     </div>
   );
@@ -593,7 +593,7 @@ export default function ConcursoLeilaoNozap() {
     <div className="rounded-2xl p-4" style={CARD}>
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="font-black text-lg flex items-center gap-2 shrink-0 text-nz-tinta"><Crown className="w-5 h-5 text-nz-ouro" /> Ranking</h2>
+          <h2 className="font-black text-lg flex items-center gap-2 shrink-0 text-gray-100"><Crown className="w-5 h-5 text-nz-ouro" /> Ranking</h2>
           {data.ranking.length > 5 && (
             <button
               onClick={() => setRankExpanded((v) => !v)}
@@ -605,26 +605,26 @@ export default function ConcursoLeilaoNozap() {
             </button>
           )}
         </div>
-        <span className="text-xs text-nz-tinta-fraca shrink-0">{data.total || 0} participando</span>
+        <span className="text-xs text-gray-400 shrink-0">{data.total || 0} participando</span>
       </div>
       <div className="flex gap-2 mb-3">
         {PERIODOS.map((p) => (
-          <button key={p.id} onClick={() => setPeriodo(p.id)} className={`flex-1 px-2 py-2 rounded-lg text-xs font-bold ${periodo === p.id ? 'bg-nz-verde text-white' : 'bg-nz-cinza-fundo text-nz-tinta-fraca border border-nz-borda'}`}>{p.l}</button>
+          <button key={p.id} onClick={() => setPeriodo(p.id)} className={`flex-1 px-2 py-2 rounded-lg text-xs font-bold ${periodo === p.id ? 'bg-nz-verde text-white' : 'bg-white/5 text-gray-400 border border-white/10'}`}>{p.l}</button>
         ))}
       </div>
       {premioPeriodo ? <div className="text-center text-xs text-nz-ouro mb-3 flex items-center justify-center gap-1.5"><Gift className="w-3.5 h-3.5" /> Prêmio {PERIODOS.find((p) => p.id === periodo)?.l}: <b>{premioPeriodo}</b></div> : null}
       {!loaded ? (
         <div className="space-y-2" aria-hidden>
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border border-nz-borda animate-pulse bg-nz-cinza-fundo">
-              <span className="w-[26px] h-[26px] rounded-full bg-nz-borda shrink-0" />
-              <span className="w-[38px] h-[38px] rounded-full bg-nz-borda shrink-0" />
-              <span className="h-3 rounded bg-nz-borda" style={{ width: `${60 - i * 7}%` }} />
+            <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border border-white/10 animate-pulse bg-white/5">
+              <span className="w-[26px] h-[26px] rounded-full bg-white/10 shrink-0" />
+              <span className="w-[38px] h-[38px] rounded-full bg-white/10 shrink-0" />
+              <span className="h-3 rounded bg-white/10" style={{ width: `${60 - i * 7}%` }} />
             </div>
           ))}
         </div>
       ) : data.ranking.length === 0 ? (
-        <p className="text-center text-nz-tinta-fraca py-8">Ninguém pontuou nesse período ainda. Seja o primeiro!</p>
+        <p className="text-center text-gray-400 py-8">Ninguém pontuou nesse período ainda. Seja o primeiro!</p>
       ) : (
         <>
           {/* PÓDIO — top 3 em destaque (2º · 1º · 3º), com o prêmio da posição quando cadastrado */}
@@ -639,14 +639,14 @@ export default function ConcursoLeilaoNozap() {
                     className="rounded-2xl px-2 pb-3 text-center border flex flex-col items-center"
                     style={{
                       paddingTop: first ? 14 : 10,
-                      borderColor: isMe ? '#A9781C' : first ? '#F5C451' : '#DDE4DF',
-                      background: first ? '#FDF6E3' : '#ffffff',
+                      borderColor: isMe ? '#A9781C' : first ? '#F5C451' : 'rgba(255,255,255,.12)',
+                      background: first ? 'rgba(218,187,152,.14)' : '#2c2d38',
                     }}
                   >
                     {first && <Crown className="w-5 h-5 text-nz-ouro mb-1" />}
                     <Avatar url={x.foto_url} nome={x.nome} size={first ? 62 : 46} />
                     <div className="-mt-2.5"><PosBadge pos={x.posicao} size={first ? 26 : 22} /></div>
-                    <p className="font-black text-xs mt-1.5 leading-tight w-full truncate px-1 text-nz-tinta">{x.nome}{isMe && <span className="text-nz-ouro"> (você)</span>}</p>
+                    <p className="font-black text-xs mt-1.5 leading-tight w-full truncate px-1 text-gray-100">{x.nome}{isMe && <span className="text-nz-ouro"> (você)</span>}</p>
                     {premioPos[x.posicao] && (
                       <p className="text-[10px] text-nz-ouro mt-1 w-full truncate px-1 flex items-center justify-center gap-1"><Gift className="w-3 h-3 shrink-0" />{premioPos[x.posicao]}</p>
                     )}
@@ -660,10 +660,10 @@ export default function ConcursoLeilaoNozap() {
             {listaAposPodio.map((x) => {
               const isMe = x.code === myCode;
               return (
-                <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-nz-ouro' : 'border-nz-borda'}`} style={{ background: x.posicao <= 3 ? '#FDF6E3' : '#F5F6F5' }}>
+                <div key={x.code} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${isMe ? 'border-nz-ouro' : 'border-white/10'}`} style={{ background: x.posicao <= 3 ? 'rgba(218,187,152,.12)' : 'rgba(255,255,255,.04)' }}>
                   <PosBadge pos={x.posicao} />
                   <Avatar url={x.foto_url} nome={x.nome} size={38} />
-                  <span className="font-bold flex-1 min-w-0 truncate text-nz-tinta">{x.nome}{isMe && <span className="text-nz-ouro text-xs ml-2">(você)</span>}</span>
+                  <span className="font-bold flex-1 min-w-0 truncate text-gray-100">{x.nome}{isMe && <span className="text-nz-ouro text-xs ml-2">(você)</span>}</span>
                   {premioPos[x.posicao] && <span className="text-[10px] text-nz-ouro shrink-0 max-w-[38%] truncate inline-flex items-center gap-1"><Gift className="w-3 h-3 shrink-0" />{premioPos[x.posicao]}</span>}
                   {/* Pontuação só pro admin (parâmetros de conversão). Público vê o ranking, não os números. */}
                   {isAdmin && <span className="font-black text-nz-ouro inline-flex items-center gap-1"><Users className="w-3.5 h-3.5 opacity-80" />{x.pontos}</span>}
@@ -906,15 +906,15 @@ export default function ConcursoLeilaoNozap() {
   );
 
   return (
-    <div className="min-h-screen text-nz-tinta w-full overflow-x-hidden bg-white">
+    <div className="min-h-screen text-gray-100 w-full overflow-x-hidden" style={{ background: 'linear-gradient(180deg, #21222b, #191a21)' }}>
       <div className="w-full pb-24">
 
         {/* VOLTAR PARA A HOME — a página é destino direto de link compartilhado no
             WhatsApp, então muita gente chega aqui sem ter navegação para sair */}
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b border-nz-borda">
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b border-white/10">
           <a
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-nz-tinta-fraca hover:text-nz-verde transition-colors px-3 py-2 rounded-full bg-nz-cinza-fundo border border-nz-borda"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-nz-verde transition-colors px-3 py-2 rounded-full bg-white/5 border border-white/10"
           >
             <ArrowLeft className="w-4 h-4" /> Voltar para a Home
           </a>
@@ -929,7 +929,7 @@ export default function ConcursoLeilaoNozap() {
                 localStorage.removeItem('concurso_code');
                 window.location.reload();
               }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors px-3 py-2 rounded-full bg-nz-cinza-fundo border border-nz-borda"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-red-400 hover:text-red-300 transition-colors px-3 py-2 rounded-full bg-white/5 border border-white/10"
             >
               <LogOut className="w-4 h-4" /> Sair
             </button>
@@ -952,14 +952,14 @@ export default function ConcursoLeilaoNozap() {
             <div className="flex items-center gap-3">
               <SeloTrofeu size={56} estrelas />
               <div>
-                <h1 className="font-black leading-none text-nz-tinta" style={{ fontSize: 'clamp(1.5rem,6vw,2.25rem)' }}>RANK PREMIADO</h1>
-                <p className="text-nz-tinta-fraca mt-1 font-semibold text-sm">Encha o grupo e ganhe prêmio todo dia</p>
+                <h1 className="font-black leading-none text-gray-100" style={{ fontSize: 'clamp(1.5rem,6vw,2.25rem)' }}>RANK PREMIADO</h1>
+                <p className="text-gray-400 mt-1 font-semibold text-sm">Encha o grupo e ganhe prêmio todo dia</p>
               </div>
             </div>
             <div className="flex flex-col items-start sm:items-end gap-2">
               <div className="flex flex-wrap gap-2">
                 {liveOn && <span className="text-xs font-black px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-white" style={{ background: LIVOO_GRAD }}><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> AO VIVO AGORA</span>}
-                <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 bg-white border border-nz-borda text-nz-tinta-fraca"><Users className="w-3.5 h-3.5" /> {data.total || 0} participando</span>
+                <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-gray-300" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(218,187,152,.25)' }}><Users className="w-3.5 h-3.5" /> {data.total || 0} participando</span>
                 {premioPeriodo && <span className="text-xs font-bold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 text-nz-ouro bg-nz-ouro-fundo border border-nz-ouro-claro"><Gift className="w-3.5 h-3.5" /> {premioPeriodo}</span>}
               </div>
               {/* Atalho do painel admin — abre direto em tela cheia (só admin vê) */}
@@ -971,7 +971,7 @@ export default function ConcursoLeilaoNozap() {
             </div>
           </header>
 
-          {msg && <div className="mt-4 text-center text-sm bg-white border border-nz-borda rounded-lg py-2 px-3">{msg}</div>}
+          {msg && <div className="mt-4 text-center text-sm rounded-lg py-2 px-3" style={{ background: '#2c2d38', border: '1px solid rgba(218,187,152,.25)' }}>{msg}</div>}
 
           {/* FEATURE 7 — prêmio do dia em destaque + LIVE ao lado (compacta) */}
           <div className="mt-6 grid lg:grid-cols-[1.5fr_1fr] gap-4 items-stretch">
@@ -1000,8 +1000,8 @@ export default function ConcursoLeilaoNozap() {
                   <span className="inline-grid place-items-center w-11 h-11 rounded-xl mb-2 bg-nz-ouro-fundo border border-nz-ouro-claro">
                     <Ic className="text-nz-ouro" style={{ width: 20, height: 20 }} />
                   </span>
-                  <p className="font-black text-sm leading-tight text-nz-tinta">{t}</p>
-                  <p className="text-xs text-nz-tinta-fraca mt-1 leading-tight">{d}</p>
+                  <p className="font-black text-sm leading-tight text-gray-100">{t}</p>
+                  <p className="text-xs text-gray-400 mt-1 leading-tight">{d}</p>
                 </div>
               ))}
             </div>
@@ -1115,8 +1115,8 @@ export default function ConcursoLeilaoNozap() {
           />
         )}
 
-        <LaminaClara tom="cinza" className="border-t border-nz-borda">
-          <p className="text-center text-xs text-nz-tinta-fraca flex items-center justify-center gap-1.5"><Users className="w-3 h-3" /> A contagem é por pessoas que entram no grupo pelo seu link.</p>
+        <LaminaClara tom="cinza" className="border-t border-white/10">
+          <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5"><Users className="w-3 h-3" /> A contagem é por pessoas que entram no grupo pelo seu link.</p>
         </LaminaClara>
       </div>
 
@@ -1124,7 +1124,7 @@ export default function ConcursoLeilaoNozap() {
           Só pra quem já tem link, e some quando o painel admin/onboarding está aberto. */}
       {myCode && !adminExpanded && !showOnboarding && (
         <div className="lg:hidden fixed inset-x-3 z-40" style={{ bottom: 'calc(.75rem + env(safe-area-inset-bottom, 0px))' }}>
-          <div className="flex gap-2 p-2 rounded-2xl shadow-2xl shadow-black/20" style={{ background: 'rgba(255,255,255,.95)', border: '1px solid #DDE4DF', backdropFilter: 'blur(10px)' }}>
+          <div className="flex gap-2 p-2 rounded-2xl shadow-2xl shadow-black/20" style={{ background: 'rgba(33,34,43,.95)', border: '1px solid rgba(218,187,152,.3)', backdropFilter: 'blur(10px)' }}>
             <button onClick={shareZap} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm text-white active:scale-[.98] transition-transform" style={{ background: '#25D366' }}>
               <MessageCircle className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} /> Divulgar no WhatsApp
             </button>
@@ -1132,7 +1132,7 @@ export default function ConcursoLeilaoNozap() {
               onClick={copyMyLink}
               aria-label="Copiar meu link"
               className="shrink-0 w-12 grid place-items-center rounded-xl font-bold border transition-colors"
-              style={linkCopied ? { background: 'rgba(27,122,72,.12)', borderColor: 'rgba(27,122,72,.45)', color: '#1B7A48' } : { background: '#F5F6F5', borderColor: '#DDE4DF', color: '#0D1310' }}
+              style={linkCopied ? { background: 'rgba(27,122,72,.12)', borderColor: 'rgba(27,122,72,.45)', color: '#1B7A48' } : { background: 'rgba(255,255,255,.08)', borderColor: 'rgba(218,187,152,.3)', color: '#fff' }}
             >
               {linkCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </button>
