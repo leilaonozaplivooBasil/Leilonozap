@@ -21,10 +21,12 @@ import PagePerformanceTracker from '../components/system/PagePerformanceTracker'
 import { getReferral, saveReferral } from '@/lib/referral';
 import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
 import useTotalProdutosLoja, { textoTotalProdutos } from '@/hooks/useTotalProdutosLoja';
+import { useSectionTracking } from '@/lib/tracking';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
 export default function Catalog() {
+  useSectionTracking('loja_virtual', 'Loja Virtual');
   const navigate = useNavigate();
   const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);

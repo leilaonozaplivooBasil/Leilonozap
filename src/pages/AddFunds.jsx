@@ -24,10 +24,12 @@ import {
   Rocket
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
+import { useSectionTracking, trackBeginCheckout } from "@/lib/tracking";
 
 export default function AddFunds() {
   const navigate = useNavigate();
   const location = useLocation();
+  useSectionTracking('checkout', 'Depósito/Checkout');
   const [user, setUser] = useState(null);
   const [packages, setPackages] = useState([]);
   const [selectedAmount, setSelectedAmount] = useState(null);
@@ -94,6 +96,7 @@ export default function AddFunds() {
     }
 
     setProcessing(true);
+    trackBeginCheckout('wallet_deposit', selectedAmount, 'checkout');
     // Redireciona para AuctionCheckoutModern com flag de carteira digital
     navigate(createPageUrl("AuctionCheckoutModern"), { 
       state: {

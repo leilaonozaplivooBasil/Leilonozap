@@ -9,6 +9,7 @@ import CartaoCarteira from '@/components/recepcao/CartaoCarteira';
 import CenaRede from '@/components/recepcao/CenaRede';
 import BlocoEntretenimento from '@/components/recepcao/BlocoEntretenimento';
 import SetoresClean from '@/components/recepcao/SetoresClean';
+import { useSectionTracking } from '@/lib/tracking';
 
 // Página de entrada em formato vitrine: blocos empilhados de largura total,
 // tipografia grande centralizada e produto flutuando sem moldura.
@@ -18,6 +19,7 @@ export default function Recepcao() {
   const [stats, setStats] = useState({ leiloes: 0, produtos: 0 });
   const [produtos, setProdutos] = useState([]);
   const [q, setQ] = useState('');
+  useSectionTracking('homepage', 'Homepage');
 
   useEffect(() => {
     (async () => {

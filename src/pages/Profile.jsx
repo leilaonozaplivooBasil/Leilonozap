@@ -50,6 +50,7 @@ import { supabase } from '@/api/supabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import { Wallet, Filter, ChevronDown } from 'lucide-react';
 import DigitalWalletBalance from '../components/wallet/DigitalWalletBalance';
+import { useSectionTracking } from '@/lib/tracking';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -92,6 +93,7 @@ export default function Profile() {
   const [ratingOrder, setRatingOrder] = useState(null);
   const [confirmedIds, setConfirmedIds] = useState(new Set());
   const [confirmingId, setConfirmingId] = useState(null);
+  useSectionTracking('perfil', 'Perfil/Conta');
 
   useEffect(() => {
     loadUserData();

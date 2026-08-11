@@ -47,6 +47,7 @@ import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
 import useBidSubmission from "@/hooks/useBidSubmission";
 import PagePerformanceTracker from "@/components/system/PagePerformanceTracker";
+import { useSectionTracking, trackCtaClick } from "@/lib/tracking";
 
 const COUNTDOWN_DURATION = 142;
 const BID_EXTENSION_SECONDS = 22;
@@ -56,6 +57,7 @@ export default function AuctionRoom() {
   const location = useLocation();
 
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
+  useSectionTracking('leilao', 'Leilão Ativo');
   const [walletOpen, setWalletOpen] = useState(false);
   // 'wallet' = carteira completa | 'recharge' = já na tela de recarga (saldo insuficiente)
   const [walletStartView, setWalletStartView] = useState('wallet');
@@ -501,6 +503,7 @@ export default function AuctionRoom() {
       setShowTermoModal(true);
       return;
     }
+    trackCtaClick('participar_leilao', 'leilao');
     submitBid(amount);
   }, [currentUser, submitBid]);
 

@@ -11,11 +11,13 @@ import { getReferral } from '@/lib/referral';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { registrarAceiteTermo } from '@/lib/termoAdesao';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
+import { useSectionTracking, trackLead } from '@/lib/tracking';
 
 const AppUser = base44.entities.AppUser;
 
 export default function Register() {
   const navigate = useNavigate();
+  useSectionTracking('cadastro', 'Cadastro/Login');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -87,6 +89,7 @@ export default function Register() {
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
       registrarAceiteTermo(user);
+      trackLead('cadastro_google', 'cadastro');
       // ⚡ Sem espera artificial (eram 300ms somados a um fluxo já lento).
       redirectAfterAuth();
     } catch (error) {
@@ -322,6 +325,7 @@ export default function Register() {
 
       localStorage.setItem('currentUser', JSON.stringify(newUser));
       sessionStorage.setItem('isLoggedIn', 'true');
+      trackLead('cadastro', 'cadastro');
 
       // 📜 PONTO 67 — registra o aceite dado antes do cadastro
       registrarAceiteTermo(newUser);

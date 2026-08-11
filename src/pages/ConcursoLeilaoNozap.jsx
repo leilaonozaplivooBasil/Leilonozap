@@ -15,6 +15,7 @@ import HeroRankPremiado from '@/components/concurso/HeroRankPremiado';
 import LaminaClara from '@/components/concurso/LaminaClara';
 import SeloTrofeu from '@/components/concurso/SeloTrofeu';
 import InstallPwaPrompt from '@/components/common/InstallPwaPrompt';
+import { useSectionTracking, trackLead } from '@/lib/tracking';
 // A página é standalone (fora do Layout), então o modal de login precisa ser dela
 import LoginModal from '@/components/common/LoginModal';
 import { proxyImage } from "@/functions/proxyImage";
@@ -71,6 +72,7 @@ function PosBadge({ pos, size = 26 }) {
 }
 
 export default function ConcursoLeilaoNozap() {
+  useSectionTracking('rank_premiado', 'Rank Premiado');
   const params = new URLSearchParams(window.location.search);
   const refCode = params.get('ref');
   // 🔗 DOIS LINKS DIFERENTES, MESMO ?ref=:
@@ -344,6 +346,7 @@ export default function ConcursoLeilaoNozap() {
       const j = await r.json();
       if (!r.ok) { setErr(j.error || 'Erro ao salvar.'); return; }
       localStorage.setItem('concurso_code', j.code); setMyCode(j.code);
+      trackLead('rank_premiado_cadastro', 'rank_premiado');
       setShowOnboarding(true); // FEATURE 8 — regra de qualificação antes de divulgar
       // auto-login: se criou conta NÍVEL 1 na plataforma (cadastro novo), já entra logado
       if (j.app_user) { try { localStorage.setItem('currentUser', JSON.stringify(j.app_user)); sessionStorage.setItem('isLoggedIn', 'true'); } catch (_) {} }

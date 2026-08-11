@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { X, Check, Loader2, History } from "lucide-react";
+import { trackPurchase } from "@/lib/tracking";
 
 // 🏆 Modal de ARREMATADO — liquid glass verde do site, com 3 estados REAIS
 // (dados gravados pelo servidor em finalizeAuction, não estimativa do cliente):
@@ -32,6 +33,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
         const data = result?.data || result;
         if (data?.success) {
           setSettle({ state: 'paid', balance: data.new_balance ?? null, needed: null });
+          trackPurchase('arremate', Number(auction.current_price ?? finalPrice) || 0, 'leilao');
           if (onSettled) onSettled();
         } else if (data?.insufficient) {
           setSettle({ state: 'insufficient', balance: data.balance ?? 0, needed: data.needed ?? null });
