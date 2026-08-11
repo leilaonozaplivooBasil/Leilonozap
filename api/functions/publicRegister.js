@@ -64,7 +64,8 @@ export default async function handler(req, res) {
     // resolve indicador pelo ref_code do link
     let referred_by_id = null;
     if (ref_code) {
-      const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`)).json();
+      // ilike: tolera maiúscula/espaço colado errado do link, sem afetar o match exato normal
+      const r = await (await sb(`app_users?select=id&referral_code=ilike.${encodeURIComponent(ref_code)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) referred_by_id = r[0].id;
     }
     // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém fica solto. Quem chega sem link de

@@ -1,9 +1,28 @@
 // googleLogin — verifica o ID token do Google Identity Services e faz login/cadastro
 // automático em app_users. Espelha base44/functions/googleLogin/entry.ts (Deno),
 // mas roda como função Vercel (mesmo runtime das outras rotas de auth em produção).
+import crypto from 'crypto';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// 🐛 CAUSA-RAIZ (11/08/2026): cadastro por Google criava o usuário SEM referral_code,
+// role, career_levels — ficavam null pra sempre (o próprio link de indicação dessa
+// pessoa não funcionava, e ela não tinha o role 'user' padrão). Mesmo gerador usado
+// em publicRegister.js/registerNetworkUser.js, pra todo cadastro sair completo.
+function genReferral(name) {
+  const base = String(name || 'user').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '').slice(0, 8) || 'user';
+  return base + crypto.randomBytes(2).toString('hex');
+}
+async function referralUnico(sbFn, name) {
+  let code = genReferral(name);
+  for (let i = 0; i < 5; i++) {
+    const dup = await (await sbFn(`app_users?select=id&referral_code=eq.${encodeURIComponent(code)}&limit=1`)).json();
+    if (!Array.isArray(dup) || !dup.length) break;
+    code = genReferral(name);
+  }
+  return code;
+}
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -93,9 +112,11 @@ export default async function handler(req, res) {
       // o cadastro fica sob o Leilão NoZap - Site Oficial (raiz da árvore).
       // ⚡ As duas consultas saem em paralelo, mas a PRECEDÊNCIA é a mesma de antes:
       // indicador do link primeiro; Site Oficial só quando não há link válido.
+      // 🔎 ilike (case/trim-insensitive) — o mesmo código colado com maiúscula/espaço
+      // extra do link do WhatsApp não pode cair silenciosamente no Site Oficial.
       const [porLink, siteOficial] = await Promise.all([
         ref_code
-          ? sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(ref_code)}&limit=1`).then((r) => r.json()).catch(() => null)
+          ? sb(`app_users?select=id&referral_code=ilike.${encodeURIComponent(ref_code)}&limit=1`).then((r) => r.json()).catch(() => null)
           : Promise.resolve(null),
         sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1').then((r) => r.json()).catch(() => null),
       ]);
@@ -103,15 +124,22 @@ export default async function handler(req, res) {
       if (!referred_by_id) {
         referred_by_id = Array.isArray(siteOficial) && siteOficial[0] ? siteOficial[0].id : null;
       }
+      const nomeNovo = payload.name || email.split('@')[0];
+      const referral_code = await referralUnico(sb, nomeNovo);
       const created = await (await sb('app_users', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },
         body: JSON.stringify({
-          full_name: payload.name || email.split('@')[0],
+          full_name: nomeNovo,
           email,
           password: crypto.randomUUID(),
           phone: '',
           referred_by_id,
+          referral_code,
+          role: 'user',
+          career_levels: ['usuario'],
+          primary_career_level: 'usuario',
+          terms_accepted: true,
           avatar_url: payload.picture || ''
         })
       })).json();
