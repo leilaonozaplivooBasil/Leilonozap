@@ -7,31 +7,37 @@ import AuctionCard from '@/components/auction/AuctionCard';
 // mostrados na ordem escolhida. Some silenciosamente se nenhum leilão estiver marcado.
 // ⚠️ O vínculo com o leilão fica em raw_base44.auction_id (coluna JSON já existente
 // na tabela featured_products) — por isso a leitura usa o Supabase direto.
-export default function DestaquesLeiloes({ auctions, currentUser }) {
-  const [featuredAuctionIds, setFeaturedAuctionIds] = useState([]);
+// 🐛 CORREÇÃO: antes os leilões destacados eram procurados dentro da lista já
+// carregada na Home (só os 80 mais recentes) — um destaque em leilão mais antigo
+// nunca aparecia, mesmo salvo corretamente. Agora busca os leilões destacados
+// DIRETO no banco pelo id, então qualquer leilão marcado aparece.
+export default function DestaquesLeiloes({ currentUser }) {
+  const [destaques, setDestaques] = useState([]);
 
   useEffect(() => {
     let alive = true;
-    supabase
-      .from('featured_products')
-      .select('sort_order,is_active,raw_base44')
-      .limit(50)
-      .then(({ data }) => {
-        if (!alive) return;
-        const ids = (data || [])
-          .filter((r) => r.raw_base44?.auction_id && r.is_active !== false)
-          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-          .slice(0, 6)
-          .map((r) => r.raw_base44.auction_id);
-        setFeaturedAuctionIds(ids);
-      })
-      .catch(() => {});
+    (async () => {
+      const { data: featured } = await supabase
+        .from('featured_products')
+        .select('sort_order,is_active,raw_base44')
+        .limit(50);
+      const ids = (featured || [])
+        .filter((r) => r.raw_base44?.auction_id && r.is_active !== false)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        .slice(0, 6)
+        .map((r) => r.raw_base44.auction_id);
+      if (!alive || ids.length === 0) { if (alive) setDestaques([]); return; }
+
+      const { data: auctionsData } = await supabase
+        .from('auctions')
+        .select('*')
+        .in('id', ids);
+      if (!alive) return;
+      const byId = Object.fromEntries((auctionsData || []).map((a) => [a.id, a]));
+      setDestaques(ids.map((id) => byId[id]).filter(Boolean));
+    })();
     return () => { alive = false; };
   }, []);
-
-  const destaques = featuredAuctionIds
-    .map((id) => (auctions || []).find((a) => a?.id === id))
-    .filter(Boolean);
 
   if (destaques.length === 0) return null;
 

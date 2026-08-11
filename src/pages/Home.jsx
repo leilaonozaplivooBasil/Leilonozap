@@ -903,7 +903,7 @@ export default function Home() {
         <AuctionSectorLinks />
 
         {/* 🌟 Destaques — até 6 leilões marcados manualmente em Editar Leilão */}
-        <DestaquesLeiloes auctions={auctions} currentUser={currentUser} />
+        <DestaquesLeiloes currentUser={currentUser} />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
