@@ -214,7 +214,11 @@ const AuthenticatedApp = () => {
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<LayoutWrapper currentPageName="Evoluir"><Evoluir /></LayoutWrapper>} />
       <Route path="/Cadastro" element={<Cadastro />} />
-      <Route path="/rankpremiado" element={<ConcursoLeilaoNozap />} />
+      <Route path="/rankpremiado" element={
+        <LayoutWrapper currentPageName="ConcursoLeilaoNozap">
+          <ConcursoLeilaoNozap />
+        </LayoutWrapper>
+      } />
       {/* ⚠️ /concursoleilaonozap NÃO pode redirecionar pra /rankpremiado: são os DOIS
           links diferentes do Rank Premiado (1º = entrar no grupo, 2º = página do
           cadastro). Redirecionar transformava os dois na mesma URL e mandava todo

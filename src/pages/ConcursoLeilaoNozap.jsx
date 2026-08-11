@@ -21,8 +21,8 @@ import { proxyImage } from "@/functions/proxyImage";
 import {
   Trophy, Users, Gift, Radio, Link2, ChevronDown,
   Camera, Briefcase, Play, Eye, Gavel, Crown, Megaphone, Lock, Award, ShoppingBag,
-  Maximize2, Minimize2, Save, Settings2, ArrowLeft,
-  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2, LogOut, LogIn,
+  Maximize2, Minimize2, Save, Settings2,
+  Copy, Check, MessageCircle, BarChart3, UserPlus, Share2,
 } from 'lucide-react';
 
 const API = '/api/concurso';
@@ -908,40 +908,6 @@ export default function ConcursoLeilaoNozap() {
   return (
     <div className="min-h-screen text-gray-100 w-full overflow-x-hidden" style={{ background: 'linear-gradient(180deg, #21222b, #191a21)' }}>
       <div className="w-full pb-24">
-
-        {/* VOLTAR PARA A HOME — a página é destino direto de link compartilhado no
-            WhatsApp, então muita gente chega aqui sem ter navegação para sair */}
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b border-white/10">
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-nz-verde transition-colors px-3 py-2 rounded-full bg-white/5 border border-white/10"
-          >
-            <ArrowLeft className="w-4 h-4" /> Voltar para a Home
-          </a>
-          {currentUser ? (
-            <button
-              onClick={() => {
-                sessionStorage.setItem('userLoggedOut', 'true');
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('userIsAdmin');
-                sessionStorage.removeItem('isLoggedIn');
-                // conta e concurso são um só: sair daqui desloga o painel pessoal também
-                localStorage.removeItem('concurso_code');
-                window.location.reload();
-              }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-red-400 hover:text-red-300 transition-colors px-3 py-2 rounded-full bg-white/5 border border-white/10"
-            >
-              <LogOut className="w-4 h-4" /> Sair
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowLogin(true)}
-              className="inline-flex items-center gap-2 text-sm font-bold text-white transition-colors active:scale-[.97] px-4 py-2 rounded-full bg-nz-verde hover:bg-nz-verde-claro"
-            >
-              <LogIn className="w-4 h-4" /> Entrar
-            </button>
-          )}
-        </div>
 
         {/* BANNER DE TOPO — lâmina full-width no estilo premiação */}
         <HeroRankPremiado total={data.total || 0} registered={!!myCode} />

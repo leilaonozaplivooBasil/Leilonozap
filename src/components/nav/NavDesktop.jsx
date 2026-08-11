@@ -179,8 +179,9 @@ export default function NavDesktop({
           Ordem do mockup do Gabriel (26/07): avatar primeiro, carrinho no meio,
           rank no canto. Tudo em items-center no mesmo eixo dos setores centrais. */}
       <div className="flex items-center gap-x-5">
-        {/* === RANK PREMIADO — agrupado com a loja, antes do perfil (essência dourada → bege da paleta) === */}
-        {temaClaro ? (
+        {/* === RANK PREMIADO — agrupado com a loja, antes do perfil (essência dourada → bege da paleta).
+            Escondido na própria página do Rank Premiado: não faz sentido linkar pra onde já se está. */}
+        {currentPageName === "ConcursoLeilaoNozap" ? null : temaClaro ? (
           /* Tema claro: sem placa nem troféu — link de texto com um pontinho */
           <Link
             to="/rankpremiado"

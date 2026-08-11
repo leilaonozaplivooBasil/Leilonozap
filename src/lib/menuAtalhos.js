@@ -33,9 +33,10 @@ const PAINEIS_EM_ATALHO = {
  * Monta a lista de atalhos.
  * @param {Object}  opts.user      AppUser logado (ou null para visitante)
  * @param {number}  opts.cartCount itens no carrinho (badge)
+ * @param {boolean} opts.hideRank  esconde o azulejo "Rank" (usado na própria página do Rank Premiado)
  * @returns {Array} [{ key, rotulo, icon?, img?, target, badge?, tom?, live? }]
  */
-export function getAtalhos({ user, cartCount = 0 } = {}) {
+export function getAtalhos({ user, cartCount = 0, hideRank = false } = {}) {
   const logado = !!(user && user.email);
 
   // 1) Setores do cabeçalho — Comprar · Leilões · Lucre
@@ -48,7 +49,9 @@ export function getAtalhos({ user, cartCount = 0 } = {}) {
   }));
 
   // 2) Rank Premiado (troféu 3D oficial) e Carrinho
-  atalhos.push({ key: "rank", rotulo: "Rank", img: "/icons/trophy-3d.png", target: { to: "/rankpremiado" }, tom: "beige" });
+  if (!hideRank) {
+    atalhos.push({ key: "rank", rotulo: "Rank", img: "/icons/trophy-3d.png", target: { to: "/rankpremiado" }, tom: "beige" });
+  }
   atalhos.push({ key: "carrinho", rotulo: "Carrinho", icon: ShoppingCart, target: { page: "Cart" }, badge: cartCount });
 
   if (!logado) return atalhos;

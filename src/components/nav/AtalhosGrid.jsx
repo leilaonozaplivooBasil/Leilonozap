@@ -28,8 +28,8 @@ export function Rotulo({ children, tom }) {
  * A lista vem de @/lib/menuAtalhos (fonte única). Toque de 64px de altura,
  * grade fluida que não estoura abaixo de 320px.
  */
-export default function AtalhosGrid({ user, cartCount = 0, onNavigate, colunas = 3 }) {
-  const atalhos = getAtalhos({ user, cartCount });
+export default function AtalhosGrid({ user, cartCount = 0, onNavigate, colunas = 3, hideRank = false }) {
+  const atalhos = getAtalhos({ user, cartCount, hideRank });
 
   return (
     <div className={`grid gap-2 ${colunas === 4 ? "grid-cols-4" : "grid-cols-3"}`}>

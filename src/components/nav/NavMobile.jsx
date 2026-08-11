@@ -162,7 +162,7 @@ export default function NavMobile({
             {/* A linha divisória só existe quando há bloco acima (visitante não tem) */}
             <div className={userLogged ? "pt-4 mt-3" : ""} style={userLogged ? { borderTop: "1px solid rgba(255,255,255,0.06)" } : undefined}>
               <p className="font-bold text-[10px] uppercase tracking-wider px-1 mb-2 text-gray-500">Atalhos</p>
-              <AtalhosGrid user={currentUser} cartCount={cartCount} onNavigate={onClose} />
+              <AtalhosGrid user={currentUser} cartCount={cartCount} onNavigate={onClose} hideRank={currentPageName === "ConcursoLeilaoNozap"} />
             </div>
 
             {/* ===== 5. Minha Conta (mesmo azulejo dos Atalhos) ===== */}
