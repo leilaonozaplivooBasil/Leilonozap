@@ -7,8 +7,10 @@ import { Crown, Sparkles, Search, Gem, Lock, Key } from "lucide-react";
 import LuxuryCard from "../components/luxury/LuxuryCard";
 import RotatingBanner from "../components/banner/RotatingBanner";
 import GoldDiamondRain from "../components/luxury/GoldDiamondRain";
+import { useSectionTracking } from '@/lib/tracking';
 
 export default function LuxuryCollection() {
+  useSectionTracking('luxury_collection', 'Leilões Collection');
   const [auctions, setAuctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");

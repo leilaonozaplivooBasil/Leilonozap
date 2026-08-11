@@ -41,8 +41,10 @@ import { getReferral } from '@/lib/referral';
 import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 import FreteResumo from '@/components/cart/FreteResumo';
+import { useSectionTracking } from '@/lib/tracking';
 
 export default function Cart() {
+  useSectionTracking('carrinho', 'Carrinho');
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);

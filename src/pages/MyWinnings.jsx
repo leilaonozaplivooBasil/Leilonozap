@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-
+import { useSectionTracking } from '@/lib/tracking';
 
 
 const statusConfigNozap = {
@@ -80,6 +80,7 @@ const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
 };
 
 export default function MyWinningsPage() {
+    useSectionTracking('meus_arremates', 'Meus Arremates');
     const [winnings, setWinnings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);

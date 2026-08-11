@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ShoppingBag, TrendingUp, Users, Wallet, Megaphone, ArrowRight, CheckCircle2, Store, Truck, UserCheck } from 'lucide-react';
 import SellerEarningsCalculator from '@/components/seller/SellerEarningsCalculator';
+import { useSectionTracking } from '@/lib/tracking';
 
 // 🛒 SEJA UM VENDEDOR — página de vendas do cargo Vendedor.
 // Percentuais de VENDA DIRETA da ÁRVORE OFICIAL (src/lib/careerLevels.js — fonte única,
@@ -27,6 +28,7 @@ const BENEFICIOS = [
 ];
 
 export default function SejaVendedor() {
+  useSectionTracking('seja_vendedor', 'Seja um Vendedor');
   const navigate = useNavigate();
 
   return (

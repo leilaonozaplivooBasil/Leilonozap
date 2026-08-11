@@ -15,8 +15,10 @@ import DetalhesPedidoModal from '@/components/catalog/DetalhesPedidoModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import MinhasComprasHeader from '@/components/catalog/MinhasComprasHeader';
+import { useSectionTracking } from '@/lib/tracking';
 
 export default function MyCatalogOrders() {
+  useSectionTracking('meus_pedidos', 'Meus Pedidos');
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);

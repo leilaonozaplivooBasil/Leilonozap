@@ -31,6 +31,7 @@ import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
+import { useSectionTracking } from '@/lib/tracking';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -126,6 +127,7 @@ function HeroActionsCarousel({ currentUser }) {
 
 export default function Home() {
   // 🔥 TODOS OS HOOKS NO TOPO - NUNCA APÓS CONDICIONAIS OU RETURNS
+  useSectionTracking('leiloes', 'Leilões Ativos');
   const navigate = useNavigate();
   const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);

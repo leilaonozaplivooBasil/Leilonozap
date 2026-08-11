@@ -16,6 +16,7 @@ import ParceiroFormalizacao from '@/components/parceiro/ParceiroFormalizacao';
 import ParceiroCTA from '@/components/parceiro/ParceiroCTA';
 import ParceiroDisclaimer from '@/components/parceiro/ParceiroDisclaimer';
 import { acessoParceiroLiberado, usuarioLocal } from '@/lib/parceiroAcesso';
+import { useSectionTracking } from '@/lib/tracking';
 
 // 🖤 PARCEIRO DE COMPRA — vitrine pública de captação privada.
 // ⚠️ REGRA PERMANENTE: esta página NÃO exibe valor financeiro algum
@@ -24,6 +25,7 @@ import { acessoParceiroLiberado, usuarioLocal } from '@/lib/parceiroAcesso';
 // Vocabulário: parceria comercial, aporte, cota-alvo, repasse, resultado apurado.
 // PROIBIDO na área pública: investimento, rendimento, garantido, risco zero.
 export default function PartnersPage() {
+  useSectionTracking('partners', 'Parceiro de Compra');
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);

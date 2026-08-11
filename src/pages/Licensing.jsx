@@ -60,6 +60,7 @@ import TabelaComissoesLeilao from '../components/licensing/TabelaComissoesLeilao
 import SalesTrendChart from '../components/licensing/SalesTrendChart';
 import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
+import { useSectionTracking } from '@/lib/tracking';
 
 const Product = base44.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
@@ -1537,6 +1538,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 };
 
 export default function LicensingPage() {
+  useSectionTracking('licensing', 'Painel de Alavancagem');
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLicenseeRegisterModal, setShowLicenseeRegisterModal] = useState(false);

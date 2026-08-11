@@ -5,6 +5,7 @@ import Lamina from '@/components/comofunciona/Lamina';
 import PassoCard from '@/components/comofunciona/PassoCard';
 import CartaoDemo from '@/components/comofunciona/CartaoDemo';
 import BotaoCarteiraDigital from '@/components/comofunciona/BotaoCarteiraDigital';
+import { useSectionTracking } from '@/lib/tracking';
 
 const PASSOS = [
   { numero: 1, titulo: 'Deposite na Carteira Digital', texto: 'O saldo da carteira é o que libera seus lances. Depósito por PIX, na hora.' },
@@ -21,6 +22,7 @@ const BENEFICIOS = [
 ];
 
 export default function ComoFunciona() {
+  useSectionTracking('como_funciona', 'Como Funciona');
   return (
     <div className="w-full bg-white">
       {/* LÂMINA 1 — ABERTURA */}
