@@ -10,6 +10,7 @@ import {
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { saveSession } from '@/lib/session';
+import { getReferral, saveReferral } from '@/lib/referral';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -33,7 +34,13 @@ export default function Cadastro() {
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const navigate = useNavigate();
   const cargo = (getParam('cargo') || getParam('as') || 'licenciado').trim();
-  const refCode = (getParam('ref') || '').trim();
+  // 🔗 Se o link ?ref= não veio na URL (ex: usuário navegou antes de chegar aqui),
+  // cai na memória de 90 dias — sem isso a indicação se perdia e a venda ia pro Site Oficial.
+  const refCodeFromUrl = (getParam('ref') || '').trim();
+  const refCode = refCodeFromUrl || getReferral();
+  useEffect(() => {
+    if (refCodeFromUrl) saveReferral(refCodeFromUrl);
+  }, [refCodeFromUrl]);
 
   const [loading, setLoading] = useState(true);
   const [level, setLevel] = useState(null);
