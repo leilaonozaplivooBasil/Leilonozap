@@ -1,6 +1,8 @@
 import React from 'react';
-import { Users } from 'lucide-react';
+import { Users, MessageCircle } from 'lucide-react';
 import PlacaRankPremiado from '@/components/concurso/PlacaRankPremiado';
+
+const LINK_GRUPO_WHATSAPP = 'https://chat.whatsapp.com/FyKc2sXiB5fBG7ikYlmvri?s=cl&p=i&mlu=4&amv=0';
 
 // Banner de topo do Rank Premiado — tema preto/grafite (identidade da placa
 // RANK PREMIADO). Só apresentação: o botão rola pra seção que já existe na página.
@@ -30,6 +32,20 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
         >
           Participar
         </button>
+
+        <p className="mt-4 text-xs sm:text-sm" style={{ color: 'rgba(218,187,152,0.65)' }}>
+          Participe primeiro para garantir seus pontos — depois entre no grupo pra acompanhar os resultados e o sorteio.
+        </p>
+
+        <a
+          href={LINK_GRUPO_WHATSAPP}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-sm border border-white/15 text-white/90 hover:bg-white/5 hover:border-white/30 transition-colors active:scale-[.98]"
+        >
+          <MessageCircle className="w-4 h-4" style={{ color: '#25D366' }} />
+          Entrar no Grupo
+        </a>
 
         {total > 0 && (
           <p className="mt-5 text-xs flex items-center gap-1.5 justify-center" style={{ color: 'rgba(218,187,152,0.6)' }}>
