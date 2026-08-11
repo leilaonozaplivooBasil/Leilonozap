@@ -8,6 +8,7 @@ const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
 const AuctionMessage = base44.entities.AuctionMessage;
 const UploadFile = (params) => base44.integrations.Core.UploadFile(params);
+const FeaturedProduct = base44.entities.FeaturedProduct;
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -19,7 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer, Copy, Archive, ArchiveRestore, CalendarClock, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadCloud, Edit, Clock, RefreshCw, Link as LinkIcon, Upload, Zap, Moon, CalendarDays, CheckCircle2, AlertTriangle, Star, Type, Pause, Play, Square, Timer, Copy, Archive, ArchiveRestore, CalendarClock, ShoppingBag, Sparkles } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { capOf, withCap } from '@/lib/fotoLegenda';
 import ModoChamadaCard from '@/components/auction/ModoChamadaCard';
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
@@ -134,6 +136,13 @@ export default function EditAuction() {
     const [confirmTyped, setConfirmTyped] = useState('');
     // Editor de texto sobre a foto: { index, text }
     const [captionEdit, setCaptionEdit] = useState(null);
+
+    // 🌟 Destaque na página de Leilões (até 6 posições fixas)
+    const [featuredId, setFeaturedId] = useState(null);
+    const [isFeatured, setIsFeatured] = useState(false);
+    const [featuredPosition, setFeaturedPosition] = useState(1);
+    const [occupiedPositions, setOccupiedPositions] = useState({}); // { [posicao]: { id: auctionId, title } }
+    const [savingFeatured, setSavingFeatured] = useState(false);
 
     // Promove uma foto a capa (posição 0)
     const tornarCapa = (index) => {
@@ -551,6 +560,99 @@ export default function EditAuction() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    // 🌟 Carrega o estado atual do destaque (se este leilão já está marcado)
+    // e o mapa de posições ocupadas por OUTROS leilões.
+    // ⚠️ O vínculo com o leilão é guardado em raw_base44.auction_id (coluna JSON já
+    // existente na tabela) — não existe coluna "auction_id" própria, então a leitura
+    // usa o Supabase direto (o adapter base44.entities esconde raw_base44).
+    const loadFeaturedInfo = useCallback(async () => {
+        if (!auctionId) return;
+        try {
+            const { data: rows } = await supabase.from('featured_products').select('id,name,sort_order,is_active,raw_base44').limit(50);
+            const linked = (rows || []).filter((r) => r.raw_base44?.auction_id);
+            const mine = linked.find((r) => r.raw_base44.auction_id === auctionId);
+            if (mine) {
+                setFeaturedId(mine.id);
+                setIsFeatured(mine.is_active !== false);
+                setFeaturedPosition(mine.sort_order || 1);
+            }
+            const occ = {};
+            linked.forEach((r) => {
+                if (r.raw_base44.auction_id !== auctionId && r.is_active !== false && r.sort_order) {
+                    occ[r.sort_order] = { id: r.raw_base44.auction_id, title: r.name };
+                }
+            });
+            setOccupiedPositions(occ);
+        } catch (e) {
+            console.debug('Erro ao carregar destaque:', e);
+        }
+    }, [auctionId]);
+
+    useEffect(() => {
+        loadFeaturedInfo();
+    }, [loadFeaturedInfo]);
+
+    const handleToggleFeatured = async (checked) => {
+        setSavingFeatured(true);
+        try {
+            if (checked) {
+                const conflito = occupiedPositions[featuredPosition];
+                if (conflito && conflito.id !== auctionId) {
+                    notify.aviso('Posição ocupada', `A posição ${featuredPosition} já está usada por outro leilão.`);
+                    setSavingFeatured(false);
+                    return;
+                }
+                const payload = {
+                    name: formData.title || 'Leilão em destaque',
+                    category: formData.category || 'outros',
+                    investment: '-',
+                    expected_return: '-',
+                    image_url: imageUrls[0] || '',
+                    order: featuredPosition,
+                    is_active: true,
+                    raw_base44: { auction_id: auctionId },
+                };
+                if (featuredId) {
+                    await FeaturedProduct.update(featuredId, payload);
+                } else {
+                    const created = await FeaturedProduct.create(payload);
+                    setFeaturedId(created.id);
+                }
+                setIsFeatured(true);
+                notify.ok('Leilão marcado como destaque', `Posição ${featuredPosition}`);
+            } else {
+                if (featuredId) await FeaturedProduct.delete(featuredId);
+                setFeaturedId(null);
+                setIsFeatured(false);
+            }
+        } catch (e) {
+            console.error('Erro ao atualizar destaque:', e);
+            notify.erro('Erro ao atualizar destaque', 'Tente novamente.');
+        } finally {
+            setSavingFeatured(false);
+        }
+    };
+
+    const handleChangeFeaturedPosition = async (newPos) => {
+        setFeaturedPosition(newPos);
+        if (!isFeatured) return;
+        const conflito = occupiedPositions[newPos];
+        if (conflito && conflito.id !== auctionId) {
+            notify.aviso('Posição ocupada', `A posição ${newPos} já está usada por outro leilão.`);
+            return;
+        }
+        setSavingFeatured(true);
+        try {
+            if (featuredId) await FeaturedProduct.update(featuredId, { order: newPos });
+            notify.ok('Posição atualizada', `Agora na posição ${newPos}`);
+        } catch (e) {
+            console.error('Erro ao mudar posição do destaque:', e);
+            notify.erro('Erro ao mudar posição', 'Tente novamente.');
+        } finally {
+            setSavingFeatured(false);
+        }
+    };
 
     const onDragEnd = (result) => {
         if (!result.destination) return;
@@ -1380,6 +1482,50 @@ export default function EditAuction() {
                       )}
                     </div>
                   </CardContent>
+                </Card>
+
+                {/* 🌟 DESTAQUE — mostra este leilão na seção "Destaques" da página de Leilões */}
+                <Card className="rounded-2xl border-white/[0.06]" style={CARD_STYLE}>
+                    <CardHeader className="pb-4">
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 grid place-items-center shrink-0">
+                                <Sparkles className="w-5 h-5 text-amber-400" />
+                            </div>
+                            <div className="min-w-0">
+                                <CardTitle className="text-white text-base">Destaque</CardTitle>
+                                <p className="text-xs text-slate-400 mt-1">Mostra este leilão na seção "Destaques" da página de Leilões (até 6 posições).</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between rounded-xl bg-[#0d1117]/80 border border-white/10 px-4 py-3">
+                            <div>
+                                <p className="text-sm font-bold text-white">Marcar como destaque</p>
+                                <p className="text-[11px] text-slate-500">Aparece na vitrine de Leilões</p>
+                            </div>
+                            <Switch checked={isFeatured} onCheckedChange={handleToggleFeatured} disabled={savingFeatured} />
+                        </div>
+                        {isFeatured && (
+                            <div>
+                                <Label className={LABEL_CLS}>Posição (1 a 6)</Label>
+                                <Select value={String(featuredPosition)} onValueChange={(v) => handleChangeFeaturedPosition(parseInt(v))}>
+                                    <SelectTrigger className={`mt-2 ${INPUT_CLS}`}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
+                                        {[1, 2, 3, 4, 5, 6].map((p) => {
+                                            const conflito = occupiedPositions[p] && occupiedPositions[p].id !== auctionId ? occupiedPositions[p] : null;
+                                            return (
+                                                <SelectItem key={p} value={String(p)} disabled={!!conflito}>
+                                                    Posição {p}{conflito ? ` — ocupada por "${conflito.title}"` : ''}
+                                                </SelectItem>
+                                            );
+                                        })}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </CardContent>
                 </Card>
 
                 </div>

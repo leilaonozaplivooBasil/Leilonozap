@@ -28,6 +28,7 @@ import LiveStats from '../components/home/LiveStats';
 import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
+import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 
@@ -900,6 +901,9 @@ export default function Home() {
 
         {/* 🧭 Setores de leilão que saíram do dropdown da navbar — descoberta pós-clique */}
         <AuctionSectorLinks />
+
+        {/* 🌟 Destaques — até 6 leilões marcados manualmente em Editar Leilão */}
+        <DestaquesLeiloes auctions={auctions} currentUser={currentUser} />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
