@@ -584,6 +584,13 @@ export default function EditAuction() {
                 }
             });
             setOccupiedPositions(occ);
+            // 🐛 FIX: se este leilão ainda não é destaque, sugere a primeira posição LIVRE
+            // (1 a 6) em vez de sempre a 1 — senão ligar o interruptor travava direto na
+            // posição 1 quando ela já estava ocupada, sem o admin nem ver o seletor.
+            if (!mine) {
+                const livre = [1, 2, 3, 4, 5, 6].find((p) => !occ[p]);
+                if (livre) setFeaturedPosition(livre);
+            }
         } catch (e) {
             console.debug('Erro ao carregar destaque:', e);
         }
