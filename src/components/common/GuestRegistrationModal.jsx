@@ -399,17 +399,22 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
   );
 
   return (
-    <div className="fixed inset-0 bg-gray-900/80 flex items-center justify-center z-[2001] p-4 animate-in fade-in-0">
+    <div className="fixed inset-0 bg-gray-900/80 z-[2001] overflow-y-auto animate-in fade-in-0">
+      {/* 🔒 Botão de fechar fixo na tela (não dentro do card que rola) — assim
+          fica sempre visível, mesmo com o formulário maior que a altura do
+          celular. Sem isso, quem recebia o link de indicação via WhatsApp
+          ficava "preso" na tela sem conseguir fechar e navegar no app. */}
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={isRegistering}
+        aria-label="Fechar"
+        className="fixed top-3 right-3 z-[2002] w-10 h-10 rounded-full bg-gray-900/80 border border-gray-600 flex items-center justify-center text-gray-300 hover:text-white disabled:opacity-50"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <div className="min-h-full flex items-center justify-center p-4">
       <Card className="w-full max-w-lg bg-gray-800 border-gray-700 text-white relative">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onClose} 
-          className="absolute top-2 right-2 text-gray-400"
-          disabled={isRegistering}
-        >
-          <X className="w-4 h-4" />
-        </Button>
         {referrerName && (
           <div className="mx-4 mt-4 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm font-semibold text-white"
             style={{ background: 'linear-gradient(135deg, rgba(233,30,131,.18), rgba(255,107,53,.1))', border: '1px solid rgba(233,30,131,.35)' }}>
@@ -418,6 +423,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
         )}
         {renderStepTwo()}
       </Card>
+      </div>
     </div>
   );
 }
