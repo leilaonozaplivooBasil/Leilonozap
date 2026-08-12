@@ -49,6 +49,7 @@ import {
   User,
   Target,
   ShieldAlert,
+  Landmark,
 } from "lucide-react";
 
 /**
@@ -108,6 +109,8 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Transações", pageName: "TransactionHistory", icon: ArrowLeftRight },
         { title: "Configurar Pagamentos", pageName: "PaymentSettings", icon: CreditCard },
         { title: "Auditoria de Comissões", pageName: "CommissionPilot", icon: ClipboardCheck },
+        // 🏦 "Banco" interno pra pagar comissões manualmente até fechar integração bancária (12/08/2026)
+        { title: "Pagamentos de Comissões", pageName: "PagamentosComissoes", icon: Landmark },
         { title: "Ativar Planos de Parceiros", pageName: "PartnerPlanActivation", icon: Handshake },
         // 💰 Extrato de aportes do Parceiro de Compra (espelho do Mercado Pago)
         { title: "Aportes de Parceiros", pageName: "AportesParceiro", icon: Receipt },

@@ -26,6 +26,21 @@
       "type": "string",
       "description": "CPF do usu\u00e1rio"
     },
+    "pix_key": {
+      "type": "string",
+      "description": "Chave PIX pra receber comiss\u00f5es/pagamentos manuais"
+    },
+    "pix_key_type": {
+      "type": "string",
+      "enum": [
+        "CPF",
+        "CNPJ",
+        "EMAIL",
+        "PHONE",
+        "RANDOM"
+      ],
+      "description": "Tipo da chave PIX"
+    },
     "points": {
       "type": "number",
       "default": 0

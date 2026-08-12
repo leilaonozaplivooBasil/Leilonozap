@@ -89,6 +89,8 @@ const FalarComParceiro = React.lazy(() => import('@/pages/FalarComParceiro'));
 const AcessoParceiro = React.lazy(() => import('@/pages/AcessoParceiro'));
 // 🕵️ Auditoria de cadastros sem rastreio de indicação — só leitura, só admin
 const AuditoriaCadastros = React.lazy(() => import('@/pages/AuditoriaCadastros'));
+// 🏦 "Banco" interno de comissões — pra pagar manualmente até a integração bancária automática (12/08/2026)
+const PagamentosComissoes = React.lazy(() => import('@/pages/PagamentosComissoes'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -377,6 +379,13 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="AuditoriaCadastros">
           <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <AuditoriaCadastros />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
+      <Route path="/PagamentosComissoes" element={
+        <LayoutWrapper currentPageName="PagamentosComissoes">
+          <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <PagamentosComissoes />
           </RequireRole>
         </LayoutWrapper>
       } />
