@@ -175,6 +175,18 @@ function _operatorActor() {
     return isOp ? u : null;
   } catch { return null; }
 }
+// 🛡️ FREIO DE RATE LIMIT — /api/functions/entityWrite (12/08/2026)
+// Todo escrita de operador (admin/estoque) passa por este único endpoint. Sem
+// proteção, uma rajada de escritas (ex: várias telas admin salvando ao mesmo
+// tempo) estourava o limite do servidor (HTTP 429) sem nenhum recuo — cada
+// chamada seguinte tentava de novo na mesma hora e prolongava o bloqueio.
+// Agora: 1 x 429 → pausa 90s SEM nem tentar de novo; 429 repetido → dobra a
+// pausa (até 5min). Sucesso → volta ao normal.
+const ENTITY_WRITE_BASE_COOLDOWN_MS = 90000; // 90s
+const ENTITY_WRITE_MAX_COOLDOWN_MS = 300000; // 5min
+let _entityWriteBlockedUntil = 0;
+let _entityWriteCooldownMs = ENTITY_WRITE_BASE_COOLDOWN_MS;
+
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
   if (!op) return { _skip: true };
@@ -196,11 +208,23 @@ async function _routeWrite(table, action, id, payload) {
     }
     // delete: mantém o comportamento atual (fora de escopo desta correção)
   }
+  // Em cooldown (rate limit recente): não tenta de novo, só devolve o erro.
+  const agora = Date.now();
+  if (agora < _entityWriteBlockedUntil) {
+    return { success: false, error: 'rate_limit_cooldown', details: `Aguardando ${Math.ceil((_entityWriteBlockedUntil - agora) / 1000)}s antes de tentar novamente` };
+  }
   try {
     const resp = await fetch('/api/functions/entityWrite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ actorId: op.id, table, action, id, payload }),
     });
+    if (resp.status === 429) {
+      _entityWriteBlockedUntil = Date.now() + _entityWriteCooldownMs;
+      _entityWriteCooldownMs = Math.min(_entityWriteCooldownMs * 2, ENTITY_WRITE_MAX_COOLDOWN_MS);
+      return { success: false, error: 'rate_limit', details: 'Limite de escritas atingido — aguardando antes de tentar novamente' };
+    }
+    // Sucesso: recupera o intervalo de pausa pro valor base
+    _entityWriteCooldownMs = ENTITY_WRITE_BASE_COOLDOWN_MS;
     return await resp.json();
   } catch (e) { return { success: false, error: String(e?.message || e) }; }
 }
