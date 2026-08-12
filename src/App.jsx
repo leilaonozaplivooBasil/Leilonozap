@@ -87,6 +87,8 @@ const IntegracaoMelhorEnvio = React.lazy(() => import('@/pages/IntegracaoMelhorE
 const FalarComParceiro = React.lazy(() => import('@/pages/FalarComParceiro'));
 // 🖤 Porta da captação privada: cadastro + ciência antes de liberar /Partners
 const AcessoParceiro = React.lazy(() => import('@/pages/AcessoParceiro'));
+// 🕵️ Auditoria de cadastros sem rastreio de indicação — só leitura, só admin
+const AuditoriaCadastros = React.lazy(() => import('@/pages/AuditoriaCadastros'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -369,6 +371,13 @@ const AuthenticatedApp = () => {
       <Route path="/SejaLicenciado" element={
         <LayoutWrapper currentPageName="SejaLicenciado">
           <SejaLicenciado />
+        </LayoutWrapper>
+      } />
+      <Route path="/AuditoriaCadastros" element={
+        <LayoutWrapper currentPageName="AuditoriaCadastros">
+          <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <AuditoriaCadastros />
+          </RequireRole>
         </LayoutWrapper>
       } />
       <Route path="/AdminCreditoTeste" element={
