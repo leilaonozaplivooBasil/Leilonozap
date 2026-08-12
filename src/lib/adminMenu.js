@@ -48,6 +48,7 @@ import {
   Trophy,
   User,
   Target,
+  ShieldAlert,
 } from "lucide-react";
 
 /**
@@ -125,6 +126,8 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Registrar Licenciado", pageName: "RegisterLicensee", icon: UserPlus },
         { title: "Gerenciar Senhas", pageName: "AdminUsers", icon: KeyRound },
         { title: "Acessos VIP", pageName: "LuxuryAccessManager", icon: Crown },
+        // 🕵️ Auditoria de cadastros sem rastreio de indicação (12/08/2026)
+        { title: "Auditoria de Cadastros", pageName: "AuditoriaCadastros", icon: ShieldAlert },
       ],
     },
     {
