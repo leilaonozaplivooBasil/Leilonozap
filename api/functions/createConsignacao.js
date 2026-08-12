@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Informe quem está pedindo e os itens' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const campos = 'id,full_name,role,career_levels,primary_career_level,active,divida_consignado';
+    const campos = 'id,full_name,role,career_levels,primary_career_level,active';
     const actorArr = await (await sb(`app_users?select=${campos}&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
     if (!actor) return res.status(403).json({ success: false, error: 'Usuário inválido' });
