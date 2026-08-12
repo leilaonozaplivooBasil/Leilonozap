@@ -121,6 +121,8 @@ export default async function handler(req, res) {
         sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1').then((r) => r.json()).catch(() => null),
       ]);
       let referred_by_id = Array.isArray(porLink) && porLink[0] ? porLink[0].id : null;
+      // 🕵️ auditoria: por que caiu no Site Oficial (se caiu)
+      const fallback_motivo = referred_by_id ? null : (ref_code ? `código de indicação "${ref_code}" não encontrado` : 'sem código de indicação');
       if (!referred_by_id) {
         referred_by_id = Array.isArray(siteOficial) && siteOficial[0] ? siteOficial[0].id : null;
       }
@@ -144,6 +146,18 @@ export default async function handler(req, res) {
         })
       })).json();
       user = Array.isArray(created) ? created[0] : created;
+      // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
+      // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio.
+      if (fallback_motivo && user?.id) {
+        sb('system_logs', {
+          method: 'POST', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            component_name: 'googleLogin', step: 'FALLBACK_SITE_OFICIAL', status: 'warning',
+            message: `Cadastro (Google) de ${email} vinculado ao Site Oficial — motivo: ${fallback_motivo}`,
+            entity_id: user.id, payload: { email, ref_code, motivo: fallback_motivo },
+          }),
+        }).catch(() => {});
+      }
     }
 
     if (!user) return res.status(500).json({ success: false, error: 'Não foi possível criar/recuperar o usuário.' });

@@ -63,10 +63,14 @@ export default async function handler(req, res) {
 
     // resolve indicador pelo ref_code do link
     let referred_by_id = null;
+    let fallback_motivo = null; // 🕵️ auditoria: por que caiu no Site Oficial (se caiu)
     if (ref_code) {
       // ilike: tolera maiúscula/espaço colado errado do link, sem afetar o match exato normal
       const r = await (await sb(`app_users?select=id&referral_code=ilike.${encodeURIComponent(ref_code)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) referred_by_id = r[0].id;
+      else fallback_motivo = `código de indicação "${ref_code}" não encontrado`;
+    } else {
+      fallback_motivo = 'sem código de indicação';
     }
     // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém fica solto. Quem chega sem link de
     // indicação entra sob o Leilão NoZap - Site Oficial (a raiz da árvore).
@@ -107,6 +111,20 @@ export default async function handler(req, res) {
     }
     // senha em bcrypt na tabela isolada (só service_role lê); app_users.password fica null
     await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
+
+    // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
+    // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio. Fire-and-forget:
+    // não atrasa nem pode quebrar o cadastro se a gravação do log falhar.
+    if (fallback_motivo) {
+      sb('system_logs', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          component_name: 'publicRegister', step: 'FALLBACK_SITE_OFICIAL', status: 'warning',
+          message: `Cadastro de ${email} vinculado ao Site Oficial — motivo: ${fallback_motivo}`,
+          entity_id: id, payload: { email, ref_code, motivo: fallback_motivo },
+        }),
+      }).catch(() => {});
+    }
 
     const u = { ...rows[0] };
     delete u.password;

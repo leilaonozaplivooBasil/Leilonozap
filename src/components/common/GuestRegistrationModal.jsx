@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User as UserIcon, Sparkles, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { ensureSiteLicensee } from '@/functions/ensureSiteLicensee'; // New import for the ensureSiteLicensee function
 import { getReferral } from '@/lib/referral';
 // 📜 PONTO 70 — este convite NÃO exibe mais o Termo de Adesão: o termo só aparece
 // na intenção de compra (1º lance no leilão / adicionar ao carrinho na loja).
@@ -124,64 +123,16 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
         return;
       }
 
-      // 🏢 LÓGICA DE INDICAÇÃO CORRIGIDA
-      let referredById = null;
+      // 🏢 RESOLUÇÃO DO INDICADOR — feita no servidor (publicRegister), não aqui.
+      // 🐛 CAUSA-RAIZ (12/08/2026): este bloco chamava ensureSiteLicensee({}), uma rota
+      // que NÃO existe no servidor atual (Vercel) — toda chamada retornava
+      // { error: 'not_implemented' }, sem o campo .data esperado, e o cadastro de
+      // QUALQUER pessoa sem link de indicação (ex: convite genérico) quebrava aqui com
+      // "Erro ao processar cadastro". O publicRegister já resolve o indicador pelo
+      // ref_code sozinho (e cai no Site Oficial só quando não há indicação válida) —
+      // então o cálculo duplicado no front não fazia falta nenhuma e só travava o fluxo.
       const referralCode = getReferral();
-      
       console.log(`🔍 [CADASTRO] Código de indicação na sessão: ${referralCode || 'NENHUM'}`);
-      
-      // 🔧 CORREÇÃO: PRIORIDADE PARA CÓDIGO DE INDICAÇÃO
-      if (referralCode && referralCode.trim() !== '') {
-        console.log(`🔍 [CADASTRO] Buscando licenciado com código: ${referralCode}`);
-        try {
-          const licensees = await AppUser.filter({ referral_code: referralCode });
-          if (licensees.length > 0) {
-            const referrer = licensees[0];
-            referredById = referrer.id;
-            console.log(`✅ [CADASTRO] Indicado por: ${referrer.full_name} (${referrer.email})`);
-          } else {
-            console.log(`⚠️ [CADASTRO] Código '${referralCode}' não encontrado no sistema`);
-          }
-        } catch (error) {
-          console.warn("❌ Erro ao buscar licenciado:", error);
-        }
-      }
-      
-      // 🏢 SÓ USA "SITE OFICIAL" SE NÃO TIVER INDICAÇÃO
-      if (!referredById) {
-        console.log("🏢 [CADASTRO] Sem código de indicação válido. Usando Site Oficial como fallback...");
-        
-        try {
-          const response = await ensureSiteLicensee({});
-          
-          if (response.data && response.data.success) {
-            referredById = response.data.siteLicensee.id;
-            console.log(`✅ [CADASTRO] Vinculado ao Site Oficial: ${response.data.siteLicensee.id}`);
-            console.log(`📊 [CADASTRO] Ação executada: ${response.data.action}`);
-            if (response.data.duplicatesRemoved) {
-              console.log(`🧹 [CADASTRO] Duplicatas removidas: ${response.data.duplicatesRemoved}`);
-            }
-          } else {
-            throw new Error("Falha ao garantir Site Oficial");
-          }
-        } catch (error) {
-          console.error("❌ [CADASTRO] Erro crítico ao buscar/criar Site Oficial:", error);
-          setErrorMessage("❌ Erro ao processar cadastro. Tente novamente.");
-          setIsRegistering(false);
-          return;
-        }
-      }
-
-      // 🔒 VALIDAÇÃO FINAL
-      if (!referredById) {
-        console.error("❌ [CADASTRO] Falha crítica: nenhum indicador definido!");
-        setErrorMessage("❌ Erro no sistema de indicação. Contate o suporte.");
-        setIsRegistering(false);
-        return;
-      }
-
-      console.log("✅ [CADASTRO] Email disponível, criando USUÁRIO COMUM...");
-      console.log(`📎 [CADASTRO] Será vinculado ao ID: ${referredById}`);
       
       // 🔐 Cadastro REAL via rota server-side (publicRegister, service_role). Antes usava
       // AppUser.create, bloqueado por RLS (42501) — o cadastro do visitante nunca concluía.

@@ -83,14 +83,20 @@ export default async function handler(req, res) {
 
     // 3) resolve indicador (actor logado tem prioridade; senão o ref_code do link)
     let referred_by_id = null, actorLevel = null;
+    let fallback_motivo = null; // 🕵️ auditoria: por que caiu no Site Oficial (se caiu)
     if (actor_id) {
       const a = await (await sb(`app_users?select=id,primary_career_level&id=eq.${encodeURIComponent(actor_id)}&limit=1`)).json();
       if (Array.isArray(a) && a[0]) { referred_by_id = a[0].id; actorLevel = a[0].primary_career_level; }
+      else fallback_motivo = `actor_id "${actor_id}" não encontrado`;
     }
     if (!referred_by_id && ref_code) {
       // (resolve pelo link de indicação) — ilike tolera maiúscula/espaço colado errado
       const r = await (await sb(`app_users?select=id,primary_career_level&referral_code=ilike.${encodeURIComponent(ref_code)}&limit=1`)).json();
-      if (Array.isArray(r) && r[0]) { referred_by_id = r[0].id; actorLevel = r[0].primary_career_level; }
+      if (Array.isArray(r) && r[0]) { referred_by_id = r[0].id; actorLevel = r[0].primary_career_level; fallback_motivo = null; }
+      else fallback_motivo = `código de indicação "${ref_code}" não encontrado`;
+    }
+    if (!referred_by_id && !ref_code && !actor_id) {
+      fallback_motivo = 'sem código de indicação e sem actor logado';
     }
     // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém entra solto. Sem indicador válido,
     // o cadastro fica sob o Leilão NoZap - Site Oficial (raiz da árvore).
@@ -150,6 +156,19 @@ export default async function handler(req, res) {
     }
     // grava o hash na tabela isolada (só service_role lê) — coluna app_users.password fica vazia
     await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
+    // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
+    // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio.
+    if (fallback_motivo) {
+      sb('system_logs', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          component_name: 'registerNetworkUser', step: 'FALLBACK_SITE_OFICIAL', status: 'warning',
+          message: `Cadastro de ${email} vinculado ao Site Oficial — motivo: ${fallback_motivo}`,
+          entity_id: id, payload: { email, ref_code, actor_id, motivo: fallback_motivo },
+        }),
+      }).catch(() => {});
+    }
+
     const u = { ...rows[0] };
     delete u.password; // nunca devolve o hash pro client
     return res.status(200).json({ success: true, user: u, needs_adesao: needsAdesao });
