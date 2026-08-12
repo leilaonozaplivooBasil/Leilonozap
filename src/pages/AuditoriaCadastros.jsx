@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { base44 } from '@/api/base44Client';
 import { Loader2, AlertTriangle, ShieldAlert, Search } from 'lucide-react';
 
 // 🕵️ AUDITORIA DE CADASTROS (12/08/2026) — pedido do Gabriel após suspeita de que uma
@@ -10,6 +11,7 @@ import { Loader2, AlertTriangle, ShieldAlert, Search } from 'lucide-react';
 export default function AuditoriaCadastros() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
+  const [logsPorUsuario, setLogsPorUsuario] = useState({});
   const [error, setError] = useState('');
   const [busca, setBusca] = useState('');
   const [diaFiltro, setDiaFiltro] = useState(null);
@@ -24,6 +26,18 @@ export default function AuditoriaCadastros() {
           .limit(5000);
         if (error) throw error;
         setUsers(data || []);
+
+        // 🕵️ motivo REAL do fallback (ex: qual código de indicação foi tentado),
+        // vem de system_logs — só existe pra cadastros feitos DEPOIS da auditoria
+        // (12/08/2026). Cadastros mais antigos não têm esse registro.
+        try {
+          const resp = await base44.functions.invoke('getSystemLogsCadastro', {});
+          if (resp?.success && Array.isArray(resp.logs)) {
+            const map = {};
+            resp.logs.forEach((l) => { if (l.entity_id && !map[l.entity_id]) map[l.entity_id] = l; });
+            setLogsPorUsuario(map);
+          }
+        } catch (_) { /* segue sem o detalhe do log */ }
       } catch (e) {
         setError(e?.message || 'Erro ao carregar cadastros');
       } finally {
@@ -44,11 +58,21 @@ export default function AuditoriaCadastros() {
       const semIndicador = !u.referred_by_id;
       const suspeito = isSite || semIndicador;
       const dia = (u.created_date || '').slice(0, 10) || 'sem-data';
+      const log = logsPorUsuario[u.id] || null;
+      // 🎯 Quando existe log de auditoria (cadastros a partir de 12/08/2026), mostra
+      // o código de indicação REALMENTE tentado no momento do cadastro. Sem log
+      // (cadastros mais antigos), o dado simplesmente não foi registrado — não há
+      // como recuperar o indicador retroativamente, e isso é dito com clareza.
+      const codigoTentado = log?.payload?.ref_code || log?.payload?.motivo || null;
+      const motivo = log
+        ? `Código tentado: "${codigoTentado || '(nenhum)'}" — não encontrado`
+        : (semIndicador ? 'Sem indicador — cadastro anterior à auditoria (motivo não registrado)' : 'Foi pro Site Oficial — cadastro anterior à auditoria (motivo não registrado)');
       return {
         ...u,
         dia,
         referrerName: referrer ? (referrer.full_name || referrer.email) : null,
-        motivo: semIndicador ? 'Sem indicador (referred_by_id vazio)' : isSite ? 'Foi pro Site Oficial' : null,
+        temLog: !!log,
+        motivo: suspeito ? motivo : null,
         suspeito,
       };
     });
@@ -174,7 +198,7 @@ export default function AuditoriaCadastros() {
                     <td className="px-4 py-2 text-gray-400">{r.email || '—'}</td>
                     <td className="px-4 py-2 text-gray-400">{r.phone || '—'}</td>
                     <td className="px-4 py-2 text-gray-400">{r.created_date ? String(r.created_date).replace('T', ' ').slice(0, 19) : '—'}</td>
-                    <td className="px-4 py-2 text-red-300">{r.motivo}</td>
+                    <td className={`px-4 py-2 ${r.temLog ? 'text-amber-300' : 'text-red-400'}`}>{r.motivo}</td>
                   </tr>
                 ))}
                 {listaFiltrada.length === 0 && (
