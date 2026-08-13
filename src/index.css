@@ -238,11 +238,23 @@ body[data-painel-nav] main .nz-escuro[class*="bg-gray-900"] { background-color: 
 body[data-painel-nav] main .nz-escuro [class*="bg-gray-800"],
 body[data-painel-nav] main .nz-escuro[class*="bg-gray-800"] { background-color: #1f2937 !important; }
 body[data-painel-nav] main .nz-escuro [class*="bg-gray-700"] { background-color: #374151 !important; }
+/* ⚠️ Especificidade: as regras do tema claro que convertem texto (text-white,
+   text-gray-1/2/3/4/5) usam ":not([class*='bg-'])", o que dá a elas MAIS peso
+   que ".nz-painel .nz-escuro [...]" sozinho — por isso o texto dentro da árvore
+   genealógica (fundo preto) ficava escuro-sobre-escuro, ilegível. Duplicar a
+   classe ".nz-escuro" (".nz-escuro.nz-escuro") empata/supera esse peso sem
+   mudar nada de layout ou lógica — só garante que a cor escura vença aqui. */
+.nz-painel .nz-escuro.nz-escuro [class*="text-white"],
 body[data-painel-nav] main .nz-escuro [class*="text-white"] { color: #ffffff !important; }
+.nz-painel .nz-escuro.nz-escuro [class*="text-gray-100"],
+.nz-painel .nz-escuro.nz-escuro [class*="text-gray-200"],
 body[data-painel-nav] main .nz-escuro [class*="text-gray-100"],
 body[data-painel-nav] main .nz-escuro [class*="text-gray-200"] { color: #e5e7eb !important; }
+.nz-painel .nz-escuro.nz-escuro [class*="text-gray-300"],
 body[data-painel-nav] main .nz-escuro [class*="text-gray-300"] { color: #d1d5db !important; }
+.nz-painel .nz-escuro.nz-escuro [class*="text-gray-400"],
 body[data-painel-nav] main .nz-escuro [class*="text-gray-400"] { color: #9ca3af !important; }
+.nz-painel .nz-escuro.nz-escuro [class*="text-gray-500"],
 body[data-painel-nav] main .nz-escuro [class*="text-gray-500"] { color: #6b7280 !important; }
 body[data-painel-nav] main .nz-escuro [class*="border-gray-700"] { border-color: #374151 !important; }
 body[data-painel-nav] main .nz-escuro [class*="border-gray-800"] { border-color: #1f2937 !important; }
