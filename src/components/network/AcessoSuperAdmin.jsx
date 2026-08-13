@@ -164,7 +164,7 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
             </button>
           </span>
         ) : (
-          <span className="text-[11.5px] text-gray-400">
+          <span className="text-[11.5px] text-gray-300">
             As senhas ficam criptografadas no banco — não é possível ver a atual, só definir uma nova.
             A padrão da casa é <strong className="text-amber-300 font-mono">{SENHA_PADRAO}</strong>.
           </span>
@@ -211,8 +211,8 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
 
       {/* ---- Link público + posição na árvore ---- */}
       <div className="mt-3 pt-3 border-t border-amber-500/20 space-y-1.5">
-        <p className="text-[10px] uppercase tracking-wider text-gray-500">Link da loja / perfil</p>
-        <p className="text-[11.5px] text-gray-400 flex items-center gap-1.5">
+        <p className="text-[10px] uppercase tracking-wider text-gray-400">Link da loja / perfil</p>
+        <p className="text-[11.5px] text-gray-300 flex items-center gap-1.5">
           <GitBranch className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
           Indicado por <strong className="text-emerald-300">{indicadoPor || 'Leilão NoZap Oficial (site)'}</strong>
         </p>

@@ -1039,7 +1039,7 @@ export default function TreeHierarchy({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
                 {/* coluna 1 — dados */}
                 <div className="space-y-3">
-                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold">Dados do cadastro</p>
+                  <p className="text-[10.5px] uppercase tracking-wider text-gray-400 font-bold">Dados do cadastro</p>
                   <Field icon={Mail} label="E-mail" value={selected.email} />
                   {selected.phone && <Field icon={Phone} label="Telefone" value={selected.phone} />}
                   {selected.nickname && <Field icon={AtSign} label="Apelido nos lances" value={selected.nickname} />}
@@ -1062,7 +1062,7 @@ export default function TreeHierarchy({
 
                 {/* coluna 2 — posição na rede + plano */}
                 <div className="space-y-3">
-                  <p className="text-[10.5px] uppercase tracking-wider text-gray-500 font-bold">Posição na árvore genealógica</p>
+                  <p className="text-[10.5px] uppercase tracking-wider text-gray-400 font-bold">Posição na árvore genealógica</p>
                   <Field icon={Users} label="Indicados diretos" value={`${selected.children.length} pessoa(s)`} />
                   <Field
                     icon={GitBranch}
@@ -1090,16 +1090,16 @@ export default function TreeHierarchy({
                     <p className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
                       No plano de alavancagem
                     </p>
-                    <p className="text-[12px] text-gray-200 leading-relaxed">
+                    <p className="text-[12px] text-white leading-relaxed">
                       <strong className={selectedLevel.textColor}>{selectedLevel.name}</strong>
                       {selectedLevel.venda_direta_pct > 0 && (
                         <> — {selectedLevel.venda_direta_pct}% de venda direta</>
                       )}
                     </p>
                     {selectedLevel.regra && (
-                      <p className="text-[11px] text-gray-400 leading-snug mt-1">{selectedLevel.regra}</p>
+                      <p className="text-[11px] text-gray-300 leading-snug mt-1">{selectedLevel.regra}</p>
                     )}
-                    <p className="text-[11px] text-gray-500 leading-snug mt-1.5">
+                    <p className="text-[11px] text-gray-400 leading-snug mt-1.5">
                       A posição na árvore define a cadeia de rebate: mover esta pessoa muda quem
                       recebe sobre a equipe dela.
                     </p>
@@ -1107,7 +1107,7 @@ export default function TreeHierarchy({
 
                   {Array.isArray(selected.career_levels) && selected.career_levels.length > 1 && (
                     <div>
-                      <p className="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1.5">Todos os cargos</p>
+                      <p className="text-[10.5px] uppercase tracking-wider text-gray-400 mb-1.5">Todos os cargos</p>
                       <div className="flex flex-wrap gap-1">
                         {selected.career_levels.map((id) => {
                           const l = getLevel(id);
@@ -1213,8 +1213,8 @@ function Field({ icon: Icon, label, value }) {
     <div className="flex items-start gap-2">
       <Icon className="w-3.5 h-3.5 text-gray-600 mt-0.5 flex-shrink-0" />
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wider text-gray-500 leading-tight">{label}</p>
-        <p className="text-[12px] text-gray-200 break-words">{value}</p>
+        <p className="text-[10px] uppercase tracking-wider text-gray-400 leading-tight">{label}</p>
+        <p className="text-[12px] text-white break-words">{value}</p>
       </div>
     </div>
   );
