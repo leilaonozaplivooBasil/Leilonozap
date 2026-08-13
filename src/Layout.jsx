@@ -784,6 +784,11 @@ export default function Layout({ children, currentPageName }) {
   // Em TODAS as outras páginas o cabeçalho continua exatamente como sempre foi.
   // Barra clara também na Live Shop (tema branco co-branded com a Livoo).
   const isRecepcao = currentPageName === 'Recepcao' || currentPageName === 'LiveShopNoZap';
+  // 🧭 AUDITORIA MOBILE (13/08/2026) — a barra fixa do topo ficava sempre escura,
+  // mesmo nas telas que já são brancas (PDV, Carteira, Evoluir, Estoque, etc.),
+  // criando um choque visual de "app dentro de outro app". Estendendo a MESMA
+  // barra clara da Recepção para toda tela do tema claro do painel (PAGINAS_TEMA_CLARO).
+  const isPainelClaro = isRecepcao || PAGINAS_TEMA_CLARO.has(currentPageName);
 
   const shouldShowLoading = isLoading;
 
@@ -863,7 +868,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: isRecepcao ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isRecepcao ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isRecepcao ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className={`relative flex justify-between items-center ${isRecepcao ? 'h-14' : 'h-14 sm:h-16'}`}>
 
@@ -875,7 +880,7 @@ export default function Layout({ children, currentPageName }) {
                     placa escura discreta atrás, senão o nome simplesmente desaparece. */}
                 <div>
                 <img
-                  src={isRecepcao ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a4d99a15d_image.png' : logoUrl}
+                  src={isPainelClaro ? 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a4d99a15d_image.png' : logoUrl}
                   alt="Leilão NoZap"
                   // 🌿 Na Recepção a vitrine é a estrela: logo minúscula, header discreto.
                   className={`${currentPageName === 'Recepcao' ? 'h-12 sm:h-14' : 'h-11 sm:h-14'} w-auto cursor-pointer hover:scale-105 transition-transform`}
@@ -906,7 +911,7 @@ export default function Layout({ children, currentPageName }) {
                   isCatalogPage={isCatalogPage}
                   adminMenuItems={adminMenuItems}
                   currentUser={currentUser}
-                  temaClaro={isRecepcao}
+                  temaClaro={isPainelClaro}
                   cartCount={cartCount}
                   onShareClick={() => setShowShareModal(true)}
                   onLoginClick={() => setShowLoginModal(true)}
@@ -960,7 +965,7 @@ export default function Layout({ children, currentPageName }) {
                     type="button"
                     aria-label="Abrir menu"
                     {...fastTap(() => setMobileMenuOpen(true))}
-                    className={`inline-flex items-center justify-center rounded-md p-2.5 ${isRecepcao ? 'text-nz-tinta hover:text-nz-verde' : 'text-gray-400 hover:text-white'}`}
+                    className={`inline-flex items-center justify-center rounded-md p-2.5 ${isPainelClaro ? 'text-nz-tinta hover:text-nz-verde' : 'text-gray-400 hover:text-white'}`}
                   >
                     <Menu className="h-6 w-6" />
                   </button>
