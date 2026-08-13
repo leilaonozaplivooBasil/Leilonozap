@@ -1463,7 +1463,7 @@ export default function NetworkOverview() {
           actions={
             <Button
               onClick={() => setShowMessageDispatcher(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="w-full sm:w-auto h-10 sm:h-9 bg-blue-600 hover:bg-blue-700"
               size="sm"
             >
               <Send className="w-4 h-4 mr-2" />
@@ -1475,22 +1475,24 @@ export default function NetworkOverview() {
         {/* Resumo da rede — faixa compacta e recolhível: ocupa pouca altura para
             deixar a árvore genealógica em primeiro plano. */}
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
+          {/* 📱 mobile: o botão fica em cima e os números embaixo, em duas caixas —
+              antes tudo era uma linha só e "99 no sistema" quebrava no meio. */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
             <button
               type="button"
               onClick={() => setShowStats((v) => !v)}
-              className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-emerald-400/90 hover:text-emerald-300 transition-colors"
+              className="flex min-h-[44px] sm:min-h-0 items-center gap-1.5 text-left text-[12px] font-semibold uppercase tracking-wider text-emerald-400/90 hover:text-emerald-300 transition-colors"
             >
-              {showStats ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              {showStats ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />}
               Resumo da árvore genealógica
             </button>
-            <div className="flex items-center gap-3 text-[12px] text-gray-400">
-              <span className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-gray-500" />
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 text-[12px] text-gray-400">
+              <span className="flex items-center gap-1.5 rounded-lg border border-gray-700/70 bg-gray-800/50 px-2.5 py-2 sm:border-0 sm:bg-transparent sm:p-0 whitespace-nowrap">
+                <Users className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                 <strong className="text-white">{stats.total}</strong> no sistema
               </span>
-              <span className="flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-green-500" />
+              <span className="flex items-center gap-1.5 rounded-lg border border-gray-700/70 bg-gray-800/50 px-2.5 py-2 sm:border-0 sm:bg-transparent sm:p-0 whitespace-nowrap">
+                <DollarSign className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                 <strong className="text-green-400">R$ {fmtBR(stats.totalVolume)}</strong>
               </span>
             </div>
@@ -1634,17 +1636,19 @@ export default function NetworkOverview() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="licensees" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-gray-700/50">
-                <TabsTrigger value="licensees">
-                  <Network className="w-4 h-4 mr-2" />
+              {/* 📱 grid-cols-4 fixo sobrepunha os rótulos no celular. No mobile a
+                  lista rola no toque; de sm pra cima segue o grid de 4 como sempre. */}
+              <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto nz-no-scrollbar bg-gray-700/50 sm:grid sm:grid-cols-4 sm:gap-0 sm:overflow-visible">
+                <TabsTrigger value="licensees" className="flex-shrink-0 whitespace-nowrap min-h-[44px] sm:min-h-0 text-[12px] sm:text-sm">
+                  <Network className="w-4 h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
                   Árvore Genealógica
                 </TabsTrigger>
-                <TabsTrigger value="users">
-                  <Users className="w-4 h-4 mr-2" />
+                <TabsTrigger value="users" className="flex-shrink-0 whitespace-nowrap min-h-[44px] sm:min-h-0 text-[12px] sm:text-sm">
+                  <Users className="w-4 h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
                   Usuários Gerais ({activeUsers.length})
                 </TabsTrigger>
-                <TabsTrigger value="estruturas">
-                  <Briefcase className="w-4 h-4 mr-2" />
+                <TabsTrigger value="estruturas" className="flex-shrink-0 whitespace-nowrap min-h-[44px] sm:min-h-0 text-[12px] sm:text-sm">
+                  <Briefcase className="w-4 h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
                   Estruturas ({structure.executives.length})
                   {structure.orfaos.length > 0 && (
                     <span className="ml-1.5 px-1.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] font-bold">
@@ -1652,8 +1656,8 @@ export default function NetworkOverview() {
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="trash">
-                  <Trash2 className="w-4 h-4 mr-2" />
+                <TabsTrigger value="trash" className="flex-shrink-0 whitespace-nowrap min-h-[44px] sm:min-h-0 text-[12px] sm:text-sm">
+                  <Trash2 className="w-4 h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
                   Lixeira ({trashedUsers.length})
                 </TabsTrigger>
               </TabsList>
@@ -1667,7 +1671,7 @@ export default function NetworkOverview() {
                       : "rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden"
                   }
                 >
-                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
                     <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
                     <span className="text-[13px] font-semibold text-green-400">
                       Árvore Genealógica
@@ -1680,7 +1684,7 @@ export default function NetworkOverview() {
                       size="sm"
                       variant="outline"
                       onClick={() => setTreeFullscreen((v) => !v)}
-                      className="h-7 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black"
+                      className="h-9 sm:h-7 ml-auto text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black"
                       title={treeFullscreen ? "Sair da tela cheia" : "Abrir em tela cheia"}
                     >
                       {treeFullscreen ? (

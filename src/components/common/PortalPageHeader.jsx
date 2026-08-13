@@ -57,22 +57,22 @@ export default function PortalPageHeader({
       <div className="mb-4"><BotaoVoltar texto={backLabel} destino={backTo} /></div>
 
       {/* Header principal */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
           {Icon && (
-            <div className={`shrink-0 p-3 rounded-2xl ${colors.bg} ${colors.border} border ring-4 ${colors.ring}`}>
-              <Icon className={`w-7 h-7 sm:w-8 sm:h-8 ${colors.text}`} />
+            <div className={`shrink-0 p-2.5 sm:p-3 rounded-2xl ${colors.bg} ${colors.border} border ring-2 sm:ring-4 ${colors.ring}`}>
+              <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${colors.text}`} />
             </div>
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight">
                 {title}
               </h1>
               {badge}
             </div>
             {subtitle && (
-              <p className="text-sm sm:text-base text-gray-400 mt-1">
+              <p className="text-[12.5px] sm:text-base text-gray-400 mt-1 leading-snug">
                 {subtitle}
               </p>
             )}
@@ -81,7 +81,7 @@ export default function PortalPageHeader({
 
         {/* Ações à direita (opcional) */}
         {actions && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex w-full sm:w-auto items-center gap-2 flex-wrap [&>*]:flex-1 sm:[&>*]:flex-none">
             {actions}
           </div>
         )}

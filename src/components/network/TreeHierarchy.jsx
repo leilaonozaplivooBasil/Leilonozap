@@ -529,12 +529,12 @@ export default function TreeHierarchy({
   return (
     <div className={`relative w-full bg-gray-950 ${fullHeight ? 'h-full' : 'rounded-b-lg'}`}>
       {/* -------- Barra de ferramentas -------- */}
-      <div className="flex items-center gap-2 flex-wrap px-3 py-2 border-b border-gray-800 bg-gray-900/80">
-        <div className="flex items-center rounded-lg border border-gray-700 overflow-hidden">
+      <div className="flex items-center gap-2 flex-wrap px-2.5 sm:px-3 py-2 border-b border-gray-800 bg-gray-900/80">
+        <div className="flex items-center rounded-lg border border-gray-700 overflow-hidden flex-shrink-0">
           <button
             type="button"
             onClick={() => setMode('list')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] transition-colors ${
+            className={`flex min-h-[40px] sm:min-h-0 items-center gap-1.5 px-3 py-1.5 text-[11.5px] transition-colors ${
               mode === 'list'
                 ? 'bg-emerald-600/20 text-emerald-300'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
@@ -547,7 +547,7 @@ export default function TreeHierarchy({
           <button
             type="button"
             onClick={() => setMode('chart')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] transition-colors border-l border-gray-700 ${
+            className={`flex min-h-[40px] sm:min-h-0 items-center gap-1.5 px-3 py-1.5 text-[11.5px] transition-colors border-l border-gray-700 ${
               mode === 'chart'
                 ? 'bg-emerald-600/20 text-emerald-300'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
@@ -559,7 +559,8 @@ export default function TreeHierarchy({
           </button>
         </div>
 
-        <div className="relative">
+        {/* 📱 no celular a busca ocupa a linha inteira — encolhida ela cortava o texto */}
+        <div className="relative w-full sm:w-auto order-last sm:order-none">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           <input
             value={query}
@@ -568,7 +569,7 @@ export default function TreeHierarchy({
               if (e.key === 'Enter' && matches.size) focusUser([...matches][0]);
             }}
             placeholder="Buscar pessoa na estrutura de negócio…"
-            className="w-52 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
+            className="w-full sm:w-52 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 h-10 sm:h-auto sm:py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
           />
         </div>
         {query && (
@@ -578,7 +579,7 @@ export default function TreeHierarchy({
           </span>
         )}
 
-        <div className="flex-1" />
+        <div className="hidden sm:block flex-1" />
 
         <span className="hidden 2xl:flex items-center gap-1.5 text-[11px] text-gray-600 mr-1">
           <Move className="w-3 h-3" />
@@ -587,18 +588,18 @@ export default function TreeHierarchy({
 
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={() => zoomBy(1 / 1.2)}
-            className="h-7 w-7 p-0 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black" title="Diminuir zoom">
+            className="h-10 w-10 sm:h-7 sm:w-7 p-0 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black" title="Diminuir zoom">
             <ZoomOut className="w-3.5 h-3.5" />
           </Button>
           <span className="text-[11px] text-gray-500 w-10 text-center tabular-nums">
             {Math.round(zoom * 100)}%
           </span>
           <Button size="sm" variant="outline" onClick={() => zoomBy(1.2)}
-            className="h-7 w-7 p-0 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black" title="Aumentar zoom">
+            className="h-10 w-10 sm:h-7 sm:w-7 p-0 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black" title="Aumentar zoom">
             <ZoomIn className="w-3.5 h-3.5" />
           </Button>
           <Button size="sm" variant="outline" onClick={() => fitToView({ allowTiny: true })}
-            className="h-7 px-2 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black text-[11px]" title="Ver a rede inteira">
+            className="h-10 sm:h-7 px-3 sm:px-2 bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black text-[11px]" title="Ver a rede inteira">
             <Maximize className="w-3.5 h-3.5 mr-1" />
             Ver tudo
           </Button>
@@ -606,11 +607,11 @@ export default function TreeHierarchy({
 
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={expandAll}
-            className="h-7 px-2 text-[11px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 hover:text-emerald-950 font-semibold">
+            className="h-10 sm:h-7 px-3 sm:px-2 text-[11px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 hover:text-emerald-950 font-semibold">
             Expandir todos
           </Button>
           <Button size="sm" variant="outline" onClick={collapseAll}
-            className="h-7 px-2 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black">
+            className="h-10 sm:h-7 px-3 sm:px-2 text-[11px] bg-gray-100 border-gray-300 text-gray-900 hover:bg-white hover:text-black">
             Recolher
           </Button>
         </div>
