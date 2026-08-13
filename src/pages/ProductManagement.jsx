@@ -12,6 +12,7 @@ import {
   Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert
 } from 'lucide-react';
 
+import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -102,6 +103,8 @@ export default function ProductManagement() {
   const [showPricingPreview, setShowPricingPreview] = useState(false);
   const [pricingPreviewData, setPricingPreviewData] = useState(null);
   const [isPricingLoading, setIsPricingLoading] = useState(false);
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState('');
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -563,8 +566,8 @@ export default function ProductManagement() {
   // 📤 Exporta CSV com filtro opcional por quantidade
   const exportCSV = (items, tipo) => {
     if (items.length === 0) { alert('Nenhum produto para exportar'); return; }
-    const headers = ['SKU', 'Produto', 'Depósito Empresa', 'Nome Depósito', 'Perfeito', 'Bom', 'Oficina', 'Custo Unit.', 'Preço Venda', 'Estoque Atual', 'Qtd Vendidos', 'Lucro'];
-    const rows = items.map(p => [p.lot || 'N/A', p.description || '', p.purchase_order || 'Empresa 3', p.deposit_name || 'Bangu', (p.qty_perfeito || 0).toString(), (p.qty_bom || 0).toString(), ((p.qty_oficina || 0) + (p.qty_ruim || 0)).toString(), (p.cost_price || 0).toFixed(2), (p.selling_price_retail || 0).toFixed(2), (p.quantity || 0).toString(), (p.quantity_sold || 0).toString(), (p.profit || 0).toFixed(2)]);
+    const headers = ['SKU', 'Produto', 'Depósito Empresa', 'Nome Depósito', 'Perfeito', 'Bom', 'Oficina', 'Custo Unit.', 'Preço Venda', 'URL da Imagem', 'Estoque Atual', 'Qtd Vendidos', 'Lucro'];
+    const rows = items.map(p => [p.lot || 'N/A', p.description || '', p.purchase_order || 'Empresa 3', p.deposit_name || 'Bangu', (p.qty_perfeito || 0).toString(), (p.qty_bom || 0).toString(), ((p.qty_oficina || 0) + (p.qty_ruim || 0)).toString(), (p.cost_price || 0).toFixed(2), (p.selling_price_retail || 0).toFixed(2), (p.image_urls && p.image_urls[0]) || '', (p.quantity || 0).toString(), (p.quantity_sold || 0).toString(), (p.profit || 0).toFixed(2)]);
     const csvContent = [headers.join(';'), ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))].join('\n');
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -685,6 +688,29 @@ export default function ProductManagement() {
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuItem
+                  disabled={isExportingZip}
+                  onClick={async () => {
+                    if (filteredProducts.length === 0) { alert('Nenhum produto para exportar'); return; }
+                    setIsExportingZip(true);
+                    setZipProgress('Preparando...');
+                    try {
+                      const r = await exportEstoqueComImagensZip(filteredProducts, {
+                        onProgress: (atual, total) => setZipProgress(`Baixando imagens ${atual}/${total}...`),
+                      });
+                      alert(`ZIP gerado! ${r.baixadas} de ${r.total} imagens baixadas com sucesso.`);
+                    } catch (e) {
+                      alert('Erro ao gerar ZIP: ' + e.message);
+                    } finally {
+                      setIsExportingZip(false);
+                      setZipProgress('');
+                    }
+                  }}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <Download className="w-4 h-4 mr-2 text-emerald-400" />
+                  {isExportingZip ? (zipProgress || 'Gerando ZIP...') : 'Exportar ZIP com Imagens'}
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     const a = document.createElement('a');
