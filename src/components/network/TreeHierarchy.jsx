@@ -661,6 +661,10 @@ export default function TreeHierarchy({
             const pointerProps = {
               onPointerDown: (e) => {
                 if (e.button === 2) return; // botão direito abre o menu, não arrasta
+                // 🔒 Sem permissão de mover (onRelink não veio do pai) — nem inicia o
+                // arraste. Sem isso, o card de confirmação aparecia e mostrava "sucesso"
+                // mesmo sem gravar nada, dando a falsa impressão de que a pessoa moveu.
+                if (typeof onRelink !== 'function') return;
                 e.stopPropagation();
                 // NÃO capturar o ponteiro aqui: com pointer capture no viewport o
                 // clique simples não chegava no nó e só o duplo clique abria o card.
