@@ -14,6 +14,11 @@ function genReferral(name) {
   const base = String(name || 'user').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '').slice(0, 8) || 'user';
   return base + crypto.randomBytes(2).toString('hex');
 }
+// 🕵️ Códigos antigos já compartilhados publicamente ANTES de uma correção manual no
+// referral_code — mantém o link antigo funcionando (aponta pro mesmo usuário) mesmo
+// depois do código dele ter sido corrigido. Chave sempre em MAIÚSCULO.
+const LEGACY_REF_ALIASES = { YARASHOPE: '6979205eb30397ea74dc0d7a' }; // Iara Figueiredo — código antigo tinha "Yara" errado
+
 async function referralUnico(sbFn, name) {
   let code = genReferral(name);
   for (let i = 0; i < 5; i++) {
@@ -114,13 +119,14 @@ export default async function handler(req, res) {
       // indicador do link primeiro; Site Oficial só quando não há link válido.
       // 🔎 ilike (case/trim-insensitive) — o mesmo código colado com maiúscula/espaço
       // extra do link do WhatsApp não pode cair silenciosamente no Site Oficial.
+      const refAlias = ref_code ? LEGACY_REF_ALIASES[ref_code.toUpperCase()] : null;
       const [porLink, siteOficial] = await Promise.all([
-        ref_code
+        (!refAlias && ref_code)
           ? sb(`app_users?select=id&referral_code=ilike.${encodeURIComponent(ref_code)}&limit=1`).then((r) => r.json()).catch(() => null)
           : Promise.resolve(null),
         sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1').then((r) => r.json()).catch(() => null),
       ]);
-      let referred_by_id = Array.isArray(porLink) && porLink[0] ? porLink[0].id : null;
+      let referred_by_id = refAlias || (Array.isArray(porLink) && porLink[0] ? porLink[0].id : null);
       // 🕵️ auditoria: por que caiu no Site Oficial (se caiu)
       const fallback_motivo = referred_by_id ? null : (ref_code ? `código de indicação "${ref_code}" não encontrado` : 'sem código de indicação');
       if (!referred_by_id) {

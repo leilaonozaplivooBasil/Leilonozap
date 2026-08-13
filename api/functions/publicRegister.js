@@ -20,6 +20,11 @@ function genReferral(name) {
   return base + crypto.randomBytes(2).toString('hex');
 }
 
+// 🕵️ Códigos antigos já compartilhados publicamente ANTES de uma correção manual no
+// referral_code — mantém o link antigo funcionando (aponta pro mesmo usuário) mesmo
+// depois do código dele ter sido corrigido. Chave sempre em MAIÚSCULO.
+const LEGACY_REF_ALIASES = { YARASHOPE: '6979205eb30397ea74dc0d7a' }; // Iara Figueiredo — código antigo tinha "Yara" errado
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -64,7 +69,9 @@ export default async function handler(req, res) {
     // resolve indicador pelo ref_code do link
     let referred_by_id = null;
     let fallback_motivo = null; // 🕵️ auditoria: por que caiu no Site Oficial (se caiu)
-    if (ref_code) {
+    if (ref_code && LEGACY_REF_ALIASES[ref_code.toUpperCase()]) {
+      referred_by_id = LEGACY_REF_ALIASES[ref_code.toUpperCase()];
+    } else if (ref_code) {
       // ilike: tolera maiúscula/espaço colado errado do link, sem afetar o match exato normal
       const r = await (await sb(`app_users?select=id&referral_code=ilike.${encodeURIComponent(ref_code)}&limit=1`)).json();
       if (Array.isArray(r) && r[0]) referred_by_id = r[0].id;

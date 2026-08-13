@@ -41,6 +41,11 @@ function genReferral(name) {
   return base + crypto.randomBytes(2).toString('hex');
 }
 
+// 🕵️ Códigos antigos já compartilhados publicamente ANTES de uma correção manual no
+// referral_code — mantém o link antigo funcionando (aponta pro mesmo usuário) mesmo
+// depois do código dele ter sido corrigido. Chave sempre em MAIÚSCULO.
+const LEGACY_REF_ALIASES = { YARASHOPE: '6979205eb30397ea74dc0d7a' }; // Iara Figueiredo — código antigo tinha "Yara" errado
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -88,6 +93,11 @@ export default async function handler(req, res) {
       const a = await (await sb(`app_users?select=id,primary_career_level&id=eq.${encodeURIComponent(actor_id)}&limit=1`)).json();
       if (Array.isArray(a) && a[0]) { referred_by_id = a[0].id; actorLevel = a[0].primary_career_level; }
       else fallback_motivo = `actor_id "${actor_id}" não encontrado`;
+    }
+    if (!referred_by_id && ref_code && LEGACY_REF_ALIASES[ref_code.toUpperCase()]) {
+      const aliasId = LEGACY_REF_ALIASES[ref_code.toUpperCase()];
+      const a2 = await (await sb(`app_users?select=id,primary_career_level&id=eq.${encodeURIComponent(aliasId)}&limit=1`)).json();
+      if (Array.isArray(a2) && a2[0]) { referred_by_id = a2[0].id; actorLevel = a2[0].primary_career_level; fallback_motivo = null; }
     }
     if (!referred_by_id && ref_code) {
       // (resolve pelo link de indicação) — ilike tolera maiúscula/espaço colado errado
