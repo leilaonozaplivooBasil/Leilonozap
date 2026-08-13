@@ -43,7 +43,7 @@ import MyClientsTab from '../components/licensing/MyClientsTab';
 import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
-import DashboardTabsList from '../components/licensing/DashboardTabsList';
+import MobileNavSheet from '../components/licensing/MobileNavSheet';
 // 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
 // outras telas. A antiga LicensingSidebar (com títulos de seção e itens
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
@@ -1032,11 +1032,10 @@ const DashboardContent = ({ user, isAdmin }) => {
       />
 
       <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
-        {/* 📱 Mobile: sidebar fica escondida, mantém a barra de abas no topo */}
+        {/* 📱 Mobile: a barra que rolava pro lado virou um seletor + painel com
+            TUDO organizado por grupos (mesma fonte única da lateral do desktop). */}
         <div className="md:hidden mb-4">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <DashboardTabsList />
-          </Tabs>
+          <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 
         <div className="flex flex-col gap-4 mb-6 sm:mb-8">
