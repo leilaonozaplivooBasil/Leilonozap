@@ -277,7 +277,7 @@ export default function TirarPedido() {
             <div className="bg-gray-50 border border-nz-borda rounded-lg px-3 py-2 flex flex-col items-center justify-center text-center min-w-0 sm:min-w-[110px]">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide">Vendas hoje</div>
               <div className="text-base sm:text-lg font-black text-green-500 truncate">{money(todayTotal)}</div>
-              <div className="text-[10px] text-gray-400">· {todayCount}</div>
+              <div className="text-[10px] text-gray-400">{todayCount} pedido{todayCount === 1 ? '' : 's'}</div>
             </div>
             <div className="bg-gray-50 border border-nz-borda rounded-lg px-3 py-2 flex flex-col items-center justify-center text-center min-w-0 sm:min-w-[110px]">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide">Saldo de comissão</div>
