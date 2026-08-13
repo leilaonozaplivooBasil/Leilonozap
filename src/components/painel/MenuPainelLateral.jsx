@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Link2, Network, Truck, UserCog, Factory, Store,
-  Megaphone, MessageCircle, ExternalLink, X,
+  Megaphone, MessageCircle, ExternalLink, X, ArrowLeft,
 } from 'lucide-react';
 
 // 🧭 08/08/2026 — MENU ESCRITO DO PAINEL, agora componente próprio.
@@ -81,6 +81,17 @@ export default function MenuPainelLateral({ user, activeTab, onTab, menuOpen = f
           {onClose && <button onClick={onClose} className="md:hidden p-1 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>}
         </div>
         <nav className="space-y-1">
+          {/* 🔙 13/08/2026 — SAÍDA DE VOLTA PRO MENU PRINCIPAL.
+              "Meu Painel" é o único item com submenu próprio: quem entrava aqui
+              ficava sem porta pra voltar ao "Navegar no painel" (Painel de
+              Alavancagem) e só saía pela seta do navegador. */}
+          <button
+            onClick={() => { navigate('/Licensing'); onClose?.(); }}
+            className="mb-2 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 border border-gray-800 hover:bg-gray-800"
+          >
+            <ArrowLeft className="w-[18px] h-[18px] flex-shrink-0" />
+            <span className="flex-1 text-left">Painel de Alavancagem</span>
+          </button>
           {MENU.map((m) => {
             const active = isAtivo(m);
             return (
