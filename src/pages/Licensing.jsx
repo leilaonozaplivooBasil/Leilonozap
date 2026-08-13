@@ -1096,7 +1096,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <CentralVendasTabs clientesCount={myClients.length} />
+              <CentralVendasTabs value={catalogSubTab} onChange={setCatalogSubTab} clientesCount={myClients.length} />
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
