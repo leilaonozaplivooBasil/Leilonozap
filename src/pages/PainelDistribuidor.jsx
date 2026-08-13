@@ -19,7 +19,7 @@ import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
   ArrowRight, MousePointerClick, UserPlus, Megaphone, Send, MapPin, Hash, Mail, Phone,
-  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, X
+  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, X, ArrowLeft
 } from 'lucide-react';
 
 const ORIGIN = (typeof window !== 'undefined' ? window.location.origin : 'https://leilaonozap.net');
@@ -275,10 +275,22 @@ export default function PainelDistribuidor() {
     <div className="min-h-screen bg-gray-900 text-white md:flex">
       {/* TOPO MOBILE — hambúrguer + seção atual + atalho pedido */}
       <div className="md:hidden sticky top-0 z-30 bg-gray-950/95 backdrop-blur border-b border-gray-800 px-3 py-2.5 flex items-center justify-between gap-2">
-        <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 text-gray-100 min-w-0">
-          <Menu className="w-6 h-6 shrink-0" />
-          <span className="font-bold truncate">{currentLabel}</span>
-        </button>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* 🔙 13/08/2026 — volta pro menu principal ("Navegar no painel").
+              Sem ele, quem entrava no Meu Painel só saía pela seta do navegador. */}
+          <button
+            onClick={() => navigate('/Licensing')}
+            aria-label="Voltar ao Painel de Alavancagem"
+            title="Voltar ao Painel de Alavancagem"
+            className="p-1.5 -ml-1 text-gray-300 shrink-0"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 text-gray-100 min-w-0">
+            <Menu className="w-6 h-6 shrink-0" />
+            <span className="font-bold truncate">{currentLabel}</span>
+          </button>
+        </div>
         <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
       </div>
 
