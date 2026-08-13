@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowRight, Award } from "lucide-react";
+import CompartilharCargo from "@/components/lucre/CompartilharCargo";
 
 const PARTNER_IMAGE = "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3debca5db_generated_image.png";
 
@@ -15,22 +16,36 @@ const EARN_CARDS = [
     desc: "Grátis: indique e ganhe 5% em cada venda e arremate.",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png",
     page: "Licensing",
+    cargo: "influenciador",
   },
   {
     title: "Seja um Vendedor",
     desc: "Ganhe 10% na venda direta (cadastro pelo licenciado).",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2f7400a5d_generated_image.png",
     page: "SejaVendedor",
+    cargo: "vendedor",
   },
   {
     title: "Seja um Licenciado",
     desc: "Tenha sua loja virtual e ganhe 13% na venda.",
     image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png",
     page: "SejaLicenciado",
+    cargo: "licenciado",
   },
 ];
 
 export default function Lucre() {
+  // 🔗 Quem está logado compartilha o próprio link de convite direto daqui
+  // (mesmo link da Central de Vendas). Visitante não vê nada disso.
+  const referralCode = React.useMemo(() => {
+    try {
+      const salvo = localStorage.getItem('currentUser');
+      return salvo ? (JSON.parse(salvo)?.referral_code || '') : '';
+    } catch {
+      return '';
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
@@ -77,6 +92,13 @@ export default function Lucre() {
                   Quero começar
                   <ArrowRight className="w-4 h-4" />
                 </Link>
+                <CompartilharCargo
+                  cargo={card.cargo}
+                  titulo={card.title}
+                  descricao={card.desc}
+                  imagem={card.image}
+                  referralCode={referralCode}
+                />
               </div>
             </div>
           ))}
@@ -114,6 +136,17 @@ export default function Lucre() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
+            {referralCode && (
+              <div className="px-6 pb-6 sm:px-7 sm:w-72 sm:pb-7">
+                <CompartilharCargo
+                  cargo="parceiro"
+                  titulo="Seja um Parceiro"
+                  descricao="Participe da nossa operação e acompanhe seu lucro."
+                  imagem={PARTNER_IMAGE}
+                  referralCode={referralCode}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
