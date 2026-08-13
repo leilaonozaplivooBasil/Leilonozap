@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     const ogH = ehParceiro ? 1024 : 630;
     // 🎯 Cargos com página de vendas dedicada vão direto pra ela; os demais
     // (ex: parceiro, que não tem página própria) mantêm o funil /Cadastro.
-    const DESTINO_DEDICADO = { influenciador: '/Licensing', vendedor: '/SejaVendedor', licenciado: '/SejaLicenciado', parceiro: '/Partners' };
+    const DESTINO_DEDICADO = { vendedor: '/SejaVendedor', licenciado: '/SejaLicenciado', parceiro: '/Partners' };
     const refQS = ref ? `ref=${encodeURIComponent(ref)}` : '';
     const destino = DESTINO_DEDICADO[cargo]
       ? `${SITE}${DESTINO_DEDICADO[cargo]}${refQS ? `?${refQS}` : ''}`
