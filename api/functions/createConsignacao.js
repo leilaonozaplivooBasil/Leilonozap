@@ -31,9 +31,19 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     const campos = 'id,full_name,role,career_levels,primary_career_level,active';
-    const actorArr = await (await sb(`app_users?select=${campos}&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
-    const actor = Array.isArray(actorArr) ? actorArr[0] : null;
-    if (!actor) return res.status(403).json({ success: false, error: 'Usuário inválido' });
+    const actorResp = await sb(`app_users?select=${campos}&id=eq.${encodeURIComponent(actorId)}&limit=1`);
+    const actorArr = await actorResp.json();
+    // 🐛 CAUSA-RAIZ (13/08/2026): quando a consulta ao Supabase falhava por qualquer
+    // motivo (erro de config, conexão, etc.), a resposta virava um objeto de erro (não
+    // array) e o código tratava isso como "usuário não encontrado" — todo mundo via
+    // "Usuário inválido" mesmo quando o problema era outro. Agora cada caso tem sua
+    // própria mensagem, pra dar pra diagnosticar sem adivinhar.
+    if (!actorResp.ok || !Array.isArray(actorArr)) {
+      return res.status(200).json({ success: false, error: 'Não foi possível validar seu usuário agora. Tente novamente em alguns segundos.', details: String(actorArr?.message || actorArr?.hint || '').slice(0, 200) });
+    }
+    const actor = actorArr[0] || null;
+    if (!actor) return res.status(403).json({ success: false, error: 'Sua conta não foi encontrada no cadastro. Saia e entre novamente; se persistir, avise o suporte.' });
+    if (actor.active === false) return res.status(403).json({ success: false, error: 'Sua conta está inativa. Fale com o suporte.' });
 
     // pedir para OUTRA pessoa só quem envia (admin / distribuidor)
     if (ownerId !== actorId && !podeEnviarConsignado(actor)) {

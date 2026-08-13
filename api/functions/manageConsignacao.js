@@ -37,9 +37,14 @@ export default async function handler(req, res) {
     if (!actorId || !action) return res.status(400).json({ success: false, error: 'Ação inválida' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const aArr = await (await sb(`app_users?select=id,full_name,role,career_levels,primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
-    const actor = Array.isArray(aArr) ? aArr[0] : null;
-    if (!actor) return res.status(403).json({ success: false, error: 'Usuário inválido' });
+    const aResp = await sb(`app_users?select=id,full_name,role,career_levels,primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`);
+    const aArr = await aResp.json();
+    // 🐛 mesma causa-raiz do createConsignacao: erro de consulta virava "usuário inválido" genérico
+    if (!aResp.ok || !Array.isArray(aArr)) {
+      return res.status(200).json({ success: false, error: 'Não foi possível validar seu usuário agora. Tente novamente em alguns segundos.', details: String(aArr?.message || aArr?.hint || '').slice(0, 200) });
+    }
+    const actor = aArr[0] || null;
+    if (!actor) return res.status(403).json({ success: false, error: 'Sua conta não foi encontrada no cadastro. Saia e entre novamente; se persistir, avise o suporte.' });
     const gestor = podeEnviarConsignado(actor);
 
     // ───────── LISTAR ─────────
