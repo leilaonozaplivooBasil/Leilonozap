@@ -44,6 +44,7 @@ import HowItWorksCard from '../components/licensing/HowItWorksCard';
 import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import MobileNavSheet from '../components/licensing/MobileNavSheet';
+import CentralVendasTabs from '../components/licensing/CentralVendasTabs';
 // 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
 // outras telas. A antiga LicensingSidebar (com títulos de seção e itens
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
@@ -1095,14 +1096,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <TabsList className="bg-white border border-nz-marrom/20 flex-wrap h-auto gap-2 p-2">
-                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Store className="w-3.5 h-3.5" />Sua Loja Virtual</TabsTrigger>
-                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><BarChart3 className="w-3.5 h-3.5" />Relatório da Minha Loja</TabsTrigger>
-                <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Package className="w-3.5 h-3.5" />Vendas da Loja</TabsTrigger>
-                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Users className="w-3.5 h-3.5" />Venda Direta ({myClients.length})</TabsTrigger>
-                <TabsTrigger value="catalogo-vendedores" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Handshake className="w-3.5 h-3.5" />Vendedores</TabsTrigger>
-                <TabsTrigger value="catalogo-comissoes" className="text-xs sm:text-sm flex items-center gap-1.5 border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40"><Wallet className="w-3.5 h-3.5" />Comissões</TabsTrigger>
-              </TabsList>
+              <CentralVendasTabs clientesCount={myClients.length} />
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
