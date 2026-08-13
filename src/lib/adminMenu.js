@@ -97,6 +97,8 @@ export function buildAdminMenu(isSuperAdmin = false) {
       items: [
         { title: "Gestão de Produtos", pageName: "ProductManagement", icon: Boxes },
         { title: "Estoque de Lotes", pageName: "EstoqueLotes", icon: PackageSearch },
+        // 🤝 Aprovação dos pedidos de mercadoria consignada feitos pela rede
+        { title: "Aprovar Consignado", pageName: "AdminConsignado", icon: Handshake },
       ],
     },
     {

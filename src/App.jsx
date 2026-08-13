@@ -250,6 +250,14 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
+      {/* 🤝 Mesma tela de aprovação do consignado alcançada pelo menu do Admin */}
+      <Route path="/AdminConsignado" element={
+        <LayoutWrapper currentPageName="AdminConsignado">
+          <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <AdminConsignado />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/AdminFinanceiro" element={<AdminFinanceiro />} />
       <Route path="/AportesParceiro" element={
         <LayoutWrapper currentPageName="AportesParceiro">
