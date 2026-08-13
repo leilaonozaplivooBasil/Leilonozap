@@ -262,29 +262,30 @@ export default function TirarPedido() {
     <div className="min-h-screen bg-white text-nz-tinta nz-painel">
       {/* header */}
       {/* topo gruda logo abaixo da barra do site — 56px no celular, 64px no desktop */}
-      <div className="bg-white border-b border-nz-borda px-6 py-4 sticky top-14 sm:top-16 z-20">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+      <div className="bg-white border-b border-nz-borda px-4 sm:px-6 py-4 sticky top-14 sm:top-16 z-20">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* ↩️ botão voltar único do sistema (era um botão próprio desta tela) */}
             <BotaoVoltar destino="/painel" tema="claro" />
-            <div className="w-9 h-9 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center"><ShoppingCart className="w-5 h-5 text-green-400" /></div>
+            <div className="w-9 h-9 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0"><ShoppingCart className="w-5 h-5 text-green-400" /></div>
             <div>
               <h1 className="text-xl font-black leading-none">PDV — Tirar Pedido</h1>
               <p className="text-xs text-gray-500 mt-0.5">Distribuidor 01 · {user.full_name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-5 text-right">
-            <div>
-              <div className="text-[11px] text-gray-500 uppercase">Vendas hoje</div>
-              <div className="text-lg font-black text-green-400">{money(todayTotal)} <span className="text-xs text-gray-500">· {todayCount}</span></div>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:items-stretch sm:gap-3">
+            <div className="bg-gray-50 border border-nz-borda rounded-lg px-3 py-2 flex flex-col items-center justify-center text-center min-w-0 sm:min-w-[110px]">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide">Vendas hoje</div>
+              <div className="text-base sm:text-lg font-black text-green-500 truncate">{money(todayTotal)}</div>
+              <div className="text-[10px] text-gray-400">· {todayCount}</div>
             </div>
-            <div>
-              <div className="text-[11px] text-gray-500 uppercase">Saldo de comissão</div>
-              <div className={`text-lg font-black ${saldo > 0 ? 'text-nz-verde' : 'text-red-500'}`}>{money(saldo)}</div>
+            <div className="bg-gray-50 border border-nz-borda rounded-lg px-3 py-2 flex flex-col items-center justify-center text-center min-w-0 sm:min-w-[110px]">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide">Saldo de comissão</div>
+              <div className={`text-base sm:text-lg font-black truncate ${saldo > 0 ? 'text-nz-verde' : 'text-red-500'}`}>{money(saldo)}</div>
             </div>
-            <div>
-              <div className="text-[11px] text-gray-500 uppercase">Saldo de operação</div>
-              <button onClick={() => setDeposito(true)} className="text-lg font-black text-nz-tinta underline decoration-dotted">{money(saldoOperacao)}</button>
+            <div className="bg-gray-50 border border-nz-borda rounded-lg px-3 py-2 flex flex-col items-center justify-center text-center min-w-0 sm:min-w-[110px]">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide">Saldo de operação</div>
+              <button onClick={() => setDeposito(true)} className="text-base sm:text-lg font-black text-nz-tinta underline decoration-dotted truncate">{money(saldoOperacao)}</button>
             </div>
           </div>
         </div>
