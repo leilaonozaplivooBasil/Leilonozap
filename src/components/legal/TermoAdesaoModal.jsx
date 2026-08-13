@@ -29,14 +29,26 @@ export default function TermoAdesaoModal({ onAccept, onClose, modo = 'aceite', t
         <div className="px-4 sm:px-6 py-4 overflow-y-auto">
           <TermoAdesaoTexto />
           {!somenteLeitura && (
-            <div className="flex items-start gap-2.5 pt-4">
+            // 🐛 CAUSA-RAIZ (13/08/2026): o quadradinho tinha só 16x16px e a área entre
+            // ele e o texto não reagia ao toque — no celular, quem tocava um pouco fora
+            // do quadrado não conseguia marcar. Agora a linha inteira é a área de toque
+            // (mínimo 44px de altura), e só ela responde ao clique — checkbox e texto
+            // ficam só visuais (pointer-events-none) pra não marcar/desmarcar em dobro.
+            <div
+              role="checkbox"
+              aria-checked={aceito}
+              tabIndex={0}
+              onClick={() => setAceito((v) => !v)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAceito((v) => !v); } }}
+              className="flex items-start gap-2.5 pt-4 -mx-2 px-2 py-2 rounded-lg cursor-pointer select-none min-h-[44px] active:bg-nz-verde-fundo/60"
+            >
               <Checkbox
                 id="termo-adesao-aceite"
                 checked={aceito}
-                onCheckedChange={setAceito}
-                className="mt-0.5 border-nz-borda data-[state=checked]:bg-nz-verde data-[state=checked]:border-nz-verde"
+                tabIndex={-1}
+                className="mt-0.5 h-5 w-5 pointer-events-none border-nz-borda data-[state=checked]:bg-nz-verde data-[state=checked]:border-nz-verde"
               />
-              <label htmlFor="termo-adesao-aceite" className="text-[13px] text-nz-tinta leading-snug cursor-pointer">
+              <label className="text-[13px] text-nz-tinta leading-snug pointer-events-none">
                 {DECLARACAO_CIENCIA}
               </label>
             </div>
