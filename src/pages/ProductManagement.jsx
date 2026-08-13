@@ -105,6 +105,7 @@ export default function ProductManagement() {
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
+  const [zoomedImage, setZoomedImage] = useState(null);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -1273,12 +1274,22 @@ export default function ProductManagement() {
                         (() => {
                           const imgUrl = (editingProduct.image_urls || [])[0];
                           return imgUrl ? (
-                            <img
-                              src={imgUrl}
-                              alt={editingProduct.description || 'Produto'}
-                              className="w-12 h-12 rounded-lg object-cover border border-gray-600 flex-shrink-0"
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
+                              className="relative w-12 h-12 rounded-lg border border-gray-600 flex-shrink-0 group/thumb overflow-hidden"
+                              title="Ampliar imagem"
+                            >
+                              <img
+                                src={imgUrl}
+                                alt={editingProduct.description || 'Produto'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                              <span className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 flex items-center justify-center transition-colors">
+                                <Search className="w-4 h-4 text-white opacity-0 group-hover/thumb:opacity-100 transition-opacity" />
+                              </span>
+                            </button>
                           ) : (
                             <div className="w-12 h-12 rounded-lg bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
                               <Package className="w-5 h-5 text-gray-500" />
@@ -1593,6 +1604,28 @@ export default function ProductManagement() {
         onConfirm={handleConfirmPricing}
         isLoading={isPricingLoading}
       />
+
+      {/* PONTO 89 — MODAL DE ZOOM DA IMAGEM DO PRODUTO */}
+      {zoomedImage && (
+        <div
+          onClick={() => setZoomedImage(null)}
+          className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 cursor-zoom-out"
+        >
+          <img
+            src={zoomedImage}
+            alt="Imagem ampliada"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={() => setZoomedImage(null)}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       {/* MODAL DE CONFIRMAÇÃO DE OPERAÇÃO */}
       {showOperationModal && (
