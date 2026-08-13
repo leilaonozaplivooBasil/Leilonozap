@@ -28,6 +28,9 @@ import ItemLateralArrastavel from '@/components/common/ItemLateralArrastavel';
 //  • Carreira (aba)  → a carreira completa já vive em outra tela
 const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings', 'tab:plano-carreira'];
 
+// ✅ Item novo (ex.: Consignado) precisa aparecer mesmo para quem já tem uma
+// ordem antiga salva no aparelho — a ordem guardada não pode escondê-lo.
+
 const chaveDe = (item) => (item.type === 'tab' ? `tab:${item.value}` : item.to);
 const destinoDe = (item) => (item.type === 'tab' ? `/Licensing?tab=${item.value}` : item.to);
 

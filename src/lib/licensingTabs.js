@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake } from 'lucide-react';
 import { normalizeLevels } from '@/lib/careerLevels';
 
 // 🧭 PONTO 85 — FONTE ÚNICA das abas do Painel de Alavancagem.
@@ -101,6 +101,10 @@ export function getLicensingGroups(user) {
       title: 'Admin',
       items: [
         { type: 'tab', value: 'admin', label: 'Admin', icon: Shield },
+        // 🤝 Aprovação dos pedidos de mercadoria consignada — só admin
+        ...((user?.role === 'admin' || user?.role === 'super_admin')
+          ? [{ type: 'link', to: '/painel/consignado', label: 'Consignado', icon: Handshake }]
+          : []),
       ],
     }
   );
