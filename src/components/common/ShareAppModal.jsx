@@ -41,8 +41,9 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
   // Determina o link baseado no contexto e no role do usuário
   let appUrl;
   
-  // Se é vendedor, SEMPRE usa seu referral_code para compartilhar sua loja
-  if (currentUser?.is_seller === true && currentUser?.referral_code) {
+  // Se o usuário tem referral_code (vendedor, licenciado, influenciador, parceiro...),
+  // SEMPRE usa esse código para compartilhar a loja com atribuição correta.
+  if (currentUser?.referral_code) {
     appUrl = `${baseUrl}/Loja-Virtual?ref=${currentUser.referral_code}`;
   } else if (context === "catalog") {
     // No catálogo: usa link do licenciado se tiver, senão link do catálogo

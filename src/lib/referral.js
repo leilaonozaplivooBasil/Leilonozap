@@ -77,6 +77,41 @@ export function getReferral() {
   return '';
 }
 
+const INF_KEY = 'influencerRef';         // { code, at }
+const INF_LEGACY_KEY = 'influencerCode'; // legacy sessionStorage key (compat com leituras antigas)
+
+/** Guarda o código de influenciador (Sai de Baixo) com a mesma memória de 90 dias do ?ref=. */
+export function saveInfluencerCode(code) {
+  const clean = String(code || '').trim();
+  if (!clean) return;
+  try {
+    localStorage.setItem(INF_KEY, JSON.stringify({ code: clean, at: nowMs() }));
+  } catch { /* storage indisponível (modo privado) */ }
+  try {
+    sessionStorage.setItem(INF_LEGACY_KEY, clean);
+  } catch { /* ignora */ }
+}
+
+/** Código de influenciador válido, ou '' se não houver / tiver expirado. */
+export function getInfluencerCode() {
+  try {
+    const raw = localStorage.getItem(INF_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.code) {
+        if (nowMs() - Number(parsed.at || 0) <= ttlMs()) return String(parsed.code);
+        try { localStorage.removeItem(INF_KEY); } catch { /* ignora */ }
+        return '';
+      }
+    }
+  } catch { /* formato inesperado */ }
+  try {
+    const s = sessionStorage.getItem(INF_LEGACY_KEY);
+    if (s) return String(s);
+  } catch { /* ignora */ }
+  return '';
+}
+
 export function clearReferral() {
   for (const store of [localStorage, sessionStorage]) {
     try {

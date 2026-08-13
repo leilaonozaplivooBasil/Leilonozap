@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
-import { getReferral } from '@/lib/referral';
+import { getReferral, getInfluencerCode } from '@/lib/referral';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { registrarAceiteTermo } from '@/lib/termoAdesao';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
@@ -79,7 +79,7 @@ export default function Register() {
     try {
       // Passa o código do link de indicação: sem ele o cadastro por Google caía
       // no Site Oficial e o indicador real perdia a pessoa da árvore.
-      const result = await base44.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
+      const result = await base44.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível continuar com o Google.'));
         setIsGoogleLoading(false);
@@ -283,7 +283,7 @@ export default function Register() {
       }
 
       // 🆕 VERIFICA CÓDIGO DE INFLUENCIADOR
-      const infCode = sessionStorage.getItem('influencerCode');
+      const infCode = getInfluencerCode();
       if (infCode && !referredById) {
         try {
           const influencers = await AppUser.filter({ referral_code: infCode });
@@ -297,7 +297,7 @@ export default function Register() {
       }
 
       // 🔒 Cadastro via backend service_role (anon não pode inserir em app_users por RLS).
-      const refForBackend = getReferral() || sessionStorage.getItem('influencerCode') || '';
+      const refForBackend = getReferral() || getInfluencerCode() || '';
       const reg = await base44.functions.invoke('publicRegister', {
         full_name: fullName.trim(),
         display_first_name: firstName || null,

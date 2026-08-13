@@ -26,7 +26,7 @@ import PainelSelector, { triggerPanelSelector } from "@/components/portal/Painel
 import { base44 } from '@/api/base44Client';
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
-import { saveReferral, getReferral, clearReferral } from "@/lib/referral";
+import { saveReferral, getReferral, clearReferral, saveInfluencerCode, getInfluencerCode } from "@/lib/referral";
 // 🔐 Ao sair da conta, o aparelho deixa de ser "aparelho autorizado" da captação privada
 import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 // 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
@@ -410,8 +410,8 @@ export default function Layout({ children, currentPageName }) {
     // Captura código de influenciador (para Sai de Baixo)
     const infCode = urlParams.get('inf');
     if (infCode) {
-      if (!sessionStorage.getItem('influencerCode')) {
-        sessionStorage.setItem('influencerCode', infCode);
+      if (!getInfluencerCode()) {
+        saveInfluencerCode(infCode);
         console.log(`Código de influenciador '${infCode}' capturado.`);
       }
     }
