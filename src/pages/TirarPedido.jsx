@@ -285,7 +285,7 @@ export default function TirarPedido() {
             </div>
             <div className="bg-gray-50 border border-nz-borda rounded-lg px-3 py-2 flex flex-col items-center justify-center text-center min-w-0 sm:min-w-[110px]">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide">Saldo de operação</div>
-              <button onClick={() => setDeposito(true)} className="text-base sm:text-lg font-black text-nz-tinta underline decoration-dotted truncate">{money(saldoOperacao)}</button>
+              <button onClick={() => setDeposito(true)} className="text-base sm:text-lg font-black text-nz-tinta truncate">{money(saldoOperacao)}</button>
             </div>
           </div>
         </div>
