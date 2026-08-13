@@ -170,6 +170,8 @@ export default function Home() {
   });
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
+  // 📅 PONTO 88 — filtro por data de encerramento, combinável com os demais filtros
+  const [dateFilter, setDateFilter] = useState("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [userFavorites, setUserFavorites] = useState([]);
@@ -424,6 +426,21 @@ export default function Home() {
     } else if (activeSourceFilter === "returns") {filtered = filtered.filter((a) => a.product_source === 'return_resale');
     }
 
+    // DATA DE ENCERRAMENTO
+    if (dateFilter !== "all") {
+      const now = new Date();
+      const limite = new Date(now);
+      if (dateFilter === "today") { limite.setHours(23, 59, 59, 999); }
+      else if (dateFilter === "5days") { limite.setDate(limite.getDate() + 5); }
+      else if (dateFilter === "15days") { limite.setDate(limite.getDate() + 15); }
+      filtered = filtered.filter((a) => {
+        if (!a.end_time) return false;
+        const endDate = new Date(a.end_time);
+        if (isNaN(endDate.getTime())) return false;
+        return endDate >= now && endDate <= limite;
+      });
+    }
+
     // CATEGORIA
     if (activeCategory === "ativos") {
       filtered = filtered.filter((a) => a?.status === 'active');
@@ -461,7 +478,7 @@ export default function Home() {
       seenTitles.add(normalizedTitle);
       return true;
     });
-  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest, searchTerm]);
+  }, [auctions, activeCategory, activeSourceFilter, dateFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest, searchTerm]);
 
   // Paginação derivada
   const totalPages = Math.max(1, Math.ceil(filteredAuctions.length / ITEMS_PER_PAGE));
@@ -787,7 +804,14 @@ export default function Home() {
   []);
 
   // Reseta página ao trocar filtro
-  useEffect(() => { setCurrentPage(1); }, [activeCategory, activeSourceFilter, showFavoritesOnly, searchTerm]);
+  useEffect(() => { setCurrentPage(1); }, [activeCategory, activeSourceFilter, dateFilter, showFavoritesOnly, searchTerm]);
+
+  const dateFilters = useMemo(() => [
+    { value: "all", label: "Todos" },
+    { value: "today", label: "Hoje" },
+    { value: "5days", label: "5 dias" },
+    { value: "15days", label: "15 dias" },
+  ], []);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -929,6 +953,24 @@ export default function Home() {
                       <Icon className={`w-4 h-4 ${isActiveCat ? 'text-emerald-400' : ''}`} />
                       <span>{category.label}</span>
                     </button>);
+              })}
+            </div>
+
+            {/* 📅 PONTO 88 — filtro por data de encerramento (Hoje / 5 dias / 15 dias) */}
+            <div className="mb-8 flex flex-wrap gap-2.5">
+              {dateFilters.map((df) => {
+                const isActiveDf = dateFilter === df.value;
+                return (
+                  <button
+                    key={df.value}
+                    onClick={() => setDateFilter(df.value)}
+                    className={`whitespace-nowrap text-sm font-medium py-2.5 px-5 rounded-full transition-all duration-300 ${
+                    isActiveDf
+                      ? 'glass-pill-active text-emerald-300'
+                      : 'glass-pill text-gray-400 hover:text-gray-200'
+                    }`}>
+                    {df.label}
+                  </button>);
               })}
             </div>
 
