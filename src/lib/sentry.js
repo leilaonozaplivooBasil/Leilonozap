@@ -53,6 +53,12 @@ export function initSentry() {
         try {
           const assinatura = JSON.stringify(event.exception || {});
           if (assinatura.includes('registerSW') || assinatura.includes('ServiceWorkerContainer')) return null;
+          // 🔇 Timeout de rede da própria lib do PostHog (posthog-js aborta a
+          // requisição de analytics em 3s e não trata a rejeição internamente).
+          // Não afeta o usuário nem o funcionamento do site — só a coleta de
+          // analytics daquele evento é perdida. Sem isso, todo pico de rede lenta
+          // gerava um alerta de erro sem nenhuma ação possível.
+          if (assinatura.includes('PostHog') && /tim(ed)?\s*out|expirou/i.test(assinatura)) return null;
         } catch (_) { /* se não der pra inspecionar, envia normalmente */ }
         return event;
       },
