@@ -129,13 +129,18 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                       />
                     </>
                   );
+                  // 📐 AUDITORIA 14/08/2026 — a legenda do banner era larga e caía por cima
+                  // da ilustração/mascote (que vive no centro-direita da arte), parecendo
+                  // defeito de desenho. Agora fica estreita, encostada à esquerda, com véu
+                  // escuro mais firme por baixo: sai da frente do personagem e ganha leitura.
+                  // Só pintura — mesmo texto, mesmo clique, mesmo carrossel.
                   const caption = (
-                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-12 sm:pb-14 md:pb-16 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-left">
-                      <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight max-w-[88%] sm:max-w-[70%]">
+                    <div className="nz-video-caption absolute inset-x-0 bottom-0 z-10 pt-14 pb-12 sm:pb-14 md:pb-16 px-4 sm:px-6 md:px-8 bg-gradient-to-t from-black/90 via-black/55 to-transparent text-left">
+                      <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight max-w-[62%] sm:max-w-[52%]">
                         {banner.caption_title || banner.title}
                       </p>
                       {banner.caption_subtitle && (
-                        <p className="mt-1 text-xs sm:text-base md:text-lg text-nz-verde-claro font-medium leading-snug max-w-[88%] sm:max-w-[70%]">
+                        <p className="mt-1 text-xs sm:text-base md:text-lg text-nz-verde-claro font-medium leading-snug max-w-[62%] sm:max-w-[52%]">
                           {banner.caption_subtitle}
                         </p>
                       )}

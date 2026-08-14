@@ -838,8 +838,12 @@ export default function Cart() {
               <h1 className="text-xl font-bold text-white truncate">Finalizar Pedido</h1>
             </div>
 
-            {/* Etapas do checkout (desktop) */}
-            <div className="hidden md:flex items-center gap-2 text-xs">
+            {/* Etapas do checkout (desktop).
+                📲 AUDITORIA 14/08/2026 — em 768px as etapas apareciam e roubavam a
+                linha: o título virava "Finalizar …". Passam a aparecer só a partir de
+                lg (1024px), onde sobra espaço pro título inteiro. Nada muda no
+                desktop e nenhuma etapa do checkout foi alterada. */}
+            <div className="hidden lg:flex items-center gap-2 text-xs">
               {[
                 { label: 'Carrinho', done: true },
                 { label: 'Pagamento', done: !!pixData || saldoOk },

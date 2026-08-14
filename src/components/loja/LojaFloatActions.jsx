@@ -19,7 +19,11 @@ import LeilaChat from '@/components/loja/LeilaChat';
 export default function LojaFloatActions({ posicao = 'rodape' }) {
   const noTopo = posicao === 'topo';
   const [chatOpen, setChatOpen] = useState(false);
-  const Label = ({ children }) => <span className="text-[9px] sm:text-[10px] text-white font-semibold mt-1 text-center leading-none bg-[#0b1018] rounded-full px-2 py-0.5 whitespace-nowrap">{children}</span>;
+  // 📱 AUDITORIA 14/08/2026 — o rótulo "Fale com a Leila" é a peça LARGA do
+  // flutuante: no celular ele cobria o botão "Filtros" da Loja, o "Quero começar"
+  // do Lucre e o texto legal do Como Funciona. Abaixo de sm o rótulo sai (fica só
+  // o ícone, que já é reconhecível e continua clicável); de sm pra cima nada muda.
+  const Label = ({ children }) => <span className="hidden sm:block text-[10px] text-white font-semibold mt-1 text-center leading-none bg-[#0b1018] rounded-full px-2 py-0.5 whitespace-nowrap">{children}</span>;
 
   // 🌊 Flutuação magnética com a rolagem (pedido do Gabriel 26/07, TODAS as telas):
   // página descendo → os botões SOBEM; página subindo → eles DESCEM; parou de rolar
