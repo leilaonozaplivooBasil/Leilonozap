@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bot } from 'lucide-react';
 import leilaSuporte from '@/assets/leila-suporte.webp';
 import useScrollDrift from '@/hooks/useScrollDrift';
+import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
 import LeilaChat from '@/components/loja/LeilaChat';
 
 // Stack único de botões flutuantes da loja: CompareAQUI (esquerda) e Suporte Leila (direita).
@@ -30,6 +31,12 @@ export default function LojaFloatActions({ posicao = 'rodape' }) {
   // → assentam de volta. Lógica compartilhada em useScrollDrift.
   const driftCls = useScrollDrift();
 
+  // 👋 AUDITORIA 14/08/2026 — a Leila sai de cena enquanto a pessoa rola e volta
+  // quando ela para (padrão das grandes lojas). Assim nenhum botão, preço ou texto
+  // fica coberto durante a navegação, e o atendimento continua em todas as páginas.
+  // No topo (sala de leilão) e com o chat aberto o comportamento não se aplica.
+  const rolando = useOcultarAoRolar(noTopo || chatOpen);
+
   return (
     <>
       {/* 🎯 PONTO 86 — o flutuante do CompareAQUI foi CONSOLIDADO na fileira do bloco
@@ -44,7 +51,10 @@ export default function LojaFloatActions({ posicao = 'rodape' }) {
         .leila-topo { top: calc(16rem + env(safe-area-inset-top, 0px)); }
         @media (min-width: 1024px) { .leila-topo { top: 16.5rem; } }
       `}</style>
-      <div className={`${noTopo ? 'leila-topo' : `nz-dock-bottom ${driftCls}`} fixed right-3 sm:right-4 z-50 flex flex-col items-center gap-3`}>
+      <div
+        className={`${noTopo ? 'leila-topo' : `nz-dock-bottom ${driftCls}`} fixed right-3 sm:right-4 z-50 flex flex-col items-center gap-3 transition-all duration-300 ${rolando ? 'opacity-0 translate-y-3 pointer-events-none' : 'opacity-100 translate-y-0'}`}
+        aria-hidden={rolando}
+      >
         <button type="button" onClick={() => setChatOpen(true)} title="Fale com a Leila — Atendente IA" className="group flex flex-col items-center">
           <span className="leila-bob relative block">
             {/* anel pulsante verde pra sinalizar que é clicável */}
