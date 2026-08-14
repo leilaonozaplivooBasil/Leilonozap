@@ -7,10 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle } from 'lucide-react';
+// Truck já importado acima — reutilizado nos badges de frete
 import { toast } from 'sonner';
 import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const CatalogSale = base44.entities.CatalogSale;
+
+// 📦 Só produto físico entra nesta fila de envio. Kinds digitais (depósito, passaporte,
+// adesão, etc.) são outras cobranças na mesma tabela — não precisam de etiqueta/rastreio.
+const KINDS_DIGITAIS = new Set([
+  'wallet_deposit', 'commission_deposit', 'operacao_deposit', 'passaporte',
+  'adesao', 'seller_adhesion', 'partner_plan', 'reposicao', 'seller_freight',
+]);
+const isPedidoFisico = (o) => !KINDS_DIGITAIS.has(o.kind);
 
 const STATUS_CONFIG = {
   pending_payment: { label: 'Aguardando Pagamento', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: Clock },
@@ -23,6 +32,20 @@ const STATUS_CONFIG = {
   saiu_entrega: { label: 'Saiu para entrega', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: Truck },
   entregue: { label: 'Entregue', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
   cancelado: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
+};
+
+// 🚚 Frete fica em raw_base44 (JSON) — nunca em total_amount (base de comissão).
+// amount_charged = produto + frete, o que o cliente realmente pagou.
+const getFrete = (order) => {
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  const frete = raw?.frete;
+  if (!frete || !Number(frete.valor)) return null;
+  return {
+    valor: Number(frete.valor) || 0,
+    transportadora: [frete.empresa, frete.servico].filter(Boolean).join(' '),
+    totalCobrado: Number(raw.amount_charged) || null,
+  };
 };
 
 export default function CatalogOrdersAdmin() {
@@ -45,7 +68,7 @@ export default function CatalogOrdersAdmin() {
       // Lê direto da tabela catalog_sales (getCatalogOrders é stub da migração — retornava vazio).
       // O acesso de admin já é protegido pela rota (RequireRole) + RLS de leitura.
       const allOrders = await base44.entities.CatalogSale.filter({}, '-created_date', 1000);
-      setOrders(Array.isArray(allOrders) ? allOrders : []);
+      setOrders(Array.isArray(allOrders) ? allOrders.filter(isPedidoFisico) : []);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       toast.error('Erro ao carregar pedidos');
@@ -198,12 +221,22 @@ export default function CatalogOrdersAdmin() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-white truncate">{order.product_title}</p>
                         <p className="text-sm text-gray-400">{order.buyer_name} • {order.buyer_email}</p>
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
                           <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
                           <span className="text-gray-500 text-xs">{new Date(order.created_date).toLocaleDateString('pt-BR')}</span>
                           {order.tracking_code && (
                             <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
+                          {(() => {
+                            const frete = getFrete(order);
+                            if (!frete) return null;
+                            return (
+                              <span className="text-amber-300 text-xs inline-flex items-center gap-1">
+                                <Truck className="w-3 h-3" />
+                                Frete: R$ {fmtBR(frete.valor)}{frete.transportadora ? ` — ${frete.transportadora}` : ''}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -245,7 +278,19 @@ export default function CatalogOrdersAdmin() {
                 <p className="text-sm text-gray-400">Produto: <span className="text-white font-medium">{selectedOrder.product_title}</span></p>
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
-                <p className="text-sm text-gray-400">Valor: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
+                <p className="text-sm text-gray-400">Valor do produto: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
+                {(() => {
+                  const frete = getFrete(selectedOrder);
+                  if (!frete) return null;
+                  return (
+                    <>
+                      <p className="text-sm text-gray-400">Frete: <span className="text-amber-300 font-bold">R$ {fmtBR(frete.valor)}</span>{frete.transportadora ? <span className="text-gray-400"> — {frete.transportadora}</span> : null}</p>
+                      {frete.totalCobrado != null && (
+                        <p className="text-sm text-gray-400">Total cobrado do cliente: <span className="text-white font-bold">R$ {fmtBR(frete.totalCobrado)}</span></p>
+                      )}
+                    </>
+                  );
+                })()}
                 {selectedOrder.buyer_phone && (
                   <p className="text-sm text-gray-400">Telefone: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
                 )}
