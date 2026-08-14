@@ -59,6 +59,13 @@ const getFrete = (order) => {
   };
 };
 
+// 🚚 Etiqueta gerada automaticamente na Melhor Envio (api/_lib/melhorEnvioShipment.js)
+const getEnvioAutomatico = (order) => {
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  return raw?.melhor_envio || null;
+};
+
 export default function CatalogOrdersAdmin() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -309,6 +316,18 @@ export default function CatalogOrdersAdmin() {
                 {selectedOrder.buyer_phone && (
                   <p className="text-sm text-gray-400">Telefone: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
                 )}
+                {(() => {
+                  const envio = getEnvioAutomatico(selectedOrder);
+                  if (!envio) return null;
+                  return (
+                    <p className="text-sm text-gray-400 pt-1 border-t border-gray-600/50 mt-2">
+                      🚚 Etiqueta gerada automaticamente{envio.protocol ? ` — protocolo ${envio.protocol}` : ''}
+                      {envio.label_url && (
+                        <> · <a href={envio.label_url} target="_blank" rel="noreferrer" className="text-indigo-300 underline">imprimir etiqueta</a></>
+                      )}
+                    </p>
+                  );
+                })()}
               </div>
 
               {!isPassaporte(selectedOrder) && (

@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+import { gerarEnvioAutomatico } from '../_lib/melhorEnvioShipment.js';
 import { settlePdvPixSale } from '../_lib/pdvSettle.js';
 // 🏪 Reposição de estoque do lojista (compra firme): entra estoque, não paga comissão.
 import { aplicarReposicao } from '../_lib/supplySettle.js';
@@ -225,14 +226,18 @@ export default async function handler(req, res) {
       const r = await fulfillStoreOrder(sale);
       // 🎟️ só agora (pagamento confirmado) o crédito do Cupom Passaporte é debitado
       const cupom = await debitarCupomDaVenda(sale);
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom });
+      // 🚚 Frete automático: adiciona ao carrinho e compra a etiqueta na Melhor Envio.
+      // Best-effort — nunca bloqueia a venda já paga/comissionada acima.
+      const envio = await gerarEnvioAutomatico(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom, envio });
     }
     // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não
     // pagava NADA ao bloco diretor). fulfillStoreOrder aplica a mesma regra de 26%.
     const rr = await fulfillStoreOrder(sale);
     const commission = rr?.commission ?? 0;
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
-    return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission });
+    const envio2 = await gerarEnvioAutomatico(sale);
+    return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission, envio: envio2 });
   } catch (e) {
     return res.status(200).json({ ok: false, error: String(e?.message || e) });
   }
