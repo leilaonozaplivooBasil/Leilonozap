@@ -102,8 +102,12 @@ function mapFromDB(entity, row) {
   if (!row || typeof row !== 'object') return row;
   const fmap = INVERSE_FIELD_MAP[entity] || {};
   const out = {};
+  // 🔓 raw_base44 só é ocultado de usuários comuns. Operador (admin/super_admin/
+  // cargo de estoque) precisa dela — é onde vive o frete/etiqueta da Melhor Envio
+  // usado no CatalogOrdersAdmin. Reusa a mesma checagem já usada pros escritos.
+  const isOperator = !!_operatorActor();
   for (const [k, v] of Object.entries(row)) {
-    if (k === 'raw_base44') continue; // não expor coluna interna
+    if (k === 'raw_base44' && !isOperator) continue; // não expor coluna interna a não-operadores
     out[fmap[k] || k] = v;
   }
   // 🛡️ Sanitiza campos numéricos nulos para Auction (evita crash .toFixed no AuctionRoom)
