@@ -49,6 +49,10 @@ const STATUS_CONFIG = {
 const STATUS_PASSAPORTE_ENTREGUE = { label: 'Entregue — Automático', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: PartyPopper };
 const getDisplayStatusConfig = (o) => (isPassaporte(o) && STATUS_PAGO.has(o.status)) ? STATUS_PASSAPORTE_ENTREGUE : (STATUS_CONFIG[o.status] || STATUS_CONFIG.paid);
 
+// 🔗 Data + horário juntos, e o rótulo do cargo do vendedor a quem o comprador está ligado.
+const getDataHora = (o) => new Date(o.created_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const CARGO_LABEL = { vendedor: 'Vendedor', licenciado_catalogo: 'Licenciado', executivo: 'Executivo', trainee: 'Trainee', kit_start: 'Kit Start', plano_lider: 'Plano Líder', plano_lojista: 'Plano Lojista', distribuidor: 'Distribuidor', diretor: 'Diretor', diretoria: 'Diretoria', ceo: 'CEO', conselheiro: 'Conselheiro', fundador: 'Fundador', influenciador: 'Influenciador' };
+
 // 🚚 Frete fica em raw_base44 (JSON) — nunca em total_amount (base de comissão).
 // amount_charged = produto + frete, o que o cliente realmente pagou.
 const getFrete = (order) => {
@@ -90,7 +94,29 @@ export default function CatalogOrdersAdmin() {
       // Lê direto da tabela catalog_sales (getCatalogOrders é stub da migração — retornava vazio).
       // O acesso de admin já é protegido pela rota (RequireRole) + RLS de leitura.
       const allOrders = await base44.entities.CatalogSale.filter({}, '-created_date', 1000);
-      setOrders(Array.isArray(allOrders) ? allOrders.filter(isPedidoFisico) : []);
+      const physicos = Array.isArray(allOrders) ? allOrders.filter(isPedidoFisico) : [];
+
+      // 🔗 Identifica a quem o comprador está ligado diretamente (quem indicou/recrutou
+      // ele — referred_by_id). Não é a comissão DESSA venda (depósito não paga comissão),
+      // é o vínculo do comprador na rede, pra saber de qual vendedor ele é.
+      const buyerIds = Array.from(new Set(physicos.map(o => o.buyer_id).filter(Boolean)));
+      const buyers = buyerIds.length ? await base44.entities.AppUser.filter({ id: { $in: buyerIds } }) : [];
+      const buyerMap = Object.fromEntries(buyers.map(b => [b.id, b]));
+      const referrerIds = Array.from(new Set(buyers.map(b => b.referred_by_id).filter(Boolean)));
+      const referrers = referrerIds.length ? await base44.entities.AppUser.filter({ id: { $in: referrerIds } }) : [];
+      const referrerMap = Object.fromEntries(referrers.map(r => [r.id, r]));
+
+      const comVendedor = physicos.map(o => {
+        const buyer = buyerMap[o.buyer_id];
+        const referrer = buyer?.referred_by_id ? referrerMap[buyer.referred_by_id] : null;
+        return {
+          ...o,
+          _vendedor_nome: referrer ? (referrer.display_first_name || referrer.full_name) : (buyer ? 'Site Oficial' : null),
+          _vendedor_cargo: referrer?.primary_career_level || null,
+        };
+      });
+
+      setOrders(comVendedor);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       toast.error('Erro ao carregar pedidos');
@@ -246,7 +272,12 @@ export default function CatalogOrdersAdmin() {
                         <p className="text-sm text-gray-400">{order.buyer_name} • {order.buyer_email}</p>
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
-                          <span className="text-gray-500 text-xs">{new Date(order.created_date).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-gray-500 text-xs">{getDataHora(order)}</span>
+                          {order._vendedor_nome && (
+                            <span className="text-purple-300 text-xs inline-flex items-center gap-1">
+                              🔗 {order._vendedor_nome}{order._vendedor_cargo ? ` (${CARGO_LABEL[order._vendedor_cargo] || order._vendedor_cargo})` : ''}
+                            </span>
+                          )}
                           {order.tracking_code && (
                             <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
@@ -304,6 +335,10 @@ export default function CatalogOrdersAdmin() {
                 )}
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
+                <p className="text-sm text-gray-400">Data/Hora: <span className="text-white">{getDataHora(selectedOrder)}</span></p>
+                {selectedOrder._vendedor_nome && (
+                  <p className="text-sm text-gray-400">Vinculado a: <span className="text-purple-300 font-medium">🔗 {selectedOrder._vendedor_nome}{selectedOrder._vendedor_cargo ? ` (${CARGO_LABEL[selectedOrder._vendedor_cargo] || selectedOrder._vendedor_cargo})` : ''}</span></p>
+                )}
                 <p className="text-sm text-gray-400">Valor do produto: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
                 {(() => {
                   const frete = getFrete(selectedOrder);
