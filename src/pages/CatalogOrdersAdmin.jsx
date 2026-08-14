@@ -13,13 +13,20 @@ import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const CatalogSale = base44.entities.CatalogSale;
 
-// 📦 Só produto físico entra nesta fila de envio. Kinds digitais (depósito, passaporte,
-// adesão, etc.) são outras cobranças na mesma tabela — não precisam de etiqueta/rastreio.
+// 📦 Só produto físico entra nesta fila de envio. Kinds digitais puros (depósito de
+// carteira, comissão, adesão, etc.) são outras cobranças na mesma tabela — não precisam
+// de etiqueta/rastreio. O Passaporte de Lances FICA na lista: é um produto vendido, só que
+// com entrega automática e instantânea (crédito direto na carteira do cliente).
 const KINDS_DIGITAIS = new Set([
-  'wallet_deposit', 'commission_deposit', 'operacao_deposit', 'passaporte',
+  'wallet_deposit', 'commission_deposit', 'operacao_deposit',
   'adesao', 'seller_adhesion', 'partner_plan', 'reposicao', 'seller_freight',
 ]);
 const isPedidoFisico = (o) => !KINDS_DIGITAIS.has(o.kind);
+const isPassaporte = (o) => o?.kind === 'passaporte';
+const STATUS_PAGO = new Set(['paid', 'preparando', 'shipped', 'saiu_entrega', 'delivered', 'entregue']);
+// 🎫 Passaporte é entrega automática: assim que o pagamento confirma, o crédito já cai na
+// carteira do cliente — não existe "preparar envio". Por isso exibimos direto como entregue.
+const getDisplayTitle = (o) => isPassaporte(o) ? 'Compra de Passaporte de Lances — Leilão NoZap' : o.product_title;
 
 const STATUS_CONFIG = {
   pending_payment: { label: 'Aguardando Pagamento', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: Clock },
@@ -33,6 +40,10 @@ const STATUS_CONFIG = {
   entregue: { label: 'Entregue', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
   cancelado: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
 };
+
+// 🎫 Badge exclusivo do Passaporte quando o pagamento já confirmou: nunca "Preparar Envio".
+const STATUS_PASSAPORTE_ENTREGUE = { label: 'Entregue — Automático', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: PartyPopper };
+const getDisplayStatusConfig = (o) => (isPassaporte(o) && STATUS_PAGO.has(o.status)) ? STATUS_PASSAPORTE_ENTREGUE : (STATUS_CONFIG[o.status] || STATUS_CONFIG.paid);
 
 // 🚚 Frete fica em raw_base44 (JSON) — nunca em total_amount (base de comissão).
 // amount_charged = produto + frete, o que o cliente realmente pagou.
@@ -99,9 +110,10 @@ export default function CatalogOrdersAdmin() {
 
   const stats = useMemo(() => ({
     total: orders.length,
-    paid: orders.filter(o => o.status === 'paid' || o.status === 'preparando').length,
+    // 🎫 Passaporte pago já conta como entregue (entrega automática), não como "pronto pra enviar"
+    paid: orders.filter(o => !( isPassaporte(o) && STATUS_PAGO.has(o.status)) && (o.status === 'paid' || o.status === 'preparando')).length,
     shipped: orders.filter(o => o.status === 'shipped' || o.status === 'saiu_entrega').length,
-    delivered: orders.filter(o => o.status === 'delivered' || o.status === 'entregue').length,
+    delivered: orders.filter(o => (isPassaporte(o) && STATUS_PAGO.has(o.status)) || o.status === 'delivered' || o.status === 'entregue').length,
     pending: orders.filter(o => o.status === 'pending_payment').length,
   }), [orders]);
 
@@ -202,7 +214,7 @@ export default function CatalogOrdersAdmin() {
         ) : (
           <div className="space-y-3">
             {filteredOrders.map(order => {
-              const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.paid;
+              const config = getDisplayStatusConfig(order);
               const StatusIcon = config.icon;
               return (
                 <Card key={order.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-all">
@@ -211,7 +223,7 @@ export default function CatalogOrdersAdmin() {
                       {/* Imagem */}
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
                         {order.product_image ? (
-                          <img src={order.product_image} alt={order.product_title} className="w-full h-full object-cover" />
+                          <img src={order.product_image} alt={getDisplayTitle(order)} className="w-full h-full object-cover" />
                         ) : (
                           <Package className="w-8 h-8 m-auto mt-4 text-gray-500" />
                         )}
@@ -219,7 +231,7 @@ export default function CatalogOrdersAdmin() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-white truncate">{order.product_title}</p>
+                        <p className="font-semibold text-white truncate">{getDisplayTitle(order)}</p>
                         <p className="text-sm text-gray-400">{order.buyer_name} • {order.buyer_email}</p>
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
@@ -275,7 +287,10 @@ export default function CatalogOrdersAdmin() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-gray-700/50 rounded-lg p-4 space-y-1">
-                <p className="text-sm text-gray-400">Produto: <span className="text-white font-medium">{selectedOrder.product_title}</span></p>
+                <p className="text-sm text-gray-400">Produto: <span className="text-white font-medium">{getDisplayTitle(selectedOrder)}</span></p>
+                {isPassaporte(selectedOrder) && (
+                  <p className="text-xs text-green-400 font-medium">🎫 Entrega automática — crédito cai na carteira do cliente na hora da confirmação do pagamento.</p>
+                )}
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
                 <p className="text-sm text-gray-400">Valor do produto: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
@@ -296,48 +311,54 @@ export default function CatalogOrdersAdmin() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-300 mb-2">Status do Pedido</label>
-                <Select value={newStatus} onValueChange={setNewStatus}>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="pending_payment">⏳ Aguardando Pagamento</SelectItem>
-                    <SelectItem value="paid"><span className="inline-flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5" />Pago</span></SelectItem>
-                    <SelectItem value="shipped"><span className="inline-flex items-center gap-2"><Truck className="w-3.5 h-3.5" />Enviado</span></SelectItem>
-                    <SelectItem value="delivered"><span className="inline-flex items-center gap-2"><PartyPopper className="w-3.5 h-3.5" />Entregue</span></SelectItem>
-                    <SelectItem value="canceled"><span className="inline-flex items-center gap-2"><XCircle className="w-3.5 h-3.5" />Cancelado</span></SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isPassaporte(selectedOrder) && (
+                <>
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">Status do Pedido</label>
+                    <Select value={newStatus} onValueChange={setNewStatus}>
+                      <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="pending_payment">⏳ Aguardando Pagamento</SelectItem>
+                        <SelectItem value="paid"><span className="inline-flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5" />Pago</span></SelectItem>
+                        <SelectItem value="shipped"><span className="inline-flex items-center gap-2"><Truck className="w-3.5 h-3.5" />Enviado</span></SelectItem>
+                        <SelectItem value="delivered"><span className="inline-flex items-center gap-2"><PartyPopper className="w-3.5 h-3.5" />Entregue</span></SelectItem>
+                        <SelectItem value="canceled"><span className="inline-flex items-center gap-2"><XCircle className="w-3.5 h-3.5" />Cancelado</span></SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div>
-                <label className="block text-sm text-gray-300 mb-2">Código de Rastreio</label>
-                <Input
-                  value={trackingCode}
-                  onChange={(e) => setTrackingCode(e.target.value)}
-                  placeholder="Ex: AA123456789BR"
-                  className="bg-gray-700 border-gray-600 text-white"
-                />
-                <p className="text-xs text-gray-500 mt-1">Ao adicionar o código, o status será atualizado para "Enviado" automaticamente</p>
-              </div>
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">Código de Rastreio</label>
+                    <Input
+                      value={trackingCode}
+                      onChange={(e) => setTrackingCode(e.target.value)}
+                      placeholder="Ex: AA123456789BR"
+                      className="bg-gray-700 border-gray-600 text-white"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Ao adicionar o código, o status será atualizado para "Enviado" automaticamente</p>
+                  </div>
+                </>
+              )}
 
               <div className="flex gap-3 pt-2">
-                <Button
-                  onClick={handleSaveOrder}
-                  disabled={isUpdating}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
-                </Button>
+                {!isPassaporte(selectedOrder) && (
+                  <Button
+                    onClick={handleSaveOrder}
+                    disabled={isUpdating}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                  </Button>
+                )}
                 <Button
                   onClick={() => setSelectedOrder(null)}
                   variant="outline"
-                  className="border-gray-600 text-gray-300"
+                  className={`border-gray-600 text-gray-300 ${isPassaporte(selectedOrder) ? 'flex-1' : ''}`}
                   disabled={isUpdating}
                 >
-                  Cancelar
+                  {isPassaporte(selectedOrder) ? 'Fechar' : 'Cancelar'}
                 </Button>
               </div>
             </CardContent>
