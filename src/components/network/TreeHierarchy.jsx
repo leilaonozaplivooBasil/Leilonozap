@@ -36,6 +36,7 @@ import SeloCargo from '@/components/network/SeloCargo';
 import CartaoIdentificacao from '@/components/network/CartaoIdentificacao';
 import AcessoSuperAdmin from '@/components/network/AcessoSuperAdmin';
 import { getSeloCargo, getFotoPerfil } from '@/lib/selosCargo';
+import usePanZoomCanvas from '@/hooks/usePanZoomCanvas';
 
 /**
  * TreeHierarchy — Árvore da rede (Sistema de Alavancagem)
@@ -57,8 +58,8 @@ import { getSeloCargo, getFotoPerfil } from '@/lib/selosCargo';
 /* ---------- métricas dos dois layouts ---------- */
 const V = { node: 64, slot: 136, level: 158 };         // organograma (vertical)
 const H = { card: 250, cardH: 54, row: 72, col: 330 }; // lista (horizontal)
-const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 2;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 3;
 const OPEN_ZOOM_FLOOR = 0.55; // nunca abre a tela em algo ilegível
 
 const getInitials = (name) => {
@@ -102,7 +103,6 @@ export default function TreeHierarchy({
   const [selectedId, setSelectedId] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
   const [query, setQuery] = useState('');
   const [drag, setDrag] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
@@ -112,7 +112,6 @@ export default function TreeHierarchy({
   const [didFit, setDidFit] = useState(false);
 
   const viewportRef = useRef(null);
-  const panState = useRef(null);
   const dragState = useRef(null);
   const nodesRef = useRef([]);
   const panRef = useRef(pan);
@@ -125,6 +124,26 @@ export default function TreeHierarchy({
   useEffect(() => { panRef.current = pan; }, [pan]);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { dropRef.current = dropTarget; }, [dropTarget]);
+
+  // 🗺️ Toda a navegação do mapa (andar com dois dedos, pinça, zoom focal,
+  // inércia e o acompanhamento da borda ao arrastar uma pessoa) vive no hook.
+  const {
+    isPanning,
+    beginPan,
+    movePan,
+    endPan,
+    zoomBy,
+    autoPanFromPointer,
+    stopAutoPan,
+  } = usePanZoomCanvas({
+    viewportRef,
+    panRef,
+    zoomRef,
+    setPan,
+    setZoom,
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+  });
 
   /* ------------------------------------------------------------------ */
   /* Hierarquia                                                          */
@@ -286,47 +305,14 @@ export default function TreeHierarchy({
      
   }, [fullHeight, mode]);
 
-  const zoomBy = useCallback((factor, origin) => {
-    const z = zoomRef.current;
-    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * factor));
-    if (next === z) return;
-    const p = panRef.current;
-    const o = origin || {
-      x: (viewportRef.current?.clientWidth || 0) / 2,
-      y: (viewportRef.current?.clientHeight || 0) / 2,
-    };
-    setPan({ x: o.x - ((o.x - p.x) * next) / z, y: o.y - ((o.y - p.y) * next) / z });
-    setZoom(next);
-  }, []);
-
-  useEffect(() => {
-    const vp = viewportRef.current;
-    if (!vp) return;
-    const handler = (e) => {
-      e.preventDefault();
-      const rect = vp.getBoundingClientRect();
-      zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, { x: e.clientX - rect.left, y: e.clientY - rect.top });
-    };
-    vp.addEventListener('wheel', handler, { passive: false });
-    return () => vp.removeEventListener('wheel', handler);
-  }, [zoomBy]);
-
   const onBackgroundPointerDown = (e) => {
     setMenu(null);
-    if (e.button !== 0) return;
-    panState.current = { startX: e.clientX, startY: e.clientY, origin: { ...panRef.current } };
-    setIsPanning(true);
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    // 🗺️ arrastar o fundo anda o mapa (com inércia ao soltar) — quem cuida é o hook
+    if (beginPan(e)) e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
   const onPointerMove = (e) => {
-    if (panState.current) {
-      setPan({
-        x: panState.current.origin.x + (e.clientX - panState.current.startX),
-        y: panState.current.origin.y + (e.clientY - panState.current.startY),
-      });
-      return;
-    }
+    if (movePan(e)) return;
     if (!dragState.current) return;
 
     const rect = viewportRef.current.getBoundingClientRect();
@@ -344,6 +330,10 @@ export default function TreeHierarchy({
     }
 
     setDrag({ id: dragState.current.id, x: px, y: py });
+
+    // 🧲 Chegando na borda do canvas, a tela ACOMPANHA o arraste — antes a árvore
+    // travava na lateral e era impossível soltar a pessoa num ramo distante.
+    autoPanFromPointer(px, py);
 
     // alvo = nó mais próximo dentro de um raio generoso
     const wx = (px - panRef.current.x) / zoomRef.current;
@@ -384,11 +374,9 @@ export default function TreeHierarchy({
     [byId]
   );
 
-  const onPointerUp = () => {
-    if (panState.current) {
-      panState.current = null;
-      setIsPanning(false);
-    }
+  const onPointerUp = (e) => {
+    endPan(e);
+    stopAutoPan();
     const state = dragState.current;
     const target = dropRef.current;
     dragState.current = null;
@@ -583,7 +571,7 @@ export default function TreeHierarchy({
 
         <span className="hidden 2xl:flex items-center gap-1.5 text-[11px] text-gray-600 mr-1">
           <Move className="w-3 h-3" />
-          arraste o fundo para mover · roda dá zoom · arraste uma pessoa sobre outra para vincular
+          dois dedos movem o mapa · pinça ou Ctrl+roda dá zoom · 2 cliques enquadram · arraste uma pessoa sobre outra para vincular
         </span>
 
         <div className="flex items-center gap-1">
@@ -630,6 +618,8 @@ export default function TreeHierarchy({
           backgroundSize: '26px 26px',
         }}
         onPointerDown={onBackgroundPointerDown}
+        // 🗺️ dois cliques / dois toques no fundo enquadram a rede inteira
+        onDoubleClick={() => fitToView({ allowTiny: true })}
         onContextMenu={(e) => e.preventDefault()}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
