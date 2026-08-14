@@ -21,8 +21,12 @@ const KINDS_DIGITAIS = new Set([
   'wallet_deposit', 'commission_deposit', 'operacao_deposit',
   'adesao', 'seller_adhesion', 'partner_plan', 'reposicao', 'seller_freight',
 ]);
-const isPedidoFisico = (o) => !KINDS_DIGITAIS.has(o.kind);
-const isPassaporte = (o) => o?.kind === 'passaporte';
+// 🎫 Depósito de carteira (wallet_deposit) de R$100+ recebe o MESMO bônus de 10% que o
+// Passaporte (creditarBonusPassaporte em mpWebhook.js) — é o mesmo benefício pro cliente,
+// só o rótulo interno é diferente. Por isso conta como Passaporte aqui também, senão ficava
+// invisível na Gestão de Pedidos mesmo tendo o crédito automático igual.
+const isPassaporte = (o) => o?.kind === 'passaporte' || (o?.kind === 'wallet_deposit' && Number(o.total_amount || o.sale_price || 0) >= 100);
+const isPedidoFisico = (o) => !KINDS_DIGITAIS.has(o.kind) || isPassaporte(o);
 const STATUS_PAGO = new Set(['paid', 'preparando', 'shipped', 'saiu_entrega', 'delivered', 'entregue']);
 // 🎫 Passaporte é entrega automática: assim que o pagamento confirma, o crédito já cai na
 // carteira do cliente — não existe "preparar envio". Por isso exibimos direto como entregue.
