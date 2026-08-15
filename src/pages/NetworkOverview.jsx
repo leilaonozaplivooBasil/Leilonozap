@@ -619,10 +619,11 @@ export default function NetworkOverview() {
       compradoresUnicos: buyerIds.size,
       taxaGeral: (buyerIds.size / totalPeople) * 100,
       recentJoinersCount,
-      // 🔧 quem comprou nos últimos 30 dias (pela data da COMPRA) sobre o total
-      // da base — não sobre "novos cadastros", que é uma coisa diferente.
+      // 🔧 taxa recente = quantos dos 55 que ENTRARAM nos últimos 30 dias já
+      // compraram — divide pelos novos da janela (recentJoinersCount), não pelo
+      // total da base. Antes dividia por totalPeople (107) e a taxa saía errada.
       compradoresRecentes,
-      taxaRecente: (compradoresRecentes / totalPeople) * 100,
+      taxaRecente: recentJoinersCount ? (compradoresRecentes / recentJoinersCount) * 100 : 0,
     };
   }, [allUsers, financeStats.buyerIds, financeStats.recentBuyerIds]);
 
