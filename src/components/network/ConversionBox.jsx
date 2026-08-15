@@ -36,14 +36,17 @@ export default function ConversionBox({ conversion, depositsCount, valorTotal = 
           <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
             <div className="text-[11px] text-gray-400">Total na base</div>
             <div className="text-lg font-bold text-white">{totalPeople}</div>
+            <div className="text-[10px] text-gray-500">desde sempre, todo o histórico</div>
           </div>
           <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
             <div className="text-[11px] text-gray-400">Novos (30 dias)</div>
             <div className="text-lg font-bold text-white">{recentJoinersCount}</div>
+            <div className="text-[10px] text-gray-500">entraram só nos últimos 30 dias</div>
           </div>
           <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
             <div className="text-[11px] text-gray-400">Compradores únicos</div>
             <div className="text-lg font-bold text-white">{compradoresUnicos}</div>
+            <div className="text-[10px] text-gray-500">desde sempre, todo o histórico</div>
           </div>
           <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
             <div className="text-[11px] text-gray-400">Conversão geral</div>
