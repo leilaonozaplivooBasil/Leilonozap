@@ -1587,7 +1587,7 @@ export default function NetworkOverview() {
           </div>
 
           <div className="mb-2">
-            <ConversionBox conversion={conversion} depositsCount={financeStats.depositsCount} />
+            <ConversionBox conversion={conversion} depositsCount={financeStats.depositsCount} valorTotal={(financeStats.depositsTotal || 0) + (financeStats.purchasesTotal || 0)} />
           </div>
 
           {showStats && (

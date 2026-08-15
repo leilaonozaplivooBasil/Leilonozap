@@ -10,13 +10,15 @@ import { TrendingUp, Users, Wallet } from 'lucide-react';
  *   30 dias ÷ total de gente que entrou nos últimos 30 dias — como o dinheiro
  *   real tende a vir de quem entrou há pouco, essa taxa fica bem maior.
  */
-export default function ConversionBox({ conversion, depositsCount }) {
+export default function ConversionBox({ conversion, depositsCount, valorTotal = 0 }) {
   const {
     totalPeople, compradoresUnicos, taxaGeral,
     recentJoinersCount, compradoresRecentes, taxaRecente,
   } = conversion;
 
   const fmtPct = (n) => (Number.isFinite(n) ? n.toFixed(1).replace('.', ',') : '0,0');
+  const fmtReais = (n) => (Number.isFinite(n) ? n.toFixed(2).replace('.', ',') : '0,00');
+  const valorPorPessoaNova = recentJoinersCount ? valorTotal / recentJoinersCount : 0;
 
   return (
     <div className="rounded-lg border border-emerald-500/30 bg-emerald-900/10 px-4 py-3">
@@ -24,7 +26,7 @@ export default function ConversionBox({ conversion, depositsCount }) {
         <TrendingUp className="w-4 h-4 text-emerald-400 flex-shrink-0" />
         <span className="text-[13px] font-semibold text-emerald-300">Caixa de Conversão</span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
           <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
             <Users className="w-3 h-3" /> Pessoas que compraram
@@ -46,6 +48,11 @@ export default function ConversionBox({ conversion, depositsCount }) {
           <div className="text-[11px] text-gray-400">Conversão últimos 30 dias</div>
           <div className="text-lg font-bold text-emerald-400">{fmtPct(taxaRecente)}%</div>
           <div className="text-[10px] text-gray-500">{compradoresRecentes} compradores ÷ {recentJoinersCount} pessoas novas (cadastradas nos últimos 30 dias)</div>
+        </div>
+        <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
+          <div className="text-[11px] text-gray-400">Valor por pessoa nova</div>
+          <div className="text-lg font-bold text-amber-300">R$ {fmtReais(valorPorPessoaNova)}</div>
+          <div className="text-[10px] text-gray-500">R$ {fmtReais(valorTotal)} ÷ {recentJoinersCount} pessoas novas (não é %)</div>
         </div>
       </div>
     </div>
