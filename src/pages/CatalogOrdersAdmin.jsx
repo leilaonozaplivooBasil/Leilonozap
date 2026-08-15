@@ -284,7 +284,8 @@ export default function CatalogOrdersAdmin() {
               return (
                 <Card key={order.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-all">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* Imagem */}
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
                         {order.product_image ? (
@@ -297,7 +298,7 @@ export default function CatalogOrdersAdmin() {
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-white truncate">{getDisplayTitle(order)}</p>
-                        <p className="text-sm text-gray-400">{order.buyer_name} • {order.buyer_email}</p>
+                        <p className="text-sm text-gray-400 truncate">{order.buyer_name} • {order.buyer_email}</p>
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
                           <span className="text-gray-500 text-xs">{getDataHora(order)}</span>
@@ -321,9 +322,10 @@ export default function CatalogOrdersAdmin() {
                           })()}
                         </div>
                       </div>
+                      </div>
 
                       {/* Status + Ação */}
-                      <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
                         <Badge className={`${config.color} border text-xs flex items-center gap-1`}>
                           <StatusIcon className="w-3 h-3" />
                           {config.label}
