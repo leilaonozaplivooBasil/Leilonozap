@@ -2,6 +2,8 @@ import React from 'react';
 import { Users, DollarSign, Wallet, ShoppingBag } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
 
+const totalReal = (financeStats) => (financeStats.depositsTotal || 0) + (financeStats.purchasesTotal || 0);
+
 /**
  * Badges de resumo da rede: pessoas no sistema, depósitos na Carteira Digital
  * (saldo usado para lance/passaporte) e compras confirmadas na Loja Virtual.
@@ -30,6 +32,10 @@ export default function NetworkFinanceBadges({ peopleCount, financeStats, compac
           <strong className="text-blue-300">{purchasesCount}</strong>
           <strong className="text-blue-300">R$ {fmtBR(purchasesTotal)}</strong>
         </span>
+        <span className="flex items-center gap-1.5 whitespace-nowrap" title="Depósitos + compras (dinheiro real total)">
+          <DollarSign className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+          <strong className="text-amber-300">Total R$ {fmtBR(totalReal(financeStats))}</strong>
+        </span>
       </div>
     );
   }
@@ -49,6 +55,10 @@ export default function NetworkFinanceBadges({ peopleCount, financeStats, compac
         <ShoppingBag className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
         <strong className="text-blue-300">{purchasesCount} compras</strong>
         <strong className="text-blue-300">· R$ {fmtBR(purchasesTotal)}</strong>
+      </span>
+      <span className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-900/10 px-2.5 py-2 sm:border-0 sm:bg-transparent sm:p-0 whitespace-nowrap" title="Depósitos + compras (dinheiro real total)">
+        <DollarSign className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+        <strong className="text-amber-300">Valor Total · R$ {fmtBR(totalReal(financeStats))}</strong>
       </span>
     </div>
   );

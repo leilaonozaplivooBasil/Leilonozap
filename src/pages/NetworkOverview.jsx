@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
 import NetworkFinanceBadges from "../components/network/NetworkFinanceBadges";
+import ConversionBox from "../components/network/ConversionBox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -555,7 +556,7 @@ export default function NetworkOverview() {
   const [purgeBlockReasons, setPurgeBlockReasons] = useState([]);
   // 💰 Depósitos na Carteira Digital (saldo pra lance/passaporte) e compras
   // confirmadas na Loja Virtual — dois números de propósitos diferentes, nunca somados.
-  const [financeStats, setFinanceStats] = useState({ depositsCount: 0, depositsTotal: 0, purchasesCount: 0, purchasesTotal: 0 });
+  const [financeStats, setFinanceStats] = useState({ depositsCount: 0, depositsTotal: 0, purchasesCount: 0, purchasesTotal: 0, buyerIds: [] });
 
   const fetchFinanceStats = useCallback(async () => {
     try {
@@ -574,11 +575,15 @@ export default function NetworkOverview() {
       const isReal = (s) => isPaga(s) && isDinheiroReal(s) && isPosMarco(s);
       const deposits = list.filter(s => s.kind === 'wallet_deposit' && isReal(s));
       const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isReal(s));
+      // pessoas únicas que geraram dinheiro real (depósito OU compra) — usado na
+      // caixa de conversão. Um mesmo comprador não conta duas vezes.
+      const buyerIds = [...new Set([...deposits, ...purchases].map(s => s.buyer_id).filter(Boolean))];
       setFinanceStats({
         depositsCount: deposits.length,
         depositsTotal: deposits.reduce((sum, d) => sum + (d.total_amount || 0), 0),
         purchasesCount: purchases.length,
         purchasesTotal: purchases.reduce((sum, s) => sum + (s.total_amount || 0), 0),
+        buyerIds,
       });
     } catch (e) {
       console.debug('Erro ao calcular estatísticas financeiras:', e?.message);
@@ -586,6 +591,34 @@ export default function NetworkOverview() {
   }, []);
 
   useEffect(() => { fetchFinanceStats(); }, [fetchFinanceStats]);
+
+  // 📊 Caixa de conversão: quantas pessoas realmente geraram dinheiro real, em
+  // relação ao total de gente na plataforma e em relação a quem entrou recentemente
+  // (últimos 30 dias) — os depósitos reais tendem a se concentrar em quem entrou há
+  // pouco tempo, então a taxa "recente" fica bem maior que a taxa geral.
+  const CONVERSAO_JANELA_DIAS = 30;
+  const conversion = useMemo(() => {
+    const totalPeople = allUsers.length;
+    const buyerIds = new Set(financeStats.buyerIds || []);
+    if (!totalPeople) {
+      return { totalPeople: 0, compradoresUnicos: buyerIds.size, taxaGeral: 0, recentJoinersCount: 0, compradoresRecentes: 0, taxaRecente: 0 };
+    }
+    const cutoff = new Date(Date.now() - CONVERSAO_JANELA_DIAS * 24 * 60 * 60 * 1000);
+    const usersById = new Map(allUsers.map(u => [u.id, u]));
+    const recentJoinersCount = allUsers.filter(u => new Date(u.created_date) >= cutoff).length;
+    const compradoresRecentes = [...buyerIds].filter(id => {
+      const u = usersById.get(id);
+      return u && new Date(u.created_date) >= cutoff;
+    }).length;
+    return {
+      totalPeople,
+      compradoresUnicos: buyerIds.size,
+      taxaGeral: (buyerIds.size / totalPeople) * 100,
+      recentJoinersCount,
+      compradoresRecentes,
+      taxaRecente: recentJoinersCount ? (compradoresRecentes / recentJoinersCount) * 100 : 0,
+    };
+  }, [allUsers, financeStats.buyerIds]);
 
   // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
   const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);
@@ -1551,6 +1584,10 @@ export default function NetworkOverview() {
               Resumo da árvore genealógica
             </button>
             <NetworkFinanceBadges peopleCount={stats.total} financeStats={financeStats} />
+          </div>
+
+          <div className="mb-2">
+            <ConversionBox conversion={conversion} depositsCount={financeStats.depositsCount} />
           </div>
 
           {showStats && (
