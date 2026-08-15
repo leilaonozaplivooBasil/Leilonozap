@@ -577,13 +577,21 @@ export default function NetworkOverview() {
       const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isReal(s));
       // pessoas únicas que geraram dinheiro real (depósito OU compra) — usado na
       // caixa de conversão. Um mesmo comprador não conta duas vezes.
-      const buyerIds = [...new Set([...deposits, ...purchases].map(s => s.buyer_id).filter(Boolean))];
+      const realSales = [...deposits, ...purchases];
+      const buyerIds = [...new Set(realSales.map(s => s.buyer_id).filter(Boolean))];
+      // 🔧 "Compradores últimos 30 dias" é pela DATA DA COMPRA (quem comprou no
+      // período), não pela data de cadastro do comprador — antes contava só quem
+      // tinha se cadastrado há pouco tempo, escondendo quem já era da base e
+      // comprou agora (caso reportado: mostrava 4, o real era 10).
+      const cutoff30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const recentBuyerIds = [...new Set(realSales.filter(s => new Date(s.created_date) >= cutoff30d).map(s => s.buyer_id).filter(Boolean))];
       setFinanceStats({
         depositsCount: deposits.length,
         depositsTotal: deposits.reduce((sum, d) => sum + (d.total_amount || 0), 0),
         purchasesCount: purchases.length,
         purchasesTotal: purchases.reduce((sum, s) => sum + (s.total_amount || 0), 0),
         buyerIds,
+        recentBuyerIds,
       });
     } catch (e) {
       console.debug('Erro ao calcular estatísticas financeiras:', e?.message);
@@ -600,25 +608,23 @@ export default function NetworkOverview() {
   const conversion = useMemo(() => {
     const totalPeople = allUsers.length;
     const buyerIds = new Set(financeStats.buyerIds || []);
+    const compradoresRecentes = (financeStats.recentBuyerIds || []).length;
     if (!totalPeople) {
-      return { totalPeople: 0, compradoresUnicos: buyerIds.size, taxaGeral: 0, recentJoinersCount: 0, compradoresRecentes: 0, taxaRecente: 0 };
+      return { totalPeople: 0, compradoresUnicos: buyerIds.size, taxaGeral: 0, recentJoinersCount: 0, compradoresRecentes, taxaRecente: 0 };
     }
     const cutoff = new Date(Date.now() - CONVERSAO_JANELA_DIAS * 24 * 60 * 60 * 1000);
-    const usersById = new Map(allUsers.map(u => [u.id, u]));
     const recentJoinersCount = allUsers.filter(u => new Date(u.created_date) >= cutoff).length;
-    const compradoresRecentes = [...buyerIds].filter(id => {
-      const u = usersById.get(id);
-      return u && new Date(u.created_date) >= cutoff;
-    }).length;
     return {
       totalPeople,
       compradoresUnicos: buyerIds.size,
       taxaGeral: (buyerIds.size / totalPeople) * 100,
       recentJoinersCount,
+      // 🔧 quem comprou nos últimos 30 dias (pela data da COMPRA) sobre o total
+      // da base — não sobre "novos cadastros", que é uma coisa diferente.
       compradoresRecentes,
-      taxaRecente: recentJoinersCount ? (compradoresRecentes / recentJoinersCount) * 100 : 0,
+      taxaRecente: (compradoresRecentes / totalPeople) * 100,
     };
-  }, [allUsers, financeStats.buyerIds]);
+  }, [allUsers, financeStats.buyerIds, financeStats.recentBuyerIds]);
 
   // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
   const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);

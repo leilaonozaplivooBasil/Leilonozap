@@ -51,9 +51,9 @@ export default function ConversionBox({ conversion, depositsCount, valorTotal = 
             <div className="text-[10px] text-gray-500">{compradoresUnicos} ÷ {totalPeople} pessoas</div>
           </div>
           <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
-            <div className="text-[11px] text-gray-400">Conversão 30 dias</div>
-            <div className="text-lg font-bold text-emerald-400">{fmtPct(taxaRecente)}%</div>
-            <div className="text-[10px] text-gray-500">{compradoresRecentes} ÷ {recentJoinersCount} novos</div>
+            <div className="text-[11px] text-gray-400">Compraram nos últimos 30 dias</div>
+            <div className="text-lg font-bold text-emerald-400">{compradoresRecentes} <span className="text-[13px] text-gray-500">({fmtPct(taxaRecente)}%)</span></div>
+            <div className="text-[10px] text-gray-500">{compradoresRecentes} ÷ {totalPeople} pessoas da base (pela data da compra)</div>
           </div>
         </div>
       </div>
