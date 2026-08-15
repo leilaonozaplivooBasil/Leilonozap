@@ -74,6 +74,26 @@ const getEnvioAutomatico = (order) => {
   return raw?.melhor_envio || null;
 };
 
+// 📍 Endereço de entrega — cada checkout grava o endereço num lugar diferente:
+// colunas address_* (Carrinho/Loja Virtual antigo), raw_base44.address (PIX/cartão atual)
+// ou buyer_address + buyer_cep como texto único (Loja da rede /loja/:slug). A logística
+// precisa ver isso tudo junto, então aqui a gente busca nos 3 formatos e devolve um só.
+const getEndereco = (order) => {
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  const a = raw?.address;
+  if (a && (a.street || a.zip)) {
+    return { street: a.street, number: a.number, complement: a.complement, neighborhood: a.neighborhood, city: a.city, state: a.state, zip: a.zip };
+  }
+  if (order?.address_street || order?.address_zip_code) {
+    return { street: order.address_street, number: order.address_number, complement: order.address_complement, neighborhood: order.address_neighborhood, city: order.address_city, state: order.address_state, zip: order.address_zip_code };
+  }
+  if (order?.buyer_address) {
+    return { street: order.buyer_address, zip: order.buyer_cep };
+  }
+  return null;
+};
+
 export default function CatalogOrdersAdmin() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -334,6 +354,9 @@ export default function CatalogOrdersAdmin() {
                   <p className="text-xs text-green-400 font-medium">🎫 Entrega automática — crédito cai na carteira do cliente na hora da confirmação do pagamento.</p>
                 )}
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
+                {selectedOrder.buyer_phone && (
+                  <p className="text-sm text-gray-400">Telefone/WhatsApp: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
+                )}
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
                 <p className="text-sm text-gray-400">Data/Hora: <span className="text-white">{getDataHora(selectedOrder)}</span></p>
                 {selectedOrder._vendedor_nome && (
@@ -352,9 +375,6 @@ export default function CatalogOrdersAdmin() {
                     </>
                   );
                 })()}
-                {selectedOrder.buyer_phone && (
-                  <p className="text-sm text-gray-400">Telefone: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
-                )}
                 {(() => {
                   const envio = getEnvioAutomatico(selectedOrder);
                   if (!envio) return null;
@@ -368,6 +388,24 @@ export default function CatalogOrdersAdmin() {
                   );
                 })()}
               </div>
+
+              {/* 📍 Endereço de entrega — destacado, é o que a logística usa pra emitir etiqueta */}
+              {!isPassaporte(selectedOrder) && (() => {
+                const endereco = getEndereco(selectedOrder);
+                if (!endereco) return null;
+                const linha1 = [endereco.street, endereco.number].filter(Boolean).join(', ');
+                const linha2 = [endereco.complement, endereco.neighborhood].filter(Boolean).join(' — ');
+                const linha3 = [endereco.city, endereco.state].filter(Boolean).join('/');
+                return (
+                  <div className="bg-green-900/20 border border-green-700/40 rounded-lg p-4 space-y-0.5">
+                    <p className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">📍 Endereço de Entrega</p>
+                    {linha1 && <p className="text-sm text-white">{linha1}</p>}
+                    {linha2 && <p className="text-sm text-white">{linha2}</p>}
+                    {linha3 && <p className="text-sm text-white">{linha3}</p>}
+                    {endereco.zip && <p className="text-sm text-gray-300">CEP: {endereco.zip}</p>}
+                  </div>
+                );
+              })()}
 
               {!isPassaporte(selectedOrder) && (
                 <>
