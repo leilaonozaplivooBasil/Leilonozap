@@ -81,6 +81,7 @@ const getEnvioAutomatico = (order) => {
 const getEndereco = (order) => {
   let raw = order?.raw_base44;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  if (raw?.delivery_type === 'pickup') return { pickup: true };
   const a = raw?.address;
   if (a && (a.street || a.zip)) {
     return { street: a.street, number: a.number, complement: a.complement, neighborhood: a.neighborhood, city: a.city, state: a.state, zip: a.zip };
@@ -90,6 +91,11 @@ const getEndereco = (order) => {
   }
   if (order?.buyer_address) {
     return { street: order.buyer_address, zip: order.buyer_cep };
+  }
+  // 🆕 Respaldo: a venda não gravou endereço, mas o cadastro (AppUser) do comprador tem.
+  const buyer = order?._buyer;
+  if (buyer?.address_street || buyer?.address_zip_code) {
+    return { street: buyer.address_street, number: buyer.address_number, complement: buyer.address_complement, neighborhood: buyer.address_neighborhood, city: buyer.address_city, state: buyer.address_state, zip: buyer.address_zip_code };
   }
   return null;
 };
@@ -133,6 +139,8 @@ export default function CatalogOrdersAdmin() {
           ...o,
           _vendedor_nome: referrer ? (referrer.display_first_name || referrer.full_name) : (buyer ? 'Site Oficial' : null),
           _vendedor_cargo: referrer?.primary_career_level || null,
+          // 🆕 Respaldo de contato/endereço quando a venda não gravou (pedidos antigos)
+          _buyer: buyer || null,
         };
       });
 
@@ -354,8 +362,11 @@ export default function CatalogOrdersAdmin() {
                   <p className="text-xs text-green-400 font-medium">🎫 Entrega automática — crédito cai na carteira do cliente na hora da confirmação do pagamento.</p>
                 )}
                 <p className="text-sm text-gray-400">Comprador: <span className="text-white">{selectedOrder.buyer_name}</span></p>
-                {selectedOrder.buyer_phone && (
-                  <p className="text-sm text-gray-400">Telefone/WhatsApp: <span className="text-white">{selectedOrder.buyer_phone}</span></p>
+                {(selectedOrder.buyer_phone || selectedOrder._buyer?.phone) && (
+                  <p className="text-sm text-gray-400">Telefone/WhatsApp: <span className="text-white">{selectedOrder.buyer_phone || selectedOrder._buyer?.phone}</span></p>
+                )}
+                {selectedOrder._buyer?.cpf && (
+                  <p className="text-sm text-gray-400">CPF: <span className="text-white">{selectedOrder._buyer.cpf}</span></p>
                 )}
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
                 <p className="text-sm text-gray-400">Data/Hora: <span className="text-white">{getDataHora(selectedOrder)}</span></p>
@@ -399,10 +410,16 @@ export default function CatalogOrdersAdmin() {
                 return (
                   <div className="bg-green-900/20 border border-green-700/40 rounded-lg p-4 space-y-0.5">
                     <p className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">📍 Endereço de Entrega</p>
-                    {linha1 && <p className="text-sm text-white">{linha1}</p>}
-                    {linha2 && <p className="text-sm text-white">{linha2}</p>}
-                    {linha3 && <p className="text-sm text-white">{linha3}</p>}
-                    {endereco.zip && <p className="text-sm text-gray-300">CEP: {endereco.zip}</p>}
+                    {endereco.pickup ? (
+                      <p className="text-sm text-white">Retirada na loja (sem entrega)</p>
+                    ) : (
+                      <>
+                        {linha1 && <p className="text-sm text-white">{linha1}</p>}
+                        {linha2 && <p className="text-sm text-white">{linha2}</p>}
+                        {linha3 && <p className="text-sm text-white">{linha3}</p>}
+                        {endereco.zip && <p className="text-sm text-gray-300">CEP: {endereco.zip}</p>}
+                      </>
+                    )}
                   </div>
                 );
               })()}
