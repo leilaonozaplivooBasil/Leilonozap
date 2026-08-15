@@ -88,6 +88,7 @@ export default function TreeHierarchy({
   onAtualizado,
   allUsers,
   fullHeight = false,
+  canEdit = true,
 }) {
   // Modo fica salvo: recarregar dados (editar, promover, mover) não pode
   // jogar o admin de volta para a Lista sem ele pedir.
@@ -655,7 +656,7 @@ export default function TreeHierarchy({
                 // 🔒 Sem permissão de mover (onRelink não veio do pai) — nem inicia o
                 // arraste. Sem isso, o card de confirmação aparecia e mostrava "sucesso"
                 // mesmo sem gravar nada, dando a falsa impressão de que a pessoa moveu.
-                if (typeof onRelink !== 'function') return;
+                if (!canEdit || typeof onRelink !== 'function') return;
                 e.stopPropagation();
                 // NÃO capturar o ponteiro aqui: com pointer capture no viewport o
                 // clique simples não chegava no nó e só o duplo clique abria o card.
@@ -765,18 +766,20 @@ export default function TreeHierarchy({
                         {level.name}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit?.(n.data);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 p-1 rounded-md text-blue-400 hover:bg-blue-500/15"
-                      title="Editar dados desta pessoa"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit?.(n.data);
+                        }}
+                        className="flex-shrink-0 p-1 rounded-md text-blue-400 hover:bg-blue-500/15"
+                        title="Editar dados desta pessoa"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {expandButton}
                   </div>
                   {/* 🪪 hover: foto real + nome + cargo (identificar sem abrir o perfil) */}
@@ -833,20 +836,21 @@ export default function TreeHierarchy({
                 {expandButton}
 
                 {/* Editar: fica FORA do círculo (à direita) para não roubar o clique do nó */}
-                <button
-                  type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit?.(n.data);
-                  }}
-                  className="absolute top-0 left-full ml-1.5 w-6 h-6 rounded-full bg-gray-900 border border-blue-500/60 text-blue-300
-                    flex items-center justify-center opacity-0 group-hover/node:opacity-100 focus:opacity-100 transition-opacity
-                    hover:bg-blue-500/20 hover:text-blue-200"
-                  title="Editar dados desta pessoa"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit?.(n.data);
+                    }}
+                    className="absolute top-0 left-full ml-1.5 w-6 h-6 rounded-full bg-gray-900 border border-blue-500/60 text-blue-300
+                      flex items-center justify-center hover:bg-blue-500/20 hover:text-blue-200"
+                    title="Editar dados desta pessoa"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                )}
 
                 <div className="absolute top-full mt-3.5 left-1/2 -translate-x-1/2 w-[128px] text-center pointer-events-none">
                   <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">
@@ -895,21 +899,25 @@ export default function TreeHierarchy({
                 <p className="text-[10.5px] text-gray-500 truncate">{target.email}</p>
               </div>
 
-              <button type="button" className={`${item} text-blue-300 hover:bg-blue-500/15`}
-                onClick={() => { setMenu(null); onEdit?.(target); }}>
-                <Pencil className="w-3.5 h-3.5" />
-                Editar dados
-              </button>
-              <button type="button" className={`${item} text-blue-300 hover:bg-blue-500/15`}
-                onClick={() => { setMenu(null); onEdit?.(target); }}>
-                <ImagePlus className="w-3.5 h-3.5" />
-                Anexar foto (arquivo ou URL)
-              </button>
-              <button type="button" className={`${item} text-emerald-300 hover:bg-emerald-500/15`}
-                onClick={() => { setMenu(null); onPromote?.(target); }}>
-                <Star className="w-3.5 h-3.5" />
-                Promover / mudar cargo
-              </button>
+              {canEdit && (
+                <>
+                  <button type="button" className={`${item} text-blue-300 hover:bg-blue-500/15`}
+                    onClick={() => { setMenu(null); onEdit?.(target); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                    Editar dados
+                  </button>
+                  <button type="button" className={`${item} text-blue-300 hover:bg-blue-500/15`}
+                    onClick={() => { setMenu(null); onEdit?.(target); }}>
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    Anexar foto (arquivo ou URL)
+                  </button>
+                  <button type="button" className={`${item} text-emerald-300 hover:bg-emerald-500/15`}
+                    onClick={() => { setMenu(null); onPromote?.(target); }}>
+                    <Star className="w-3.5 h-3.5" />
+                    Promover / mudar cargo
+                  </button>
+                </>
+              )}
 
               {target.children.length > 0 && (
                 <button type="button" className={`${item} text-gray-300 hover:bg-white/5`}
@@ -919,7 +927,7 @@ export default function TreeHierarchy({
                 </button>
               )}
 
-              {target.referred_by_id && onDetach && (
+              {canEdit && target.referred_by_id && onDetach && (
                 <button type="button" className={`${item} text-amber-300 hover:bg-amber-500/15`}
                   onClick={() => { setMenu(null); onDetach(target); }}>
                   <Unlink className="w-3.5 h-3.5" />
@@ -927,13 +935,16 @@ export default function TreeHierarchy({
                 </button>
               )}
 
-              <div className="my-1 border-t border-gray-800" />
-
-              <button type="button" className={`${item} ${isTrashed ? 'text-emerald-300 hover:bg-emerald-500/15' : 'text-red-400 hover:bg-red-500/15'}`}
-                onClick={() => { setMenu(null); onDelete?.(target); }}>
-                {isTrashed ? <RotateCcw className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
-                {isTrashed ? 'Restaurar da lixeira' : 'Excluir (vai para a lixeira)'}
-              </button>
+              {canEdit && (
+                <>
+                  <div className="my-1 border-t border-gray-800" />
+                  <button type="button" className={`${item} ${isTrashed ? 'text-emerald-300 hover:bg-emerald-500/15' : 'text-red-400 hover:bg-red-500/15'}`}
+                    onClick={() => { setMenu(null); onDelete?.(target); }}>
+                    {isTrashed ? <RotateCcw className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    {isTrashed ? 'Restaurar da lixeira' : 'Excluir (vai para a lixeira)'}
+                  </button>
+                </>
+              )}
             </div>
           </>
         );
@@ -1000,34 +1011,38 @@ export default function TreeHierarchy({
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
-                    className="h-9 text-[12px] bg-blue-100 border-blue-300 text-blue-900 hover:bg-blue-50 hover:text-blue-950 font-semibold">
-                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                    Editar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
-                    className="h-9 text-[12px] bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-50 hover:text-sky-950 font-semibold">
-                    <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
-                    Foto
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => onPromote?.(selected)}
-                    className="h-9 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 hover:text-emerald-950 font-semibold">
-                    <Star className="w-3.5 h-3.5 mr-1.5" />
-                    Promover
-                  </Button>
-                  <Button size="sm" variant="outline"
-                    onClick={() => { const alvo = selected; setSelectedId(null); onDelete?.(alvo); }}
-                    className={`h-9 text-[12px] font-semibold ${
-                      selected.active === false
-                        ? 'bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50'
-                        : 'bg-red-100 border-red-300 text-red-900 hover:bg-red-50'
-                    }`}>
-                    {selected.active === false
-                      ? <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Restaurar</>
-                      : <><Trash2 className="w-3.5 h-3.5 mr-1.5" />Excluir</>}
-                  </Button>
-                </div>
+                {canEdit ? (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
+                      className="h-9 text-[12px] bg-blue-100 border-blue-300 text-blue-900 hover:bg-blue-50 hover:text-blue-950 font-semibold">
+                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => onEdit?.(selected)}
+                      className="h-9 text-[12px] bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-50 hover:text-sky-950 font-semibold">
+                      <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                      Foto
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => onPromote?.(selected)}
+                      className="h-9 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 hover:text-emerald-950 font-semibold">
+                      <Star className="w-3.5 h-3.5 mr-1.5" />
+                      Promover
+                    </Button>
+                    <Button size="sm" variant="outline"
+                      onClick={() => { const alvo = selected; setSelectedId(null); onDelete?.(alvo); }}
+                      className={`h-9 text-[12px] font-semibold ${
+                        selected.active === false
+                          ? 'bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50'
+                          : 'bg-red-100 border-red-300 text-red-900 hover:bg-red-50'
+                      }`}>
+                      {selected.active === false
+                        ? <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Restaurar</>
+                        : <><Trash2 className="w-3.5 h-3.5 mr-1.5" />Excluir</>}
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-gray-500 italic">Somente visualização</span>
+                )}
               </div>
 
               {/* conteúdo em duas colunas */}

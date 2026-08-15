@@ -742,6 +742,7 @@ export default function NetworkOverview() {
 
   // Atribui um executivo a alguém — opcionalmente para toda a equipe abaixo
   const assignExecutive = useCallback(async (targetUser, executiveId, { cascade = false, pinned = false } = {}) => {
+    if (!requireSuperAdmin()) return;
     try {
       await saveUserFields(targetUser.id, buildExecutiveUpdate(executiveId, { pinned }));
       let afetados = 1;
@@ -764,6 +765,7 @@ export default function NetworkOverview() {
 
   // Carga inicial: vincula todo mundo que está sem executivo de uma vez só
   const assignAllOrphans = useCallback(async (executiveId) => {
+    if (!requireSuperAdmin()) return;
     const alvos = structureRef.current?.orfaos || [];
     if (!alvos.length) return;
     const nome = allUsers.find(u => u.id === executiveId)?.full_name || 'executivo';
@@ -786,6 +788,7 @@ export default function NetworkOverview() {
   // Normaliza a cascata: todo descendente passa a pertencer ao executivo da raiz
   // da estrutura dele. Corrige vínculos antigos feitos antes da cascata existir.
   const normalizarCascata = useCallback(async () => {
+    if (!requireSuperAdmin()) return;
     const byId = new Map(allUsers.map(u => [u.id, u]));
     const correcoes = [];
 
@@ -831,6 +834,7 @@ export default function NetworkOverview() {
   }, [allUsers, activeUsers, saveUserFields, fetchData, loadAudit]);
 
   const handlePromote = (user) => {
+    if (!requireSuperAdmin()) return;
     setPromotingUser(user);
     const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
     setSelectedLevels(userLevels);
@@ -858,6 +862,7 @@ export default function NetworkOverview() {
   };
 
   const confirmPromotion = async () => {
+    if (!requireSuperAdmin()) return;
     if (!promotingUser || selectedLevels.length === 0) {
       toast.error("Selecione pelo menos um nível.");
       return;
@@ -914,6 +919,7 @@ export default function NetworkOverview() {
   };
 
   const handleGrantCommission = async () => {
+    if (!requireSuperAdmin()) return;
     if (!selectedLicenseeId || !commissionAmount || parseFloat(commissionAmount) <= 0) {
       toast.error("Selecione um licenciado e valor válido.");
       return;
@@ -953,6 +959,7 @@ export default function NetworkOverview() {
   };
 
   const handleOrganizeAlavancagem = async () => {
+    if (!requireSuperAdmin()) return;
     if (!selectedLicenseeForLink || selectedUsersToLink.length === 0) {
       toast.error("Selecione um licenciado e usuários.");
       return;
@@ -998,6 +1005,7 @@ export default function NetworkOverview() {
 
   // Atualiza vínculo via arrastar-e-soltar
   const handleRelink = async (draggedId, newParentId, resolveCycles = false) => {
+    if (!requireSuperAdmin()) return;
     try {
       let targetId = newParentId;
       if (!newParentId) {
@@ -1071,6 +1079,7 @@ export default function NetworkOverview() {
   };
 
   const handleCleanDuplicates = async () => {
+    if (!requireSuperAdmin()) return;
     const confirmClean = window.confirm(
       "ATENÇÃO: Remover cadastros duplicados?\n\nEsta ação é irreversível e removerá todos os usuários com o mesmo e-mail, exceto o mais recente."
     );
@@ -1159,6 +1168,7 @@ export default function NetworkOverview() {
   };
 
   const handleLinkOrphanUsers = async () => {
+    if (!requireSuperAdmin()) return;
     const confirmLink = window.confirm(
       "Vincular todos os usuários SEM indicação ao Licenciado Site?\n\nEsta ação vai buscar todos os usuários órfãos e vinculá-los automaticamente."
     );
@@ -1187,6 +1197,7 @@ export default function NetworkOverview() {
   };
 
   const handleCleanSiteDuplicates = async () => {
+    if (!requireSuperAdmin()) return;
     const confirmClean = window.confirm(
       "LIMPAR DUPLICATAS DO SITE OFICIAL?\n\n" +
       "Esta ação vai:\n" +
@@ -1247,6 +1258,7 @@ export default function NetworkOverview() {
   };
 
   const handleEditUser = (user) => {
+    if (!requireSuperAdmin()) return;
     setEditingUserFull(user);
   };
 
@@ -1300,6 +1312,19 @@ export default function NetworkOverview() {
     try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.id || null; } catch { return null; }
   })();
 
+  // 🔐 Admin comum só VISUALIZA a rede. Editar, excluir, promover, mover na
+  // árvore, vincular executivo e conceder comissão são exclusivos do Super Admin.
+  const isSuperAdmin = (() => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.role === 'super_admin'; } catch { return false; }
+  })();
+  const requireSuperAdmin = () => {
+    if (!isSuperAdmin) {
+      toast.error('Somente o Super Admin pode fazer essa alteração. Administradores só podem visualizar.');
+      return false;
+    }
+    return true;
+  };
+
   // Quantas pessoas existem abaixo de alguém (equipe inteira)
   const countDescendants = useCallback((userId) => {
     const stack = [userId];
@@ -1318,6 +1343,7 @@ export default function NetworkOverview() {
 
   // Abre o diálogo (a árvore e a tabela chamam isto no lugar de deletar direto)
   const handleDeleteUser = (user) => {
+    if (!requireSuperAdmin()) return;
     if (user.active === false) {
       handleRestoreUser(user);
       return;
@@ -1327,6 +1353,7 @@ export default function NetworkOverview() {
   };
 
   const handleMoveToTrash = async () => {
+    if (!requireSuperAdmin()) return;
     const user = deleteTarget;
     if (!user) return;
     setIsDeleting(true);
@@ -1367,6 +1394,7 @@ export default function NetworkOverview() {
   };
 
   const handleRestoreUser = async (user) => {
+    if (!requireSuperAdmin()) return;
     try {
       const result = await base44.functions.invoke('adminUpdateUser', {
         userId: user.id,
@@ -1388,6 +1416,7 @@ export default function NetworkOverview() {
   // O servidor é quem decide: se houver saldo, comissão ou pedido, ele recusa e
   // devolve o motivo, que é mostrado no lugar do botão de confirmar.
   const handlePurgeUser = async () => {
+    if (!requireSuperAdmin()) return;
     const user = purgeTarget;
     if (!user) return;
     setIsPurging(true);
@@ -1418,6 +1447,7 @@ export default function NetworkOverview() {
 
   // Soltar da rede: vira raiz, sem indicador
   const handleDetachUser = async (user) => {
+    if (!requireSuperAdmin()) return;
     try {
       await saveUserFields(user.id, { referred_by_id: null });
       toast.success(`${user.full_name} foi desvinculado(a) do indicador anterior.`);
@@ -1515,6 +1545,12 @@ export default function NetworkOverview() {
           )}
         </div>
 
+        {!isSuperAdmin && (
+          <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-900/10 px-4 py-3 text-[12.5px] text-amber-300">
+            Modo de visualização — apenas o Super Admin pode editar, excluir, promover ou mover usuários.
+          </div>
+        )}
+        {isSuperAdmin && (
         <Card className="bg-gray-800 border-gray-700 mb-8">
           <CardHeader>
             <CardTitle className="text-green-400">Ferramentas de Administração</CardTitle>
@@ -1628,6 +1664,7 @@ export default function NetworkOverview() {
             </Accordion>
           </CardContent>
         </Card>
+        )}
 
         {/* Gestão de usuários — bloco principal de trabalho, ocupa a largura toda */}
         <Card className="bg-gray-800 border-gray-700">
@@ -1707,6 +1744,7 @@ export default function NetworkOverview() {
                       <TreeHierarchy
                         users={activeUsers}
                         fullHeight={treeFullscreen}
+                        canEdit={isSuperAdmin}
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
                         onPromote={handlePromote}
@@ -1823,31 +1861,35 @@ export default function NetworkOverview() {
                                     {new Date(user.created_date).toLocaleDateString('pt-BR')}
                                   </TableCell>
                                   <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleEditUser(user)}
-                                        className="text-blue-400 hover:text-blue-300"
-                                        title="Editar usuário"
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleDeleteUser(user)}
-                                        className="text-red-400 hover:text-red-300"
-                                        title="Deletar usuário"
-                                        disabled={isDeleting && deletingUserId === user.id}
-                                      >
-                                        {isDeleting && deletingUserId === user.id ? (
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="w-4 h-4" />
-                                        )}
-                                      </Button>
-                                    </div>
+                                    {isSuperAdmin ? (
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleEditUser(user)}
+                                          className="text-blue-400 hover:text-blue-300"
+                                          title="Editar usuário"
+                                        >
+                                          <Pencil className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleDeleteUser(user)}
+                                          className="text-red-400 hover:text-red-300"
+                                          title="Deletar usuário"
+                                          disabled={isDeleting && deletingUserId === user.id}
+                                        >
+                                          {isDeleting && deletingUserId === user.id ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : (
+                                            <Trash2 className="w-4 h-4" />
+                                          )}
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Eye className="w-4 h-4 text-gray-500" title="Somente visualização" />
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               );
@@ -1926,23 +1968,25 @@ export default function NetworkOverview() {
                                       </span>
                                     </span>
                                     <div className="flex-1" />
-                                    {/* trocar o executivo desta pessoa direto na linha */}
-                                    <Select
-                                      value={executive.id}
-                                      onValueChange={(novoExec) => {
-                                        if (novoExec === executive.id) return;
-                                        assignExecutive(m, novoExec, { cascade: true, pinned: true });
-                                      }}
-                                    >
-                                      <SelectTrigger className="w-52 h-7 bg-gray-800 border-gray-600 text-white text-[11.5px]">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                                        {structure.executives.map(e => (
-                                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                    {/* trocar o executivo desta pessoa direto na linha — só Super Admin */}
+                                    {isSuperAdmin ? (
+                                      <Select
+                                        value={executive.id}
+                                        onValueChange={(novoExec) => {
+                                          if (novoExec === executive.id) return;
+                                          assignExecutive(m, novoExec, { cascade: true, pinned: true });
+                                        }}
+                                      >
+                                        <SelectTrigger className="w-52 h-7 bg-gray-800 border-gray-600 text-white text-[11.5px]">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                          {structure.executives.map(e => (
+                                            <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : null}
                                   </div>
                                 );
                               })}
@@ -1967,7 +2011,7 @@ export default function NetworkOverview() {
                       enquanto estiverem aqui, o 1% dessas estruturas não tem para quem ir
                     </span>
                     <div className="flex-1" />
-                    {structure.orfaos.length > 0 && structure.executives.length > 0 && (
+                    {isSuperAdmin && structure.orfaos.length > 0 && structure.executives.length > 0 && (
                       <Select onValueChange={(execId) => assignAllOrphans(execId)}>
                         <SelectTrigger className="w-64 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
                           <SelectValue placeholder={`Vincular todos os ${structure.orfaos.length} a…`} />
@@ -2000,16 +2044,18 @@ export default function NetworkOverview() {
                               <p className="text-[12.5px] text-gray-200 truncate">{u.full_name}</p>
                               <p className={`text-[10.5px] ${lv.textColor}`}>{lv.name}</p>
                             </div>
-                            <Select onValueChange={(execId) => assignExecutive(u, execId, { cascade: true })}>
-                              <SelectTrigger className="w-56 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
-                                <SelectValue placeholder="Vincular a um executivo…" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                                {structure.executives.map(e => (
-                                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {isSuperAdmin && (
+                              <Select onValueChange={(execId) => assignExecutive(u, execId, { cascade: true })}>
+                                <SelectTrigger className="w-56 h-8 bg-gray-700 border-gray-600 text-white text-[12px]">
+                                  <SelectValue placeholder="Vincular a um executivo…" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                  {structure.executives.map(e => (
+                                    <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                           </div>
                         );
                       })}
@@ -2068,24 +2114,30 @@ export default function NetworkOverview() {
                               })()}
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRestoreUser(u)}
-                                className="h-9 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 font-semibold"
-                              >
-                                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                                Restaurar
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => { setPurgeTarget(u); setPurgeBlockReasons([]); }}
-                                className="h-9 text-[12px] bg-red-600 hover:bg-red-500 text-white font-semibold"
-                                title="Apagar este cadastro do banco definitivamente"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                                Apagar de vez
-                              </Button>
+                              {isSuperAdmin ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleRestoreUser(u)}
+                                    className="h-9 text-[12px] bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-50 font-semibold"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                                    Restaurar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => { setPurgeTarget(u); setPurgeBlockReasons([]); }}
+                                    className="h-9 text-[12px] bg-red-600 hover:bg-red-500 text-white font-semibold"
+                                    title="Apagar este cadastro do banco definitivamente"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                    Apagar de vez
+                                  </Button>
+                                </>
+                              ) : (
+                                <Eye className="w-4 h-4 text-gray-500" title="Somente visualização" />
+                              )}
                             </div>
                           </div>
                         );
