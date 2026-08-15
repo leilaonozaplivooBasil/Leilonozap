@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
+import NetworkFinanceBadges from "../components/network/NetworkFinanceBadges";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -552,6 +553,30 @@ export default function NetworkOverview() {
   const [purgeTarget, setPurgeTarget] = useState(null);
   const [isPurging, setIsPurging] = useState(false);
   const [purgeBlockReasons, setPurgeBlockReasons] = useState([]);
+  // 💰 Depósitos na Carteira Digital (saldo pra lance/passaporte) e compras
+  // confirmadas na Loja Virtual — dois números de propósitos diferentes, nunca somados.
+  const [financeStats, setFinanceStats] = useState({ depositsCount: 0, depositsTotal: 0, purchasesCount: 0, purchasesTotal: 0 });
+
+  const fetchFinanceStats = useCallback(async () => {
+    try {
+      const [deposits, sales] = await Promise.all([
+        base44.entities.MercadoPagoPayment.filter({ status: 'approved', deposit_type: 'digital_wallet' }, '-created_date', 3000),
+        base44.entities.CatalogSale.filter({}, '-created_date', 3000),
+      ]);
+      const depositsList = Array.isArray(deposits) ? deposits : [];
+      const salesList = (Array.isArray(sales) ? sales : []).filter(s => s.status && s.status !== 'pending_payment' && s.status !== 'canceled');
+      setFinanceStats({
+        depositsCount: depositsList.length,
+        depositsTotal: depositsList.reduce((sum, d) => sum + (d.amount || 0), 0),
+        purchasesCount: salesList.length,
+        purchasesTotal: salesList.reduce((sum, s) => sum + (s.total_amount || 0), 0),
+      });
+    } catch (e) {
+      console.debug('Erro ao calcular estatísticas financeiras:', e?.message);
+    }
+  }, []);
+
+  useEffect(() => { fetchFinanceStats(); }, [fetchFinanceStats]);
 
   // A árvore só mostra gente ativa; quem foi excluído fica na Lixeira (active=false)
   const activeUsers = useMemo(() => allUsers.filter(u => u.active !== false), [allUsers]);
@@ -1516,16 +1541,7 @@ export default function NetworkOverview() {
               {showStats ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />}
               Resumo da árvore genealógica
             </button>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 text-[12px] text-gray-400">
-              <span className="flex items-center gap-1.5 rounded-lg border border-gray-700/70 bg-gray-800/50 px-2.5 py-2 sm:border-0 sm:bg-transparent sm:p-0 whitespace-nowrap">
-                <Users className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                <strong className="text-white">{stats.total}</strong> no sistema
-              </span>
-              <span className="flex items-center gap-1.5 rounded-lg border border-gray-700/70 bg-gray-800/50 px-2.5 py-2 sm:border-0 sm:bg-transparent sm:p-0 whitespace-nowrap">
-                <DollarSign className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                <strong className="text-green-400">R$ {fmtBR(stats.totalVolume)}</strong>
-              </span>
-            </div>
+            <NetworkFinanceBadges peopleCount={stats.total} financeStats={financeStats} />
           </div>
 
           {showStats && (
@@ -1716,6 +1732,9 @@ export default function NetworkOverview() {
                     <span className="text-[11px] text-gray-500 hidden sm:inline">
                       arraste uma pessoa sobre outra para mudar o indicador (pede confirmação)
                     </span>
+                    {/* 🔎 Mesmos números do resumo, mas AQUI dentro: esta barra continua
+                        visível em tela cheia, diferente do resumo lá de fora. */}
+                    <NetworkFinanceBadges peopleCount={activeUsers.length} financeStats={financeStats} compact />
                     <div className="flex-1" />
                     <Button
                       size="sm"
