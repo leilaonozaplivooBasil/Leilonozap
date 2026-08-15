@@ -37,15 +37,15 @@ export default function ConversionBox({ conversion, depositsCount }) {
           </div>
           <div className="text-lg font-bold text-white">{depositsCount}</div>
         </div>
-        <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2" title={`${compradoresUnicos} compradores ÷ ${totalPeople} pessoas no total`}>
+        <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
           <div className="text-[11px] text-gray-400">Conversão geral</div>
           <div className="text-lg font-bold text-emerald-400">{fmtPct(taxaGeral)}%</div>
-          <div className="text-[10px] text-gray-500">sobre {totalPeople} pessoas no total</div>
+          <div className="text-[10px] text-gray-500">{compradoresUnicos} compradores ÷ {totalPeople} pessoas no total</div>
         </div>
-        <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2" title={`${compradoresRecentes} compradores ÷ ${recentJoinersCount} pessoas nos últimos 30 dias`}>
+        <div className="rounded-lg bg-gray-800/60 border border-gray-700/70 px-3 py-2">
           <div className="text-[11px] text-gray-400">Conversão últimos 30 dias</div>
           <div className="text-lg font-bold text-emerald-400">{fmtPct(taxaRecente)}%</div>
-          <div className="text-[10px] text-gray-500">sobre {recentJoinersCount} pessoas novas</div>
+          <div className="text-[10px] text-gray-500">{compradoresRecentes} compradores ÷ {recentJoinersCount} pessoas novas (cadastradas nos últimos 30 dias)</div>
         </div>
       </div>
     </div>
