@@ -10,6 +10,7 @@ import { Navigate, useParams } from 'react-router-dom';
 // genérico /Cadastro. Parceiro (e qualquer outro cargo) não tem página própria,
 // então mantém o comportamento antigo.
 const DESTINO_DEDICADO = {
+  influenciador: '/Licensing',
   vendedor: '/SejaVendedor',
   licenciado: '/SejaLicenciado',
   parceiro: '/Partners',
