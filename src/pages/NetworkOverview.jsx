@@ -559,16 +559,21 @@ export default function NetworkOverview() {
 
   const fetchFinanceStats = useCallback(async () => {
     try {
-      // 🔧 CORREÇÃO: MercadoPagoPayment/DigitalWalletTransaction não têm dados reais
-      // no banco (tabela vazia/sem mapeamento). Os depósitos e compras de verdade
-      // ficam em catalog_sales, diferenciados pelo campo "kind":
-      // wallet_deposit = depósito na Carteira Digital (saldo de lance/passaporte)
-      // loja/produto = compra de produto na Loja Virtual
+      // 🔧 CRITÉRIO OFICIAL (docs/MARCO-OFICIAL-AGOSTO-2026.md — mesma regra usada
+      // em auditarFase1Marco): "dinheiro real" só conta se a venda está PAGA,
+      // tem RASTRO de gateway (mp_payment_id/stripe) e é a partir de 01/08/2026
+      // (pré-lançamento oficial). Sem os 3 critérios juntos, é teste — não entra.
       const sales = await base44.entities.CatalogSale.list();
       const list = Array.isArray(sales) ? sales : [];
-      const isConfirmed = (s) => ['paid', 'entregue', 'shipped', 'delivered'].includes(s.status);
-      const deposits = list.filter(s => s.kind === 'wallet_deposit' && isConfirmed(s));
-      const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isConfirmed(s));
+      const MARCO_OFICIAL = new Date('2026-08-01T00:00:00Z');
+      const isPaga = (s) => ['paid', 'shipped', 'delivered'].includes(s.status);
+      // stripe_session_id vem redigido como "[REDACTED]" mesmo quando não é
+      // rastro real — só conta se for um valor de verdade.
+      const isDinheiroReal = (s) => Boolean(s.mp_payment_id || s.stripe_payment_intent || (s.stripe_session_id && s.stripe_session_id !== '[REDACTED]'));
+      const isPosMarco = (s) => new Date(s.created_date) >= MARCO_OFICIAL;
+      const isReal = (s) => isPaga(s) && isDinheiroReal(s) && isPosMarco(s);
+      const deposits = list.filter(s => s.kind === 'wallet_deposit' && isReal(s));
+      const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isReal(s));
       setFinanceStats({
         depositsCount: deposits.length,
         depositsTotal: deposits.reduce((sum, d) => sum + (d.total_amount || 0), 0),
