@@ -21,6 +21,14 @@ import {
 
 const AppUser = base44.entities.AppUser;
 
+// Explica em linguagem simples o que cada Permissão de Trabalho libera —
+// mostrado embaixo do seletor para quem está escolhendo o cargo do usuário.
+const ROLE_INFO = {
+    user: 'Usuário Comum: acesso só às áreas comuns do app (loja, leilões, carteira). Não entra em nenhum painel administrativo.',
+    licensee: 'Licenciado: acesso ao painel próprio de vendas, indicados e comissões da rede dele. Não acessa o Painel de Controle nem edita outros usuários.',
+    admin: 'Administrador: acesso a todos os painéis (pedidos, estoque, financeiro, árvore genealógica). Pode visualizar tudo, mas NÃO pode editar, excluir, promover ou mover usuários — isso é exclusivo do Super Admin.',
+};
+
 export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
     const [userData, setUserData] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -371,6 +379,12 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                                     <SelectItem value="admin">Administrador</SelectItem>
                                 </SelectContent>
                             </Select>
+                            {/* 🎈 "Balão" explicando o que o cargo escolhido pode ou não fazer */}
+                            {ROLE_INFO[userData.role] && (
+                                <div className="mt-1.5 p-2.5 bg-blue-900/20 border border-blue-500/30 rounded-lg text-[11px] text-blue-200 leading-snug">
+                                    {ROLE_INFO[userData.role]}
+                                </div>
+                            )}
                         </div>
                     </div>
 
