@@ -559,17 +559,21 @@ export default function NetworkOverview() {
 
   const fetchFinanceStats = useCallback(async () => {
     try {
-      const [deposits, sales] = await Promise.all([
-        base44.entities.MercadoPagoPayment.filter({ status: 'approved', deposit_type: 'digital_wallet' }, '-created_date', 3000),
-        base44.entities.CatalogSale.filter({}, '-created_date', 3000),
-      ]);
-      const depositsList = Array.isArray(deposits) ? deposits : [];
-      const salesList = (Array.isArray(sales) ? sales : []).filter(s => s.status && s.status !== 'pending_payment' && s.status !== 'canceled');
+      // 🔧 CORREÇÃO: MercadoPagoPayment/DigitalWalletTransaction não têm dados reais
+      // no banco (tabela vazia/sem mapeamento). Os depósitos e compras de verdade
+      // ficam em catalog_sales, diferenciados pelo campo "kind":
+      // wallet_deposit = depósito na Carteira Digital (saldo de lance/passaporte)
+      // loja/produto = compra de produto na Loja Virtual
+      const sales = await base44.entities.CatalogSale.list();
+      const list = Array.isArray(sales) ? sales : [];
+      const isConfirmed = (s) => ['paid', 'entregue', 'shipped', 'delivered'].includes(s.status);
+      const deposits = list.filter(s => s.kind === 'wallet_deposit' && isConfirmed(s));
+      const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isConfirmed(s));
       setFinanceStats({
-        depositsCount: depositsList.length,
-        depositsTotal: depositsList.reduce((sum, d) => sum + (d.amount || 0), 0),
-        purchasesCount: salesList.length,
-        purchasesTotal: salesList.reduce((sum, s) => sum + (s.total_amount || 0), 0),
+        depositsCount: deposits.length,
+        depositsTotal: deposits.reduce((sum, d) => sum + (d.total_amount || 0), 0),
+        purchasesCount: purchases.length,
+        purchasesTotal: purchases.reduce((sum, s) => sum + (s.total_amount || 0), 0),
       });
     } catch (e) {
       console.debug('Erro ao calcular estatísticas financeiras:', e?.message);
