@@ -567,7 +567,10 @@ export default function NetworkOverview() {
       const sales = await base44.entities.CatalogSale.list();
       const list = Array.isArray(sales) ? sales : [];
       const MARCO_OFICIAL = new Date('2026-08-01T00:00:00Z');
-      const isPaga = (s) => ['paid', 'shipped', 'delivered'].includes(s.status);
+      // 🔧 vendas do PDV gravam status em português ("entregue") em vez de
+      // "delivered" — sem isso, pagamentos reais feitos no balcão (ex: a venda
+      // de R$250 da Lenice) ficavam fora da soma por não bater com o enum em inglês.
+      const isPaga = (s) => ['paid', 'shipped', 'delivered', 'entregue'].includes(s.status);
       // stripe_session_id vem redigido como "[REDACTED]" mesmo quando não é
       // rastro real — só conta se for um valor de verdade.
       const isDinheiroReal = (s) => Boolean(s.mp_payment_id || s.stripe_payment_intent || (s.stripe_session_id && s.stripe_session_id !== '[REDACTED]'));
