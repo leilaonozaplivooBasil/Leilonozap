@@ -63,6 +63,30 @@
     <!-- Login com Google (Google Identity Services) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+    <!-- 📊 Datadog RUM (monitoramento real de uso/erros no navegador) -->
+    <script>
+      (function(h,o,u,n,d) {
+        h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+        d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+        n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+      })(window,document,'script','https://www.datadoghq-browser-agent.com/us3/v7/datadog-rum.js','DD_RUM')
+      window.DD_RUM.onReady(function() {
+        window.DD_RUM.init({
+            applicationId: '573b8217-6038-4df8-ab56-ee2655cbeded',
+            clientToken: 'pubc59b83e50228c395c98d8f11b39d6318',
+            site: 'us3.datadoghq.com',
+            service: 'leilao-nozap',
+            env: 'production',
+            version: '1.0.0',
+            sessionSampleRate: 100,
+            sessionReplaySampleRate: 20,
+            trackResources: true,
+            trackUserInteractions: true,
+            trackLongTasks: true,
+        });
+      })
+    </script>
+
     <!-- 🛟 RECUPERAÇÃO DE CACHE (27/07/2026) — o app instalado no celular abria em
          branco. Causa: quem tinha um deploy antigo em cache pedia /assets/<hash-velho>.js;
          a Vercel devolvia o index.html (200) em vez de 404, o navegador recusava o módulo
