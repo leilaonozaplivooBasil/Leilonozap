@@ -127,16 +127,21 @@ export default function ConcursoLeilaoNozap() {
   // 📊 Meta Pixel — SÓ nesta página (Rank Premiado), autorizado por Heloim em 11/08/2026
   // a pedido da Avilla Business. Não entra no index.html (carregaria em todas as páginas).
   useEffect(() => {
-    if (window.fbq) return; // já inicializado (evita duplicar ao navegar entre páginas)
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    window.fbq('init', '1434558685189211');
+    // Carrega e inicializa o script só uma vez (evita duplicar o script/init
+    // ao navegar entre páginas), mas o PageView é disparado SEMPRE que esta
+    // página monta — inclusive quando o usuário volta pra ela via navegação
+    // SPA (sem reload), senão a visita não seria contada.
+    if (!window.fbq) {
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', '1434558685189211');
+    }
     window.fbq('track', 'PageView');
   }, []);
 
