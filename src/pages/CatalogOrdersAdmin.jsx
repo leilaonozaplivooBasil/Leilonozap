@@ -421,14 +421,14 @@ export default function CatalogOrdersAdmin() {
       {/* Modal de Gerenciamento */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <Card className="bg-gray-800 border-gray-700 w-full max-w-md">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <Card className="bg-gray-800 border-gray-700 w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 flex-shrink-0">
               <CardTitle className="text-white text-lg">Gerenciar Pedido</CardTitle>
               <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 overflow-y-auto">
               <div className="bg-gray-700/50 rounded-lg p-4 space-y-1">
                 <p className="text-sm text-gray-400">Produto: <span className="text-white font-medium">{getDisplayTitle(selectedOrder)}</span></p>
                 {isPassaporte(selectedOrder) && (
@@ -522,12 +522,12 @@ export default function CatalogOrdersAdmin() {
                       <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem value="pending_payment">⏳ Aguardando Pagamento</SelectItem>
-                        <SelectItem value="paid"><span className="inline-flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5" />Pago</span></SelectItem>
-                        <SelectItem value="shipped"><span className="inline-flex items-center gap-2"><Truck className="w-3.5 h-3.5" />Enviado</span></SelectItem>
-                        <SelectItem value="delivered"><span className="inline-flex items-center gap-2"><PartyPopper className="w-3.5 h-3.5" />Entregue</span></SelectItem>
-                        <SelectItem value="canceled"><span className="inline-flex items-center gap-2"><XCircle className="w-3.5 h-3.5" />Cancelado</span></SelectItem>
+                      <SelectContent className="bg-white border-gray-200">
+                        <SelectItem value="pending_payment" className="text-gray-900 focus:bg-gray-100 focus:text-gray-900">⏳ Aguardando Pagamento</SelectItem>
+                        <SelectItem value="paid" className="text-gray-900 focus:bg-gray-100 focus:text-gray-900"><span className="inline-flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5" />Pago</span></SelectItem>
+                        <SelectItem value="shipped" className="text-gray-900 focus:bg-gray-100 focus:text-gray-900"><span className="inline-flex items-center gap-2"><Truck className="w-3.5 h-3.5" />Enviado</span></SelectItem>
+                        <SelectItem value="delivered" className="text-gray-900 focus:bg-gray-100 focus:text-gray-900"><span className="inline-flex items-center gap-2"><PartyPopper className="w-3.5 h-3.5" />Entregue</span></SelectItem>
+                        <SelectItem value="canceled" className="text-gray-900 focus:bg-gray-100 focus:text-gray-900"><span className="inline-flex items-center gap-2"><XCircle className="w-3.5 h-3.5" />Cancelado</span></SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
