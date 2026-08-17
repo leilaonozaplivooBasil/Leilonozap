@@ -566,31 +566,36 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           </div>
 
           {!isActive && auction.status !== 'paused' && auction.status !== 'scheduled' && (
-            <div className="rounded-xl p-3 mb-4 text-center" style={{
-              background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
-              border: '1px solid rgba(16,185,129,0.15)',
-            }}>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <img
-                  src="/brand/icon-3d.webp"
-                  alt="Leilão NoZap"
-                  className="w-8 h-8"
-                />
-                <span className="text-green-400 font-bold text-sm">
-                  ARREMATADO!
-                </span>
-              </div>
+            auction.winner_name ? (
+              <div className="rounded-xl p-3 mb-4 text-center" style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
+                border: '1px solid rgba(16,185,129,0.15)',
+              }}>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <img
+                    src="/brand/icon-3d.webp"
+                    alt="Leilão NoZap"
+                    className="w-8 h-8"
+                  />
+                  <span className="text-green-400 font-bold text-sm">
+                    ARREMATADO!
+                  </span>
+                </div>
 
-              {auction.winner_name ? (
                 <div className="text-green-400 font-semibold text-sm mb-1">
                   🏆 {auction.winner_name}
                 </div>
-              ) : (
-                <div className="text-green-400 font-medium text-sm mb-1">
-                  🏆 Vencedor
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="rounded-xl p-3 mb-4 text-center" style={{
+                background: 'rgba(148,163,184,0.08)',
+                border: '1px solid rgba(148,163,184,0.15)',
+              }}>
+                <span className="text-gray-400 font-bold text-sm">
+                  NÃO ARREMATADO
+                </span>
+              </div>
+            )
           )}
 
           {isActive ? (
