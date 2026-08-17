@@ -970,19 +970,8 @@ export default function ConcursoLeilaoNozap() {
 
         {/* CONTAGEM DO SORTEIO + COMO FUNCIONA (lâmina branca, full-width) */}
         <LaminaClara>
-          {/* 🎬 VÍDEO DE APRESENTAÇÃO — como funciona o Rank Premiado */}
-          <div className="rounded-2xl overflow-hidden border border-nz-borda shadow-sm" style={{ aspectRatio: '16/9' }}>
-            <iframe
-              src="https://drive.google.com/file/d/1hebmxOVqlbkVe8zHr6RNIWqWbwCSXwmg/preview"
-              title="Como funciona o Rank Premiado"
-              className="w-full h-full"
-              allow="autoplay; fullscreen"
-              allowFullScreen
-            />
-          </div>
-
           {/* FEATURE 1 — contador regressivo do sorteio (FOMO) */}
-          <div className="mt-6"><CountdownTimer config={config} /></div>
+          <CountdownTimer config={config} />
 
           {/* COMO FUNCIONA — 3 passos pra quem chega pelo link e ainda não participa */}
           {!myCode && (

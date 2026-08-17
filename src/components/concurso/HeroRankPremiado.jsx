@@ -26,6 +26,17 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
           Convide, some pontos e concorra aos produtos do dia.
         </p>
 
+        {/* 🎬 VÍDEO DE APRESENTAÇÃO — como funciona o Rank Premiado */}
+        <div className="mt-8 max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ aspectRatio: '16/9' }}>
+          <iframe
+            src="https://drive.google.com/file/d/1hebmxOVqlbkVe8zHr6RNIWqWbwCSXwmg/preview"
+            title="Como funciona o Rank Premiado"
+            className="w-full h-full"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          />
+        </div>
+
         <button
           onClick={ir}
           className="mt-8 inline-flex items-center justify-center px-8 py-4 rounded-full font-black text-white bg-nz-verde hover:bg-nz-verde-claro transition-colors active:scale-[.98]"
