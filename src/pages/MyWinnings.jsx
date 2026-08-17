@@ -131,6 +131,23 @@ export default function MyWinningsPage() {
                 );
                 setWinnings(wonAuctions);
 
+                // 🩹 CAUSA-RAIZ: a liquidação (débito do saldo + criação do pedido em
+                // catalog_sales) só disparava se o vencedor visse o WinnerModal na sala no
+                // exato momento do martelo. Quem só confere depois em "Meus Arremates" nunca
+                // liquidava — o arremate nunca virava pedido na Gestão de Pedidos. Aqui, ao
+                // abrir esta página, tenta liquidar (best-effort, idempotente no servidor)
+                // qualquer arremate ainda "awaiting_payment" — mesma chamada do WinnerModal.
+                const pendentes = wonAuctions.filter(a => a.order_status === 'awaiting_payment');
+                for (const a of pendentes) {
+                    try {
+                        const r = await base44.functions.invoke('settleAuctionWithBalance', { auction_id: a.id, user_id: user.id });
+                        const d = r?.data || r;
+                        if (d?.success) {
+                            setWinnings(prev => prev.map(w => w.id === a.id ? { ...w, order_status: 'paid' } : w));
+                        }
+                    } catch (_) { /* melhor esforço — segue mostrando como está */ }
+                }
+
             } catch (error) {
                 console.error("Failed to load winnings:", error);
             } finally {
