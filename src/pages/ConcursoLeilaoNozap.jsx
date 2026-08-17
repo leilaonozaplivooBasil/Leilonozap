@@ -140,6 +140,20 @@ export default function ConcursoLeilaoNozap() {
     window.fbq('track', 'PageView');
   }, []);
 
+  // 📊 GA4 — o gtag.js do index.html carrega global e já registra o 1º acesso
+  // completo à URL, mas essa página também é aberta por navegação SPA (sem
+  // reload) vindo de outras telas do app, e nesse caso nenhum page_view novo
+  // dispara sozinho. Garante o evento aqui, sempre que a página monta.
+  useEffect(() => {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'page_view', {
+        page_path: window.location.pathname + window.location.search,
+        page_location: window.location.href,
+        page_title: 'Rank Premiado',
+      });
+    }
+  }, []);
+
   // Trava o scroll do fundo enquanto o painel admin está em tela cheia + fecha no ESC.
   useEffect(() => {
     if (!adminExpanded) return;
