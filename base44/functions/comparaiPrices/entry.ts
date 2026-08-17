@@ -1,5 +1,36 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// 🔗 Fonte real de dados: Supabase (o banco interno do Base44 é legado e não tem
+// os produtos/leilões reais do catálogo — por isso a busca sempre dava "não encontrado").
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+async function sbFetch(table, id) {
+    const url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}&select=*`;
+    const res = await fetch(url, {
+        headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        }
+    });
+    if (!res.ok) throw new Error(`Supabase fetch error (${table}): ${res.status}`);
+    return await res.json();
+}
+
+async function sbUpdate(table, id, patch) {
+    const url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
+    await fetch(url, {
+        method: 'PATCH',
+        headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal'
+        },
+        body: JSON.stringify(patch)
+    });
+}
+
 // 🧹 LIMPEZA DE TÍTULOS - VERSÃO MELHORADA
 function cleanTitle(title) {
     if (!title) return '';
@@ -44,24 +75,25 @@ Deno.serve(async (req) => {
         }
 
         let searchTitle, currentPrice, entityId, isProduct = false;
+        let auction = null; // 🔗 mantido fora do if pra não buscar duas vezes no Supabase
 
-        // 1️⃣ BUSCA LEILÃO OU PRODUTO
+        // 1️⃣ BUSCA LEILÃO OU PRODUTO (sempre no Supabase — fonte real do catálogo)
         if (auctionId) {
-            console.log(`📦 Buscando leilão ${auctionId}...`);
-            const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
+            console.log(`📦 Buscando leilão ${auctionId} no Supabase...`);
+            const auctions = await sbFetch('auctions', auctionId);
             
             if (!auctions || auctions.length === 0) {
                 return Response.json({ success: false, error: "Leilão não encontrado" }, { status: 404 });
             }
             
-            const auction = auctions[0];
+            auction = auctions[0];
             currentPrice = auction.current_price || auction.starting_price;
             searchTitle = auction.title;
             entityId = auctionId;
             console.log(`✅ Título: ${searchTitle}`);
         } else {
-            console.log(`📦 Buscando produto ${productId}...`);
-            const products = await base44.asServiceRole.entities.Product.filter({ id: productId });
+            console.log(`📦 Buscando produto ${productId} no Supabase...`);
+            const products = await sbFetch('products', productId);
             
             if (!products || products.length === 0) {
                 return Response.json({ success: false, error: "Produto não encontrado" }, { status: 404 });
@@ -80,12 +112,8 @@ Deno.serve(async (req) => {
         // 2️⃣ PARA PRODUTOS, SEMPRE USA GOOGLE SHOPPING
         let useGoogleShopping = forceGoogleShopping || isProduct;
 
-        // 3️⃣ SE FOR AUCTION, BUSCA DADOS PARA VERIFICAR MODO
-        let auction = null;
-        if (auctionId) {
-            const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
-            auction = auctions[0];
-            
+        // 3️⃣ SE FOR AUCTION, VERIFICA MODO (dados já buscados no passo 1️⃣, sem nova consulta)
+        if (auctionId && auction) {
             // 🆕 SE FOR DIRETO DE FÁBRICA, PRIORIZA MODO SUPPLIER
             if (auction.product_source === 'factory_new' && auction.source_url) {
                 console.log(`✨ PRODUTO DIRETO DE FÁBRICA DETECTADO`);
@@ -193,7 +221,7 @@ RETORNE APENAS JSON:
                             console.log(`⚠️ Economia ${Math.round(savingsPercent)}% fora do range`);
                             useGoogleShopping = true;
                         } else {
-                            await base44.asServiceRole.entities.Auction.update(auctionId, {
+                            await sbUpdate('auctions', auctionId, {
                                 market_price: result.price,
                                 last_comparison_date: new Date().toISOString()
                             });
@@ -353,7 +381,7 @@ RETORNE APENAS JSON:
 
         // 9️⃣ SALVA CACHE (apenas para auctions, não para produtos)
         if (auctionId) {
-            await base44.asServiceRole.entities.Auction.update(auctionId, {
+            await sbUpdate('auctions', auctionId, {
                 market_price: minPrice,
                 last_comparison_date: new Date().toISOString()
             });
