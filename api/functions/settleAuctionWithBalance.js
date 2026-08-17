@@ -101,11 +101,15 @@ export default async function handler(req, res) {
       id: saleId, base44_id: saleId, kind: 'arremate',
       buyer_id: userId, buyer_email: user.email || '', buyer_name: user.full_name || auction.winner_name || 'Vencedor',
       product_title: `Arremate — ${auction.title}`.slice(0, 200),
+      product_image: auction.image_urls?.[0] || null,
       // total_amount é a base da comissão — fica só com o produto, frete nunca comissiona.
       sale_price: produtoAmount, total_amount: produtoAmount, quantity: 1,
       status: 'paid', payment_method: 'saldo',
       tracking_code: 'AR' + saleId.slice(0, 8).toUpperCase(),
       created_date: new Date().toISOString(),
+      // 🚚 Frete cobrado junto do arremate — vai em raw_base44 (mesmo padrão da Loja Virtual)
+      // pra logística ver quanto separar pra pagar a transportadora, sem entrar na base de comissão.
+      ...(freteAmount > 0 ? { raw_base44: { frete: { valor: freteAmount }, amount_charged: amount } } : {}),
     };
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(sale) });
 
