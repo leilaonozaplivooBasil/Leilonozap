@@ -209,7 +209,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     let deposited = 0, spent = 0, sold = 0, pendingCount = 0;
     for (const t of transactions) {
       if (t.status === 'pending') { pendingCount++; continue; }
-      if (t.status === 'cancelled') { continue; }
+      if (t.status === 'cancelled' || t.status === 'canceled') { continue; }
       if (t.type === 'deposit') deposited += t.amount;
       else if (t.type === 'purchase') spent += Math.abs(t.amount);
       else if (t.type === 'sale') sold += t.amount;

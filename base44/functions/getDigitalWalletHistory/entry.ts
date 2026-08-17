@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
             const amount = Number(s.total_amount) || Number(s.sale_price) || 0;
             const isDeposit = DEPOSIT_KINDS.includes(s.kind);
             // Depósito cancelado (PIX que nunca foi pago) não é um depósito confirmado — não exibir.
-            if (isDeposit && s.status === 'cancelled') continue;
+            if (isDeposit && s.status === 'canceled') continue;
             transactions.push({
                 id: s.id,
                 type: isDeposit ? 'deposit' : 'purchase',
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
                     : (s.kind === 'arremate' ? 'Leilão' : 'Loja'),
                 amount: isDeposit ? amount : -amount,
                 quantity: s.quantity || 1,
-                status: s.status === 'paid' ? 'paid' : (s.status === 'pending_payment' ? 'pending' : s.status),
+                status: s.status === 'paid' ? 'paid' : (s.status === 'pending_payment' ? 'pending' : (s.status === 'canceled' ? 'cancelled' : s.status)),
                 tracking_code: s.tracking_code || null,
                 date: s.created_date,
             });
