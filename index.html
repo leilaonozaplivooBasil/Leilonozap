@@ -53,11 +53,14 @@
 
     <!-- manifest: injetado automaticamente pelo vite-plugin-pwa (/manifest.json) -->
 
-    <!-- 📊 DataLayer (GA4/GTM) — inicializado aqui, o container do GTM entra depois
-         quando o time de marketing informar o ID (GTM-XXXXXXX). Sem o container,
-         os eventos já são empurrados e ficam prontos, só não são lidos ainda. -->
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YS4W9104X6"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-YS4W9104X6');
     </script>
 
     <!-- Login com Google (Google Identity Services) -->
