@@ -30,7 +30,7 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
             (camada transparente por cima do iframe intercepta qualquer clique). */}
         <div className="mt-8 mx-auto max-w-[380px] relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ aspectRatio: '9/16' }}>
           <iframe
-            src="https://www.youtube.com/embed/zLx7uHi7Tyg?autoplay=1&mute=1&loop=1&playlist=zLx7uHi7Tyg&controls=0&playsinline=1&modestbranding=1&rel=0&disablekb=1"
+            src="https://www.youtube.com/embed/moMMzlsb_Fw?autoplay=1&mute=1&loop=1&playlist=moMMzlsb_Fw&controls=0&playsinline=1&modestbranding=1&rel=0&disablekb=1"
             title="Como funciona o Rank Premiado"
             className="w-full h-full absolute inset-0"
             allow="autoplay; encrypted-media"
