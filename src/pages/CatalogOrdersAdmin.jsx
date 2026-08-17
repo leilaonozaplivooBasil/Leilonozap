@@ -67,6 +67,23 @@ const getFrete = (order) => {
   };
 };
 
+// 📦 PONTO 90 — itens do pedido. Pedidos com mais de um produto guardam a lista completa
+// em dois formatos diferentes, dependendo de onde a compra foi feita: items_json (coluna
+// própria, usada pela loja da rede /loja/:slug) ou raw_base44.items (Loja Virtual principal).
+// Sem isso, a separação só via o título resumido do pedido (ex: "Kit Drive +1 item(ns)")
+// e não sabia o que embalar além do item principal.
+const getItems = (order) => {
+  if (Array.isArray(order?.items_json) && order.items_json.length > 1) {
+    return order.items_json.map((it) => ({ title: it.title || it.product_name || 'Item', qty: it.qty || it.quantity || 1 }));
+  }
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  if (Array.isArray(raw?.items) && raw.items.length > 1) {
+    return raw.items.map((it) => ({ title: it.title || 'Item', qty: it.qty || 1 }));
+  }
+  return null;
+};
+
 // 🚚 Etiqueta gerada automaticamente na Melhor Envio (api/_lib/melhorEnvioShipment.js)
 const getEnvioAutomatico = (order) => {
   let raw = order?.raw_base44;
@@ -311,6 +328,15 @@ export default function CatalogOrdersAdmin() {
                             <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
                           {(() => {
+                            const itens = getItems(order);
+                            if (!itens) return null;
+                            return (
+                              <span className="text-orange-300 text-xs font-medium inline-flex items-center gap-1">
+                                <Package className="w-3 h-3" />{itens.length} itens no pedido
+                              </span>
+                            );
+                          })()}
+                          {(() => {
                             const frete = getFrete(order);
                             if (!frete) return null;
                             return (
@@ -401,6 +427,23 @@ export default function CatalogOrdersAdmin() {
                   );
                 })()}
               </div>
+
+              {/* 📦 Itens do pedido — discriminação completa pra separação não embalar só o item principal */}
+              {(() => {
+                const itens = getItems(selectedOrder);
+                if (!itens) return null;
+                return (
+                  <div className="bg-orange-900/20 border border-orange-700/40 rounded-lg p-4 space-y-1.5">
+                    <p className="text-xs font-semibold text-orange-400 uppercase tracking-wide mb-1">📦 Itens do pedido ({itens.length})</p>
+                    {itens.map((it, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-white">{it.title}</span>
+                        <span className="text-gray-400 ml-3 shrink-0">Qtd: {it.qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {/* 📍 Endereço de entrega — destacado, é o que a logística usa pra emitir etiqueta */}
               {!isPassaporte(selectedOrder) && (() => {
