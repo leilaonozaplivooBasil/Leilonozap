@@ -14,6 +14,7 @@ const CONTENT_TABLES = new Set([
   'batch_registrations', 'lotes_recebidos', 'cash_registers', 'sale_commissions', 'sales',
   'customers', 'deposit_packages', 'financial_expenses', 'system_logs', 'comparai_logs',
   'negotiations', 'luxury_auctions', 'luxury_access_codes', 'bids', 'partner_plan_purchases',
+  'catalog_sales',
 ]);
 
 function sb(path, opts = {}) {

@@ -1,0 +1,44 @@
+import React from 'react';
+import { PackageCheck, Box, Send, Truck, CheckCircle2 } from 'lucide-react';
+
+// 🚚 Jornada técnica do pedido — a logística vai clicando nas etapas conforme
+// avança. Grava em fulfillment_status, que já é lido pelo pedido do cliente
+// (DetalhesPedidoModal) — clicar aqui já atualiza o que o cliente vê.
+const STEPS = [
+  { value: 'a_enviar', label: 'Recebemos o pedido', icon: PackageCheck },
+  { value: 'preparando', label: 'Embalando', icon: Box },
+  { value: 'enviado', label: 'Enviado', icon: Send },
+  { value: 'saiu_entrega', label: 'Saiu para entrega', icon: Truck },
+  { value: 'entregue', label: 'Entregue', icon: CheckCircle2 },
+];
+
+export default function OrderFulfillmentSteps({ current, onSelect }) {
+  const idx = Math.max(0, STEPS.findIndex((s) => s.value === current));
+
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold text-indigo-300 uppercase tracking-wide">
+        🚚 Jornada da entrega — clique para avançar
+      </p>
+      <div className="flex items-stretch gap-1">
+        {STEPS.map((step, i) => {
+          const done = i <= idx;
+          const StepIcon = step.icon;
+          return (
+            <button
+              key={step.value}
+              type="button"
+              onClick={() => onSelect(step.value)}
+              className={`flex-1 flex flex-col items-center gap-1 rounded-lg border p-2 text-center transition-colors ${
+                done ? 'border-indigo-500/60 bg-indigo-500/15 text-indigo-200' : 'border-gray-600 bg-gray-700/40 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              <StepIcon className={`h-4 w-4 ${done ? 'text-indigo-300' : 'text-gray-500'}`} />
+              <span className="text-[10px] font-medium leading-tight">{step.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

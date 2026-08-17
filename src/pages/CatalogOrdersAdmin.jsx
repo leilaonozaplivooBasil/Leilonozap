@@ -10,6 +10,8 @@ import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, Part
 // Truck já importado acima — reutilizado nos badges de frete
 import { toast } from 'sonner';
 import PageFullscreen from "@/components/admin/PageFullscreen";
+import OrderItemsChecklist from "@/components/catalog/OrderItemsChecklist";
+import OrderFulfillmentSteps from "@/components/catalog/OrderFulfillmentSteps";
 
 const CatalogSale = base44.entities.CatalogSale;
 
@@ -82,6 +84,20 @@ const getItems = (order) => {
     return raw.items.map((it) => ({ title: it.title || 'Item', qty: it.qty || 1 }));
   }
   return null;
+};
+
+// 📦 Checklist SEMPRE mostra ao menos o produto principal como card clicável
+// (mesmo pedido de 1 item só) — não fica só em texto/descrição.
+const getItemsForChecklist = (order) => {
+  const bundle = getItems(order);
+  if (bundle) return bundle;
+  return [{ title: order.product_title, qty: order.quantity || 1 }];
+};
+
+const getPackedItems = (order) => {
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  return Array.isArray(raw?.packed_items) ? raw.packed_items : [];
 };
 
 // 🚚 Etiqueta gerada automaticamente na Melhor Envio (api/_lib/melhorEnvioShipment.js)
@@ -203,6 +219,35 @@ export default function CatalogOrdersAdmin() {
     setSelectedOrder(order);
     setTrackingCode(order.tracking_code || '');
     setNewStatus(order.status);
+  };
+
+  const handleTogglePacked = async (order, idx) => {
+    let raw = order.raw_base44;
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
+    raw = raw || {};
+    const packed = new Set(raw.packed_items || []);
+    if (packed.has(idx)) packed.delete(idx); else packed.add(idx);
+    const newRaw = { ...raw, packed_items: Array.from(packed) };
+    try {
+      await CatalogSale.update(order.id, { raw_base44: newRaw });
+      setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, raw_base44: newRaw } : prev));
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, raw_base44: newRaw } : o)));
+    } catch (error) {
+      console.error('Erro ao marcar item separado:', error);
+      toast.error('Erro ao salvar');
+    }
+  };
+
+  const handleSetFulfillment = async (order, value) => {
+    try {
+      await CatalogSale.update(order.id, { fulfillment_status: value });
+      setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, fulfillment_status: value } : prev));
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, fulfillment_status: value } : o)));
+      toast.success('Etapa da entrega atualizada!');
+    } catch (error) {
+      console.error('Erro ao atualizar etapa da entrega:', error);
+      toast.error('Erro ao salvar');
+    }
   };
 
   const handleSaveOrder = async () => {
@@ -428,22 +473,22 @@ export default function CatalogOrdersAdmin() {
                 })()}
               </div>
 
-              {/* 📦 Itens do pedido — discriminação completa pra separação não embalar só o item principal */}
-              {(() => {
-                const itens = getItems(selectedOrder);
-                if (!itens) return null;
-                return (
-                  <div className="bg-orange-900/20 border border-orange-700/40 rounded-lg p-4 space-y-1.5">
-                    <p className="text-xs font-semibold text-orange-400 uppercase tracking-wide mb-1">📦 Itens do pedido ({itens.length})</p>
-                    {itens.map((it, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-white">{it.title}</span>
-                        <span className="text-gray-400 ml-3 shrink-0">Qtd: {it.qty}</span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
+              {/* 📦 Itens do pedido em cards clicáveis — logística marca ao separar/embalar */}
+              {!isPassaporte(selectedOrder) && (
+                <OrderItemsChecklist
+                  items={getItemsForChecklist(selectedOrder)}
+                  packedIndices={getPackedItems(selectedOrder)}
+                  onToggle={(idx) => handleTogglePacked(selectedOrder, idx)}
+                />
+              )}
+
+              {/* 🚚 Jornada da entrega — clicável, atualiza o que o cliente vê em "Acompanhar Pedido" */}
+              {!isPassaporte(selectedOrder) && (
+                <OrderFulfillmentSteps
+                  current={selectedOrder.fulfillment_status || 'a_enviar'}
+                  onSelect={(value) => handleSetFulfillment(selectedOrder, value)}
+                />
+              )}
 
               {/* 📍 Endereço de entrega — destacado, é o que a logística usa pra emitir etiqueta */}
               {!isPassaporte(selectedOrder) && (() => {
