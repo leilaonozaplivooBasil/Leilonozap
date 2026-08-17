@@ -26,15 +26,17 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
           Convide, some pontos e concorra aos produtos do dia.
         </p>
 
-        {/* 🎬 VÍDEO DE APRESENTAÇÃO — como funciona o Rank Premiado */}
-        <div className="mt-8 max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ aspectRatio: '16/9' }}>
+        {/* 🎬 VSL — formato short (9:16), autoplay ao entrar na página, sem play/pause
+            (camada transparente por cima do iframe intercepta qualquer clique). */}
+        <div className="mt-8 mx-auto max-w-[380px] relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ aspectRatio: '9/16' }}>
           <iframe
-            src="https://drive.google.com/file/d/1hebmxOVqlbkVe8zHr6RNIWqWbwCSXwmg/preview"
+            src="https://www.youtube.com/embed/zLx7uHi7Tyg?autoplay=1&mute=1&loop=1&playlist=zLx7uHi7Tyg&controls=0&playsinline=1&modestbranding=1&rel=0&disablekb=1"
             title="Como funciona o Rank Premiado"
-            className="w-full h-full"
-            allow="autoplay; fullscreen"
-            allowFullScreen
+            className="w-full h-full absolute inset-0"
+            allow="autoplay; encrypted-media"
           />
+          {/* Camada invisível: bloqueia clique/toque, impedindo pausar ou abrir controles */}
+          <div className="absolute inset-0 z-10" style={{ background: 'transparent' }} />
         </div>
 
         <button
