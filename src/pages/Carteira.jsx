@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Clock, Upload, ArrowDownToLine, Loader2, CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
 import ExtratoComissoes from '@/components/commissions/ExtratoComissoes';
 import PassaporteCard from '@/components/wallet/PassaporteCard';
 import CarteiraDeslogada from '@/components/wallet/CarteiraDeslogada';
@@ -91,6 +91,13 @@ export default function Carteira() {
         <BotaoVoltar destino="/Licensing" tema="claro" />
         {/* 🖤💚 Cabeçalho no padrão da Visão Geral, com o TOTAL da carteira única */}
         <CarteiraHeader total={(Number(w?.saldo_disponivel) || 0) + (Number(w?.commission_balance) || 0)} />
+
+        {/* 🆕 Atalho rápido pro extrato de comissões, que já vive nesta mesma página */}
+        <div className="flex justify-end">
+          <a href="#extrato-comissoes" className="inline-flex items-center gap-1 text-sm font-semibold text-nz-verde hover:underline">
+            Ver comissões <ChevronRight className="w-4 h-4" />
+          </a>
+        </div>
 
         {/* 💰 CARTEIRA ÚNICA — os quatro saldos reais do mesmo getMyWallet:
             depósito/leilão, comissões de vendas, reservado em lances e a liberar. */}
@@ -184,7 +191,9 @@ export default function Carteira() {
         {/* 🧾 Vendas do meu estoque — custo devolvido e lucro separados */}
         <ExtratoEstoqueProprio user={user} />
 
-        <ExtratoComissoes user={user} />
+        <div id="extrato-comissoes">
+          <ExtratoComissoes user={user} />
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronRight } from 'lucide-react';
 import IconeAtividade from './IconeAtividade';
 
 const STATUS_STYLE = {
@@ -36,13 +37,23 @@ const ROLE_LABELS = {
 
 // 🧾 "Últimas atividades" — formato Mercado Pago: ícone + descrição + status
 // colorido + valor à direita.
-export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
+export default function ActivityFeedCard({ records, isSaiDeBaixo, onViewCommissions }) {
   const list = (Array.isArray(records) ? records : []).slice(0, 8);
 
   return (
     <Card className="bg-white border-gray-200 shadow-sm">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm font-semibold text-gray-900">Últimas atividades</CardTitle>
+        {/* 🆕 Atalho rápido pra abrir o extrato completo de comissões */}
+        {onViewCommissions &&
+          <button
+            type="button"
+            onClick={onViewCommissions}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-nz-verde hover:underline"
+          >
+            Ver comissões <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        }
       </CardHeader>
       <CardContent className="p-0">
         {list.length === 0 ? (

@@ -592,6 +592,13 @@ const DashboardContent = ({ user, isAdmin }) => {
     toast.success('Link copiado!');
   };
 
+  // 🆕 Atalho rápido pra Central de Vendas > Comissões, usado pelos links da
+  // Visão Geral (carteira + últimas atividades).
+  const goToCommissions = () => {
+    handleTabChange('catalogo', 'catalogo-comissoes');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleAuctionSelect = (auctionId) => {
     setIsAuctionSelectionModalOpen(false);
 
@@ -1081,6 +1088,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               onUseNow={() => setIsAuctionSelectionModalOpen(true)}
               onWithdraw={() => setShowWithdrawalModal(true)}
               onTransfer={() => navigate('/TransferirSaldo')}
+              onViewCommissions={goToCommissions}
             />
 
             <LicensingBanners
@@ -1090,7 +1098,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
             <div className="grid gap-6 mb-8 lg:grid-cols-2">
               <SalesTrendChart sales={myCatalogSales} isSaiDeBaixo={isSaiDeBaixo} />
-              <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} />
+              <ActivityFeedCard records={myCommissionRecords} isSaiDeBaixo={isSaiDeBaixo} onViewCommissions={goToCommissions} />
             </div>
           </>
         }

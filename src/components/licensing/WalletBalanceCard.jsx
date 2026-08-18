@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Zap, Wallet, Clock, Sparkles, ArrowRightLeft } from 'lucide-react';
+import { Zap, Wallet, Clock, Sparkles, ArrowRightLeft, ChevronRight } from 'lucide-react';
 
 // 💳 Cartão de saldo — estilo Mercado Pago (fundo claro, cards com borda
 // cinza), mantendo o selo digital verde pulsante que já existia.
-export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWithdrawalAmount, isSaiDeBaixo, onUseNow, onWithdraw, onTransfer }) {
+export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWithdrawalAmount, isSaiDeBaixo, onUseNow, onWithdraw, onTransfer, onViewCommissions }) {
   const accentText = isSaiDeBaixo ? 'text-red-600' : 'text-nz-verde';
   const accentBg = isSaiDeBaixo ? 'from-red-500 to-red-700' : 'from-nz-verde-claro to-nz-verde';
 
@@ -14,9 +14,21 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
       <CardContent className="relative p-6 md:px-10 md:py-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
           <div className="w-full md:w-auto">
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border mb-3 ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-nz-verde border-nz-verde/20 bg-nz-verde-fundo'}`}>
-              <Wallet className="w-3 h-3" /> Comissão a receber
-            </span>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${isSaiDeBaixo ? 'text-red-600 border-red-200 bg-red-50' : 'text-nz-verde border-nz-verde/20 bg-nz-verde-fundo'}`}>
+                <Wallet className="w-3 h-3" /> Comissão a receber
+              </span>
+              {/* 🆕 Atalho rápido para o extrato completo de comissões */}
+              {onViewCommissions &&
+                <button
+                  type="button"
+                  onClick={onViewCommissions}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-nz-verde hover:underline"
+                >
+                  Ver comissões <ChevronRight className="w-3 h-3" />
+                </button>
+              }
+            </div>
             <div className="flex items-baseline gap-3 mb-2">
               <span className="text-5xl font-black text-gray-900 tracking-tight">
                 R$ {totalAvailable.toFixed(2)}
