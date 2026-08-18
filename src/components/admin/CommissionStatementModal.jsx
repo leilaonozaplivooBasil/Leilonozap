@@ -46,6 +46,7 @@ const ROLE_ORDER = [
 ];
 
 // Card agrupado por venda - mostra todos os cargos que você ganhou nessa venda
+// 🎨 Mesma identidade visual (branco + verde) do restante do Painel de Alavancagem
 const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
     const totalAmount = records.reduce((sum, r) => sum + (r.amount || 0), 0);
     const saleAmount = records[0]?.sale_amount || sale?.total_amount || 0;
@@ -55,9 +56,9 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
     const buyerName = sale?.buyer_name || 'Comprador não identificado';
 
     return (
-        <Card className="bg-gray-800/50 border-gray-700/50 mb-3 overflow-hidden">
-            <div 
-                className="p-4 cursor-pointer hover:bg-gray-700/30 transition-colors"
+        <Card className="bg-white border-nz-borda mb-3 overflow-hidden">
+            <div
+                className="p-4 cursor-pointer hover:bg-nz-verde-fundo/40 transition-colors"
                 onClick={onToggle}
             >
                 {/* Header da venda */}
@@ -66,7 +67,7 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         <Calendar className="w-3.5 h-3.5" />
                         <span>{dateStr}</span>
                         <span className="mx-1">•</span>
-                        <span className={saleType === 'auction' ? 'text-cyan-400' : 'text-blue-400'}>
+                        <span className="text-nz-verde">
                             <span className="inline-flex items-center gap-1">
                   {saleType === 'auction' ? <Gavel className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
                   {saleType === 'auction' ? 'Leilão' : 'Loja Virtual'}
@@ -74,20 +75,20 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         </span>
                     </div>
                     {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                        <ChevronUp className="w-4 h-4 text-gray-400" />
                     ) : (
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
                     )}
                 </div>
 
                 {/* Produto e valor */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center flex-shrink-0">
-                            <ShoppingBag className="w-5 h-5 text-gray-400" />
+                        <div className="w-10 h-10 rounded-lg bg-nz-verde-fundo flex items-center justify-center flex-shrink-0">
+                            <ShoppingBag className="w-5 h-5 text-nz-verde" />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="font-medium text-white truncate">{productTitle}</p>
+                            <p className="font-medium text-gray-900 truncate">{productTitle}</p>
                             <p className="text-sm text-gray-500">Venda: R$ {fmtBR(Number(saleAmount))}</p>
                             {/* 🆕 Quem comprou — pra a pessoa acompanhar de onde veio a comissão */}
                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
@@ -97,7 +98,7 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         </div>
                     </div>
                     <div className="text-right ml-3">
-                        <p className="text-xl font-bold text-green-400">+R$ {fmtBR(totalAmount)}</p>
+                        <p className="text-xl font-bold text-nz-verde">+R$ {fmtBR(totalAmount)}</p>
                         <p className="text-xs text-gray-500">{records.length} cargo{records.length > 1 ? 's' : ''}</p>
                     </div>
                 </div>
@@ -105,19 +106,19 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
 
             {/* Detalhes expandidos - lista de cargos */}
             {isExpanded && (
-            <div className="px-4 pb-4 border-t border-gray-700/50">
+            <div className="px-4 pb-4 border-t border-nz-borda">
                 <p className="text-xs text-gray-500 uppercase tracking-wide mt-3 mb-2">Suas comissões nesta venda:</p>
                 <div className="space-y-2">
                     {[...records]
                         .sort((a, b) => ROLE_ORDER.indexOf(b.role) - ROLE_ORDER.indexOf(a.role))
                         .map((record, idx) => (
-                        <div key={record.id || idx} className="flex items-center justify-between py-2 px-3 bg-gray-900/50 rounded-lg">
+                        <div key={record.id || idx} className="flex items-center justify-between py-2 px-3 bg-nz-verde-fundo/60 rounded-lg">
                             <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                <span className="text-sm text-gray-300">{ROLE_LABELS[record.role] || record.role}</span>
+                                <div className="w-2 h-2 rounded-full bg-nz-verde"></div>
+                                <span className="text-sm text-gray-700">{ROLE_LABELS[record.role] || record.role}</span>
                                 <span className="text-xs text-gray-500">({Number(record.percent || 0).toFixed(1)}%)</span>
                             </div>
-                            <span className="text-sm font-semibold text-green-400">+R$ {fmtBR(Number(record.amount || 0))}</span>
+                            <span className="text-sm font-semibold text-nz-verde">+R$ {fmtBR(Number(record.amount || 0))}</span>
                         </div>
                     ))}
                 </div>
@@ -242,10 +243,10 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl bg-gray-900 border-gray-800 text-white max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogContent className="sm:max-w-2xl bg-white border-nz-borda text-nz-tinta max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader className="pb-0">
-                    <DialogTitle className="flex items-center gap-2 text-white text-lg">
-                        <DollarSign className="w-5 h-5 text-green-400"/>
+                    <DialogTitle className="flex items-center gap-2 text-gray-900 text-lg">
+                        <DollarSign className="w-5 h-5 text-nz-verde"/>
                         Histórico de Comissões
                     </DialogTitle>
                     <DialogDescription className="text-gray-500 text-sm">
@@ -255,21 +256,21 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
 
                 {/* Cards de Resumo - Design Minimalista */}
                 <div className="grid grid-cols-3 gap-2 my-4">
-                    <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+                    <div className="p-3 bg-nz-verde-fundo rounded-lg text-center border border-nz-verde/20">
                         <p className="text-xs text-gray-500 mb-1">Disponível</p>
-                        <p className="text-lg font-bold text-green-400">
+                        <p className="text-lg font-bold text-nz-verde">
                             R$ {fmtBR((licensee?.commission_balance || 0))}
                         </p>
                     </div>
-                    <div className="p-3 bg-gray-800/50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Gavel className="w-3 h-3" />Leilão</p>
-                        <p className="text-lg font-bold text-cyan-400">
+                    <div className="p-3 bg-nz-verde-fundo rounded-lg text-center border border-nz-verde/20">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1"><Gavel className="w-3 h-3" />Leilão</p>
+                        <p className="text-lg font-bold text-nz-verde">
                             R$ {fmtBR(totals.app)}
                         </p>
                     </div>
-                    <div className="p-3 bg-gray-800/50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><ShoppingBag className="w-3 h-3" />Loja Virtual</p>
-                        <p className="text-lg font-bold text-blue-400">
+                    <div className="p-3 bg-nz-verde-fundo rounded-lg text-center border border-nz-verde/20">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1"><ShoppingBag className="w-3 h-3" />Loja Virtual</p>
+                        <p className="text-lg font-bold text-nz-verde">
                             R$ {fmtBR(totals.catalog)}
                         </p>
                     </div>
@@ -277,14 +278,14 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
 
                 {/* Tabs por Canal */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                    <TabsList className="bg-gray-800/50 border-0 w-full grid grid-cols-3 h-9">
-                        <TabsTrigger value="todos" className="text-xs data-[state=active]:bg-gray-700">
+                    <TabsList className="bg-white border border-nz-marrom/20 w-full grid grid-cols-3 h-9">
+                        <TabsTrigger value="todos" className="text-xs border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40">
                             Todos ({saleCounts.total})
                         </TabsTrigger>
-                        <TabsTrigger value="app" className="text-xs data-[state=active]:bg-gray-700">
+                        <TabsTrigger value="app" className="text-xs border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40">
                             Leilão ({saleCounts.app})
                         </TabsTrigger>
-                        <TabsTrigger value="catalogo" className="text-xs data-[state=active]:bg-gray-700">
+                        <TabsTrigger value="catalogo" className="text-xs border border-transparent data-[state=inactive]:border-nz-marrom/15 data-[state=inactive]:hover:bg-nz-marrom-fundo/40">
                             Loja Virtual ({saleCounts.catalog})
                         </TabsTrigger>
                     </TabsList>
@@ -294,12 +295,12 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                         <div className="max-h-[50vh] overflow-y-auto pr-1">
                             {isLoading ? (
                                 <div className="flex justify-center items-center h-40">
-                                    <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
+                                    <Loader2 className="w-6 h-6 animate-spin text-nz-verde" />
                                 </div>
                             ) : filteredGroups.length > 0 ? (
                                 filteredGroups.map(([saleId, records]) => (
-                                    <SaleCard 
-                                        key={saleId} 
+                                    <SaleCard
+                                        key={saleId}
                                         saleId={saleId}
                                         records={records}
                                         sale={salesById[saleId]}
@@ -308,14 +309,14 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                                     />
                                 ))
                             ) : (
-                                <div className="text-center py-12 bg-gray-800/30 rounded-lg">
-                                    <TrendingUp className="w-10 h-10 mx-auto text-gray-600 mb-3" />
-                                    <p className="text-gray-400 font-medium">
+                                <div className="text-center py-12 bg-nz-cinza-fundo rounded-lg">
+                                    <TrendingUp className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+                                    <p className="text-gray-600 font-medium">
                                         Nenhuma comissão ainda
                                     </p>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        {activeTab === 'app' 
-                                            ? 'Compartilhe seu link de Leilão' 
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {activeTab === 'app'
+                                            ? 'Compartilhe seu link de Leilão'
                                             : activeTab === 'catalogo'
                                             ? 'Venda pela Loja Virtual'
                                             : 'Suas comissões aparecerão aqui'}
