@@ -36,6 +36,32 @@ export const ROLE_LABEL = {
   cliente: 'Cliente',
 };
 
+// 🌳 Rede "de mim para baixo" — percorre referred_by_id/recruited_by_id a
+// partir do usuário logado e devolve o Set de IDs de todos os descendentes
+// (indicados, sub-indicados, vendedores recrutados, etc). O CRM só deve
+// mostrar quem está dentro deste Set — nunca a base inteira do aplicativo.
+export function getNetworkDescendantIds(appUsers, rootId) {
+  const childrenByParent = new Map();
+  appUsers.forEach((u) => {
+    [u.referred_by_id, u.recruited_by_id].filter(Boolean).forEach((parentId) => {
+      if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+      childrenByParent.get(parentId).push(u.id);
+    });
+  });
+  const result = new Set();
+  const queue = [rootId];
+  while (queue.length) {
+    const current = queue.shift();
+    (childrenByParent.get(current) || []).forEach((childId) => {
+      if (!result.has(childId)) {
+        result.add(childId);
+        queue.push(childId);
+      }
+    });
+  }
+  return result;
+}
+
 // Deriva o "Tipo" de rede a partir do cadastro real (role, cargos e contextos)
 export function deriveRoleType(u) {
   const levels = Array.isArray(u.career_levels) ? u.career_levels : [];
@@ -50,14 +76,17 @@ export function deriveRoleType(u) {
 
 export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctions = [], manualCustomers = [] }) {
   const byId = new Map();
+  // Nome de quem indicou cada usuário — para o funil "Indicado por"
+  const nameById = new Map(appUsers.map((u) => [u.id, u.full_name || u.nickname || 'Sem nome']));
 
-  // 1) Base: todos os usuários cadastrados
+  // 1) Base: todos os usuários cadastrados (já filtrados pela rede de quem está vendo)
   appUsers.forEach((u) => {
     if (!u.id) return;
     const address = [u.address_street, u.address_number, u.address_city, u.address_state, u.address_zip_code]
       .filter(Boolean).join(', ');
     byId.set(u.id, {
       id: `u_${u.id}`,
+      user_id: u.id,
       origin_type: 'auto',
       full_name: u.full_name || u.nickname || 'Sem nome',
       email: u.email || '',
@@ -70,8 +99,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
       source: 'cadastro',
       assigned_seller: '',
       last_contact: u.created_date,
+      registered_at: u.created_date,
+      referred_by_name: u.referred_by_id ? (nameById.get(u.referred_by_id) || null) : null,
       total_spent: 0,
+      purchase_count: 0,
       auctions_won: 0,
+      purchases: [],
+      auctions_list: [],
     });
   });
 
@@ -82,11 +116,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     const target = s.buyer_id && byId.get(s.buyer_id);
     if (target) {
       target.total_spent += amount;
+      target.purchase_count += 1;
       target.status = 'cliente';
       const mapped = PURCHASE_STATUS_MAP[s.status];
       if (mapped) target.purchase_status = mapped;
       if (!target.source.includes('loja_virtual')) target.source = `${target.source}+loja_virtual`;
       if (!target.last_contact || new Date(s.created_date) > new Date(target.last_contact)) target.last_contact = s.created_date;
+      target.purchases.push({ id: s.id, product_title: s.product_title, amount, status: s.status, date: s.created_date });
       return;
     }
     const key = normKey(s.buyer_email, s.buyer_phone);
@@ -113,8 +149,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
         source: 'loja_virtual',
         assigned_seller: '',
         last_contact: s.created_date,
+        registered_at: null,
+        referred_by_name: null,
         total_spent: amount,
+        purchase_count: 1,
         auctions_won: 0,
+        purchases: [{ id: s.id, product_title: s.product_title, amount, status: s.status, date: s.created_date }],
+        auctions_list: [],
       });
     }
   });
@@ -129,6 +170,7 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     target.auctions_won += 1;
     if (!target.source.includes('leilao')) target.source = `${target.source}+leilao`;
     if (a.end_time && (!target.last_contact || new Date(a.end_time) > new Date(target.last_contact))) target.last_contact = a.end_time;
+    target.auctions_list.push({ id: a.id, title: a.title, amount: Number(a.current_price) || 0, date: a.end_time });
   });
 
   const autoList = [...byId.values(), ...guestBuyers.values()];
@@ -152,8 +194,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
       source: c.source || 'outro',
       assigned_seller: c.assigned_seller || '',
       last_contact: c.last_contact,
+      registered_at: c.created_date,
+      referred_by_name: null,
       total_spent: c.total_spent || 0,
+      purchase_count: c.total_purchases || 0,
       auctions_won: 0,
+      purchases: [],
+      auctions_list: [],
       notes: c.notes,
       raw: c,
     }));

@@ -17,9 +17,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { buildUnifiedCustomers, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
+import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 
 // 🧭 CRM realocado (18/08/2026): antes era a página standalone /CRM (acesso só
 // admin, com header próprio). Agora vive como seção dentro de Central de
@@ -111,11 +112,33 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     loadAutoSources();
   }, [isAdmin]);
 
+  // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app.
+  // A árvore é construída com TODOS os usuários (precisa do grafo completo pra
+  // achar sub-indicados), mas só entram na lista os IDs dentro da minha rede.
+  const networkIds = React.useMemo(
+    () => (currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
+    [appUsers, currentUser?.id]
+  );
+  const networkAppUsers = React.useMemo(
+    () => appUsers.filter((u) => networkIds.has(u.id)),
+    [appUsers, networkIds]
+  );
+  const networkCatalogSales = React.useMemo(
+    () => catalogSales.filter((s) => s.licensee_id === currentUser?.id || networkIds.has(s.licensee_id)),
+    [catalogSales, networkIds, currentUser?.id]
+  );
+  const networkAuctions = React.useMemo(
+    () => auctions.filter((a) => networkIds.has(a.winner_id)),
+    [auctions, networkIds]
+  );
+
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
   const unifiedCustomers = React.useMemo(
-    () => buildUnifiedCustomers({ appUsers, catalogSales, auctions, manualCustomers: customers }),
-    [appUsers, catalogSales, auctions, customers]
+    () => buildUnifiedCustomers({ appUsers: networkAppUsers, catalogSales: networkCatalogSales, auctions: networkAuctions, manualCustomers: customers }),
+    [networkAppUsers, networkCatalogSales, networkAuctions, customers]
   );
+
+  const [detailCustomer, setDetailCustomer] = useState(null);
 
   // Carregar produtos automaticamente ao abrir modal
   useEffect(() => {
@@ -630,7 +653,12 @@ _Enviado via CRM Leilão NoZap_`;
             customers={filteredCustomers}
             onForward={handleForward}
             onDelete={handleDelete}
+            onRowClick={setDetailCustomer}
           />
+
+          {detailCustomer && (
+            <CrmCustomerDetailModal customer={detailCustomer} onClose={() => setDetailCustomer(null)} />
+          )}
           </TabsContent>
 
           <TabsContent value="sellers">

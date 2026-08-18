@@ -19,7 +19,7 @@ const PURCHASE_LABEL = {
 const SOURCE_PART_LABEL = { cadastro: 'Cadastro', loja_virtual: 'Loja Virtual', leilao: 'Leilão', indicacao: 'Indicação', site: 'Site', whatsapp: 'WhatsApp', redes_sociais: 'Redes Sociais', outro: 'Outro' };
 const formatSource = (source) => (source || '').split('+').map((p) => SOURCE_PART_LABEL[p] || p).join(' + ');
 
-export default function CrmCustomersTable({ customers, onForward, onDelete }) {
+export default function CrmCustomersTable({ customers, onForward, onDelete, onRowClick }) {
   const navigate = useNavigate();
 
   return (
@@ -51,8 +51,11 @@ export default function CrmCustomersTable({ customers, onForward, onDelete }) {
                 return (
                   <tr
                     key={customer.id}
-                    onClick={() => { if (isManual) navigate(createPageUrl('CustomerDetails') + `?id=${customer.id}`); }}
-                    className={`border-b border-nz-borda transition-colors ${isManual ? 'cursor-pointer hover:bg-nz-cinza-fundo' : ''} ${index % 2 === 0 ? 'bg-white' : 'bg-nz-cinza-fundo/40'}`}
+                    onClick={() => {
+                      if (isManual) navigate(createPageUrl('CustomerDetails') + `?id=${customer.id}`);
+                      else onRowClick?.(customer);
+                    }}
+                    className={`border-b border-nz-borda transition-colors cursor-pointer hover:bg-nz-cinza-fundo ${index % 2 === 0 ? 'bg-white' : 'bg-nz-cinza-fundo/40'}`}
                   >
                     <td className="p-3 text-nz-tinta font-medium">{customer.full_name}</td>
                     <td className="p-3 text-nz-tinta-fraca">
