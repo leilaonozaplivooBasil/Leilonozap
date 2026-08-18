@@ -41,14 +41,11 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
     else navigate(destino);
   };
 
-  // 🚫 DECISÃO DO DONO (08/08/2026): o sistema NÃO tem mais botão "Voltar" em
-  // tela nenhuma. A saída é sempre a navegação persistente (barra do painel no
-  // topo / lateral). Desligar aqui, num lugar só, garante o padrão em TODAS as
-  // telas de uma vez — sem risco de sobrar uma esquecida. O componente segue no
-  // projeto (as telas continuam podendo chamá-lo) apenas não desenha nada.
-  return null;
-
-  // eslint-disable-next-line no-unreachable
+  // 📱 CORREÇÃO (18/08/2026): a navegação lateral (NavegacaoLateralGlobal) só
+  // existe no DESKTOP ("hidden md:block") — no celular ela nunca aparece, então
+  // sem este botão o usuário ficava sem NENHUMA saída na tela (bug reportado:
+  // "não conseguimos voltar quando clica"). Volta a desenhar, mas só no
+  // celular (md:hidden abaixo): no desktop a lateral continua sendo a saída.
   if (temBarraDoPainel) return null;
 
   const cor = tema === 'claro'
@@ -60,7 +57,7 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
       type="button"
       onClick={voltar}
       aria-label={texto}
-      className={`inline-flex h-11 items-center gap-2 px-4 rounded-full border text-sm font-medium transition-colors ${cor} ${className}`}
+      className={`md:hidden inline-flex h-11 items-center gap-2 px-4 rounded-full border text-sm font-medium transition-colors ${cor} ${className}`}
     >
       <ArrowLeft className="w-4 h-4" />
       {texto}
