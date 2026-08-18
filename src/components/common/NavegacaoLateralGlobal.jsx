@@ -26,7 +26,7 @@ import ItemLateralArrastavel from '@/components/common/ItemLateralArrastavel';
 //  • Comprar Estoque → aba dentro de /painel/estoque
 //  • Meus Arremates  → dentro do Painel do Arrematante
 //  • Carreira (aba)  → a carreira completa já vive em outra tela
-const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings', 'tab:plano-carreira'];
+const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings'];
 
 // ✅ Item novo (ex.: Consignado) precisa aparecer mesmo para quem já tem uma
 // ordem antiga salva no aparelho — a ordem guardada não pode escondê-lo.
