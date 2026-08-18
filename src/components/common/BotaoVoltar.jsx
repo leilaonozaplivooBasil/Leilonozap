@@ -48,8 +48,11 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
   // celular (md:hidden abaixo): no desktop a lateral continua sendo a saída.
   if (temBarraDoPainel) return null;
 
+  // 🎨 Botão só de ícone (18/08/2026): mesmo tamanho/forma dos outros ícones do
+  // cabeçalho (w-9 h-9 rounded-xl) — a pílula com texto "← Voltar" destoava do
+  // resto do topo. Fica compacto e alinhado com o quadradinho do carrinho ao lado.
   const cor = tema === 'claro'
-    ? 'bg-white border-nz-borda text-gray-600 hover:bg-nz-cinza-fundo hover:text-nz-verde'
+    ? 'bg-nz-cinza-fundo border-nz-borda text-nz-tinta-fraca hover:text-nz-verde hover:border-green-500/40'
     : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white';
 
   return (
@@ -57,10 +60,10 @@ export default function BotaoVoltar({ texto = 'Voltar', destino = '/', tema = 'e
       type="button"
       onClick={voltar}
       aria-label={texto}
-      className={`md:hidden inline-flex h-11 items-center gap-2 px-4 rounded-full border text-sm font-medium transition-colors ${cor} ${className}`}
+      title={texto}
+      className={`md:hidden w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors ${cor} ${className}`}
     >
       <ArrowLeft className="w-4 h-4" />
-      {texto}
     </button>
   );
 }
