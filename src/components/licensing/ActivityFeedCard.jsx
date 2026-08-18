@@ -13,6 +13,27 @@ const STATUS_LABEL = {
   paid: 'Aprovado',
 };
 
+// 🏷️ Rótulo amigável do papel do usuário na comissão — identifica POR QUE essa
+// linha existe (vendedor, licenciado, executivo…), já que várias linhas podem
+// vir do MESMO pedido (uma por nível da cadeia de comissão).
+const ROLE_LABELS = {
+  influencer_app: 'Influencer',
+  licenciado_catalogo: 'Licenciado',
+  trainee: 'Trainee',
+  executivo: 'Executivo',
+  kit_start: 'Kit Start',
+  plano_lider: 'Líder',
+  plano_lojista: 'Lojista',
+  distribuidor: 'Distribuidor',
+  diretor: 'Diretor',
+  diretoria: 'Diretoria',
+  ceo: 'CEO',
+  conselheiro: 'Conselheiro',
+  fundador: 'Fundador',
+  site_official_rollup: 'Site Oficial',
+  vendedor: 'Vendedor',
+};
+
 // 🧾 "Últimas atividades" — formato Mercado Pago: ícone + descrição + status
 // colorido + valor à direita.
 export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
@@ -36,9 +57,13 @@ export default function ActivityFeedCard({ records, isSaiDeBaixo }) {
                   <IconeAtividade tipo={isCatalog ? 'catalog' : 'auction'} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{rec.product_title || (isCatalog ? 'Venda Loja Virtual' : 'Comissão de Leilão')}</p>
-                    {/* origem escrita discretamente ao lado da data, sem poluir a linha */}
-                    <p className="text-xs text-gray-400">
-                      <span className="text-gray-500">{isCatalog ? 'Loja Virtual' : 'Leilão'}</span>
+                    {/* 🆕 Identifica de onde vem o pedido: nome do responsável (licenciado
+                        âncora da loja) + o papel dessa comissão (vendedor, executivo…) —
+                        sem isso, várias linhas do mesmo pedido pareciam idênticas. */}
+                    <p className="text-xs text-gray-400 truncate">
+                      {rec.anchor_user_name && <span className="text-gray-600 font-medium">{rec.anchor_user_name}</span>}
+                      {rec.anchor_user_name && <span className="mx-1.5">·</span>}
+                      <span className="text-gray-500">{ROLE_LABELS[rec.role] || (isCatalog ? 'Loja Virtual' : 'Leilão')}</span>
                       <span className="mx-1.5">·</span>
                       {new Date(rec.created_date).toLocaleString('pt-BR')}
                     </p>
