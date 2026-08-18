@@ -1169,7 +1169,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsContent>
 
               <TabsContent value="catalogo-crm" className="mt-6">
-                <CrmClientesTab isAdmin={isAdmin} />
+                <CrmClientesTab isAdmin={isAdmin} currentUser={user} />
               </TabsContent>
 
               <TabsContent value="catalogo-comissoes" className="mt-6">

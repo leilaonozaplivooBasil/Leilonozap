@@ -17,13 +17,19 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { buildUnifiedCustomers } from '@/lib/crmUnifiedCustomers';
+import CrmStatsCards from './CrmStatsCards';
+import CrmCustomersTable from './CrmCustomersTable';
 
 // 🧭 CRM realocado (18/08/2026): antes era a página standalone /CRM (acesso só
 // admin, com header próprio). Agora vive como seção dentro de Central de
 // Vendas no Painel de Alavancagem — mesmos dados, mesma lógica, só o local
 // mudou. O controle de acesso (admin/super_admin) passa a vir de fora (prop
 // isAdmin), já que aqui dentro não faz sentido "navegar pra Home".
-export default function CrmClientesTab({ isAdmin }) {
+// 🔄 Fontes automáticas (18/08/2026): a lista de clientes agora soma indicados
+// (AppUser.referred_by_id) e compradores da Loja Virtual (CatalogSale.licensee_id)
+// junto com o cadastro manual — ver src/lib/crmUnifiedCustomers.js.
+export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,13 +80,38 @@ export default function CrmClientesTab({ isAdmin }) {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
+  // Fontes automáticas: rede (indicados) e compradores da Loja Virtual
+  const [appUsers, setAppUsers] = useState([]);
+  const [catalogSales, setCatalogSales] = useState([]);
+
+  const loadAutoSources = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const [referred, sales] = await Promise.all([
+        base44.entities.AppUser.filter({ referred_by_id: currentUser.id }, '-created_date', 500),
+        base44.entities.CatalogSale.filter({ licensee_id: currentUser.id }, '-created_date', 500),
+      ]);
+      setAppUsers(Array.isArray(referred) ? referred : []);
+      setCatalogSales(Array.isArray(sales) ? sales : []);
+    } catch (error) {
+      console.error('Erro ao carregar fontes automáticas do CRM:', error);
+    }
+  };
+
   useEffect(() => {
     if (!isAdmin) { setIsLoading(false); return; }
     loadCustomers();
     loadSellers();
     loadNegotiations();
     loadProducts();
+    loadAutoSources();
   }, [isAdmin]);
+
+  // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
+  const unifiedCustomers = React.useMemo(
+    () => buildUnifiedCustomers({ appUsers, catalogSales, manualCustomers: customers }),
+    [appUsers, catalogSales, customers]
+  );
 
   // Carregar produtos automaticamente ao abrir modal
   useEffect(() => {
@@ -150,7 +181,7 @@ export default function CrmClientesTab({ isAdmin }) {
   };
 
   useEffect(() => {
-    let filtered = customers;
+    let filtered = unifiedCustomers;
 
     if (searchTerm) {
       filtered = filtered.filter(c =>
@@ -173,7 +204,7 @@ export default function CrmClientesTab({ isAdmin }) {
     }
 
     setFilteredCustomers(filtered);
-  }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, customers]);
+  }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, unifiedCustomers]);
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
@@ -415,63 +446,18 @@ _Enviado via CRM Leilão NoZap_`;
   };
 
   const stats = {
-    total: customers.length,
-    leads: customers.filter(c => c.status === 'lead').length,
-    clientes: customers.filter(c => c.status === 'cliente').length,
-    totalSpent: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
-    semCompra: customers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
-    emNegociacao: customers.filter(c => c.purchase_status === 'em_negociacao').length,
-    aguardandoPagamento: customers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
-    pago: customers.filter(c => c.purchase_status === 'pago').length,
-    enviado: customers.filter(c => c.purchase_status === 'enviado').length,
-    entregue: customers.filter(c => c.purchase_status === 'entregue').length,
-    cancelado: customers.filter(c => c.purchase_status === 'cancelado').length,
+    total: unifiedCustomers.length,
+    leads: unifiedCustomers.filter(c => c.status === 'lead').length,
+    clientes: unifiedCustomers.filter(c => c.status === 'cliente').length,
+    totalSpent: unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    semCompra: unifiedCustomers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
+    em_negociacao: unifiedCustomers.filter(c => c.purchase_status === 'em_negociacao').length,
+    aguardando_pagamento: unifiedCustomers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
+    pago: unifiedCustomers.filter(c => c.purchase_status === 'pago').length,
+    enviado: unifiedCustomers.filter(c => c.purchase_status === 'enviado').length,
+    entregue: unifiedCustomers.filter(c => c.purchase_status === 'entregue').length,
+    cancelado: unifiedCustomers.filter(c => c.purchase_status === 'cancelado').length,
     volumeNegociacao: negotiations.filter(n => n.status === 'em_andamento').reduce((sum, n) => sum + (n.total_value || 0), 0)
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'lead': return 'bg-yellow-100 text-yellow-800';
-      case 'cliente': return 'bg-green-100 text-green-800';
-      case 'inativo': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getSourceColor = (source) => {
-    switch (source) {
-      case 'site': return 'bg-blue-100 text-blue-800';
-      case 'indicacao': return 'bg-purple-100 text-purple-800';
-      case 'whatsapp': return 'bg-green-100 text-green-800';
-      case 'redes_sociais': return 'bg-pink-100 text-pink-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPurchaseStatusColor = (status) => {
-    switch (status) {
-      case 'sem_compra': return 'bg-gray-100 text-gray-800';
-      case 'em_negociacao': return 'bg-blue-100 text-blue-800';
-      case 'aguardando_pagamento': return 'bg-yellow-100 text-yellow-800';
-      case 'pago': return 'bg-green-100 text-green-800';
-      case 'enviado': return 'bg-purple-100 text-purple-800';
-      case 'entregue': return 'bg-emerald-100 text-emerald-800';
-      case 'cancelado': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPurchaseStatusLabel = (status) => {
-    const labels = {
-      'sem_compra': 'Sem Compra',
-      'em_negociacao': 'Em Negociação',
-      'aguardando_pagamento': 'Aguardando Pagamento',
-      'pago': 'Pago',
-      'enviado': 'Enviado',
-      'entregue': 'Entregue',
-      'cancelado': 'Cancelado'
-    };
-    return labels[status] || status;
   };
 
   if (!isAdmin) {
@@ -492,16 +478,16 @@ _Enviado via CRM Leilão NoZap_`;
   }
 
   return (
-    <div className="p-3 sm:p-6 bg-gray-900 rounded-2xl">
+    <div className="p-3 sm:p-6 bg-white border border-nz-borda rounded-2xl">
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold text-white">CRM - Gestão de Clientes</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">CRM - Gestão de Clientes</h1>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               onClick={() => setShowSellerModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
+              className="bg-nz-marrom hover:bg-nz-marrom-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
             >
               <UserPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Novo Vendedor</span>
@@ -530,7 +516,7 @@ _Enviado via CRM Leilão NoZap_`;
                 setProductSearchTerm('');
                 setShowAddForm(true);
               }}
-              className="bg-gray-800 hover:bg-gray-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
+              className="bg-nz-verde hover:bg-nz-verde-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
             >
               <UserPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Novo Cliente</span>
@@ -539,202 +525,19 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
 
-        {/* ESTATÍSTICAS PRINCIPAIS */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Total de Contatos</p>
-                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.total}</p>
-                </div>
-                <Users className="w-8 h-8 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Leads</p>
-                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.leads}</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-yellow-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Clientes Ativos</p>
-                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.clientes}</p>
-                </div>
-                <Users className="w-8 h-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-orange-600 border-orange-500">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-xs sm:text-sm mb-1">Volume em Negociação</p>
-                  <p className="text-lg sm:text-2xl font-bold text-white">
-                    R$ {stats.volumeNegociacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <Briefcase className="w-8 h-8 text-orange-100" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Faturamento Total</p>
-                  <p className="text-lg sm:text-2xl font-bold text-white">
-                    R$ {stats.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <DollarSign className="w-8 h-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ESTATÍSTICAS DE STATUS DA COMPRA - CLICÁVEIS COMO FILTROS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'sem_compra'
-                ? 'bg-gray-800 border-gray-600 ring-2 ring-gray-500'
-                : 'bg-gray-800 border-gray-700 hover:bg-gray-700'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'sem_compra' ? 'all' : 'sem_compra')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <ShoppingCart className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-400'}`}>Sem Compra</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'sem_compra' ? 'text-white' : 'text-white'}`}>{stats.semCompra}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'em_negociacao'
-                ? 'bg-blue-600 border-blue-500 ring-2 ring-blue-400'
-                : 'bg-gray-800 border-gray-700 hover:bg-blue-900/30'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'em_negociacao' ? 'all' : 'em_negociacao')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <MessageSquare className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-blue-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-gray-400'}`}>Em Negociação</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'em_negociacao' ? 'text-white' : 'text-blue-400'}`}>{stats.emNegociacao}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'aguardando_pagamento'
-                ? 'bg-yellow-600 border-yellow-500 ring-2 ring-yellow-400'
-                : 'bg-gray-800 border-gray-700 hover:bg-yellow-900/30'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'aguardando_pagamento' ? 'all' : 'aguardando_pagamento')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <Clock className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-yellow-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-gray-400'}`}>Aguardando Pag.</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-white' : 'text-yellow-400'}`}>{stats.aguardandoPagamento}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'pago'
-                ? 'bg-green-600 border-green-500 ring-2 ring-green-400'
-                : 'bg-gray-800 border-gray-700 hover:bg-green-900/30'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'pago' ? 'all' : 'pago')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <CheckCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-green-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-gray-400'}`}>Pago</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'pago' ? 'text-white' : 'text-green-400'}`}>{stats.pago}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'enviado'
-                ? 'bg-purple-600 border-purple-500 ring-2 ring-purple-400'
-                : 'bg-gray-800 border-gray-700 hover:bg-purple-900/30'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'enviado' ? 'all' : 'enviado')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <Package className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-purple-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-gray-400'}`}>Enviado</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'enviado' ? 'text-white' : 'text-purple-400'}`}>{stats.enviado}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'entregue'
-                ? 'bg-emerald-600 border-emerald-500 ring-2 ring-emerald-400'
-                : 'bg-gray-800 border-gray-700 hover:bg-emerald-900/30'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'entregue' ? 'all' : 'entregue')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <Truck className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-emerald-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-gray-400'}`}>Entregue</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'entregue' ? 'text-white' : 'text-emerald-400'}`}>{stats.entregue}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all ${
-              purchaseStatusFilter === 'cancelado'
-                ? 'bg-red-600 border-red-500 ring-2 ring-red-400'
-                : 'bg-gray-800 border-gray-700 hover:bg-red-900/30'
-            }`}
-            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'cancelado' ? 'all' : 'cancelado')}
-          >
-            <CardContent className="p-3">
-              <div className="text-center">
-                <XCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-red-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-gray-400'}`}>Cancelado</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'cancelado' ? 'text-white' : 'text-red-400'}`}>{stats.cancelado}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <CrmStatsCards
+          stats={stats}
+          purchaseStatusFilter={purchaseStatusFilter}
+          onPurchaseStatusClick={setPurchaseStatusFilter}
+        />
 
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
-          <TabsList className="bg-gray-800 border border-gray-700 w-full sm:w-auto">
-            <TabsTrigger value="customers" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-400 flex-1 sm:flex-none">
+          <TabsList className="bg-white border border-nz-borda w-full sm:w-auto">
+            <TabsTrigger value="customers" className="data-[state=active]:bg-nz-verde data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
-            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-400 flex-1 sm:flex-none">
+            <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
               Vendedores
             </TabsTrigger>
           </TabsList>
@@ -743,19 +546,19 @@ _Enviado via CRM Leilão NoZap_`;
             {/* FILTROS DE CLIENTES */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nz-tinta-fraca" />
             <Input
               placeholder="Buscar por nome, email ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-800 text-white border-gray-700"
+              className="pl-10 bg-white text-nz-tinta border-nz-borda"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-white text-nz-tinta rounded-md px-4 py-2 border border-nz-borda focus:outline-none focus:ring-2 focus:ring-nz-verde/40"
           >
             <option value="all">Todos os Status</option>
             <option value="lead">Leads</option>
@@ -766,11 +569,12 @@ _Enviado via CRM Leilão NoZap_`;
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-white text-nz-tinta rounded-md px-4 py-2 border border-nz-borda focus:outline-none focus:ring-2 focus:ring-nz-verde/40"
           >
             <option value="all">Todas as Origens</option>
-            <option value="site">Site</option>
             <option value="indicacao">Indicação</option>
+            <option value="loja_virtual">Loja Virtual</option>
+            <option value="site">Site</option>
             <option value="whatsapp">WhatsApp</option>
             <option value="redes_sociais">Redes Sociais</option>
             <option value="outro">Outro</option>
@@ -784,124 +588,18 @@ _Enviado via CRM Leilão NoZap_`;
               setPurchaseStatusFilter('all');
             }}
             variant="outline"
-            className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+            className="bg-white border-nz-borda text-nz-tinta hover:bg-nz-cinza-fundo"
           >
             <Filter className="w-4 h-4 mr-2" />
             Limpar Filtros
           </Button>
           </div>
 
-          {/* LISTA DE CLIENTES */}
-          <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">
-              Clientes ({filteredCustomers.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-700 bg-gray-800">
-                    <th className="text-left p-3 font-semibold text-white">Nome</th>
-                    <th className="text-left p-3 font-semibold text-white">Email</th>
-                    <th className="text-left p-3 font-semibold text-white">Telefone</th>
-                    <th className="text-center p-3 font-semibold text-white">Status</th>
-                    <th className="text-center p-3 font-semibold text-white">Status da Compra</th>
-                    <th className="text-center p-3 font-semibold text-white">Origem</th>
-                    <th className="text-center p-3 font-semibold text-white">Vendedor</th>
-                    <th className="text-center p-3 font-semibold text-white">Último Contato</th>
-                    <th className="text-right p-3 font-semibold text-white">Gasto Total</th>
-                    <th className="text-center p-3 font-semibold text-white">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCustomers.map((customer, index) => (
-                    <tr
-                      key={customer.id}
-                      onClick={() => navigate(createPageUrl('CustomerDetails') + `?id=${customer.id}`)}
-                      className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors cursor-pointer ${
-                        index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
-                      }`}
-                    >
-                      <td className="p-3 text-gray-300 font-medium">{customer.full_name}</td>
-                      <td className="p-3 text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {customer.email || '-'}
-                        </div>
-                      </td>
-                      <td className="p-3 text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {customer.phone || '-'}
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge className={getStatusColor(customer.status)}>
-                          {customer.status === 'lead' ? 'Lead' : customer.status === 'cliente' ? 'Cliente' : 'Inativo'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge className={getPurchaseStatusColor(customer.purchase_status || 'sem_compra')}>
-                          {getPurchaseStatusLabel(customer.purchase_status || 'sem_compra')}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge className={getSourceColor(customer.source)}>
-                          {customer.source || '-'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center text-gray-400">
-                        {customer.assigned_seller || '-'}
-                      </td>
-                      <td className="p-3 text-center text-gray-400">
-                        {customer.last_contact ? new Date(customer.last_contact).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                      <td className="p-3 text-right text-green-400 font-bold">
-                        R$ {fmtBR((customer.total_spent || 0))}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleForward(customer);
-                            }}
-                            className="text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                            title="Encaminhar para Vendedor"
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(customer.id);
-                            }}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {filteredCustomers.length === 0 && (
-                <div className="text-center py-12 text-gray-400">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum cliente encontrado</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-            </Card>
+          <CrmCustomersTable
+            customers={filteredCustomers}
+            onForward={handleForward}
+            onDelete={handleDelete}
+          />
           </TabsContent>
 
           <TabsContent value="sellers">
