@@ -102,16 +102,18 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
           </div>
         </div>
 
-        <Button onClick={onViewHistory} className="w-full bg-nz-verde hover:bg-nz-verde-escuro text-white" size="lg">
-          <BarChart3 className="w-5 h-5 mr-2" />
-          Ver Histórico Detalhado por Venda
-        </Button>
-
-        {/* Histórico de Comissões */}
+        {/* Histórico de Comissões — o botão "Ver detalhado" fica ao lado do título,
+            em vez de uma faixa verde inteira separada (ficava estranha/deslocada). */}
         <div className="mt-6 rounded-xl border bg-white border-nz-borda">
-          <div className="p-4 border-b border-nz-borda">
-            <h4 className="text-gray-900 font-semibold">Histórico de Comissões</h4>
-            <p className="text-gray-500 text-sm">Últimos lançamentos de Leilão e Loja Virtual</p>
+          <div className="p-4 border-b border-nz-borda flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="text-gray-900 font-semibold">Histórico de Comissões</h4>
+              <p className="text-gray-500 text-sm">Últimos lançamentos de Leilão e Loja Virtual</p>
+            </div>
+            <Button onClick={onViewHistory} variant="outline" size="sm" className="shrink-0 border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo">
+              <BarChart3 className="w-4 h-4 mr-1.5" />
+              Ver detalhado
+            </Button>
           </div>
           {isLoadingCommissions ? (
             <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-nz-verde" /></div>
