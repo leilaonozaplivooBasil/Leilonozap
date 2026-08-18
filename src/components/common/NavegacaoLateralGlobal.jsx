@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import { getLicensingGroups } from '@/lib/licensingTabs';
 import ItemLateralArrastavel from '@/components/common/ItemLateralArrastavel';
+import ItemLateralGrupo from '@/components/common/ItemLateralGrupo';
 
 // 🧭 NAVEGAÇÃO LATERAL ÚNICA DO SISTEMA (08/08/2026 — decisão do dono).
 // O botão "Voltar" foi retirado de todas as telas; no lugar dele entra ESTA
@@ -55,6 +56,18 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
   const itens = useMemo(() => {
     const lista = [];
     getLicensingGroups(user).forEach((grupo, gi) => {
+      // 🧭 O grupo "Operação" (Meu Painel, PDV, Estoque, Metas) some da lista
+      // e vira UM ícone só, com um menu flutuante pros 4 destinos — a lateral
+      // encolhe sem tirar nenhum link do lugar.
+      if (grupo.title === 'Operação') {
+        const subItens = grupo.items
+          .filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)))
+          .map((item) => ({ ...item, to: destinoDe(item) }));
+        if (subItens.length) {
+          lista.push({ type: 'group', chave: 'group:operacao', label: 'Operação', subItens, grupo: gi });
+        }
+        return;
+      }
       grupo.items.forEach((item) => {
         const chave = chaveDe(item);
         if (ITENS_OCULTOS.includes(chave)) return;
@@ -90,20 +103,29 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
             {(provided) => (
               <nav ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1 w-full px-2 pb-12">
                 {itens.map((item, i) => (
-                  <ItemLateralArrastavel
-                    key={item.chave}
-                    item={item}
-                    indice={i}
-                    to={destinoDe(item)}
-                    aoSelecionar={onTabChange && item.type === 'tab' ? () => onTabChange(item.value) : undefined}
-                    ativo={
-                      item.type === 'tab'
-                        ? !!onTabChange && activeTab === item.value
-                        : location.pathname.toLowerCase() === (item.to || '').toLowerCase()
-                    }
-                    // respiro sutil onde a lista muda de bloco original
-                    separador={i > 0 && itens[i - 1].grupo !== item.grupo}
-                  />
+                  item.type === 'group' ? (
+                    <ItemLateralGrupo
+                      key={item.chave}
+                      item={item}
+                      indice={i}
+                      separador={i > 0 && itens[i - 1].grupo !== item.grupo}
+                    />
+                  ) : (
+                    <ItemLateralArrastavel
+                      key={item.chave}
+                      item={item}
+                      indice={i}
+                      to={destinoDe(item)}
+                      aoSelecionar={onTabChange && item.type === 'tab' ? () => onTabChange(item.value) : undefined}
+                      ativo={
+                        item.type === 'tab'
+                          ? !!onTabChange && activeTab === item.value
+                          : location.pathname.toLowerCase() === (item.to || '').toLowerCase()
+                      }
+                      // respiro sutil onde a lista muda de bloco original
+                      separador={i > 0 && itens[i - 1].grupo !== item.grupo}
+                    />
+                  )
                 ))}
                 {provided.placeholder}
               </nav>
