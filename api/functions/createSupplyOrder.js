@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     const ids = [...new Set(items.map((i) => String(i.product_id)).filter(Boolean))];
     if (!ids.length) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const inList = ids.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-    const prods = await (await sb(`products?select=id,description,price_catalog,selling_price_retail,quantity&id=in.(${inList})`)).json();
+    const prods = await (await sb(`products?select=id,description,price_catalog,selling_price_retail,quantity,image_urls&id=in.(${inList})`)).json();
     const pmap = {}; (Array.isArray(prods) ? prods : []).forEach((p) => { pmap[String(p.id)] = p; });
 
     let bruto = 0, totalQty = 0; const lines = [];
@@ -114,6 +114,9 @@ export default async function handler(req, res) {
       buyer_id: loja.id, buyer_name: loja.full_name, buyer_email: loja.email || null, buyer_phone: loja.phone || null,
       seller_id: null,
       product_title: String(title).slice(0, 300),
+      // Foto do produto: só quando é 1 item (pedido multi-item não tem "a" foto certa).
+      product_id: lines.length === 1 ? lines[0].product_id : null,
+      product_image: lines.length === 1 ? (pmap[lines[0].product_id]?.image_urls?.[0] || null) : null,
       // liquido = o que a casa recebe pelos produtos. O frete fica de fora, como em toda venda.
       sale_price: liquido, total_amount: liquido, quantity: totalQty,
       items_json: lines, raw_base44: raw,

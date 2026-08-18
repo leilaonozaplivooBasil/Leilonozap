@@ -17,6 +17,9 @@ const IMG_PC_SOCIOS_OURO = 'https://media.base44.com/images/public/68d536db3c26f
 const IMG_PC_ELITE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/ff1866234_generated_image.png';
 // Private Galpão: usa a MESMA arte oficial do carrossel de planos
 const IMG_PRIVATE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/0afd480b8_generated_image.png';
+// 💰 Depósito de saldo de operação: transação financeira, não é produto — sem
+// isso caía no ícone genérico cinza de "sem foto" (nenhuma regra reconhecia o kind).
+const IMG_DEPOSITO_OPERACAO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/5dd076179_generated_image.png';
 
 // Sem foto e sem tipo reconhecido: caixa neutra (nada de texto "Imagem")
 export const IMG_SEM_FOTO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231f2937' width='100' height='100'/%3E%3Cpath d='M28 62l14-16 10 11 8-9 12 14z' fill='%234b5563'/%3E%3Ccircle cx='37' cy='38' r='6' fill='%234b5563'/%3E%3C/svg%3E";
@@ -25,6 +28,7 @@ export const IMG_SEM_FOTO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const REGRAS = [
   // Planos do Parceiro primeiro: são os mais específicos
   { re: /private|galp[ãa]o/i, img: IMG_PRIVATE },
+  { re: /dep[óo]sito de saldo de opera[çc][ãa]o/i, img: IMG_DEPOSITO_OPERACAO },
   { re: /vision[áa]rio/i, img: IMG_PC_VISIONARIO },
   { re: /s[óo]cios?\s+de\s+ouro/i, img: IMG_PC_SOCIOS_OURO },
   { re: /elite/i, img: IMG_PC_ELITE },
@@ -41,7 +45,8 @@ const KINDS_DIGITAL = ['adesao', 'licenca', 'plano', 'digital'];
 // Arte do tipo, ou null quando não é produto digital reconhecido
 function arteDoTipo(order) {
   const titulo = order?.product_title || '';
-  const ehDigital = KINDS_DIGITAL.includes(order?.kind) || /ades[ãa]o|licen[çc]a|plano|assinatura|parceiro de compra|private|galp[ãa]o|vision[áa]rio|s[óo]cios? de ouro|elite/i.test(titulo);
+  if (order?.kind === 'operacao_deposit') return IMG_DEPOSITO_OPERACAO;
+  const ehDigital = KINDS_DIGITAL.includes(order?.kind) || /ades[ãa]o|licen[çc]a|plano|assinatura|parceiro de compra|private|galp[ãa]o|vision[áa]rio|s[óo]cios? de ouro|elite|dep[óo]sito de saldo de opera[çc][ãa]o/i.test(titulo);
   if (!ehDigital) return null;
   const regra = REGRAS.find((r) => r.re.test(titulo));
   return regra ? regra.img : IMG_LICENCIADO;
