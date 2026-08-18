@@ -49,7 +49,7 @@ async function sb(path, method = 'GET', body) {
 // Devolve saldo_reservado → saldo_disponivel do líder ANTERIOR, com trava otimista
 // (só grava se os dois saldos estiverem como foram lidos). Nunca devolve mais do que
 // está reservado e nunca derruba o lance: falha aqui é registrada e seguimos.
-async function releaseHold(userId, valor) {
+async function releaseHold(userId, valor, auctionId = null) {
   const uid = String(userId || '').trim();
   const pedido = money(valor);
   if (!uid || pedido <= 0) return 0;
@@ -69,7 +69,25 @@ async function releaseHold(userId, valor) {
         saldo_disponivel: money(disponivel + liberar),
         saldo_reservado: money(reservado - liberar),
       });
-      if (Array.isArray(patch.data) && patch.data[0]) return liberar;
+      if (Array.isArray(patch.data) && patch.data[0]) {
+        // 📒 LIVRO-CAIXA DA RESERVA (18/08/2026) — gravação INLINE de propósito.
+        // ⚠️ NÃO transformar em import: este arquivo é deliberadamente SEM imports
+        // relativos (ver cabeçalho, causa-raiz do "Erro ao enviar lance" em produção).
+        // Best-effort: o extrato nunca pode derrubar o lance já confirmado.
+        try {
+          await sb('reserva_ledger', 'POST', {
+            user_id: uid,
+            auction_id: auctionId ? String(auctionId) : null,
+            tipo: 'devolucao_cobertura',
+            direcao: 'saida_reserva',
+            valor: liberar,
+            saldo_antes: reservado,
+            saldo_depois: money(reservado - liberar),
+            origem: 'functions/submitAtomicBid.releaseHold',
+          });
+        } catch (_) { /* extrato secundário */ }
+        return liberar;
+      }
       // corrida: o saldo mudou entre a leitura e a escrita — tenta de novo
     }
     return 0;
@@ -334,7 +352,7 @@ export default async function handler(req, res) {
     let releasedPrevious = null;
     if (auction.winner_id && auction.winner_id !== userId) {
       const valorAnterior = money(Number(auction.current_price || 0) + Number(auction.frete_reservado_valor || 0));
-      const devolvido = await releaseHold(auction.winner_id, valorAnterior);
+      const devolvido = await releaseHold(auction.winner_id, valorAnterior, auctionId);
       if (devolvido > 0) releasedPrevious = { user_id: auction.winner_id, valor: devolvido };
     }
 

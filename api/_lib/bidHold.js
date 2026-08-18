@@ -13,6 +13,9 @@ const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL 
   .replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 import { liberarCupomPassaporte } from './passaporteCoupon.js';
+// 📒 Livro-caixa da reserva (18/08/2026). Import de MESMO diretório (./) — a mesma
+// forma segura já usada acima. Nunca usar import de 2 níveis dentro de api/functions/.
+import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
 
 const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -75,6 +78,18 @@ export async function releaseHold(userId, amount, auctionId = null) {
       const updated = await patch.json().catch(() => []);
       const row = Array.isArray(updated) ? updated[0] : null;
       if (row) {
+        // 📒 LIVRO-CAIXA (18/08/2026): grava a saída da reserva ANTES dos efeitos
+        // secundários. Best-effort por contrato — nunca derruba a devolução do saldo.
+        await registrarMovimentoReserva({
+          userId: uid,
+          auctionId,
+          tipo: TIPOS.DEVOLUCAO_COBERTURA,
+          direcao: 'saida_reserva',
+          valor: liberar,
+          saldoAntes: reservado,
+          saldoDepois: money(row.saldo_reservado),
+          origem: '_lib/bidHold.releaseHold',
+        });
         // 🎟️ Foi coberto = disputou e perdeu → libera o Cupom Passaporte dele.
         // Best effort: nunca pode derrubar a devolução do saldo.
         try { await liberarCupomPassaporte(uid, auctionId); } catch (_) { /* secundário */ }

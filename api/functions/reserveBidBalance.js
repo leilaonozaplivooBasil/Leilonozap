@@ -12,6 +12,21 @@ function sb(path, opts = {}) {
 }
 const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+// 📒 LIVRO-CAIXA DA RESERVA (18/08/2026) — gravação INLINE de propósito.
+// ⚠️ NÃO trocar por `import ... from '../_lib/reservaLedger.js'`: import relativo de
+// 2 níveis dentro de api/functions/ já derrubou o lance em produção (ver cabeçalho de
+// api/functions/submitAtomicBid.js). Este arquivo é 100% autocontido e vai continuar.
+// Best-effort: falhar aqui NUNCA pode derrubar a reserva já aplicada.
+async function ledgerReserva(mov) {
+  try {
+    await sb('reserva_ledger', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(mov),
+    });
+  } catch (_) { /* extrato é secundário — o dinheiro já foi movido corretamente */ }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -19,6 +34,11 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const userId = String(body?.user_id || '').trim();
     const amount = money(body?.amount);
+    // 🔗 PONTO CEGO CORRIGIDO (18/08/2026): a reserva nascia SEM saber de qual leilão
+    // era — por isso R$ 13,20 de uma conta ficaram irrastreáveis na auditoria. Agora o
+    // leilão vem no corpo e é gravado no livro-caixa. Opcional: se não vier, a reserva
+    // continua funcionando exatamente como antes (compatibilidade preservada).
+    const auctionId = String(body?.auction_id || '').trim() || null;
     if (!userId || amount <= 0) return res.status(400).json({ success: false, error: 'Dados inválidos' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -49,6 +69,17 @@ export default async function handler(req, res) {
       const row = Array.isArray(updated) ? updated[0] : null;
 
       if (row && Math.abs(money(row.saldo_disponivel) - novoSaldo) < 0.01 && Math.abs(money(row.saldo_reservado) - novoReservado) < 0.01) {
+        // 📒 extrato: entrada na reserva, com a foto exata do saldo antes/depois
+        await ledgerReserva({
+          user_id: userId,
+          auction_id: auctionId,
+          tipo: 'reserva',
+          direcao: 'entrada_reserva',
+          valor: amount,
+          saldo_antes: reservadoAtual,
+          saldo_depois: money(row.saldo_reservado),
+          origem: 'functions/reserveBidBalance',
+        });
         return res.status(200).json({
           success: true,
           balance: row.saldo_disponivel,

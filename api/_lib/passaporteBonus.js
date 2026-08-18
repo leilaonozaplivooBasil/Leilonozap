@@ -92,46 +92,94 @@ export async function creditarBonusPassaporte(sale) {
 }
 
 /**
- * Recolhe o bônus de quem ARREMATOU (o valor pago virou compra).
- * Recolhe no máximo o saldo existente — jamais gera saldo negativo.
+ * Recolhe o bônus de quem ARREMATOU — PROPORCIONAL À FATIA ARREMATADA.
+ *
+ * 🔴 BUG CORRIGIDO EM 18/08/2026 (autorizado pelo dono).
+ * A versão anterior varria TODOS os cupons 'creditado' do usuário e recolhia o
+ * valor INTEIRO de cada um a qualquer arremate. Risco medido na auditoria: uma
+ * conta com bônus de R$ 45,00 (aporte de R$ 450,00) perderia os R$ 45 completos
+ * ao arrematar um item de R$ 20,00.
+ *
+ * REGRA OFICIAL (fatiada): só a FATIA arrematada perde o bônus dela.
+ *   recolhimento = 10% do valor arrematado, limitado ao bônus ainda ativo.
+ *
+ * Segurança preservada:
+ * • Nunca deixa saldo negativo (ajustarSaldo já limita ao saldo existente).
+ * • Consome os cupons em ordem de criação (FIFO), de forma PARCIAL: o cupom só
+ *   vira 'recolhido' quando é consumido por inteiro; se sobrou bônus, ele
+ *   continua 'creditado' com o parcial somado em bonus_recolhido_valor.
+ * • Quanto ainda resta de cada cupom = valor_credito - bonus_recolhido_valor
+ *   (usa colunas que já existem — nenhuma migração nova é necessária).
+ * • Se o valor do arremate não for informado, é buscado pelo próprio auctionId,
+ *   que os chamadores atuais já passam. Assim a assinatura antiga continua
+ *   funcionando sem virar "recolhe zero" silencioso.
  */
-export async function recolherBonusPorArremate(userId, auctionId = null) {
+export async function recolherBonusPorArremate(userId, auctionId = null, valorArrematado = null) {
   try {
-    if (!ok()) return { recolhido: 0 };
+    if (!ok()) return { recolhido: 0, reason: 'config' };
     const uid = String(userId || '').trim();
-    if (!uid) return { recolhido: 0 };
+    if (!uid) return { recolhido: 0, reason: 'sem_usuario' };
+
+    // 1) Valor da fatia arrematada — informado, ou lido do próprio leilão
+    let base = money(valorArrematado);
+    if (base <= 0 && auctionId) {
+      const a = await (await sb(`auctions?select=current_price&id=eq.${enc(String(auctionId))}&limit=1`)).json();
+      base = money(Array.isArray(a) && a[0] ? a[0].current_price : 0);
+    }
+    if (base <= 0) return { recolhido: 0, reason: 'valor_arremate_indeterminado' };
+
+    // 2) Alvo do recolhimento: 10% SÓ da fatia arrematada
+    const alvo = money((base * PCT_BONUS) / 100);
+    if (alvo <= 0) return { recolhido: 0, reason: 'alvo_zero' };
 
     const rows = await (await sb(
-      `passaporte_coupons?select=id,valor_credito&user_id=eq.${enc(uid)}&status=eq.creditado&order=created_at.asc`
+      `passaporte_coupons?select=id,valor_credito,bonus_recolhido_valor&user_id=eq.${enc(uid)}&status=eq.creditado&order=created_at.asc`
     )).json();
     const lista = Array.isArray(rows) ? rows : [];
     if (!lista.length) return { recolhido: 0, reason: 'sem_bonus_ativo' };
 
+    let restaRecolher = alvo;
     let total = 0;
+
     for (const c of lista) {
-      // marca ANTES (CAS por status) — se dois arremates rodarem juntos, só um recolhe
-      const claim = await sb(`passaporte_coupons?id=eq.${enc(c.id)}&status=eq.creditado`, {
+      if (restaRecolher <= 0) break;
+
+      const jaRecolhido = money(c.bonus_recolhido_valor);
+      const disponivelNoCupom = money(money(c.valor_credito) - jaRecolhido);
+      if (disponivelNoCupom <= 0) continue;
+
+      const tirarDoCupom = money(Math.min(disponivelNoCupom, restaRecolher));
+      const consomeTudo = tirarDoCupom >= disponivelNoCupom;
+
+      // CAS por bonus_recolhido_valor: se dois arremates rodarem juntos, só um
+      // consegue avançar este cupom — o outro relê na próxima volta do laço.
+      const casFilter = jaRecolhido === 0
+        ? `or=(bonus_recolhido_valor.eq.0,bonus_recolhido_valor.is.null)`
+        : `bonus_recolhido_valor=eq.${jaRecolhido}`;
+
+      const claim = await sb(`passaporte_coupons?id=eq.${enc(c.id)}&${casFilter}`, {
         method: 'PATCH',
         headers: { Prefer: 'return=representation' },
         body: JSON.stringify({
-          status: 'recolhido',
-          bonus_recolhido_em: new Date().toISOString(),
+          bonus_recolhido_valor: money(jaRecolhido + tirarDoCupom),
+          // só encerra o cupom quando o bônus dele acabou por completo
+          ...(consomeTudo
+            ? { status: 'recolhido', bonus_recolhido_em: new Date().toISOString() }
+            : {}),
           ...(auctionId ? { auction_id_arrematado: String(auctionId) } : {}),
         }),
       });
       const claimed = await claim.json().catch(() => []);
-      if (!Array.isArray(claimed) || !claimed.length) continue;
+      if (!Array.isArray(claimed) || !claimed.length) continue; // corrida: segue
 
-      const res = await ajustarSaldo(uid, -money(c.valor_credito));
+      // 3) Só depois de garantir a marca, o dinheiro sai da carteira
+      const res = await ajustarSaldo(uid, -tirarDoCupom);
       const recolhido = money(Math.abs(res.applied));
       total = money(total + recolhido);
-      await sb(`passaporte_coupons?id=eq.${enc(c.id)}`, {
-        method: 'PATCH',
-        headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({ bonus_recolhido_valor: recolhido }),
-      });
+      restaRecolher = money(restaRecolher - tirarDoCupom);
     }
-    return { recolhido: total };
+
+    return { recolhido: total, alvo, valor_arrematado: base, pct: PCT_BONUS };
   } catch (e) {
     return { recolhido: 0, reason: String(e?.message || e) };
   }
