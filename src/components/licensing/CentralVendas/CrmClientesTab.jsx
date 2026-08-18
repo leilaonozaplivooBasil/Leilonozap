@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { buildUnifiedCustomers } from '@/lib/crmUnifiedCustomers';
+import { buildUnifiedCustomers, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
 
@@ -36,6 +36,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all');
+  const [roleTypeFilter, setRoleTypeFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -80,19 +81,22 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // Fontes automáticas: rede (indicados) e compradores da Loja Virtual
+  // Fontes automáticas — visão ADMIN completa: todos os usuários, todas as
+  // vendas da Loja Virtual e todos os arremates de Leilões da plataforma.
   const [appUsers, setAppUsers] = useState([]);
   const [catalogSales, setCatalogSales] = useState([]);
+  const [auctions, setAuctions] = useState([]);
 
   const loadAutoSources = async () => {
-    if (!currentUser?.id) return;
     try {
-      const [referred, sales] = await Promise.all([
-        base44.entities.AppUser.filter({ referred_by_id: currentUser.id }, '-created_date', 500),
-        base44.entities.CatalogSale.filter({ licensee_id: currentUser.id }, '-created_date', 500),
+      const [users, sales, auctionsList] = await Promise.all([
+        base44.entities.AppUser.list('-created_date', 2000),
+        base44.entities.CatalogSale.list('-created_date', 2000),
+        base44.entities.Auction.list('-end_time', 2000),
       ]);
-      setAppUsers(Array.isArray(referred) ? referred : []);
+      setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
+      setAuctions(Array.isArray(auctionsList) ? auctionsList.filter((a) => !!a.winner_id) : []);
     } catch (error) {
       console.error('Erro ao carregar fontes automáticas do CRM:', error);
     }
@@ -109,8 +113,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
   const unifiedCustomers = React.useMemo(
-    () => buildUnifiedCustomers({ appUsers, catalogSales, manualCustomers: customers }),
-    [appUsers, catalogSales, customers]
+    () => buildUnifiedCustomers({ appUsers, catalogSales, auctions, manualCustomers: customers }),
+    [appUsers, catalogSales, auctions, customers]
   );
 
   // Carregar produtos automaticamente ao abrir modal
@@ -196,15 +200,19 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
 
     if (sourceFilter !== 'all') {
-      filtered = filtered.filter(c => c.source === sourceFilter);
+      filtered = filtered.filter(c => (c.source || '').split('+').includes(sourceFilter));
     }
 
     if (purchaseStatusFilter !== 'all') {
       filtered = filtered.filter(c => (c.purchase_status || 'sem_compra') === purchaseStatusFilter);
     }
 
+    if (roleTypeFilter !== 'all') {
+      filtered = filtered.filter(c => c.role_type === roleTypeFilter);
+    }
+
     setFilteredCustomers(filtered);
-  }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, unifiedCustomers]);
+  }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, roleTypeFilter, unifiedCustomers]);
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
@@ -457,7 +465,16 @@ _Enviado via CRM Leilão NoZap_`;
     enviado: unifiedCustomers.filter(c => c.purchase_status === 'enviado').length,
     entregue: unifiedCustomers.filter(c => c.purchase_status === 'entregue').length,
     cancelado: unifiedCustomers.filter(c => c.purchase_status === 'cancelado').length,
-    volumeNegociacao: negotiations.filter(n => n.status === 'em_andamento').reduce((sum, n) => sum + (n.total_value || 0), 0)
+    volumeNegociacao: negotiations.filter(n => n.status === 'em_andamento').reduce((sum, n) => sum + (n.total_value || 0), 0),
+    leiloesArrematados: unifiedCustomers.reduce((sum, c) => sum + (c.auctions_won || 0), 0),
+    vendedores: unifiedCustomers.filter(c => c.role_type === 'vendedor').length,
+    licenciados: unifiedCustomers.filter(c => c.role_type === 'licenciado').length,
+    influencers: unifiedCustomers.filter(c => c.role_type === 'influencer').length,
+    investidores: unifiedCustomers.filter(c => c.role_type === 'investidor').length,
+    leiloeiros: unifiedCustomers.filter(c => c.role_type === 'leiloeiro').length,
+    arrematantes: unifiedCustomers.filter(c => c.role_type === 'arrematante').length,
+    produtosDisponiveis: availableProducts.length,
+    valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.selling_price_retail || p.market_value || 0) * (p.quantity || 0)), 0),
   };
 
   if (!isAdmin) {
@@ -544,7 +561,7 @@ _Enviado via CRM Leilão NoZap_`;
 
           <TabsContent value="customers">
             {/* FILTROS DE CLIENTES */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nz-tinta-fraca" />
             <Input
@@ -572,12 +589,25 @@ _Enviado via CRM Leilão NoZap_`;
             className="bg-white text-nz-tinta rounded-md px-4 py-2 border border-nz-borda focus:outline-none focus:ring-2 focus:ring-nz-verde/40"
           >
             <option value="all">Todas as Origens</option>
-            <option value="indicacao">Indicação</option>
+            <option value="cadastro">Cadastro na Plataforma</option>
             <option value="loja_virtual">Loja Virtual</option>
+            <option value="leilao">Leilão</option>
+            <option value="indicacao">Indicação</option>
             <option value="site">Site</option>
             <option value="whatsapp">WhatsApp</option>
             <option value="redes_sociais">Redes Sociais</option>
             <option value="outro">Outro</option>
+          </select>
+
+          <select
+            value={roleTypeFilter}
+            onChange={(e) => setRoleTypeFilter(e.target.value)}
+            className="bg-white text-nz-tinta rounded-md px-4 py-2 border border-nz-borda focus:outline-none focus:ring-2 focus:ring-nz-verde/40"
+          >
+            <option value="all">Todos os Tipos</option>
+            {Object.entries(ROLE_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
 
           <Button
@@ -586,6 +616,7 @@ _Enviado via CRM Leilão NoZap_`;
               setStatusFilter('all');
               setSourceFilter('all');
               setPurchaseStatusFilter('all');
+              setRoleTypeFilter('all');
             }}
             variant="outline"
             className="bg-white border-nz-borda text-nz-tinta hover:bg-nz-cinza-fundo"

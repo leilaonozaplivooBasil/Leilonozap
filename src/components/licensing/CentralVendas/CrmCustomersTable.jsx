@@ -2,24 +2,22 @@ import React from 'react';
 import { fmtBR } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Mail, Phone, Send, Trash2 } from 'lucide-react';
+import { Users, Mail, Phone, Send, Trash2, Gavel } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 
 // ☀️ Redesenho (18/08/2026): tabela em tema branco + verde institucional,
 // badges neutros (sem arco-íris). Ações (encaminhar/excluir) só aparecem em
 // clientes cadastrados manualmente — as linhas automáticas (indicação / loja
 // virtual) vêm de outras tabelas e não podem ser editadas/excluídas por aqui.
 const STATUS_LABEL = { lead: 'Lead', cliente: 'Cliente', inativo: 'Inativo' };
-const SOURCE_LABEL = {
-  indicacao: 'Indicação', loja_virtual: 'Loja Virtual', site: 'Site',
-  whatsapp: 'WhatsApp', redes_sociais: 'Redes Sociais', outro: 'Outro',
-  'indicacao+loja_virtual': 'Indicação + Loja Virtual',
-};
 const PURCHASE_LABEL = {
   sem_compra: 'Sem Compra', em_negociacao: 'Em Negociação', aguardando_pagamento: 'Aguardando Pagamento',
   pago: 'Pago', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado',
 };
+const SOURCE_PART_LABEL = { cadastro: 'Cadastro', loja_virtual: 'Loja Virtual', leilao: 'Leilão', indicacao: 'Indicação', site: 'Site', whatsapp: 'WhatsApp', redes_sociais: 'Redes Sociais', outro: 'Outro' };
+const formatSource = (source) => (source || '').split('+').map((p) => SOURCE_PART_LABEL[p] || p).join(' + ');
 
 export default function CrmCustomersTable({ customers, onForward, onDelete }) {
   const navigate = useNavigate();
@@ -37,8 +35,10 @@ export default function CrmCustomersTable({ customers, onForward, onDelete }) {
                 <th className="text-left p-3 font-semibold text-nz-tinta">Nome</th>
                 <th className="text-left p-3 font-semibold text-nz-tinta">Contato</th>
                 <th className="text-left p-3 font-semibold text-nz-tinta">Endereço</th>
+                <th className="text-center p-3 font-semibold text-nz-tinta">Tipo</th>
                 <th className="text-center p-3 font-semibold text-nz-tinta">Status</th>
                 <th className="text-center p-3 font-semibold text-nz-tinta">Compra</th>
+                <th className="text-center p-3 font-semibold text-nz-tinta">Leilões</th>
                 <th className="text-center p-3 font-semibold text-nz-tinta">Origem</th>
                 <th className="text-center p-3 font-semibold text-nz-tinta">Último Contato</th>
                 <th className="text-right p-3 font-semibold text-nz-tinta">Gasto Total</th>
@@ -61,6 +61,11 @@ export default function CrmCustomersTable({ customers, onForward, onDelete }) {
                     </td>
                     <td className="p-3 text-nz-tinta-fraca max-w-[220px] truncate" title={customer.address}>{customer.address || '-'}</td>
                     <td className="p-3 text-center">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-marrom-fundo text-nz-marrom-escuro">
+                        {ROLE_LABEL[customer.role_type] || 'Cliente'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
                       <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-verde-fundo text-nz-verde">
                         {STATUS_LABEL[customer.status] || customer.status}
                       </span>
@@ -70,9 +75,14 @@ export default function CrmCustomersTable({ customers, onForward, onDelete }) {
                         {PURCHASE_LABEL[customer.purchase_status] || customer.purchase_status}
                       </span>
                     </td>
+                    <td className="p-3 text-center text-nz-tinta-fraca">
+                      {customer.auctions_won > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-nz-verde font-semibold"><Gavel className="w-3.5 h-3.5" />{customer.auctions_won}</span>
+                      ) : '-'}
+                    </td>
                     <td className="p-3 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-marrom-fundo text-nz-marrom-escuro">
-                        {SOURCE_LABEL[customer.source] || customer.source}
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-cinza-fundo text-nz-tinta-fraca border border-nz-borda">
+                        {formatSource(customer.source)}
                       </span>
                     </td>
                     <td className="p-3 text-center text-nz-tinta-fraca">
