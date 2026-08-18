@@ -12,10 +12,14 @@ import {
   Building2,
   MapPin,
   Store,
+  ShoppingBag,
+  Megaphone,
 } from "lucide-react";
 
-// Cargos de rede que têm painel próprio em /painel (ordem = prioridade)
-export const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado"];
+// Cargos de rede que têm painel próprio em /painel (ordem = prioridade).
+// ⚠️ "vendedor" e "influenciador" faltavam aqui — por isso o selo do perfil
+// nunca virava "Vendedor" mesmo com o cargo já certo na árvore genealógica.
+export const REDE_CARGOS = ["distribuidor", "loja_fisica", "ponto_retirada", "parceiro", "licenciado", "vendedor", "influenciador"];
 
 export const REDE_META = {
   distribuidor: { label: "DISTRIBUIDOR", title: "Painel do Distribuidor", icon: Truck },
@@ -23,6 +27,8 @@ export const REDE_META = {
   ponto_retirada: { label: "PONTO DE RETIRADA", title: "Painel do Ponto de Retirada", icon: MapPin },
   parceiro: { label: "PARCEIRO", title: "Painel do Parceiro", icon: Store },
   licenciado: { label: "LICENCIADO", title: "Painel do Licenciado", icon: Briefcase },
+  vendedor: { label: "VENDEDOR", title: "Painel do Vendedor", icon: ShoppingBag },
+  influenciador: { label: "INFLUENCIADOR", title: "Painel do Influenciador", icon: Megaphone },
 };
 
 const OURO = { grad: "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500", text: "text-black", glow: "shadow-[0_2px_10px_rgba(245,158,11,0.55)]" };
