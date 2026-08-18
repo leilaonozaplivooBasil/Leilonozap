@@ -1138,28 +1138,12 @@ const DashboardContent = ({ user, isAdmin }) => {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {podeVerOperacao(user) ? (
-                      <Card className="bg-nz-verde-fundo border-nz-verde/30">
-                        <CardContent className="pt-5 flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-nz-tinta">Convidar para minha rede</p>
-                            <p className="text-sm text-nz-tinta-fraca">Links de convite por cargo (vendedor, licenciado, parceiro e mais) vivem no Painel da Loja.</p>
-                          </div>
-                          <Button onClick={() => navigate('/painel?tab=cadastrar')} className="bg-nz-verde hover:bg-nz-verde/90">
-                            Convidar para minha rede
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <>
-                        <RoleLinksGrid referralCode={user.referral_code} isSaiDeBaixo={isSaiDeBaixo} />
-                        <div className="flex justify-end">
-                          <Button onClick={() => setShowSellerModal(true)} variant="outline" size="sm" className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-600 text-gray-300'}>
-                            Cadastro manual (avançado)
-                          </Button>
-                        </div>
-                      </>
-                    )}
+                    <RoleLinksGrid referralCode={user.referral_code} isSaiDeBaixo={isSaiDeBaixo} />
+                    <div className="flex justify-end">
+                      <Button onClick={() => setShowSellerModal(true)} variant="outline" size="sm" className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-600 text-gray-300'}>
+                        Cadastro manual (avançado)
+                      </Button>
+                    </div>
                     <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
                   </CardContent>
                 </Card>
