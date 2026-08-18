@@ -1,6 +1,7 @@
 // settleAuctionWithBalance — liquida o arremate AUTOMATICAMENTE com o saldo da carteira.
-// Chamado quando o modal de vitória abre: debita o lance vencedor do saldo_disponivel,
-// cria a venda já paga (kind 'arremate') e paga comissões — sem passar pelo checkout.
+// Chamado quando o modal de vitória abre: consome o saldo_reservado do vencedor
+// (e só busca o saldo_disponivel se faltar), cria a venda já paga (kind 'arremate')
+// e paga comissões — sem passar pelo checkout.
 // Idempotente: flip atômico do order_status da auction garante execução única.
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
@@ -44,14 +45,29 @@ export default async function handler(req, res) {
     const produtoAmount = fromCents(produtoCents);
     const freteAmount = fromCents(freteCents);
 
-    const uRows = await (await sb(`app_users?select=saldo_disponivel,full_name,email,cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    // 🔴 CORREÇÃO 18/08/2026 — COBRANÇA DUPLA DO VENCEDOR (autorizada pelo dono).
+    //
+    // O QUE ESTAVA ERRADO: este endpoint cobrava o arremate SÓ do saldo_disponivel.
+    // Mas o dinheiro do vencedor está no saldo_RESERVADO — foi travado ali no lance.
+    // Consequências reais medidas na auditoria:
+    //   • Quem tinha disponível pagava DUAS VEZES na prática: saía do disponível e o
+    //     reservado ficava travado pra sempre (caso Sophia R$ 15,60 / Luiz R$ 21,60).
+    //   • Quem NÃO tinha disponível recebia "saldo insuficiente" mesmo com o dinheiro
+    //     dele reservado na própria conta.
+    //
+    // REGRA OFICIAL AGORA: o arremate consome PRIMEIRO o saldo_reservado (que já é
+    // dele, travado pra este fim) e só busca o saldo_disponivel se faltar.
+    // A conferência de suficiência passa a ser sobre reservado + disponível.
+    const uRows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado,full_name,email,cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
     const user = Array.isArray(uRows) ? uRows[0] : null;
     if (!user) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
-    if (cents(user.saldo_disponivel) < amountCents) {
+    const totalDisponivelCents = cents(user.saldo_disponivel) + cents(user.saldo_reservado);
+    if (totalDisponivelCents < amountCents) {
       return res.status(200).json({
         success: false, insufficient: true,
         error: 'Saldo insuficiente',
         balance: fromCents(cents(user.saldo_disponivel)),
+        reserved: fromCents(cents(user.saldo_reservado)),
         needed: amount,
       });
     }
@@ -66,26 +82,48 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, already_paid: true, raced: true });
     }
 
-    // débito atômico (CAS) em centavos
+    // 💰 DÉBITO ATÔMICO (CAS) EM CENTAVOS — RESERVADO PRIMEIRO, DEPOIS DISPONÍVEL.
+    // A trava otimista agora vale para AS DUAS colunas: só grava se nenhuma delas
+    // mudou entre a leitura e a escrita. Se mudou (outro lance/depósito em paralelo),
+    // relê e tenta de novo. Assim o arremate nunca solta reserva de outro leilão.
     let newBalance = null;
+    let baixaReservado = 0; // centavos consumidos do saldo_reservado (pro livro-caixa)
+    let reservadoAntes = 0;
+    let reservadoDepois = 0;
     for (let attempt = 0; attempt < 5; attempt++) {
-      const rows = await (await sb(`app_users?select=saldo_disponivel&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
-      const cur = cents(Array.isArray(rows) ? rows[0]?.saldo_disponivel : 0);
-      if (cur < amountCents) {
+      const rows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+      const u = Array.isArray(rows) ? rows[0] : null;
+      const curDisp = cents(u?.saldo_disponivel);
+      const curRes = cents(u?.saldo_reservado);
+      if (curDisp + curRes < amountCents) {
         // saldo caiu no meio do caminho — desfaz o flip e devolve o CTA de pagamento
         await sb(`auctions?id=eq.${encodeURIComponent(auctionId)}`, {
           method: 'PATCH', headers: { Prefer: 'return=minimal' },
           body: JSON.stringify({ order_status: 'awaiting_payment' }),
         });
-        return res.status(200).json({ success: false, insufficient: true, error: 'Saldo insuficiente', balance: fromCents(cur), needed: amount });
+        return res.status(200).json({ success: false, insufficient: true, error: 'Saldo insuficiente', balance: fromCents(curDisp), reserved: fromCents(curRes), needed: amount });
       }
-      const novo = fromCents(cur - amountCents);
+      // consome a reserva primeiro; o que faltar sai do disponível
+      const tirarDaReserva = Math.min(curRes, amountCents);
+      const tirarDoDisponivel = amountCents - tirarDaReserva;
+      const novoDisp = fromCents(curDisp - tirarDoDisponivel);
+      const novoRes = fromCents(curRes - tirarDaReserva);
+      // coluna nunca inicializada fica NULL, e "eq.0" nunca casa com NULL
+      const fDisp = curDisp === 0 ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)' : `saldo_disponivel.eq.${fromCents(curDisp)}`;
+      const fRes = curRes === 0 ? 'or(saldo_reservado.eq.0,saldo_reservado.is.null)' : `saldo_reservado.eq.${fromCents(curRes)}`;
       const patch = await sb(
-        `app_users?id=eq.${encodeURIComponent(userId)}&saldo_disponivel=eq.${fromCents(cur)}`,
-        { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novo }) }
+        `app_users?id=eq.${encodeURIComponent(userId)}&and=(${fDisp},${fRes})`,
+        { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novoDisp, saldo_reservado: novoRes }) }
       );
       const updated = await patch.json().catch(() => []);
-      if (Array.isArray(updated) && updated.length) { newBalance = novo; break; }
+      if (Array.isArray(updated) && updated.length) {
+        newBalance = novoDisp;
+        baixaReservado = tirarDaReserva;
+        reservadoAntes = curRes;
+        reservadoDepois = curRes - tirarDaReserva;
+        break;
+      }
+      // corrida: alguém mudou o saldo — relê e tenta de novo
     }
     if (newBalance === null) {
       await sb(`auctions?id=eq.${encodeURIComponent(auctionId)}`, {
@@ -93,6 +131,28 @@ export default async function handler(req, res) {
         body: JSON.stringify({ order_status: 'awaiting_payment' }),
       });
       return res.status(200).json({ success: false, error: 'Concorrência ao debitar, tente novamente' });
+    }
+
+    // 📒 LIVRO-CAIXA DA RESERVA (reserva_ledger) — registra a baixa do saldo_reservado
+    // que virou pagamento do arremate, com saldo antes e depois. Best-effort inline:
+    // falha aqui NUNCA derruba a liquidação (a venda já está paga neste ponto).
+    // ⚠️ Import de 2 níveis já derrubou o lance em produção — por isso inline, sem import.
+    if (baixaReservado > 0) {
+      try {
+        await sb('reserva_ledger', {
+          method: 'POST', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            user_id: userId,
+            auction_id: auctionId,
+            tipo: 'liquidacao_arremate',
+            direcao: 'saida_reserva',
+            valor: fromCents(baixaReservado),
+            saldo_antes: fromCents(reservadoAntes),
+            saldo_depois: fromCents(reservadoDepois),
+            origem: 'settleAuctionWithBalance',
+          }),
+        });
+      } catch (e) { console.warn('[SETTLE] livro-caixa da reserva:', e?.message); }
     }
 
     // venda já paga (mesma rota do arremate via PIX, sem gateway)
