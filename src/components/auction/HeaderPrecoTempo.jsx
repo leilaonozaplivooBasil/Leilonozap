@@ -6,7 +6,7 @@ import { fmtBR } from '@/lib/money';
  * PONTO 84 — cabeçalho da sala: PREÇO à esquerda, RELÓGIO à direita.
  * Só apresentação — nenhuma regra de leilão vive aqui.
  */
-export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo }) {
+export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName }) {
   return (
     <div className="flex w-full items-center justify-between gap-2">
       {/* PREÇO — esquerda */}
@@ -26,6 +26,12 @@ export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionA
         >
           R$ <span className="text-emerald-400">{fmtBR(currentPrice)}</span>
         </span>
+        {/* 🏆 PONTO 85 — quem está liderando o lance, visível pra todo mundo na sala */}
+        {leaderName && (
+          <span className="mt-0.5 flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-300 max-w-[120px] sm:max-w-[180px]">
+            🏆 <span className="truncate">{leaderName}</span>
+          </span>
+        )}
       </div>
 
       {/* PONTO 90 — CRONÔMETRO DIGITAL: sem "voltinha" de relógio, dígitos

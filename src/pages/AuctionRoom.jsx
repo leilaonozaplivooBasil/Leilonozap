@@ -1067,6 +1067,7 @@ export default function AuctionRoom() {
             isAuctionActive={isAuctionActive}
             isWarMode={isWarMode}
             onInfo={() => setShowMobilePanel(true)}
+            leaderName={auction?.winner_name}
           />
         </div>
 
@@ -1104,6 +1105,12 @@ export default function AuctionRoom() {
                 <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
                 <span className="product-panel__timer">{displayTime}</span>
               </div>
+              {/* 🏆 PONTO 85 — quem está liderando o lance, visível pra todo mundo na sala */}
+              {auction?.winner_name && (
+                <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-500/15 border border-amber-500/25 px-2.5 py-1.5 text-xs font-bold text-amber-300">
+                  🏆 Líder: <span className="truncate">{auction.winner_name}</span>
+                </div>
+              )}
               <p className="product-panel__desc">{auction.description}</p>
               <AuctionDisputePanel
                 auction={auction}
