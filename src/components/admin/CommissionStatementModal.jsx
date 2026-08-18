@@ -93,7 +93,7 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                             {/* 🆕 Quem comprou — pra a pessoa acompanhar de onde veio a comissão */}
                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                                 <User className="w-3 h-3" />
-                                {buyerName}
+                                <span>Cliente: <span className="font-medium text-gray-700">{buyerName}</span></span>
                             </p>
                         </div>
                     </div>
