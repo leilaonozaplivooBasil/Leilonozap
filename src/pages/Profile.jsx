@@ -549,6 +549,17 @@ export default function Profile() {
     );
   }
 
+  // 🗓️ Data do lance: prioriza o campo "timestamp" (Momento da mensagem) da
+  // AuctionMessage — quando created_date vem vazio/nulo, new Date(null) cai em
+  // 01/01/1970, que no fuso de Brasília aparece como "31/12/1969". Com fallback
+  // seguro: se nenhuma data for válida, mostra "—" em vez de uma data errada.
+  const formatBidDate = (bid) => {
+    const raw = bid.timestamp || bid.created_date;
+    const d = raw ? new Date(raw) : null;
+    if (!d || isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('pt-BR');
+  };
+
   const userStats = [
     { label: "Lances Dados", value: userBids.length, icon: Zap, color: "text-green-400" },
     { label: "Leilões Vencidos", value: currentUser.won_auctions || 0, icon: Trophy, color: "text-purple-400" }
@@ -1018,7 +1029,7 @@ export default function Profile() {
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>R$ {fmtBR((bid.bid_amount || 0))}</p>
                               <p className="text-xs text-gray-500">
-                                {new Date(bid.created_date).toLocaleDateString('pt-BR')}
+                                {formatBidDate(bid)}
                               </p>
                             </div>
                             <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Registrado</Badge>
