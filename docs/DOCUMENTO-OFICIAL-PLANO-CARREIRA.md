@@ -301,6 +301,100 @@ daqui pra frente **tem que ler as duas**.
 
 ---
 
+## 6-C. VENDA NO PDV — REGRA OFICIAL "QUEM VENDE RECEBE" (dono, 18/08/2026)
+
+O PDV (Tirar Pedido) atende **duas vendas diferentes na mesma tela**. Confundir as
+duas foi o que travou a operação em 18/08/2026. A regra abaixo separa as duas de
+forma definitiva.
+
+### O princípio: uma comissão NÃO paga duas coisas
+
+O antigo "rebate da casa" misturava dois pagamentos que são independentes:
+
+| Pagamento | O que remunera | Quem recebe | Existe sempre? |
+|---|---|---|---|
+| **Comissão de venda** | o esforço comercial (atendeu, fechou o pedido) | **quem tirou o pedido**, pela árvore genealógica dele + topo 10% | ✅ **sempre** |
+| **Margem da mercadoria** | o capital (comprou o lote, guardou, correu o risco) | **o dono da peça** | ❌ só se a peça saiu do **estoque próprio** |
+| **% da licença** | o benefício de quem é da rede e compra pra si | o **comprador identificado** da rede | ❌ só quando há comprador da rede identificado |
+
+No balcão de um distribuidor com estoque próprio essas figuras são a **mesma
+pessoa** — por isso a regra antiga parecia funcionar. Quando o PDV foi aberto para
+a rede toda e o **estoque central** entrou na jogada, elas se separaram.
+
+### As três situações, resolvidas sem exceção
+
+| Situação | Resultado |
+|---|---|
+| Recreio compra no balcão de Bangu, peça do **estoque de Bangu** | Recreio: % da licença · **Bangu: comissão de venda + margem da mercadoria dele** |
+| Recreio compra no balcão de Bangu, peça do **estoque central** | Recreio: % da licença · **Bangu: comissão de venda** (atendeu, mas não bancou a peça) |
+| Vendedor de rua vende pra **cliente final**, peça do central | **Comissão de venda sobe pela árvore do vendedor** — é venda de loja virtual |
+
+✅ **A regra do balcão do distribuidor continua de pé:** quem compra na porta de um
+distribuidor faz esse distribuidor ganhar. Ela só deixou de depender de um dado
+errado (ver abaixo) e passou a depender do que a pessoa **fez**.
+
+💰 **Não encarece:** balcão pagava teto 20% + topo 10% = 30%. A régua da loja
+virtual paga cadeia 20% + topo 10% = 30%. Mesmo custo, endereço certo.
+
+### ⛔ O MÉTODO DE PAGAMENTO NUNCA DECIDE A RÉGUA DE COMISSÃO
+
+Dinheiro, PIX, cartão ou **saldo** definem apenas **por onde o dinheiro chegou** —
+nunca quem recebe comissão.
+
+**Caso oficial (Elenice Lima, 18/08/2026):** vendedora de rua vendeu pela loja
+virtual dela, o cliente pagou **em dinheiro na mão dela**, ela **depositou e comprou
+saldo**, e pagou o pedido com esse saldo. O dinheiro do cliente entrou de verdade na
+plataforma; o saldo foi só o canal. **É venda de loja virtual — comissão pela árvore
+dela.** Se o cliente tivesse passado o cartão no site, o resultado econômico seria
+idêntico.
+
+### 🚨 `products.distribuidor_id` NÃO É "DONO DO ESTOQUE"
+
+O estoque **central** está gravado com o id de um distribuidor (medido em
+18/08/2026: **933 de 1.000** produtos com estoque apontando para `DISTRIBUIDOR
+BANGU`, sendo mercadoria central). Portanto:
+
+> ⛔ **NUNCA usar `products.distribuidor_id` para decidir comissão, rebate ou
+> permissão de venda.** Dono de mercadoria é `store_inventory` (estoque próprio,
+> `origem='comprado'|'consignado'`) — é o que a baixa (`api/_lib/baixaEstoque.js`)
+> e o repasse (`api/_lib/repasseEstoqueProprio.js`) já usam.
+
+**Trava removida em 18/08/2026** em `api/functions/createPdvOrder.js`: o pedido era
+bloqueado com *"Este produto pertence a outro distribuidor"* quando o
+`distribuidor_id` diferia de quem operava. Como o estoque central carrega o id de um
+distribuidor, **100% dos produtos travavam** para todo vendedor de rua — ele recebia
+o dinheiro do cliente e era barrado no último clique.
+
+### O que protege o dinheiro (continua de pé, não foi tocado)
+
+1. **Débito condicional no banco:** o pedido em saldo só fecha se a carteira de quem
+   opera cobrir o valor — dois pedidos simultâneos nunca deixam saldo negativo.
+2. **Trava do consignado:** peça consignada sem cobertura de saldo não fecha venda.
+3. **Idempotência da comissão:** `sale_id` já com `commission_records` não paga de novo.
+4. **Crédito conferido:** comissão que não cai no saldo fica `pending`, nunca silenciosa.
+
+### Onde vive no código
+
+| Papel | Arquivo |
+|---|---|
+| Decide quem é o vendedor da venda de PDV | `api/functions/createPdvOrder.js` |
+| Comissão pela árvore (motor único da loja) | `api/_lib/storeFulfill.js` → `api/_lib/arvoreOficial.js` |
+| Regra do balcão (comprador da rede identificado) | `api/_lib/pdvBalcao.js` |
+| Mesma decisão no caminho PIX (webhook) | `api/_lib/pdvSettle.js` |
+| Dono real da mercadoria + margem | `api/_lib/baixaEstoque.js` · `api/_lib/repasseEstoqueProprio.js` |
+
+### ⏭️ Pendências conhecidas (NÃO alteradas — exigem autorização)
+
+1. **Comprador da rede identificado levando peça do estoque central:** hoje o balcão
+   ainda fica com o resto do teto como rebate de casa, mesmo sem ser dono da peça.
+   Pelo princípio acima, deveria receber comissão de venda pela árvore dele.
+2. **Organização dos dados de estoque:** separar estoque central de estoque próprio
+   do distribuidor no cadastro dos produtos.
+3. **Admin operando o PDV:** continua atribuindo a venda ao `distribuidor_id` do
+   produto (decisão anterior, preservada) — que hoje é dado impreciso.
+
+---
+
 ## 7. OUTRAS COMISSÕES CITADAS NA APRESENTAÇÃO
 
 - **Venda de licença** (Distribuidor sobre licenciados da região): **7%**

@@ -106,21 +106,35 @@ export default async function handler(req, res) {
       comissaoInfo = comissaoDaLicenca(comprador, tabelas.levels);
     }
 
-    // 🔐 QUEM PAGA É QUEM RECEBE (correção 08/08/2026).
-    // O rebate do balcão ia para o dono cadastrado do produto (distribuidor_id),
-    // enquanto o débito em saldo saía de quem estava operando (employer/actor).
-    // Produto de OUTRO distribuidor = carteira A paga e comissão vai pra B, sem
-    // travar e sem avisar. Agora o balcão da operação é quem responde por ela, e
-    // divergência trava o pedido em vez de pagar para o lado errado.
-    // Admin/super_admin é exceção: ele opera EM NOME do distribuidor dono do
-    // produto (não é o balcão), então segue o comportamento de sempre.
+    // 🧭 PADRÃO OFICIAL DA COMISSÃO DE VENDA (Gabriel, 18/08/2026) — "QUEM VENDE RECEBE".
+    //
+    // A comissão de venda é SEMPRE de quem tirou o pedido e sobe pela árvore genealógica
+    // dele — igual à loja virtual e ao leilão. Uma régua só. O que muda de caso pra caso
+    // NÃO é a comissão de venda, é a MARGEM DA MERCADORIA: essa só existe pra quem é dono
+    // da peça, e já é paga separadamente pela baixa de estoque próprio
+    // (liberarRepasseEstoqueProprio, mais abaixo). Duas coisas diferentes, dois pagamentos.
+    //
+    // ⚠️ TRAVA REMOVIDA NESTA DATA: antes o pedido era BLOQUEADO quando o
+    // `distribuidor_id` do produto era diferente de quem operava ("Este produto pertence a
+    // outro distribuidor"). Dois erros nisso:
+    //   1) `distribuidor_id` NÃO significa dono do estoque — o estoque CENTRAL está marcado
+    //      com o id de um distribuidor, então a trava julgava por dado errado;
+    //   2) desde que o PDV foi aberto pra rede toda, o vendedor de rua vende do estoque
+    //      CENTRAL. Ele recebia o dinheiro do cliente, comprava saldo e era barrado no
+    //      último clique — 100% dos produtos travavam pra ele (caso Elenice, 18/08/2026).
+    // Venda de rua paga em saldo é VENDA DE LOJA VIRTUAL: o cliente pagou de verdade, o
+    // dinheiro entrou via depósito e o saldo é só o canal. O método de pagamento NUNCA
+    // decide a régua de comissão — decide só por onde o dinheiro chegou.
+    //
+    // O que protege o dinheiro NÃO era essa comparação, e continua de pé mais abaixo: o
+    // pedido só fecha se a carteira de quem opera cobrir o valor (débito condicional no
+    // banco) e a peça consignada trava sem cobertura.
+    //
+    // Admin/super_admin segue como sempre: opera EM NOME do distribuidor dono do produto.
     const donoProduto = sellerId; // veio do distribuidor_id dos itens (se houver)
     if (!isStoreOwner && !isAdmin) {
-      const balcaoOperacao = employerId || actorId;
-      if (donoProduto && String(donoProduto) !== String(balcaoOperacao)) {
-        return res.status(200).json({ success: false, error: 'Este produto pertence a outro distribuidor. O pedido não pode ser fechado neste balcão — quem paga tem que ser quem recebe a comissão.' });
-      }
-      sellerId = balcaoOperacao;
+      // quem operou é quem vendeu → a comissão sobe pela árvore DELE
+      sellerId = employerId || actorId;
     } else {
       sellerId = isStoreOwner ? actorId : (donoProduto || employerId || actorId);
     }
