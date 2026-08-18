@@ -237,7 +237,7 @@ export default function PainelDistribuidor() {
     { id: 'rede', label: 'Minha Árvore', icon: Network },
     /* 🧭 PDV e Estoque saíram DAQUI: já existem na lateral de ícones do sistema
        (mesma tela, dois caminhos = informação repetida). Continuam nos atalhos. */
-    { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
+    { id: 'pedidos', label: 'Todos os Pedidos (Loja + PDV)', icon: Truck, route: ROUTES.pedidos },
     /* 🧹 FAXINA 08/08/2026 — saíram da lateral por já existirem em outro lugar:
        Vendas/Histórico e Ranking (Central de Vendas), Financeiro & Comissões
        (Minha Carteira) e Empresa/Perfil (tela de Perfil). As telas continuam
@@ -253,7 +253,7 @@ export default function PainelDistribuidor() {
     { id: 'funcionarios', label: 'Funcionários (PDV)', icon: UserCog },
     { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
     { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true },
-    { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: ROUTES.pedidos },
+    { id: 'pedidos', label: 'Todos os Pedidos (Loja + PDV)', icon: Truck, route: ROUTES.pedidos },
     /* 🧹 mesma faxina do bloco acima (lojas): sem portas repetidas na lateral. */
     { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
     { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },

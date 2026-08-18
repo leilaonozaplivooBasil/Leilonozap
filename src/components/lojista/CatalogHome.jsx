@@ -3,7 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, ShoppingBag, Eye, Loader2 } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Eye, Loader2, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { podeVerOperacao } from '@/lib/licensingTabs';
 
 // 🔴 Contagem "zerada" a partir daqui: vendas/comissões antigas (antes de julho/2026)
 // eram de teste. O relatório só considera pedidos criados a partir deste corte
@@ -11,6 +13,7 @@ import { TrendingUp, ShoppingBag, Eye, Loader2 } from 'lucide-react';
 const REPORT_CUTOFF_DATE = new Date('2026-07-01T03:00:00.000Z');
 
 export default function CatalogHome({ currentStore, catalogSales = [], user, onGoToPedidos, onGoToComissoes }) {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
@@ -78,6 +81,15 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
 
   return (
     <div className="space-y-6">
+      {podeVerOperacao(user) && (
+        <button
+          onClick={() => navigate('/painel')}
+          className="w-full flex items-center justify-between gap-3 rounded-xl border border-nz-verde/30 bg-nz-verde-fundo px-4 py-3 text-left hover:border-nz-verde/50 transition-colors"
+        >
+          <span className="text-sm font-medium text-nz-tinta">Ver visão completa da operação (estoque, comissão e rede)</span>
+          <ArrowRight className="w-4 h-4 text-nz-verde shrink-0" />
+        </button>
+      )}
       {/* Cards principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card

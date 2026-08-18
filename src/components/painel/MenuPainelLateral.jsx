@@ -16,7 +16,7 @@ const MENU_LOJA = [
   { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
   { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
   { id: 'rede', label: 'Minha Árvore', icon: Network },
-  { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: '/painel/pedidos' },
+  { id: 'pedidos', label: 'Todos os Pedidos (Loja + PDV)', icon: Truck, route: '/painel/pedidos' },
   { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
   { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
 ];
@@ -27,7 +27,7 @@ const MENU_DIST = [
   { id: 'funcionarios', label: 'Funcionários (PDV)', icon: UserCog },
   { id: 'fornecedores', label: 'Fornecedores', icon: Factory },
   { id: 'loja', label: 'Editar Loja Virtual', icon: Store, ext: true, route: '/CatalogManagement' },
-  { id: 'pedidos', label: 'Pedidos & Envio', icon: Truck, route: '/painel/pedidos' },
+  { id: 'pedidos', label: 'Todos os Pedidos (Loja + PDV)', icon: Truck, route: '/painel/pedidos' },
   { id: 'marketing', label: 'Marketing & Cliques', icon: Megaphone },
   { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
 ];
@@ -74,7 +74,7 @@ export default function MenuPainelLateral({ user, activeTab, onTab, menuOpen = f
       <aside className={`bg-gray-950 border-r border-gray-800 p-4 w-72 md:w-64 overflow-y-auto fixed md:sticky top-0 left-0 h-full md:h-auto md:min-h-screen md:self-start z-50 transition-transform duration-200 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="mb-6 px-2 flex items-start justify-between">
           <div className="min-w-0">
-            <div className="text-xs text-gray-500 uppercase tracking-wide">Painel do</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Painel da Loja</div>
             <div className="text-lg font-black text-green-400">{cargoNome}</div>
             <div className="text-[11px] text-gray-500 truncate">{user.full_name}</div>
           </div>

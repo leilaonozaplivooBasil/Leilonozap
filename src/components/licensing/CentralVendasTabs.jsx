@@ -13,7 +13,7 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
   const ITENS = [
     { value: 'catalogo-produtos', label: 'Sua Loja Virtual', icon: Store },
     { value: 'catalogo-home', label: 'Relatório da Minha Loja', icon: BarChart3 },
-    { value: 'catalogo-pedidos', label: 'Vendas da Loja', icon: Package },
+    { value: 'catalogo-pedidos', label: 'Pedidos Online (Loja Virtual)', icon: Package },
     { value: 'catalogo-clientes', label: `Venda Direta (${clientesCount})`, icon: Users },
     { value: 'catalogo-vendedores', label: 'Vendedores', icon: Handshake },
     { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
