@@ -54,6 +54,8 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
     const dateStr = new Date(records[0]?.created_date || Date.now()).toLocaleDateString('pt-BR');
     const saleType = records[0]?.sale_type || 'catalog';
     const buyerName = sale?.buyer_name || 'Comprador não identificado';
+    // 🆕 De qual Loja Virtual (licenciado/vendedor dono do link) essa venda saiu
+    const storeOwnerName = records[0]?.anchor_user_name || sale?.licensee_name || sale?.seller_name || null;
 
     return (
         <Card className="bg-white border-nz-borda mb-3 overflow-hidden">
@@ -95,6 +97,13 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                                 <User className="w-3 h-3" />
                                 <span>Cliente: <span className="font-medium text-gray-700">{buyerName}</span></span>
                             </p>
+                            {/* 🆕 Loja Virtual de quem — o licenciado/vendedor dono do link que gerou a venda */}
+                            {storeOwnerName && (
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                    <ShoppingBag className="w-3 h-3" />
+                                    <span>Loja Virtual de: <span className="font-medium text-gray-700">{storeOwnerName}</span></span>
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="text-right ml-3">
