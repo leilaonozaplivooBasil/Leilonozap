@@ -4,10 +4,11 @@ import { base44 } from '@/api/base44Client';
 
 const CommissionRecord = base44.entities.CommissionRecord;
 const CatalogSale = base44.entities.CatalogSale;
+const Auction = base44.entities.Auction;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
+import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Gavel, User } from 'lucide-react';
 
 const ROLE_LABELS = {
   influencer_app: "Influencer",
@@ -51,6 +52,7 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
     const productTitle = records[0]?.product_title || sale?.product_title || 'Produto';
     const dateStr = new Date(records[0]?.created_date || Date.now()).toLocaleDateString('pt-BR');
     const saleType = records[0]?.sale_type || 'catalog';
+    const buyerName = sale?.buyer_name || 'Comprador não identificado';
 
     return (
         <Card className="bg-gray-800/50 border-gray-700/50 mb-3 overflow-hidden">
@@ -66,8 +68,8 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         <span className="mx-1">•</span>
                         <span className={saleType === 'auction' ? 'text-cyan-400' : 'text-blue-400'}>
                             <span className="inline-flex items-center gap-1">
-                  {saleType === 'auction' ? <Smartphone className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
-                  {saleType === 'auction' ? 'App' : 'Catálogo'}
+                  {saleType === 'auction' ? <Gavel className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
+                  {saleType === 'auction' ? 'Leilão' : 'Loja Virtual'}
                 </span>
                         </span>
                     </div>
@@ -87,6 +89,11 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                         <div className="min-w-0 flex-1">
                             <p className="font-medium text-white truncate">{productTitle}</p>
                             <p className="text-sm text-gray-500">Venda: R$ {fmtBR(Number(saleAmount))}</p>
+                            {/* 🆕 Quem comprou — pra a pessoa acompanhar de onde veio a comissão */}
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                <User className="w-3 h-3" />
+                                {buyerName}
+                            </p>
                         </div>
                     </div>
                     <div className="text-right ml-3">
@@ -148,16 +155,32 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                      // Exclui comissões revertidas (ex.: comissão indevida de depósito de carteira, cancelada)
                      const records = rawRecords.filter(r => r.status !== 'canceled');
 
-                     const saleIds = Array.from(new Set(records.map(r => r.sale_id).filter(Boolean)));
+                     // 🆕 Comissão de Loja Virtual busca o comprador em CatalogSale; comissão de
+                     // Leilão busca o arrematante (winner_name) em Auction — normalizados aqui
+                     // num único formato {buyer_name, product_title, total_amount} pro card usar.
+                     const catalogSaleIds = Array.from(new Set(records.filter(r => r.sale_type !== 'auction').map(r => r.sale_id).filter(Boolean)));
+                     const auctionSaleIds = Array.from(new Set(records.filter(r => r.sale_type === 'auction').map(r => r.sale_id).filter(Boolean)));
                      let salesMap = {};
-                     if (saleIds.length > 0) {
+                     if (catalogSaleIds.length > 0) {
                          const sales = await CatalogSale.filter(
-                             { id: { $in: saleIds } },
+                             { id: { $in: catalogSaleIds } },
                              "-created_date",
-                             saleIds.length
+                             catalogSaleIds.length
                          );
                          if (Array.isArray(sales)) {
-                             salesMap = Object.fromEntries(sales.map(s => [s.id, s]));
+                             sales.forEach(s => { salesMap[s.id] = s; });
+                         }
+                     }
+                     if (auctionSaleIds.length > 0) {
+                         const auctions = await Auction.filter(
+                             { id: { $in: auctionSaleIds } },
+                             "-created_date",
+                             auctionSaleIds.length
+                         );
+                         if (Array.isArray(auctions)) {
+                             auctions.forEach(a => {
+                                 salesMap[a.id] = { buyer_name: a.winner_name, product_title: a.title, total_amount: a.current_price };
+                             });
                          }
                      }
 
@@ -239,13 +262,13 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                         </p>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Smartphone className="w-3 h-3" />App</p>
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Gavel className="w-3 h-3" />Leilão</p>
                         <p className="text-lg font-bold text-cyan-400">
                             R$ {fmtBR(totals.app)}
                         </p>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><ShoppingBag className="w-3 h-3" />Catálogo</p>
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><ShoppingBag className="w-3 h-3" />Loja Virtual</p>
                         <p className="text-lg font-bold text-blue-400">
                             R$ {fmtBR(totals.catalog)}
                         </p>
@@ -259,10 +282,10 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                             Todos ({saleCounts.total})
                         </TabsTrigger>
                         <TabsTrigger value="app" className="text-xs data-[state=active]:bg-gray-700">
-                            App ({saleCounts.app})
+                            Leilão ({saleCounts.app})
                         </TabsTrigger>
                         <TabsTrigger value="catalogo" className="text-xs data-[state=active]:bg-gray-700">
-                            Catálogo ({saleCounts.catalog})
+                            Loja Virtual ({saleCounts.catalog})
                         </TabsTrigger>
                     </TabsList>
 
@@ -292,9 +315,9 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                                     </p>
                                     <p className="text-sm text-gray-600 mt-1">
                                         {activeTab === 'app' 
-                                            ? 'Compartilhe seu link do App' 
+                                            ? 'Compartilhe seu link de Leilão' 
                                             : activeTab === 'catalogo'
-                                            ? 'Venda pelo Catálogo'
+                                            ? 'Venda pela Loja Virtual'
                                             : 'Suas comissões aparecerão aqui'}
                                     </p>
                                 </div>
