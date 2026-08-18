@@ -14,7 +14,7 @@ import DepositoOperacaoModal from '@/components/wallet/DepositoOperacaoModal';
 import PixReposicaoModal from '@/components/reposicao/PixReposicaoModal';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
-  Package, User as UserIcon, Phone, CreditCard, Wallet, QrCode, Store, Truck, Banknote
+  Package, User as UserIcon, Phone, Wallet, QrCode, Store, Truck, Banknote
 } from 'lucide-react';
 
 const priceOf = (p) => Number(p.price_catalog || p.selling_price_retail || 0);
@@ -406,8 +406,12 @@ export default function TirarPedido() {
           </div>
 
           {/* pagamento */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-            {[['saldo', 'Comissão', Wallet], ['operacao', 'Adicionar saldo', Banknote], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
+          {/* 🔒 18/08/2026 — "Cartão" REMOVIDO daqui. Não existe cobrança de cartão no PDV:
+              o botão gravava a venda como paga e entregue, baixava estoque e pagava comissão
+              real sem cobrar de ninguém (teste de R$ 23,76 fechou sozinho e distribuiu R$ 7,15).
+              O servidor também recusa 'cartao' agora. Volta quando tiver cobrança de verdade. */}
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[['saldo', 'Comissão', Wallet], ['operacao', 'Adicionar saldo', Banknote], ['pix', 'PIX', QrCode]].map(([k, label, Icon]) => (
               <button
                 key={k}
                 onClick={() => {

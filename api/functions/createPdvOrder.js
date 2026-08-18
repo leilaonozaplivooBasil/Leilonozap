@@ -38,6 +38,19 @@ export default async function handler(req, res) {
     const vendedorId = String(body?.vendedor_id || '').trim(); // venda vinculada a um vendedor (comissão)
     const compradorId = String(body?.comprador_id || '').trim(); // quem está levando (licença) — desconto de balcão
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Operador e itens são obrigatórios' });
+    // 🔒 TRAVA DE COBRANÇA (18/08/2026) — só passa método que REALMENTE cobra o dinheiro:
+    //   dinheiro  → cédula na mão, no balcão (nada a cobrar online)
+    //   saldo     → debita commission_balance (conferido e debitado abaixo)
+    //   operacao  → debita saldo_operacao (idem)
+    //   pix       → cobrança real no Mercado Pago, só liquida no webhook
+    // 'cartao' estava FORA de todos esses caminhos: a venda era gravada como paga/entregue,
+    // baixava estoque e pagava comissão real SEM cobrar nada de ninguém (pedido de teste de
+    // R$ 23,76 fechou sozinho e distribuiu R$ 7,15 de comissão). Enquanto não existir
+    // cobrança de cartão de verdade aqui, o método é recusado — venda nenhuma fecha de graça.
+    const METODOS_COM_COBRANCA = ['dinheiro', 'saldo', 'operacao', 'pix'];
+    if (!METODOS_COM_COBRANCA.includes(paymentMethod)) {
+      return res.status(200).json({ success: false, error: 'Cartão ainda não está liberado no PDV — não existe cobrança de cartão aqui, e o pedido fecharia sem ninguém pagar. Use Dinheiro, PIX, Saldo de comissão ou Saldo de operação.' });
+    }
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     // guard: ator admin OU cargo de estoque OU funcionário de PDV ativo
