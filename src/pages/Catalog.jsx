@@ -561,8 +561,17 @@ export default function Catalog() {
     }
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
 
-  // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página)
+  // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página).
+  // ⚡ Na primeira montagem, "Todos" já foi buscado por loadProducts() — repetir aqui
+  // duplicava a mesma busca de 240 produtos (visto em produção: 2 requests idênticos
+  // no primeiro carregamento da loja, dobrando o tempo de abertura à toa).
+  const primeiraMontagemCategoria = useRef(true);
   useEffect(() => {
+    if (primeiraMontagemCategoria.current && selectedCategory === "all") {
+      primeiraMontagemCategoria.current = false;
+      return;
+    }
+    primeiraMontagemCategoria.current = false;
     let alive = true;
     setReachedEnd(false);
     const fetchByCategory = async () => {
