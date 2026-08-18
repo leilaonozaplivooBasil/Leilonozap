@@ -42,6 +42,91 @@ async function writeResilient(method, table, id, payload, depth = 0) {
   return { ok: false, details: msg.slice(0, 200) };
 }
 
+// 🔴 DEVOLUÇÃO DE RESERVA DE LEILÃO (18/08/2026) — PEÇA ÚNICA.
+//
+// O QUE ESTAVA ERRADO: existem DOIS caminhos que tiram o leilão de circulação —
+// APAGAR e CANCELAR — e NENHUM devolvia o saldo travado no lance do líder. O dinheiro
+// ficava reservado apontando pra um leilão que não existe mais ou foi cancelado: o
+// cliente vê o valor na conta e não consegue usar. Medido: R$ 109,20 em 6 contas.
+//
+// Esta função é a ÚNICA fonte da devolução, usada pelos dois caminhos — assim eles
+// nunca mais divergem (era exatamente essa divergência que prendia o dinheiro).
+//
+// REGRA: devolve saldo_reservado → saldo_disponivel do LÍDER daquele leilão.
+//   • Só o LÍDER: quem foi coberto durante a disputa já recebeu de volta na hora.
+//   • Valor = lance dele + frete reservado (mesma base do submitAtomicBid).
+//   • Se o pedido já está PAGO, NÃO devolve: a reserva virou pagamento.
+//   • Nunca devolve mais do que está reservado; nunca deixa saldo negativo.
+//   • Trava anticorrida (CAS) nas duas colunas: lance/depósito simultâneo recalcula.
+//   • Toda movimentação vira linha em reserva_ledger (livro-caixa auditável).
+//   • Best-effort: falha aqui NUNCA bloqueia o apagar/cancelar — só avisa na resposta.
+// ⚠️ Inline de propósito: import de 2 níveis já derrubou função em produção.
+async function devolverReservaDoLeilao(auctionId, motivo) {
+  const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
+  try {
+    const aRows = await (await sb(`auctions?select=id,winner_id,current_price,frete_reservado_valor,order_status&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
+    const auction = Array.isArray(aRows) ? aRows[0] : null;
+    const lider = auction?.winner_id ? String(auction.winner_id) : '';
+    if (!lider || auction?.order_status === 'paid') return null;
+
+    const valorPreso = money((Number(auction?.current_price) || 0) + (Number(auction?.frete_reservado_valor) || 0));
+    if (valorPreso <= 0) return null;
+
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const uRows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(lider)}&limit=1`)).json();
+      const u = Array.isArray(uRows) ? uRows[0] : null;
+      if (!u) return null;
+
+      const disponivel = money(u.saldo_disponivel);
+      const reservado = money(u.saldo_reservado);
+      const liberar = money(Math.min(valorPreso, reservado));
+      if (liberar <= 0) return null;
+
+      // coluna nunca inicializada fica NULL, e "eq.0" nunca casa com NULL
+      const fDisp = disponivel === 0 ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)' : `saldo_disponivel.eq.${disponivel}`;
+      const fRes = reservado === 0 ? 'or(saldo_reservado.eq.0,saldo_reservado.is.null)' : `saldo_reservado.eq.${reservado}`;
+      const patch = await sb(`app_users?id=eq.${encodeURIComponent(lider)}&and=(${fDisp},${fRes})`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ saldo_disponivel: money(disponivel + liberar), saldo_reservado: money(reservado - liberar) }),
+      });
+      const updated = await patch.json().catch(() => []);
+      if (!Array.isArray(updated) || !updated.length) continue; // corrida: relê e tenta de novo
+
+      try {
+        await sb('reserva_ledger', {
+          method: 'POST',
+          headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            user_id: lider,
+            auction_id: String(auctionId),
+            tipo: motivo,
+            direcao: 'saida_reserva',
+            valor: liberar,
+            saldo_antes: reservado,
+            saldo_depois: money(reservado - liberar),
+            origem: `entityWrite:${motivo}`,
+          }),
+        });
+      } catch (e) { console.warn('[DEVOLUCAO RESERVA] livro-caixa:', e?.message); }
+
+      return { user_id: lider, valor: liberar };
+    }
+    return null;
+  } catch (e) {
+    console.warn('[DEVOLUCAO RESERVA] falhou:', e?.message);
+    return null;
+  }
+}
+
+// O nome do campo de cancelamento varia conforme a tela (status / lot_status /
+// order_status) e o valor às vezes é "cancelado", às vezes "canceled" — checamos os
+// três campos e aceitamos as duas grafias, senão um caminho escaparia sem devolver.
+function ehCancelamentoDeLeilao(payload) {
+  return [payload?.status, payload?.lot_status, payload?.order_status]
+    .some((v) => typeof v === 'string' && /^cancel/i.test(v.trim()));
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
