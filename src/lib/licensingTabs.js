@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users } from 'lucide-react';
 import { normalizeLevels } from '@/lib/careerLevels';
 
 // 🧭 PONTO 85 — FONTE ÚNICA das abas do Painel de Alavancagem.
@@ -80,7 +80,19 @@ export function getLicensingGroups(user) {
     {
       title: 'Vender',
       items: [
-        { type: 'tab', value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag },
+        {
+          type: 'tab', value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag,
+          // 🛍️ Seções da Central de Vendas — permite ir direto numa seção pelo
+          // menu flutuante da lateral, sem abrir a aba e escolher de novo lá dentro.
+          subItens: [
+            { value: 'catalogo-produtos', label: 'Sua Loja Virtual', icon: Store },
+            { value: 'catalogo-home', label: 'Relatório da Loja', icon: BarChart3 },
+            { value: 'catalogo-pedidos', label: 'Pedidos', icon: Package },
+            { value: 'catalogo-clientes', label: 'Venda Direta', icon: Users },
+            { value: 'catalogo-vendedores', label: 'Vendedores', icon: Handshake },
+            { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
+          ],
+        },
       ],
     },
     {

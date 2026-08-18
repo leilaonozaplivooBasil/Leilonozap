@@ -4,22 +4,27 @@ import { Link, useLocation } from 'react-router-dom';
 import { Draggable } from '@hello-pangea/dnd';
 import { Store } from 'lucide-react';
 
-// 🧭 Ícone único da lateral que agrupa vários links de operação (Meu Painel,
-// PDV, Estoque, Metas) num menu flutuante — reduz a lista sem remover nenhum
-// destino: é só navegação, nenhuma rota/lógica muda.
+// 🧭 Ícone único da lateral que agrupa vários destinos num menu flutuante —
+// usado tanto para "Operação" (Meu Painel, PDV, Estoque, Metas: links de rota)
+// quanto para "Central de Vendas" (Loja Virtual, Pedidos, Vendedores…: troca de
+// aba interna). Cada sub-item tem `to` (link) OU `onClick` (troca de aba).
 //
 // 🩹 O menu é renderizado num portal (document.body) com posição FIXA calculada
 // a partir do botão: a lateral tem overflow-y-auto (rola verticalmente), e isso
 // corta automaticamente qualquer coisa que passe pra fora na horizontal — um
-// menu "position: absolute" dentro dela simplesmente não aparecia (parecia
-// "sem link"). Fora do contêiner, o corte não existe mais.
-export default function ItemLateralGrupo({ item, indice, separador }) {
+// menu "position: absolute" dentro dela simplesmente não aparecia. Fora do
+// contêiner, o corte não existe mais.
+export default function ItemLateralGrupo({ item, indice, separador, ativo: ativoProp }) {
   const location = useLocation();
   const [aberto, setAberto] = useState(false);
   const [posicao, setPosicao] = useState(null);
   const botaoRef = useRef(null);
 
-  const ativo = item.subItens.some((s) => location.pathname.toLowerCase() === (s.to || '').toLowerCase());
+  const ativo = ativoProp !== undefined
+    ? ativoProp
+    : item.subItens.some((s) => s.to && location.pathname.toLowerCase() === s.to.toLowerCase());
+
+  const Icone = item.icon || Store;
 
   const abrir = () => {
     const rect = botaoRef.current?.getBoundingClientRect();
@@ -30,7 +35,7 @@ export default function ItemLateralGrupo({ item, indice, separador }) {
   useEffect(() => {
     if (!aberto) return;
     const fechar = (e) => {
-      if (botaoRef.current && !botaoRef.current.contains(e.target) && !e.target.closest('[data-menu-operacao]')) {
+      if (botaoRef.current && !botaoRef.current.contains(e.target) && !e.target.closest('[data-menu-lateral-grupo]')) {
         setAberto(false);
       }
     };
@@ -61,28 +66,45 @@ export default function ItemLateralGrupo({ item, indice, separador }) {
                 : 'text-white/70 hover:bg-white/10 hover:text-nz-verde-claro'
             }`}
           >
-            <Store className="w-5 h-5" />
+            <Icone className="w-5 h-5" />
             <span className="text-[9px] font-medium leading-tight">{item.label}</span>
           </button>
 
           {aberto && posicao && createPortal(
             <div
-              data-menu-operacao
-              className="fixed z-[9999] w-48 rounded-xl border border-white/10 bg-nz-preto-barra shadow-2xl py-2"
+              data-menu-lateral-grupo
+              className="fixed z-[9999] w-52 rounded-xl border border-white/10 bg-nz-preto-barra shadow-2xl py-2"
               style={{ top: posicao.top, left: posicao.left }}
             >
               {item.subItens.map((sub) => {
-                const Icone = sub.icon;
-                return (
-                  <Link
-                    key={sub.to}
-                    to={sub.to}
-                    onClick={() => setAberto(false)}
-                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors"
-                  >
-                    {Icone && <Icone className="w-4 h-4 shrink-0" />}
+                const IconeSub = sub.icon;
+                const conteudo = (
+                  <>
+                    {IconeSub && <IconeSub className="w-4 h-4 shrink-0" />}
                     {sub.label}
-                  </Link>
+                  </>
+                );
+                if (sub.to) {
+                  return (
+                    <Link
+                      key={sub.to}
+                      to={sub.to}
+                      onClick={() => setAberto(false)}
+                      className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors"
+                    >
+                      {conteudo}
+                    </Link>
+                  );
+                }
+                return (
+                  <button
+                    key={sub.label}
+                    type="button"
+                    onClick={() => { sub.onClick?.(); setAberto(false); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors"
+                  >
+                    {conteudo}
+                  </button>
                 );
               })}
             </div>,

@@ -71,6 +71,18 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
       grupo.items.forEach((item) => {
         const chave = chaveDe(item);
         if (ITENS_OCULTOS.includes(chave)) return;
+        // 🛍️ "Central de Vendas" (e qualquer aba com subItens) também vira um
+        // ícone único com menu flutuante — escolhe a seção direto, sem abrir a
+        // aba e escolher de novo no seletor interno dela.
+        if (item.type === 'tab' && Array.isArray(item.subItens) && item.subItens.length) {
+          const subItens = item.subItens.map((sub) => (
+            onTabChange
+              ? { label: sub.label, icon: sub.icon, onClick: () => onTabChange(item.value, sub.value) }
+              : { label: sub.label, icon: sub.icon, to: `/Licensing?tab=${item.value}&catalogTab=${sub.value}` }
+          ));
+          lista.push({ type: 'group', chave, label: item.label, icon: item.icon, subItens, grupo: gi, tabValue: item.value });
+          return;
+        }
         lista.push({ ...item, chave, grupo: gi });
       });
     });
@@ -109,6 +121,7 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
                       item={item}
                       indice={i}
                       separador={i > 0 && itens[i - 1].grupo !== item.grupo}
+                      ativo={item.tabValue ? (!!onTabChange && activeTab === item.tabValue) : undefined}
                     />
                   ) : (
                     <ItemLateralArrastavel
