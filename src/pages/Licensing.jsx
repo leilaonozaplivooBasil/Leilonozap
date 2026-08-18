@@ -592,11 +592,11 @@ const DashboardContent = ({ user, isAdmin }) => {
     toast.success('Link copiado!');
   };
 
-  // 🆕 Atalho rápido pra Central de Vendas > Comissões, usado pelos links da
-  // Visão Geral (carteira + últimas atividades).
+  // 🆕 Atalho rápido usado pelos links "Ver comissões" da Visão Geral (carteira +
+  // últimas atividades): abre direto o Histórico de Comissões detalhado por
+  // venda — o mesmo modal usado dentro da Central de Vendas > Comissões.
   const goToCommissions = () => {
-    handleTabChange('catalogo', 'catalogo-comissoes');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setViewingCommissionsFor(user);
   };
 
   const handleAuctionSelect = (auctionId) => {
