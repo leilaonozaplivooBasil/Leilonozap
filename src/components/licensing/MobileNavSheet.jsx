@@ -1,29 +1,61 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, X, Search, Check } from 'lucide-react';
+import { ChevronDown, X, Search, Check, Store } from 'lucide-react';
 import { getLicensingGroups } from '@/lib/licensingTabs';
 
-// 📱 NAVEGAÇÃO DO PAINEL DE ALAVANCAGEM NO CELULAR (13/08/2026)
-//
-// Antes era uma barra que rolava pro lado: a pessoa não via tudo, não sabia
-// quantas seções existiam e precisava "caçar" arrastando. Agora funciona como no
-// desktop: um botão único mostra onde você está e abre um painel com TUDO
-// organizado por grupos — igual à lateral do computador.
+// 📱 NAVEGAÇÃO DO PAINEL DE ALAVANCAGEM NO CELULAR (13/08/2026 · reorganizado 18/08/2026)
 //
 // Mesma FONTE ÚNICA do desktop (@/lib/licensingTabs): nenhuma lista duplicada.
-// Nada de lógica de negócio aqui — só navegação visual.
+//
+// A lateral do desktop (NavegacaoLateralGlobal) condensa "Operação" e qualquer
+// aba com sub-seções (ex: "Central de Vendas") num ícone único que abre um menu
+// flutuante — e esconde itens que já são alcançados de dentro de outra tela
+// (Comprar Estoque, Meus Arremates). Essa MESMA organização é replicada aqui:
+// como não há hover no celular, o item único expande inline (acordeão) em vez
+// de abrir um flutuante. Nada de lógica de negócio — só espelha o agrupamento.
+const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings'];
+const chaveDe = (item) => (item.type === 'tab' ? `tab:${item.value}` : item.to);
+
 export default function MobileNavSheet({ user, activeTab, onTabChange }) {
   const navigate = useNavigate();
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState('');
+  const [grupoExpandido, setGrupoExpandido] = useState(null);
 
-  const grupos = useMemo(() => getLicensingGroups(user), [user]);
+  // Mesma transformação da lateral do desktop: grupo "Operação" e qualquer aba
+  // com subItens viram UM item de grupo (expande pra mostrar os destinos).
+  const grupos = useMemo(() => {
+    return getLicensingGroups(user)
+      .map((grupo) => {
+        if (grupo.title === 'Operação') {
+          const subItens = grupo.items.filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)));
+          if (!subItens.length) return { ...grupo, items: [] };
+          return {
+            ...grupo,
+            items: [{ type: 'group', chave: 'group:operacao', label: 'Operação', icon: Store, subItens }],
+          };
+        }
+        const items = grupo.items
+          .filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)))
+          .map((item) => {
+            if (item.type === 'tab' && Array.isArray(item.subItens) && item.subItens.length) {
+              return { type: 'group', chave: `tab:${item.value}`, label: item.label, icon: item.icon, subItens: item.subItens, tabValue: item.value };
+            }
+            return item;
+          });
+        return { ...grupo, items };
+      })
+      .filter((g) => g.items.length > 0);
+  }, [user]);
 
-  // Seção atual (para o rótulo do botão): a aba ativa dentro dos grupos
+  // Seção atual (para o rótulo do botão): a aba ativa dentro dos grupos, olhando
+  // também dentro dos itens de grupo (ex: Central de Vendas está "dentro" dele).
   const atual = useMemo(() => {
     for (const g of grupos) {
-      const hit = g.items.find((i) => i.type === 'tab' && i.value === activeTab);
-      if (hit) return hit;
+      for (const item of g.items) {
+        if (item.type === 'tab' && item.value === activeTab) return item;
+        if (item.type === 'group' && item.tabValue === activeTab) return item;
+      }
     }
     return grupos[0]?.items[0];
   }, [grupos, activeTab]);
@@ -40,7 +72,13 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
     const termo = busca.trim().toLowerCase();
     if (!termo) return grupos;
     return grupos
-      .map((g) => ({ ...g, items: g.items.filter((i) => i.label.toLowerCase().includes(termo)) }))
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((i) =>
+          i.label.toLowerCase().includes(termo) ||
+          (i.subItens || []).some((s) => s.label.toLowerCase().includes(termo))
+        ),
+      }))
       .filter((g) => g.items.length > 0);
   }, [grupos, busca]);
 
@@ -52,6 +90,16 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       navigate(item.to);
+    }
+  };
+
+  const escolherSub = (sub) => {
+    setAberto(false);
+    setBusca('');
+    if (sub.to) {
+      navigate(sub.to);
+    } else {
+      sub.onClick?.();
     }
   };
 
@@ -117,6 +165,49 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                   </p>
                   {grupo.items.map((item) => {
                     const Icon = item.icon;
+
+                    // Item de grupo (Operação / Central de Vendas): expande inline
+                    // pra mostrar os destinos — mesma organização do menu flutuante do desktop.
+                    if (item.type === 'group') {
+                      const expandido = grupoExpandido === item.chave;
+                      const ativo = !!item.tabValue && item.tabValue === activeTab;
+                      return (
+                        <div key={item.chave}>
+                          <button
+                            type="button"
+                            onClick={() => setGrupoExpandido(expandido ? null : item.chave)}
+                            className={`mb-0.5 flex w-full min-h-[48px] items-center gap-3 rounded-lg px-3 py-2.5 text-left ${
+                              ativo || expandido ? 'bg-nz-verde-fundo text-nz-verde' : 'text-nz-tinta active:bg-nz-cinza-fundo'
+                            }`}
+                          >
+                            <Icon className={`h-[18px] w-[18px] flex-shrink-0 ${ativo || expandido ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
+                            <span className={`min-w-0 flex-1 truncate text-sm ${ativo ? 'font-bold' : 'font-medium'}`}>
+                              {item.label}
+                            </span>
+                            <ChevronDown className={`h-4 w-4 flex-shrink-0 text-nz-tinta-fraca transition-transform ${expandido ? 'rotate-180' : ''}`} />
+                          </button>
+                          {expandido && (
+                            <div className="ml-4 mb-1 border-l border-nz-borda pl-3">
+                              {item.subItens.map((sub) => {
+                                const IconSub = sub.icon;
+                                return (
+                                  <button
+                                    key={sub.label}
+                                    type="button"
+                                    onClick={() => escolherSub(sub)}
+                                    className="mb-0.5 flex w-full min-h-[44px] items-center gap-2.5 rounded-lg px-3 py-2 text-left text-nz-tinta active:bg-nz-cinza-fundo"
+                                  >
+                                    {IconSub && <IconSub className="h-4 w-4 flex-shrink-0 text-nz-tinta-fraca" />}
+                                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{sub.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
                     const ativo = item.type === 'tab' && item.value === activeTab;
                     return (
                       <button
