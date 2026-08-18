@@ -2,13 +2,22 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
+// 🚀 OTIMIZAÇÃO (fase 1 - 18/08/2026):
+// 1) O efeito antes dependia de `location.pathname` — como o Layout remonta a
+//    cada navegação e esse hook roda dentro dele, TODA troca de página recriava
+//    o timeout/interval do heartbeat (um novo delay de 5s + rede a cada nav).
+//    Agora a página atual é lida por ref, sem disparar o efeito de novo.
+// 2) Heartbeat só roda com a aba visível (regra mobile: nada de rede em
+//    background) — antes o setInterval seguia rodando mesmo em segundo plano.
 export function useActiveSession(currentUser) {
   const location = useLocation();
+  const pathRef = useRef(location.pathname);
+  pathRef.current = location.pathname;
+
   const sessionIdRef = useRef(null);
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    // Gera ou recupera session_id único
     if (!sessionIdRef.current) {
       const stored = sessionStorage.getItem('live_session_id');
       if (stored) {
@@ -20,16 +29,17 @@ export function useActiveSession(currentUser) {
     }
 
     const updateSession = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       try {
-        const existingSessions = await base44.entities.LiveSession.filter({ 
-          session_id: sessionIdRef.current 
+        const existingSessions = await base44.entities.LiveSession.filter({
+          session_id: sessionIdRef.current
         });
 
         const sessionData = {
           session_id: sessionIdRef.current,
           user_id: currentUser?.id || null,
           last_heartbeat: new Date().toISOString(),
-          page: location.pathname,
+          page: pathRef.current,
           user_agent: navigator.userAgent
         };
 
@@ -49,7 +59,7 @@ export function useActiveSession(currentUser) {
     // Heartbeat inicial com delay de 5s (evita sobrecarga no mount)
     const initialTimeout = setTimeout(updateSession, 5000);
 
-    // Heartbeat a cada 2 minutos (reduzido de 30s para evitar rate limit)
+    // Heartbeat a cada 2 minutos
     intervalRef.current = setInterval(updateSession, 120000);
 
     return () => {
@@ -58,7 +68,7 @@ export function useActiveSession(currentUser) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [currentUser?.id, location.pathname]);
+  }, [currentUser?.id]);
 
   return null;
 }

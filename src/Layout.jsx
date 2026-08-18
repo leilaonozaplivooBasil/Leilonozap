@@ -42,6 +42,14 @@ import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
 
+// 🚀 OTIMIZAÇÃO (fase 1 - 18/08/2026): o App.jsx cria um <Layout> novo por rota
+// (não usa <Outlet> persistente), então o Layout remonta a cada navegação e
+// initApp() refazia a chamada de rede de revalidação do usuário em TODA
+// página aberta. Este módulo guarda quando foi a última revalidação real:
+// dentro da janela, reaproveita o usuário do localStorage sem bater na rede.
+let lastLayoutUserSyncAt = 0;
+const LAYOUT_USER_SYNC_MIN_INTERVAL_MS = 20000;
+
 // Flutuantes globais: CompareAQUI (esquerda) + Fale com a Leila (direita) em todas as páginas.
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
@@ -464,8 +472,16 @@ export default function Layout({ children, currentPageName }) {
               return;
             }
 
+            const agoraParaSync = Date.now();
+            if (agoraParaSync - lastLayoutUserSyncAt < LAYOUT_USER_SYNC_MIN_INTERVAL_MS) {
+              // 🚀 Revalidado há pouco (navegação rápida entre páginas): usa o
+              // usuário já confirmado, sem repetir a chamada de rede.
+              setCurrentUser(prev => safeMergeUser(userFromStorage, prev));
+              userFound = true;
+            } else {
             try {
               const usersInDB = await AppUser.filter({ email: userFromStorage.email });
+              lastLayoutUserSyncAt = Date.now();
               if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
                 const freshUser = usersInDB[0];
 
@@ -503,6 +519,7 @@ export default function Layout({ children, currentPageName }) {
               console.log("⚠️ Erro ao buscar no banco, usando localStorage");
               setCurrentUser(prev => safeMergeUser(userFromStorage, prev));
               userFound = true;
+            }
             }
           } catch (parseError) {
             // Erro ao fazer parse do JSON, limpa localStorage

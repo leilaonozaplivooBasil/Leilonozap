@@ -508,41 +508,35 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   }, [isLoadingUsers]);
 
-  // 🔥 CARREGAMENTO SEQUENCIAL COM DELAYS LONGOS
+  // 🚀 OTIMIZAÇÃO (fase 1 - 18/08/2026): antes eram ~13-16s de espera fixa
+  // encadeada (cada busca esperava a anterior TERMINAR + um delay de 2-3s).
+  // Mantém a mesma ordem e um pequeno espaçamento (protege de rate limit),
+  // mas sem esperar cada requisição terminar antes de disparar a próxima —
+  // elas passam a correr em paralelo, só o DISPARO é escalonado.
   useEffect(() => {
     const loadData = async () => {
       console.log("📊 Iniciando carregamento de dados...");
 
-      // 1️⃣ Busca métricas
-      await fetchRealMetrics();
+      fetchRealMetrics();
+      await delay(150);
+      fetchMyClients();
+      await delay(150);
+      fetchMyWithdrawals();
+      await delay(150);
+      fetchMySales();
+      await delay(150);
+      fetchMyCommissionRecords();
 
-      // 2️⃣ Aguarda 3s e busca clientes
-      await delay(3000);
-      await fetchMyClients();
-
-      // 3️⃣ Aguarda mais 2s e busca saques
-      await delay(2000);
-      await fetchMyWithdrawals();
-
-      // 4️⃣ Aguarda mais 2s e busca vendas
-      await delay(2000);
-      await fetchMySales();
-
-      // 4.1️⃣ Aguarda mais 2s e busca comissões
-      await delay(2000);
-      await fetchMyCommissionRecords();
-
-      // 5️⃣ Aguarda mais 3s e busca todos usuários (se admin)
       if (isAdmin) {
-        await delay(3000);
-        await loadAllUsers();
+        await delay(150);
+        loadAllUsers();
       }
 
-      console.log("✅ Carregamento completo!");
+      console.log("✅ Carregamento disparado!");
     };
 
     // Carrega apenas uma vez quando o componente monta
-    const initialTimeout = setTimeout(loadData, 1000);
+    const initialTimeout = setTimeout(loadData, 300);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -1613,8 +1607,10 @@ export default function LicensingPage() {
 
     fetchUser();
 
+    // 📱 Polling inteligente: só revalida com a aba visível (nada de rede
+    // gastando bateria/dados com o app em segundo plano no celular).
     const interval = setInterval(() => {
-      fetchUser();
+      if (document.visibilityState === 'visible') fetchUser();
     }, 60000);
 
     return () => clearInterval(interval);
