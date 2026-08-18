@@ -43,7 +43,15 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
           .filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)))
           .map((item) => {
             if (item.type === 'tab' && Array.isArray(item.subItens) && item.subItens.length) {
-              return { type: 'group', chave: `tab:${item.value}`, label: item.label, icon: item.icon, subItens: item.subItens, tabValue: item.value };
+              // 🐛 CORREÇÃO: os subItens (ex: Central de Vendas) só traziam `value`
+              // — sem `to` nem `onClick` os botões não navegavam pra lugar nenhum.
+              // Mesma transformação já feita na lateral do desktop (NavegacaoLateralGlobal).
+              const subItens = item.subItens.map((sub) => (
+                onTabChange
+                  ? { label: sub.label, icon: sub.icon, onClick: () => onTabChange(item.value, sub.value) }
+                  : { label: sub.label, icon: sub.icon, to: `/Licensing?tab=${item.value}&catalogTab=${sub.value}` }
+              ));
+              return { type: 'group', chave: `tab:${item.value}`, label: item.label, icon: item.icon, subItens, tabValue: item.value };
             }
             return item;
           });
