@@ -1,15 +1,16 @@
-/* global process */
 // faxinaReservasOrfas — SANEAMENTO DE SALDO RESERVADO ÓRFÃO (18/08/2026)
-// ⚠️ Roda no SERVIDOR (Vercel/Node), não no navegador — por isso usa process.env.
 //
 // PROBLEMA QUE ESTA FUNÇÃO RESOLVE:
-// Antes das correções 1 e 2, dois caminhos prendiam dinheiro do cliente:
+// Antes das correções desta data, três caminhos prendiam dinheiro do cliente:
 //   • o arremate cobrava do saldo disponível e deixava a reserva travada (cobrança dupla);
-//   • apagar/cancelar um leilão não devolvia a reserva do líder.
+//   • apagar um leilão não devolvia a reserva do líder;
+//   • cancelar um leilão também não devolvia.
 // Resultado: contas com `saldo_reservado` apontando pra leilão que já acabou, já foi pago
 // ou nem existe mais. O cliente vê o dinheiro na conta mas não consegue usar.
 //
-// O QUE ESTA FUNÇÃO FAZ:
+// As correções fecham a torneira DE HOJE PRA FRENTE. Esta função limpa o que já vazou.
+//
+// O QUE FAZ:
 // Para cada conta com saldo reservado, recalcula quanto DEVERIA estar reservado
 // (soma dos lances em que a pessoa é líder de leilão AINDA EM DISPUTA e não pago).
 // A diferença é órfã → volta pro saldo disponível, com linha no livro-caixa.
@@ -25,7 +26,8 @@
 //   6. Toda movimentação vira linha em `reserva_ledger` — auditável pra sempre.
 //   7. Reserva legítima de leilão em disputa é PRESERVADA (nunca liberada).
 //
-// ⚠️ Sem imports de 2 níveis (já derrubou função em produção): tudo inline.
+// ⚠️ Roda no SERVIDOR (Vercel/Node). Sem imports de 2 níveis (já derrubou função em
+// produção): tudo inline de propósito.
 
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
