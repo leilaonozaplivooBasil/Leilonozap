@@ -45,7 +45,15 @@ export default async function handler(req, res) {
     for (const s of Array.isArray(sales) ? sales : []) {
       const amount = Number(s.total_amount) || Number(s.sale_price) || 0;
       const isDeposit = DEPOSIT_KINDS.includes(s.kind);
-      if (isDeposit && s.status === 'cancelled') continue;
+      // 🚫 PEDIDO CANCELADO NUNCA É MOVIMENTAÇÃO (18/08/2026 — caso Alexandre).
+      // Dois defeitos aqui geravam "débito fantasma" na carteira do cliente:
+      //  1) o filtro só valia para DEPÓSITO cancelado — COMPRA cancelada passava
+      //     direto e aparecia como débito de um pedido que nunca foi pago;
+      //  2) só reconhecia a grafia 'cancelled' (2 L), mas o sistema grava
+      //     'canceled' (1 L) — 37 dos 41 casos encontrados no banco.
+      // Auditoria: 41 pedidos fantasma em 8 usuários, R$ 3.067.634 de débito falso
+      // exibido. Nada disso debitou saldo real — era só exibição mentindo pro cliente.
+      if (s.status === 'canceled' || s.status === 'cancelled') continue;
       transactions.push({
         id: s.id,
         type: isDeposit ? 'deposit' : 'purchase',
