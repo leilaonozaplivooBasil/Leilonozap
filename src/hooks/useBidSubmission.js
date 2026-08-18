@@ -139,7 +139,14 @@ export default function useBidSubmission({
         return;
       }
 
-      if (!gteMoney(bidAmount, minBid)) {
+      // 🎯 PONTO 85 — o PRIMEIRO lance precisa ser EXATAMENTE o preço inicial (não
+      // "maior ou igual"). Espelha a mesma regra aplicada no submitAtomicBid.
+      if (isFirstBid && money(bidAmount) !== money(minBid)) {
+        alert(`❌ O primeiro lance precisa ser exatamente R$ ${fmtBR(minBid)}`);
+        return;
+      }
+
+      if (!isFirstBid && !gteMoney(bidAmount, minBid)) {
         alert(`❌ Mínimo: R$ ${fmtBR(minBid)}`);
         return;
       }

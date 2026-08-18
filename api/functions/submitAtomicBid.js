@@ -174,7 +174,20 @@ export default async function handler(req, res) {
       });
     }
 
-    if (bidAmount < minBid) {
+    // 🎯 PONTO 85 — o PRIMEIRO lance precisa ser EXATAMENTE o preço inicial anunciado
+    // (antes bastava ser "maior ou igual", o que deixava passar qualquer valor acima
+    // do inicial sem respeitar o incremento, ex: inicial R$197 + incremento R$50
+    // aceitando um primeiro lance de R$198). Do segundo lance em diante a regra de
+    // incremento normal (current_price + increment) continua intacta, abaixo.
+    if (isFirstBid && money(bidAmount) !== money(minBid)) {
+      return res.status(400).json({
+        success: false,
+        message: `O primeiro lance precisa ser exatamente R$ ${minBid.toFixed(2)}`,
+        current_state: { current_price: currentPrice, min_bid: minBid, winner_name: auction.winner_name },
+      });
+    }
+
+    if (!isFirstBid && bidAmount < minBid) {
       return res.status(400).json({
         success: false,
         message: `Lance mínimo: R$ ${minBid.toFixed(2)}`,

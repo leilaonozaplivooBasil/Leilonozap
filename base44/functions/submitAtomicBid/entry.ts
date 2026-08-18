@@ -83,7 +83,18 @@ Deno.serve(async (req) => {
       }, { status: 409 });
     }
 
-    if (bidAmount < minBid) {
+    // 🎯 PONTO 85 — o PRIMEIRO lance precisa ser EXATAMENTE o preço inicial anunciado
+    // (não "maior ou igual"), pra não deixar passar valor acima do inicial ignorando
+    // o incremento. Espelha a mesma correção do endpoint real (api/functions/submitAtomicBid.js).
+    if (isFirstBid && Math.round(bidAmount * 100) !== Math.round(minBid * 100)) {
+      return Response.json({
+        success: false,
+        message: `O primeiro lance precisa ser exatamente R$ ${minBid.toFixed(2)}`,
+        current_state: { current_price: currentPrice, min_bid: minBid, winner_name: auction.winner_name }
+      }, { status: 400 });
+    }
+
+    if (!isFirstBid && bidAmount < minBid) {
       return Response.json({
         success: false,
         message: `Lance mínimo: R$ ${minBid.toFixed(2)}`,

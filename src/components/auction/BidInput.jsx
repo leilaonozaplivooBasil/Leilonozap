@@ -20,7 +20,14 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
       return;
     }
 
-    if (!gteMoney(finalAmount, minBid)) {
+    // 🎯 PONTO 85 — o PRIMEIRO lance precisa ser EXATAMENTE o preço inicial (não
+    // "maior ou igual"). Espelha a mesma regra do backend (submitAtomicBid).
+    if (isFirstBid && money(finalAmount) !== money(minBid)) {
+      toast.error(`O primeiro lance precisa ser exatamente R$ ${fmtBR(minBid)}`);
+      return;
+    }
+
+    if (!isFirstBid && !gteMoney(finalAmount, minBid)) {
       toast.error(`Lance mínimo é R$ ${fmtBR(minBid)}`);
       return;
     }

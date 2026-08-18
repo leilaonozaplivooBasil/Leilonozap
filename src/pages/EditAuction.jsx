@@ -24,6 +24,7 @@ import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, UploadClou
 import { Switch } from '@/components/ui/switch';
 import { capOf, withCap } from '@/lib/fotoLegenda';
 import ModoChamadaCard from '@/components/auction/ModoChamadaCard';
+import BidHistoryCard from '@/components/auction/BidHistoryCard';
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
 import { precoArremateAgora, normalizarArremateAgora } from '@/lib/arremateAgora';
 import { supabase } from '@/api/supabaseClient';
@@ -1490,6 +1491,9 @@ export default function EditAuction() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* 🔎 PONTO 85 — histórico de lances (somente leitura), com identidade do arrematante */}
+                <BidHistoryCard auctionId={auctionId} />
 
                 {/* 🌟 DESTAQUE — mostra este leilão na seção "Destaques" da página de Leilões */}
                 <Card className="rounded-2xl border-white/[0.06]" style={CARD_STYLE}>
