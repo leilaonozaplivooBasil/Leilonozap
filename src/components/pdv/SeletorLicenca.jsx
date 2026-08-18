@@ -53,11 +53,19 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
     return { tetoPct: melhorPct, degrauPct: i > 0 ? Number(levels[REDE[i - 1]]?.venda_direta_pct || 0) : 0 };
   }, [users, ownerId, levels]);
 
-  // melhor licença da pessoa (maior percentual entre os cargos que ela tem)
+  // melhor licença de VENDA da pessoa (maior percentual só entre os cargos da
+  // escada REDE que ela tem). ⚠️ Cargo institucional (executivo de conta, CEO,
+  // diretoria, sócio, fundador) NÃO conta aqui — mesmo tendo venda_direta_pct alto
+  // na tabela, ele não é uma licença de venda. Sem este filtro, uma vendedora
+  // licenciada (13%) que também é executiva de conta (20%, cargo administrativo)
+  // aparecia com 20% na lista — o servidor já calculava certo (13%); só a etiqueta
+  // da tela estava errada. Mesmo filtro do cálculo do teto (REDE, acima) e do
+  // servidor (api/_lib/networkChain.js → bestSellingLevel).
   const enfeitar = useMemo(() => (u) => {
     const cargos = [...(Array.isArray(u.career_levels) ? u.career_levels : []), u.primary_career_level].filter(Boolean);
     let melhor = null;
     cargos.forEach((c) => {
+      if (!REDE.includes(c)) return;
       const lv = levels[c];
       if (lv && (!melhor || (Number(lv.venda_direta_pct) || 0) > (Number(melhor.venda_direta_pct) || 0))) melhor = lv;
     });
