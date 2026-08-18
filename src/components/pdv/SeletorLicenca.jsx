@@ -182,7 +182,11 @@ export default function SeletorLicenca({ ownerId, comprador, onSelect, onClear }
         {outras.length > 0 && <div className="px-3 py-1.5 text-[10px] font-bold uppercase text-orange-600 bg-nz-fogo-fundo">Outras estruturas</div>}
         {outras.map((p) => <Linha key={p.id} p={p} deOutra />)}
       </div>
-      <p className="text-[10px] text-gray-500 mt-1">Sem seleção, a venda fica na casa.</p>
+      {/* 🧭 Texto corrigido em 18/08/2026: dizia "a venda fica na casa", o que ficou
+          impreciso depois da regra "quem vende recebe". Sem seleção a venda é de quem
+          está operando e a comissão sobe pela rede DELE. O texto antigo podia levar o
+          vendedor a escolher um escritório sem precisar e entregar a própria comissão. */}
+      <p className="text-[10px] text-gray-500 mt-1">Sem seleção, a venda é sua e a comissão sobe pela sua rede.</p>
     </div>
   );
 }
