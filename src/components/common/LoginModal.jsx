@@ -137,50 +137,6 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       console.log(`[LOGIN] Tentando login com: ${normalizedEmail}`);
 
-      // 🔥 MASTER ADMIN BYPASS
-      if (normalizedEmail === 'luizsantanna@tttcorporate.com') {
-        console.log('[LOGIN] 🔑 Admin master detectado - verificando usuário...');
-
-        const adminUsers = await AppUser.filter({ email: normalizedEmail });
-
-        if (adminUsers.length > 0) {
-          const adminUser = adminUsers[0];
-          adminUser.role = 'admin';
-
-          localStorage.setItem('currentUser', JSON.stringify(adminUser));
-          sessionStorage.setItem('isLoggedIn', 'true');
-
-          console.log('[LOGIN] ✅ Admin master logado com sucesso!');
-
-          setTimeout(() => {
-            if (onSuccess) onSuccess(adminUser);
-            onClose();
-          }, 500);
-          return;
-        } else {
-          console.log('[LOGIN] ⚠️ Admin não encontrado no banco - criando...');
-
-          const newAdmin = await AppUser.create({
-            full_name: 'Luiz Sant Anna',
-            email: normalizedEmail,
-            password: password,
-            phone: '00000000000',
-            role: 'admin'
-          });
-
-          localStorage.setItem('currentUser', JSON.stringify(newAdmin));
-          sessionStorage.setItem('isLoggedIn', 'true');
-
-          console.log('[LOGIN] ✅ Admin master criado e logado!');
-
-          setTimeout(() => {
-            if (onSuccess) onSuccess(newAdmin);
-            onClose();
-          }, 500);
-          return;
-        }
-      }
-
       // 🔒 Busca SOMENTE o usuário com esse email (não baixa todos)
       let users;
       try {
