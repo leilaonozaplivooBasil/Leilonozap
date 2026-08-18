@@ -51,6 +51,7 @@ import CentralVendasTabs from '../components/licensing/CentralVendasTabs';
 import NavegacaoLateralGlobal from '@/components/common/NavegacaoLateralGlobal';
 import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
+import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
 import { VALID_LICENSING_TABS, podeVerOperacao } from '@/lib/licensingTabs';
@@ -122,7 +123,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1165,6 +1166,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                     <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="catalogo-crm" className="mt-6">
+                <CrmClientesTab isAdmin={isAdmin} />
               </TabsContent>
 
               <TabsContent value="catalogo-comissoes" className="mt-6">

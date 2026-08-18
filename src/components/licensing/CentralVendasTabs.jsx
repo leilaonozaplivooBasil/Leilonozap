@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Store, BarChart3, Package, Users, Handshake, Wallet, ChevronDown, Check } from 'lucide-react';
+import { Store, BarChart3, Package, Users, Handshake, Wallet, ChevronDown, Check, Briefcase } from 'lucide-react';
 
 // 🛍️ NAVEGAÇÃO DA CENTRAL DE VENDAS (13/08/2026)
 // Antes eram abas soltas e depois uma fileira que rolava de lado — rolar
@@ -17,6 +17,7 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
     { value: 'catalogo-clientes', label: `Venda Direta (${clientesCount})`, icon: Users },
     { value: 'catalogo-vendedores', label: 'Vendedores', icon: Handshake },
     { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
+    { value: 'catalogo-crm', label: 'CRM', icon: Briefcase },
   ];
 
   const atual = ITENS.find((i) => i.value === value) || ITENS[0];

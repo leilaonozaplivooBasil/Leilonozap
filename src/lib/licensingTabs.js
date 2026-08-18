@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, Briefcase } from 'lucide-react';
 import { normalizeLevels } from '@/lib/careerLevels';
 
 // 🧭 PONTO 85 — FONTE ÚNICA das abas do Painel de Alavancagem.
@@ -91,6 +91,7 @@ export function getLicensingGroups(user) {
             { value: 'catalogo-clientes', label: 'Venda Direta', icon: Users },
             { value: 'catalogo-vendedores', label: 'Vendedores', icon: Handshake },
             { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
+            { value: 'catalogo-crm', label: 'CRM', icon: Briefcase },
           ],
         },
       ],

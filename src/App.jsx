@@ -147,7 +147,7 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 // 🆕 Rotas controladas EXPLICITAMENTE (não passar pelo loop)
 // Portal vira a "/" / Home vai para "/leiloes" / Catalog vai para "/Loja-Virtual"
-const EXPLICIT_ROUTES = new Set(['Portal', 'Home', 'Catalog', 'SuperAdminPanels', mainPageKey]);
+const EXPLICIT_ROUTES = new Set(['Portal', 'Home', 'Catalog', 'SuperAdminPanels', 'CRM', mainPageKey]);
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -275,6 +275,9 @@ const AuthenticatedApp = () => {
       <Route path="/portal/leiloeiro" element={<PortalLeiloeiro />} />
       {/* 🔒 Redirect legado: /Catalog → /Loja-Virtual (preserva query params como ?ref=) */}
       <Route path="/Catalog" element={<RedirectWithParams to="/Loja-Virtual" />} />
+      {/* 🔒 CRM realocado (18/08/2026): virou a aba "CRM" dentro de Central de
+          Vendas no Painel de Alavancagem. Links antigos pra /CRM abrem direto lá. */}
+      <Route path="/CRM" element={<Navigate to="/Licensing?tab=catalogo&catalogTab=catalogo-crm" replace />} />
       {Object.entries(Pages)
         .filter(([path]) => !EXPLICIT_ROUTES.has(path)) // 🔒 não duplicar rotas explícitas (Portal, Home, Catalog)
         .map(([path, Page]) => (
