@@ -407,8 +407,18 @@ export default function TirarPedido() {
 
           {/* pagamento */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-            {[['saldo', 'Comissão', Wallet], ['operacao', 'Operação', Banknote], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
-              <button key={k} onClick={() => setPayment(k)} className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}>
+            {[['saldo', 'Comissão', Wallet], ['operacao', 'Adicionar saldo', Banknote], ['pix', 'PIX', QrCode], ['cartao', 'Cartão', CreditCard]].map(([k, label, Icon]) => (
+              <button
+                key={k}
+                onClick={() => {
+                  setPayment(k);
+                  // 💵 "Adicionar saldo" (antigo "Operação"): além de escolher essa forma
+                  // de pagamento, já abre o depósito — é a única forma de colocar dinheiro
+                  // nessa carteira, e o botão não fazia nada além de selecionar.
+                  if (k === 'operacao') setDeposito(true);
+                }}
+                className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}
+              >
                 <Icon className="w-4 h-4" /> {label}
               </button>
             ))}
