@@ -41,8 +41,14 @@ CREATE TABLE IF NOT EXISTS reserva_ledger (
   -- qual função gravou (rastreabilidade de código)
   origem          text,
 
+  -- explicação em português do movimento (usada pela faxina de saldo órfão)
+  observacao      text,
+
   created_at      timestamptz NOT NULL DEFAULT now()
 );
+
+-- Caso a tabela já exista de uma execução anterior, garante a coluna nova
+ALTER TABLE reserva_ledger ADD COLUMN IF NOT EXISTS observacao text;
 
 -- Consultas que o extrato do usuário e a auditoria fazem
 CREATE INDEX IF NOT EXISTS reserva_ledger_user_idx    ON reserva_ledger (user_id, created_at DESC);
