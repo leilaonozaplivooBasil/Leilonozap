@@ -338,10 +338,15 @@ export default function useBidSubmission({
       }
       alert("Erro ao enviar lance.");
     } finally {
+      // 🩹 PONTO 86 (19/08/2026) — o botão ficava "travado" alguns segundos DEPOIS
+      // do lance já ter sido processado de verdade. O anti-spam real já existe
+      // antes de começar (lastBidTimeRef + debounce em sessionStorage, 2s cada) —
+      // este atraso aqui só evita uma re-renderização em cima da hora, não
+      // precisa dos 3s inteiros.
       setTimeout(() => {
         isSubmittingRef.current = false;
         setIsSubmittingBid(false);
-      }, 3000);
+      }, 400);
     }
   }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet, freteValor]);
 

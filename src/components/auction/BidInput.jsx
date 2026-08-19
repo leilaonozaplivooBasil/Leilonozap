@@ -44,6 +44,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             increment={increment}
             freteValor={freteValor}
             isLoading={isLoading}
+            isFirstBid={isFirstBid}
             onEscolher={handleSubmit}
           />
         </div>

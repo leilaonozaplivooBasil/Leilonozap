@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 
 const Auction = base44.entities.Auction;
 const AuctionMessage = base44.entities.AuctionMessage;
-const AppUser = base44.entities.AppUser;
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
 import { format } from 'date-fns';
@@ -15,7 +14,7 @@ import BidInput from "../components/auction/BidInput";
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
-import { money, addMoney, mulMoney, fmtBR } from '@/lib/money';
+import { money, addMoney, fmtBR } from '@/lib/money';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
@@ -65,6 +64,16 @@ export default function AuctionRoom() {
 
   const [auction, setAuction] = useState(null);
   const [messages, setMessages] = useState([]);
+
+  // 🐢 PONTO 86 (19/08/2026) — o chat recalculava a lista invertida (e escaneava
+  // o array inteiro procurando o winner_announcement mais recente, com JSON.parse
+  // incluído) em TODO render — inclusive no tick de 1s do cronômetro, que não tem
+  // nada a ver com o chat. Agora só recalcula quando `messages` de fato muda.
+  const reversedMessages = useMemo(() => messages.slice().reverse(), [messages]);
+  const firstWinnerAnnouncementId = useMemo(() => {
+    const found = reversedMessages.find((m) => m.is_system_message && m.message_type === 'winner_announcement');
+    return found ? found.id : null;
+  }, [reversedMessages]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showMobilePanel, setShowMobilePanel] = useState(false);
@@ -413,6 +422,29 @@ export default function AuctionRoom() {
     onEndAuction: endAuction,
   });
 
+  // 📱 PONTO 86 (19/08/2026) — REGRA DE OURO deste projeto (ver
+  // PROGRESSO_PADRONIZACAO_PAINEIS.md), que a sala de leilão nunca tinha
+  // recebido: no celular, sair do app (tela bloqueada, troca de app, ligação)
+  // suspende/atrasa os timers do navegador. Sem isso, ao voltar, a sala
+  // parecia "travada" até o próximo tick natural do timer/polling — que podia
+  // demorar muito mais que o normal justamente por ter ficado em segundo
+  // plano. Agora, ao VOLTAR pro app, recalibra o relógio do servidor e força
+  // uma sincronização imediata do leilão e das mensagens.
+  useEffect(() => {
+    const resync = () => {
+      calibrateServerOffset();
+      syncAuctionDataOnly();
+      syncMessagesOnly();
+    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') resync(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', resync);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', resync);
+    };
+  }, [calibrateServerOffset, syncAuctionDataOnly, syncMessagesOnly]);
+
   // Bid hook
   const { submitBid, isSubmittingBid } = useBidSubmission({
     auction,
@@ -652,13 +684,13 @@ export default function AuctionRoom() {
     }
 
     // 🛡️ PONTO 70 — sem preço REAL de arremate imediato, a ação nem começa
-    if (precoArremateAgora(auction) === null) {
+    const buyNowAmount = precoArremateAgora(auction);
+    if (buyNowAmount === null) {
       alert("Este leilão não possui preço de compra rápida.");
       return;
     }
 
     // Verifica saldo antes de abrir o modal de arremate
-    const buyNowAmount = mulMoney(auction.current_price || auction.starting_price, 1.45);
     try {
       const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
@@ -685,144 +717,59 @@ export default function AuctionRoom() {
     setIsBuyingNow(true);
 
     try {
-      // 🆕 ARREMATE = LANCE ATUAL + 45% (centavos exatos)
-      const currentPrice = money(auction.current_price || auction.starting_price);
-      const buyNowPrice = mulMoney(currentPrice, 1.45);
-
-      // VERIFICA E DEBITA SALDO
-      const debitResult = await base44.functions.invoke('debitWalletBalance', {
-        user_id: currentUser.id, amount: buyNowPrice, auction_id: auction.id,
-        description: `Arremate - ${auction.title} - R$ ${fmtBR(buyNowPrice)}`
+      // 🔴 CORRIGIDO (19/08/2026) — o arremate inteiro agora roda ATÔMICO no
+      // servidor (submitAtomicBuyNow): reserva o saldo, registra o lance e
+      // encerra o leilão numa transação só, com estorno automático se qualquer
+      // etapa falhar. Antes, cada passo era uma escrita solta do navegador —
+      // se uma delas falhasse DEPOIS do débito, o dinheiro saía da carteira e
+      // nunca voltava, sem leilão ganho e sem produto (causa real por trás do
+      // "Erro ao processar arremate. Tente novamente.").
+      const result = await base44.functions.invoke('submitAtomicBuyNow', {
+        auction_id: auction.id,
+        user_id: currentUser.id,
       });
-      const debitData = debitResult?.data || debitResult;
-      if (!debitData?.success) {
-        alert(`❌ Saldo insuficiente! Seu saldo: R$ ${fmtBR((debitData?.balance || 0))}`);
-        setUserWallet({ balance: debitData?.balance || 0 });
-        setIsBuyingNow(false);
-        setShowBuyNowModal(false);
-        setShowLowBalanceModal(true);
+      const data = result?.data || result;
+
+      if (!data?.success) {
+        if (data?.saldo_insuficiente) {
+          setUserWallet({ balance: data?.balance || 0 });
+          setShowBuyNowModal(false);
+          setShowLowBalanceModal(true);
+          return;
+        }
+        alert(data?.message || 'Erro ao processar arremate. Tente novamente.');
         return;
       }
-      setUserWallet({ balance: debitData.new_balance });
 
-      // Cria mensagem de arremate
-      await AuctionMessage.create({
-        auction_id: auction.id,
-        message_type: "bid",
-        sender_id: currentUser.id,
-        content: `🔥 ARREMATE RÁPIDO! R$ ${fmtBR(buyNowPrice)}`,
-        sender_name: currentUser.nickname || currentUser.full_name,
-        bid_amount: buyNowPrice,
-        is_system_message: false
-      });
-
-      // Finaliza leilão imediatamente
-      await Auction.update(auction.id, {
-        status: "ended",
-        current_price: buyNowPrice,
-        winner_id: currentUser.id,
-        winner_name: currentUser.nickname || currentUser.full_name,
-        order_status: "awaiting_payment"
-      });
-
+      const winnerResult = data.result;
       playSound('winner');
 
-      // Atualiza stats do usuário
-      try {
-        const userExists = await AppUser.filter({ id: currentUser.id });
-        if (userExists && userExists.length > 0) {
-          await AppUser.update(currentUser.id, {
-            won_auctions: (currentUser.won_auctions || 0) + 1,
-            points: (currentUser.points || 0) + 100
-          });
-        }
-      } catch (error) {
-        console.warn("Erro ao atualizar stats:", error);
-      }
-
-      // Comissão para licenciado (se não for plano de investimento)
-      if (!auction.is_investment_plan) {
-        const winnerData = await AppUser.filter({ id: currentUser.id });
-        if (winnerData && winnerData.length > 0 && winnerData[0].referred_by_id) {
-          try {
-            const licensees = await AppUser.filter({ id: winnerData[0].referred_by_id });
-            if (licensees && licensees.length > 0) {
-              const licensee = licensees[0];
-              const commission = buyNowPrice * 0.03;
-              const isTestAuction = auction.is_test_auction === true;
-
-              if (isTestAuction) {
-                await AppUser.update(licensee.id, {
-                  network_bids_count: (licensee.network_bids_count || 0) + 1,
-                  commission_balance: (licensee.commission_balance || 0) + commission,
-                  test_valora_balance: (licensee.test_valora_balance || 0) + commission,
-                });
-              } else {
-                await AppUser.update(licensee.id, {
-                  network_bids_count: (licensee.network_bids_count || 0) + 1,
-                  commission_balance: (licensee.commission_balance || 0) + commission,
-                  valora_pay_balance: (licensee.valora_pay_balance || 0) + commission,
-                });
-              }
-            }
-          } catch (error) {
-            console.error("Erro ao atualizar comissão:", error);
-          }
-        }
-      }
-
       setShowBuyNowModal(false);
-
-      // Para os intervalos de sync para evitar conflitos
       clearSyncIntervals();
       clearCountdown();
 
-      // Atualiza o estado local para refletir o fim do leilão
-      setAuction(prev => ({
+      setAuction((prev) => ({
         ...prev,
-        status: "ended",
-        current_price: buyNowPrice,
-        winner_id: currentUser.id,
-        winner_name: currentUser.nickname || currentUser.full_name,
-        order_status: "awaiting_payment"
+        status: 'ended',
+        current_price: winnerResult?.final_price ?? prev.current_price,
+        winner_id: winnerResult?.winner_id ?? currentUser.id,
+        winner_name: winnerResult?.winner_name ?? (currentUser.nickname || currentUser.full_name),
+        order_status: winnerResult?.order_status ?? 'awaiting_payment',
       }));
 
-      // Cria a mensagem de vitória no chat
-      const productImage = (auction.image_urls && auction.image_urls.length > 0)
-        ? auction.image_urls[0]
-        : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
+      // 💰 saldo real pós-arremate — o servidor já debitou de verdade
+      try {
+        const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+        const freshData = freshResult?.data || freshResult;
+        if (typeof freshData?.balance === 'number') setUserWallet({ balance: freshData.balance });
+      } catch (_) { /* saldo se corrige no próximo sync normal */ }
 
-      const victoryData = {
-        winner: {
-          id: currentUser.id,
-          full_name: currentUser.full_name || '',
-          nickname: currentUser.nickname || '',
-          email: currentUser.email || '',
-          avatar_url: currentUser.avatar_url || null
-        },
-        auction: {
-          id: auction.id,
-          title: auction.title || 'Produto',
-          image_urls: [productImage],
-          current_price: buyNowPrice,
-          starting_price: auction.starting_price || 0
-        }
-      };
-
-      await AuctionMessage.create({
-        auction_id: auction.id,
-        message_type: "winner_announcement",
-        content: JSON.stringify(victoryData),
-        sender_name: "LanceIA",
-        is_system_message: true,
-      });
-
-      // Atualiza as mensagens imediatamente
+      // Atualiza as mensagens imediatamente (o servidor já criou o lance e a
+      // mensagem de vitória dentro de finalizeOneAuction)
       const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
       setMessages(freshMessages);
       lastMessageCountRef.current = freshMessages.length;
 
-      // Mostra o modal de vitória após 5 segundos
       setTimeout(() => {
         setShowWinnerModal(true);
       }, 5000);
@@ -1146,18 +1093,13 @@ export default function AuctionRoom() {
               <div className="text-center py-4">
                 <span className="text-sm text-gray-400">🔥 Leilão iniciado! Boa sorte!</span>
               </div>
-              {messages.slice().reverse().map((message, index, arr) => {
+              {reversedMessages.map((message) => {
                 const sender = userMap[message.sender_id];
 
                 // SE FOR MENSAGEM DE VITÓRIA, VERIFICAR SE JÁ RENDERIZOU UMA
                 if (message.is_system_message && message.message_type === 'winner_announcement') {
                   // VERIFICAR SE JÁ EXISTE UM VICTORY CARD RENDERIZADO (apenas o mais recente)
-                  const firstWinnerAnnouncementIndex = arr.findIndex(m =>
-                    m.is_system_message && m.message_type === 'winner_announcement'
-                  );
-
-                  if (firstWinnerAnnouncementIndex !== -1 && index !== firstWinnerAnnouncementIndex) {
-                    console.log('⏭️ [RENDER] Pulando VictoryCard duplicado (não é o mais recente):', message.id);
+                  if (firstWinnerAnnouncementId !== null && message.id !== firstWinnerAnnouncementId) {
                     return null; // NÃO RENDERIZA DUPLICATAS
                   }
 
@@ -1381,8 +1323,8 @@ export default function AuctionRoom() {
                   <span className="font-semibold text-white">R$ {fmtBR(currentPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Arremate (+45%):</span>
-                  <span className="text-2xl font-bold text-orange-400">R$ {fmtBR(mulMoney(currentPrice, 1.45))}</span>
+                  <span className="text-gray-400">Arremate Imediato:</span>
+                  <span className="text-2xl font-bold text-orange-400">R$ {fmtBR(precoArremateAgora(auction) ?? 0)}</span>
                 </div>
               </div>
             </div>

@@ -14,15 +14,23 @@ export default function BidPopover({
   increment,
   freteValor = 0,
   isLoading = false,
+  isFirstBid = false,
   onEscolher,
 }) {
   const [aberto, setAberto] = useState(false);
   const [valorLivre, setValorLivre] = useState("");
 
-  // opções: mínimo permitido + 1x, 2x, 3x o incremento configurado pelo admin
+  // 🎯 PONTO 86 (19/08/2026) — o PRIMEIRO lance só aceita um valor EXATO
+  // (o preço inicial, sem incremento — regra do submitAtomicBid). Antes esta
+  // tela oferecia 4 botões (mínimo + 3 incrementados) mesmo no primeiro lance,
+  // e os 3 incrementados eram SEMPRE rejeitados pelo servidor — o cliente
+  // clicava num botão da própria tela e recebia "valor errado" de volta.
+  // A partir do 2º lance, os incrementos voltam a fazer sentido e aparecem.
   const opcoes = useMemo(
-    () => [0, 1, 2, 3].map((n) => (n === 0 ? money(minBid) : addMoney(minBid, mulMoney(increment, n)))),
-    [minBid, increment]
+    () => (isFirstBid
+      ? [money(minBid)]
+      : [0, 1, 2, 3].map((n) => (n === 0 ? money(minBid) : addMoney(minBid, mulMoney(increment, n))))),
+    [minBid, increment, isFirstBid]
   );
 
   const escolher = (valor) => {
@@ -89,7 +97,7 @@ export default function BidPopover({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className={isFirstBid ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
               {opcoes.map((valor, i) => (
                 <button
                   key={valor}
@@ -107,35 +115,39 @@ export default function BidPopover({
                     R$ {fmtBR(valor)}
                   </span>
                   <span className="text-[10px] leading-tight text-gray-400">
-                    {i === 0 ? 'lance mínimo' : `+ R$ ${fmtBR(mulMoney(increment, i))} sobre o mínimo`}
+                    {i === 0 ? (isFirstBid ? 'lance inicial' : 'lance mínimo') : `+ R$ ${fmtBR(mulMoney(increment, i))} sobre o mínimo`}
                     {freteValor > 0 && ` · com frete R$ ${fmtBR(addMoney(valor, freteValor))}`}
                   </span>
                 </button>
               ))}
             </div>
 
-            <div className="mt-3 flex gap-2">
-              <input
-                type="number"
-                step="0.01"
-                inputMode="decimal"
-                value={valorLivre}
-                onChange={(e) => setValorLivre(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarLivre(); } }}
-                placeholder={`Digitar valor (mín. R$ ${fmtBR(minBid)})`}
-                min={minBid}
-                className="min-h-[48px] flex-1 min-w-0 rounded-2xl border border-white/12 bg-black/40 px-4 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={confirmarLivre}
-                disabled={isLoading || !valorLivre}
-                className="min-h-[48px] shrink-0 rounded-2xl px-4 font-bold text-white disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}
-              >
-                Confirmar
-              </button>
-            </div>
+            {/* 🎯 sem campo livre no primeiro lance — só o valor exato é aceito,
+                digitar qualquer outra coisa aqui só levaria a um erro garantido */}
+            {!isFirstBid && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={valorLivre}
+                  onChange={(e) => setValorLivre(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarLivre(); } }}
+                  placeholder={`Digitar valor (mín. R$ ${fmtBR(minBid)})`}
+                  min={minBid}
+                  className="min-h-[48px] flex-1 min-w-0 rounded-2xl border border-white/12 bg-black/40 px-4 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={confirmarLivre}
+                  disabled={isLoading || !valorLivre}
+                  className="min-h-[48px] shrink-0 rounded-2xl px-4 font-bold text-white disabled:opacity-40"
+                  style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}
+                >
+                  Confirmar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
