@@ -1,5 +1,10 @@
 // checkPaymentStatus — usado pelo polling do checkout. Lê o status da venda (que o webhook marca como paga).
 // Robustez: se a venda ainda está pendente, consulta o MP; se já aprovou, dispara o webhook (confirma + comissão).
+// Aceita DOIS jeitos de perguntar:
+//   payment_id → fluxo PIX (o payment_id já nasce junto com o QR, antes do cliente pagar)
+//   sale_id    → fluxo cartão/Checkout Pro (só existe payment_id DEPOIS que o cliente paga;
+//                antes disso só se conhece o pedido, então a consulta ao MP é por
+//                external_reference em vez de payment_id)
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -17,8 +22,31 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const paymentId = String(body?.payment_id || '').trim();
-    if (!paymentId) return res.status(200).json({ found: false });
+    const saleId = String(body?.sale_id || '').trim();
+    if (!paymentId && !saleId) return res.status(200).json({ found: false });
     if (!SUPABASE_URL || !SR) return res.status(200).json({ found: false });
+
+    // 💳 fluxo cartão (Checkout Pro): pergunta pelo pedido, não pelo pagamento —
+    // ainda não existe payment_id enquanto o cliente não paga o link/QR.
+    if (!paymentId && saleId) {
+      const rowsSale = await (await sb(`catalog_sales?select=id,status&id=eq.${encodeURIComponent(saleId)}&source=eq.pdv&limit=1`)).json();
+      const saleByOrder = Array.isArray(rowsSale) ? rowsSale[0] : null;
+      if (!saleByOrder) return res.status(200).json({ found: false });
+      if (saleByOrder.status === 'paid') return res.status(200).json({ found: true, status: 'confirmed' });
+      if (MP_TOKEN) {
+        const rBusca = await fetch(`https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(saleId)}&sort=date_created&criteria=desc`, { headers: { Authorization: `Bearer ${MP_TOKEN}` } });
+        const busca = await rBusca.json();
+        const aprovado = (busca?.results || []).find((p) => p.status === 'approved');
+        if (aprovado) {
+          // dispara o webhook (fonte única de confirmação + comissão, idempotente)
+          await fetch(`${BASE_URL}/api/functions/mpWebhook`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: { id: aprovado.id } }),
+          }).catch(() => {});
+          return res.status(200).json({ found: true, status: 'confirmed' });
+        }
+      }
+      return res.status(200).json({ found: true, status: 'pending' });
+    }
 
     const rows = await (await sb(`catalog_sales?select=id,status&mp_payment_id=eq.${encodeURIComponent(paymentId)}&limit=1`)).json();
     const sale = Array.isArray(rows) ? rows[0] : null;

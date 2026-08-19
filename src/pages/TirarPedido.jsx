@@ -8,13 +8,14 @@ import { lerSaldos } from '@/lib/carteiraSaldos';
 import { toast } from 'sonner';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import PixPdvModal from '@/components/pdv/PixPdvModal';
+import CardPdvModal from '@/components/pdv/CardPdvModal';
 import NotaPedido from '@/components/pdv/NotaPedido';
 import SeletorLicenca from '@/components/pdv/SeletorLicenca';
 import DepositoOperacaoModal from '@/components/wallet/DepositoOperacaoModal';
 import PixReposicaoModal from '@/components/reposicao/PixReposicaoModal';
 import {
   ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
-  Package, User as UserIcon, Phone, Wallet, QrCode, Store, Truck, Banknote
+  Package, User as UserIcon, Phone, Wallet, QrCode, Store, Truck, Banknote, CreditCard
 } from 'lucide-react';
 
 const priceOf = (p) => Number(p.price_catalog || p.selling_price_retail || 0);
@@ -56,6 +57,7 @@ export default function TirarPedido() {
   // do teto sobe pela linha DESTE balcão. Opcional: sem seleção, a venda fica na casa.
   const [comprador, setComprador] = useState(null); // { id, full_name, nivel_nome, desconto_pct, estrutura }
   const [pix, setPix] = useState(null); // cobrança PIX aberta { payment_id, pix_code, qr_code_base64, sale_id, snapshot }
+  const [cartao, setCartao] = useState(null); // cobrança cartão aberta { url, preference_id, sale_id, snapshot }
   const [nota, setNota] = useState(null); // nota de pedido pra mostrar/enviar no WhatsApp
   const isStore = user && ['loja_fisica', 'ponto_retirada', 'parceiro'].includes(user.primary_career_level);
 
@@ -230,6 +232,9 @@ export default function TirarPedido() {
       if (r.pix) {
         // 💳 PIX real: o pedido fica AGUARDANDO — QR na tela, confirmação automática
         setPix({ ...r.pix, sale_id: r.sale_id, snapshot: { ...snapshot, total: r.total, saleId: r.sale_id } });
+      } else if (r.cartao) {
+        // 💳 Cartão real (Checkout Pro): o pedido fica AGUARDANDO — link/QR na tela, confirmação automática
+        setCartao({ ...r.cartao, sale_id: r.sale_id, snapshot: { ...snapshot, total: r.total, saleId: r.sale_id } });
       } else {
         toast.success(`Pedido fechado! ${money(r.total)}${r.comissao ? ` · comissão ${money(r.comissao)}` : ''}`);
         setNota({ ...snapshot, total: r.total, saleId: r.sale_id });
@@ -253,6 +258,24 @@ export default function TirarPedido() {
     setPix(null);
     if (saleId) { try { await base44.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
     toast('Cobrança PIX cancelada.');
+  };
+
+  // pagamento no cartão caiu (webhook confirmou) → mostra a nota e libera o balcão
+  const cartaoConfirmado = () => {
+    const snap = cartao?.snapshot;
+    setCartao(null);
+    toast.success('Pagamento no cartão confirmado!');
+    if (snap) setNota(snap);
+    limpar();
+  };
+  // cliente desistiu / não pagou → cancela o pedido pendente (o carrinho fica intacto)
+  // (cancelPdvPix, apesar do nome, cancela qualquer pedido pendente de origem 'pdv' —
+  // é a mesma trava usada pelo PIX: só mexe em venda ainda 'pending_payment')
+  const cartaoCancelado = async () => {
+    const saleId = cartao?.sale_id;
+    setCartao(null);
+    if (saleId) { try { await base44.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
+    toast('Cobrança no cartão cancelada.');
   };
 
   if (!user) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">Faça login.</div>;
@@ -406,24 +429,25 @@ export default function TirarPedido() {
           </div>
 
           {/* pagamento */}
-          {/* 🔒 18/08/2026 — "Cartão" REMOVIDO daqui. Não existe cobrança de cartão no PDV:
-              o botão gravava a venda como paga e entregue, baixava estoque e pagava comissão
-              real sem cobrar de ninguém (teste de R$ 23,76 fechou sozinho e distribuiu R$ 7,15).
-              O servidor também recusa 'cartao' agora. Volta quando tiver cobrança de verdade. */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {[['saldo', 'Comissão', Wallet], ['operacao', 'Adicionar saldo', Banknote], ['pix', 'PIX', QrCode]].map(([k, label, Icon]) => (
+          {/* 🔓 19/08/2026 — Cartão VOLTOU, agora com cobrança real (Checkout Pro do Mercado
+              Pago, mesmo motor que já confirma o PIX). O botão antigo foi removido em
+              18/08/2026 porque fechava a venda sem cobrar ninguém — esse risco não existe
+              mais aqui: o pedido nasce 'pending_payment' e só baixa estoque/paga comissão
+              quando o pagamento é confirmado de verdade (ver createPdvOrder.js e mpWebhook.js). */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {[
+              ['saldo', 'Comissão', Wallet, saldo],
+              ['operacao', 'Saldo de Operação', Banknote, saldoOperacao],
+              ['cartao', 'Cartão', CreditCard, null],
+              ['pix', 'PIX', QrCode, null],
+            ].map(([k, label, Icon, bal]) => (
               <button
                 key={k}
-                onClick={() => {
-                  setPayment(k);
-                  // 💵 "Adicionar saldo" (antigo "Operação"): além de escolher essa forma
-                  // de pagamento, já abre o depósito — é a única forma de colocar dinheiro
-                  // nessa carteira, e o botão não fazia nada além de selecionar.
-                  if (k === 'operacao') setDeposito(true);
-                }}
+                onClick={() => setPayment(k)}
                 className={`min-h-[44px] py-2.5 rounded-lg border-2 text-xs font-semibold flex flex-col items-center gap-1 ${payment === k ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-nz-borda text-nz-tinta-fraca'}`}
               >
                 <Icon className="w-4 h-4" /> {label}
+                {bal != null && <span className="text-[10px] font-normal opacity-80">{money(bal)}</span>}
               </button>
             ))}
           </div>
@@ -462,6 +486,8 @@ export default function TirarPedido() {
 
       {/* 💳 PIX real no balcão — QR + confirmação automática */}
       {pix && <PixPdvModal pix={pix} total={pix.snapshot?.total || total} onConfirmed={pixConfirmado} onCancel={pixCancelado} />}
+      {/* 💳 Cartão real no balcão — link/QR do Checkout Pro + confirmação automática */}
+      {cartao && <CardPdvModal cartao={cartao} total={cartao.snapshot?.total || total} onConfirmed={cartaoConfirmado} onCancel={cartaoCancelado} />}
       {/* 🧾 nota de pedido — envio em tempo real no WhatsApp do cliente */}
       {nota && <NotaPedido nota={nota} onClose={() => setNota(null)} />}
 
