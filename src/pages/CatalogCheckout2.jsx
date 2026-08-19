@@ -164,6 +164,27 @@ export default function CatalogCheckout2() {
                 ticket_url: mpData.ticket_url,
             });
             toast.success('✅ PIX gerado!');
+
+            // Salva CPF e endereço no perfil do comprador (necessário para etiqueta automática do Melhor Envio)
+            if (currentUser?.id) {
+                const profileUpdate = {
+                    cpf: cpf.replace(/\D/g, ''),
+                    phone: phone.trim(),
+                    address_street: addressStreet.trim(),
+                    address_number: addressNumber.trim(),
+                    address_complement: addressComplement.trim(),
+                    address_neighborhood: addressNeighborhood.trim(),
+                    address_city: addressCity.trim(),
+                    address_state: addressState.trim(),
+                    address_zip_code: addressZip.trim(),
+                };
+                base44.entities.AppUser.update(currentUser.id, profileUpdate).then(() => {
+                    const saved = localStorage.getItem('currentUser');
+                    if (saved) {
+                        try { localStorage.setItem('currentUser', JSON.stringify({ ...JSON.parse(saved), ...profileUpdate })); } catch { /* ok */ }
+                    }
+                }).catch(() => { /* salvar perfil é best-effort, não bloqueia o fluxo */ });
+            }
             return;
         } catch (error) {
             console.error('❌ Erro ao gerar PIX (createMPPix):', error);
