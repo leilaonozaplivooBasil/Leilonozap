@@ -207,9 +207,17 @@ export default function CatalogOrdersAdmin() {
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(o => o.status === filterStatus);
+    if (filterStatus === 'paid') {
+      // Só físicos que precisam de envio — exclui Passaporte (entrega automática)
+      filtered = filtered.filter(o => !isPassaporte(o) && (o.status === 'paid' || o.status === 'preparando'));
+    } else if (filterStatus === 'shipped') {
+      filtered = filtered.filter(o => o.status === 'shipped' || o.status === 'saiu_entrega');
+    } else if (filterStatus === 'delivered') {
+      filtered = filtered.filter(o => (isPassaporte(o) && STATUS_PAGO.has(o.status)) || o.status === 'delivered' || o.status === 'entregue');
+    } else if (filterStatus === 'pending_payment') {
+      filtered = filtered.filter(o => o.status === 'pending_payment');
     }
+    // 'all' não filtra
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
