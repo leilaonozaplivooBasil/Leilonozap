@@ -1,7 +1,8 @@
-// pdvSettle — helper (pasta _lib, não é rota): conclui uma venda PIX do PDV quando o
+// pdvSettle — helper (pasta _lib, não é rota): conclui uma venda do PDV (PIX ou cartão) quando o
 // Mercado Pago confirma o pagamento. SÓ AGORA o estoque baixa e a comissão é paga —
 // enquanto o pedido está 'pending_payment' ele não vale nada (sem faturamento, sem comissão).
-// Chamado 1x pelo mpWebhook (o flip atômico lá garante execução única).
+// Chamado 1x pelo mpWebhook (o flip atômico lá garante execução única). O nome ficou
+// 'settlePdvPixSale' de quando só existia PIX, mas hoje serve qualquer sale.source === 'pdv'.
 import { fulfillStoreOrder } from './storeFulfill.js';
 import { carregarTabelasBalcao, buscarUsuario, pagarComissaoBalcao } from './pdvBalcao.js';
 // 📦 mesma regra de baixa da loja virtual: estoque próprio primeiro, central depois
@@ -64,7 +65,7 @@ export async function settlePdvPixSale(sale) {
   // 🤝 peça consignada vendida: a dívida dela morre agora, retida no próprio PIX
   if (consumos.some((c) => c.origem === 'consignado')) {
     try {
-      await liquidarConsignado({ sale, ownerId, consumos, paymentMethod: 'pix' });
+      await liquidarConsignado({ sale, ownerId, consumos, paymentMethod: sale.payment_method || 'pix' });
     } catch (e) {
       console.error(`[PDV] Liquidação de consignado falhou na venda ${sale.id}:`, e?.message);
     }

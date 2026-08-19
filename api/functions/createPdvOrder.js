@@ -38,18 +38,21 @@ export default async function handler(req, res) {
     const vendedorId = String(body?.vendedor_id || '').trim(); // venda vinculada a um vendedor (comissão)
     const compradorId = String(body?.comprador_id || '').trim(); // quem está levando (licença) — desconto de balcão
     if (!actorId || !items.length) return res.status(400).json({ success: false, error: 'Operador e itens são obrigatórios' });
-    // 🔒 TRAVA DE COBRANÇA (18/08/2026) — só passa método que REALMENTE cobra o dinheiro:
+    // 🔒 TRAVA DE COBRANÇA (18/08/2026, cartão real adicionado em 19/08/2026) — só passa
+    // método que REALMENTE cobra o dinheiro:
     //   dinheiro  → cédula na mão, no balcão (nada a cobrar online)
     //   saldo     → debita commission_balance (conferido e debitado abaixo)
     //   operacao  → debita saldo_operacao (idem)
     //   pix       → cobrança real no Mercado Pago, só liquida no webhook
-    // 'cartao' estava FORA de todos esses caminhos: a venda era gravada como paga/entregue,
-    // baixava estoque e pagava comissão real SEM cobrar nada de ninguém (pedido de teste de
-    // R$ 23,76 fechou sozinho e distribuiu R$ 7,15 de comissão). Enquanto não existir
-    // cobrança de cartão de verdade aqui, o método é recusado — venda nenhuma fecha de graça.
-    const METODOS_COM_COBRANCA = ['dinheiro', 'saldo', 'operacao', 'pix'];
+    //   cartao    → idem, via Checkout Pro (link/QR) — mesmo motor do PIX
+    // Antes de 19/08/2026, 'cartao' ficava FORA de todos esses caminhos: a venda era
+    // gravada como paga/entregue, baixava estoque e pagava comissão real SEM cobrar nada
+    // de ninguém (pedido de teste de R$ 23,76 fechou sozinho e distribuiu R$ 7,15 de
+    // comissão). Por isso qualquer método NOVO que apareça aqui tem que nascer 'pending_payment'
+    // e só confirmar pelo webhook — nunca fechar a venda direto neste handler.
+    const METODOS_COM_COBRANCA = ['dinheiro', 'saldo', 'operacao', 'pix', 'cartao'];
     if (!METODOS_COM_COBRANCA.includes(paymentMethod)) {
-      return res.status(200).json({ success: false, error: 'Cartão ainda não está liberado no PDV — não existe cobrança de cartão aqui, e o pedido fecharia sem ninguém pagar. Use Dinheiro, PIX, Saldo de comissão ou Saldo de operação.' });
+      return res.status(200).json({ success: false, error: 'Forma de pagamento não reconhecida — o pedido fecharia sem ninguém pagar. Use Dinheiro, PIX, Cartão, Saldo de comissão ou Saldo de operação.' });
     }
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -227,6 +230,59 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true, pending: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, items: lines.length,
         pix: { payment_id: String(pay.id), pix_code: td.qr_code || null, qr_code_base64: td.qr_code_base64 || null, ticket_url: td.ticket_url || null },
+      });
+    }
+
+    // 💳 CARTÃO REAL (Mercado Pago Checkout Pro) — mesmo padrão do PIX acima: o pedido
+    // nasce 'pending_payment' e só baixa estoque/paga comissão quando o mpWebhook confirma
+    // (settlePdvPixSale, que apesar do nome é genérico — roda para qualquer pagamento de
+    // origem 'pdv'). Diferença pro PIX: aqui não existe API de "gerar cobrança direta" sem
+    // capturar dado de cartão no servidor (PCI), então é gerada uma preferência do Checkout
+    // Pro — o cliente paga pelo link/QR na própria página hospedada do Mercado Pago.
+    if (paymentMethod === 'cartao') {
+      if (!MP_TOKEN) return res.status(500).json({ success: false, error: 'Mercado Pago não configurado' });
+      if (total < 1) return res.status(200).json({ success: false, error: 'Valor mínimo no cartão: R$ 1,00' });
+      const pendingCartao = {
+        id: saleId, base44_id: saleId, kind: 'produto', source: 'pdv',
+        seller_id: sellerId, operator_id: actorId,
+        buyer_name: customer.name || 'Cliente balcão', buyer_email: customer.email || null, buyer_phone: customer.phone || null,
+        product_title: String(title).slice(0, 300), sale_price: total, total_amount: total, quantity: totalQty,
+        items_json: itemsJson, status: 'pending_payment', payment_method: 'cartao',
+        raw_base44: { pdv: true, is_store_owner: isStoreOwner, delivered, operator_id: actorId, items: itemsJson, comprador_id: compradorId || null, balcao_id: sellerId, total_bruto: totalBruto },
+      };
+      let insCartao = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(pendingCartao) });
+      if (!insCartao.ok) {
+        const { operator_id, buyer_email, ...menorCartao } = pendingCartao;
+        insCartao = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(menorCartao) });
+        if (!insCartao.ok) { const t = await insCartao.text(); return res.status(200).json({ success: false, error: 'Falha ao criar pedido', details: t.slice(0, 200) }); }
+      }
+      const [firstC, ...restC] = String(customer.name || 'Cliente Balcão').trim().split(/\s+/);
+      const prefBody = {
+        items: itemsJson.map((l) => ({ title: String(l.title).slice(0, 120), quantity: l.qty, unit_price: l.unit, currency_id: 'BRL' })),
+        payer: { email: customer.email || `pdv+${saleId.slice(0, 8)}@leilaonozap.net`, name: firstC || 'Cliente', surname: restC.join(' ') || 'Balcão' },
+        external_reference: saleId,
+        notification_url: `${BASE_URL}/api/functions/mpWebhook`,
+        back_urls: { success: `${BASE_URL}/`, failure: `${BASE_URL}/`, pending: `${BASE_URL}/` },
+        auto_return: 'approved',
+        // 💳 aceita crédito e débito (é "Cartão" no balcão, sem distinguir a bandeira/tipo).
+        // 'bank_transfer' exclui o PIX daqui — o PIX já tem botão e fluxo próprios nesta tela.
+        payment_methods: {
+          excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }, { id: 'bank_transfer' }, { id: 'digital_wallet' }],
+          installments: 12,
+        },
+      };
+      const rCartao = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(prefBody),
+      });
+      const pref = await rCartao.json();
+      if (!rCartao.ok || !pref?.id) {
+        await sb(`catalog_sales?id=eq.${saleId}&status=eq.pending_payment`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'canceled' }) });
+        return res.status(200).json({ success: false, error: 'Falha ao gerar link de cartão', details: (pref?.message || JSON.stringify(pref)).slice(0, 300) });
+      }
+      await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
+      return res.status(200).json({
+        success: true, pending: true, sale_id: saleId, total, total_bruto: totalBruto, comissao_licenca: comissaoInfo, items: lines.length,
+        cartao: { preference_id: pref.id, url: pref.init_point },
       });
     }
 
