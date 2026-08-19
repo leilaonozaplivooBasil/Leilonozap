@@ -158,6 +158,8 @@ export default function CatalogOrdersAdmin() {
   const [newStatus, setNewStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [reprocessandoEnvioId, setReprocessandoEnvioId] = useState(null);
+  const [cpfInput, setCpfInput] = useState('');
+  const [salvandoCpf, setSalvandoCpf] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -235,6 +237,31 @@ export default function CatalogOrdersAdmin() {
     setSelectedOrder(order);
     setTrackingCode(order.tracking_code || '');
     setNewStatus(order.status);
+    setCpfInput('');
+  };
+
+  const handleSalvarCpf = async () => {
+    if (!selectedOrder?.buyer_id) return;
+    const cpfLimpo = cpfInput.replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) { toast.error('CPF deve ter 11 dígitos.'); return; }
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { actorId = null; }
+    if (!actorId) { toast.error('Sessão não identificada.'); return; }
+    setSalvandoCpf(true);
+    try {
+      const r = await base44.functions.invoke('atualizarCpfComprador', { actorId, buyer_id: selectedOrder.buyer_id, cpf: cpfLimpo });
+      const data = r?.data || r;
+      if (!data?.ok) { toast.error(data?.error || 'Não foi possível salvar o CPF.'); return; }
+      const cpfSalvo = data.cpf || cpfLimpo;
+      setSelectedOrder((prev) => prev ? { ...prev, _buyer: { ...(prev._buyer || {}), cpf: cpfSalvo } } : prev);
+      setOrders((prev) => prev.map((o) => o.id === selectedOrder.id ? { ...o, _buyer: { ...(o._buyer || {}), cpf: cpfSalvo } } : o));
+      setCpfInput('');
+      toast.success('CPF salvo! Agora clique em "Reprocessar envio".');
+    } catch (e) {
+      toast.error('Erro ao salvar CPF.');
+    } finally {
+      setSalvandoCpf(false);
+    }
   };
 
   const handleTogglePacked = async (order, idx) => {
@@ -494,9 +521,27 @@ export default function CatalogOrdersAdmin() {
                 {(selectedOrder.buyer_phone || selectedOrder._buyer?.phone) && (
                   <p className="text-sm text-gray-400">Telefone/WhatsApp: <span className="text-white">{selectedOrder.buyer_phone || selectedOrder._buyer?.phone}</span></p>
                 )}
-                {selectedOrder._buyer?.cpf && (
-                  <p className="text-sm text-gray-400">CPF: <span className="text-white">{selectedOrder._buyer.cpf}</span></p>
-                )}
+                {selectedOrder._buyer?.cpf ? (
+                  <p className="text-sm text-gray-400">CPF: <span className="text-white font-mono">{selectedOrder._buyer.cpf}</span></p>
+                ) : selectedOrder.buyer_id ? (
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className="text-sm text-amber-400">CPF não cadastrado</span>
+                    <Input
+                      value={cpfInput}
+                      onChange={(e) => setCpfInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                      placeholder="00000000000"
+                      className="h-7 w-36 bg-gray-600 border-gray-500 text-white text-xs font-mono px-2"
+                    />
+                    <Button
+                      size="sm"
+                      className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700"
+                      disabled={salvandoCpf || cpfInput.replace(/\D/g,'').length !== 11}
+                      onClick={handleSalvarCpf}
+                    >
+                      {salvandoCpf ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
+                    </Button>
+                  </div>
+                ) : null}
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
                 <p className="text-sm text-gray-400">Data/Hora: <span className="text-white">{getDataHora(selectedOrder)}</span></p>
                 {selectedOrder._vendedor_nome && (
