@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import FiltrosVitrine from '@/components/common/FiltrosVitrine';
+import { thumbUrl } from '@/lib/imgThumb';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
@@ -194,7 +195,14 @@ export default function TirarPedido() {
       <div style={style}>
         <button onClick={() => addToCart(p)} className="w-full h-16 mb-2 flex items-center gap-3 bg-white hover:bg-nz-cinza-fundo border border-nz-borda rounded-xl p-3 text-left transition-colors">
           <span className="w-10 h-10 rounded-lg bg-nz-cinza-fundo flex items-center justify-center overflow-hidden flex-shrink-0">
-            {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-gray-400" />}
+            {p.image_urls?.[0] ? (
+              <img
+                src={thumbUrl(p.image_urls[0], 96)}
+                onError={(e) => { if (e.currentTarget.src !== p.image_urls[0]) e.currentTarget.src = p.image_urls[0]; }}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : <Package className="w-5 h-5 text-gray-400" />}
           </span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate">{p.description}</div>

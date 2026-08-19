@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
+import { thumbUrl } from '@/lib/imgThumb';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
@@ -80,7 +81,12 @@ function LoteDetalheModal({ lote, onClose }) {
                     <button onClick={onClose} className="text-slate-500 hover:text-white shrink-0"><XCircle size={20} /></button>
                 </div>
                 {lote.image_urls?.[0] && (
-                    <img src={lote.image_urls[0]} alt={lote.title} className="w-full h-40 object-cover rounded-xl mb-4 border border-[#30363d]" />
+                    <img
+                        src={thumbUrl(lote.image_urls[0], 480)}
+                        onError={(e) => { if (e.currentTarget.src !== lote.image_urls[0]) e.currentTarget.src = lote.image_urls[0]; }}
+                        alt={lote.title}
+                        className="w-full h-40 object-cover rounded-xl mb-4 border border-[#30363d]"
+                    />
                 )}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-[#0d1117] rounded-xl p-3 border border-[#30363d]">
@@ -601,7 +607,12 @@ export default function GestaoLotes() {
                                                                 title="Ampliar imagem"
                                                                 className="relative w-10 h-10 rounded-lg shrink-0 group"
                                                             >
-                                                                <img src={thumb} alt="" className="w-10 h-10 rounded-lg object-cover border border-[#30363d]" />
+                                                                <img
+                                                    src={thumbUrl(thumb, 96)}
+                                                    onError={(e) => { if (e.currentTarget.src !== thumb) e.currentTarget.src = thumb; }}
+                                                    alt=""
+                                                    className="w-10 h-10 rounded-lg object-cover border border-[#30363d]"
+                                                />
                                                                 <span className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors">
                                                                     <ZoomIn size={14} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                                                 </span>
