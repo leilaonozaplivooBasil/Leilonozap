@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
     Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users,
     DollarSign, Gavel, ArrowLeft, Trash2, Copy,
-    TrendingUp, Calendar, ArrowUpDown, Pencil
+    TrendingUp, Calendar, ArrowUpDown, Pencil, X, ZoomIn
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
@@ -147,6 +147,8 @@ export default function GestaoLotes() {
     const [showInvestidoresModal, setShowInvestidoresModal] = useState(false);
     const [loteDetalhe, setLoteDetalhe] = useState(null);
     const [confirmarArremate, setConfirmarArremate] = useState(null);
+    // 🔍 PONTO 89 — zoom de imagem: miniatura é pequena demais pra reconhecer o produto
+    const [imagemAmpliada, setImagemAmpliada] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
     const navigate = useNavigate();
     const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
@@ -593,7 +595,17 @@ export default function GestaoLotes() {
                                                 <td className="px-4 py-3 max-w-[220px]">
                                                     <div className="flex items-center gap-3">
                                                         {thumb ? (
-                                                            <img src={thumb} alt="" className="w-10 h-10 rounded-lg object-cover border border-[#30363d] shrink-0" />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setImagemAmpliada(thumb)}
+                                                                title="Ampliar imagem"
+                                                                className="relative w-10 h-10 rounded-lg shrink-0 group"
+                                                            >
+                                                                <img src={thumb} alt="" className="w-10 h-10 rounded-lg object-cover border border-[#30363d]" />
+                                                                <span className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors">
+                                                                    <ZoomIn size={14} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                </span>
+                                                            </button>
                                                         ) : (
                                                             <div className="w-10 h-10 rounded-lg bg-[#0d1117] border border-[#30363d] flex items-center justify-center shrink-0">
                                                                 <Package size={16} className="text-slate-600" />
@@ -705,6 +717,27 @@ export default function GestaoLotes() {
                 onRefresh={() => { Arrematante.list('-created_date', 200).then(data => setArrematantesCadastro(data || [])); }} />
 
             {gradeUpdateLote && <AtualizarGradesModal isOpen={true} onClose={() => setGradeUpdateLote(null)} lote={gradeUpdateLote} onSuccess={loadDados} />}
+            {imagemAmpliada && (
+                <div
+                    onClick={() => setImagemAmpliada(null)}
+                    className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[70] flex items-center justify-center p-4 cursor-zoom-out"
+                >
+                    <button
+                        type="button"
+                        onClick={() => setImagemAmpliada(null)}
+                        title="Fechar"
+                        className="absolute top-4 right-4 text-slate-300 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                    <img
+                        src={imagemAmpliada}
+                        alt="Imagem ampliada"
+                        onClick={(e) => e.stopPropagation()}
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default"
+                    />
+                </div>
+            )}
             {loteDetalhe && <LoteDetalheModal lote={loteDetalhe} onClose={() => setLoteDetalhe(null)} />}
             {confirmarArremate && (
                 <ConfirmarArrematModal lote={confirmarArremate.lote} vencedor={confirmarArremate.vencedor}
