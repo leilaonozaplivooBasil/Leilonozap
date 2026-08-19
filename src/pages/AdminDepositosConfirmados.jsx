@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,12 @@ import { toast } from 'sonner';
 // Tempo máximo (ms) para um PIX ser considerado pendente válido — 30 minutos
 const PIX_EXPIRY_MS = 30 * 60 * 1000;
 
+const KIND_LABEL = {
+  wallet_deposit: 'Depósito na Carteira',
+  passaporte: 'Passaporte de Lances',
+  commission_deposit: 'Depósito — Carteira de Comissões',
+};
+
 export default function AdminDepositosConfirmados() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchEmail, setSearchEmail] = useState('');
@@ -21,33 +26,33 @@ export default function AdminDepositosConfirmados() {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const queryClient = useQueryClient();
 
-  const getCallerEmail = () => {
-    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
+  const getActorId = () => {
+    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).id : null; } catch { return null; }
   };
 
   const { data: transactions = [], isLoading, error } = useQuery({
-    queryKey: ['wallet-deposits'],
+    queryKey: ['admin-deposits'],
     queryFn: async () => {
-      const response = await adminDataProxy({ entity_name: 'WalletTransaction', method: 'list', params: { limit: 1000 }, caller_email: getCallerEmail() });
-      const all = response?.data?.data || response?.data || [];
-      return all.filter(t => t.type === 'deposit');
+      const actorId = getActorId();
+      if (!actorId) return [];
+      const response = await base44.functions.invoke('adminListDeposits', { actorId });
+      const data = response?.data || response;
+      if (!data?.success) throw new Error(data?.error || 'Falha ao carregar depósitos');
+      return Array.isArray(data.deposits) ? data.deposits : [];
     },
-    refetchInterval: 5000
+    refetchInterval: 15000,
   });
 
   const filteredTransactions = transactions.filter(t => {
     const matchStatus = filterStatus === 'all' || t.status === filterStatus;
-    const matchEmail = t.user_id.toLowerCase().includes(searchEmail.toLowerCase());
-    
+    const term = searchEmail.toLowerCase().trim();
+    const matchEmail = !term || (t.email || '').toLowerCase().includes(term) || (t.name || '').toLowerCase().includes(term);
+
     let matchDate = true;
     if (filterDateFrom || filterDateTo) {
       const txDate = new Date(t.created_date).getTime();
-      if (filterDateFrom) {
-        matchDate = txDate >= new Date(filterDateFrom).getTime();
-      }
-      if (filterDateTo && matchDate) {
-        matchDate = txDate <= new Date(filterDateTo).getTime();
-      }
+      if (filterDateFrom) matchDate = txDate >= new Date(filterDateFrom).getTime();
+      if (filterDateTo && matchDate) matchDate = txDate <= new Date(filterDateTo).getTime();
     }
 
     return matchStatus && matchEmail && matchDate;
@@ -65,7 +70,7 @@ export default function AdminDepositosConfirmados() {
     confirmed: filteredTransactions.filter(t => t.status === 'confirmed').length,
     pending: filteredTransactions.filter(t => t.status === 'pending').length,
     expired: expiredPix.length,
-    totalAmount: filteredTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
+    totalAmount: filteredTransactions.filter(t => t.status === 'confirmed').reduce((sum, t) => sum + (t.amount || 0), 0),
   };
 
   const handleCleanupExpired = async () => {
@@ -81,7 +86,7 @@ export default function AdminDepositosConfirmados() {
 
     for (const tx of expiredPix) {
       try {
-        await base44.entities.WalletTransaction.delete(tx.id);
+        await base44.entities.CatalogSale.delete(tx.id);
         deleted++;
       } catch (err) {
         console.error('[CleanupPix] Falha ao deletar tx:', tx.id, err);
@@ -90,7 +95,7 @@ export default function AdminDepositosConfirmados() {
     }
 
     setIsCleaningUp(false);
-    queryClient.invalidateQueries({ queryKey: ['wallet-deposits'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-deposits'] });
 
     if (errors === 0) {
       toast.success(`✅ ${deleted} PIX expirado(s) removido(s) com sucesso.`);
@@ -99,21 +104,22 @@ export default function AdminDepositosConfirmados() {
     }
   };
 
-
   const handleExportCSV = () => {
-    const headers = ['Email', 'Valor (R$)', 'Status', 'Data'];
+    const headers = ['Email', 'Nome', 'Tipo', 'Valor (R$)', 'Status', 'Data'];
     const rows = filteredTransactions.map(t => [
-      t.user_id,
+      t.email,
+      t.name,
+      KIND_LABEL[t.kind] || t.kind,
       t.amount?.toFixed(2),
       t.status,
-      new Date(t.created_date).toLocaleDateString('pt-BR')
+      new Date(t.created_date).toLocaleDateString('pt-BR'),
     ]);
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `depósitos_${new Date().toISOString().split('T')[0]}.csv`);
     link.click();
@@ -122,11 +128,11 @@ export default function AdminDepositosConfirmados() {
   return (
     <div className="min-h-screen bg-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">💰 Depósitos Confirmados</h1>
-          <p className="text-slate-400">Acompanhamento de todas as transações de depósito dos investidores</p>
+          <p className="text-slate-400">Acompanhamento de todos os depósitos (carteira, passaporte, comissão) de todos os usuários</p>
         </div>
 
         {/* Banner de alerta — PIX expirados */}
@@ -185,7 +191,7 @@ export default function AdminDepositosConfirmados() {
 
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader className="pb-3">
-              <CardTitle className="text-slate-400 text-sm font-medium">Total Depositado</CardTitle>
+              <CardTitle className="text-slate-400 text-sm font-medium">Total Depositado (confirmado)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-400">R$ {stats.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
@@ -203,9 +209,9 @@ export default function AdminDepositosConfirmados() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-2 uppercase font-semibold">Email</label>
+                <label className="block text-xs text-slate-400 mb-2 uppercase font-semibold">Email ou nome</label>
                 <Input
-                  placeholder="Buscar por email..."
+                  placeholder="Buscar..."
                   value={searchEmail}
                   onChange={(e) => setSearchEmail(e.target.value)}
                   className="bg-slate-700 border-slate-600 text-white placeholder-slate-500"
@@ -222,7 +228,7 @@ export default function AdminDepositosConfirmados() {
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="confirmed">Confirmado</SelectItem>
                     <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="failed">Falhou</SelectItem>
+                    <SelectItem value="failed">Cancelado/Falhou</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -268,7 +274,7 @@ export default function AdminDepositosConfirmados() {
             {isLoading ? (
               <div className="text-center py-8 text-slate-400">Carregando...</div>
             ) : error ? (
-              <div className="text-center py-8 text-red-400">Erro ao carregar dados</div>
+              <div className="text-center py-8 text-red-400">Erro ao carregar dados: {error.message}</div>
             ) : filteredTransactions.length === 0 ? (
               <div className="text-center py-8 text-slate-400">Nenhum depósito encontrado</div>
             ) : (
@@ -276,17 +282,21 @@ export default function AdminDepositosConfirmados() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-700">
-                      <th className="text-left py-3 px-4 text-slate-300 font-semibold">Email</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-semibold">Comprador</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-semibold">Tipo</th>
                       <th className="text-right py-3 px-4 text-slate-300 font-semibold">Valor</th>
                       <th className="text-center py-3 px-4 text-slate-300 font-semibold">Status</th>
                       <th className="text-left py-3 px-4 text-slate-300 font-semibold">Data</th>
-                      <th className="text-left py-3 px-4 text-slate-300 font-semibold">Descrição</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredTransactions.map((tx) => (
                       <tr key={tx.id} className="border-b border-slate-700 hover:bg-slate-700/50 transition">
-                        <td className="py-3 px-4 text-white font-mono text-sm">{tx.user_id}</td>
+                        <td className="py-3 px-4 text-white text-sm">
+                          <div className="font-semibold">{tx.name || '—'}</div>
+                          <div className="text-slate-500 font-mono text-xs">{tx.email || tx.user_id}</div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-300 text-sm">{KIND_LABEL[tx.kind] || tx.kind}</td>
                         <td className="py-3 px-4 text-right text-green-400 font-bold">
                           R$ {tx.amount?.toFixed(2) || '0.00'}
                         </td>
@@ -296,15 +306,12 @@ export default function AdminDepositosConfirmados() {
                             tx.status === 'pending' ? 'bg-yellow-900 text-yellow-300' :
                             'bg-red-900 text-red-300'
                           }>
-                            {tx.status === 'confirmed' ? '✓ Confirmado' : 
+                            {tx.status === 'confirmed' ? '✓ Confirmado' :
                              tx.status === 'pending' ? '⏳ Pendente' : '✗ Falhou'}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-slate-400 text-sm">
-                          {new Date(tx.created_date).toLocaleDateString('pt-BR')}
-                        </td>
-                        <td className="py-3 px-4 text-slate-400 text-sm max-w-xs truncate">
-                          {tx.description}
+                          {new Date(tx.created_date).toLocaleString('pt-BR')}
                         </td>
                       </tr>
                     ))}

@@ -83,7 +83,10 @@ export default function WalletHistory() {
       deposit: "Depósito",
       purchase: "Compra",
       refund: "Reembolso",
-      adjustment: "Ajuste"
+      adjustment: "Ajuste",
+      bid_hold: "Lance reservado",
+      bid_release: "Lance devolvido",
+      bid_settle: "Arremate confirmado",
     };
     return labels[type] || type;
   };
