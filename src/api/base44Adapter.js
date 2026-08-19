@@ -135,6 +135,14 @@ function applyOrderBy(query, orderBy, entity) {
     const fmap = FIELD_MAP[entity] || {};
     query = query.order(fmap[o.column] || o.column, { ascending: o.ascending });
   }
+  // 🔒 DESEMPATE ESTÁVEL (Ponto 93, 19/08/2026) — sem uma 2ª coluna, empate na coluna
+  // principal (ex.: created_date IDÊNTICO em centenas de produtos de um mesmo lote
+  // importado de uma vez) faz o Postgres reordenar os empatados a cada consulta.
+  // Efeito prático: paginação por LIMIT/OFFSET (Catalog.jsx → loadMore) pula produto
+  // de uma página pra outra — ele existe, está ativo, mas nunca aparece navegando
+  // (só a busca acha, porque roda numa consulta só, sem paginar). id é sempre único:
+  // garante a MESMA ordem em toda consulta, então nenhuma linha some entre páginas.
+  query = query.order('id', { ascending: true });
   return query;
 }
 
