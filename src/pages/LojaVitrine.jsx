@@ -36,7 +36,7 @@ export default function LojaVitrine() {
 
   // carrega vitrine
   const load = useCallback(async (term = '') => {
-    const { data: r, error } = await supabase.rpc('loja_vitrine', { _slug: slug, q: term, lim: 60 });
+    const { data: r, error } = await supabase.rpc('loja_vitrine', { _slug: slug, q: term, lim: 200 });
     if (error) { setData(null); return; }
     setData(r || null);
   }, [slug]);

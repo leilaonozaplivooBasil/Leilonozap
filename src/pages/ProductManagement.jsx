@@ -431,6 +431,10 @@ export default function ProductManagement() {
       });
     } else if (alertFilter === 'error') {
       filtered = filtered.filter(p => (p.quantity || 0) < 0);
+    } else if (alertFilter === 'no_category') {
+      filtered = filtered.filter(p => !p.category_id);
+    } else if (alertFilter === 'hidden_stock') {
+      filtered = filtered.filter(p => (p.quantity || 0) > 0 && !p.catalog_active);
     }
 
     if (hideZeroStock) {
@@ -787,6 +791,8 @@ export default function ProductManagement() {
             <option value="no_price">Sem Preço ({products.filter(p => !p.selling_price_retail || p.selling_price_retail === 0).length})</option>
             <option value="stopped">Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
             <option value="error">Erro Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
+            <option value="no_category">Sem Categoria ({products.filter(p => !p.category_id).length})</option>
+            <option value="hidden_stock">Estoque fora da loja ({products.filter(p => (p.quantity || 0) > 0 && !p.catalog_active).length})</option>
           </select>
           <button
             onClick={() => setHideZeroStock(!hideZeroStock)}
