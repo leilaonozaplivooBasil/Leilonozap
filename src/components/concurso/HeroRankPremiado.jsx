@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Users, MessageCircle } from 'lucide-react';
 import PlacaRankPremiado from '@/components/concurso/PlacaRankPremiado';
 
 const LINK_GRUPO_WHATSAPP = 'https://chat.whatsapp.com/FyKc2sXiB5fBG7ikYlmvri?s=cl&p=i&mlu=4&amv=0';
+
+// 🎬 VSL — player oficial VTurb/ConverteAI (troca o antigo embed do YouTube).
+// O player já vem com sua própria UI (mute/play), então nada de camada
+// invisível bloqueando clique por cima — isso quebraria os controles dele.
+const VTURB_PLAYER_ID = 'vid-6a8468fb5ad35a372bd66f75';
+const VTURB_ACCOUNT = '7a8633e0-3565-48d0-86ae-dcc6a38a36bb';
+const VTURB_PLAYER_SRC = `https://scripts.converteai.net/${VTURB_ACCOUNT}/players/6a8468fb5ad35a372bd66f75/v4/player.js`;
 
 // Banner de topo do Rank Premiado — tema preto/grafite (identidade da placa
 // RANK PREMIADO). Só apresentação: o botão rola pra seção que já existe na página.
@@ -11,6 +18,47 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
     const alvo = document.getElementById(registered ? 'meu-painel' : 'cadastro-form');
     alvo?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
+
+  // Carrega o SDK do player + otimizações de rede (preload/dns-prefetch) uma
+  // única vez — guardado por atributo pra não duplicar em re-render/StrictMode.
+  useEffect(() => {
+    if (!window._plt) window._plt = performance?.timeOrigin ? performance.timeOrigin + performance.now() : Date.now();
+
+    const dnsPrefetch = [
+      'https://cdn.converteai.net',
+      'https://scripts.converteai.net',
+      'https://images.converteai.net',
+      'https://license.vturb.com',
+    ];
+    dnsPrefetch.forEach((href) => {
+      if (document.querySelector(`link[rel="dns-prefetch"][href="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'dns-prefetch';
+      link.href = href;
+      document.head.appendChild(link);
+    });
+
+    const preloads = [
+      { href: VTURB_PLAYER_SRC, as: 'script' },
+      { href: 'https://scripts.converteai.net/lib/js/smartplayer-wc/v4/smartplayer.js', as: 'script' },
+      { href: `https://cdn.converteai.net/${VTURB_ACCOUNT}/6a8468cea4d48ef3f38a8ac4/main.m3u8`, as: 'fetch' },
+    ];
+    preloads.forEach(({ href, as }) => {
+      if (document.querySelector(`link[rel="preload"][href="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.href = href;
+      link.as = as;
+      document.head.appendChild(link);
+    });
+
+    if (!document.querySelector(`script[src="${VTURB_PLAYER_SRC}"]`)) {
+      const s = document.createElement('script');
+      s.src = VTURB_PLAYER_SRC;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+  }, []);
 
   return (
     <section className="w-full border-b border-white/10" style={{ background: 'linear-gradient(180deg, #21222b, #191a21)' }}>
@@ -26,17 +74,13 @@ export default function HeroRankPremiado({ total = 0, registered = false }) {
           Convide, some pontos e concorra aos produtos do dia.
         </p>
 
-        {/* 🎬 VSL — formato short (9:16), autoplay ao entrar na página, sem play/pause
-            (camada transparente por cima do iframe intercepta qualquer clique). */}
-        <div className="mt-8 mx-auto max-w-[380px] relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ aspectRatio: '9/16' }}>
-          <iframe
-            src="https://www.youtube.com/embed/moMMzlsb_Fw?autoplay=1&mute=1&loop=1&playlist=moMMzlsb_Fw&controls=0&playsinline=1&modestbranding=1&rel=0&disablekb=1"
-            title="Como funciona o Rank Premiado"
-            className="w-full h-full absolute inset-0"
-            allow="autoplay; encrypted-media"
-          />
-          {/* Camada invisível: bloqueia clique/toque, impedindo pausar ou abrir controles */}
-          <div className="absolute inset-0 z-10" style={{ background: 'transparent' }} />
+        {/* 🎬 VSL — player VTurb/ConverteAI. A proporção (9:16) vem do próprio
+            placeholder oficial do player (padding-top em %); não force outro
+            aspect-ratio aqui por cima, senão o player pode cortar/esticar. */}
+        <div className="mt-8 mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ maxWidth: 400 }}>
+          <vturb-smartplayer id={VTURB_PLAYER_ID} style={{ display: 'block', margin: '0 auto', width: '100%', maxWidth: 400 }}>
+            <div className="vturb-player-placeholder" style={{ position: 'relative', width: '100%', padding: '177.77777777777777% 0 0', zIndex: 0, backgroundColor: 'black' }} />
+          </vturb-smartplayer>
         </div>
 
         <button
