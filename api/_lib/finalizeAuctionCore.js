@@ -90,15 +90,27 @@ async function devolverReserva(userId, valor) {
 export async function finalizeOneAuction(auction) {
   const auctionId = auction.id;
 
-  // 🏆 Apura o vencedor pelo MAIOR lance realmente gravado no banco.
-  const bids = await (await sb(
-    `auction_messages?select=sender_id,sender_name,bid_amount,created_date&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=1`
+  // 🏆 Apura o vencedor pelo MAIOR lance realmente gravado no banco. Busca TODOS
+  // os lances (não só o topo) — o Cupom Passaporte precisa saber, por pessoa, qual
+  // foi o MAIOR lance dela neste leilão pra liberar/cancelar só a fatia certa.
+  const allBids = await (await sb(
+    `auction_messages?select=sender_id,sender_name,bid_amount,created_date&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
   )).json();
-  const topBid = Array.isArray(bids) ? bids[0] : null;
+  const bidsList = Array.isArray(allBids) ? allBids : [];
+  const topBid = bidsList[0] || null;
 
   const winnerId = topBid?.sender_id || null;
   const winnerName = topBid?.sender_name || null;
   const finalPrice = money(topBid?.bid_amount || auction.current_price || auction.starting_price);
+
+  // maior lance de CADA participante neste leilão (bidsList já vem ordenado
+  // desc por valor, então o primeiro encontrado de cada sender_id é o maior dele)
+  const maiorLancePorParticipante = new Map();
+  for (const b of bidsList) {
+    if (b?.sender_id && !maiorLancePorParticipante.has(b.sender_id)) {
+      maiorLancePorParticipante.set(b.sender_id, money(b.bid_amount));
+    }
+  }
 
   // 🔒 Claim atômico: só UM finalizador vence esta corrida.
   const claim = await sb(
@@ -150,9 +162,10 @@ export async function finalizeOneAuction(auction) {
         });
       } catch (e) { console.warn('[FINALIZE] stats vencedor:', e?.message); }
 
-      // 🎟️ Arrematou = o aporte virou compra → cupons ainda bloqueados são cancelados.
-      // Cupom já LIBERADO (de uma derrota anterior) permanece intacto.
-      try { await cancelarCuponsBloqueados(winnerId); } catch (e) { console.warn('[FINALIZE] cupom passaporte:', e?.message); }
+      // 🎟️ Arrematou = a FATIA do lance vencedor vira compra → cancela só 10% do
+      // valor arrematado (não o bônus inteiro). Cupom já LIBERADO (de uma derrota
+      // em outro leilão) permanece intacto.
+      try { await cancelarCuponsBloqueados(winnerId, finalPrice); } catch (e) { console.warn('[FINALIZE] cupom passaporte:', e?.message); }
 
       // 🎟️ Modelo A: o bônus de 10% já está na carteira. Quem ARREMATOU tem o bônus
       // recolhido (o valor pago virou compra). Nunca deixa saldo negativo.
@@ -193,21 +206,17 @@ export async function finalizeOneAuction(auction) {
     }
   }
 
-  // 🎟️ CUPOM PASSAPORTE — libera pra quem disputou e NÃO ganhou (restaurado
-  // 19/08/2026, autorizado pelo dono). O cupom só pode liberar aqui, no fim do
-  // leilão — nunca no meio, quando a pessoa é só coberta por um lance (ela ainda
-  // pode relançar e vencer). Todo mundo que deu lance neste leilão e não é o
-  // vencedor final tem os cupons bloqueados liberados pra Loja Virtual agora.
+  // 🎟️ CUPOM PASSAPORTE — libera a FATIA de quem disputou e NÃO ganhou: só 10% do
+  // MAIOR lance que essa pessoa deu NESTE leilão (não o bônus inteiro — ver
+  // REGRA CORRIGIDA 19/08/2026 no topo de passaporteCoupon.js). Roda só no
+  // ENCERRAMENTO do leilão, nunca no meio, quando a pessoa é só coberta por um
+  // lance (ela ainda pode relançar e vencer).
   try {
-    const participantes = await (await sb(
-      `auction_messages?select=sender_id&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&sender_id=not.is.null`
-    )).json();
-    const perdedores = [...new Set((Array.isArray(participantes) ? participantes : []).map(m => m.sender_id))]
-      .filter(id => id && id !== winnerId);
-    for (const perdedorId of perdedores) {
-      try { await liberarCupomPassaporte(perdedorId, auctionId); } catch (e) { console.warn('[FINALIZE] libera cupom perdedor:', perdedorId, e?.message); }
+    for (const [participanteId, maiorLance] of maiorLancePorParticipante) {
+      if (participanteId === winnerId) continue;
+      try { await liberarCupomPassaporte(participanteId, auctionId, maiorLance); } catch (e) { console.warn('[FINALIZE] libera cupom perdedor:', participanteId, e?.message); }
     }
-  } catch (e) { console.warn('[FINALIZE] busca participantes p/ cupom:', e?.message); }
+  } catch (e) { console.warn('[FINALIZE] libera cupons perdedores:', e?.message); }
 
   // 🔓 DEVOLUÇÃO DE RESERVA NO MARTELO — REGRA OFICIAL CORRIGIDA (08/08/2026).
   //
