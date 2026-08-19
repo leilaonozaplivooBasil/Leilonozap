@@ -89,7 +89,38 @@ function remetente() {
   return { ...campos, postal_code: FROM_CEP, country_id: 'BR' };
 }
 
+// Motivos que NÃO são problema — não geram log (retirada no balcão é normal;
+// "já gerado" é a própria idempotência funcionando). Todo o resto some hoje
+// em silêncio total: sem isso, ninguém sabe por que um envio não foi gerado
+// até abrir o banco na mão.
+const SKIPS_SEM_PROBLEMA = new Set(['retirada_na_loja', 'ja_gerado']);
+// Falha de verdade na comunicação com o Melhor Envio (não é config faltando)
+const SKIPS_GRAVES = new Set(['cart_falhou', 'checkout_falhou', 'erro_inesperado']);
+
+async function logResultado(sale, resultado) {
+  if (!resultado || resultado.ok || SKIPS_SEM_PROBLEMA.has(resultado.skipped)) return;
+  try {
+    await sb('system_logs', {
+      method: 'POST',
+      body: JSON.stringify({
+        entity_id: sale?.id || null,
+        component_name: 'melhorEnvioShipment',
+        step: 'ENVIO_AUTOMATICO',
+        status: SKIPS_GRAVES.has(resultado.skipped) ? 'error' : 'warning',
+        message: `Envio automático não gerado (venda ${sale?.id}): ${resultado.skipped}` + (resultado.detalhe ? ` — ${String(resultado.detalhe).slice(0, 200)}` : ''),
+        created_at: new Date().toISOString(),
+      }),
+    });
+  } catch (_) { /* log é opcional, nunca pode quebrar o fluxo */ }
+}
+
 export async function gerarEnvioAutomatico(sale) {
+  const resultado = await tentarGerarEnvio(sale);
+  await logResultado(sale, resultado);
+  return resultado;
+}
+
+async function tentarGerarEnvio(sale) {
   try {
     let raw = sale.raw_base44;
     if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
