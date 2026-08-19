@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List } from "lucide-react";
-import moment from "moment";
+import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
+import { toDate } from "@/lib/dateFmt";
 
 import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards";
 import ExpenseTable from "@/components/financial/ExpenseTable";
@@ -29,8 +30,8 @@ export default function Financial() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [filterDateFrom, setFilterDateFrom] = useState(moment().startOf("month").format("YYYY-MM-DD"));
-  const [filterDateTo, setFilterDateTo] = useState(moment().endOf("month").format("YYYY-MM-DD"));
+  const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [filterDateTo, setFilterDateTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [filterCategory, setFilterCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("expenses");
   const [paymentExpense, setPaymentExpense] = useState(null);
@@ -88,9 +89,9 @@ export default function Financial() {
 
   // Auto-detect overdue
   useEffect(() => {
-    const today = moment().startOf("day");
+    const today = startOfDay(new Date());
     expenses.forEach(exp => {
-      if (exp.payment_status === "pendente" && moment(exp.due_date).startOf("day").isBefore(today)) {
+      if (exp.payment_status === "pendente" && isBefore(startOfDay(toDate(exp.due_date)), today)) {
         FinancialExpense.update(exp.id, { payment_status: "vencido" });
       }
     });
@@ -116,8 +117,9 @@ export default function Financial() {
   const usedCategories = [...new Set(expenses.map(e => e.category).filter(Boolean))].sort();
 
   const filtered = expenses.filter(exp => {
-    const expDate = moment(exp.due_date);
-    const monthMatch = (!filterDateFrom || expDate.isSameOrAfter(filterDateFrom, "day")) && (!filterDateTo || expDate.isSameOrBefore(filterDateTo, "day"));
+    const expDate = startOfDay(toDate(exp.due_date));
+    const monthMatch = (!filterDateFrom || !isBefore(expDate, startOfDay(parseISO(filterDateFrom)))) &&
+      (!filterDateTo || !isAfter(expDate, startOfDay(parseISO(filterDateTo))));
     const statusMatch = filterStatus === "all" || exp.payment_status === filterStatus;
     const typeMatch = filterType === "all" || exp.expense_type === filterType;
     const categoryMatch = filterCategory === "all" || exp.category === filterCategory;
@@ -144,7 +146,7 @@ export default function Financial() {
       amount: parseFloat(exp.amount) || 0,
       interest_amount: 0,
       total_amount: parseFloat(exp.amount) || 0,
-      due_date: exp.due_date || moment().format("YYYY-MM-DD"),
+      due_date: exp.due_date || format(new Date(), "yyyy-MM-dd"),
       payment_method: "pix",
       payment_status: "pendente",
       amount_paid: 0,

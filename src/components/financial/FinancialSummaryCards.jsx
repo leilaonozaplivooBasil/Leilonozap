@@ -1,9 +1,10 @@
 import React from "react";
 import { DollarSign, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
-import moment from "moment";
+import { startOfDay, isBefore, differenceInCalendarDays } from "date-fns";
+import { toDate } from "@/lib/dateFmt";
 
 export default function FinancialSummaryCards({ expenses }) {
-  const today = moment().startOf("day");
+  const today = startOfDay(new Date());
 
   const totalMonth = expenses.reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0), 0);
   const totalPaid = expenses.filter(e => e.payment_status === "pago_integral").reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0), 0);
@@ -11,13 +12,13 @@ export default function FinancialSummaryCards({ expenses }) {
     .reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0) - (e.amount_paid || 0), 0);
   const totalOverdue = expenses.filter(e => {
     if (e.payment_status === "pago_integral" || e.payment_status === "cancelado") return false;
-    return moment(e.due_date).startOf("day").isBefore(today);
+    return isBefore(startOfDay(toDate(e.due_date)), today);
   }).reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0) - (e.amount_paid || 0), 0);
 
   const dueSoon = expenses.filter(e => {
     if (e.payment_status === "pago_integral" || e.payment_status === "cancelado") return false;
-    const due = moment(e.due_date).startOf("day");
-    const diff = due.diff(today, "days");
+    const due = startOfDay(toDate(e.due_date));
+    const diff = differenceInCalendarDays(due, today);
     return diff >= 0 && diff <= 3;
   }).length;
 
