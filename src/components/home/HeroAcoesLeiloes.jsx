@@ -12,7 +12,34 @@ const LIVOO_SITE = "https://livoolive.com.br";
 const acao =
   "inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-gray-100 transition-transform active:scale-[0.97] sm:gap-2 sm:text-sm";
 
+// 🩹 PONTO 87 (19/08/2026) — CAUSA PROVÁVEL do "popup do CompareAQUI aparece
+// sozinho" relatado em /leiloes: este botão fica DENTRO da fileira que rola
+// no eixo X (arrastar pra ver "Ao Vivo"/"Compartilhar"). Um arrasto rápido é
+// facilmente lido pelo navegador como toque — o usuário só queria rolar e
+// "sem querer" abre o modal. Guarda simples: só dispara o clique se o dedo
+// não se moveu mais que alguns pixels entre o toque e o soltar (gesto de
+// toque de verdade, não um arrasto de rolagem).
+const LIMITE_ARRASTO_PX = 10;
+
+function useCliqueSemArrasto(onTap) {
+  const inicioRef = React.useRef(null);
+  return {
+    onPointerDown: (e) => { inicioRef.current = { x: e.clientX, y: e.clientY }; },
+    onClick: (e) => {
+      const inicio = inicioRef.current;
+      if (inicio) {
+        const dx = Math.abs(e.clientX - inicio.x);
+        const dy = Math.abs(e.clientY - inicio.y);
+        if (dx > LIMITE_ARRASTO_PX || dy > LIMITE_ARRASTO_PX) return; // foi arrasto, ignora
+      }
+      onTap(e);
+    },
+  };
+}
+
 export default function HeroAcoesLeiloes({ count = 0 }) {
+  const compararTap = useCliqueSemArrasto(() => window.dispatchEvent(new Event("openComparai")));
+
   return (
     <div className="mt-4 flex items-center gap-4 overflow-x-auto px-3 py-1 nz-no-scrollbar sm:mt-5 sm:gap-6 sm:px-4">
       {/* PONTO 88 — pulso de luz branca da logo do CompareAQUI (local, não vaza pro app) */}
@@ -53,7 +80,7 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
       {/* Comparar — mesmo evento global do CompareAQUI */}
       <button
         type="button"
-        onClick={() => window.dispatchEvent(new Event("openComparai"))}
+        {...compararTap}
         aria-label="Comparar preços com o CompareAQUI"
         title="CompareAQUI — compare o preço antes de comprar"
         className={acao}

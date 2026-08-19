@@ -7,6 +7,16 @@ const SERPAPI_KEY = process.env.SERPAPI_KEY;
 const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
+// 🔴 CAUSA-RAIZ DO "TRAVA, DO NADA VOLTA" (19/08/2026) — nenhuma das 4 fontes
+// abaixo tinha timeout, ao contrário de TODA outra chamada externa deste
+// projeto (GenerateImage, InvokeLLM, waProxy, etc. — todas usam
+// AbortSignal.timeout). Se uma fonte pendurasse a conexão (comum em scraping
+// do Zoom ou instabilidade de API de terceiro), a busca inteira (elas rodam
+// em sequência) ficava presa até a função serverless ser derrubada pelo
+// limite da plataforma — o spinner "Analisando preços..." congelava e só
+// "voltava" quando esse limite batia. Agora cada fonte tem um teto próprio.
+const FONTE_TIMEOUT_MS = 6000;
+
 // Limpa o título do catálogo pra virar uma query boa. Desgruda "Pequeno500ml" -> "Pequeno 500ml"
 // (títulos vêm colados e a busca não achava nada), tira ruído e fica com até 5 palavras.
 export function cleanTitle(title) {
@@ -31,7 +41,7 @@ export function isValidPrice(price) {
 
 async function fetchZoom(query) {
   const url = `https://www.zoom.com.br/search?q=${encodeURIComponent(query)}`;
-  const resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept-Language': 'pt-BR,pt;q=0.9' } });
+  const resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept-Language': 'pt-BR,pt;q=0.9' }, signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
   if (!resp.ok) throw new Error(`Zoom HTTP ${resp.status}`);
   const html = await resp.text();
   const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
@@ -61,7 +71,7 @@ async function fetchZoom(query) {
 
 async function fetchSerpApi(query) {
   const u = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(query)}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-  const resp = await fetch(u);
+  const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
   if (!resp.ok) throw new Error(`SerpAPI HTTP ${resp.status}`);
   const data = await resp.json();
   if (!data.shopping_results) return [];
@@ -79,7 +89,7 @@ async function fetchSerpApi(query) {
 // por imagem o Lens acha a mesma torneira no ML (R$89,99). Bem mais assertivo.
 async function fetchGoogleLens(imageUrl) {
   const u = `https://www.searchapi.io/api/v1/search?engine=google_lens&search_type=all&url=${encodeURIComponent(imageUrl)}&gl=br&hl=pt-br&api_key=${SEARCHAPI_KEY}`;
-  const resp = await fetch(u);
+  const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok || data?.error) throw new Error(`Lens: ${data?.error || resp.status}`);
   const vm = data.visual_matches || [];
@@ -94,7 +104,7 @@ async function fetchGoogleLens(imageUrl) {
 
 async function fetchSearchApi(query) {
   const u = `https://www.searchapi.io/api/v1/search?engine=google_shopping&q=${encodeURIComponent(query)}&gl=br&hl=pt-br&location=Brazil&api_key=${SEARCHAPI_KEY}`;
-  const resp = await fetch(u);
+  const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok || data?.error) throw new Error(`SearchAPI: ${data?.error || resp.status}`);
   const results = data.shopping_results || [];
@@ -134,8 +144,19 @@ export async function searchMarket(title, imageUrl) {
   }
   if (!fontes.length) return { found: false, reason: 'sem_titulo_sem_imagem', query: cleaned, results: [] };
 
+  // ⏱️ Teto GERAL da cascata (19/08/2026) — cada fonte já tem seu próprio
+  // timeout, mas rodando em sequência o pior caso ainda somava até 4x isso.
+  // Corta a busca por aqui e devolve "não encontrado" em vez de continuar
+  // tentando fontes quando já se gastou tempo demais — o usuário prefere um
+  // "indisponível" rápido a um spinner pendurado por 20+ segundos.
+  const inicio = Date.now();
+  const TETO_GERAL_MS = 12000;
   const falhas = [];
   for (const f of fontes) {
+    if (Date.now() - inicio > TETO_GERAL_MS) {
+      falhas.push(`${f.nome}: pulada (teto geral de ${TETO_GERAL_MS}ms atingido)`);
+      continue;
+    }
     try {
       const raw = await f.fn();
       const r = relevantes(raw, f.image);

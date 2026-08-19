@@ -94,7 +94,15 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
               forceRefresh: false,
               forceGoogleShopping: forceGoogleShopping
             };
-        response = await comparaiPrices(payload);
+        // 🔴 CAUSA-RAIZ DO "TRAVA, DO NADA VOLTA" (19/08/2026) — a chamada não
+        // tinha NENHUM teto de tempo no navegador. O servidor agora tem um
+        // limite próprio (marketSearch.js), mas se a REDE em si travar antes
+        // de chegar lá, nada aqui derrubava o spinner "Analisando preços...".
+        // 18s dá folga pro teto do servidor (12s) + latência de rede.
+        response = await Promise.race([
+          comparaiPrices(payload),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_CLIENTE')), 18000)),
+        ]);
         console.log('✅ [COMPARAI] Chamada retornou sem exception');
       } catch (callError) {
         console.error('💥 [COMPARAI] EXCEPTION na chamada:', callError);
@@ -175,8 +183,10 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
       console.error('❌ [COMPARAI] Erro.response.data:', err.response?.data);
       
       let errorMessage = 'Não foi possível comparar preços';
-      
-      if (err.response?.data?.error) {
+
+      if (err.message === 'TIMEOUT_CLIENTE') {
+        errorMessage = 'A busca demorou demais. Tente novamente em alguns segundos.';
+      } else if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err.message) {
         errorMessage = err.message;
