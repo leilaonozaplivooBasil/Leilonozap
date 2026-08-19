@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import FiltrosVitrine from '@/components/common/FiltrosVitrine';
 import { thumbUrl } from '@/lib/imgThumb';
@@ -215,6 +215,23 @@ export default function TirarPedido() {
     );
   }, [vitrine]);
 
+  // 🐛 react-window EXIGE altura numérica em px — "100%" faz a lista calcular
+  // 0 itens visíveis por dentro (o container até fica do tamanho certo na
+  // tela, mas nenhuma linha é desenhada: foi o bug da vitrine "sumindo" no
+  // balcão). Mede o container de verdade com ResizeObserver via callback ref
+  // (dispara de novo quando a vitrine aparece, já que a div é condicional).
+  const [listHeight, setListHeight] = useState(0);
+  const listResizeObserverRef = useRef(null);
+  const setListWrapEl = useCallback((el) => {
+    if (listResizeObserverRef.current) { listResizeObserverRef.current.disconnect(); listResizeObserverRef.current = null; }
+    if (el) {
+      setListHeight(el.clientHeight);
+      const ro = new ResizeObserver(() => setListHeight(el.clientHeight));
+      ro.observe(el);
+      listResizeObserverRef.current = ro;
+    }
+  }, []);
+
   const addToCart = (p) => {
     setCart((prev) => {
       const ex = prev.find((x) => x.id === p.id);
@@ -381,10 +398,12 @@ export default function TirarPedido() {
           {vitrine.length > 0 && (
             <div className="mb-4">
               <p className="text-[11px] text-nz-tinta-fraca py-1">{vitrine.length} produtos {term ? 'encontrados' : 'na loja'} · clique para adicionar</p>
-              <div className="pr-1" style={{ height: 'calc(100vh - 330px)' }}>
-                <List height="100%" width="100%" itemCount={vitrine.length} itemSize={VITRINE_ROW_H} overscanCount={8}>
-                  {VitrineRow}
-                </List>
+              <div ref={setListWrapEl} className="pr-1" style={{ height: 'calc(100vh - 330px)' }}>
+                {listHeight > 0 && (
+                  <List height={listHeight} width="100%" itemCount={vitrine.length} itemSize={VITRINE_ROW_H} overscanCount={8}>
+                    {VitrineRow}
+                  </List>
+                )}
               </div>
             </div>
           )}
