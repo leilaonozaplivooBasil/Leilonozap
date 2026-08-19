@@ -15,6 +15,19 @@ const Product = base44.entities.Product;
 const Auction = base44.entities.Auction;
 const CatalogSale = base44.entities.CatalogSale;
 
+function validateCPF(cpf) {
+    const c = String(cpf || '').replace(/\D/g, '');
+    if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+    let s = 0;
+    for (let i = 0; i < 9; i++) s += parseInt(c[i]) * (10 - i);
+    let r = (s * 10) % 11; if (r >= 10) r = 0;
+    if (r !== parseInt(c[9])) return false;
+    s = 0;
+    for (let i = 0; i < 10; i++) s += parseInt(c[i]) * (11 - i);
+    r = (s * 10) % 11; if (r >= 10) r = 0;
+    return r === parseInt(c[10]);
+}
+
 export default function CatalogCheckout2() {
     const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
     const [product, setProduct] = useState(null);
@@ -86,6 +99,10 @@ export default function CatalogCheckout2() {
         }
         if (!cpf?.trim()) {
             toast.error('CPF é obrigatório');
+            return;
+        }
+        if (!validateCPF(cpf)) {
+            toast.error('CPF inválido. Verifique os dígitos e corrija.');
             return;
         }
         if (!email?.trim()) {
