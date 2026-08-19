@@ -20,6 +20,11 @@ const IMG_PRIVATE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c
 // 💰 Depósito de saldo de operação: transação financeira, não é produto — sem
 // isso caía no ícone genérico cinza de "sem foto" (nenhuma regra reconhecia o kind).
 const IMG_DEPOSITO_OPERACAO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/5dd076179_generated_image.png';
+// 🚚 PONTO 85 — Frete (kind='seller_freight', criado em createSellerFreightPayment.js):
+// não é produto, não é "digital" no sentido dos planos/licenças acima — caía direto no
+// placeholder quebrado do navegador. Ícone próprio (caminhão), sem depender de asset
+// externo — mesmo estilo inline do IMG_SEM_FOTO abaixo.
+const IMG_FRETE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231f2937' width='100' height='100'/%3E%3Crect x='12' y='38' width='42' height='24' rx='2' fill='%234b5563'/%3E%3Cpath d='M54 46h14l12 12v4H54z' fill='%234b5563'/%3E%3Ccircle cx='28' cy='66' r='7' fill='%231f2937' stroke='%234b5563' stroke-width='4'/%3E%3Ccircle cx='66' cy='66' r='7' fill='%231f2937' stroke='%234b5563' stroke-width='4'/%3E%3C/svg%3E";
 
 // Sem foto e sem tipo reconhecido: caixa neutra (nada de texto "Imagem")
 export const IMG_SEM_FOTO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231f2937' width='100' height='100'/%3E%3Cpath d='M28 62l14-16 10 11 8-9 12 14z' fill='%234b5563'/%3E%3Ccircle cx='37' cy='38' r='6' fill='%234b5563'/%3E%3C/svg%3E";
@@ -46,6 +51,7 @@ const KINDS_DIGITAL = ['adesao', 'licenca', 'plano', 'digital'];
 function arteDoTipo(order) {
   const titulo = order?.product_title || '';
   if (order?.kind === 'operacao_deposit') return IMG_DEPOSITO_OPERACAO;
+  if (order?.kind === 'seller_freight' || /^frete\b/i.test(titulo)) return IMG_FRETE;
   const ehDigital = KINDS_DIGITAL.includes(order?.kind) || /ades[ãa]o|licen[çc]a|plano|assinatura|parceiro de compra|private|galp[ãa]o|vision[áa]rio|s[óo]cios? de ouro|elite|dep[óo]sito de saldo de opera[çc][ãa]o/i.test(titulo);
   if (!ehDigital) return null;
   const regra = REGRAS.find((r) => r.re.test(titulo));
