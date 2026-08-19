@@ -19,12 +19,13 @@ export default function AuctionDetails() {
   const [auction, setAuction] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [bidCount, setBidCount] = useState(null);
   const intervalRef = useRef(null);
 
   useEffect(() => {
     const loadAuction = async () => {
       if (!auctionId) return;
-      
+
       try {
         const auctions = await Auction.filter({ id: auctionId });
         if (auctions.length > 0) {
@@ -38,6 +39,24 @@ export default function AuctionDetails() {
     };
 
     loadAuction();
+  }, [auctionId]);
+
+  // 📊 número real de lances — antes era um número aleatório fixo, o que mentia pro comprador
+  useEffect(() => {
+    if (!auctionId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { supabase } = await import('@/api/supabaseClient');
+        const { count } = await supabase
+          .from('auction_messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('auction_id', auctionId)
+          .eq('message_type', 'bid');
+        if (alive) setBidCount(typeof count === 'number' ? count : 0);
+      } catch { if (alive) setBidCount(null); }
+    })();
+    return () => { alive = false; };
   }, [auctionId]);
 
   // Carrossel automático
@@ -327,7 +346,7 @@ export default function AuctionDetails() {
                 <div className="text-right">
                   <div className="flex items-center gap-1 text-gray-400 mb-1">
                     <TrendingUp className="w-4 h-4 text-emerald-500/50" />
-                    <span className="text-sm">{Math.floor(Math.random() * 25) + 5} lances</span>
+                    <span className="text-sm">{bidCount === null ? '—' : bidCount} {bidCount === 1 ? 'lance' : 'lances'}</span>
                   </div>
                   <p className="text-xs text-gray-500">
                     Incremento: +R$ {fmtBR(auction.increment || 10)}
@@ -352,6 +371,12 @@ export default function AuctionDetails() {
                       </div>
                     </div>
                   </div>
+                  {/* 🏆 quem está ganhando agora — visível também com o leilão ativo */}
+                  {auction.winner_name && (
+                    <div className="mt-2 pt-2 border-t border-emerald-500/15 text-amber-300 text-sm font-semibold">
+                      🏆 Líder: {auction.winner_name}
+                    </div>
+                  )}
                 </div>
               )}
 

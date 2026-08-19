@@ -904,6 +904,13 @@ export default function AuctionRoom() {
     if (timeRemaining !== null) {
       if (timeRemaining <= 0) return "Aguardando...";
 
+      // 📅 Acima de 24h mostra em dias/semanas — só vira relógio (HH:MM:SS) na reta final
+      const weeks = Math.floor(timeRemaining / (7 * 86400));
+      if (weeks > 0) return `${weeks} semana${weeks > 1 ? 's' : ''}`;
+
+      const days = Math.floor(timeRemaining / 86400);
+      if (days > 0) return `${days} dia${days > 1 ? 's' : ''}`;
+
       const hours = Math.floor(timeRemaining / 3600);
       const minutes = Math.floor((timeRemaining % 3600) / 60);
       const seconds = timeRemaining % 60;

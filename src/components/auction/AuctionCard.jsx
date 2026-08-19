@@ -505,6 +505,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
                 R$ {fmtBR(currentPrice)}
               </p>
+              {/* 🏆 quem está ganhando agora — visível também com o leilão ativo, não só depois de encerrar */}
+              {isActive && auction.winner_name && (
+                <p className="text-xs text-amber-400 font-semibold truncate mt-0.5">
+                  🏆 {auction.winner_name}
+                </p>
+              )}
             </div>
 
             {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." no lugar do "Termina" */}
@@ -745,6 +751,7 @@ export default memo(AuctionCard, (prevProps, nextProps) => {
   return (
     prevProps.auction.id === nextProps.auction.id &&
     prevProps.auction.current_price === nextProps.auction.current_price &&
+    prevProps.auction.winner_name === nextProps.auction.winner_name &&
     prevProps.auction.status === nextProps.auction.status &&
     prevProps.auction.modo_chamada === nextProps.auction.modo_chamada &&
     prevProps.auction.data_abertura_lances === nextProps.auction.data_abertura_lances &&
