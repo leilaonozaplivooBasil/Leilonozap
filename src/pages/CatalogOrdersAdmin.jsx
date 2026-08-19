@@ -323,7 +323,9 @@ export default function CatalogOrdersAdmin() {
         }));
         toast.success(`Etiqueta gerada${resultado.protocol ? ` — protocolo ${resultado.protocol}` : ''}!`);
       } else {
-        toast.error(MOTIVO_ENVIO_LABEL[resultado?.skipped] || resultado?.detalhe || resultado?.skipped || 'Envio não gerado.');
+        const motivo = MOTIVO_ENVIO_LABEL[resultado?.skipped] || resultado?.skipped || 'Envio não gerado.';
+        const detalhe = resultado?.detalhe ? ` — ${resultado.detalhe}` : '';
+        toast.error(`${motivo}${detalhe}`);
       }
     } catch (error) {
       console.error('Erro ao reprocessar envio:', error);

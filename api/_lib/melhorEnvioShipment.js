@@ -138,11 +138,14 @@ async function tentarGerarEnvio(sale) {
     const token = await getAccessToken(ambiente);
     if (!token) return { ok: false, skipped: 'melhor_envio_nao_autorizado' };
 
-    // documento do destinatário (exigido pela transportadora) — busca no cadastro
+    // documento e telefone do destinatário — busca no cadastro (exigidos pela transportadora)
     let cpfDestino = '';
+    let phoneDestino = String(sale.buyer_phone || '').replace(/\D/g, '');
     if (sale.buyer_id) {
-      const rows = await (await sb(`app_users?select=cpf&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json().catch(() => null);
-      cpfDestino = String((Array.isArray(rows) && rows[0]?.cpf) || '').replace(/\D/g, '');
+      const rows = await (await sb(`app_users?select=cpf,phone&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json().catch(() => null);
+      const userRow = Array.isArray(rows) ? rows[0] : null;
+      cpfDestino = String(userRow?.cpf || '').replace(/\D/g, '');
+      if (!phoneDestino && userRow?.phone) phoneDestino = String(userRow.phone).replace(/\D/g, '');
     }
     if (cpfDestino.length !== 11) return { ok: false, skipped: 'destinatario_sem_cpf' };
 
@@ -188,7 +191,7 @@ async function tentarGerarEnvio(sale) {
       from: remet,
       to: {
         name: sale.buyer_name || 'Cliente',
-        phone: String(sale.buyer_phone || '').replace(/\D/g, ''),
+        phone: phoneDestino,
         email: sale.buyer_email || undefined,
         document: cpfDestino,
         address: addr.street,
