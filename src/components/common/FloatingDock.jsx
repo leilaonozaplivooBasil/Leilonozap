@@ -21,6 +21,7 @@ import React from 'react';
 const PAGINAS_COM_BARRA_INFERIOR = [
   'AuctionRoom',
   'AuctionDetails',
+  'VendedorEscolherProdutos',
 ];
 
 // Páginas com um card/hero "colado" perto do fundo (card de estatísticas dos
