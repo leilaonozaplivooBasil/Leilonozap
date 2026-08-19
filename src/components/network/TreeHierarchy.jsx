@@ -35,6 +35,7 @@ import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStr
 import SeloCargo from '@/components/network/SeloCargo';
 import CartaoIdentificacao from '@/components/network/CartaoIdentificacao';
 import AcessoSuperAdmin from '@/components/network/AcessoSuperAdmin';
+import WalletExtractAdmin from '@/components/network/WalletExtractAdmin';
 import { getSeloCargo, getFotoPerfil } from '@/lib/selosCargo';
 import usePanZoomCanvas from '@/hooks/usePanZoomCanvas';
 
@@ -1132,6 +1133,10 @@ export default function TreeHierarchy({
                   )}
                 </div>
               </div>
+
+              {/* 💰 extrato completo da carteira — depósitos, compras, lances (com frete),
+                  saques. Admin (não só super admin) precisa ver isso sem sair da árvore. */}
+              {canEdit && <WalletExtractAdmin key={selected.id} userId={selected.id} />}
 
               {/* 🔐 senha / reset / link público — só o super admin vê.
                   "Indicado por" vem da própria árvore (selectedParent). */}

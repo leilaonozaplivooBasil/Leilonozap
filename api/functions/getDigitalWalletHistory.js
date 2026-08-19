@@ -27,9 +27,19 @@ export default async function handler(req, res) {
     if (!userId) return res.status(400).json({ success: false, error: 'Usuário obrigatório', transactions: [] });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente', transactions: [] });
 
+    // 🔒 blindagem contra IDOR — mesma regra do getMyWallet.js: sem actor_id continua
+    // liberado (self-service de sempre), pedir o extrato de OUTRA pessoa exige admin real.
+    const actorId = String(body?.actor_id || userId).trim();
+    if (actorId !== userId) {
+      const actorRows = await (await sb(`app_users?select=primary_career_level,role&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
+      const actor = Array.isArray(actorRows) ? actorRows[0] : null;
+      const isAdmin = actor && (['admin', 'super_admin'].includes(actor.role) || ['admin', 'super_admin'].includes(actor.primary_career_level));
+      if (!isAdmin) return res.status(403).json({ success: false, error: 'Acesso restrito a administradores', transactions: [] });
+    }
+
     const uid = encodeURIComponent(userId);
 
-    const [sales, mySales, wds, bidMessages] = await Promise.all([
+    const [sales, mySales, wds, bidMessages, reservaRows] = await Promise.all([
       sb(`catalog_sales?select=${SALE_COLS}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`).then(r => r.json()).catch(() => []),
       sb(`catalog_sales?select=${SALE_COLS}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
       sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`).then(r => r.json()).catch(() => []),
@@ -38,6 +48,10 @@ export default async function handler(req, res) {
       // m.frete_amount vinha undefined → 0 → a tela nunca tinha o que mostrar.
       // timestamp serve de data alternativa para lances antigos com created_date nulo.
       sb(`auction_messages?select=id,auction_id,bid_amount,created_date,timestamp,frete_amount&sender_id=eq.${uid}&message_type=eq.bid&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
+      // 💰 PONTO 86 (19/08/2026) — reserva_ledger já grava CADA retenção e devolução de
+      // lance+frete desde 18/08, mas nunca tinha sido lido em lugar nenhum: o cliente via
+      // o lance como linha "informativa" e nunca via o débito/crédito real acontecer.
+      sb(`reserva_ledger?select=id,auction_id,tipo,direcao,valor,created_at&user_id=eq.${uid}&order=created_at.desc&limit=150`).then(r => r.json()).catch(() => []),
     ]);
 
     const transactions = [];
@@ -102,7 +116,11 @@ export default async function handler(req, res) {
 
     // Lances dados em leilões — só informativo (não somam/subtraem do saldo).
     const bids = Array.isArray(bidMessages) ? bidMessages : [];
-    const auctionIds = [...new Set(bids.map(m => m.auction_id).filter(Boolean))].slice(0, 60);
+    const reservas = Array.isArray(reservaRows) ? reservaRows : [];
+    const auctionIds = [...new Set([
+      ...bids.map(m => m.auction_id),
+      ...reservas.map(r => r.auction_id),
+    ].filter(Boolean))].slice(0, 80);
     const auctionTitles = {};
     // PONTO 84: o extrato precisa do ESTADO real do leilão para dizer ao cliente se o
     // valor está reservado (liderando), se voltou pro saldo (superado) ou se foi usado
@@ -165,6 +183,36 @@ export default async function handler(req, res) {
         // 🕐 PONTO 85 — lances gravados ANTES do PONTO 84 nasceram com created_date nulo
         // e desapareciam da lista visível. timestamp é a data alternativa real.
         date: m.created_date || m.timestamp || null,
+      });
+    }
+
+    // 💰 PONTO 86 — retenção e devolução de lance+frete como linhas REAIS de
+    // débito/crédito (antes o lance só aparecia como linha "informativa" que não
+    // somava/subtraía nada — o cliente nunca via o dinheiro sair nem voltar).
+    // 'reserva' tira do saldo disponível → débito. 'devolucao_*' devolve → crédito.
+    // 'liquidacao_arremate' não mexe no disponível de novo (o débito já aconteceu na
+    // reserva) — só informa que aquele valor reservado virou compra confirmada.
+    const RESERVA_TIPO_LABEL = {
+      reserva: 'Lance reservado (inclui frete)',
+      devolucao_cobertura: 'Devolução — superado por outro lance',
+      devolucao_fim_leilao: 'Devolução — leilão encerrado',
+      devolucao_leilao_apagado: 'Devolução — leilão cancelado',
+      liquidacao_arremate: 'Arremate confirmado',
+      ajuste_manual: 'Ajuste manual (admin)',
+    };
+    for (const r of reservas) {
+      const valor = Number(r.valor) || 0;
+      const isLiquidacao = r.tipo === 'liquidacao_arremate';
+      transactions.push({
+        id: `reserva-${r.id}`,
+        type: r.direcao === 'entrada_reserva' ? 'bid_hold' : (isLiquidacao ? 'bid_settle' : 'bid_release'),
+        title: `${RESERVA_TIPO_LABEL[r.tipo] || r.tipo} — ${auctionTitles[r.auction_id] || 'Leilão'}`,
+        source: 'Leilão',
+        // débito real na entrada da reserva; crédito real na devolução; a
+        // liquidação do arremate não gera um segundo débito (já saiu na reserva).
+        amount: r.direcao === 'entrada_reserva' ? -valor : (isLiquidacao ? 0 : valor),
+        status: isLiquidacao ? 'info' : 'confirmed',
+        date: r.created_at,
       });
     }
 

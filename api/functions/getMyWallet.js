@@ -16,6 +16,18 @@ export default async function handler(req, res) {
     if (!userId) return res.status(400).json({ success: false, error: 'Usuário obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
+    // 🔒 blindagem contra IDOR — sem actor_id (self-service de sempre, retrocompatível)
+    // continua liberado; só quando ALGUÉM pede a carteira de OUTRA pessoa é que exige
+    // que quem está pedindo seja admin/super_admin de verdade (não só o que veio do
+    // localStorage do navegador).
+    const actorId = String(body?.actor_id || userId).trim();
+    if (actorId !== userId) {
+      const actorRows = await (await sb(`app_users?select=primary_career_level,role&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
+      const actor = Array.isArray(actorRows) ? actorRows[0] : null;
+      const isAdmin = actor && (['admin', 'super_admin'].includes(actor.role) || ['admin', 'super_admin'].includes(actor.primary_career_level));
+      if (!isAdmin) return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+    }
+
     const user = (await (await sb(`app_users?select=saldo_disponivel,saldo_alocado,saldo_reservado,commission_balance,kyc_status,cpf,full_name&id=eq.${encodeURIComponent(userId)}&limit=1`)).json())[0];
     if (!user) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
     // status/release_at só existem depois da migração de "saldo a liberar" — tenta com, cai pra sem.

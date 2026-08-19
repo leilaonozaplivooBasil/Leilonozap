@@ -108,6 +108,7 @@ export function buildAdminMenu(isSuperAdmin = false) {
       items: [
         { title: "Dashboard Financeiro", pageName: "Financial", icon: ChartLine },
         { title: "KYC & Saques", pageName: "AdminFinanceiro", icon: ShieldCheck },
+        { title: "Depósitos Confirmados", pageName: "AdminDepositosConfirmados", icon: Wallet },
         { title: "Transações", pageName: "TransactionHistory", icon: ArrowLeftRight },
         { title: "Configurar Pagamentos", pageName: "PaymentSettings", icon: CreditCard },
         { title: "Auditoria de Comissões", pageName: "CommissionPilot", icon: ClipboardCheck },
