@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import BidStateTag from '@/components/wallet/BidStateTag';
+import PassaporteCard from '@/components/wallet/PassaporteCard';
 import { jaAceitouPassaporte, registrarAceitePassaporte } from '@/lib/passaporteTermo';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
@@ -346,6 +347,11 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                     Adicionar Saldo
                   </Button>
 
+                  {/* 🎟️ Bônus Passaporte — separado do saldo de lance de propósito:
+                      é crédito potencializado que NUNCA pode dar lance, só aparece
+                      pra usar na loja se o leilão terminar e o cliente não ganhar. */}
+                  <PassaporteCard user={currentUser} />
+
                   {/* Extrato */}
                   <div>
                     <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3">Extrato</h3>
@@ -446,7 +452,8 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   <div className="rounded-xl border border-green-500/40 bg-green-600/10 p-3.5 flex items-start gap-2.5">
                     <Ticket className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-green-300/90 leading-relaxed">
-                      Depósitos de R$ 100 ou mais recebem <strong className="text-green-300">+10% de crédito na hora</strong> (R$ 100 viram R$ 110).{' '}
+                      Depósitos de R$ 100 ou mais recebem <strong className="text-green-300">+10% de crédito na hora</strong> (R$ 100 viram R$ 110 na carteira).
+                      Esse bônus é <strong className="text-green-300">só pra Loja Virtual</strong> — não entra no seu saldo de lance.{' '}
                       <a href="/passaporte" className="underline font-semibold text-green-300 hover:text-green-200">como funciona</a>
                     </p>
                   </div>

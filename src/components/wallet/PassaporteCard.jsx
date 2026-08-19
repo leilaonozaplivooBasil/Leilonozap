@@ -39,7 +39,7 @@ export default function PassaporteCard({ user }) {
               Crédito de {money(credito)} · disponível agora: <strong className="text-green-300">{money(saldo)}</strong>
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Sem validade — o que sobrar continua guardado para a próxima compra.
+              Sem validade — o que sobrar continua guardado para a próxima compra. Vale só na Loja Virtual, não dá pra dar lance com ele.
             </p>
           </div>
         </div>
@@ -58,9 +58,13 @@ export default function PassaporteCard({ user }) {
       <div className="rounded-2xl border border-white/10 bg-gray-800/40 backdrop-blur-xl p-5 shadow-lg shadow-black/10 flex items-start gap-3">
         <Lock className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
         <div className="min-w-0">
-          <h2 className="font-bold text-white">Seu crédito Passaporte de 10% está guardado</h2>
+          <h2 className="font-bold text-white">Crédito Passaporte de 10% — saldo potencializado</h2>
           <p className="text-sm text-gray-400 mt-1">
-            Libera quando você disputar um leilão e for superado. Depois disso, dá para usar na Loja Virtual.
+            Este crédito é à parte do seu saldo de lance — <strong className="text-gray-300">não pode ser usado pra dar lance em leilão</strong>.
+          </p>
+          <p className="text-xs text-gray-500 mt-1.5">
+            Se você <strong>não ganhar</strong> o leilão que está disputando, ele libera pra usar na Loja Virtual assim que o leilão terminar.
+            Se você <strong>ganhar</strong>, este crédito é cancelado automaticamente — o valor pago virou a sua compra.
           </p>
         </div>
       </div>

@@ -5,12 +5,12 @@ const ITENS = [
   {
     Icon: Wallet,
     titulo: 'R$ 110 de crédito por R$ 100',
-    texto: 'O bônus de 10% entra na carteira junto com o valor pago, na hora.',
+    texto: 'O bônus de 10% aparece na sua carteira na hora — mas é um crédito à parte, só pra Loja Virtual. Não entra no saldo de lance.',
   },
   {
     Icon: Gavel,
     titulo: 'Lance livre, sem cota',
-    texto: 'Você dá quantos lances quiser enquanto tiver saldo na carteira.',
+    texto: 'Você dá quantos lances quiser enquanto tiver saldo depositado (sem contar o bônus).',
   },
   {
     Icon: ShoppingBag,
@@ -42,8 +42,9 @@ export default function BeneficiosPassaporte() {
         ))}
       </div>
       <p className="mt-4 pt-4 border-t border-white/10 text-xs text-white/50 leading-relaxed">
-        Se você <span className="text-white/80 font-medium">arrematar</span>, o bônus de R$ 10 é recolhido do saldo —
-        o valor pago virou compra. O bônus é o prêmio de quem participa e não leva.
+        Se você <span className="text-white/80 font-medium">não ganhar</span> o leilão, o bônus de R$ 10 libera pra
+        usar na Loja Virtual assim que o leilão terminar. Se você <span className="text-white/80 font-medium">arrematar</span>,
+        o bônus é cancelado — o valor pago virou a sua compra. Ele nunca pode ser usado pra dar lance.
       </p>
     </div>
   );

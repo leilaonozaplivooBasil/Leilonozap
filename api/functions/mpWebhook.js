@@ -8,8 +8,7 @@ import { gerarEnvioAutomatico } from '../_lib/melhorEnvioShipment.js';
 import { settlePdvPixSale } from '../_lib/pdvSettle.js';
 // 🏪 Reposição de estoque do lojista (compra firme): entra estoque, não paga comissão.
 import { aplicarReposicao } from '../_lib/supplySettle.js';
-import { debitarCupomDaVenda } from '../_lib/passaporteCoupon.js';
-import { creditarBonusPassaporte } from '../_lib/passaporteBonus.js';
+import { debitarCupomDaVenda, criarCupomPassaporte } from '../_lib/passaporteCoupon.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -177,8 +176,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, reposicao: true, ...r });
     }
     if (sale.kind === 'passaporte') {
-      // Passaporte de Lances (modelo A): credita o valor pago + 10% de bônus NA HORA.
-      // Sem acessos e sem validade — o crédito fica na carteira até ser usado.
+      // Passaporte de Lances — REGRA OFICIAL (restaurada 19/08/2026, autorizado pelo
+      // dono): o valor pago vira saldo de lance normal; o bônus de 10% nasce como
+      // CUPOM BLOQUEADO (à parte, nunca soma no saldo de lance). Só libera pra usar
+      // na Loja Virtual se o leilão terminar e o usuário NÃO arrematar; se arrematar,
+      // o cupom é cancelado (ver finalizeAuctionCore.js).
       const r = await creditWalletDeposit({ ...sale, kind: 'wallet_deposit' });
       try {
         await sb('passaportes', {
@@ -189,8 +191,8 @@ export default async function handler(req, res) {
           }),
         });
       } catch (_) { /* crédito já entrou; registro do passaporte é secundário */ }
-      // 🎟️ Bônus de 10% creditado na carteira (recolhido se o usuário arrematar)
-      const bonus = await creditarBonusPassaporte(sale);
+      // 🎟️ Cupom de 10% nasce BLOQUEADO — nunca entra no saldo de lance.
+      const bonus = await criarCupomPassaporte(sale);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, passaporte: true, ...r, bonus });
     }
     if (sale.kind === 'operacao_deposit') {
@@ -201,8 +203,9 @@ export default async function handler(req, res) {
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
-      // 🎟️ Bônus de 10% também no aporte de carteira (>= R$ 100), creditado na hora
-      const bonus = sale.kind === 'wallet_deposit' ? await creditarBonusPassaporte(sale) : null;
+      // 🎟️ Cupom de 10% também no aporte de carteira (>= R$ 100) — bloqueado, à
+      // parte do saldo de lance (mesma regra do passaporte, ver comentário acima).
+      const bonus = sale.kind === 'wallet_deposit' ? await criarCupomPassaporte(sale) : null;
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r, bonus });
     }
     if (sale.kind === 'adesao') {

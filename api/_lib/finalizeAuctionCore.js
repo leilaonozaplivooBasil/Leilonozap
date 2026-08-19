@@ -7,7 +7,7 @@
 // nunca dupliquem efeitos: só um executa, o outro recebe o consolidado.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-import { cancelarCuponsBloqueados } from './passaporteCoupon.js';
+import { cancelarCuponsBloqueados, liberarCupomPassaporte } from './passaporteCoupon.js';
 import { recolherBonusPorArremate } from './passaporteBonus.js';
 
 // tolerância pra deriva de relógio entre cliente e servidor (nunca encerra
@@ -192,6 +192,22 @@ export async function finalizeOneAuction(auction) {
       }
     }
   }
+
+  // 🎟️ CUPOM PASSAPORTE — libera pra quem disputou e NÃO ganhou (restaurado
+  // 19/08/2026, autorizado pelo dono). O cupom só pode liberar aqui, no fim do
+  // leilão — nunca no meio, quando a pessoa é só coberta por um lance (ela ainda
+  // pode relançar e vencer). Todo mundo que deu lance neste leilão e não é o
+  // vencedor final tem os cupons bloqueados liberados pra Loja Virtual agora.
+  try {
+    const participantes = await (await sb(
+      `auction_messages?select=sender_id&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&sender_id=not.is.null`
+    )).json();
+    const perdedores = [...new Set((Array.isArray(participantes) ? participantes : []).map(m => m.sender_id))]
+      .filter(id => id && id !== winnerId);
+    for (const perdedorId of perdedores) {
+      try { await liberarCupomPassaporte(perdedorId, auctionId); } catch (e) { console.warn('[FINALIZE] libera cupom perdedor:', perdedorId, e?.message); }
+    }
+  } catch (e) { console.warn('[FINALIZE] busca participantes p/ cupom:', e?.message); }
 
   // 🔓 DEVOLUÇÃO DE RESERVA NO MARTELO — REGRA OFICIAL CORRIGIDA (08/08/2026).
   //
