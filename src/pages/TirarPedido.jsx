@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import FiltrosVitrine from '@/components/common/FiltrosVitrine';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
@@ -183,6 +184,29 @@ export default function TirarPedido() {
     return cmp ? [...lista].sort(cmp) : lista;
   }, [results, categoria, ordem, precoMax, comFoto]);
 
+  // 🚀 vitrine com +2000 produtos renderizando tudo de uma vez travava o balcão
+  // (scroll engasgado, digitação lenta). react-window desenha só as linhas visíveis.
+  const VITRINE_ROW_H = 72; // 64px do card + 8px de respiro entre linhas
+  const VitrineRow = useCallback(({ index, style }) => {
+    const p = vitrine[index];
+    if (!p) return null;
+    return (
+      <div style={style}>
+        <button onClick={() => addToCart(p)} className="w-full h-16 mb-2 flex items-center gap-3 bg-white hover:bg-nz-cinza-fundo border border-nz-borda rounded-xl p-3 text-left transition-colors">
+          <span className="w-10 h-10 rounded-lg bg-nz-cinza-fundo flex items-center justify-center overflow-hidden flex-shrink-0">
+            {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-gray-400" />}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{p.description}</div>
+            <div className="text-[11px] text-gray-500">{p.lot || ''} · estoque {Number(p.quantity) || 0}</div>
+          </div>
+          <div className="text-sm font-bold text-green-400">{money(priceOf(p))}</div>
+          <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
+        </button>
+      </div>
+    );
+  }, [vitrine]);
+
   const addToCart = (p) => {
     setCart((prev) => {
       const ex = prev.find((x) => x.id === p.id);
@@ -347,21 +371,13 @@ export default function TirarPedido() {
           )}
 
           {vitrine.length > 0 && (
-            <div className="space-y-2 mb-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
-              <p className="text-[11px] text-nz-tinta-fraca sticky top-0 bg-white py-1">{vitrine.length} produtos {term ? 'encontrados' : 'na loja'} · clique para adicionar</p>
-              {vitrine.map((p) => (
-                <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center gap-3 bg-white hover:bg-nz-cinza-fundo border border-nz-borda rounded-xl p-3 text-left transition-colors">
-                  <span className="w-10 h-10 rounded-lg bg-nz-cinza-fundo flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-5 h-5 text-gray-400" />}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{p.description}</div>
-                    <div className="text-[11px] text-gray-500">{p.lot || ''} · estoque {Number(p.quantity) || 0}</div>
-                  </div>
-                  <div className="text-sm font-bold text-green-400">{money(priceOf(p))}</div>
-                  <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
-                </button>
-              ))}
+            <div className="mb-4">
+              <p className="text-[11px] text-nz-tinta-fraca py-1">{vitrine.length} produtos {term ? 'encontrados' : 'na loja'} · clique para adicionar</p>
+              <div className="pr-1" style={{ height: 'calc(100vh - 330px)' }}>
+                <List height="100%" width="100%" itemCount={vitrine.length} itemSize={VITRINE_ROW_H} overscanCount={8}>
+                  {VitrineRow}
+                </List>
+              </div>
             </div>
           )}
           {!searching && vitrine.length === 0 && (
