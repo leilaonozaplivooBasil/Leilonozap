@@ -97,15 +97,17 @@ export default async function handler(req, res) {
         if (cr?.valido) { discount_amount = Number(cr.desconto) || 0; total = round2(Number(cr.total_final) || subtotal); coupon_code = cr.code; coupon_id = cr.coupon_id; }
       } catch (_) { /* cupom inválido → ignora, cobra cheio */ }
     }
-    // 🎟️ Cupom Passaporte (crédito de 10% do aporte). Validado e calculado SEMPRE no
-    // servidor: dono do cupom, status liberado e saldo. O PIX exige R$ 1,00 mínimo, então
-    // o abatimento para em R$ 1,00 e o resto do crédito continua guardado no cupom.
-    let passaporte_coupon_id = null, passaporte_desconto = 0;
+    // 🎟️ Cupom Passaporte (crédito de 10% do aporte, somado entre todos os cupons
+    // liberados do usuário). Validado e calculado SEMPRE no servidor. O PIX exige
+    // R$ 1,00 mínimo, então o abatimento para em R$ 1,00 e o resto do crédito
+    // continua guardado. O débito de verdade acontece em debitarCupomDaVenda, no
+    // confirm do pagamento — consome em FIFO por todos os cupons liberados do
+    // usuário, sem precisar saber qual cupom específico foi usado aqui.
+    let passaporte_desconto = 0;
     if (body?.use_passaporte === true && buyer?.id) {
       const abativel = round2(Math.max(0, total - 1));
       const pc = abativel > 0 ? await calcularDesconto(buyer.id, abativel) : null;
       if (pc) {
-        passaporte_coupon_id = pc.coupon_id;
         passaporte_desconto = pc.desconto;
         total = round2(total - passaporte_desconto);
       }
@@ -134,7 +136,7 @@ export default async function handler(req, res) {
       kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       coupon_code, discount_amount: round2(discount_amount + passaporte_desconto) || null,
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado },
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado },
     }) });
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 

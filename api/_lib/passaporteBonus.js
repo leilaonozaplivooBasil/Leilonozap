@@ -1,9 +1,19 @@
 // passaporteBonus — modelo A do Passaporte de Lances (PONTO 68).
 //
-// REGRA: depósito de R$ 100 ou mais credita +10% NA HORA no saldo disponível
-// (R$ 100 pagos = R$ 110 de crédito). Se o usuário ARREMATAR, o bônus é
-// recolhido do saldo — o valor pago virou compra, e o bônus era para quem
-// participa e não leva.
+// ⚠️ DESATIVADO PARA DEPÓSITOS NOVOS (19/08/2026, autorizado pelo dono). Este
+// modelo mesclava o bônus direto no saldo de lance, deixando-o utilizável para
+// dar lance na hora — contrariando a regra oficial. mpWebhook.js agora usa
+// criarCupomPassaporte (passaporteCoupon.js), que nasce bloqueado e nunca soma
+// no saldo de lance. `creditarBonusPassaporte` fica só de referência.
+//
+// `recolherBonusPorArremate` continua ATIVO: depósitos feitos ANTES desta
+// correção já têm o bônus mesclado em saldo_disponivel, e precisam continuar
+// sendo recolhidos corretamente se essas contas arrematarem.
+//
+// REGRA (histórica, deste modelo): depósito de R$ 100 ou mais credita +10% NA
+// HORA no saldo disponível (R$ 100 pagos = R$ 110 de crédito). Se o usuário
+// ARREMATAR, o bônus é recolhido do saldo — o valor pago virou compra, e o
+// bônus era para quem participa e não leva.
 //
 // Segurança:
 // • CAS em saldo_disponivel: nunca apaga um depósito concorrente.

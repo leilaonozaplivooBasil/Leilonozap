@@ -67,12 +67,14 @@ export default async function handler(req, res) {
       if (!Array.isArray(ex) || !ex.length) seller_id = null;
     }
 
-    // 🎟️ Cupom Passaporte (crédito de 10% do aporte) — validado no servidor.
-    let passaporte_coupon_id = null, passaporte_desconto = 0;
+    // 🎟️ Cupom Passaporte (crédito de 10% do aporte, somado entre todos os cupons
+    // liberados do usuário) — validado no servidor. Débito real acontece em
+    // debitarCupomDaVenda, no confirm do pagamento (FIFO por todos os cupons).
+    let passaporte_desconto = 0;
     if (body?.use_passaporte === true && buyer?.id) {
       const abativel = round2(Math.max(0, total - 1));
       const pc = abativel > 0 ? await calcularDesconto(buyer.id, abativel) : null;
-      if (pc) { passaporte_coupon_id = pc.coupon_id; passaporte_desconto = pc.desconto; }
+      if (pc) { passaporte_desconto = pc.desconto; }
     }
     const totalProdutos = round2(total - passaporte_desconto);
 
@@ -103,7 +105,7 @@ export default async function handler(req, res) {
       sale_price: totalProdutos, total_amount: totalProdutos, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', payment_method: 'credit_card_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       discount_amount: passaporte_desconto || null,
-      raw_base44: { passaporte_coupon_id, passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao },
+      raw_base44: { passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao },
     }) });
 
     // Checkout Pro (página hospedada do Mercado Pago) — mesma UX de redirecionamento que a Stripe tinha.
