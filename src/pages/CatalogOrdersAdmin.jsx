@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle } from 'lucide-react';
-// Truck já importado acima — reutilizado nos badges de frete
+import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle, AlertTriangle, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import PageFullscreen from "@/components/admin/PageFullscreen";
 import OrderItemsChecklist from "@/components/catalog/OrderItemsChecklist";
@@ -120,6 +119,16 @@ const getEnvioAutomatico = (order) => {
   let raw = order?.raw_base44;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
   return raw?.melhor_envio || null;
+};
+
+// 🔴 Pedido físico pago que ainda não tem etiqueta gerada — precisa de ação
+const needsLabel = (order) => {
+  if (isPassaporte(order)) return false;
+  if (order.status !== 'paid' && order.status !== 'preparando') return false;
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  if ((raw?.delivery_type || '') === 'pickup') return false;
+  return !raw?.melhor_envio?.order_id;
 };
 
 // 📍 Endereço de entrega — cada checkout grava o endereço num lugar diferente:
@@ -427,17 +436,26 @@ export default function CatalogOrdersAdmin() {
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p>Nenhum pedido encontrado</p>
-          </div>
+          filterStatus === 'paid' ? (
+            <div className="text-center py-16">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
+              <p className="text-green-400 font-semibold text-lg">Fila zerada!</p>
+              <p className="text-gray-500 text-sm mt-1">Nenhum pedido físico aguardando envio.</p>
+            </div>
+          ) : (
+            <div className="text-center py-16 text-gray-400">
+              <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
+              <p>Nenhum pedido encontrado</p>
+            </div>
+          )
         ) : (
           <div className="space-y-3">
             {filteredOrders.map(order => {
               const config = getDisplayStatusConfig(order);
               const StatusIcon = config.icon;
+              const pendingLabel = needsLabel(order);
               return (
-                <Card key={order.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-all">
+                <Card key={order.id} className={`bg-gray-800 border-gray-700 hover:border-gray-600 transition-all ${pendingLabel ? 'border-l-4 border-l-amber-500' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -457,6 +475,11 @@ export default function CatalogOrdersAdmin() {
                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                           <span className="text-green-400 font-bold text-sm">R$ {fmtBR((order.total_amount || order.sale_price || 0))}</span>
                           <span className="text-gray-500 text-xs">{getDataHora(order)}</span>
+                          {pendingLabel && (
+                            <span className="text-amber-400 text-xs font-medium inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />Etiqueta pendente
+                            </span>
+                          )}
                           {order._vendedor_nome && (
                             <span className="text-purple-300 text-xs inline-flex items-center gap-1">
                               🔗 {order._vendedor_nome}{order._vendedor_cargo ? ` (${CARGO_LABEL[order._vendedor_cargo] || order._vendedor_cargo})` : ''}
@@ -489,11 +512,24 @@ export default function CatalogOrdersAdmin() {
                       </div>
 
                       {/* Status + Ação */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
                         <Badge className={`${config.color} border text-xs flex items-center gap-1`}>
                           <StatusIcon className="w-3 h-3" />
                           {config.label}
                         </Badge>
+                        {pendingLabel && (
+                          <Button
+                            size="sm"
+                            disabled={reprocessandoEnvioId === order.id}
+                            onClick={() => handleReprocessarEnvio(order)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8 px-2"
+                            title="Gerar etiqueta Melhor Envio"
+                          >
+                            {reprocessandoEnvioId === order.id
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : <><Printer className="w-3 h-3 mr-1" />Etiqueta</>}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           onClick={() => handleOpenOrder(order)}
