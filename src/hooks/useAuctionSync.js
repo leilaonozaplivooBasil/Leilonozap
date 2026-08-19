@@ -23,7 +23,20 @@ export default function useAuctionSync({
   const auctionSyncIntervalRef = useRef(null);
   const messageSyncIntervalRef = useRef(null);
 
+  // 🐢 PONTO 86 (19/08/2026) — auction/messages viviam DIRETO nas deps dos
+  // useCallback abaixo. Como os dois mudam de referência a cada lance (preço
+  // novo, mensagem nova), o efeito de assinatura mais abaixo via os callbacks
+  // "mudarem" e desmontava/remontava o WebSocket + o polling A CADA LANCE —
+  // bem no momento em que a sala mais precisa estar estável. Agora os
+  // callbacks leem o valor mais recente via ref, sem precisar recriar a
+  // função (e portanto sem recriar a assinatura) quando só o CONTEÚDO muda.
+  const auctionRef = useRef(auction);
+  const messagesRef = useRef(messages);
+  useEffect(() => { auctionRef.current = auction; }, [auction]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   const syncAuctionDataOnly = useCallback(async () => {
+    const auction = auctionRef.current;
     if (!auctionId || !auction) return;
 
     const now = Date.now();
@@ -77,10 +90,10 @@ export default function useAuctionSync({
     } finally {
       isSyncingAuctionRef.current = false;
     }
-  }, [auctionId, auction, getServerSyncedTime, calibrateServerOffset, onEndAuction, setAuction, lastOffsetCalibrationRef]);
+  }, [auctionId, getServerSyncedTime, calibrateServerOffset, onEndAuction, setAuction, lastOffsetCalibrationRef]);
 
   const syncMessagesOnly = useCallback(async () => {
-    if (!auctionId || !auction) return;
+    if (!auctionId || !auctionRef.current) return;
     try {
       const msgs = await AuctionMessage.filter({ auction_id: auctionId }, '-created_date', 50);
       if (!Array.isArray(msgs)) return;
@@ -95,14 +108,14 @@ export default function useAuctionSync({
       });
 
       if (deduped.length > lastMessageCountRef.current) {
-        const newBids = deduped.filter(m => m.message_type === 'bid' && !messages.some(e => e.id === m.id));
+        const newBids = deduped.filter(m => m.message_type === 'bid' && !messagesRef.current.some(e => e.id === m.id));
         if (newBids.length > 0) setTimeout(syncAuctionDataOnly, 100);
       }
       lastMessageCountRef.current = deduped.length;
     } catch (error) {
       console.debug("[MESSAGE SYNC] Erro:", error.message);
     }
-  }, [auctionId, auction, messages, syncAuctionDataOnly, setMessages]);
+  }, [auctionId, syncAuctionDataOnly, setMessages]);
 
   // Real-time subscription for messages + polling fallback for auction data
   useEffect(() => {
