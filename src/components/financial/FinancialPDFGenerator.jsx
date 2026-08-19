@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Loader2 } from "lucide-react";
 import { jsPDF } from "jspdf";
-import moment from "moment";
+import { format, startOfMonth, endOfMonth, isBefore, isAfter, differenceInMilliseconds } from "date-fns";
+import { toDate } from "@/lib/dateFmt";
 
 const STATUS_LABELS = {
   pendente: "Pendente", pago_integral: "Pago", pago_parcial: "Parcial",
@@ -19,8 +20,8 @@ const METHOD_LABELS = {
 };
 
 export default function FinancialPDFGenerator({ open, onClose, expenses }) {
-  const [startDate, setStartDate] = useState(moment().startOf("month").format("YYYY-MM-DD"));
-  const [endDate, setEndDate] = useState(moment().endOf("month").format("YYYY-MM-DD"));
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [generating, setGenerating] = useState(false);
 
   const LOGO_URL = "/brand/icon-3d-256.png";
@@ -46,16 +47,16 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
     doc.text("Leilão NoZap - Documento Interno Confidencial", 14, ph - 13);
     doc.text("leilaonozap.net", 14, ph - 9);
     doc.text(`Página ${pageNum} de ${totalPages}`, pw - 14, ph - 13, { align: "right" });
-    doc.text(`Gerado em: ${moment().format("DD/MM/YYYY [às] HH:mm")}`, pw - 14, ph - 9, { align: "right" });
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, pw - 14, ph - 9, { align: "right" });
   };
 
   const handleGenerate = async () => {
     setGenerating(true);
     const filtered = expenses.filter(e => {
-      const d = moment(e.due_date);
-      return d.isSameOrAfter(startDate) && d.isSameOrBefore(endDate);
+      const d = toDate(e.due_date);
+      return !isBefore(d, toDate(startDate)) && !isAfter(d, toDate(endDate));
     });
-    filtered.sort((a, b) => moment(a.due_date).diff(moment(b.due_date)));
+    filtered.sort((a, b) => differenceInMilliseconds(toDate(a.due_date), toDate(b.due_date)));
 
     const logoImg = await loadImage(LOGO_URL);
     const doc = new jsPDF();
@@ -92,8 +93,8 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
     // Período e data
     doc.setFontSize(9);
     doc.setTextColor(209, 213, 219);
-    doc.text(`Período: ${moment(startDate).format("DD/MM/YYYY")} a ${moment(endDate).format("DD/MM/YYYY")}`, logoImg ? 52 : 14, 35);
-    doc.text(`${moment().format("DD/MM/YYYY HH:mm")}`, pw - 14, 35, { align: "right" });
+    doc.text(`Período: ${format(toDate(startDate), "dd/MM/yyyy")} a ${format(toDate(endDate), "dd/MM/yyyy")}`, logoImg ? 52 : 14, 35);
+    doc.text(`${format(new Date(), "dd/MM/yyyy HH:mm")}`, pw - 14, 35, { align: "right" });
 
     // ═══════════ RESUMO FINANCEIRO ═══════════
     let y = 56;
@@ -204,7 +205,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
       doc.text(`R$ ${fmtBR(total)}`, cols[3], y);
       doc.setFont(undefined, "normal");
 
-      doc.text(moment(exp.due_date).format("DD/MM/YYYY"), cols[4], y);
+      doc.text(format(toDate(exp.due_date), "dd/MM/yyyy"), cols[4], y);
       doc.text((METHOD_LABELS[exp.payment_method] || "-").substring(0, 14), cols[5], y);
 
       // Status colorido
@@ -252,7 +253,7 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
       addFooter(doc, i, totalPages);
     }
 
-    doc.save(`LeilaoNoZap_Financeiro_${moment(startDate).format("YYYYMMDD")}_${moment(endDate).format("YYYYMMDD")}.pdf`);
+    doc.save(`LeilaoNoZap_Financeiro_${format(toDate(startDate), "yyyyMMdd")}_${format(toDate(endDate), "yyyyMMdd")}.pdf`);
     setGenerating(false);
     onClose();
   };

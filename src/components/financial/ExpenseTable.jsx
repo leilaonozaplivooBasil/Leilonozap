@@ -2,7 +2,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, AlertTriangle, Clock, CheckCircle2, XCircle, CircleDashed } from "lucide-react";
-import moment from "moment";
+import { format, startOfDay, differenceInCalendarDays } from "date-fns";
+import { toDate } from "@/lib/dateFmt";
 
 const STATUS_CONFIG = {
   pendente: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock },
@@ -20,9 +21,9 @@ const METHOD_LABELS = {
 
 function getDueAlert(dueDate, status) {
   if (status === "pago_integral" || status === "cancelado") return null;
-  const today = moment().startOf("day");
-  const due = moment(dueDate).startOf("day");
-  const diff = due.diff(today, "days");
+  const today = startOfDay(new Date());
+  const due = startOfDay(toDate(dueDate));
+  const diff = differenceInCalendarDays(due, today);
   if (diff < 0) return { type: "overdue", label: `Vencido há ${Math.abs(diff)} dia(s)`, color: "text-red-400" };
   if (diff <= 3) return { type: "warning", label: diff === 0 ? "Vence HOJE" : `Vence em ${diff} dia(s)`, color: "text-amber-400" };
   return null;
@@ -92,7 +93,7 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
                     <div className="text-xs text-blue-400">Pago: R$ {(exp.amount_paid).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   )}
                 </td>
-                <td className="py-3 px-3 text-gray-300">{moment(exp.due_date).format("DD/MM/YYYY")}</td>
+                <td className="py-3 px-3 text-gray-300">{format(toDate(exp.due_date), "dd/MM/yyyy")}</td>
                 <td className="py-3 px-3 text-gray-300 hidden lg:table-cell text-xs">{METHOD_LABELS[exp.payment_method] || "-"}</td>
                 <td className="py-3 px-3">
                   <Badge className={`${statusCfg.color} border text-xs gap-1`}>

@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, CircleDashed, DollarSign, AlertTriangle, Clock, XCircle } from "lucide-react";
-import moment from "moment";
+import { format } from "date-fns";
+import { toDate } from "@/lib/dateFmt";
 
 const METHOD_LABELS = {
   pix: "PIX", cartao_credito: "Cartão Crédito", cartao_debito: "Cartão Débito",
@@ -25,7 +26,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
   const [paymentType, setPaymentType] = useState("pago_integral");
   const [amountPaying, setAmountPaying] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("pix");
-  const [paymentDate, setPaymentDate] = useState(moment().format("YYYY-MM-DD"));
+  const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [pixOrCardInfo, setPixOrCardInfo] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -36,7 +37,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
       setAmountPaying(remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setPaymentMethod(expense.payment_method || "pix");
       setPixOrCardInfo(expense.pix_or_card_info || "");
-      setPaymentDate(moment().format("YYYY-MM-DD"));
+      setPaymentDate(format(new Date(), "yyyy-MM-dd"));
       setPaymentType("pago_integral");
       setNotes("");
     }
@@ -125,7 +126,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
             </div>
             <div>
               <span className="text-gray-500 text-xs">Vencimento</span>
-              <p className="text-gray-300">{moment(expense.due_date).format("DD/MM/YYYY")}</p>
+              <p className="text-gray-300">{format(toDate(expense.due_date), "dd/MM/yyyy")}</p>
             </div>
           </div>
 
@@ -300,7 +301,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
                 <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
                 <p className="text-emerald-400 font-semibold">Este gasto já foi pago integralmente</p>
                 <p className="text-gray-500 text-sm">
-                  Pago em {expense.payment_date ? moment(expense.payment_date).format("DD/MM/YYYY") : "—"} 
+                  Pago em {expense.payment_date ? format(toDate(expense.payment_date), "dd/MM/yyyy") : "—"}
                   {expense.payment_method ? ` via ${METHOD_LABELS[expense.payment_method] || expense.payment_method}` : ""}
                 </p>
               </div>

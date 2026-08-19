@@ -4,7 +4,8 @@ import {
   DollarSign, TrendingUp, TrendingDown, Calendar, PieChart, BarChart3, 
   AlertTriangle, CheckCircle2, Clock, ArrowUpRight, ArrowDownRight 
 } from "lucide-react";
-import moment from "moment";
+import { format, getDaysInMonth, subMonths } from "date-fns";
+import { toDate } from "@/lib/dateFmt";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from "recharts";
 
 const STATUS_LABELS = { pendente: "Pendente", pago_integral: "Pago", pago_parcial: "Parcial", vencido: "Vencido", cancelado: "Cancelado" };
@@ -70,21 +71,21 @@ function calcTypeData(list) {
 
 export default function FinancialDashboard({ expenses }) {
   const [viewMode, setViewMode] = useState("year"); // "year" or "month"
-  const [selectedYear, setSelectedYear] = useState(moment().format("YYYY"));
-  const [selectedMonth, setSelectedMonth] = useState(moment().format("MM")); // "01"-"12"
+  const [selectedYear, setSelectedYear] = useState(format(new Date(), "yyyy"));
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "MM")); // "01"-"12"
 
   const years = useMemo(() => {
-    const yrs = [...new Set(expenses.map(e => moment(e.due_date).format("YYYY")))].sort().reverse();
-    if (!yrs.includes(moment().format("YYYY"))) yrs.unshift(moment().format("YYYY"));
+    const yrs = [...new Set(expenses.map(e => format(toDate(e.due_date), "yyyy")))].sort().reverse();
+    if (!yrs.includes(format(new Date(), "yyyy"))) yrs.unshift(format(new Date(), "yyyy"));
     return yrs;
   }, [expenses]);
 
   // Filtered expenses based on view mode
   const filteredExpenses = useMemo(() => {
     if (viewMode === "year") {
-      return expenses.filter(e => moment(e.due_date).format("YYYY") === selectedYear);
+      return expenses.filter(e => format(toDate(e.due_date), "yyyy") === selectedYear);
     }
-    return expenses.filter(e => moment(e.due_date).format("YYYY-MM") === `${selectedYear}-${selectedMonth}`);
+    return expenses.filter(e => format(toDate(e.due_date), "yyyy-MM") === `${selectedYear}-${selectedMonth}`);
   }, [expenses, viewMode, selectedYear, selectedMonth]);
 
   const summary = useMemo(() => calcSummary(filteredExpenses), [filteredExpenses]);
@@ -97,12 +98,13 @@ export default function FinancialDashboard({ expenses }) {
     if (viewMode === "year") {
       const months = {};
       for (let i = 0; i < 12; i++) {
-        const key = moment().year(parseInt(selectedYear)).month(i).format("YYYY-MM");
-        const label = moment().year(parseInt(selectedYear)).month(i).format("MMM");
+        const refDate = new Date(parseInt(selectedYear), i, 1);
+        const key = format(refDate, "yyyy-MM");
+        const label = format(refDate, "MMM");
         months[key] = { label, key, total: 0, pago: 0, pendente: 0, vencido: 0, count: 0 };
       }
       filteredExpenses.forEach(e => {
-        const key = moment(e.due_date).format("YYYY-MM");
+        const key = format(toDate(e.due_date), "yyyy-MM");
         if (!months[key]) return;
         const val = (e.amount || 0) + (e.interest_amount || 0);
         months[key].total += val;
@@ -114,14 +116,14 @@ export default function FinancialDashboard({ expenses }) {
       return Object.values(months);
     } else {
       // Daily for selected month
-      const daysInMonth = moment(`${selectedYear}-${selectedMonth}`, "YYYY-MM").daysInMonth();
+      const daysInMonth = getDaysInMonth(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1));
       const days = {};
       for (let d = 1; d <= daysInMonth; d++) {
-        const key = moment(`${selectedYear}-${selectedMonth}-${String(d).padStart(2, "0")}`, "YYYY-MM-DD").format("YYYY-MM-DD");
+        const key = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, d), "yyyy-MM-dd");
         days[key] = { label: String(d), key, total: 0, pago: 0, pendente: 0, vencido: 0, count: 0 };
       }
       filteredExpenses.forEach(e => {
-        const key = moment(e.due_date).format("YYYY-MM-DD");
+        const key = format(toDate(e.due_date), "yyyy-MM-dd");
         if (!days[key]) return;
         const val = (e.amount || 0) + (e.interest_amount || 0);
         days[key].total += val;
@@ -145,19 +147,18 @@ export default function FinancialDashboard({ expenses }) {
     if (viewMode === "year") {
       const prevYear = String(parseInt(selectedYear) - 1);
       const curr = summary.total;
-      const prev = expenses.filter(e => moment(e.due_date).format("YYYY") === prevYear)
+      const prev = expenses.filter(e => format(toDate(e.due_date), "yyyy") === prevYear)
         .reduce((s, e) => s + (e.amount || 0) + (e.interest_amount || 0), 0);
       const diff = prev > 0 ? ((curr - prev) / prev * 100) : 0;
       return { curr, prev, diff, label: `${selectedYear} vs ${prevYear}` };
     } else {
-      const currKey = `${selectedYear}-${selectedMonth}`;
-      const prevMoment = moment(currKey, "YYYY-MM").subtract(1, "month");
-      const prevKey = prevMoment.format("YYYY-MM");
+      const prevDate = subMonths(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1), 1);
+      const prevKey = format(prevDate, "yyyy-MM");
       const curr = summary.total;
-      const prev = expenses.filter(e => moment(e.due_date).format("YYYY-MM") === prevKey)
+      const prev = expenses.filter(e => format(toDate(e.due_date), "yyyy-MM") === prevKey)
         .reduce((s, e) => s + (e.amount || 0) + (e.interest_amount || 0), 0);
       const diff = prev > 0 ? ((curr - prev) / prev * 100) : 0;
-      return { curr, prev, diff, label: `${MONTH_NAMES[parseInt(selectedMonth)-1]} vs ${prevMoment.format("MMM/YY")}` };
+      return { curr, prev, diff, label: `${MONTH_NAMES[parseInt(selectedMonth)-1]} vs ${format(prevDate, "MMM/yy")}` };
     }
   }, [expenses, summary, viewMode, selectedYear, selectedMonth]);
 
