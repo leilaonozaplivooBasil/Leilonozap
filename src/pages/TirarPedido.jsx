@@ -14,7 +14,7 @@ import SeletorLicenca from '@/components/pdv/SeletorLicenca';
 import DepositoOperacaoModal from '@/components/wallet/DepositoOperacaoModal';
 import PixReposicaoModal from '@/components/reposicao/PixReposicaoModal';
 import {
-  ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
+  Search, Plus, Minus, Trash2, ShoppingCart, Loader2, Check,
   Package, User as UserIcon, Phone, Wallet, QrCode, Store, Truck, Banknote, CreditCard
 } from 'lucide-react';
 
@@ -212,6 +212,10 @@ export default function TirarPedido() {
   const finalize = async () => {
     if (!user?.id) { toast.error('Faça login.'); return; }
     if (!cart.length) { toast.error('Adicione produtos ao pedido.'); return; }
+    // 🔒 já existe uma cobrança pendente (PIX/cartão) esperando o cliente pagar —
+    // não deixa abrir uma segunda pro mesmo carrinho (ex.: Enter no teclado com o
+    // foco ainda no botão, por trás do modal).
+    if (pix || cartao) return;
     setProcessing(true);
     // 🧾 retrato do pedido ANTES de limpar — vira a nota e alimenta o modal do PIX
     const snapshot = {
@@ -478,7 +482,7 @@ export default function TirarPedido() {
             <span className="text-2xl font-black text-green-400">{money(total)}</span>
           </div>
 
-          <button onClick={finalize} disabled={processing || !cart.length || saldoInsuficiente} className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 font-black flex items-center justify-center gap-2">
+          <button onClick={finalize} disabled={processing || !cart.length || saldoInsuficiente || !!pix || !!cartao} className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 font-black flex items-center justify-center gap-2">
             {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Fechar pedido
           </button>
         </div>

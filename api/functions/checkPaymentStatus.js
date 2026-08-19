@@ -38,11 +38,20 @@ export default async function handler(req, res) {
         const busca = await rBusca.json();
         const aprovado = (busca?.results || []).find((p) => p.status === 'approved');
         if (aprovado) {
-          // dispara o webhook (fonte única de confirmação + comissão, idempotente)
-          await fetch(`${BASE_URL}/api/functions/mpWebhook`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: { id: aprovado.id } }),
-          }).catch(() => {});
-          return res.status(200).json({ found: true, status: 'confirmed' });
+          // dispara o webhook (fonte única de confirmação + comissão, idempotente) e só
+          // confirma pro balcão depois de CONFERIR o status realmente gravado — se essa
+          // chamada falhar (rede, 5xx), a tela não pode achar que estoque/comissão já saíram.
+          let webhookOk = false;
+          try {
+            const webhook = await fetch(`${BASE_URL}/api/functions/mpWebhook`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: { id: aprovado.id } }),
+            });
+            webhookOk = webhook.ok;
+          } catch (_) { /* webhookOk continua false — cai no polling de novo */ }
+          if (!webhookOk) return res.status(200).json({ found: true, status: 'pending' });
+          const settledRows = await (await sb(`catalog_sales?select=status&id=eq.${encodeURIComponent(saleId)}&limit=1`)).json();
+          const settled = Array.isArray(settledRows) ? settledRows[0] : null;
+          return res.status(200).json({ found: true, status: ['paid', 'entregue'].includes(settled?.status) ? 'confirmed' : 'pending' });
         }
       }
       return res.status(200).json({ found: true, status: 'pending' });

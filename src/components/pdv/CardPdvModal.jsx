@@ -67,8 +67,8 @@ export default function CardPdvModal({ cartao, total, onConfirmed, onCancel }) {
 
         <p className="text-xs text-center text-nz-tinta-fraca mb-2">O cliente aponta a câmera do celular pro QR, ou abre o link e paga no cartão dele (crédito ou débito):</p>
         <div className="flex gap-2 mb-2">
-          <input readOnly value={cartao.url || ''} className="flex-1 bg-nz-cinza-fundo border border-nz-borda rounded-lg px-2 py-2 text-[11px] text-nz-tinta-fraca truncate" />
-          <button onClick={copy} className="px-3 rounded-lg text-sm font-semibold text-white flex items-center gap-1" style={{ background: '#1B7A48' }}>
+          <input readOnly aria-label="Link de pagamento" value={cartao.url || ''} className="flex-1 bg-nz-cinza-fundo border border-nz-borda rounded-lg px-2 py-2 text-[11px] text-nz-tinta-fraca truncate" />
+          <button type="button" aria-label="Copiar link de pagamento" onClick={copy} className="px-3 rounded-lg text-sm font-semibold text-white flex items-center gap-1" style={{ background: '#1B7A48' }}>
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           </button>
         </div>
