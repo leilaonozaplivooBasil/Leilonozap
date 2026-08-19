@@ -9,12 +9,18 @@ export default function CompareAquiButton({ auction, mode, trigger }) {
   // CompareAQUI de baixo (LojaFloatActions) e este componente só serve o modal
   // com a comparação REAL do produto do leilão (pedido Gabriel 25/07: um botão só).
   const isEventTriggered = trigger === 'event';
+  // 🩹 PONTO 87 (19/08/2026) — o listener registrava mesmo com auction ainda
+  // null (o guard "if (!auction) return null" vinha DEPOIS deste hook). Nas
+  // páginas atuais isso nunca disparou de verdade porque elas só montam este
+  // componente depois do loading — mas era uma corrida latente: se o evento
+  // global 'openComparai' disparasse nesse intervalo, o modal apareceria
+  // sozinho assim que o auction chegasse. Corrigido preventivamente.
   useEffect(() => {
-    if (!isEventTriggered) return undefined;
+    if (!isEventTriggered || !auction) return undefined;
     const open = () => setShowModal(true);
     window.addEventListener('openComparai', open);
     return () => window.removeEventListener('openComparai', open);
-  }, [isEventTriggered]);
+  }, [isEventTriggered, auction]);
 
   if (!auction) return null;
 

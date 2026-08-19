@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Sparkles, X, Globe, Zap, ShieldCheck, Check } from 'lucide-react';
+import { Sparkles, Globe, Zap, ShieldCheck, Check } from 'lucide-react';
 
 // 🧹 O botão flutuante fixo (ícone circular no canto) foi removido: o único
 // lugar que renderiza este componente (Layout.jsx) sempre passava
@@ -24,15 +24,12 @@ export default function CompareAquiFloatingButton() {
       {/* MODAL INFORMATIVO */}
       {showInfo && (
         <Dialog open={showInfo} onOpenChange={setShowInfo}>
+          {/* 🩹 PONTO 87 (19/08/2026) — DialogContent já injeta seu próprio botão
+              nativo de fechar em top-4/right-4 (ver src/components/ui/dialog.jsx);
+              este componente desenhava um SEGUNDO botão exatamente em cima, dois
+              alvos de toque empilhados no mesmo pixel — sensação de "clique não
+              funciona"/"trava" até acertar o certo. */}
           <DialogContent className="max-w-2xl bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 text-white border-blue-500/30 max-h-[90vh] overflow-y-auto">
-
-            <button
-              onClick={() => setShowInfo(false)}
-              className="absolute top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-              aria-label="Fechar"
-            >
-              <X className="w-6 h-6 text-white" />
-            </button>
 
             <DialogHeader>
               <DialogTitle className="text-2xl pr-12">
