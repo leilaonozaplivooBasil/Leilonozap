@@ -36,6 +36,15 @@ export default function Catalog() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  // 🔎 filterProducts() re-filtra e re-ordena TODOS os produtos carregados a cada
+  // letra digitada — em catálogos grandes isso travava a digitação. O campo de
+  // busca continua respondendo na hora (bind direto em searchTerm); só o cálculo
+  // pesado do filtro espera 300ms de pausa na digitação.
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
   const [currentUser, setCurrentUser] = useState(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -159,8 +168,8 @@ export default function Catalog() {
     // Filtro por texto — por PALAVRAS (cada termo tem que aparecer, em qualquer ordem) e
     // ignorando pontuação. Antes buscava a frase LITERAL: "fonte chocolate" não achava
     // "Fonte de Chocolate" (o "de" no meio) e um "#" colado zerava tudo.
-    if (searchTerm) {
-      const termos = searchTerm.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+    if (debouncedSearchTerm) {
+      const termos = debouncedSearchTerm.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
       if (termos.length) {
         filtered = filtered.filter((p) => {
           const desc = (p.description || '').toLowerCase();
@@ -199,7 +208,7 @@ export default function Catalog() {
     filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
 
     setFilteredProducts(filtered);
-  }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
 
   // 🎴 Monta o cartão da Loja Virtual a partir de UM AppUser (dono resolvido).
   // Extraído pra o cartão poder vir do cadastro (dono real) ou do link, sem duplicar código.
@@ -559,7 +568,7 @@ export default function Catalog() {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
 
   // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página).
   // ⚡ Na primeira montagem, "Todos" já foi buscado por loadProducts() — repetir aqui

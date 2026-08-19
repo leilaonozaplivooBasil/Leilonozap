@@ -3,15 +3,14 @@ import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sparkles, X, Globe, Zap, ShieldCheck, Check } from 'lucide-react';
-import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 
-export default function CompareAquiFloatingButton({ auctions, mode = 'home', hideButton = false }) {
+// 🧹 O botão flutuante fixo (ícone circular no canto) foi removido: o único
+// lugar que renderiza este componente (Layout.jsx) sempre passava
+// hideButton=true — o botão nunca aparecia de fato, só existia no bundle.
+// O que continua ativo é o MODAL informativo, aberto via evento global
+// 'openComparai' disparado pelos cards de produto ("Comparar Preços").
+export default function CompareAquiFloatingButton() {
   const [showInfo, setShowInfo] = useState(false);
-  const [isFlying, setIsFlying] = useState(false);
-
-  const handleClick = () => {
-    setShowInfo(true);
-  };
 
   // permite abrir o Comparai de qualquer lugar (ex: card/ícone da loja estilo Shopee)
   React.useEffect(() => {
@@ -22,27 +21,6 @@ export default function CompareAquiFloatingButton({ auctions, mode = 'home', hid
 
   return (
     <>
-      {/* BOTÃO FLUTUANTE FIXO - SEM TOOLTIP (ocultável quando entra no stack da loja) */}
-      <div
-        className={`fixed bottom-5 right-4 z-50 transition-all duration-300 flex flex-col items-center ${hideButton ? 'hidden' : ''} ${showInfo ? 'opacity-0 scale-0 pointer-events-none' : 'opacity-100 scale-100'}`}
-      >
-        <button
-          onClick={handleClick}
-          disabled={showInfo}
-          className="w-14 h-14 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 relative animate-float border-0 p-0 bg-transparent cursor-pointer disabled:cursor-not-allowed"
-          title="CompareAQUI - Comparação Inteligente"
-        >
-          <img
-            src={CompareAquiIcon}
-            alt="CompareAQUI"
-            className="w-full h-full object-cover rounded-full"
-          />
-
-          <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
-        </button>
-        <span className="text-[10px] text-blue-200 font-semibold mt-0.5 drop-shadow">CompareAQUI</span>
-      </div>
-
       {/* MODAL INFORMATIVO */}
       {showInfo && (
         <Dialog open={showInfo} onOpenChange={setShowInfo}>
@@ -175,16 +153,6 @@ export default function CompareAquiFloatingButton({ auctions, mode = 'home', hid
           </DialogContent>
         </Dialog>
       )}
-
-      <style>{`
-        @keyframes float-comparai {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-float {
-          animation: float-comparai 3s ease-in-out infinite;
-        }
-      `}</style>
     </>
   );
 }

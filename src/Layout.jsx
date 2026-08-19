@@ -1141,7 +1141,7 @@ export default function Layout({ children, currentPageName }) {
             {/* Nas páginas de produto/leilão quem atende o evento 'openComparai' é o
                 ComparaiButton da própria página (comparação REAL do produto).
                 Montar o listener global aqui abriria DOIS modais no mesmo clique. */}
-            {!['AuctionRoom', 'AuctionDetails', 'CatalogProductDetails'].includes(currentPageName) && <CompareAquiFloatingButton hideButton />}
+            {!['AuctionRoom', 'AuctionDetails', 'CatalogProductDetails'].includes(currentPageName) && <CompareAquiFloatingButton />}
             {/* PONTO 87 — na sala de leilão a Leila NÃO flutua: virou ícone no cabeçalho (AcoesSalaHeader) */}
             {currentPageName !== 'AuctionRoom' && <LojaFloatActions posicao="rodape" />}
           </React.Suspense>
