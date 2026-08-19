@@ -55,6 +55,21 @@ const getDisplayStatusConfig = (o) => (isPassaporte(o) && STATUS_PAGO.has(o.stat
 const getDataHora = (o) => new Date(o.created_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const CARGO_LABEL = { vendedor: 'Vendedor', licenciado_catalogo: 'Licenciado', executivo: 'Executivo', trainee: 'Trainee', kit_start: 'Kit Start', plano_lider: 'Plano Líder', plano_lojista: 'Plano Lojista', distribuidor: 'Distribuidor', diretor: 'Diretor', diretoria: 'Diretoria', ceo: 'CEO', conselheiro: 'Conselheiro', fundador: 'Fundador', influenciador: 'Influenciador' };
 
+// 🚚 Motivo devolvido por gerarEnvioAutomatico (api/_lib/melhorEnvioShipment.js)
+// quando o envio não é gerado — usado no botão "Reprocessar envio" abaixo.
+const MOTIVO_ENVIO_LABEL = {
+  retirada_na_loja: 'Pedido é retirada no balcão, não precisa de etiqueta.',
+  ja_gerado: 'Etiqueta já tinha sido gerada.',
+  sem_frete_id: 'O pedido não tem a transportadora/serviço de frete escolhido salvo.',
+  remetente_nao_configurado: 'Faltam dados do remetente (endereço da loja) configurados no servidor.',
+  melhor_envio_nao_autorizado: 'A conta do Melhor Envio não está autorizada (ou o token venceu) — veja /integracoes/melhor-envio.',
+  destinatario_sem_cpf: 'O comprador não tem CPF cadastrado — a transportadora exige.',
+  endereco_destino_incompleto: 'O endereço de entrega do pedido está incompleto.',
+  cart_falhou: 'O Melhor Envio recusou o carrinho.',
+  checkout_falhou: 'O Melhor Envio recusou a compra da etiqueta.',
+  erro_inesperado: 'Erro inesperado ao falar com o Melhor Envio.',
+};
+
 // 🚚 Frete fica em raw_base44 (JSON) — nunca em total_amount (base de comissão).
 // amount_charged = produto + frete, o que o cliente realmente pagou.
 const getFrete = (order) => {
@@ -142,6 +157,7 @@ export default function CatalogOrdersAdmin() {
   const [trackingCode, setTrackingCode] = useState('');
   const [newStatus, setNewStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [reprocessandoEnvioId, setReprocessandoEnvioId] = useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -247,6 +263,46 @@ export default function CatalogOrdersAdmin() {
     } catch (error) {
       console.error('Erro ao atualizar etapa da entrega:', error);
       toast.error('Erro ao salvar');
+    }
+  };
+
+  // 🚚 Testa/reexecuta o envio automático pra ESTA venda específica e mostra na hora
+  // o motivo exato (ver api/functions/reprocessarEnvioMelhorEnvio.js) — sem isso, a
+  // única forma de saber por que a etiqueta não foi gerada era abrir o banco direto.
+  const handleReprocessarEnvio = async (order) => {
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { actorId = null; }
+    if (!actorId) { toast.error('Sessão não identificada. Entre novamente.'); return; }
+
+    setReprocessandoEnvioId(order.id);
+    try {
+      const r = await base44.functions.invoke('reprocessarEnvioMelhorEnvio', { actorId, sale_id: order.id });
+      const data = r?.data || r;
+      if (!data?.ok) { toast.error(data?.error || 'Não foi possível reprocessar.'); return; }
+      const resultado = data.resultado;
+      if (resultado?.ok) {
+        const novoRaw = { melhor_envio: { order_id: resultado.order_id, protocol: resultado.protocol, label_url: resultado.label_url } };
+        setSelectedOrder((prev) => {
+          if (!prev || prev.id !== order.id) return prev;
+          let raw = prev.raw_base44;
+          if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
+          return { ...prev, raw_base44: { ...(raw || {}), ...novoRaw } };
+        });
+        setOrders((prev) => prev.map((o) => {
+          if (o.id !== order.id) return o;
+          let raw = o.raw_base44;
+          if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
+          return { ...o, raw_base44: { ...(raw || {}), ...novoRaw } };
+        }));
+        toast.success(`Etiqueta gerada${resultado.protocol ? ` — protocolo ${resultado.protocol}` : ''}!`);
+      } else {
+        toast.error(MOTIVO_ENVIO_LABEL[resultado?.skipped] || resultado?.detalhe || resultado?.skipped || 'Envio não gerado.');
+      }
+    } catch (error) {
+      console.error('Erro ao reprocessar envio:', error);
+      toast.error('Erro ao falar com o servidor.');
+    } finally {
+      setReprocessandoEnvioId(null);
     }
   };
 
@@ -471,6 +527,24 @@ export default function CatalogOrdersAdmin() {
                     </p>
                   );
                 })()}
+                {!getEnvioAutomatico(selectedOrder) && !isPassaporte(selectedOrder) && (
+                  <div className="pt-1 border-t border-gray-600/50 mt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10"
+                      disabled={reprocessandoEnvioId === selectedOrder.id}
+                      onClick={() => handleReprocessarEnvio(selectedOrder)}
+                    >
+                      {reprocessandoEnvioId === selectedOrder.id ? (
+                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Reprocessando...</>
+                      ) : (
+                        <><RefreshCw className="w-3 h-3 mr-1" /> Reprocessar envio (Melhor Envio)</>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* 📦 Itens do pedido em cards clicáveis — logística marca ao separar/embalar */}
