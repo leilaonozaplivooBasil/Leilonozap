@@ -16,7 +16,6 @@ import AtualizacaoDisponivel from "@/components/system/AtualizacaoDisponivel";
 import NavDesktop from "@/components/nav/NavDesktop";
 import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
-import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import TransactionToasts from "@/components/notifications/TransactionToasts";
 import ReferralSignupToast from "@/components/notifications/ReferralSignupToast";
 import GlobalWalletDrawer from "@/components/wallet/GlobalWalletDrawer";
@@ -53,6 +52,9 @@ const LAYOUT_USER_SYNC_MIN_INTERVAL_MS = 20000;
 // Flutuantes globais: CompareAQUI (esquerda) + Fale com a Leila (direita) em todas as páginas.
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
+// 🎉 canvas-confetti só é usado aqui (confete ao confirmar pagamento) —
+// tirando do bundle principal e carregando sob demanda.
+const PaymentConfirmationPopup = React.lazy(() => import("@/components/payment/PaymentConfirmationPopup"));
 const CompareAquiFloatingButton = React.lazy(() => import("@/components/comparai/CompareAquiFloatingButton"));
 const MiniCanvasOverview = React.lazy(() => import("@/components/admin/MiniCanvasOverview"));
 import { Menu, ShoppingCart as CartIcon, Wallet as WalletIcon } from "lucide-react";
@@ -1119,7 +1121,9 @@ export default function Layout({ children, currentPageName }) {
         />
 
         {/* Payment Confirmation Popup */}
-        <PaymentConfirmationPopup />
+        <React.Suspense fallback={null}>
+          <PaymentConfirmationPopup />
+        </React.Suspense>
         <TransactionToasts />
         <ReferralSignupToast />
         <GlobalWalletDrawer />
