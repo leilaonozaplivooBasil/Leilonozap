@@ -99,6 +99,7 @@ export default function Cadastro() {
 
   const sendCode = async () => {
     if (!form.full_name || !form.email || !form.password) { toast.error('Preencha nome, e-mail e senha.'); return; }
+    if (!onlyDigits(form.cpf)) { toast.error('CPF é obrigatório.'); return; }
     if (form.password.length < 6) { toast.error('Senha de no mínimo 6 caracteres.'); return; }
     setSending(true);
     try {

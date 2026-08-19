@@ -97,6 +97,8 @@ export async function baixarCentral({ productId, qty, unit = 0 }) {
       sold_amount: round2((Number(p.sold_amount) || 0) + (Number(unit) || 0) * qty),
       status: novaQtd > 0 ? 'ESTOQUE' : 'VENDIDO',
       updated_date: now,
+      // quando esgota, retira da vitrine automaticamente (mesmo comportamento do store_inventory)
+      ...(novaQtd === 0 ? { catalog_active: false } : {}),
     }),
   });
   return true;

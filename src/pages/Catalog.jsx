@@ -53,7 +53,7 @@ export default function Catalog() {
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [sortBy, setSortBy] = useState("recent");
-  const [stockFilter, setStockFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("inStock");
   const [licenseePhone, setLicenseePhone] = useState(null);
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);

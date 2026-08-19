@@ -431,6 +431,10 @@ export default function ProductManagement() {
       });
     } else if (alertFilter === 'error') {
       filtered = filtered.filter(p => (p.quantity || 0) < 0);
+    } else if (alertFilter === 'no_category') {
+      filtered = filtered.filter(p => !p.category_id);
+    } else if (alertFilter === 'hidden_stock') {
+      filtered = filtered.filter(p => (p.quantity || 0) > 0 && !p.catalog_active);
     }
 
     if (hideZeroStock) {
@@ -650,6 +654,38 @@ export default function ProductManagement() {
                 >
                   <Package className="w-4 h-4 mr-2 text-orange-400" /> Agrupar Duplicados
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (!confirm('Sincronizar estoque com a loja?\n\nIsso irá:\n• Ocultar da loja todos os produtos com estoque = 0\n• NÃO reativará produtos (use "Reativar esgotados" para isso)\n\nContinuar?')) return;
+                    try {
+                      setIsLoading(true);
+                      const r = await base44.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: false });
+                      alert(`✅ Sincronização concluída!\n${r?.resumo || ''}\n\nOcultados: ${r?.ocultados ?? '?'} produtos com estoque zerado.`);
+                      sessionStorage.removeItem('products_cache_v3');
+                      sessionStorage.removeItem('products_cache_time_v3');
+                      await loadData();
+                    } catch (e) { alert('Erro: ' + e.message); } finally { setIsLoading(false); }
+                  }}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <Package className="w-4 h-4 mr-2 text-blue-400" /> Sincronizar Estoque → Loja
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    if (!confirm('Reativar produtos com estoque > 0 que estão ocultos na loja?\n\nIsso irá reabrir a venda de todos os produtos que têm unidades disponíveis mas estão marcados como inativos.\n\nContinuar?')) return;
+                    try {
+                      setIsLoading(true);
+                      const r = await base44.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: true });
+                      alert(`✅ Reconciliação completa!\n${r?.resumo || ''}\n\nOcultados: ${r?.ocultados ?? '?'}\nReativados: ${r?.reativados ?? '?'}`);
+                      sessionStorage.removeItem('products_cache_v3');
+                      sessionStorage.removeItem('products_cache_time_v3');
+                      await loadData();
+                    } catch (e) { alert('Erro: ' + e.message); } finally { setIsLoading(false); }
+                  }}
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
+                >
+                  <Package className="w-4 h-4 mr-2 text-emerald-400" /> Reativar Esgotados c/ Estoque
+                </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                     <Download className="w-4 h-4 mr-2 text-yellow-400" /> Exportar CSV
@@ -787,6 +823,8 @@ export default function ProductManagement() {
             <option value="no_price">Sem Preço ({products.filter(p => !p.selling_price_retail || p.selling_price_retail === 0).length})</option>
             <option value="stopped">Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
             <option value="error">Erro Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
+            <option value="no_category">Sem Categoria ({products.filter(p => !p.category_id).length})</option>
+            <option value="hidden_stock">Estoque fora da loja ({products.filter(p => (p.quantity || 0) > 0 && !p.catalog_active).length})</option>
           </select>
           <button
             onClick={() => setHideZeroStock(!hideZeroStock)}
