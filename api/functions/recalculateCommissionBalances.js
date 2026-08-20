@@ -6,14 +6,26 @@
 // sem admin. Agora exige DIAG_KEY (mesmo padrão de outras 15 rotas do projeto)
 // e roda em PREVIEW por padrão — só grava com confirm:'RECALCULAR'.
 //
-// ⚠️⚠️ ATENÇÃO ANTES DE RODAR COM confirm — O CÁLCULO AQUI É INCOMPLETO.
-// Ele reescreve o saldo com a soma de commission_records. Mas a COMISSÃO DE
-// LEILÃO (os 5% do martelo) NÃO grava registro nenhum: finalizeAuctionCore.js:192
-// credita direto em app_users.commission_balance. Ou seja, rodar isto HOJE
-// APAGA a comissão de leilão de todo mundo — dinheiro real que a pessoa ganhou.
-// O mesmo vale para qualquer crédito que não passe por commission_records.
-// Enquanto o leilão não gravar registro (risco #15 da auditoria), esta rota só
-// deve ser usada em PREVIEW, para diagnóstico. Não confirme sem conferir.
+// ⚠️⚠️ ATENÇÃO ANTES DE RODAR COM confirm — LEIA O QUE MUDOU EM 21/08/2026.
+//
+// O buraco antigo: esta rota reescreve o saldo somando commission_records, e a
+// COMISSÃO DE LEILÃO não gravava registro nenhum (o martelo credita direto em
+// app_users.commission_balance). Rodar isto APAGAVA a comissão de leilão de
+// todo mundo — dinheiro real, sumindo sem rastro de onde tinha vindo.
+//
+// ✅ PONTO 100 (21/08/2026) fechou esse buraco na ORIGEM: o martelo agora grava
+// linha em commission_records para as duas fatias do leilão —
+// 'leilao_indicador' (os 5%) e 'leilao_retido' (o que a empresa não distribui).
+// A fatia sem dono da LOJA ('empresa_rollup'), que era registrada e nunca paga,
+// também passou a creditar saldo. Registro e saldo agora andam juntos.
+//
+// ⛔ MAS A RESSALVA CONTINUA VALENDO PARA O PASSADO. Todo arremate anterior a
+// 21/08/2026 tem saldo SEM registro correspondente. Rodar isto com confirm hoje
+// apaga a comissão histórica dessas pessoas. Antes de confirmar é preciso fazer
+// o backfill dos arremates antigos. Até lá: PREVIEW, só para diagnóstico.
+//
+// ⚠️ E qualquer crédito que não passe por commission_records continua invisível
+// aqui (bônus, ajuste manual, passaporte). Conferir antes, sempre.
 // Corrige commission_balance/catalog_commission_balance de todo usuário com saldo,
 // recalculando a partir da SOMA REAL dos commission_records ativos (status != 'canceled').
 // Usa service role (bypassa RLS do browser) e pagina os registros — sem isso, updates
@@ -77,7 +89,7 @@ export default async function handler(req, res) {
       success: true,
       modo: aplicar ? 'APLICADO' : 'preview',
       aviso: aplicar ? undefined : 'PREVIEW — nada foi gravado. Envie confirm:"RECALCULAR" para aplicar.',
-      alerta_calculo: 'Este recálculo NÃO enxerga a comissão de leilão (o martelo credita direto em app_users, sem gravar commission_records). Aplicar isto zera esse ganho.',
+      alerta_calculo: 'Desde 21/08/2026 o martelo grava commission_records (leilao_indicador e leilao_retido), então arremates NOVOS são enxergados. Arremates ANTERIORES a essa data têm saldo sem registro: aplicar isto zera o ganho histórico deles. Fazer o backfill antes de confirmar.',
       updated: aplicar ? mudariam : 0,
       mudariam,
       results,

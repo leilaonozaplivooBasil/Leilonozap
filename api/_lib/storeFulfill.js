@@ -102,6 +102,32 @@ async function payStoreCommissions(sale) {
   // como 'pending' na venda e pode ser reprocessado depois SEM pagar em dobro.
   const porPessoa = {};
   for (const a of assignments) porPessoa[a.user_id] = round2((porPessoa[a.user_id] || 0) + a.amount);
+  // 🏦 PONTO 100 (21/08/2026, decisão do dono) — A FATIA SEM DONO AGORA É PAGA.
+  // Até aqui a linha 'empresa_rollup' era gravada em commission_records e o saldo
+  // NUNCA era creditado: uma linha morta. Pior, isso quebrava o
+  // recalculateCommissionBalances — ele reescreve o saldo somando os records, e
+  // recalcular criava do nada, na conta oficial, um saldo que nunca existiu.
+  // Agora registro e saldo andam juntos, igual a todo mundo, e igual ao que o
+  // leilão passou a fazer com a fatia retida (finalizeAuctionCore, PONTO 100).
+  //
+  // ⚠️ DE PROPÓSITO FORA DO `total` E DO LOOP ABAIXO. O `total` vira o
+  // comissaoTotal de liberarRepasseEstoqueProprio, onde
+  // `margem = bruto - comissao - custo` (repasseEstoqueProprio.js:50). Somar a
+  // fatia da empresa ali faria o LOJISTA receber menos — a fatia sem dono sai da
+  // parte da plataforma, nunca do bolso de quem vendeu.
+  if (companyAmount > 0 && site) {
+    try {
+      const res = await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: site.id, _amount: companyAmount }) });
+      if (!res.ok) {
+        await sb(`commission_records?sale_id=eq.${encodeURIComponent(sale.id)}&role=eq.empresa_rollup`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'pending' }),
+        });
+        console.error(`[LOJA] Fatia da empresa NÃO creditada (marcada como pendente): venda ${sale.id}, R$ ${companyAmount}`);
+      }
+    } catch (e) {
+      console.error(`[LOJA] Erro ao creditar fatia da empresa na venda ${sale.id}:`, e?.message);
+    }
+  }
   for (const [uid, amount] of Object.entries(porPessoa)) {
     if (amount <= 0.001) continue;
     let ok = false;
