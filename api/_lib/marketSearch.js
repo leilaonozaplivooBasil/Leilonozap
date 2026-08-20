@@ -160,6 +160,7 @@ async function fetchSerpApiLensExato(imageUrl) {
     price: Number(m.extracted_price) || Number(m.price?.extracted_value) || 0,
     url: m.link || '#',
     image: m.thumbnail || '',
+    storeIcon: m.source_icon || '',
     matchLevel: 'exata',
   }));
 }
@@ -176,6 +177,7 @@ async function fetchSerpApiLensVisual(imageUrl) {
     price: Number(m.price?.extracted_value) || Number(m.extracted_price) || 0,
     url: m.link || '#',
     image: m.thumbnail || '',
+    storeIcon: m.source_icon || '',
     matchLevel: 'visual',
   })).filter((r) => r.price > 0);
 }
@@ -192,6 +194,7 @@ async function fetchSerpApi(query) {
     price: r.extracted_price || parseFloat(String(r.price || '').replace(/[^\d,]/g, '').replace(',', '.')),
     url: r.product_link || r.link || '#',
     image: r.thumbnail || '',
+    storeIcon: r.source_icon || '',
     matchLevel: 'texto',
   }));
 }
@@ -228,6 +231,7 @@ async function fetchGoogleLensExato(imageUrl) {
     price: Number(m.extracted_price) || Number(m.price?.extracted_value) || 0,
     url: m.link || '#',
     image: m.thumbnail || '',
+    storeIcon: m.source_icon || '',
     matchLevel: 'exata',
   }));
 }
@@ -244,6 +248,7 @@ async function fetchGoogleLensSimilar(imageUrl) {
     price: Number(m.price?.extracted_value) || Number(m.extracted_price) || 0,
     url: m.link || '#',
     image: m.thumbnail || '',
+    storeIcon: m.source_icon || '',
     matchLevel: 'visual',
   })).filter((r) => r.price > 0);
 }
@@ -279,6 +284,7 @@ async function fetchLensPonteBase44(imageUrl) {
     price: Number(m.extracted_price) || Number(m.price?.extracted_value) || Number(m.price) || 0,
     url: m.link || m.url || '#',
     image: m.thumbnail || m.image || '',
+    storeIcon: m.source_icon || '',
     matchLevel: 'visual',
   }));
 }
@@ -295,6 +301,7 @@ async function fetchSearchApi(query) {
     price: Number(r.extracted_price) || parseFloat(String(r.price || '').replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.')),
     url: r.product_link || r.link || '#',
     image: r.thumbnail || '',
+    storeIcon: r.source_icon || '',
     matchLevel: 'texto',
   })).filter((r) => r.price > 0);
 }
