@@ -145,16 +145,33 @@ function sb(path, opts = {}) {
 //   • forçar a hora do processamento de pagamentos reais de terceiros.
 // É blindagem, não remendo de rombo — mas é a blindagem que todo gateway manda pôr.
 //
-// COMO LIGAR (é isto que falta, e é fora do código): pegar a chave secreta em
-// Mercado Pago → Suas integrações → a aplicação → Webhooks → "Assinatura secreta",
-// e publicar na Vercel como MP_WEBHOOK_SECRET.
+// COMO LIGAR — EM DUAS ETAPAS, DE PROPÓSITO:
 //
-// ENQUANTO A CHAVE NÃO ESTIVER PUBLICADA, ESTA FUNÇÃO DEIXA PASSAR — de propósito.
-// Recusar tudo sem a chave configurada derrubaria o recebimento de pagamentos no
-// primeiro deploy, que é um estrago muito maior do que o buraco que ela fecha.
-// O aviso no log diz, em toda notificação, que a trava está desligada.
+//   etapa 1 (observar): publicar só MP_WEBHOOK_SECRET na Vercel. A função confere
+//     a assinatura e ANOTA NO LOG se bateu ou não, mas NÃO recusa nada.
+//   etapa 2 (bloquear): depois de ver no log que bate em pagamento de verdade,
+//     publicar MP_WEBHOOK_MODO=bloquear. Aí assinatura errada vira 401.
+//
+// A chave secreta sai em Mercado Pago → Suas integrações → a aplicação →
+// Webhooks → "Assinatura secreta" — e ela SÓ EXISTE depois que o webhook estiver
+// configurado naquela tela.
+//
+// POR QUE DUAS ETAPAS, E NÃO LIGAR DIRETO (decisão de 21/08/2026):
+// hoje o Mercado Pago nos notifica porque cada cobrança leva `notification_url`
+// dentro dela — não porque exista webhook cadastrado no painel. Eu NÃO tenho
+// certeza de que a notificação que chega por esse caminho venha assinada com a
+// mesma chave. Se não vier, ligar a trava direto recusaria TODA notificação e
+// derrubaria o recebimento de pagamentos. O log da etapa 1 responde essa pergunta
+// com pagamento real, sem arriscar um centavo. Padrão sem MP_WEBHOOK_MODO =
+// observar: quem esquecer de configurar não quebra nada.
 function conferirAssinatura(req, payId) {
   const segredo = process.env.MP_WEBHOOK_SECRET;
+  const bloqueia = String(process.env.MP_WEBHOOK_MODO || '').toLowerCase() === 'bloquear';
+  // Resultado quando a conferência falha: em modo observação vira aviso e passa.
+  const reprovar = (motivo) => (bloqueia
+    ? { ok: false, motivo }
+    : (console.warn(`[MP] ASSINATURA NÃO CONFERE (${motivo}) — modo OBSERVAÇÃO, nada foi bloqueado. Pagamento ${payId}.`), { ok: true, verificado: false, motivo }));
+
   if (!segredo) {
     console.warn('[MP] MP_WEBHOOK_SECRET não publicada — webhook aceitando sem conferir assinatura (PONTO 122).');
     return { ok: true, verificado: false };
@@ -169,7 +186,7 @@ function conferirAssinatura(req, payId) {
     }
     const ts = campos.ts;
     const v1 = campos.v1;
-    if (!ts || !v1) return { ok: false, motivo: 'x-signature ausente ou incompleto' };
+    if (!ts || !v1) return reprovar('x-signature ausente ou incompleto');
 
     // Manifesto exigido pelo MP: id:<data.id>;request-id:<x-request-id>;ts:<ts>;
     // O id entra em minúsculas quando tem letra; pedaço sem valor sai do manifesto.
@@ -184,9 +201,13 @@ function conferirAssinatura(req, payId) {
     const b = Buffer.from(String(v1), 'utf8');
     // timingSafeEqual exige tamanhos iguais — comparar antes evita a exceção.
     const bate = a.length === b.length && crypto.timingSafeEqual(a, b);
-    return bate ? { ok: true, verificado: true } : { ok: false, motivo: 'assinatura não confere' };
+    if (bate) {
+      if (!bloqueia) console.warn(`[MP] ASSINATURA CONFERE (modo OBSERVAÇÃO) — pagamento ${payId}. Pode publicar MP_WEBHOOK_MODO=bloquear.`);
+      return { ok: true, verificado: true };
+    }
+    return reprovar('assinatura não confere');
   } catch (e) {
-    return { ok: false, motivo: `erro ao conferir assinatura: ${e?.message}` };
+    return reprovar(`erro ao conferir assinatura: ${e?.message}`);
   }
 }
 
