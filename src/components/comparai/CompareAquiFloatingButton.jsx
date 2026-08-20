@@ -3,6 +3,7 @@ import CompareAquiLogo from '@/assets/compareaqui-logo.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sparkles, Globe, Zap, ShieldCheck, Check } from 'lucide-react';
+import CompareAquiProvaViva from './CompareAquiProvaViva';
 
 // 🧹 O botão flutuante fixo (ícone circular no canto) foi removido: o único
 // lugar que renderiza este componente (Layout.jsx) sempre passava
@@ -126,6 +127,11 @@ export default function CompareAquiFloatingButton() {
                   </li>
                 </ol>
               </div>
+
+              {/* 🔴 PROVA AO VIVO — pedido do dono: comprovar pro cliente que o motor
+                  funciona de verdade, sem sair do site. Roda o mesmo searchMarket
+                  dos produtos reais, com qualquer termo que o visitante digitar. */}
+              <CompareAquiProvaViva />
 
               {/* GARANTIA */}
               <div className="bg-emerald-500/[0.07] border border-emerald-500/30 rounded-xl p-6 text-center">
