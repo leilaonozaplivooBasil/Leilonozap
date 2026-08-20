@@ -17,15 +17,31 @@
 // "Individual" = cada detentor recebe o percentual cheio.
 // "POOL" = o percentual é dividido entre os detentores do cargo.
 
-export const TOP_ROLES = [
-  { level: 'ceo', pct: 3, pool: false },
-  { level: 'livoo_live', pct: 2, pool: false },
-  { level: 'embaixador', pct: 1, pool: false },
-  { level: 'conselheiro', pct: 1, pool: true },
-  { level: 'fundador', pct: 1, pool: true },
-  { level: 'diretoria_operacao', pct: 0.5, pool: true },
-  { level: 'diretoria_executiva', pct: 0.5, pool: true },
-];
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 117 (21/08/2026) — EXISTIAM DUAS RÉGUAS DE TOPO, E ELAS DISCORDAVAM
+// ══════════════════════════════════════════════════════════════════════════════
+// Esta lista era escrita à mão, com ceo/livoo_live/embaixador em `pool: false`
+// — "cada detentor recebe o percentual cheio". O comentário logo acima dizia
+// isso com todas as letras. Só que o documento oficial manda o contrário
+// (DOCUMENTO-OFICIAL-PLANO-CARREIRA.md:205): "Pool com vários donos: rateia em
+// centavos inteiros (maior resto)". E o motor da loja (arvoreOficial.js) sempre
+// rateou.
+//
+// A conta do erro: com 2 CEOs saíam 6% em vez de 3%. Com 2 CEOs e 2
+// Embaixadores o topo ia a 14% e a venda inteira a 34% — R$ 40 a mais por
+// R$ 1.000. Hoje só o commissionBackfill e a simulação usam este arquivo, então
+// o estrago real depende de quantos detentores existem de cada cargo; com 1 de
+// cada, o número coincide e esta correção é preventiva.
+//
+// A correção NÃO é trocar `false` por `true` na mão — é DELETAR a segunda régua.
+// TOP_ROLES agora deriva de POOLS, a mesma constante que o motor da loja usa.
+// Import de MESMO diretório (./), a forma segura já usada aqui embaixo pro
+// resolveExecutivo — nunca de api/functions/ pra fora (ver submitAtomicBid.js).
+// Se alguém mudar um percentual do plano, muda em UM lugar e os dois motores
+// acompanham. Não existe mais como eles discordarem.
+import { POOLS } from './arvoreOficial.js';
+
+export const TOP_ROLES = POOLS.map((p) => ({ level: p.id, pct: p.pct, pool: true }));
 
 // A regra do executivo mora em UM lugar só: api/_lib/resolveExecutivo.js.
 // Este arquivo NÃO reimplementa a resolução — apenas consome a fonte única.
