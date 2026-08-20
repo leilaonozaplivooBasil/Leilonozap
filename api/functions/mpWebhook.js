@@ -128,6 +128,68 @@ function sb(path, opts = {}) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 122 (21/08/2026) — A PORTA DO DINHEIRO ESTAVA SEM FECHADURA (risco #27)
+// ══════════════════════════════════════════════════════════════════════════════
+// Esta rota é pública (tem que ser — quem chama é o Mercado Pago) e não conferia
+// NADA sobre quem estava batendo. O `import crypto` no topo do arquivo estava lá
+// desde sempre, sem uso: alguém começou esta trava e não terminou.
+//
+// SENDO JUSTO COM O CÓDIGO ANTIGO: o estrago não é "qualquer um marca venda como
+// paga". O handler não confia no corpo — ele busca o pagamento na API do MP com o
+// nosso token e só age se o MP disser `approved`. Forjar pagamento por aqui não dá.
+// O que dá, sem assinatura:
+//   • disparar processamento com IDs de pagamento chutados, à vontade;
+//   • fazer a rota gastar chamada de API do MP e do banco a cada tiro (a conta e
+//     o rate limit são nossos);
+//   • forçar a hora do processamento de pagamentos reais de terceiros.
+// É blindagem, não remendo de rombo — mas é a blindagem que todo gateway manda pôr.
+//
+// COMO LIGAR (é isto que falta, e é fora do código): pegar a chave secreta em
+// Mercado Pago → Suas integrações → a aplicação → Webhooks → "Assinatura secreta",
+// e publicar na Vercel como MP_WEBHOOK_SECRET.
+//
+// ENQUANTO A CHAVE NÃO ESTIVER PUBLICADA, ESTA FUNÇÃO DEIXA PASSAR — de propósito.
+// Recusar tudo sem a chave configurada derrubaria o recebimento de pagamentos no
+// primeiro deploy, que é um estrago muito maior do que o buraco que ela fecha.
+// O aviso no log diz, em toda notificação, que a trava está desligada.
+function conferirAssinatura(req, payId) {
+  const segredo = process.env.MP_WEBHOOK_SECRET;
+  if (!segredo) {
+    console.warn('[MP] MP_WEBHOOK_SECRET não publicada — webhook aceitando sem conferir assinatura (PONTO 122).');
+    return { ok: true, verificado: false };
+  }
+  try {
+    const cabecalho = String(req.headers?.['x-signature'] || req.headers?.['X-Signature'] || '');
+    const requestId = String(req.headers?.['x-request-id'] || req.headers?.['X-Request-Id'] || '');
+    const campos = {};
+    for (const parte of cabecalho.split(',')) {
+      const i = parte.indexOf('=');
+      if (i > 0) campos[parte.slice(0, i).trim()] = parte.slice(i + 1).trim();
+    }
+    const ts = campos.ts;
+    const v1 = campos.v1;
+    if (!ts || !v1) return { ok: false, motivo: 'x-signature ausente ou incompleto' };
+
+    // Manifesto exigido pelo MP: id:<data.id>;request-id:<x-request-id>;ts:<ts>;
+    // O id entra em minúsculas quando tem letra; pedaço sem valor sai do manifesto.
+    const bruto = String(payId);
+    const idNorm = /[a-zA-Z]/.test(bruto) ? bruto.toLowerCase() : bruto;
+    let manifesto = `id:${idNorm};`;
+    if (requestId) manifesto += `request-id:${requestId};`;
+    manifesto += `ts:${ts};`;
+
+    const esperado = crypto.createHmac('sha256', segredo).update(manifesto).digest('hex');
+    const a = Buffer.from(esperado, 'utf8');
+    const b = Buffer.from(String(v1), 'utf8');
+    // timingSafeEqual exige tamanhos iguais — comparar antes evita a exceção.
+    const bate = a.length === b.length && crypto.timingSafeEqual(a, b);
+    return bate ? { ok: true, verificado: true } : { ok: false, motivo: 'assinatura não confere' };
+  } catch (e) {
+    return { ok: false, motivo: `erro ao conferir assinatura: ${e?.message}` };
+  }
+}
+
 export default async function handler(req, res) {
   // 🔴 PONTO 121: guarda o id da venda que ESTA execução marcou como paga. O
   // catch lá embaixo precisa saber disso pra devolver ao estado anterior — se
@@ -143,6 +205,21 @@ export default async function handler(req, res) {
     const url = new URL(req.url, 'http://x');
     const payId = body?.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || body?.id;
     if (!payId) return res.status(200).json({ ok: true, ignored: true });
+
+    // 🔒 PONTO 122 (risco #27) — só depois de saber o payId dá pra montar o
+    // manifesto que o Mercado Pago assina. Assinatura errada é 401 e para aqui:
+    // não gasta chamada na API do MP nem consulta no banco.
+    // GET continua aceito de propósito — a notificação IPN antiga do MP chega
+    // como GET com ?topic=payment&id=..., e é justamente ela que as duas linhas
+    // acima leem da query. Recusar GET desligaria esse caminho.
+    if (!['POST', 'GET'].includes(String(req.method || '').toUpperCase())) {
+      return res.status(405).json({ ok: false, error: 'metodo_nao_permitido' });
+    }
+    const assinatura = conferirAssinatura(req, payId);
+    if (!assinatura.ok) {
+      console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
+      return res.status(401).json({ ok: false, error: 'assinatura_invalida' });
+    }
 
     // BUSCA o pagamento real no MP (fonte de verdade — não confia no corpo do webhook)
     const r = await fetch(`https://api.mercadopago.com/v1/payments/${payId}`, { headers: { Authorization: `Bearer ${MP_TOKEN}` } });

@@ -30,6 +30,69 @@ function sb(path, opts = {}) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 122 (21/08/2026) — O QR ANTIGO CONTINUAVA VIVO (risco #22)
+// ══════════════════════════════════════════════════════════════════════════════
+// Esta rota trocava `mp_payment_id` pelo da cobrança nova e ia embora. A cobrança
+// ANTIGA continuava aberta no Mercado Pago, e ninguém definia validade nenhuma —
+// nem na antiga, nem na nova. O QR velho segue pagável, e ele está no celular do
+// cliente, no print que ele mandou pro cônjuge, no e-mail.
+//
+// O ESTRAGO, na ordem em que acontece de verdade:
+//   1. o cliente clica "gerar novo PIX" e paga o QR NOVO → venda vira paid;
+//   2. dias depois alguém paga o QR VELHO (o print que ficou no WhatsApp);
+//   3. o webhook acha a venda pelo external_reference, vê status 'paid' e
+//      responde `already_paid`. O dinheiro entra e ninguém no mundo é avisado.
+// Ou seja: cliente cobrado duas vezes, sem estorno e sem alerta.
+//
+// Duas travas, porque uma só não fecha:
+//   • CANCELA a cobrança anterior no MP antes de criar a nova (esta função);
+//   • carimba VALIDADE na nova, pra que nenhum QR fique eterno.
+//
+// Best-effort de propósito: se o MP recusar o cancelamento, o cliente ainda
+// precisa conseguir pagar — a gente registra e segue. O único caso que PARA o
+// fluxo é a cobrança antiga estar APROVADA (tratado no handler).
+const HORAS_VALIDADE_PIX = 24;
+
+/** Validade no formato que o Mercado Pago exige, no relógio de Brasília (-03:00). */
+function validadePix(horas) {
+  const alvo = new Date(Date.now() + horas * 3600 * 1000 - 3 * 3600 * 1000);
+  return alvo.toISOString().replace('Z', '-03:00');
+}
+
+async function situacaoCobrancaAntiga(paymentId) {
+  if (!paymentId) return { estado: 'sem_cobranca_anterior' };
+  try {
+    const r = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+      headers: { Authorization: `Bearer ${MP_TOKEN}` },
+    });
+    const p = await r.json().catch(() => null);
+    if (!r.ok || !p?.id) return { estado: 'nao_encontrada' };
+    if (p.status === 'approved') return { estado: 'ja_paga', status: p.status };
+    // 'pending' e 'in_process' são as que continuam pagáveis — só essas precisam morrer.
+    if (!['pending', 'in_process'].includes(String(p.status))) return { estado: 'ja_inativa', status: p.status };
+
+    const c = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${MP_TOKEN}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': `cancelar-${paymentId}`,
+      },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+    if (!c.ok) {
+      const t = await c.text();
+      console.error(`[PIX] NÃO CONSEGUI CANCELAR a cobrança antiga ${paymentId} — ela continua pagável: ${t.slice(0, 200)}`);
+      return { estado: 'falhou_cancelar', status: p.status };
+    }
+    return { estado: 'cancelada' };
+  } catch (e) {
+    console.error(`[PIX] erro ao cancelar a cobrança antiga ${paymentId}:`, e?.message);
+    return { estado: 'falhou_cancelar' };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -84,7 +147,20 @@ export default async function handler(req, res) {
       : Number(sale.total_amount) || 0;
     if (!(valor >= 1)) return res.status(200).json({ success: false, error: 'Valor do pedido inválido para PIX' });
 
-    // 6) Nova cobrança PIX — MESMO external_reference (o webhook continua achando
+    // 6) MATA A COBRANÇA ANTERIOR ANTES DE CRIAR A NOVA (PONTO 122, risco #22).
+    //    Se a antiga já estiver APROVADA, este pedido está pago e o webhook ainda
+    //    não chegou: gerar outra cobrança aqui cobraria o cliente duas vezes.
+    const antiga = await situacaoCobrancaAntiga(sale.mp_payment_id);
+    if (antiga.estado === 'ja_paga') {
+      console.error(`[PIX] Pedido ${saleId} pediu novo PIX mas a cobrança ${sale.mp_payment_id} já está APROVADA. Nova cobrança NÃO foi criada.`);
+      return res.status(200).json({
+        success: false,
+        ja_pago: true,
+        error: 'Recebemos o seu pagamento. A confirmação entra em instantes — não precisa pagar de novo.',
+      });
+    }
+
+    // 7) Nova cobrança PIX — MESMO external_reference (o webhook continua achando
     //    este pedido) e chave de idempotência nova (senão o MP devolve a antiga).
     const [first, ...rest] = String(sale.buyer_name || 'Cliente').trim().split(/\s+/);
     const mp = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -98,6 +174,10 @@ export default async function handler(req, res) {
         transaction_amount: valor,
         description: `Loja Virtual - ${sale.product_title || 'Pedido'}`.slice(0, 200),
         payment_method_id: 'pix',
+        // ⏰ PONTO 122: sem isto o QR nunca morre. Com validade, o pior caso
+        // "cliente paga um código velho" tem prazo pra acabar — e o cliente
+        // continua tendo o botão de gerar outro sempre que precisar.
+        date_of_expiration: validadePix(HORAS_VALIDADE_PIX),
         notification_url: `${BASE_URL}/api/functions/mpWebhook`,
         external_reference: saleId,
         payer: {
@@ -118,7 +198,7 @@ export default async function handler(req, res) {
 
     const td = pay.point_of_interaction?.transaction_data || {};
 
-    // 7) Atualiza o pedido com a cobrança nova. O pedido continua o MESMO.
+    // 8) Atualiza o pedido com a cobrança nova. O pedido continua o MESMO.
     await sb(`catalog_sales?id=eq.${encodeURIComponent(saleId)}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
@@ -133,6 +213,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       sale_id: saleId,
+      cobranca_anterior: antiga.estado,
       amount: valor,
       payment_id: String(pay.id),
       pix_code: td.qr_code || null,

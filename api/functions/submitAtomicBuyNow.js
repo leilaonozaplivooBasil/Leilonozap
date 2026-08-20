@@ -46,9 +46,48 @@ function precoArremateAgora(auction) {
   return money(preco);
 }
 
-/** Reserva `amount` de saldo_disponivel → saldo_reservado, com CAS. Mesma lógica de reserveBidBalance.js. */
-async function reservar(userId, amount) {
-  for (let tentativa = 0; tentativa < 3; tentativa++) {
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 122 (21/08/2026) — AS DUAS FUNÇÕES ABAIXO DIZIAM "COM CAS" E NÃO ERAM
+// ══════════════════════════════════════════════════════════════════════════════
+// O comentário antigo prometia trava otimista, mas o filtro era
+// `saldo_disponivel=gte.${amount}` — isso é um PISO ("tem pelo menos tanto"), não
+// uma trava ("continua exatamente como eu li"). É o mesmo defeito já corrigido no
+// reserveBidBalance.js (PONTO 114).
+//
+// A conta do estrago, com R$ 100 na carteira e dois cliques no "🔥 ARREMATE"
+// chegando juntos (dedo duplo no celular, ou duas abas):
+//   • os dois leem saldo_disponivel = 100 e saldo_reservado = 0;
+//   • os dois passam pelo `gte.100`;
+//   • os dois gravam saldo_disponivel: 0, saldo_reservado: 100.
+// Resultado: DOIS arremates reservados, R$ 200 de compromisso, e só R$ 100 saiu
+// da carteira. A segunda reserva não tem lastro nenhum — o cliente leva dois
+// produtos e a empresa recebe por um.
+//
+// A trava de verdade é `and=(saldo_disponivel.eq.<lido>,saldo_reservado.eq.<lido>)`:
+// se qualquer uma das duas colunas mudou entre a leitura e a escrita, o PATCH não
+// pega linha nenhuma e o laço relê. Precisa ser nas DUAS: travar só o disponível
+// deixa um depósito simultâneo ser apagado pela escrita da reserva.
+// Coluna nunca inicializada fica NULL, e "eq.0" nunca casa com NULL no Postgres —
+// por isso o `or(...is.null)` quando o valor lido é zero (PONTO 71).
+const filtroIgual = (coluna, valor) => (valor === 0
+  ? `or(${coluna}.eq.0,${coluna}.is.null)`
+  : `${coluna}.eq.${valor}`);
+
+// 📒 LIVRO-CAIXA DA RESERVA (risco #25 da auditoria): este era um dos caminhos que
+// mexia em saldo_reservado sem gravar UMA linha de extrato. Inline de propósito —
+// import de 2 níveis dentro de api/functions/ já derrubou o lance em produção.
+// Best-effort por contrato: falhar aqui NUNCA derruba o arremate.
+async function livroCaixaReserva(mov) {
+  try {
+    await sb('reserva_ledger', {
+      method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(mov),
+    });
+  } catch (e) { console.warn('[BUYNOW] livro-caixa da reserva:', e?.message); }
+}
+
+/** Reserva `amount` de saldo_disponivel → saldo_reservado, com CAS de verdade nas duas colunas. */
+async function reservar(userId, amount, auctionId = null) {
+  for (let tentativa = 0; tentativa < 5; tentativa++) {
     const rows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${enc(userId)}&limit=1`)).json();
     const user = Array.isArray(rows) ? rows[0] : null;
     if (!user) return { success: false, error: 'usuario_nao_encontrado' };
@@ -56,7 +95,7 @@ async function reservar(userId, amount) {
     const reservadoAtual = money(user.saldo_reservado);
     if (saldoAtual < amount) return { success: false, error: 'saldo_insuficiente', balance: saldoAtual };
     const patch = await sb(
-      `app_users?id=eq.${enc(userId)}&saldo_disponivel=gte.${amount}`,
+      `app_users?id=eq.${enc(userId)}&and=(${filtroIgual('saldo_disponivel', saldoAtual)},${filtroIgual('saldo_reservado', reservadoAtual)})`,
       { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({
         saldo_disponivel: money(saldoAtual - amount),
         saldo_reservado: money(reservadoAtual + amount),
@@ -64,15 +103,23 @@ async function reservar(userId, amount) {
     );
     const updated = await patch.json().catch(() => []);
     const row = Array.isArray(updated) ? updated[0] : null;
-    if (row) return { success: true, balance: row.saldo_disponivel };
-    // corrida: tenta de novo
+    if (row) {
+      await livroCaixaReserva({
+        user_id: String(userId), auction_id: auctionId ? String(auctionId) : null,
+        tipo: 'reserva', direcao: 'entrada_reserva', valor: money(amount),
+        saldo_antes: reservadoAtual, saldo_depois: money(reservadoAtual + amount),
+        origem: 'submitAtomicBuyNow.reservar',
+      });
+      return { success: true, balance: row.saldo_disponivel };
+    }
+    // corrida: alguém mexeu no saldo entre a leitura e a escrita — relê e tenta de novo
   }
   return { success: false, error: 'corrida' };
 }
 
-/** Devolve `amount` de saldo_reservado → saldo_disponivel, com CAS. Usado só no estorno de falha. */
-async function estornar(userId, amount) {
-  for (let tentativa = 0; tentativa < 3; tentativa++) {
+/** Devolve `amount` de saldo_reservado → saldo_disponivel, com CAS de verdade. Usado só no estorno de falha. */
+async function estornar(userId, amount, auctionId = null) {
+  for (let tentativa = 0; tentativa < 5; tentativa++) {
     const rows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${enc(userId)}&limit=1`)).json();
     const user = Array.isArray(rows) ? rows[0] : null;
     if (!user) return false;
@@ -81,14 +128,22 @@ async function estornar(userId, amount) {
     const devolver = money(Math.min(amount, reservadoAtual));
     if (devolver <= 0) return true;
     const patch = await sb(
-      `app_users?id=eq.${enc(userId)}&saldo_reservado=gte.${devolver}`,
+      `app_users?id=eq.${enc(userId)}&and=(${filtroIgual('saldo_disponivel', saldoAtual)},${filtroIgual('saldo_reservado', reservadoAtual)})`,
       { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({
         saldo_disponivel: money(saldoAtual + devolver),
         saldo_reservado: money(reservadoAtual - devolver),
       }) }
     );
     const updated = await patch.json().catch(() => []);
-    if (Array.isArray(updated) && updated[0]) return true;
+    if (Array.isArray(updated) && updated[0]) {
+      await livroCaixaReserva({
+        user_id: String(userId), auction_id: auctionId ? String(auctionId) : null,
+        tipo: 'devolucao_arremate_falhou', direcao: 'saida_reserva', valor: devolver,
+        saldo_antes: reservadoAtual, saldo_depois: money(reservadoAtual - devolver),
+        origem: 'submitAtomicBuyNow.estornar',
+      });
+      return true;
+    }
   }
   return false;
 }
@@ -131,7 +186,7 @@ export default async function handler(req, res) {
 
     // 💰 Reserva o valor ANTES de tocar em qualquer registro do leilão — se faltar
     // saldo, nada mais roda. A partir daqui, qualquer falha precisa estornar.
-    const reserva = await reservar(userId, buyNowPrice);
+    const reserva = await reservar(userId, buyNowPrice, auctionId);
     if (!reserva.success) {
       if (reserva.error === 'saldo_insuficiente') {
         return res.status(200).json({
@@ -166,7 +221,7 @@ export default async function handler(req, res) {
     const bidInsertData = await bidInsertResp.json().catch(() => null);
     const bidRow = Array.isArray(bidInsertData) ? bidInsertData[0] : null;
     if (!bidInsertResp.ok || !bidRow) {
-      await estornar(userId, buyNowPrice);
+      await estornar(userId, buyNowPrice, auctionId);
       return res.status(500).json({ success: false, message: 'Não foi possível registrar o arremate. Tente novamente.' });
     }
 
@@ -178,13 +233,13 @@ export default async function handler(req, res) {
     try {
       payload = await finalizeOneAuction(auction);
     } catch (e) {
-      await estornar(userId, buyNowPrice);
+      await estornar(userId, buyNowPrice, auctionId);
       return res.status(500).json({ success: false, message: 'Erro ao encerrar o leilão: ' + String(e?.message || e) });
     }
 
     if (payload?.result?.winner_id !== userId) {
       // Perdeu a corrida de encerramento (outro processo fechou primeiro) — devolve o dinheiro.
-      await estornar(userId, buyNowPrice);
+      await estornar(userId, buyNowPrice, auctionId);
       return res.status(409).json({
         success: false, conflict: true,
         message: 'Outra pessoa arrematou este leilão antes. Seu saldo foi devolvido.',

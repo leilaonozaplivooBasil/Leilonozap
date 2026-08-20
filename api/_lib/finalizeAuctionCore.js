@@ -10,6 +10,9 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 import { cancelarCuponsBloqueados, liberarCupomPassaporte } from './passaporteCoupon.js';
 import { recolherBonusPorArremate } from './passaporteBonus.js';
 import { oid } from './oid.js';
+// 📒 Livro-caixa da reserva. Import de MESMO diretório (./) — a forma segura já
+// usada nas linhas acima. Nunca de api/functions/ pra fora (ver submitAtomicBid.js).
+import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
 
 // tolerância pra deriva de relógio entre cliente e servidor (nunca encerra
 // um leilão com mais de 2s restantes)
@@ -165,7 +168,15 @@ export function resultPayload(auction, extra = {}) {
 // otimista (só grava se os dois saldos ainda estiverem como foram lidos). Nunca
 // devolve mais do que está reservado e nunca lança erro — falha aqui não pode
 // impedir o encerramento do leilão. Retorna quanto foi efetivamente devolvido.
-async function devolverReserva(userId, valor) {
+// 🔴 PONTO 122 (21/08/2026) — ESTA DEVOLUÇÃO NÃO DEIXAVA RASTRO (risco #25)
+// A tabela reserva_ledger foi criada em 18/08 justamente porque saldo_reservado
+// era mexido sem extrato — a auditoria achou R$ 159,60 travados em 8 contas, R$
+// 13,20 deles IRRASTREÁVEIS. Todas as outras portas passaram a gravar; esta,
+// que roda no MARTELO (o momento de maior movimento de reserva do sistema),
+// continuou muda. Quem fosse conferir a conta de um cliente veria o saldo mudar
+// sozinho, sem linha nenhuma explicando. Agora grava, e o parâmetro auctionId
+// diz de qual leilão veio.
+async function devolverReserva(userId, valor, auctionId = null) {
   const uid = String(userId || '').trim();
   const pedido = money(valor);
   if (!uid || pedido <= 0) return 0;
@@ -190,7 +201,20 @@ async function devolverReserva(userId, valor) {
         }),
       });
       const updated = await patch.json().catch(() => []);
-      if (Array.isArray(updated) && updated[0]) return liberar;
+      if (Array.isArray(updated) && updated[0]) {
+        // 📒 best-effort por contrato: falhar aqui nunca derruba o encerramento.
+        await registrarMovimentoReserva({
+          userId: uid,
+          auctionId,
+          tipo: TIPOS.DEVOLUCAO_FIM_LEILAO,
+          direcao: 'saida_reserva',
+          valor: liberar,
+          saldoAntes: reservado,
+          saldoDepois: money(reservado - liberar),
+          origem: '_lib/finalizeAuctionCore.devolverReserva',
+        });
+        return liberar;
+      }
       // corrida: o saldo mudou entre a leitura e a escrita — tenta de novo
     }
     return 0;
@@ -492,7 +516,7 @@ export async function finalizeOneAuction(auction) {
       const valorPreso = money(
         (Number(auction.current_price) || 0) + (Number(auction.frete_reservado_valor) || 0)
       );
-      const devolvido = await devolverReserva(liderPreso, valorPreso);
+      const devolvido = await devolverReserva(liderPreso, valorPreso, auctionId);
       if (devolvido > 0) reservasDevolvidas.push({ user_id: liderPreso, valor: devolvido });
     }
   } catch (e) { console.warn('[FINALIZE] devolução de reservas:', e?.message); }

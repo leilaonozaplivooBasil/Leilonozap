@@ -25,7 +25,17 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     const [users, levelsArr] = await Promise.all([
-      (await sb('app_users?select=id,full_name,email,career_levels,primary_career_level,recruited_by_id,referred_by_id&active=neq.false&limit=5000')).json(),
+      // 🔴 PONTO 122 (21/08/2026) — `active=neq.false` APAGAVA PEDAÇO DA ÁRVORE (risco #17)
+      // No Postgres, `active <> false` com a coluna em NULL não dá "verdadeiro": dá
+      // NULL — e a linha some do resultado. Conta antiga (ou criada por um caminho
+      // que não preenche `active`) simplesmente não vinha nesta lista.
+      // O estrago não é só a pessoa sumir do seletor: a árvore é montada por
+      // pai→filho aqui embaixo. Se um NULL está no MEIO da linha, TODO MUNDO
+      // abaixo dele fica órfão e desaparece junto — o balcão não consegue mais
+      // escolher quem está levando a licença, e a venda vai pro dono errado.
+      // O resto do sistema já trata NULL como ativo (`u.active !== false` em JS).
+      // Esta consulta era a única que discordava. Agora as duas dizem a mesma coisa.
+      (await sb('app_users?select=id,full_name,email,career_levels,primary_career_level,recruited_by_id,referred_by_id&or=(active.is.null,active.eq.true)&limit=5000')).json(),
       (await sb('career_levels?select=id,nome,venda_direta_pct')).json(),
     ]);
     if (!Array.isArray(users)) return res.status(200).json({ success: false, error: 'Falha ao ler a rede' });

@@ -148,6 +148,16 @@ export default async function handler(req, res) {
       // 🏷️ Itens na cobrança para o Mercado Pago poder exibir o produto na listagem.
       additional_info: { items: lines.map((l) => ({ title: String(l.p.description).slice(0, 120), quantity: l.q, unit_price: unitPrice(l.p) })) },
       payment_method_id: 'pix',
+      // ⏰ PONTO 122 (21/08/2026) — VALIDADE DO QR (riscos #11 e #22)
+      // Sem `date_of_expiration` o Mercado Pago deixa o código PIX pagável por
+      // muito tempo, e ninguém neste repositório cancelava a cobrança quando o
+      // pedido saía de cena. Era assim que um pedido cancelado (ou já pago por
+      // um QR regerado) recebia dinheiro dias depois, sem ninguém ser avisado.
+      // 24 horas é curto o bastante pra fechar essa janela e longo o bastante
+      // pro cliente pagar com calma — e o botão "gerar novo PIX" continua ali
+      // (regerarPixPedido.js), que agora cancela o anterior antes de criar outro.
+      date_of_expiration: new Date(Date.now() + 24 * 3600 * 1000 - 3 * 3600 * 1000)
+        .toISOString().replace('Z', '-03:00'),
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
       external_reference: saleId,
       payer: {
