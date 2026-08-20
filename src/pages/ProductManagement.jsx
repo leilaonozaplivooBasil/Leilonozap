@@ -294,20 +294,30 @@ export default function ProductManagement() {
 
     setIsLoadingData(true);
     try {
+      // 🔒 SEM LOGIN TAMBÉM É BARRADO (20/08/2026).
+      // Antes toda a conferência de cargo vivia dentro de `if (savedUser)`. Quem
+      // entrava SEM login pulava o bloco inteiro e a tela carregava assim mesmo:
+      // a trava pegava quem se identificava e não tinha cargo, e deixava passar
+      // quem não se identificava. Como esta página mostra custo, lucro, margem,
+      // nota fiscal e a posição completa do estoque, era o miolo do negócio à vista
+      // de qualquer visitante. A rota não tem proteção própria — a trava é aqui.
       const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
+      let user = null;
+      try { user = savedUser ? JSON.parse(savedUser) : null; } catch (_) { user = null; }
+      if (!user?.id) {
+        navigate(createPageUrl('Home'));
+        return;
+      }
+      setCurrentUser(user);
 
-        // Pode gerir produtos: admin OU cargos com estoque próprio (Distribuidor, Loja Física, Ponto de Retirada)
-        const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
-        const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
-          (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
-        if (!podeProduto) {
-          alert("Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
-          navigate(createPageUrl('Home'));
-          return;
-        }
+      // Pode gerir produtos: admin OU cargos com estoque próprio (Distribuidor, Loja Física, Ponto de Retirada)
+      const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+      const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
+        (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
+      if (!podeProduto) {
+        alert("Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
+        navigate(createPageUrl('Home'));
+        return;
       }
 
       // Cache agressivo de 1 minuto (reduzido de 5 para capturar mudanças rápido)
@@ -327,13 +337,66 @@ export default function ProductManagement() {
         }
       }
 
-      const allProducts = await base44.entities.Product.list('-created_date', 5000);
+      // 📦 CARREGA O CATÁLOGO INTEIRO, EM BLOCOS (20/08/2026).
+      // Antes era uma tacada só: Product.list('-created_date', 5000). Só que o
+      // Supabase corta a resposta em 1.000 linhas por padrão e NÃO avisa — então a
+      // tela recebia os 1.000 produtos mais NOVOS e os outros 2.141 simplesmente
+      // não existiam aqui. Como a busca filtra o que já está na memória, procurar
+      // um produto antigo devolvia "Nenhum produto encontrado" mesmo com ele vivo
+      // no estoque e à venda na loja — e não havia como dar baixa nele.
+      // Mesmo padrão de paginação já usado em api/functions/reconciliarEstoqueLoja.js.
+      // Paginação por CURSOR (keyset), não por posição. Paginar por offset é frágil
+      // aqui: um cadastro ou uma exclusão no meio do carregamento desloca todas as
+      // linhas seguintes, e a página seguinte repete ou PULA um produto — e produto
+      // pulado não tem como ser recuperado depois. Ancorando no último `id` lido,
+      // cada bloco continua exatamente de onde o anterior parou, aconteça o que
+      // acontecer com as outras linhas.
+      // `id` serve de âncora porque é único e o adapter já ordena por ele em toda
+      // consulta (Ponto 93 em src/api/base44Adapter.js). Ordenamos por created_date
+      // para exibir aqui, depois de ter o conjunto completo em mãos.
+      const PAGE = 1000;
+      const MAX_BLOCOS = 50; // trava de segurança contra laço infinito
+      const allProducts = [];
+      const vistos = new Set();
+      let ultimoId = '';
+      for (let bloco_n = 0; bloco_n < MAX_BLOCOS; bloco_n++) {
+        const filtro = ultimoId ? { id: { $gt: ultimoId } } : {};
+        const bloco = await base44.entities.Product.filter(filtro, 'id', PAGE);
+        if (!Array.isArray(bloco) || bloco.length === 0) break;
+        for (const prod of bloco) {
+          if (!prod?.id || vistos.has(prod.id)) continue;
+          vistos.add(prod.id);
+          allProducts.push(prod);
+        }
+        ultimoId = bloco[bloco.length - 1]?.id || '';
+        if (bloco.length < PAGE || !ultimoId) break;
+      }
+      // mais novo primeiro, com o mesmo desempate por id que o banco usa
+      allProducts.sort((a, b) => {
+        const da = a?.created_date || '';
+        const db = b?.created_date || '';
+        if (da !== db) return da < db ? 1 : -1;
+        return String(a?.id) < String(b?.id) ? -1 : 1;
+      });
       setProducts(allProducts);
       setFilteredProducts(allProducts);
 
-      // Salva no cache
-      sessionStorage.setItem('products_cache_v3', JSON.stringify(allProducts));
-      sessionStorage.setItem('products_cache_time_v3', Date.now().toString());
+      // Salva no cache.
+      // ⚠️ Com o catálogo inteiro o JSON passa de vários MB e pode estourar a cota
+      // do sessionStorage. Se estourar, a gravação lança erro e cairia no catch lá
+      // embaixo, fazendo a tela dizer que falhou ao carregar — com os produtos já
+      // na mão. Então o cache é opcional: falhou, seguimos sem ele. E apagamos o
+      // cache velho junto, senão a próxima abertura serviria a lista truncada antiga.
+      try {
+        sessionStorage.setItem('products_cache_v3', JSON.stringify(allProducts));
+        sessionStorage.setItem('products_cache_time_v3', Date.now().toString());
+      } catch (e) {
+        try {
+          sessionStorage.removeItem('products_cache_v3');
+          sessionStorage.removeItem('products_cache_time_v3');
+        } catch (_) { /* sem cache mesmo */ }
+        console.warn('[ESTOQUE] cache desligado nesta sessão (catálogo maior que a cota):', e?.message);
+      }
 
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
@@ -438,11 +501,14 @@ export default function ProductManagement() {
     }
 
     if (hideZeroStock) {
-      filtered = filtered.filter(p =>
-        (p.qty_perfeito || 0) > 0 ||
-        (p.qty_bom || 0) > 0 ||
-        (p.qty_oficina || 0) > 0
-      );
+      // 📏 RÉGUA ÚNICA: quem manda é a QUANTIDADE (20/08/2026).
+      // Antes este filtro media pela classificação (Perfeito/Bom/Oficina). Como a
+      // venda baixa a quantidade e NUNCA mexe na classificação, a régua estava
+      // errada nos dois sentidos: 350 produtos com peça de verdade sumiam da tela
+      // por estarem sem classificação preenchida, e 150 já vendidos continuavam
+      // aparecendo como se tivessem estoque. "Zerado" agora quer dizer uma coisa
+      // só — não tem peça —, igual à vitrine (src/pages/Catalog.jsx).
+      filtered = filtered.filter(p => (p.quantity || 0) > 0);
     }
 
     setFilteredProducts(filtered);
@@ -496,7 +562,18 @@ export default function ProductManagement() {
     e.preventDefault();
 
     try {
-      const totalQuantity = parseInt(formData.quantity) + (editingProduct?.quantity_sold || 0);
+      // 🔢 Quantidade: aceita ZERO, mas exige um número escrito de propósito.
+      // Campo vazio NÃO vale como zero: zerar o estoque agora também tira o produto
+      // da loja, então apagar o campo sem querer e salvar seria destrutivo demais
+      // para passar calado. Quem quer zerar, digita 0.
+      const qtdTexto = String(formData.quantity ?? '').trim();
+      const qtdNum = Number(qtdTexto);
+      if (qtdTexto === '' || !Number.isInteger(qtdNum) || qtdNum < 0) {
+        alert('Informe a Quantidade Total: um número inteiro de 0 para cima. Digite 0 para zerar o estoque.');
+        return;
+      }
+
+      const totalQuantity = qtdNum + (editingProduct?.quantity_sold || 0);
       const custoUnitario = totalQuantity > 0 ? parseFloat(formData.cost_price) / totalQuantity : parseFloat(formData.cost_price);
       const quantidadeVendida = editingProduct?.quantity_sold || 0;
       const profit = formData.sold_amount ? (parseFloat(formData.sold_amount) - (custoUnitario * quantidadeVendida)) : 0;
@@ -509,7 +586,13 @@ export default function ProductManagement() {
         selling_price_wholesale: parseFloat(formData.selling_price_wholesale) || 0,
         sold_amount: parseFloat(formData.sold_amount || 0),
         status: formData.status || 'ESTOQUE',
-        quantity: Math.max(1, parseInt(formData.quantity) || 1),
+        // 🔢 Aceita ZERO (20/08/2026). Antes: Math.max(1, parseInt(...) || 1).
+        // Em JavaScript o zero é "falsy", então digitar 0 caía no `|| 1` e o produto
+        // era salvo com 1 peça. Na prática: abrir um produto já zerado, corrigir só a
+        // descrição e clicar em Atualizar RESSUSCITAVA uma unidade — e, como o
+        // catalog_active seguia ligado, ela voltava a ser comprável na loja.
+        // Já validado logo acima: inteiro, maior ou igual a zero, escrito de propósito.
+        quantity: qtdNum,
         qty_perfeito: parseInt(formData.qty_perfeito) || 0,
         qty_bom: parseInt(formData.qty_bom) || 0,
         qty_ruim: 0, // Sempre zero - ruim não existe mais
@@ -1416,7 +1499,11 @@ export default function ProductManagement() {
                         value={formData.quantity}
                         onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                         className="bg-gray-700 text-white"
-                        min="1"
+                        /* min="0": com min="1" o navegador barrava o zero antes de o
+                           formulário rodar, e dar baixa pelo campo era impossível. */
+                        min="0"
+                        step="1"
+                        required
                       />
                     </div>
 
