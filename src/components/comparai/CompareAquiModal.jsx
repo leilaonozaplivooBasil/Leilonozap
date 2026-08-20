@@ -24,6 +24,17 @@ function isMercadoLivre(item) {
   return s.includes('mercado livre') || s.includes('mercadolivre') || u.includes('mercadolivre.com');
 }
 
+// 🏷️ PONTO 91 (20/08/2026) — o dono pediu pra separar explicitamente
+// "MESMA IMAGEM" de "mesmo produto" e de "parecido", em vez de jogar tudo numa
+// lista só como se tivessem a mesma confiança. O nível vem do backend
+// (matchLevel), decidido pela FONTE que achou o anúncio — não é chute do front.
+const SELO_MATCH = {
+  exata: { texto: 'Mesma imagem', classe: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+  mesmo_produto: { texto: 'Mesmo produto', classe: 'bg-sky-500/20 text-sky-300 border-sky-500/40' },
+  visual: { texto: 'Visualmente igual', classe: 'bg-sky-500/15 text-sky-300/90 border-sky-500/30' },
+  texto: { texto: 'Por nome', classe: 'bg-amber-500/15 text-amber-300/90 border-amber-500/30' },
+};
+
 export default function CompareAquiModal({ auction, isProduct = false, onClose }) {
   const [comparisonData, setComparisonData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +57,13 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   // nada. Clicar agora abre um modal de detalhe (dentro do site, sem sair)
   // com a foto grande, nome completo da loja/produto e o preço.
   const [selectedProof, setSelectedProof] = useState(null);
+
+  // 🔦 PONTO 91 (20/08/2026) — o backend SEMPRE devolveu um `debug` dizendo o que
+  // cada fonte tentou e por que falhou, mas o modal jogava fora ao dar throw:
+  // a tela mostrava "Comparação Indisponível" sem nenhuma pista, e ficamos horas
+  // adivinhando. Agora esse diagnóstico é guardado e exibido na tela de erro.
+  const [diagnostico, setDiagnostico] = useState(null);
+  const [verDiagnostico, setVerDiagnostico] = useState(false);
 
   // Mercado Livre primeiro (quando aparece no resultado real), o resto mantém
   // a ordem original da busca — não inventa nada, só reordena o que já veio.
@@ -95,6 +113,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   const handleCompare = async (forceGoogleShopping = false) => {
     setIsLoading(true);
     setError(null);
+    setDiagnostico(null);
 
     try {
       console.log('🚀 [COMPARAI] ========== INICIANDO ==========');
@@ -180,6 +199,8 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
       // 🔥 VALIDAÇÃO 3: Success = false (erro esperado)
       if (response.success === false) {
         console.error('❌ [COMPARAI] Success=false. Error:', response.error);
+        console.error('🔦 [COMPARAI] Diagnóstico do servidor:', response.debug);
+        setDiagnostico({ ...(response.debug || {}), errorCode: response.errorCode });
         throw new Error(response.error || 'Comparação falhou');
       }
       
@@ -371,7 +392,38 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
               <AlertTriangle className="w-7 h-7 text-amber-400" />
             </div>
             <h3 className="text-xl font-bold mb-2 text-amber-400">Comparação Indisponível</h3>
-            <p className="text-gray-300 mb-6">{error}</p>
+            <p className="text-gray-300 mb-4">{error}</p>
+
+            {/* 🔦 PONTO 91 — a trilha real de cada fonte. Antes esta tela era
+                totalmente cega: mesma frase pra chave sem cota, produto sem
+                foto, ou nenhuma loja com preço. Agora dá pra ver o motivo. */}
+            {(diagnostico?.attempts?.length > 0 || diagnostico?.fontes?.length > 0) && (
+              <div className="text-left mb-6">
+                <button
+                  type="button"
+                  onClick={() => setVerDiagnostico((v) => !v)}
+                  className="text-[11px] text-sky-300 hover:text-sky-200 underline underline-offset-2"
+                >
+                  {verDiagnostico ? 'Ocultar' : 'Ver'} detalhes técnicos da busca
+                </button>
+                {verDiagnostico && (
+                  <div className="mt-2 rounded-lg border border-white/10 bg-black/40 p-3 space-y-1 max-h-52 overflow-y-auto overflow-x-hidden">
+                    {diagnostico?.query && (
+                      <p className="text-[11px] text-gray-400 break-words">
+                        Termo buscado: <span className="text-gray-200">"{diagnostico.query}"</span>
+                        {' · '}Foto do produto: <span className={diagnostico.tinhaImagem ? 'text-emerald-400' : 'text-amber-400'}>
+                          {diagnostico.tinhaImagem ? 'sim' : 'não'}
+                        </span>
+                      </p>
+                    )}
+                    {(diagnostico.attempts || diagnostico.fontes || []).map((linha, i) => (
+                      <p key={i} className="text-[11px] text-gray-400 font-mono break-words leading-relaxed">• {linha}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <Button onClick={onClose} className="bg-gray-700 hover:bg-gray-600">Fechar</Button>
           </div>
         </DialogContent>
@@ -607,11 +659,20 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                                     Mercado Livre
                                   </span>
                                 )}
+                                {SELO_MATCH[item.matchLevel] && (
+                                  <span className={`shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${SELO_MATCH[item.matchLevel].classe}`}>
+                                    {SELO_MATCH[item.matchLevel].texto}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
                             </div>
                             <div className="shrink-0 flex items-center gap-1">
-                              <span className="font-slab font-bold text-white">R$ {fmtBR(item.price)}</span>
+                              {item.price > 0 ? (
+                                <span className="font-slab font-bold text-white">R$ {fmtBR(item.price)}</span>
+                              ) : (
+                                <span className="text-[10px] text-gray-500">sem preço</span>
+                              )}
                               <ChevronRight className="w-4 h-4 text-sky-400" />
                             </div>
                           </button>

@@ -5,6 +5,8 @@
 // Zoom. Primeira com resultado relevante vence.
 // Retorna a MÉDIA do mercado (é a referência do Heloim: venda = média - 20%).
 
+import { chamarRuntimeBase44 } from './base44Runtime.js';
+
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
@@ -91,6 +93,7 @@ async function fetchZoom(query) {
         price: o.price,
         url: o.url ? (o.url.startsWith('http') ? o.url : `https://www.zoom.com.br${o.url}`) : '#',
         image: o.image || '',
+        matchLevel: 'texto',
       });
     }
     Object.keys(o).forEach((k) => walk(o[k], depth + 1));
@@ -114,6 +117,7 @@ async function fetchSerpApi(query) {
     price: r.extracted_price || parseFloat(String(r.price || '').replace(/[^\d,]/g, '').replace(',', '.')),
     url: r.product_link || r.link || '#',
     image: r.thumbnail || '',
+    matchLevel: 'texto',
   }));
 }
 
@@ -128,6 +132,15 @@ async function fetchSerpApi(query) {
 // exact_matches PRIMEIRO (confiança máxima); só cai pro 'all' (visual_matches)
 // se a busca exata não trouxer nada — e mesmo esse fallback continua passando
 // pela trava de nome+número (relevantes()), não é bypass.
+// 🔴 PONTO 91 (20/08/2026) — CAUSA-RAIZ #2 DO "COMPARAÇÃO INDISPONÍVEL":
+// esta função terminava com `.filter((r) => r.price > 0)`. Correspondência EXATA
+// é uma resposta de IDENTIDADE ("é a mesma imagem"), não de preço — na aba
+// "Correspondências exatas" do print do dono, dos 6 anúncios do PCX15000 só UM
+// exibia preço. O filtro jogava fora 5 de 6 provas ANTES de qualquer validação,
+// e o log ainda chamava o número já filtrado de "brutos", tornando impossível
+// distinguir "o Lens não achou" de "o Lens achou 6 e nós matamos 6".
+// Agora devolve TODOS os exatos; quem tem preço entra na média, quem não tem
+// continua valendo como prova visual de que o produto é o mesmo.
 async function fetchGoogleLensExato(imageUrl) {
   const u = `https://www.searchapi.io/api/v1/search?engine=google_lens&search_type=exact_matches&url=${encodeURIComponent(imageUrl)}&gl=br&hl=pt-br&api_key=${SEARCHAPI_KEY}`;
   const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
@@ -140,7 +153,8 @@ async function fetchGoogleLensExato(imageUrl) {
     price: Number(m.extracted_price) || Number(m.price?.extracted_value) || 0,
     url: m.link || '#',
     image: m.thumbnail || '',
-  })).filter((r) => r.price > 0);
+    matchLevel: 'exata',
+  }));
 }
 
 async function fetchGoogleLensSimilar(imageUrl) {
@@ -155,7 +169,43 @@ async function fetchGoogleLensSimilar(imageUrl) {
     price: Number(m.price?.extracted_value) || Number(m.extracted_price) || 0,
     url: m.link || '#',
     image: m.thumbnail || '',
+    matchLevel: 'visual',
   })).filter((r) => r.price > 0);
+}
+
+// 🔑 PONTO 91 — CAUSA-RAIZ #1: as duas funções acima dependem de SEARCHAPI_KEY,
+// e o PRÓPRIO REPOSITÓRIO documenta que essa chave está com a cota esgotada
+// (ver api/functions/buscarFotosPorImagem.js:12-16). A SERPAPI_KEY, que está
+// válida e com saldo, vive no cofre do Base44 e NÃO é visível no process.env da
+// Vercel. Por isso a busca de fotos do admin FUNCIONA e o CompareAQUI NÃO: o
+// admin usa a ponte servidor→servidor pro runtime Base44, e o CompareAQUI era o
+// único consumidor de Lens do projeto sem essa ponte. Agora tem.
+//
+// ⚠️ Compatibilidade: a função Deno hoje publicada devolve só URLs de imagem
+// ({images:[]}). A versão com preço/loja/título ({matches:[]}) está no repo em
+// base44/functions/buscarFotosPorImagem/entry.ts e precisa ser PUBLICADA no
+// painel do Base44 pra esta fonte passar a render preço. Enquanto não for, esta
+// fonte falha com uma mensagem explícita (aparece no diagnóstico do modal) em
+// vez de morrer calada.
+const PONTE_TIMEOUT_MS = 15000;
+async function fetchLensPonteBase44(imageUrl) {
+  const json = await chamarRuntimeBase44('buscarFotosPorImagem', { imageUrl, full: true }, PONTE_TIMEOUT_MS);
+  const matches = Array.isArray(json?.matches) ? json.matches : [];
+  if (!matches.length) {
+    const fotos = Array.isArray(json?.images) ? json.images.length : 0;
+    if (fotos > 0) {
+      throw new Error(`ponte devolveu ${fotos} fotos sem preço — publique a versão nova de buscarFotosPorImagem no Base44`);
+    }
+    throw new Error(`ponte sem resultado: ${String(json?.error || json?.motivo || 'desconhecido').slice(0, 70)}`);
+  }
+  return matches.map((m) => ({
+    store: m.source || m.store || 'Loja',
+    productNameFound: m.title || m.productNameFound || '',
+    price: Number(m.extracted_price) || Number(m.price?.extracted_value) || Number(m.price) || 0,
+    url: m.link || m.url || '#',
+    image: m.thumbnail || m.image || '',
+    matchLevel: 'visual',
+  }));
 }
 
 async function fetchSearchApi(query) {
@@ -170,6 +220,7 @@ async function fetchSearchApi(query) {
     price: Number(r.extracted_price) || parseFloat(String(r.price || '').replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.')),
     url: r.product_link || r.link || '#',
     image: r.thumbnail || '',
+    matchLevel: 'texto',
   })).filter((r) => r.price > 0);
 }
 
@@ -204,35 +255,103 @@ export async function searchMarket(title, imageUrl) {
   //      fonte — aceita 1 palavra batendo. Mesmo assim, a especificação
   //      numérica (quando existe) continua obrigatória — não vira licença
   //      pra trazer produto errado, só afrouxa a exigência de palavras.
-  const relevantes = (raw) => {
-    const comPreco = raw.filter((c) => isValidPrice(c.price));
+  // 🥇 REGRA DE OURO (PONTO 91, 20/08/2026) — CAUSA-RAIZ #3: o filtro de texto
+  // era aplicado IGUALMENTE a TODAS as fontes, inclusive à correspondência
+  // EXATA por imagem. Isso é uma inversão de confiança: quando o Google diz
+  // "esta é literalmente a mesma imagem, neste anúncio", a identidade JÁ está
+  // provada — nosso filtro de palavra/número só pode DERRUBAR acerto, nunca
+  // acrescentar. Prova concreta com o print do dono: o anúncio real
+  // "Caixa de Som Amplificada | Philco Extreme #2" era REJEITADO porque o
+  // número extraído dele é {2} e o do título do leilão é {15000}, mesmo o
+  // Google tendo confirmado ser a mesma foto. Agora identidade verificada por
+  // imagem passa direto; o filtro continua valendo integralmente pro resto.
+  // Fábrica de validador: permite validar contra o título do NOSSO leilão (cru,
+  // muitas vezes genérico) OU contra o título RICO do anúncio que o Google
+  // confirmou ser o mesmo produto (com marca + modelo). Ver enriquecerPrecos().
+  const criarValidador = (tituloBase) => {
+    const palavras = cleanTitle(tituloBase).toLowerCase().split(' ').filter((w) => w.length > 2).map(normalizarTexto);
+    const numeros = extrairNumeros(tituloBase);
+    return (raw, identidadeVerificada) => {
+      if (identidadeVerificada) return raw;
 
-    const pontuados = comPreco.map((c) => {
-      const found = normalizarTexto(c.productNameFound || '');
-      const hits = titleWords.filter((w) => found.includes(w) || found.includes(singularAproximado(w))).length;
-      const numerosFound = extrairNumeros(c.productNameFound);
-      const especOk = numerosTitulo.size === 0 || [...numerosTitulo].some((n) => numerosFound.has(n));
-      return { item: c, hits, especOk };
-    });
+      const comPreco = raw.filter((c) => isValidPrice(c.price));
 
-    const limiarEstrito = titleWords.length >= 4 ? 3 : Math.min(2, titleWords.length);
-    const estrito = pontuados.filter((p) => p.hits >= limiarEstrito && p.especOk).map((p) => p.item);
-    if (estrito.length > 0) return estrito;
+      const pontuados = comPreco.map((c) => {
+        const found = normalizarTexto(c.productNameFound || '');
+        const hits = palavras.filter((w) => found.includes(w) || found.includes(singularAproximado(w))).length;
+        const numerosFound = extrairNumeros(c.productNameFound);
+        const especOk = numeros.size === 0 || [...numeros].some((n) => numerosFound.has(n));
+        return { item: c, hits, especOk };
+      });
 
-    return pontuados.filter((p) => p.hits >= 1 && p.especOk).map((p) => p.item);
+      const limiarEstrito = palavras.length >= 4 ? 3 : Math.min(2, palavras.length);
+      const estrito = pontuados.filter((p) => p.hits >= limiarEstrito && p.especOk).map((p) => p.item);
+      if (estrito.length > 0) return estrito;
+
+      return pontuados.filter((p) => p.hits >= 1 && p.especOk).map((p) => p.item);
+    };
+  };
+  const relevantes = criarValidador(title);
+
+  // 💰 PONTO 91 — "tem que trazer bastante, um, dois, três... oito, pra trazer o
+  // preço médio e o cliente comprovar" (dono). A correspondência exata prova a
+  // IDENTIDADE, mas costuma vir com poucos preços (no print do dono, 1 de 6).
+  // Média de uma loja só não é média. A saída: usar o título RICO do anúncio
+  // que o Google já confirmou (ex.: "Caixa de Som Amplificada 1500W RMS Ex Bass
+  // Philco - PCX15000" — tem marca e modelo, ao contrário do nosso
+  // "CAIXA DE SOM PCX 15000") pra buscar MAIS ofertas do MESMO produto, e
+  // validar essas ofertas contra esse título rico. Não é achismo: é usar a
+  // identidade já provada pela imagem como chave de busca por preço.
+  const escolherTituloRico = (lista) => {
+    const cand = (lista || [])
+      .map((c) => String(c.productNameFound || '').trim())
+      .filter((t) => t.length >= 15)
+      .sort((a, b) => b.length - a.length);
+    return cand[0] || '';
+  };
+
+  const enriquecerPrecos = async (tituloRico, falhas, inicio, TETO) => {
+    const q = cleanTitle(tituloRico);
+    if (!q || q.length < 4) return [];
+    const valida = criarValidador(tituloRico);
+    const motores = [];
+    if (SEARCHAPI_KEY) motores.push({ nome: 'enriq_google_shopping', fn: () => fetchSearchApi(q) });
+    if (SERPAPI_KEY) motores.push({ nome: 'enriq_serpapi', fn: () => fetchSerpApi(q) });
+    motores.push({ nome: 'enriq_zoom', fn: () => fetchZoom(q) });
+
+    const achados = [];
+    for (const m of motores) {
+      if (Date.now() - inicio > TETO) { falhas.push(`${m.nome}: pulada (teto geral)`); break; }
+      try {
+        const brutos = await m.fn();
+        const ok = valida(brutos, false).filter((c) => isValidPrice(c.price));
+        falhas.push(`${m.nome} ("${q}"): ${brutos.length} brutos, ${ok.length} válidos`);
+        achados.push(...ok);
+        if (achados.length >= 8) break;
+      } catch (e) {
+        falhas.push(`${m.nome}: ${String(e?.message || e).slice(0, 90)}`);
+      }
+    }
+    return achados;
   };
 
   const fontes = [];
-  if (imageUrl && SEARCHAPI_KEY) {
-    fontes.push({ nome: 'google_lens_exato', fn: () => fetchGoogleLensExato(imageUrl) });
-    fontes.push({ nome: 'google_lens_similar', fn: () => fetchGoogleLensSimilar(imageUrl) });
+  if (imageUrl) {
+    // Ponte pro runtime Base44 PRIMEIRO: é o único ambiente onde a SERPAPI_KEY
+    // está válida e com saldo (mesmo caminho que faz a busca de fotos do admin
+    // funcionar). Não depende de nenhuma chave publicada aqui na Vercel.
+    fontes.push({ nome: 'ponte_base44_lens', fn: () => fetchLensPonteBase44(imageUrl) });
+    if (SEARCHAPI_KEY) {
+      fontes.push({ nome: 'google_lens_exato', identidadeVerificada: true, fn: () => fetchGoogleLensExato(imageUrl) });
+      fontes.push({ nome: 'google_lens_similar', fn: () => fetchGoogleLensSimilar(imageUrl) });
+    }
   }
   if (cleaned && cleaned.length >= 4) {
     if (SEARCHAPI_KEY) fontes.push({ nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) });
     if (SERPAPI_KEY) fontes.push({ nome: 'serpapi', fn: () => fetchSerpApi(cleaned) });
     fontes.push({ nome: 'zoom', fn: () => fetchZoom(cleaned) });
   }
-  if (!fontes.length) return { found: false, reason: 'sem_titulo_sem_imagem', query: cleaned, results: [] };
+  if (!fontes.length) return { found: false, reason: 'sem_titulo_sem_imagem', query: cleaned, results: [], attempts: [] };
 
   // ⏱️ Teto GERAL da cascata (19/08/2026) — cada fonte já tem seu próprio
   // timeout, mas rodando em sequência o pior caso ainda somava até 4x isso.
@@ -242,6 +361,20 @@ export async function searchMarket(title, imageUrl) {
   const inicio = Date.now();
   const TETO_GERAL_MS = 12000;
   const falhas = [];
+
+  // 🔦 PONTO 91 — a ausência de chave era SILENCIOSA: a fonte simplesmente não
+  // entrava no array e nada era registrado, então "chave não publicada" ficava
+  // indistinguível de "não achei preço". Agora vira uma linha explícita no
+  // diagnóstico, que o modal exibe na tela de erro.
+  if (imageUrl && !SEARCHAPI_KEY) falhas.push('google_lens (SearchAPI): SEARCHAPI_KEY não publicada neste ambiente — pulada');
+  if (!imageUrl) falhas.push('busca por imagem: produto sem foto cadastrada — pulada');
+  if (cleaned && cleaned.length >= 4 && !SERPAPI_KEY) falhas.push('serpapi: SERPAPI_KEY não publicada neste ambiente — pulada');
+
+  // Guarda a prova de identidade (correspondência exata por imagem) mesmo
+  // quando ela não traz preço, pra anexar ao resultado final da fonte que
+  // conseguir precificar. É o que o dono pediu: "trazer bastante, 1,2,3...8".
+  let provaIdentidade = [];
+
   for (const f of fontes) {
     if (Date.now() - inicio > TETO_GERAL_MS) {
       falhas.push(`${f.nome}: pulada (teto geral de ${TETO_GERAL_MS}ms atingido)`);
@@ -249,29 +382,77 @@ export async function searchMarket(title, imageUrl) {
     }
     try {
       const raw = await f.fn();
-      const r = relevantes(raw);
-      falhas.push(`${f.nome}: ${raw.length} brutos, ${r.length} relevantes`);
-      if (r.length > 0) {
+      const r = relevantes(raw, f.identidadeVerificada);
+      const comPreco = r.filter((c) => isValidPrice(c.price));
+      // Três números, não um: distingue "a fonte não achou nada" de "achou e
+      // nós filtramos". Antes o log chamava de "brutos" um número já filtrado.
+      falhas.push(`${f.nome}: ${raw.length} brutos, ${r.length} relevantes, ${comPreco.length} com preço`);
+
+      if (f.identidadeVerificada && r.length > 0 && provaIdentidade.length === 0) {
+        provaIdentidade = r;
+      }
+
+      // Identidade provada mas poucos preços → busca mais ofertas DO MESMO
+      // produto usando o título rico (marca+modelo) do anúncio já confirmado.
+      let precificados = comPreco;
+      if (f.identidadeVerificada && r.length > 0 && precificados.length < 4) {
+        const rico = escolherTituloRico(r);
+        if (rico) {
+          const extrasPreco = await enriquecerPrecos(rico, falhas, inicio, TETO_GERAL_MS);
+          const chaves = new Set(precificados.map((c) => `${(c.store || '').toLowerCase()}|${Math.round(c.price * 100)}`));
+          for (const e of extrasPreco) {
+            const k = `${(e.store || '').toLowerCase()}|${Math.round(e.price * 100)}`;
+            if (chaves.has(k)) continue;
+            chaves.add(k);
+            precificados = precificados.concat([{ ...e, matchLevel: 'mesmo_produto' }]);
+          }
+        }
+      }
+
+      if (precificados.length > 0) {
         // MÉDIA APARADA (robusta a outliers): a busca casa itens parecidos mas de tamanhos/capacidades
         // diferentes (16gb x 256gb, kit 6 x kit 24) e um item caro inflava a média. Ancora na mediana
         // e mantém só os preços dentro de uma banda ao redor dela (0,4x a 2,2x), depois tira a média.
-        const sorted = r.map((c) => c.price).sort((a, b) => a - b);
+        const sorted = precificados.map((c) => c.price).sort((a, b) => a - b);
         const med = sorted[Math.floor(sorted.length / 2)];
         let band = sorted.filter((p) => p >= med * 0.4 && p <= med * 2.2);
         if (band.length < 3) band = sorted; // poucos dados: usa tudo
         const avg = band.reduce((a, b) => a + b, 0) / band.length;
+
+        // Mostra primeiro o que tem preço; depois as provas de identidade sem
+        // preço (mesma imagem confirmada pelo Google, anúncio sem preço público)
+        // sem duplicar o que já está na lista.
+        const jaListado = new Set(precificados.map((c) => `${c.store}|${c.productNameFound}`));
+        const semPreco = [...r, ...provaIdentidade]
+          .filter((c) => !isValidPrice(c.price) && !jaListado.has(`${c.store}|${c.productNameFound}`));
+        const vistos = new Set();
+        const extras = semPreco.filter((c) => {
+          const k = `${c.store}|${c.productNameFound}`;
+          if (vistos.has(k)) return false; vistos.add(k); return true;
+        });
+
         return {
           found: true, source: f.nome, query: cleaned,
           avg: Math.round(avg * 100) / 100,
           median: med, min: sorted[0], max: sorted[sorted.length - 1],
-          count: band.length, total_found: r.length, results: r.slice(0, 12),
+          count: band.length, total_found: precificados.length,
+          results: [...precificados, ...extras].slice(0, 12),
           attempts: falhas,
         };
       }
-      falhas.push(`${f.nome}: 0 relevantes`);
     } catch (e) {
-      falhas.push(`${f.nome}: ${String(e?.message || e).slice(0, 60)}`);
+      falhas.push(`${f.nome}: ${String(e?.message || e).slice(0, 110)}`);
     }
   }
-  return { found: false, reason: 'sem_resultado', query: cleaned, fontes: falhas, results: [] };
+
+  // Nenhuma fonte precificou. Se o Google confirmou a identidade por imagem,
+  // isso NÃO é "não encontramos o produto" — é "achamos o produto, nenhuma
+  // loja publicou preço". São coisas diferentes e a tela precisa dizer qual é.
+  if (provaIdentidade.length > 0) {
+    return {
+      found: false, reason: 'identidade_sem_preco', query: cleaned,
+      results: provaIdentidade.slice(0, 12), attempts: falhas, fontes: falhas,
+    };
+  }
+  return { found: false, reason: 'sem_resultado', query: cleaned, fontes: falhas, attempts: falhas, results: [] };
 }

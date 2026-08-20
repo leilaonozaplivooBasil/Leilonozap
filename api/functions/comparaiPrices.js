@@ -45,11 +45,35 @@ export default async function handler(req, res) {
       : (Array.isArray(entity.images) && entity.images[0] ? entity.images[0] : null);
     const mk = await searchMarket(searchTitle, imgUrl); // busca por imagem primeiro
     if (!mk.found) {
-      const code = mk.reason === 'titulo_curto' ? 'INVALID_TITLE' : 'NO_VALID_RESULTS';
-      const err = mk.reason === 'titulo_curto'
-        ? 'Título não é descritivo o suficiente para busca'
-        : 'Não encontramos preços reais para comparar no momento';
-      return res.status(200).json({ success: false, error: err, errorCode: code, debug: { query: mk.query, fontes: mk.fontes } });
+      // 🔦 PONTO 91 (20/08/2026) — a tela dizia sempre a MESMA frase ("não
+      // encontramos preços") para causas totalmente diferentes: chave não
+      // publicada, cota estourada, produto sem foto, ou produto achado mas sem
+      // preço público. O dono ficava sem saber o que corrigir. Agora cada caso
+      // tem sua mensagem, e a trilha completa (`attempts`) vai junto pra tela.
+      let code = 'NO_VALID_RESULTS';
+      let err = 'Não encontramos preços reais para comparar no momento';
+      if (mk.reason === 'titulo_curto') {
+        code = 'INVALID_TITLE';
+        err = 'Título não é descritivo o suficiente para busca';
+      } else if (mk.reason === 'identidade_sem_preco') {
+        code = 'IDENTIDADE_SEM_PRECO';
+        err = 'Encontramos o produto exato, mas nenhuma loja publicou o preço agora';
+      } else if (mk.reason === 'sem_titulo_sem_imagem') {
+        code = 'SEM_FOTO_SEM_TITULO';
+        err = 'Este anúncio não tem foto nem título suficiente para comparar';
+      }
+      return res.status(200).json({
+        success: false,
+        error: err,
+        errorCode: code,
+        identityMatches: mk.results || [],
+        debug: {
+          query: mk.query,
+          fontes: mk.fontes || mk.attempts || [],
+          attempts: mk.attempts || mk.fontes || [],
+          tinhaImagem: !!imgUrl,
+        },
+      });
     }
 
     const referencePrice = mk.avg;
@@ -72,6 +96,9 @@ export default async function handler(req, res) {
         priceLabel: 'Preço Médio do Mercado',
         referencePrice,
         source: mk.source,
+        // Trilha do que cada fonte devolveu — o modal mostra sob demanda, pra
+        // nunca mais ficarmos cegos sobre de onde o número veio (PONTO 91).
+        attempts: mk.attempts || [],
       },
       cached: false,
     });
