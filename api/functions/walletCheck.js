@@ -49,18 +49,51 @@ export default async function handler(req, res) {
     const fLed = desde ? `&created_at=gte.${encodeURIComponent(desde)}` : '';
 
     const users = lista(await (await sb('app_users?select=id,full_name,email,commission_balance&limit=5000')).json());
-    const records = lista(await (await sb(`commission_records?select=user_id,user_name,amount,status,created_date&limit=20000${fRec}`)).json());
-    const ledger = lista(await (await sb(`commission_ledger?select=beneficiary_id,beneficiary_name,amount&limit=20000${fLed}`)).json());
+    const records = lista(await (await sb(`commission_records?select=user_id,user_name,amount,status,role,created_date&limit=20000${fRec}`)).json());
+    const ledger = lista(await (await sb(`commission_ledger?select=beneficiary_id,beneficiary_name,amount,role_in_sale&limit=20000${fLed}`)).json());
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 116 (21/08/2026) — CONTABILIDADE NÃO É COMISSÃO A PAGAR
+    // ══════════════════════════════════════════════════════════════════════════
+    // Esta função soma TODA linha de comissão e credita a diferença contra o
+    // saldo. Só que nem toda linha é dinheiro a pagar:
+    //
+    //   'empresa_rollup'  — a sobra sem dono (cadeia curta, upline sem cargo).
+    //                       É gravada no nome da conta Site Oficial DE PROPÓSITO
+    //                       SEM creditar saldo (api/_lib/storeFulfill.js:84):
+    //                       é registro contábil, não comissão de ninguém.
+    //   'leilao_retido'   — a fatia do leilão que a empresa não distribui
+    //                       (PONTO 100). Mesma coisa.
+    //   'venda'           — no commission_ledger é a linha de ESCROW: 100% do
+    //                       valor da venda pro vendedor, que amadurece em 7 dias.
+    //                       Quem credita é o cron liberar_saldos_maturados().
+    //                       Somar aqui faria o escrow ser pago DUAS vezes — e
+    //                       ainda antes do prazo.
+    //
+    // Sem esses filtros, rodar em modo executar pra "acertar quem ficou pra
+    // trás" fazia a conta Site Oficial aparecer como a maior pendente da lista e
+    // receber TODO o rollup histórico acumulado como saldo sacável.
+    const ROLES_CONTABEIS = new Set(['empresa_rollup', 'leilao_retido']);
 
     // quanto CADA UM deveria ter recebido, somando as duas tabelas
     const devido = {};
+    let ignoradoContabil = 0;
     for (const r of records) {
       if (!r.user_id) continue;
       if (r.status && r.status !== 'confirmed') continue;
+      if (ROLES_CONTABEIS.has(String(r.role || ''))) {
+        ignoradoContabil = round2(ignoradoContabil + Number(r.amount || 0));
+        continue;
+      }
       devido[r.user_id] = round2((devido[r.user_id] || 0) + Number(r.amount || 0));
     }
     for (const l of ledger) {
       if (!l.beneficiary_id) continue;
+      // escrow: quem paga é o cron, na maturação. Não é pendência de crédito.
+      if (String(l.role_in_sale || '') === 'venda' || ROLES_CONTABEIS.has(String(l.role_in_sale || ''))) {
+        ignoradoContabil = round2(ignoradoContabil + Number(l.amount || 0));
+        continue;
+      }
       devido[l.beneficiary_id] = round2((devido[l.beneficiary_id] || 0) + Number(l.amount || 0));
     }
 
@@ -107,6 +140,11 @@ export default async function handler(req, res) {
         total_lancado: round2(linhas.reduce((a, l) => a + l.lancado, 0)),
         total_nas_carteiras: round2(linhas.reduce((a, l) => a + l.na_carteira, 0)),
         faltando_creditar: round2(faltando.reduce((a, l) => a + l.faltando, 0)),
+        // 📊 PONTO 116: quanto foi deixado de fora por ser contabilidade (rollup
+        // da empresa, retido do leilão) ou escrow que o cron ainda vai maturar.
+        // Fica visível de propósito: se este número surpreender, é sinal de que
+        // tem coisa classificada errada — melhor descobrir aqui do que creditando.
+        ignorado_contabil: ignoradoContabil,
         todas_as_pessoas: linhas,
         pessoas_faltando: faltando,
         pessoas_com_saldo_a_mais: sobrando,
