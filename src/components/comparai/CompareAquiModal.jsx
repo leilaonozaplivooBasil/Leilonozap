@@ -539,6 +539,30 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                     </div>
                   )}
 
+                  {/* 🩺 20/08/2026 (4ª rodada) — dono testou e reportou produtos de
+                      marcas diferentes vindo juntos (Mondial, Arno, Oster pra um
+                      anúncio só "Air Fryer fritadeira eletrica"). Investigado a fundo:
+                      não existe comparação de imagem por conteúdo em NENHUM lugar do
+                      sistema (nem no importador de foto que ele citou — aquele é
+                      manual, o admin clica pra escolher). O único jeito de confirmar
+                      o produto EXATO é a busca por imagem (Google Lens,
+                      source === 'google_lens_imagem'); texto sozinho, em título sem
+                      marca/modelo/litragem, só consegue confirmar a CATEGORIA. Deixa
+                      isso visível em vez de fingir a mesma certeza nos dois casos. */}
+                  {!comparisonData.isFactoryDirect && comparisonData.source && (
+                    comparisonData.source === 'google_lens_imagem' ? (
+                      <div className="flex items-center gap-2 text-[11px] text-emerald-400/90 -mt-2">
+                        <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                        Confirmado por imagem (Google Lens) — o produto exato, não só a categoria.
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 -mt-2">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>Comparado só pelo nome — o título deste anúncio não tem marca/modelo/tamanho pra confirmar o produto exato por imagem. Pode incluir marcas parecidas da mesma categoria.</span>
+                      </div>
+                    )
+                  )}
+
                   {/* CARD 2.5: LOJAS COMPARADAS — PROVA (20/08/2026, pedido do dono) —
                       a API já devolvia comparisonData.comparisons (loja, produto achado,
                       preço) mas o modal só mostrava a MÉDIA, nunca a lista real que
