@@ -30,13 +30,39 @@ export function cleanTitle(title) {
     .replace(/\b(novo|usado|semi[-\s]?novo|original|lacrado|garantia|frete\s*gr[aá]tis)\b/gi, '')
     .replace(/\b(arremate|devolu[çc][aã]o|promo[çc][aã]o|kit|combo|un|und|unidade)\b/gi, '')
     .replace(/\b(110v|220v|bivolt)\b/gi, '')
-    .replace(/([a-zA-ZÀ-ÿ])(\d)/g, '$1 $2')
+    // ⚠️ PONTO 92 — era `([a-zA-ZÀ-ÿ])(\d)`, que separava QUALQUER letra de
+    // dígito e destruía código de modelo curto: "Bike Harley M4" virava
+    // "M 4", o "M" caía por ter 1 caractere e o "4" por ser dígito solto —
+    // o modelo sumia inteiro. Exigindo 3+ letras, ainda desgruda o caso que
+    // motivou a regra ("Pequeno500ml" -> "Pequeno 500ml") sem matar "M4"/"T2".
+    .replace(/([a-zA-ZÀ-ÿ]{3,})(\d)/g, '$1 $2')
     .replace(/(\d)([a-zA-ZÀ-ÿ]{3,})/g, '$1 $2')
     .replace(/[^\wÀ-ÿ\s]/g, ' ')
+    // 🎯 PONTO 92 (20/08/2026) — re-une dimensões que os replaces acima quebram:
+    // "120x60" virava "120x 60", e o "60" era descartado logo abaixo, sobrando
+    // "120x" (medida sem sentido). Agora volta a ser um token só.
+    .replace(/(\d+)\s*[xX]\s*(\d+)/g, '$1x$2')
     .replace(/\s+/g, ' ')
     .trim();
-  const words = clean.split(' ').filter((w) => w.length > 1 && !/^\d+$/.test(w));
-  return words.slice(0, 5).join(' ');
+
+  // 🔴 PONTO 92 — CAUSA-RAIZ COMPROVADA NA TELA (diagnóstico do dono,
+  // 20/08/2026): o filtro era `!/^\d+$/` — jogava fora QUALQUER palavra só de
+  // dígitos. Resultado real: "CAIXA DE SOM PCX 15000" era buscado como
+  // "CAIXA DE SOM PCX", SEM o modelo. E aí o validador ainda EXIGIA que o
+  // resultado contivesse "15000". Buscávamos sem o modelo e cobrávamos o
+  // modelo — contradição que zerava tudo: o Zoom devolveu 28 caixas de som
+  // genéricas e 0 passaram ("28 brutos, 0 relevantes" no print do dono).
+  // O número do modelo é o sinal MAIS forte de identidade; agora só some
+  // dígito solto (1 caractere), que é ruído de verdade.
+  const words = clean.split(' ').filter((w) => w.length > 1 && !/^\d$/.test(w));
+
+  // Garante que o modelo/capacidade sobreviva ao corte de tamanho: reserva
+  // espaço pra até 2 tokens com dígito, em vez de deixar o slice cegamente
+  // cortar justo o que identifica o produto (o número costuma vir no fim).
+  const comDigito = words.filter((w) => /\d/.test(w)).slice(0, 2);
+  const semDigito = words.filter((w) => !/\d/.test(w)).slice(0, 4);
+  const manter = new Set([...semDigito, ...comDigito]);
+  return words.filter((w) => manter.has(w)).slice(0, 6).join(' ');
 }
 
 export function isValidPrice(price) {
