@@ -42,6 +42,31 @@ export default async function handler(req, res) {
     if (!buyerEmail) return res.status(200).json({ success: false, error: 'E-mail obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 119 (21/08/2026) — QR PIX SEM DONO (risco #26)
+    // ══════════════════════════════════════════════════════════════════════════
+    // Esta rota só exigia valor > 0 e e-mail. O buyer_id era opcional: a venda
+    // nascia sem dono, a cobrança PIX REAL era gerada no Mercado Pago, e o QR
+    // voltava pro cliente. Quando ele pagava, o webhook marcava a venda como paga
+    // e a função de crédito saía na primeira linha — não havia a quem creditar.
+    //
+    // Resultado: dinheiro de verdade no caixa do Mercado Pago, saldo creditado a
+    // NINGUÉM, e a resposta dizendo "ok". O cliente pagou e não recebeu nada, e
+    // nem existe registro apontando pra quem devolver.
+    //
+    // A regra passa a ser a do createOperationDeposit, que já faz certo: exige o
+    // dono e CONFIRMA que ele existe ANTES de gerar qualquer cobrança. Cobrança
+    // sem destinatário não chega nem a ser criada — é infinitamente mais barato
+    // recusar aqui do que reconciliar um PIX órfão depois.
+    if (!buyerId) {
+      return res.status(400).json({ success: false, error: 'Não foi possível identificar sua conta. Entre novamente e tente de novo.' });
+    }
+    const donoRows = await (await sb(`app_users?select=id&id=eq.${encodeURIComponent(buyerId)}&limit=1`)).json().catch(() => null);
+    if (!Array.isArray(donoRows) || !donoRows[0]) {
+      console.error(`[DEPOSITO] Tentativa de gerar cobrança de R$ ${amount} para buyer_id inexistente: ${buyerId}`);
+      return res.status(403).json({ success: false, error: 'Conta não encontrada. Entre novamente e tente de novo.' });
+    }
+
     // 📋 PONTO 110 (21/08/2026) — GUARDAR O CPF QUE O COMPRADOR DIGITOU.
     // O checkout da loja pede o CPF (src/pages/Cart.jsx:591) e ele chegava aqui
     // só pra montar o `payer` da cobrança no Mercado Pago — e era DESCARTADO.
