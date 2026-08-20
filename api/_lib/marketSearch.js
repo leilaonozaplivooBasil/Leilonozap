@@ -1,8 +1,11 @@
 // marketSearch — busca de preço de mercado compartilhada (Leilão NoZap).
 // Fonte única usada por comparaiPrices (modal Comparaí) E calculateProductPricing (painel).
-// Cascata (20/08/2026): Google Lens exato (correspondência exata por imagem) -> Google Lens
-// visual (mesma foto, similaridade) -> Google Shopping (SearchAPI) -> SerpAPI (se houver) ->
-// Zoom. Primeira com resultado relevante vence.
+// Cascata (20/08/2026, PONTO 93 — INDEPENDENTE DO BASE44):
+//   IMAGEM: SerpAPI Lens exato -> SerpAPI Lens visual -> SearchAPI Lens (reserva)
+//           -> ponte Base44 (muleta, só enquanto faltar SERPAPI_KEY aqui)
+//   TEXTO : Google Shopping (SearchAPI) -> SerpAPI Shopping -> Zoom
+// Primeira com resultado relevante vence. Com a SERPAPI_KEY publicada na Vercel,
+// nenhuma chamada sai pro Base44.
 // Retorna a MÉDIA do mercado (é a referência do Heloim: venda = média - 20%).
 
 import { chamarRuntimeBase44 } from './base44Runtime.js';
@@ -129,6 +132,52 @@ async function fetchZoom(query) {
     const k = `${(h.store || '').toLowerCase()}|${Math.round(h.price * 100)}|${String(h.productNameFound).toLowerCase().slice(0, 22)}`;
     if (seen.has(k)) return false; seen.add(k); return true;
   });
+}
+
+// ---- BUSCA POR IMAGEM VIA SERPAPI (INDEPENDENTE: nada de Base44) ----
+// 🟢 PONTO 93 (20/08/2026) — pedido do dono: "eu não tenho mais nada a ver com
+// o Base44, tem que ser independente, está tudo na Vercel e no Supabase".
+// Ele confirmou que TEM a chave da SerpAPI em mãos. A SerpAPI faz exatamente o
+// fluxo manual dele: engine=google_lens com type=exact_matches é a MESMA aba
+// "Correspondências exatas" do Google. Então, com a SERPAPI_KEY publicada aqui
+// na Vercel, este caminho substitui de uma vez:
+//   - a ponte pro Base44 (que só existia pra emprestar essa credencial), e
+//   - o SearchAPI (que está com a cota do mês esgotada).
+// Enquanto a chave não estiver publicada, estas fontes simplesmente não entram
+// na cascata e o diagnóstico da tela diz isso com todas as letras.
+async function fetchSerpApiLensExato(imageUrl) {
+  const u = `https://serpapi.com/search.json?engine=google_lens&type=exact_matches&url=${encodeURIComponent(imageUrl)}&hl=pt&country=br&api_key=${SERPAPI_KEY}`;
+  const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`SerpAPI Lens exato HTTP ${resp.status}`);
+  if (data?.error) throw new Error(`SerpAPI Lens exato: ${String(data.error).slice(0, 90)}`);
+  // Sem filtro de preço: correspondência exata responde IDENTIDADE, não preço
+  // (mesma razão do PONTO 91). Quem tiver preço entra na média; quem não tiver
+  // continua valendo como prova de que é o mesmo produto.
+  return (data.exact_matches || []).map((m) => ({
+    store: m.source || 'Loja',
+    productNameFound: m.title || '',
+    price: Number(m.extracted_price) || Number(m.price?.extracted_value) || 0,
+    url: m.link || '#',
+    image: m.thumbnail || '',
+    matchLevel: 'exata',
+  }));
+}
+
+async function fetchSerpApiLensVisual(imageUrl) {
+  const u = `https://serpapi.com/search.json?engine=google_lens&type=visual_matches&url=${encodeURIComponent(imageUrl)}&hl=pt&country=br&api_key=${SERPAPI_KEY}`;
+  const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`SerpAPI Lens visual HTTP ${resp.status}`);
+  if (data?.error) throw new Error(`SerpAPI Lens visual: ${String(data.error).slice(0, 90)}`);
+  return (data.visual_matches || []).map((m) => ({
+    store: m.source || 'Loja',
+    productNameFound: m.title || '',
+    price: Number(m.price?.extracted_value) || Number(m.extracted_price) || 0,
+    url: m.link || '#',
+    image: m.thumbnail || '',
+    matchLevel: 'visual',
+  })).filter((r) => r.price > 0);
 }
 
 async function fetchSerpApi(query) {
@@ -363,13 +412,23 @@ export async function searchMarket(title, imageUrl) {
 
   const fontes = [];
   if (imageUrl) {
-    // Ponte pro runtime Base44 PRIMEIRO: é o único ambiente onde a SERPAPI_KEY
-    // está válida e com saldo (mesmo caminho que faz a busca de fotos do admin
-    // funcionar). Não depende de nenhuma chave publicada aqui na Vercel.
-    fontes.push({ nome: 'ponte_base44_lens', fn: () => fetchLensPonteBase44(imageUrl) });
+    // 1º — SERPAPI DIRETO (caminho INDEPENDENTE, PONTO 93). Chave do dono
+    // publicada aqui na Vercel: não passa por Base44 nem por SearchAPI.
+    if (SERPAPI_KEY) {
+      fontes.push({ nome: 'serpapi_lens_exato', identidadeVerificada: true, fn: () => fetchSerpApiLensExato(imageUrl) });
+      fontes.push({ nome: 'serpapi_lens_visual', fn: () => fetchSerpApiLensVisual(imageUrl) });
+    }
+    // 2º — SearchAPI (reserva; hoje respondendo "cota do mês esgotada").
     if (SEARCHAPI_KEY) {
       fontes.push({ nome: 'google_lens_exato', identidadeVerificada: true, fn: () => fetchGoogleLensExato(imageUrl) });
       fontes.push({ nome: 'google_lens_similar', fn: () => fetchGoogleLensSimilar(imageUrl) });
+    }
+    // 3º — ponte Base44: MULETA, só enquanto a SERPAPI_KEY não estiver
+    // publicada aqui. Assim que ela for pro painel da Vercel, esta linha para
+    // de ser usada sozinha — sem eu precisar mexer em nada. É de propósito:
+    // o dono quer sair do Base44, e a saída não pode depender de um deploy meu.
+    if (!SERPAPI_KEY) {
+      fontes.push({ nome: 'ponte_base44_lens', fn: () => fetchLensPonteBase44(imageUrl) });
     }
   }
   if (cleaned && cleaned.length >= 4) {
@@ -392,9 +451,11 @@ export async function searchMarket(title, imageUrl) {
   // entrava no array e nada era registrado, então "chave não publicada" ficava
   // indistinguível de "não achei preço". Agora vira uma linha explícita no
   // diagnóstico, que o modal exibe na tela de erro.
-  if (imageUrl && !SEARCHAPI_KEY) falhas.push('google_lens (SearchAPI): SEARCHAPI_KEY não publicada neste ambiente — pulada');
   if (!imageUrl) falhas.push('busca por imagem: produto sem foto cadastrada — pulada');
-  if (cleaned && cleaned.length >= 4 && !SERPAPI_KEY) falhas.push('serpapi: SERPAPI_KEY não publicada neste ambiente — pulada');
+  if (!SERPAPI_KEY) {
+    falhas.push('⚠️ SERPAPI_KEY não publicada na Vercel — busca por imagem independente DESLIGADA (é a chave que destrava tudo sem Base44)');
+  }
+  if (imageUrl && !SEARCHAPI_KEY) falhas.push('google_lens (SearchAPI): SEARCHAPI_KEY não publicada neste ambiente — pulada');
 
   // Guarda a prova de identidade (correspondência exata por imagem) mesmo
   // quando ela não traz preço, pra anexar ao resultado final da fonte que

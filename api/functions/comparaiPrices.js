@@ -4,6 +4,12 @@
 import { searchMarket } from '../_lib/marketSearch.js';
 import { chamarRuntimeBase44 } from '../_lib/base44Runtime.js';
 
+// 🟢 PONTO 93 — quando a SERPAPI_KEY estiver publicada aqui na Vercel, o
+// marketSearch resolve tudo sozinho (SerpAPI Lens direto) e a ponte pro Base44
+// deixa de ser acionada — sem precisar de deploy. É o interruptor da
+// independência: uma variável de ambiente, não uma refatoração.
+const TEM_SERPAPI_LOCAL = !!process.env.SERPAPI_KEY;
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -56,7 +62,7 @@ export default async function handler(req, res) {
     // resposta desta aqui. Então, quando tudo aqui falha, perguntamos pra lá.
     // ⚠️ Sem recursão: o endpoint do runtime executa a versão Deno
     // (base44/functions/comparaiPrices/entry.ts), que é outro arquivo.
-    if (!mk.found) {
+    if (!mk.found && !TEM_SERPAPI_LOCAL) {
       try {
         const ponte = await chamarRuntimeBase44(
           'comparaiPrices',
