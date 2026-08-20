@@ -289,18 +289,35 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
       console.log('📤 Compartilhando:', shareMessage);
 
-      // 📸 TENTA BAIXAR FOTO DO PRODUTO
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const temShareNativo = (isIOS || isAndroid) && !!navigator.share;
+
+      // 🐞 PONTO 96 — CAUSA-RAIZ DO "COMPARTILHAR NÃO FUNCIONA" (relatado pelo
+      // dono, testando no desktop). O código baixava a foto do produto com
+      // `await fetch(...)` ANTES de chamar window.open. Todo await gasta o
+      // "user gesture" do clique, e sem gesto o navegador BLOQUEIA o popup —
+      // o WhatsApp Web simplesmente nunca abria, sem erro nenhum na tela.
+      // Pior: no desktop essa foto nem é usada (ela só serve pro
+      // navigator.share do celular). Pagava o preço sem levar nada.
+      // Agora, no desktop, o window.open é a PRIMEIRA coisa depois do clique,
+      // sem nenhum await antes — o gesto é preservado e o popup abre.
+      if (!temShareNativo) {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank', 'noopener');
+        return;
+      }
+
+      // 📸 Só no celular: a foto vale a pena porque vai junto no share nativo.
       let productFile = null;
       const imageUrl = auction.image_urls?.[0];
-      
       if (imageUrl) {
         try {
           const response = await fetch(imageUrl);
           if (response.ok) {
             const blob = await response.blob();
-            productFile = new File([blob], 'produto.jpg', { 
+            productFile = new File([blob], 'produto.jpg', {
               type: 'image/jpeg',
-              lastModified: Date.now()
+              lastModified: Date.now(),
             });
           }
         } catch (err) {
@@ -308,11 +325,8 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
         }
       }
 
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-      // 📱 COMPARTILHA
-      if ((isIOS || isAndroid) && navigator.share) {
+      // 📱 COMPARTILHA (nativo do celular)
+      {
         if (productFile && navigator.canShare && navigator.canShare({ files: [productFile] })) {
           await navigator.share({
             title: '💰 Economia Garantida!',
@@ -325,9 +339,6 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
             text: shareMessage
           });
         }
-      } else {
-        // Desktop
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
       }
       
     } catch (error) {
@@ -529,76 +540,67 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                 
                 <div ref={screenshotRef} className="space-y-4 p-4 bg-black/60 rounded-2xl">
                   
-                  {/* CARD 1: LANCE NOZAP — 🎨 PONTO 95: mais clean/minimalista.
-                      Saíram o gradiente pesado e a borda grossa (border-2); ficou
-                      fundo sutil + borda fina, na cor verde da própria logo.
-                      Cantos mais boleados (rounded-2xl), a pedido do dono. */}
-                  <div className="bg-emerald-500/[0.07] border border-emerald-400/25 rounded-2xl p-4 sm:p-5 overflow-hidden">
-                    <div className="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* logo 3D oficial, CHAPADA: sem círculo, sem borda, sem fundo */}
-                        <img
-                          src={logoNoZap}
-                          alt="Leilão NoZap"
-                          className="h-9 sm:h-11 w-auto shrink-0 object-contain"
-                        />
-                        <div className="min-w-0">
-                          <h3 className="text-white font-bold text-base sm:text-lg mb-1 break-words">{localAuction.title}</h3>
-                          <span className="text-emerald-400 text-xs sm:text-sm font-semibold">Site Analisado - Leilão NoZap</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-slab text-3xl sm:text-4xl md:text-5xl font-bold text-emerald-400">
-                          R$ {fmtBR((localAuction.current_price || localAuction.starting_price))}
-                        </div>
-                        <div className="text-emerald-300/80 text-xs sm:text-sm mt-1">Lance Atual neste Site</div>
-                      </div>
-                    </div>
+                  {/* 🏁 PONTO 96 (20/08/2026) — REESTRUTURAÇÃO. O card estava
+                      comprido não por layout, mas por REPETIÇÃO: "preço médio",
+                      "você economiza X / Y% mais barato" e "NoZap venceu, Y% menor
+                      que o mercado" diziam a MESMA coisa três vezes, com o mesmo
+                      número. Diminuir padding não resolveria isso; tirar a
+                      redundância, sim. Os três viraram UM veredito.
+                      Também havia DOIS heróis brigando (laranja gigante x verde
+                      gigante) — dois heróis, nenhum herói. Agora a hierarquia é
+                      por TAMANHO: o % é a manchete, os dois preços são a prova.
+                      ⚠️ Cores e o glassmorphism do modal: intocados. */}
+
+                  {/* FAIXA DO PRODUTO — contexto, não protagonista */}
+                  <div className="flex items-center gap-3 px-1">
+                    <img src={logoNoZap} alt="Leilão NoZap" className="h-7 sm:h-8 w-auto shrink-0 object-contain" />
+                    <h3 className="text-white font-semibold text-sm sm:text-base leading-snug break-words min-w-0">
+                      {localAuction.title}
+                    </h3>
                   </div>
 
-                  {/* CARD 2: FABRICANTE/MERCADO */}
-                  {comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 ? (
-                    <div className="bg-amber-500/[0.07] border border-amber-400/30 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
-                      <div className="text-amber-300 text-xs font-medium mb-4 uppercase tracking-wide">Preço no Fabricante</div>
+                  {/* VEREDITO — lê-se em 1 segundo: pago X, vale Y */}
+                  <div className="bg-emerald-500/[0.07] border border-emerald-400/25 rounded-2xl p-5 sm:p-6 overflow-hidden">
+                    {comparisonData.savingsPercent > 0 && (
+                      <div className="text-center mb-5">
+                        <div className="font-slab text-4xl sm:text-5xl font-black text-emerald-400 leading-none">
+                          {comparisonData.savingsPercent}% MAIS BARATO
+                        </div>
+                      </div>
+                    )}
 
-                      {localAuction.supplier_logo_url && (
-                        <img
-                          src={localAuction.supplier_logo_url}
-                          alt="Logo"
-                          className="w-20 h-20 sm:w-24 sm:h-24 mx-auto object-contain bg-white rounded-xl p-2 shadow-lg mb-3"
-                        />
-                      )}
-
-                      <div className="text-amber-100 text-sm font-semibold mb-3 break-words">
-                        {comparisonData.comparisons[0].store}
+                    <div className="flex items-stretch gap-2 sm:gap-3">
+                      <div className="flex-1 min-w-0 rounded-xl bg-emerald-500/10 border border-emerald-400/30 px-2 py-3 text-center">
+                        <div className="font-slab text-xl sm:text-3xl font-bold text-emerald-400 leading-tight break-words">
+                          R$ {fmtBR((localAuction.current_price || localAuction.starting_price))}
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-emerald-300/70 mt-1 uppercase tracking-wide">aqui</div>
                       </div>
 
-                      <div className="font-slab text-3xl sm:text-4xl font-black text-white">
-                        R$ {fmtBR(comparisonData.comparisons[0].price)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-orange-500/[0.07] border border-orange-400/30 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
-                      <div className="flex items-center justify-center gap-2 mb-4">
-                        <img
-                          src={CompareAquiIcon}
-                          alt="CompareAQUI"
-                          className="w-9 h-9 sm:w-10 sm:h-10 shrink-0"
-                        />
-                        <div className="text-orange-300 text-xs sm:text-sm font-bold uppercase tracking-wide">{comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>
-                      </div>
+                      <div className="shrink-0 self-center text-gray-500 text-lg sm:text-xl px-0.5">→</div>
 
-                      <div className="font-slab text-4xl sm:text-5xl font-black text-orange-400 mb-2">
-                        R$ {fmtBR((comparisonData.referencePrice || comparisonData.averageMarketPrice || comparisonData.cheapestMarketPrice))}
-                      </div>
-
-                      <div className="text-orange-300 text-xs sm:text-sm">
-                        {comparisonData.isManualPrice
-                          ? 'Preço inserido manualmente'
-                          : `Preço médio entre ${comparisonData.totalStoresAnalyzed || 'várias'} lojas`}
+                      <div className="flex-1 min-w-0 rounded-xl bg-orange-500/10 border border-orange-400/30 px-2 py-3 text-center">
+                        <div className="font-slab text-xl sm:text-3xl font-bold text-orange-400 leading-tight break-words">
+                          R$ {fmtBR((comparisonData.referencePrice || comparisonData.averageMarketPrice || comparisonData.cheapestMarketPrice))}
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-orange-300/70 mt-1 uppercase tracking-wide">
+                          {comparisonData.isFactoryDirect ? 'no fabricante' : 'no mercado'}
+                        </div>
                       </div>
                     </div>
-                  )}
+
+                    {comparisonData.savings > 0 && (
+                      <p className="text-center text-sm sm:text-base text-emerald-300/90 mt-4">
+                        você economiza <span className="font-bold text-emerald-400">R$ {fmtBR(comparisonData.savings)}</span>
+                      </p>
+                    )}
+
+                    <p className="text-center text-[10.5px] text-gray-500 mt-1.5">
+                      {comparisonData.isManualPrice
+                        ? 'Preço inserido manualmente'
+                        : `média de ${comparisonData.totalStoresAnalyzed || 'várias'} lojas, agora`}
+                    </p>
+                  </div>
 
                   {/* 🩺 20/08/2026 (5ª rodada) — dono mostrou o fluxo manual que "nunca
                       erra": botão direito na foto > Google Lens > aba "Correspondências
@@ -685,78 +687,40 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                     </div>
                   )}
 
-                  {/* CARD 3: ECONOMIA */}
-                  {comparisonData.savings > 0 && (
-                    <div className="bg-emerald-500/[0.09] border border-emerald-400/35 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
-                      <div className="flex items-center justify-center gap-2 mb-4">
-                        <img
-                          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
-                          alt="NoZap"
-                          className="w-9 h-9 sm:w-10 sm:h-10 shrink-0"
-                        />
-                        <div className="text-green-300 text-xs sm:text-sm font-bold uppercase tracking-wide">Você Economiza</div>
-                      </div>
-
-                      <div className="font-slab text-4xl sm:text-5xl md:text-6xl font-black text-green-400 mb-2 break-words">
-                        R$ {fmtBR(comparisonData.savings)}
-                      </div>
-
-                      <div className="text-xl sm:text-2xl font-bold text-green-300">
-                        {comparisonData.savingsPercent}% MAIS BARATO!
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CARD 4: VENCEDOR */}
-                  {comparisonData.savings > 0 && (
-                    <div className="bg-emerald-500/[0.07] border border-emerald-400/25 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
-                      <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto mb-3">
-                        <Trophy className="w-6 h-6 text-amber-400" />
-                      </div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">LEILÃO NOZAP VENCEU</h3>
-
-                      <p className="text-green-300 text-base sm:text-lg break-words">
-                        O preço do Leilão NoZap é <span className="font-bold text-amber-300">
-                          {comparisonData.savingsPercent}%
-                        </span> menor que {comparisonData.isFactoryDirect ? 'o fabricante' : 'o mercado'}!
-                      </p>
-                    </div>
-                  )}
-
                 </div>
 
-                {/* BOTÃO COMPARTILHAR - SIMPLES */}
-                <Button
-                  onClick={handleShareComparai}
-                  disabled={isSharing}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 text-lg shadow-lg disabled:opacity-50"
-                >
-                  {isSharing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Compartilhando...
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-5 h-5 mr-2" />
-                      Compartilhar essa economia
-                    </>
-                  )}
-                </Button>
+                {/* 🎛️ PONTO 96 — botões em GLASSMORPHISM, a mesma linguagem do
+                    modal (vidro fosco translúcido). O verde chapado e o branco
+                    chapado destoavam do resto e davam ar de formulário. Primário
+                    com brilho sutil; secundário vira fantasma — botão de apoio
+                    não precisa gritar. */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleShareComparai}
+                    disabled={isSharing}
+                    className="flex-1 h-12 rounded-xl border border-emerald-400/40 bg-emerald-500/15 backdrop-blur-md text-emerald-200 font-semibold hover:bg-emerald-500/25 hover:border-emerald-400/60 shadow-lg shadow-emerald-500/10 transition-all disabled:opacity-50"
+                  >
+                    {isSharing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Compartilhando...
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Compartilhar economia
+                      </>
+                    )}
+                  </Button>
 
-                {/* OUTROS BOTÕES — 20/08/2026: removido "Ver no Site do Fabricante"
-                    (window.open pra fora do site) — pedido explícito do dono: o
-                    cliente nunca sai do Leilão NoZap, a prova fica só nos dados
-                    já mostrados no card acima (loja, foto, preço). */}
-                <div className="flex flex-col gap-3">
                   <Button
                     onClick={() => handleCompare()}
-                    variant="outline"
-                    className="w-full border-emerald-500 text-emerald-400 hover:bg-emerald-900/20"
                     disabled={isLoading}
+                    title="Atualizar comparação"
+                    aria-label="Atualizar comparação"
+                    className="h-12 w-12 shrink-0 rounded-xl border border-white/15 bg-white/5 backdrop-blur-md text-gray-300 hover:bg-white/10 hover:text-white transition-all disabled:opacity-50 p-0"
                   >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                    Atualizar Comparação
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
 
