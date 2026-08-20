@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, AlertTriangle, Factory, Trophy, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
+import LogoLoja from './LogoLoja';
 
 // 20/08/2026 (pedido do dono, "sênior") — "todo mundo compara no Mercado
 // Livre, não tem como não trazer o Mercado Livre". Embutir a PÁGINA ao vivo
@@ -653,6 +654,8 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                             )}
                             <div className="w-0 flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
+                                {/* 🖼️ PONTO 94 — logo da loja em vez de só o nome escrito */}
+                                <LogoLoja item={item} size={18} />
                                 <p className="text-gray-300 truncate">{item.store}</p>
                                 {isMercadoLivre(item) && (
                                   <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-1.5 py-0.5 rounded">
@@ -781,9 +784,16 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
           retornado pela busca, sem fingir ser a página externa. */}
       {selectedProof && (
         <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
-          <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-md rounded-2xl bg-gradient-to-br from-gray-900 via-emerald-950/40 to-gray-900 text-white border-2 border-sky-400/80 ring-1 ring-white/25 shadow-2xl shadow-sky-500/20">
+          {/* 🌑 PONTO 94 — dono: "quando eu clicar pra abrir o modal, ao invés de
+              ficar transparente, que está ficando transparente sobre transparente
+              e feio, escurece o fundo pra aparecer o texto". Fundo SÓLIDO aqui.
+              ⚠️ O modal PRINCIPAL continua translúcido de propósito — ele foi
+              explícito: "o principal é deixar assim transparente mesmo, que está
+              muito bonito, não muda nada". */}
+          <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-md rounded-2xl bg-[#0a0f1a] text-white border-2 border-sky-400/80 ring-1 ring-white/10 shadow-2xl shadow-black/80">
             <DialogHeader>
               <DialogTitle className="text-lg pr-8 flex items-center gap-2">
+                <LogoLoja item={selectedProof} size={28} />
                 {isMercadoLivre(selectedProof) && (
                   <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-2 py-0.5 rounded">
                     Mercado Livre
