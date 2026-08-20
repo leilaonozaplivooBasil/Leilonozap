@@ -9,6 +9,7 @@ import { Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, Alert
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 import LogoLoja from './LogoLoja';
+import useSiteMedia from '@/hooks/useSiteMedia';
 
 // 20/08/2026 (pedido do dono, "sênior") — "todo mundo compara no Mercado
 // Livre, não tem como não trazer o Mercado Livre". Embutir a PÁGINA ao vivo
@@ -25,16 +26,11 @@ function isMercadoLivre(item) {
   return s.includes('mercado livre') || s.includes('mercadolivre') || u.includes('mercadolivre.com');
 }
 
-// 🏷️ PONTO 91 (20/08/2026) — o dono pediu pra separar explicitamente
-// "MESMA IMAGEM" de "mesmo produto" e de "parecido", em vez de jogar tudo numa
-// lista só como se tivessem a mesma confiança. O nível vem do backend
-// (matchLevel), decidido pela FONTE que achou o anúncio — não é chute do front.
-const SELO_MATCH = {
-  exata: { texto: 'Mesma imagem', classe: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
-  mesmo_produto: { texto: 'Mesmo produto', classe: 'bg-sky-500/20 text-sky-300 border-sky-500/40' },
-  visual: { texto: 'Visualmente igual', classe: 'bg-sky-500/15 text-sky-300/90 border-sky-500/30' },
-  texto: { texto: 'Por nome', classe: 'bg-amber-500/15 text-amber-300/90 border-amber-500/30' },
-};
+// 🏷️ PONTO 95 (20/08/2026) — os selos de nível de correspondência ("Mesma
+// imagem", "Mesmo produto"...) SAÍRAM da tela a pedido do dono: "isso tem que
+// ser algo interno, não precisa aparecer aqui, já testei e está perfeito".
+// O matchLevel continua existindo no backend e ainda comanda a validação e a
+// ordenação (Mercado Livre primeiro) — só não é mais exibido pro cliente.
 
 export default function CompareAquiModal({ auction, isProduct = false, onClose }) {
   const [comparisonData, setComparisonData] = useState(null);
@@ -58,6 +54,14 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   // nada. Clicar agora abre um modal de detalhe (dentro do site, sem sair)
   // com a foto grande, nome completo da loja/produto e o preço.
   const [selectedProof, setSelectedProof] = useState(null);
+
+  // 🟢 PONTO 95 (20/08/2026) — dono: "pega a logo oficial 3D que está no site e
+  // usa ela em todo o CompareAQUI, chapada, sem fundo". useSiteMedia() é a
+  // MESMA fonte que o cabeçalho do site usa (Painel de Mídia, com fallback em
+  // /brand/logo-horizontal-dark.webp — a 3D horizontal). Assim, se ele trocar a
+  // logo no painel, o CompareAQUI acompanha sozinho. Sem arquivo chumbado e
+  // sem nenhuma URL do Base44.
+  const { logoUrl: logoNoZap } = useSiteMedia();
 
   // 🔦 PONTO 91 (20/08/2026) — o backend SEMPRE devolveu um `debug` dizendo o que
   // cada fonte tentou e por que falhou, mas o modal jogava fora ao dar throw:
@@ -523,34 +527,38 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
             {comparisonData && !isLoading && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 
-                <div ref={screenshotRef} className="space-y-4 p-4 bg-black rounded-xl">
+                <div ref={screenshotRef} className="space-y-4 p-4 bg-black/60 rounded-2xl">
                   
-                  {/* CARD 1: LANCE NOZAP */}
-                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-xl p-4 sm:p-5 overflow-hidden">
+                  {/* CARD 1: LANCE NOZAP — 🎨 PONTO 95: mais clean/minimalista.
+                      Saíram o gradiente pesado e a borda grossa (border-2); ficou
+                      fundo sutil + borda fina, na cor verde da própria logo.
+                      Cantos mais boleados (rounded-2xl), a pedido do dono. */}
+                  <div className="bg-emerald-500/[0.07] border border-emerald-400/25 rounded-2xl p-4 sm:p-5 overflow-hidden">
                     <div className="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 min-w-0">
+                        {/* logo 3D oficial, CHAPADA: sem círculo, sem borda, sem fundo */}
                         <img
-                          src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
-                          alt="NoZap"
-                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-green-400 shrink-0"
+                          src={logoNoZap}
+                          alt="Leilão NoZap"
+                          className="h-9 sm:h-11 w-auto shrink-0 object-contain"
                         />
                         <div className="min-w-0">
                           <h3 className="text-white font-bold text-base sm:text-lg mb-1 break-words">{localAuction.title}</h3>
-                          <span className="text-green-400 text-xs sm:text-sm font-semibold">Site Analisado - Leilão NoZap</span>
+                          <span className="text-emerald-400 text-xs sm:text-sm font-semibold">Site Analisado - Leilão NoZap</span>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="font-slab text-3xl sm:text-4xl md:text-5xl font-bold text-green-400">
+                        <div className="font-slab text-3xl sm:text-4xl md:text-5xl font-bold text-emerald-400">
                           R$ {fmtBR((localAuction.current_price || localAuction.starting_price))}
                         </div>
-                        <div className="text-green-300 text-xs sm:text-sm mt-1">Lance Atual neste Site</div>
+                        <div className="text-emerald-300/80 text-xs sm:text-sm mt-1">Lance Atual neste Site</div>
                       </div>
                     </div>
                   </div>
 
                   {/* CARD 2: FABRICANTE/MERCADO */}
                   {comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 ? (
-                    <div className="bg-gradient-to-br from-amber-900/25 to-yellow-900/15 border-2 border-amber-600/50 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
+                    <div className="bg-amber-500/[0.07] border border-amber-400/30 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
                       <div className="text-amber-300 text-xs font-medium mb-4 uppercase tracking-wide">Preço no Fabricante</div>
 
                       {localAuction.supplier_logo_url && (
@@ -570,7 +578,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-orange-900/30 to-amber-900/15 border-2 border-orange-500/70 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
+                    <div className="bg-orange-500/[0.07] border border-orange-400/30 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
                       <div className="flex items-center justify-center gap-2 mb-4">
                         <img
                           src={CompareAquiIcon}
@@ -627,7 +635,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                       overflow-hidden em cascata evita o vazamento de texto pro lado de
                       fora do card em qualquer largura de tela. */}
                   {!comparisonData.isFactoryDirect && sortedComparisons.length > 0 && (
-                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 sm:p-5 overflow-hidden">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-5 overflow-hidden">
                       <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/90 mb-3">
                         Lojas comparadas ({sortedComparisons.length})
                       </div>
@@ -637,7 +645,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                             key={i}
                             type="button"
                             onClick={() => setSelectedProof(item)}
-                            className="w-full flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden text-left hover:bg-white/[0.07] hover:border-sky-400/40 active:scale-[0.99] transition-all cursor-pointer"
+                            className="w-full flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm overflow-hidden text-left hover:bg-white/[0.07] hover:border-sky-400/40 active:scale-[0.99] transition-all cursor-pointer"
                           >
                             {/* Foto real do produto, vinda da mesma fonte (Google
                                 Shopping/Zoom) — a prova visual que dá pra trazer
@@ -652,22 +660,15 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                             ) : (
                               <div className="w-9 h-9 rounded-md bg-white/5 border border-white/10 shrink-0" />
                             )}
+                            {/* 🖼️ PONTO 95 — dono: "aumentar a logo da empresa" e
+                                "esse MESMA IMAGEM não precisa mais aparecer, tem que
+                                ser algo interno". Logo passou de 18px pra 32px e
+                                virou a âncora visual da linha; os selos saíram.
+                                O matchLevel continua vindo do backend e ainda manda
+                                na ordenação/validação — só não polui mais a tela. */}
+                            <LogoLoja item={item} size={32} className="shrink-0" />
                             <div className="w-0 flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                {/* 🖼️ PONTO 94 — logo da loja em vez de só o nome escrito */}
-                                <LogoLoja item={item} size={18} />
-                                <p className="text-gray-300 truncate">{item.store}</p>
-                                {isMercadoLivre(item) && (
-                                  <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-1.5 py-0.5 rounded">
-                                    Mercado Livre
-                                  </span>
-                                )}
-                                {SELO_MATCH[item.matchLevel] && (
-                                  <span className={`shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${SELO_MATCH[item.matchLevel].classe}`}>
-                                    {SELO_MATCH[item.matchLevel].texto}
-                                  </span>
-                                )}
-                              </div>
+                              <p className="text-gray-200 font-medium truncate">{item.store}</p>
                               <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
                             </div>
                             <div className="shrink-0 flex items-center gap-1">
@@ -686,7 +687,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
                   {/* CARD 3: ECONOMIA */}
                   {comparisonData.savings > 0 && (
-                    <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-2 border-green-500 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
+                    <div className="bg-emerald-500/[0.09] border border-emerald-400/35 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
                       <div className="flex items-center justify-center gap-2 mb-4">
                         <img
                           src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
@@ -708,7 +709,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
                   {/* CARD 4: VENCEDOR */}
                   {comparisonData.savings > 0 && (
-                    <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
+                    <div className="bg-emerald-500/[0.07] border border-emerald-400/25 rounded-2xl p-5 sm:p-6 text-center overflow-hidden">
                       <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto mb-3">
                         <Trophy className="w-6 h-6 text-amber-400" />
                       </div>
@@ -794,11 +795,6 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
             <DialogHeader>
               <DialogTitle className="text-lg pr-8 flex items-center gap-2">
                 <LogoLoja item={selectedProof} size={28} />
-                {isMercadoLivre(selectedProof) && (
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-2 py-0.5 rounded">
-                    Mercado Livre
-                  </span>
-                )}
                 <span className="truncate">{selectedProof.store}</span>
               </DialogTitle>
             </DialogHeader>

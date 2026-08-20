@@ -139,16 +139,10 @@ export default function CompareAquiProvaViva() {
                   ) : (
                     <div className="w-9 h-9 rounded-md bg-white/5 border border-white/10 shrink-0" />
                   )}
+                  {/* 🖼️ PONTO 95 — logo grande como âncora visual, sem selos */}
+                  <LogoLoja item={item} size={32} className="shrink-0" />
                   <div className="w-0 flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <LogoLoja item={item} size={18} />
-                      <p className="text-gray-300 truncate">{item.store}</p>
-                      {isMercadoLivre(item) && (
-                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-1.5 py-0.5 rounded">
-                          Mercado Livre
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-gray-200 font-medium truncate">{item.store}</p>
                     <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
                   </div>
                   <div className="shrink-0 flex items-center gap-1">
@@ -173,11 +167,6 @@ export default function CompareAquiProvaViva() {
             <DialogHeader>
               <DialogTitle className="text-lg pr-8 flex items-center gap-2">
                 <LogoLoja item={selectedProof} size={28} />
-                {isMercadoLivre(selectedProof) && (
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-2 py-0.5 rounded">
-                    Mercado Livre
-                  </span>
-                )}
                 <span className="truncate">{selectedProof.store}</span>
               </DialogTitle>
             </DialogHeader>
