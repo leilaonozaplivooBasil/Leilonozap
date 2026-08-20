@@ -356,32 +356,85 @@ export async function finalizeOneAuction(auction) {
           if (lic) {
             const commission = money(finalPrice * 0.05);
             const ehTeste = auction.is_test_auction === true;
-            const patch = { network_bids_count: (Number(lic.network_bids_count) || 0) + 1 };
-            if (ehTeste) {
-              patch.test_wallet_balance = money((Number(lic.test_wallet_balance) || 0) + commission);
-            } else {
-              patch.commission_balance = money((Number(lic.commission_balance) || 0) + commission);
-            }
-            await sb(`app_users?id=eq.${enc(lic.id)}`, { method: 'PATCH', body: JSON.stringify(patch) });
-            pctDistribuido = PCT_INDICADOR_LEILAO;
 
-            // 📒 PONTO 100: a linha do extrato que faltava. Sem ela o
-            // recalculateCommissionBalances APAGAVA este ganho — ele soma
-            // commission_records, e o leilão nunca gravava nada.
-            // Só no leilão real: leilão de teste não entra no extrato de dinheiro.
-            if (auction.is_test_auction !== true) {
-              await gravarLinhaComissaoLeilao({
-                sale_id: auction.id,
-                user_id: lic.id,
-                user_name: lic.full_name || null,
-                role: 'leilao_indicador',
-                percent: PCT_INDICADOR_LEILAO,
-                amount: commission,
-                sale_amount: finalPrice,
-                product_title: auction.title || null,
-                anchor_user_id: winnerId,
-                anchor_user_name: u.full_name || winnerName || null,
+            // ══════════════════════════════════════════════════════════════
+            // 🔴 PONTO 114 (21/08/2026) — ESCRITA CEGA APAGAVA COMISSÃO
+            // ══════════════════════════════════════════════════════════════
+            // O crédito era `commission_balance: (lido) + commission` num PATCH
+            // sem filtro nenhum. Isso é ler-e-escrever: se uma comissão de LOJA
+            // caísse na mesma pessoa entre a leitura e a escrita, ela era
+            // APAGADA — o martelo gravava por cima com um total velho. Some
+            // dinheiro de alguém que não tem nada a ver com o leilão, sem rastro.
+            //
+            // O dinheiro REAL agora usa rpc/credit_commission — incremento
+            // atômico no banco, o mesmo que a comissão de loja já usa
+            // (api/_lib/storeFulfill.js:109). Não tem leitura no meio: é o banco
+            // que soma.
+            //
+            // ⚠️ E se o crédito FALHAR, `pctDistribuido` fica em zero de
+            // propósito: a fatia retida (PONTO 100) é calculada em cima dele, e
+            // dar a comissão como paga sem ter pago desequilibraria a conta dos
+            // 30% do leilão. Ninguém recebeu → a empresa retém tudo.
+            let creditou = false;
+            if (ehTeste) {
+              // Saldo de teste não é dinheiro: CAS simples resolve, e não existe
+              // RPC pra essa coluna.
+              const atual = money(lic.test_wallet_balance);
+              const filtro = atual === 0
+                ? 'or(test_wallet_balance.eq.0,test_wallet_balance.is.null)'
+                : `test_wallet_balance.eq.${atual}`;
+              const r = await sb(`app_users?id=eq.${enc(lic.id)}&${filtro}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=representation' },
+                body: JSON.stringify({ test_wallet_balance: money(atual + commission) }),
               });
+              const linhas = await r.json().catch(() => []);
+              creditou = Array.isArray(linhas) && linhas.length > 0;
+            } else {
+              const r = await sb('rpc/credit_commission', {
+                method: 'POST',
+                body: JSON.stringify({ _user: lic.id, _amount: commission }),
+              });
+              creditou = r.ok;
+            }
+
+            if (!creditou) {
+              console.error(`[FINALIZE] Comissão de 5% NÃO creditada no leilão ${auctionId} — indicador ${lic.id}, R$ ${commission}. Fatia fica retida com a empresa.`);
+            }
+
+            // contador de rede: não é dinheiro, best-effort, fora do caminho crítico
+            try {
+              await sb(`app_users?id=eq.${enc(lic.id)}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=minimal' },
+                body: JSON.stringify({ network_bids_count: (Number(lic.network_bids_count) || 0) + 1 }),
+              });
+            } catch (_) { /* contador não pode derrubar o martelo */ }
+
+            // Só considera distribuído — e só escreve o extrato — se o dinheiro
+            // REALMENTE entrou. Extrato de comissão que não foi paga é pior que
+            // extrato nenhum: some no relatório e ninguém procura.
+            if (creditou) {
+              pctDistribuido = PCT_INDICADOR_LEILAO;
+
+              // 📒 PONTO 100: a linha do extrato que faltava. Sem ela o
+              // recalculateCommissionBalances APAGAVA este ganho — ele soma
+              // commission_records, e o leilão nunca gravava nada.
+              // Só no leilão real: leilão de teste não entra no extrato de dinheiro.
+              if (!ehTeste) {
+                await gravarLinhaComissaoLeilao({
+                  sale_id: auction.id,
+                  user_id: lic.id,
+                  user_name: lic.full_name || null,
+                  role: 'leilao_indicador',
+                  percent: PCT_INDICADOR_LEILAO,
+                  amount: commission,
+                  sale_amount: finalPrice,
+                  product_title: auction.title || null,
+                  anchor_user_id: winnerId,
+                  anchor_user_name: u.full_name || winnerName || null,
+                });
+              }
             }
           }
         } catch (e) { console.warn('[FINALIZE] comissão licenciado:', e?.message); }

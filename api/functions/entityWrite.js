@@ -146,6 +146,57 @@ export default async function handler(req, res) {
     const ok = actor && (['admin', 'super_admin'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
     if (!ok) return res.status(403).json({ success: false, error: 'Sem permissão' });
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 115 (21/08/2026) — VENDA NÃO É "CONTEÚDO" (riscos #19 e #20)
+    // ══════════════════════════════════════════════════════════════════════════
+    // `catalog_sales` estava na lista de tabelas de conteúdo desta rota genérica,
+    // que aceita não só admin como QUALQUER conta com cargo de estoque
+    // (distribuidor, loja física, ponto de retirada — a constante STOCK acima).
+    //
+    // Com isso um distribuidor podia:
+    //   • APAGAR a linha de uma venda paga — inclusive de outra pessoa —
+    //     deixando as comissões órfãs, o dinheiro já creditado, e destruindo o
+    //     rastro da venda. Sem log nenhum do que foi apagado.
+    //   • Devolver o status de uma venda paga para 'pending_payment'. Parece
+    //     inofensivo, mas rearma a ÚNICA trava anti-pagamento-duplo da adesão e
+    //     dos depósitos (risco #19): basta o webhook rodar de novo — ele é
+    //     público e o polling também o dispara — e o Mercado Pago confirma que
+    //     o pagamento continua aprovado. O sistema paga TUDO outra vez.
+    //
+    // A venda já tem rotas próprias pra cada operação legítima:
+    // createStoreOrder, updateOrderStatus, excluirMeuPedido, cancelPdvPix — todas
+    // com regra de negócio e estorno. Esta rota genérica não precisa tocar nela.
+    //
+    // A trava é em três camadas, porque cada uma pega um caminho diferente:
+    const VENDA_TEM_ROTA_PROPRIA = table === 'catalog_sales';
+    if (VENDA_TEM_ROTA_PROPRIA) {
+      const isAdmin = actor && ['admin', 'super_admin'].includes(actor.role);
+      // 1) apagar venda: NUNCA por aqui, nem admin. Apagar venda paga destrói
+      //    rastro de dinheiro — quem precisa cancelar usa updateOrderStatus,
+      //    que estorna comissão e devolve ao comprador.
+      if (action === 'delete') {
+        return res.status(403).json({
+          success: false,
+          error: 'Venda não pode ser apagada por aqui. Use o cancelamento no gerenciador de pedidos — ele estorna a comissão e devolve o dinheiro ao comprador.',
+        });
+      }
+      // 2) cargo de estoque não mexe em venda, só admin.
+      if (!isAdmin) {
+        return res.status(403).json({ success: false, error: 'Sem permissão para alterar vendas.' });
+      }
+      // 3) nem admin reabre venda paga por aqui — é isso que rearma a trava
+      //    anti-pagamento-duplo. Trocar status de venda é rota própria, com log.
+      const proibidas = ['status', 'total_amount', 'sale_price', 'commission_total', 'mp_payment_id', 'buyer_id', 'seller_id'];
+      const alvo = Array.isArray(body?.payload) ? (body.payload[0] || {}) : (body?.payload || {});
+      const tocadas = proibidas.filter((c) => Object.prototype.hasOwnProperty.call(alvo, c));
+      if (tocadas.length) {
+        return res.status(403).json({
+          success: false,
+          error: `Estes campos da venda não podem ser alterados por aqui: ${tocadas.join(', ')}. Use o gerenciador de pedidos.`,
+        });
+      }
+    }
+
     const now = new Date().toISOString();
 
     if (action === 'delete') {
