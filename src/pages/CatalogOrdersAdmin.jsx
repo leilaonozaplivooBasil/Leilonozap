@@ -63,6 +63,10 @@ const MOTIVO_ENVIO_LABEL = {
   remetente_nao_configurado: 'Faltam dados do remetente (endereço da loja) configurados no servidor.',
   melhor_envio_nao_autorizado: 'A conta do Melhor Envio não está autorizada (ou o token venceu) — veja /integracoes/melhor-envio.',
   destinatario_sem_cpf: 'O comprador não tem CPF cadastrado — a transportadora exige.',
+  // PONTO 111: separado do "sem CPF" de propósito — aqui o cliente JÁ deu um
+  // CPF, mas ele não passa no dígito verificador. A ação é conferir e corrigir,
+  // não sair pedindo de novo às cegas.
+  destinatario_cpf_invalido: 'O CPF do comprador é inválido (não passa na conferência). Confira e corrija em Gerenciar.',
   endereco_destino_incompleto: 'O endereço de entrega do pedido está incompleto.',
   cart_falhou: 'O Melhor Envio recusou o carrinho.',
   checkout_falhou: 'O Melhor Envio recusou a compra da etiqueta.',

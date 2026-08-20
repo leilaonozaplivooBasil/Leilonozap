@@ -485,12 +485,31 @@ export default function Cart() {
     return value;
   };
 
-  // Validação de CPF - simplificada (ASAAS faz validação final)
+  // 🔴 PONTO 111 (21/08/2026) — AQUI NASCIA O CPF INVÁLIDO.
+  // Esta função terminava em `return true; // ASAAS valida o CPF real`: conferia
+  // só o tamanho e os dígitos repetidos, e delegava o resto ao gateway. Só que o
+  // gateway mudou para o Mercado Pago, que aceita QUALQUER coisa em
+  // payer.identification. Resultado: ninguém validava.
+  //
+  // O CPF errado atravessava o sistema inteiro e só era recusado no fim da linha,
+  // pelo Melhor Envio — "O campo to.document deve ter um CPF válido" — com o
+  // pedido já pago, o produto já vendido e a etiqueta travada. O operador tinha
+  // que caçar o cliente pra pedir o CPF de novo.
+  //
+  // Agora confere o dígito verificador de verdade, a MESMA conta de
+  // api/_lib/melhorEnvioShipment.js e api/concurso.js:15. O cliente descobre o
+  // erro no campo, ANTES de pagar — que é o único lugar onde ele consegue corrigir.
   const isValidCpf = (cpf) => {
-    const cleanCpf = cpf.replace(/\D/g, '');
+    const cleanCpf = String(cpf || '').replace(/\D/g, '');
     if (cleanCpf.length !== 11) return false;
-    if (/^(\d)\1+$/.test(cleanCpf)) return false; // CPFs com todos dígitos iguais (ex: 111.111.111-11)
-    return true; // ASAAS valida o CPF real
+    if (/^(\d)\1{10}$/.test(cleanCpf)) return false;   // 111.111.111-11 e afins
+    const calc = (base) => {
+      let soma = 0;
+      for (let i = 0; i < base; i += 1) soma += parseInt(cleanCpf[i], 10) * (base + 1 - i);
+      const r = (soma * 10) % 11;
+      return r === 10 ? 0 : r;
+    };
+    return calc(9) === parseInt(cleanCpf[9], 10) && calc(10) === parseInt(cleanCpf[10], 10);
   };
 
   const handleCheckout = async () => {

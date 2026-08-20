@@ -18,6 +18,28 @@
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const FROM_CEP = String(process.env.MELHOR_ENVIO_FROM_CEP || '').replace(/\D/g, '');
+
+// ✅ PONTO 111 (21/08/2026) — validação de CPF por dígito verificador.
+// MESMA implementação já usada em api/concurso.js:15 — copiada de propósito em
+// vez de importada: este arquivo é chamado pelo mpWebhook, e import relativo
+// dentro de api/_lib/ pra fora já derrubou fluxo de dinheiro antes (ver o
+// cabeçalho de api/functions/submitAtomicBid.js).
+//
+// Por que precisa existir aqui: nenhum checkout do sistema confere o CPF que o
+// cliente digita. O Melhor Envio confere — e recusa o carrinho inteiro com
+// "O campo to.document deve ter um CPF válido". Melhor descobrir aqui, com uma
+// mensagem que diz o que fazer, do que na transportadora.
+function cpfValido(valor) {
+  const cpf = String(valor || '').replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;   // 111.111.111-11 e afins
+  const calc = (base) => {
+    let soma = 0;
+    for (let i = 0; i < base; i += 1) soma += parseInt(cpf[i], 10) * (base + 1 - i);
+    const r = (soma * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  return calc(9) === parseInt(cpf[9], 10) && calc(10) === parseInt(cpf[10], 10);
+}
 const UA = 'Leilao NoZap (contato@leilaonozap.net)';
 
 function sb(path, opts = {}) {
@@ -158,32 +180,48 @@ async function tentarGerarEnvio(sale) {
     //      payer.identification.number. Se o pagamento existe, o dado existe.
     //      É o que destrava os pedidos que já estão parados hoje.
     // Achando pelo caminho 2 ou 3, grava no cadastro pra não precisar de novo.
+    // 🔴 PONTO 111 (21/08/2026) — NÃO BASTA TER 11 DÍGITOS, TEM QUE SER VÁLIDO.
+    // Depois do PONTO 110 o erro mudou de "comprador não tem CPF cadastrado" para
+    // "O campo to.document deve ter um CPF válido": a etiqueta ACHAVA o CPF, mas
+    // ele não passava no dígito verificador. Causa: nenhum checkout do sistema
+    // confere o CPF digitado — Cart.jsx:591 só faz replace(/\D/g,'') e manda.
+    // Então um cliente que digita errado (ou inventa) grava lixo, e o erro só
+    // aparece láááá na frente, na transportadora.
+    // Agora todo candidato passa por cpfValido() ANTES de ser aceito — e um CPF
+    // reprovado não interrompe a busca: a função continua pras outras fontes.
     let cpfDestino = '';
+    let cpfRejeitado = '';
+    const aceitar = (candidato) => {
+      const d = String(candidato || '').replace(/\D/g, '');
+      if (!d) return false;
+      if (cpfValido(d)) { cpfDestino = d; return true; }
+      if (!cpfRejeitado) cpfRejeitado = d;   // guarda o 1º inválido só pro log
+      return false;
+    };
+
     let phoneDestino = String(sale.buyer_phone || '').replace(/\D/g, '');
     if (sale.buyer_id) {
       const rows = await (await sb(`app_users?select=cpf,phone&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json().catch(() => null);
       const userRow = Array.isArray(rows) ? rows[0] : null;
-      cpfDestino = String(userRow?.cpf || '').replace(/\D/g, '');
+      aceitar(userRow?.cpf);
       if (!phoneDestino && userRow?.phone) phoneDestino = String(userRow.phone).replace(/\D/g, '');
     }
 
     // 2) o CPF que veio no checkout, se alguém tiver gravado na venda
-    if (cpfDestino.length !== 11) {
-      const daVenda = String(sale.buyer_cpf || raw.buyer_cpf || raw.customer?.cpf || '').replace(/\D/g, '');
-      if (daVenda.length === 11) cpfDestino = daVenda;
+    if (!cpfDestino) {
+      aceitar(sale.buyer_cpf || raw.buyer_cpf || raw.customer?.cpf);
     }
 
     // 3) resgate no Mercado Pago — best-effort, nunca derruba a etiqueta
-    if (cpfDestino.length !== 11 && sale.mp_payment_id && process.env.MP_ACCESS_TOKEN) {
+    if (!cpfDestino && sale.mp_payment_id && process.env.MP_ACCESS_TOKEN) {
       try {
         const r = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(sale.mp_payment_id)}`, {
           headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
         });
         if (r.ok) {
           const pay = await r.json();
-          const doMp = String(pay?.payer?.identification?.number || '').replace(/\D/g, '');
-          if (doMp.length === 11 && String(pay?.payer?.identification?.type || 'CPF').toUpperCase() === 'CPF') {
-            cpfDestino = doMp;
+          const tipo = String(pay?.payer?.identification?.type || 'CPF').toUpperCase();
+          if (tipo === 'CPF' && aceitar(pay?.payer?.identification?.number)) {
             console.warn(`[ENVIO] CPF do comprador resgatado do Mercado Pago (venda ${sale.id}). Gravando no cadastro.`);
           }
         }
@@ -192,8 +230,9 @@ async function tentarGerarEnvio(sale) {
       }
     }
 
-    // achou fora do cadastro → grava, pra próxima etiqueta não depender disso
-    if (cpfDestino.length === 11 && sale.buyer_id) {
+    // achou fora do cadastro → grava, pra próxima etiqueta não depender disso.
+    // Só chega aqui CPF já validado — nunca gravamos lixo no cadastro.
+    if (cpfDestino && sale.buyer_id) {
       try {
         await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&or=(cpf.is.null,cpf.eq.)`, {
           method: 'PATCH', headers: { Prefer: 'return=minimal' },
@@ -202,7 +241,19 @@ async function tentarGerarEnvio(sale) {
       } catch (_) { /* secundário: a etiqueta sai do mesmo jeito */ }
     }
 
-    if (cpfDestino.length !== 11) return { ok: false, skipped: 'destinatario_sem_cpf' };
+    if (!cpfDestino) {
+      // Separa os dois casos, porque a AÇÃO do operador é diferente em cada um:
+      //   sem CPF     → precisa PEDIR o CPF ao cliente;
+      //   CPF inválido→ o cliente JÁ deu um, mas está errado/digitado errado —
+      //                 conferir e corrigir, não sair pedindo de novo às cegas.
+      // Antes os dois caíam na mesma mensagem e a transportadora só recusava o
+      // carrinho lá na frente, com um erro que ninguém sabia de onde vinha.
+      if (cpfRejeitado) {
+        console.warn(`[ENVIO] Venda ${sale.id}: CPF encontrado mas REPROVADO no dígito verificador (${cpfRejeitado.slice(0, 3)}...${cpfRejeitado.slice(-2)}).`);
+        return { ok: false, skipped: 'destinatario_cpf_invalido' };
+      }
+      return { ok: false, skipped: 'destinatario_sem_cpf' };
+    }
 
     const addr = raw.address || {};
     const destinoCep = String(addr.zip || frete.cep || '').replace(/\D/g, '');
