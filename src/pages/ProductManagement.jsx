@@ -294,20 +294,30 @@ export default function ProductManagement() {
 
     setIsLoadingData(true);
     try {
+      // 🔒 SEM LOGIN TAMBÉM É BARRADO (20/08/2026).
+      // Antes toda a conferência de cargo vivia dentro de `if (savedUser)`. Quem
+      // entrava SEM login pulava o bloco inteiro e a tela carregava assim mesmo:
+      // a trava pegava quem se identificava e não tinha cargo, e deixava passar
+      // quem não se identificava. Como esta página mostra custo, lucro, margem,
+      // nota fiscal e a posição completa do estoque, era o miolo do negócio à vista
+      // de qualquer visitante. A rota não tem proteção própria — a trava é aqui.
       const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
+      let user = null;
+      try { user = savedUser ? JSON.parse(savedUser) : null; } catch (_) { user = null; }
+      if (!user?.id) {
+        navigate(createPageUrl('Home'));
+        return;
+      }
+      setCurrentUser(user);
 
-        // Pode gerir produtos: admin OU cargos com estoque próprio (Distribuidor, Loja Física, Ponto de Retirada)
-        const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
-        const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
-          (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
-        if (!podeProduto) {
-          alert("Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
-          navigate(createPageUrl('Home'));
-          return;
-        }
+      // Pode gerir produtos: admin OU cargos com estoque próprio (Distribuidor, Loja Física, Ponto de Retirada)
+      const STOCK_CARGOS = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
+      const podeProduto = user.role === 'admin' || user.role === 'super_admin' ||
+        (Array.isArray(user.career_levels) && user.career_levels.some((c) => STOCK_CARGOS.includes(c)));
+      if (!podeProduto) {
+        alert("Acesso negado! Apenas Distribuidor, Loja Física, Ponto de Retirada ou administradores.");
+        navigate(createPageUrl('Home'));
+        return;
       }
 
       // Cache agressivo de 1 minuto (reduzido de 5 para capturar mudanças rápido)
