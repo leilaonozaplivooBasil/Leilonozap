@@ -77,9 +77,28 @@ export default async function handler(req, res) {
         });
       }
       // Desfaz o dinheiro numa transação só (a função é atômica e idempotente).
+      //
+      // 💳 PONTO 107 (21/08/2026) — `_devolver_ao_comprador: true`.
+      // Cancelamento administrativo = o cliente pagou e a empresa FICOU com o
+      // dinheiro. Devolver é obrigatório, senão a empresa retém valor que não é
+      // dela. Foi o caso real do cliente Ronilson: pagou R$ 73,87, o produto não
+      // existia (erro de estoque na loja), a logística cancelou e o dinheiro
+      // ficou parado sem nenhum caminho de volta. Agora vira saldo livre na
+      // carteira dele, pra escolher outro produto, com linha no extrato.
+      //
+      // ⚠️ O chargeback (mpWebhook.js) chama a MESMA função SEM esta flag, de
+      // propósito: lá o dinheiro já voltou pelo cartão, e creditar a carteira
+      // faria a empresa pagar DUAS VEZES.
+      //
+      // A função só devolve se a venda estava PAGA — pedido abandonado sem
+      // pagamento não gera crédito nenhum.
       const rpc = await sb('rpc/cancelar_venda', {
         method: 'POST',
-        body: JSON.stringify({ _sale_id: saleId, _motivo: String(body?.motivo || 'Cancelado por ' + (isAdmin ? 'admin' : 'vendedor')) }),
+        body: JSON.stringify({
+          _sale_id: saleId,
+          _motivo: String(body?.motivo || 'Cancelado por ' + (isAdmin ? 'admin' : 'vendedor')),
+          _devolver_ao_comprador: true,
+        }),
       });
       if (!rpc.ok) {
         const t = await rpc.text();

@@ -174,9 +174,24 @@ export default async function handler(req, res) {
       const idVenda = pay.external_reference;
       console.error(`[MP] ESTORNO RECEBIDO (${pay.status}) — pagamento ${pay.id}, venda ${idVenda}. Desfazendo comissão e escrow.`);
       if (!idVenda) return res.status(200).json({ ok: true, status: pay.status, sem_referencia: true });
+      // 🔴 PONTO 107 (21/08/2026) — `_devolver_ao_comprador: false`, EXPLÍCITO.
+      // O valor já é o padrão da função, mas está escrito aqui de propósito pra
+      // ninguém "consertar" isso por engano depois.
+      //
+      // No chargeback/refund o dinheiro JÁ VOLTOU pro comprador pelo cartão ou
+      // pelo Mercado Pago. Se creditássemos a carteira também, a empresa perderia
+      // a venda E daria saldo de presente — pagaria duas vezes pelo mesmo
+      // estorno. Aqui só desfazemos a comissão e o escrow.
+      //
+      // Quem devolve é o cancelamento ADMINISTRATIVO (updateOrderStatus.js), onde
+      // a empresa ficou com o dinheiro e precisa entregar de volta.
       const rpc = await sb('rpc/cancelar_venda', {
         method: 'POST',
-        body: JSON.stringify({ _sale_id: String(idVenda), _motivo: `Mercado Pago: ${pay.status} (pagamento ${pay.id})` }),
+        body: JSON.stringify({
+          _sale_id: String(idVenda),
+          _motivo: `Mercado Pago: ${pay.status} (pagamento ${pay.id})`,
+          _devolver_ao_comprador: false,
+        }),
       });
       if (!rpc.ok) {
         const t = await rpc.text();

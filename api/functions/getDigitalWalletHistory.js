@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     const uid = encodeURIComponent(userId);
 
-    const [sales, mySales, wds, bidMessages, reservaRows] = await Promise.all([
+    const [sales, mySales, wds, bidMessages, reservaRows, estornoRows] = await Promise.all([
       sb(`catalog_sales?select=${SALE_COLS}&buyer_id=eq.${uid}&order=created_date.desc&limit=200`).then(r => r.json()).catch(() => []),
       sb(`catalog_sales?select=${SALE_COLS}&seller_id=eq.${uid}&status=eq.paid&kind=not.in.(wallet_deposit,passaporte,commission_deposit)&order=created_date.desc&limit=100`).then(r => r.json()).catch(() => []),
       sb(`withdrawal_requests?select=valor,status,requested_at&user_id=eq.${uid}&order=requested_at.desc&limit=50`).then(r => r.json()).catch(() => []),
@@ -52,6 +52,12 @@ export default async function handler(req, res) {
       // lance+frete desde 18/08, mas nunca tinha sido lido em lugar nenhum: o cliente via
       // o lance como linha "informativa" e nunca via o débito/crédito real acontecer.
       sb(`reserva_ledger?select=id,auction_id,tipo,direcao,valor,created_at&user_id=eq.${uid}&order=created_at.desc&limit=150`).then(r => r.json()).catch(() => []),
+      // 💳 PONTO 107 (21/08/2026) — devolução de venda cancelada. Sem esta leitura
+      // o dinheiro voltava pro saldo e o cliente não fazia ideia de onde veio: via
+      // o saldo mudar sem nenhuma linha explicando. `motivo` é o texto que ele lê.
+      // .catch(() => []) porque a tabela é nova: ambiente sem a migração aplicada
+      // continua mostrando o extrato normalmente, só sem estas linhas.
+      sb(`wallet_ledger?select=id,sale_id,tipo,valor,motivo,created_at&user_id=eq.${uid}&order=created_at.desc&limit=100`).then(r => r.json()).catch(() => []),
     ]);
 
     const transactions = [];
@@ -67,7 +73,13 @@ export default async function handler(req, res) {
       //     'canceled' (1 L) — 37 dos 41 casos encontrados no banco.
       // Auditoria: 41 pedidos fantasma em 8 usuários, R$ 3.067.634 de débito falso
       // exibido. Nada disso debitou saldo real — era só exibição mentindo pro cliente.
-      if (s.status === 'canceled' || s.status === 'cancelled') continue;
+      // 🔴 PONTO 107 (21/08/2026) — FALTAVA A TERCEIRA GRAFIA: 'cancelado'.
+      // A correção de 18/08 acima cobriu 'cancelled' e 'canceled' e parou aí. Só
+      // que a função cancelar_venda() (migração 20260821) grava em PORTUGUÊS —
+      // 'cancelado'. Com a devolução ao comprador entrando em cena, o cliente
+      // veria o débito da compra cancelada E o crédito da devolução: o mesmo
+      // dinheiro contado duas vezes na tela. Agora as três grafias são puladas.
+      if (['canceled', 'cancelled', 'cancelado'].includes(String(s.status || '').toLowerCase())) continue;
       transactions.push({
         id: s.id,
         type: isDeposit ? 'deposit' : 'purchase',
@@ -111,6 +123,25 @@ export default async function handler(req, res) {
         amount: -(Number(w.valor) || 0),
         status: w.status || 'pending',
         date: w.requested_at,
+      });
+    }
+
+    // 💳 PONTO 107 (21/08/2026) — DEVOLUÇÃO DE VENDA CANCELADA.
+    // Entra como CRÉDITO de verdade, não linha informativa: o saldo do cliente
+    // subiu mesmo. E é crédito sem débito correspondente de propósito — o dinheiro
+    // original saiu por PIX/cartão, fora da carteira, e a compra cancelada nem
+    // aparece no extrato (é pulada lá em cima, na regra do "pedido fantasma").
+    // Sem esta linha o cliente via o saldo crescer do nada e não entendia por quê.
+    for (const e of Array.isArray(estornoRows) ? estornoRows : []) {
+      transactions.push({
+        id: `estorno-${e.id}`,
+        type: 'refund',
+        title: 'Devolução de compra cancelada',
+        // o texto que o admin escreveu ao cancelar — é o que explica pro cliente
+        source: e.motivo || 'Pedido cancelado',
+        amount: Number(e.valor) || 0,
+        status: 'paid',
+        date: e.created_at,
       });
     }
 
