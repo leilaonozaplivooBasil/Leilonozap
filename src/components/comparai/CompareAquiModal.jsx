@@ -1,13 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { X, Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, AlertTriangle, Factory, Trophy } from 'lucide-react';
+import { Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, AlertTriangle, Factory, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
+
+// 20/08/2026 (pedido do dono, "sênior") — "todo mundo compara no Mercado
+// Livre, não tem como não trazer o Mercado Livre". Embutir a PÁGINA ao vivo
+// do Google Shopping/ML num iframe não é possível: os dois bloqueiam
+// deliberadamente ser embutidos em site de terceiro (cabeçalho de segurança
+// X-Frame-Options/CSP, é assim que Google e ML se protegem de clickjacking —
+// não é uma config que dá pra contornar do nosso lado). O que É possível, e
+// já está pronto (a API já busca, só não era mostrado): a FOTO real de cada
+// produto encontrado, vinda direto da mesma fonte (Google Shopping/Zoom).
+// Isso já detecta e destaca o Mercado Livre quando ele aparece no resultado.
+function isMercadoLivre(item) {
+  const s = `${item?.store || ''}`.toLowerCase();
+  const u = `${item?.url || ''}`.toLowerCase();
+  return s.includes('mercado livre') || s.includes('mercadolivre') || u.includes('mercadolivre.com');
+}
 
 export default function CompareAquiModal({ auction, isProduct = false, onClose }) {
   const [comparisonData, setComparisonData] = useState(null);
@@ -23,6 +38,13 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   const [showLogoEditor, setShowLogoEditor] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [tempLogoUrl, setTempLogoUrl] = useState(localAuction?.supplier_logo_url || '');
+
+  // Mercado Livre primeiro (quando aparece no resultado real), o resto mantém
+  // a ordem original da busca — não inventa nada, só reordena o que já veio.
+  const sortedComparisons = useMemo(() => {
+    const list = comparisonData?.comparisons || [];
+    return [...list].sort((a, b) => (isMercadoLivre(b) ? 1 : 0) - (isMercadoLivre(a) ? 1 : 0));
+  }, [comparisonData]);
 
   const [isSharing, setIsSharing] = useState(false);
 
@@ -352,13 +374,14 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-2xl rounded-2xl bg-gradient-to-br from-gray-900 via-emerald-950/40 to-gray-900 text-white border-emerald-500/20 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-          
-          <button onClick={onClose} className="absolute top-4 right-4 z-20 text-white hover:text-red-400 transition-colors p-2" disabled={isSharing}>
-            <X className="w-6 h-6" />
-          </button>
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-2xl rounded-2xl bg-gray-900 text-white border border-emerald-500/25 shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto overflow-x-hidden">
 
           <DialogHeader>
+            {/* 🩹 20/08/2026 — dono reportou "dois X" no fechar: este componente
+                desenhava um botão de fechar próprio (absolute top-4 right-4) EM CIMA
+                do botão nativo que o DialogContent já injeta (ver dialog.jsx) — mesmo
+                bug do PONTO 87 (19/08/2026), só que aqui nunca tinha sido corrigido.
+                Removido o botão manual; o nativo já fecha o modal sozinho. */}
             <DialogTitle className="text-xl sm:text-2xl pr-10">
               <img
                 src={CompareAquiIcon}
@@ -366,7 +389,11 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                 className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white p-2 shadow-lg"
               />
               <div className="min-w-0">
-                <div className="font-slab text-emerald-400 font-bold text-xl sm:text-2xl">CompareAQUI</div>
+                {/* CompareAQUI mantém a própria cor azul (a do ícone/logo) mesmo dentro
+                    do NoZap — pedido do dono: reforça que é uma plataforma INDEPENDENTE
+                    validando o preço, não o próprio site se autoavaliando. O verde do
+                    NoZap fica reservado pro que É do NoZap (preço, economia, vencedor). */}
+                <div className="font-slab text-sky-400 font-bold text-xl sm:text-2xl">CompareAQUI</div>
                 <div className="text-xs sm:text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
               </div>
             </DialogTitle>
@@ -509,19 +536,39 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                       só nos dados (loja, produto achado, preço). w-0+flex-1+min-w-0 +
                       overflow-hidden em cascata evita o vazamento de texto pro lado de
                       fora do card em qualquer largura de tela. */}
-                  {!comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 && (
+                  {!comparisonData.isFactoryDirect && sortedComparisons.length > 0 && (
                     <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 sm:p-5 overflow-hidden">
                       <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/90 mb-3">
-                        Lojas comparadas ({comparisonData.comparisons.length})
+                        Lojas comparadas ({sortedComparisons.length})
                       </div>
                       <div className="space-y-1.5 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
-                        {comparisonData.comparisons.slice(0, 10).map((item, i) => (
+                        {sortedComparisons.slice(0, 10).map((item, i) => (
                           <div
                             key={i}
-                            className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
+                            className="flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
                           >
+                            {/* Foto real do produto, vinda da mesma fonte (Google
+                                Shopping/Zoom) — a prova visual que dá pra trazer
+                                pra dentro do site sem embutir a página externa. */}
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt=""
+                                className="w-9 h-9 rounded-md object-cover border border-white/10 shrink-0 bg-white/5"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-md bg-white/5 border border-white/10 shrink-0" />
+                            )}
                             <div className="w-0 flex-1 min-w-0">
-                              <p className="text-gray-300 truncate">{item.store}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-gray-300 truncate">{item.store}</p>
+                                {isMercadoLivre(item) && (
+                                  <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-1.5 py-0.5 rounded">
+                                    Mercado Livre
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
                             </div>
                             <div className="shrink-0 font-slab font-bold text-white">

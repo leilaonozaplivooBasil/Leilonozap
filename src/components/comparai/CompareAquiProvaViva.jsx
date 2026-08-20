@@ -4,6 +4,12 @@ import { base44 } from '@/api/base44Client';
 
 const EXEMPLOS = ['Fone de ouvido bluetooth', 'Air fryer 5 litros', 'Cadeira gamer'];
 
+function isMercadoLivre(item) {
+  const s = `${item?.store || ''}`.toLowerCase();
+  const u = `${item?.url || ''}`.toLowerCase();
+  return s.includes('mercado livre') || s.includes('mercadolivre') || u.includes('mercadolivre.com');
+}
+
 /**
  * 🔴 PROVA AO VIVO (19/08/2026, pedido do dono) — deixa o visitante testar o
  * motor de comparação de verdade, sem sair do site: digita qualquer produto,
@@ -109,20 +115,40 @@ export default function CompareAquiProvaViva() {
             <p className="text-[10.5px] text-gray-500">{resultado.count} loja{resultado.count === 1 ? '' : 's'} comparada{resultado.count === 1 ? '' : 's'} em tempo real</p>
           </div>
           <div className="space-y-1.5 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
-            {(resultado.results || []).slice(0, 6).map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
-              >
-                <div className="w-0 flex-1 min-w-0">
-                  <p className="text-gray-300 truncate">{item.store}</p>
-                  <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
+            {[...(resultado.results || [])]
+              .sort((a, b) => (isMercadoLivre(b) ? 1 : 0) - (isMercadoLivre(a) ? 1 : 0))
+              .slice(0, 6)
+              .map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
+                >
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt=""
+                      className="w-9 h-9 rounded-md object-cover border border-white/10 shrink-0 bg-white/5"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-md bg-white/5 border border-white/10 shrink-0" />
+                  )}
+                  <div className="w-0 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-gray-300 truncate">{item.store}</p>
+                      {isMercadoLivre(item) && (
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-1.5 py-0.5 rounded">
+                          Mercado Livre
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
+                  </div>
+                  <div className="shrink-0 font-bold text-white">
+                    R$ {Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
                 </div>
-                <div className="shrink-0 font-bold text-white">
-                  R$ {Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
