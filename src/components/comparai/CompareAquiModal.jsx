@@ -500,6 +500,38 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                     </div>
                   )}
 
+                  {/* CARD 2.5: LOJAS COMPARADAS — PROVA (20/08/2026, pedido do dono) —
+                      a API já devolvia comparisonData.comparisons (loja, produto achado,
+                      preço, link) mas o modal só mostrava a MÉDIA, nunca a lista real que
+                      comprova de onde ela veio. */}
+                  {!comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 && (
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
+                      <div className="text-gray-300 text-xs font-bold uppercase mb-3">
+                        Lojas comparadas ({comparisonData.comparisons.length})
+                      </div>
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        {comparisonData.comparisons.slice(0, 10).map((item, i) => (
+                          <a
+                            key={i}
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors"
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-gray-300 truncate">{item.store}</span>
+                              <span className="block text-[11px] text-gray-500 truncate">{item.productNameFound}</span>
+                            </span>
+                            <span className="shrink-0 flex items-center gap-1.5 font-bold text-white">
+                              R$ {fmtBR(item.price)}
+                              <ExternalLink className="w-3 h-3 text-gray-500" />
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* CARD 3: ECONOMIA */}
                   {comparisonData.savings > 0 && (
                     <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-2 border-green-500 rounded-xl p-6 text-center">
