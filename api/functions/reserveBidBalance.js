@@ -60,9 +60,35 @@ export default async function handler(req, res) {
       const novoSaldo = money(saldoAtual - amount);
       const novoReservado = money(reservadoAtual + amount);
 
-      // CAS: só aplica se saldo_disponivel ainda cobrir o valor no momento da escrita
+      // ══════════════════════════════════════════════════════════════════════
+      // 🔴 PONTO 114 (21/08/2026) — `gte.` NÃO É COMPARE-AND-SWAP.
+      // ══════════════════════════════════════════════════════════════════════
+      // O filtro era `&saldo_disponivel=gte.${amount}`. Isso é um LIMIAR, não
+      // uma trava: pergunta "ainda dá pra pagar?", não "ninguém mexeu?".
+      //
+      // Dois lances simultâneos de R$ 100 numa conta com R$ 100:
+      //   • os dois leem saldo 100, reservado 0
+      //   • os dois passam no `gte.100`
+      //   • os dois gravam saldo_disponivel: 0, saldo_reservado: 100
+      // Resultado: DOIS lances de R$ 100 lastreados por R$ 100. E pior — como
+      // saldo_reservado é gravado com o valor calculado (não incrementado), a
+      // segunda escrita APAGA a reserva da primeira: o dinheiro do primeiro
+      // lance some da reserva e o lance fica sem lastro nenhum.
+      //
+      // Agora trava nas DUAS colunas, com o valor exato que foi lido. Se alguém
+      // mexeu no meio, voltam zero linhas e o laço relê — e na segunda leitura o
+      // saldo já não cobre, então a segunda reserva é recusada, que é o certo.
+      // Mesma correção do releaseBidHold (PONTO 98) e do requestWithdrawal
+      // (PONTO 101). Coluna nunca inicializada fica NULL, e "eq.0" nunca casa
+      // com NULL — daí o `or(...is.null)` quando o valor lido é 0.
+      const fDisp = saldoAtual === 0
+        ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)'
+        : `saldo_disponivel.eq.${saldoAtual}`;
+      const fRes = reservadoAtual === 0
+        ? 'or(saldo_reservado.eq.0,saldo_reservado.is.null)'
+        : `saldo_reservado.eq.${reservadoAtual}`;
       const patch = await sb(
-        `app_users?id=eq.${encodeURIComponent(userId)}&saldo_disponivel=gte.${amount}`,
+        `app_users?id=eq.${encodeURIComponent(userId)}&and=(${fDisp},${fRes})`,
         { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novoSaldo, saldo_reservado: novoReservado }) }
       );
       const updated = await patch.json().catch(() => []);
