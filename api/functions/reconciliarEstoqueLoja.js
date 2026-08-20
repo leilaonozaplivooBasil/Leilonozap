@@ -49,9 +49,18 @@ export default async function handler(req, res) {
 
   // autenticação básica — verifica se é admin/super_admin
   if (!actorId) return res.status(403).json({ ok: false, error: 'actorId obrigatório' });
-  const actorRes = await sb(`app_users?select=primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`);
+  const actorRes = await sb(`app_users?select=primary_career_level,role&id=eq.${encodeURIComponent(actorId)}&limit=1`);
   const [actor] = await actorRes.json().catch(() => []);
-  if (!actor || !['admin', 'super_admin'].includes(actor.primary_career_level)) {
+  // 🔑 Olha os DOIS campos de cargo, como adminListDeposits.js, getMyWallet.js e
+  // getDigitalWalletHistory.js ja fazem. Esta funcao era a unica olhando so o
+  // primary_career_level, e por isso barrava quem tem role='super_admin' com um
+  // primary_career_level fora da lista — 'ceo', por exemplo. Na pratica o dono do
+  // sistema levava 403 na propria ferramenta, e a tela ainda anunciava sucesso.
+  const isAdmin = actor && (
+    ['admin', 'super_admin'].includes(actor.role) ||
+    ['admin', 'super_admin'].includes(actor.primary_career_level)
+  );
+  if (!isAdmin) {
     return res.status(403).json({ ok: false, error: 'Acesso restrito a administradores' });
   }
 

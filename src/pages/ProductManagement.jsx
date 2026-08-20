@@ -743,7 +743,12 @@ export default function ProductManagement() {
                     try {
                       setIsLoading(true);
                       const r = await base44.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: false });
-                      alert(`✅ Sincronização concluída!\n${r?.resumo || ''}\n\nOcultados: ${r?.ocultados ?? '?'} produtos com estoque zerado.`);
+                      // ⚠️ Confere o resultado ANTES de comemorar. O texto de sucesso era fixo:
+                      // quando o servidor recusava (403, erro), a tela dizia "concluída" do
+                      // mesmo jeito, só com um "?" no lugar do número — e ninguém percebia
+                      // que nada tinha sido feito.
+                      if (!r?.ok) { alert('❌ Não foi possível sincronizar.\n\n' + (r?.error || 'O servidor não confirmou a operação.')); return; }
+                      alert(`✅ Sincronização concluída!\n${r.resumo || ''}\n\nOcultados: ${r.ocultados ?? 0} produtos com estoque zerado.`);
                       sessionStorage.removeItem('products_cache_v3');
                       sessionStorage.removeItem('products_cache_time_v3');
                       await loadData();
@@ -759,7 +764,8 @@ export default function ProductManagement() {
                     try {
                       setIsLoading(true);
                       const r = await base44.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: true });
-                      alert(`✅ Reconciliação completa!\n${r?.resumo || ''}\n\nOcultados: ${r?.ocultados ?? '?'}\nReativados: ${r?.reativados ?? '?'}`);
+                      if (!r?.ok) { alert('❌ Não foi possível reconciliar.\n\n' + (r?.error || 'O servidor não confirmou a operação.')); return; }
+                      alert(`✅ Reconciliação completa!\n${r.resumo || ''}\n\nOcultados: ${r.ocultados ?? 0}\nReativados: ${r.reativados ?? 0}`);
                       sessionStorage.removeItem('products_cache_v3');
                       sessionStorage.removeItem('products_cache_time_v3');
                       await loadData();
