@@ -164,6 +164,37 @@ function sb(path, opts = {}) {
 // derrubaria o recebimento de pagamentos. O log da etapa 1 responde essa pergunta
 // com pagamento real, sem arriscar um centavo. Padrão sem MP_WEBHOOK_MODO =
 // observar: quem esquecer de configurar não quebra nada.
+// Lê cabeçalho sem depender do formato: no Node os headers vêm como objeto de
+// chaves minúsculas; em runtime tipo Edge vêm como Headers (com .get). Ler só de
+// um jeito faria a assinatura "sumir" por motivo de plataforma, não de segurança.
+function lerCabecalho(req, nome) {
+  const h = req?.headers;
+  if (!h) return '';
+  if (typeof h.get === 'function') return String(h.get(nome) || '');
+  return String(h[nome] || h[nome.toLowerCase()] || h[nome.toUpperCase()] || '');
+}
+
+// 🔎 DIAGNÓSTICO (21/08/2026) — a pergunta que o código não sabia responder.
+// A notificação do Mercado Pago chega aqui por DOIS caminhos possíveis: o webhook
+// cadastrado no painel, e o `notification_url` que cada cobrança leva dentro dela
+// (é o que as 12 rotas de pagamento deste repositório usam). A documentação do MP
+// afirma que a assinatura vai "na URL registrada", e não diz o que acontece no
+// segundo caminho. Como nenhuma versão anterior deste arquivo LEU cabeçalho
+// nenhum, não existe registro em lugar nenhum — nem no código, nem no banco.
+// Esta linha faz a própria notificação real responder, sem mexer em configuração
+// e sem risco: lista só os NOMES dos cabeçalhos que chegaram (nunca o valor da
+// assinatura) e diz se o x-signature veio.
+function diagnosticarCabecalhos(req, payId) {
+  try {
+    const h = req?.headers;
+    const nomes = h
+      ? (typeof h.keys === 'function' ? Array.from(h.keys()) : Object.keys(h))
+      : [];
+    const temAssinatura = !!lerCabecalho(req, 'x-signature');
+    console.log(`[MP][DIAG] pagamento ${payId} · x-signature: ${temAssinatura ? 'VEIO' : 'NÃO VEIO'} · x-request-id: ${lerCabecalho(req, 'x-request-id') ? 'VEIO' : 'NÃO VEIO'} · user-agent: ${lerCabecalho(req, 'user-agent').slice(0, 60)} · cabeçalhos: ${nomes.join(',')}`);
+  } catch (_) { /* diagnóstico nunca pode atrapalhar */ }
+}
+
 function conferirAssinatura(req, payId) {
   const segredo = process.env.MP_WEBHOOK_SECRET;
   const bloqueia = String(process.env.MP_WEBHOOK_MODO || '').toLowerCase() === 'bloquear';
@@ -177,8 +208,8 @@ function conferirAssinatura(req, payId) {
     return { ok: true, verificado: false };
   }
   try {
-    const cabecalho = String(req.headers?.['x-signature'] || req.headers?.['X-Signature'] || '');
-    const requestId = String(req.headers?.['x-request-id'] || req.headers?.['X-Request-Id'] || '');
+    const cabecalho = lerCabecalho(req, 'x-signature');
+    const requestId = lerCabecalho(req, 'x-request-id');
     const campos = {};
     for (const parte of cabecalho.split(',')) {
       const i = parte.indexOf('=');
@@ -236,6 +267,7 @@ export default async function handler(req, res) {
     if (!['POST', 'GET'].includes(String(req.method || '').toUpperCase())) {
       return res.status(405).json({ ok: false, error: 'metodo_nao_permitido' });
     }
+    diagnosticarCabecalhos(req, payId);
     const assinatura = conferirAssinatura(req, payId);
     if (!assinatura.ok) {
       console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
