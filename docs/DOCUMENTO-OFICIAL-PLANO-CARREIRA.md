@@ -231,6 +231,52 @@ o martelo **já É o pagamento**. Não existe "esperar pagar depois".
 
 > ⛔ **NÃO MOVER este gatilho para o fluxo de pagamento.** Decisão explícita do dono.
 
+### 6-A.1 · RASTRO CONTÁBIL DO LEILÃO (21/08/2026)
+
+⚠️ **A REGRA DE PAGAMENTO ACIMA NÃO MUDOU.** Continua 5% para uma pessoa só —
+quem indicou o arrematante. Sem cadeia, sem telescópio, sem pool de topo, sem
+executivo. O que esta seção acrescenta é **contabilidade**, não distribuição.
+
+**O problema que ela resolve.** O martelo somava os 5% direto no
+`commission_balance` do indicador e **não gravava linha nenhuma** em
+`commission_records`. Duas consequências:
+
+1. `recalculateCommissionBalances` reescreve o saldo somando as linhas de
+   comissão. Sem linha, rodar essa rotina **apagava** o ganho do indicador.
+2. Não existia como abrir um relatório e mostrar quanto o leilão gerou.
+
+**Como fica.** Todo arremate real registra o bloco de 30% da rede inteiro:
+
+| Fatia | % | Destino | `role` | Saldo |
+|---|---|---|---|---|
+| Indicador do arrematante | **5%** | quem indicou | `leilao_indicador` | credita (como sempre) |
+| Fatia retida | **25%** | conta oficial da empresa | `leilao_retido` | credita |
+| Margem + tributos | 70% | empresa | — | não é comissão |
+
+- **Sem indicador**, os **30% inteiros** vão para `leilao_retido`. A fatia da
+  rede existe sempre; o que não tem dono fica retido, nunca evapora.
+- Base = `current_price`. **O frete nunca comissiona** — nem nos 5%, nem nos 25%.
+- **Não roda em** plano de investimento (`is_investment_plan`) nem em leilão de
+  teste (`is_test_auction`). Leilão de teste não gera dinheiro sacável.
+- Idempotente por `(sale_id, role)`: leilão finalizado duas vezes não retém duas.
+
+**Por que a fatia retida é saldo sacável, e não só um lançamento.** Decisão
+expressa do dono (Luiz Alberto Sant'Anna Filho) em 21/08/2026: a conta oficial é
+administrada por ele e está no CPF dele; quando o repasse bancário automático
+entrar no ar, esse saldo vira pagamento real. O valor retido fica identificado
+como *fatia da rede que a empresa optou por não distribuir no leilão* — separado
+do que aquela conta ganha por cargo nos pools da loja —, para que numa auditoria
+futura dê para abrir para a diretoria linha por linha.
+
+**Na loja virtual**, a fatia sem dono (`empresa_rollup`) passou a creditar saldo
+também. Antes era uma linha morta: registrada em `commission_records` e nunca
+paga — o que ainda por cima quebrava o `recalculateCommissionBalances`. Agora os
+dois modelos tratam a fatia sem dono do mesmo jeito.
+
+⚠️ **Pendência conhecida:** arremates anteriores a 21/08/2026 têm saldo sem
+registro. `recalculateCommissionBalances` só pode ser confirmado depois do
+backfill desses arremates — até lá, apenas preview.
+
 ### Onde vive no código
 | Papel | Arquivo | Estado |
 |---|---|---|

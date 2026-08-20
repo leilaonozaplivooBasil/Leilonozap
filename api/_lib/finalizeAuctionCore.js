@@ -9,6 +9,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 import { cancelarCuponsBloqueados, liberarCupomPassaporte } from './passaporteCoupon.js';
 import { recolherBonusPorArremate } from './passaporteBonus.js';
+import { oid } from './oid.js';
 
 // tolerância pra deriva de relógio entre cliente e servidor (nunca encerra
 // um leilão com mais de 2s restantes)
@@ -25,6 +26,120 @@ export function sb(path, opts = {}) {
 }
 export const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 export const enc = encodeURIComponent;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🏦 PONTO 100 (21/08/2026) — RASTRO DO DINHEIRO DO LEILÃO
+// Decisão do dono (Luiz Alberto Sant'Anna Filho) nesta data.
+//
+// A REGRA DE PAGAMENTO NÃO MUDA. Continua exatamente o que o documento oficial
+// manda: 5% do valor do arremate para UMA pessoa — quem indicou o arrematante.
+// Sem cadeia, sem telescópio, sem pool de topo, sem executivo.
+//
+// O QUE MUDA É A CONTABILIDADE. Antes o leilão movia dinheiro sem deixar
+// registro: o martelo somava 5% direto no commission_balance do indicador e não
+// gravava UMA linha em commission_records. Duas consequências ruins:
+//
+//   1. A função recalculateCommissionBalances reescreve o saldo somando as
+//      linhas de comissão. Como o leilão não tinha linha, rodar ela APAGAVA o
+//      ganho do indicador — dinheiro sumindo sem rastro de onde veio.
+//   2. Não existia como abrir um relatório e mostrar quanto o leilão gerou.
+//
+// Agora o bloco de 30% da rede é registrado inteiro em todo arremate:
+//
+//   • 5%  → indicador do arrematante (role 'leilao_indicador')
+//           Continua sendo o ÚNICO pagamento distribuído. Nada mudou aqui.
+//   • 25% → conta oficial da empresa (role 'leilao_retido')
+//           Fatia da rede que a empresa optou por NÃO distribuir no leilão.
+//           É saldo real e sacável, por decisão expressa do dono: a conta é
+//           dele, está no CPF dele, e quando o repasse bancário automático
+//           entrar no ar esse valor vira pagamento de verdade.
+//   • Sem indicador? Os 30% inteiros vão para 'leilao_retido'. A fatia da rede
+//     existe sempre; o que não tem dono fica retido, nunca evapora.
+//   • Os outros 70% (margem + tributos) NÃO são comissão e não entram aqui.
+//
+// Base = finalPrice (só o produto). O FRETE NUNCA COMISSIONA — nem nos 5%,
+// nem nos 25%.
+//
+// ⛔ NÃO RODA EM: plano de investimento (is_investment_plan) e leilão de teste
+// (is_test_auction). Leilão de teste não pode gerar dinheiro sacável de verdade.
+//
+// 📕 Fonte de verdade: docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, seção 6-A.
+// ══════════════════════════════════════════════════════════════════════════════
+export const CONTA_OFICIAL_NOME = 'Leilão NoZap - Site Oficial';
+export const PCT_REDE_LEILAO = 30.0;      // bloco da rede (igual ao da loja)
+export const PCT_INDICADOR_LEILAO = 5.0;  // única fatia distribuída no leilão
+
+// Grava UMA linha em commission_records. Best-effort por contrato: o dinheiro já
+// foi movido, e falhar no extrato NUNCA pode derrubar o arremate.
+async function gravarLinhaComissaoLeilao(linha) {
+  try {
+    const id = oid();
+    const r = await sb('commission_records', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ id, base44_id: id, sale_type: 'leilao', status: 'confirmed', created_date: new Date().toISOString(), ...linha }),
+    });
+    return r.ok;
+  } catch (e) {
+    console.warn('[FINALIZE] extrato de comissão:', e?.message);
+    return false;
+  }
+}
+
+/**
+ * Credita a fatia RETIDA (a parte da rede que o leilão não distribui) na conta
+ * oficial da empresa, com linha no extrato. Idempotente pelo par
+ * (sale_id, role): se já existe linha 'leilao_retido' deste leilão, não repete.
+ */
+export async function reterFatiaDaRede({ auction, finalPrice, pctRetido, arrematanteId, arrematanteNome }) {
+  try {
+    if (pctRetido <= 0) return 0;
+    const valor = money((finalPrice * pctRetido) / 100);
+    if (valor <= 0) return 0;
+
+    const jaTem = await (await sb(
+      `commission_records?select=id&sale_id=eq.${enc(auction.id)}&role=eq.leilao_retido&limit=1`
+    )).json();
+    if (Array.isArray(jaTem) && jaTem.length) return 0;
+
+    const contas = await (await sb(
+      `app_users?select=id,full_name,commission_balance&full_name=eq.${enc(CONTA_OFICIAL_NOME)}&limit=1`
+    )).json();
+    const oficial = Array.isArray(contas) ? contas[0] : null;
+    if (!oficial) {
+      // 🔴 Sem a conta oficial cadastrada o dinheiro não tem onde cair. NÃO
+      // inventa destino: registra alto e claro pra alguém arrumar o cadastro.
+      console.error(`[FINALIZE] Conta oficial "${CONTA_OFICIAL_NOME}" não encontrada — R$ ${valor} do leilão ${auction.id} ficaram sem registro.`);
+      return 0;
+    }
+
+    await gravarLinhaComissaoLeilao({
+      sale_id: auction.id,
+      user_id: oficial.id,
+      user_name: oficial.full_name,
+      role: 'leilao_retido',
+      percent: pctRetido,
+      amount: valor,
+      sale_amount: finalPrice,
+      product_title: auction.title || null,
+      // ⚠️ âncora = o ARREMATANTE. Não usar auction.winner_id aqui: neste ponto
+      // ele ainda pode ser o líder ANTERIOR (a foto lida antes do claim atômico).
+      anchor_user_id: arrematanteId || null,
+      anchor_user_name: arrematanteNome || null,
+    });
+
+    // 💰 crédito no saldo — decisão expressa do dono (ver cabeçalho).
+    await sb(`app_users?id=eq.${enc(oficial.id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ commission_balance: money((Number(oficial.commission_balance) || 0) + valor) }),
+    });
+    return valor;
+  } catch (e) {
+    console.warn('[FINALIZE] retenção da fatia da rede:', e?.message);
+    return 0;
+  }
+}
 
 export async function fetchAuction(auctionId) {
   const rows = await (await sb(`auctions?select=*&id=eq.${enc(auctionId)}&limit=1`)).json();
@@ -183,10 +298,15 @@ export async function finalizeOneAuction(auction) {
       //     NÃO mover este gatilho para o fluxo de pagamento.
       // Saldo de teste ou real conforme is_test_auction. Planos de investimento não comissionam.
       // 📕 Fonte de verdade: docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md
+      // 🏦 PONTO 100: pctDistribuido guarda quanto dos 30% da rede saiu de fato.
+      // O que sobrar é retido na conta oficial logo abaixo — ver o cabeçalho de
+      // reterFatiaDaRede(). O PAGAMENTO em si não mudou: continua 5% pro
+      // indicador do arrematante e mais ninguém.
+      let pctDistribuido = 0;
       if (u.referred_by_id && !auction.is_investment_plan) {
         try {
           const lic = (await (await sb(
-            `app_users?select=id,network_bids_count,commission_balance,test_valora_balance,valora_pay_balance&id=eq.${enc(u.referred_by_id)}&limit=1`
+            `app_users?select=id,full_name,network_bids_count,commission_balance,test_valora_balance,valora_pay_balance&id=eq.${enc(u.referred_by_id)}&limit=1`
           )).json())?.[0];
           if (lic) {
             const commission = money(finalPrice * 0.05);
@@ -200,8 +320,41 @@ export async function finalizeOneAuction(auction) {
               patch.valora_pay_balance = money((Number(lic.valora_pay_balance) || 0) + commission);
             }
             await sb(`app_users?id=eq.${enc(lic.id)}`, { method: 'PATCH', body: JSON.stringify(patch) });
+            pctDistribuido = PCT_INDICADOR_LEILAO;
+
+            // 📒 PONTO 100: a linha do extrato que faltava. Sem ela o
+            // recalculateCommissionBalances APAGAVA este ganho — ele soma
+            // commission_records, e o leilão nunca gravava nada.
+            // Só no leilão real: leilão de teste não entra no extrato de dinheiro.
+            if (auction.is_test_auction !== true) {
+              await gravarLinhaComissaoLeilao({
+                sale_id: auction.id,
+                user_id: lic.id,
+                user_name: lic.full_name || null,
+                role: 'leilao_indicador',
+                percent: PCT_INDICADOR_LEILAO,
+                amount: commission,
+                sale_amount: finalPrice,
+                product_title: auction.title || null,
+                anchor_user_id: winnerId,
+                anchor_user_name: u.full_name || winnerName || null,
+              });
+            }
           }
         } catch (e) { console.warn('[FINALIZE] comissão licenciado:', e?.message); }
+      }
+
+      // 🏦 PONTO 100: o que dos 30% da rede NÃO foi distribuído fica RETIDO na
+      // conta oficial da empresa, com linha no extrato. Sem indicador, retém os
+      // 30% inteiros. Plano de investimento e leilão de teste não retêm nada.
+      if (!auction.is_investment_plan && auction.is_test_auction !== true) {
+        await reterFatiaDaRede({
+          auction,
+          finalPrice,
+          pctRetido: money(PCT_REDE_LEILAO - pctDistribuido),
+          arrematanteId: winnerId,
+          arrematanteNome: u.full_name || winnerName || null,
+        });
       }
     }
   }
