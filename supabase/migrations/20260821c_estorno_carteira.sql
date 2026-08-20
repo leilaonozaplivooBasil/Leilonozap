@@ -56,11 +56,12 @@ create or replace function public.estornar_para_carteira(_sale_id text, _motivo 
 returns jsonb language plpgsql security definer as $$
 declare
   _venda   record;
+  _valor   numeric := 0;
   _antes   numeric := 0;
   _depois  numeric := 0;
   _texto   text;
 begin
-  select id, buyer_id, buyer_name, total_amount, status, product_title
+  select id, buyer_id, buyer_name, total_amount, status, product_title, raw_base44
     into _venda
     from public.catalog_sales where id = _sale_id;
   if not found then
@@ -69,7 +70,33 @@ begin
   if _venda.buyer_id is null then
     return jsonb_build_object('success', false, 'error', 'Venda sem comprador identificado');
   end if;
-  if coalesce(_venda.total_amount, 0) <= 0 then
+  -- 🔴 PONTO 108 (21/08/2026) — O FRETE TAMBÉM TEM QUE VOLTAR.
+  -- Aqui usava total_amount, e total_amount é a BASE DE COMISSÃO: o frete fica
+  -- FORA dele de propósito (createStoreOrder.js:9 — "o frete NÃO entra em
+  -- sale_price/total_amount: essa é a base de comissão").
+  --
+  -- Resultado no caso real do Ronilson: ele pagou R$ 86,54 (R$ 73,87 de produto
+  -- + R$ 12,67 de frete dos Correios) e a devolução saiu R$ 73,87. Faltaram os
+  -- R$ 12,67 do frete de uma entrega que nunca vai acontecer.
+  --
+  -- O valor realmente cobrado vive no JSON da venda, em
+  -- raw_base44->>'amount_charged'. Quando ele não existe (o INSERT de fallback
+  -- do createStoreOrder.js:102 grava a venda sem raw_base44), cai em
+  -- total_amount, que é o comportamento antigo.
+  --
+  -- A checagem com regex evita que um amount_charged corrompido derrube a
+  -- devolução inteira num erro de cast.
+  _valor := round(coalesce(
+    case
+      when _venda.raw_base44->>'amount_charged' ~ '^[0-9]+(\.[0-9]+)?$'
+        then (_venda.raw_base44->>'amount_charged')::numeric
+      else null
+    end,
+    _venda.total_amount,
+    0
+  ), 2);
+
+  if _valor <= 0 then
     return jsonb_build_object('success', true, 'devolvido', 0, 'motivo_pulo', 'valor zero');
   end if;
 
@@ -86,9 +113,9 @@ begin
 
   -- credita e captura o antes/depois na MESMA escrita
   update public.app_users u
-     set saldo_disponivel = round(coalesce(u.saldo_disponivel, 0) + _venda.total_amount, 2)
+     set saldo_disponivel = round(coalesce(u.saldo_disponivel, 0) + _valor, 2)
    where u.id = _venda.buyer_id
-  returning round(coalesce(u.saldo_disponivel, 0) - _venda.total_amount, 2), u.saldo_disponivel
+  returning round(coalesce(u.saldo_disponivel, 0) - _valor, 2), u.saldo_disponivel
     into _antes, _depois;
 
   if _antes is null then
@@ -98,12 +125,14 @@ begin
   insert into public.wallet_ledger
     (user_id, sale_id, tipo, valor, saldo_antes, saldo_depois, motivo, origem)
   values
-    (_venda.buyer_id, _sale_id, 'estorno_venda', round(_venda.total_amount, 2),
+    (_venda.buyer_id, _sale_id, 'estorno_venda', _valor,
      _antes, _depois, _texto, 'sql/estornar_para_carteira');
 
   return jsonb_build_object(
     'success',       true,
-    'devolvido',     round(_venda.total_amount, 2),
+    'devolvido',     _valor,
+    'produto',       round(coalesce(_venda.total_amount, 0), 2),
+    'frete',         round(_valor - coalesce(_venda.total_amount, 0), 2),
     'comprador',     _venda.buyer_name,
     'saldo_antes',   _antes,
     'saldo_depois',  _depois,
