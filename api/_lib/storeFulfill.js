@@ -74,7 +74,36 @@ async function payStoreCommissions(sale) {
   const { assignments, companyPercent, companyAmount } = calcularComissao(sale, users);
 
   const anchor = users.find((u) => u.id === sale.seller_id) || null;
-  const site = users.find((u) => u.full_name === 'Leilão NoZap - Site Oficial');
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 PONTO 118 (21/08/2026) — A EMPRESA ERA ACHADA PELO NOME, LETRA POR LETRA
+  // ══════════════════════════════════════════════════════════════════════════
+  // Era `users.find(u => u.full_name === 'Leilão NoZap - Site Oficial')`, dentro
+  // da lista de usuários já carregada. Bastava um espaço a mais no nome, um
+  // acento diferente, a conta arquivada, ou ser uma das DUPLICATAS de "Site
+  // Oficial" (a tela da rede tem até um botão pra limpar essas duplicatas) e o
+  // `site` vinha undefined. Aí a linha do rollup — a fatia sem dono da venda —
+  // simplesmente NÃO era gravada, em silêncio. Some do relatório e ninguém sabe
+  // que sumiu.
+  //
+  // Agora resolve por CHAVE ESTÁVEL: referral_code = 'leilaonozap', a mesma que
+  // o cadastro já usa pra achar a raiz da árvore (publicRegister.js:85 e
+  // googleLogin.js:127). Consulta própria, SEM filtro de ativo — a conta da
+  // empresa é destino contábil, não participante de pool; se ela estiver
+  // arquivada por qualquer motivo, o registro ainda tem que sair.
+  // O nome continua como último recurso, pra não quebrar ambiente onde o
+  // referral_code ainda não estiver preenchido.
+  let site = null;
+  try {
+    const porCodigo = await (await sb('app_users?select=id,full_name&referral_code=eq.leilaonozap&limit=1')).json();
+    site = Array.isArray(porCodigo) ? porCodigo[0] : null;
+  } catch (_) { site = null; }
+  if (!site) site = users.find((u) => u.full_name === 'Leilão NoZap - Site Oficial') || null;
+  if (!site && companyAmount > 0) {
+    // Nunca mais some calado: se a empresa tem fatia a registrar e não há conta
+    // pra receber, isso é problema de cadastro e alguém precisa saber.
+    console.error(`[LOJA] Conta oficial da empresa NÃO encontrada (referral_code=leilaonozap). Fatia de R$ ${companyAmount} da venda ${sale.id} ficou SEM registro contábil.`);
+  }
   const now = new Date().toISOString();
   const linhas = [];
   let total = 0;
