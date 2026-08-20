@@ -12,6 +12,21 @@ import PageFullscreen from "@/components/admin/PageFullscreen";
 import OrderItemsChecklist from "@/components/catalog/OrderItemsChecklist";
 import OrderFulfillmentSteps from "@/components/catalog/OrderFulfillmentSteps";
 
+// ✅ PONTO 112 (21/08/2026) — mesma conta do checkout (src/pages/Cart.jsx) e do
+// servidor (api/functions/atualizarCpfComprador.js). As três precisam concordar:
+// se a tela aceitar o que o servidor recusa, o operador fica no escuro.
+function cpfTemDigitoValido(valor) {
+  const cpf = String(valor || '').replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const calc = (base) => {
+    let soma = 0;
+    for (let i = 0; i < base; i += 1) soma += parseInt(cpf[i], 10) * (base + 1 - i);
+    const r = (soma * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  return calc(9) === parseInt(cpf[9], 10) && calc(10) === parseInt(cpf[10], 10);
+}
+
 const CatalogSale = base44.entities.CatalogSale;
 
 // 📦 Só produto físico entra nesta fila de envio. Kinds digitais puros (depósito de
@@ -265,6 +280,13 @@ export default function CatalogOrdersAdmin() {
     if (!selectedOrder?.buyer_id) return;
     const cpfLimpo = cpfInput.replace(/\D/g, '');
     if (cpfLimpo.length !== 11) { toast.error('CPF deve ter 11 dígitos.'); return; }
+    // 🔴 PONTO 112: confere o dígito verificador ANTES de mandar pro servidor.
+    // Sem isto o operador corrigia um CPF inválido por outro inválido e caía no
+    // mesmo erro da etiqueta, achando que o sistema estava quebrado.
+    if (!cpfTemDigitoValido(cpfLimpo)) {
+      toast.error('Esse CPF não passa na conferência dos dígitos. Confira o número com o cliente.');
+      return;
+    }
     let actorId = null;
     try { actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { actorId = null; }
     if (!actorId) { toast.error('Sessão não identificada.'); return; }
