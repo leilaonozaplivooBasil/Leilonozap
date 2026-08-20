@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, AlertTriangle, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const EXEMPLOS = ['Fone de ouvido bluetooth', 'Air fryer 5 litros', 'Cadeira gamer'];
 
@@ -22,6 +24,7 @@ export default function CompareAquiProvaViva() {
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState(null);
   const [imagemAtiva, setImagemAtiva] = useState(null);
+  const [selectedProof, setSelectedProof] = useState(null);
 
   const buscar = async (termo) => {
     const q = (termo ?? query).trim();
@@ -119,9 +122,11 @@ export default function CompareAquiProvaViva() {
               .sort((a, b) => (isMercadoLivre(b) ? 1 : 0) - (isMercadoLivre(a) ? 1 : 0))
               .slice(0, 6)
               .map((item, i) => (
-                <div
+                <button
                   key={i}
-                  className="flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
+                  type="button"
+                  onClick={() => setSelectedProof(item)}
+                  className="w-full flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden text-left hover:bg-white/[0.07] hover:border-sky-400/40 active:scale-[0.99] transition-all cursor-pointer"
                 >
                   {item.image ? (
                     <img
@@ -144,13 +149,71 @@ export default function CompareAquiProvaViva() {
                     </div>
                     <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
                   </div>
-                  <div className="shrink-0 font-bold text-white">
-                    R$ {Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="shrink-0 flex items-center gap-1">
+                    <span className="font-bold text-white">
+                      R$ {Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-sky-400" />
                   </div>
-                </div>
+                </button>
               ))}
           </div>
         </div>
+      )}
+
+      {/* MODAL DETALHE — clicar numa linha abre a foto grande + dado completo,
+          sem sair do site (mesmo padrão do modal real, CompareAquiModal.jsx). */}
+      {selectedProof && (
+        <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
+          <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-md rounded-2xl bg-gradient-to-br from-gray-900 via-emerald-950/40 to-gray-900 text-white border-2 border-sky-400/80 ring-1 ring-white/25 shadow-2xl shadow-sky-500/20">
+            <DialogHeader>
+              <DialogTitle className="text-lg pr-8 flex items-center gap-2">
+                {isMercadoLivre(selectedProof) && (
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-2 py-0.5 rounded">
+                    Mercado Livre
+                  </span>
+                )}
+                <span className="truncate">{selectedProof.store}</span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedProof.image ? (
+                <img
+                  src={selectedProof.image}
+                  alt=""
+                  className="w-full max-h-64 object-contain rounded-xl border border-white/10 bg-white/5"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-full h-40 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                  <ImageIcon className="w-8 h-8 text-gray-600" />
+                </div>
+              )}
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/90 mb-1">Produto encontrado</div>
+                <p className="text-gray-200 break-words">{selectedProof.productNameFound || selectedProof.store}</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.04] border border-white/10 px-4 py-3 text-center">
+                <div className="text-[11px] text-gray-400 uppercase tracking-wide">Preço encontrado</div>
+                <div className="text-3xl font-black text-orange-400">
+                  R$ {Number(selectedProof.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+                Resultado real, buscado agora mesmo no Google Shopping/Zoom. Não abrimos a página da loja
+                aqui dentro porque elas mesmas bloqueiam isso por segurança — mas esse é o dado real que
+                elas retornaram, sem sair do Leilão NoZap.
+              </p>
+              <Button
+                onClick={() => setSelectedProof(null)}
+                variant="outline"
+                className="w-full border-sky-400 text-sky-300 hover:bg-sky-900/20"
+              >
+                Fechar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
