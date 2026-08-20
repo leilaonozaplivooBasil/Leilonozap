@@ -212,6 +212,16 @@ function diagnosticarCabecalhos(req, payId) {
 // Nada de segredo vai pro log: o manifesto é feito de id de pagamento, id de
 // requisição e carimbo de tempo. A chave nunca é impressa, e da assinatura só
 // saem os 10 primeiros caracteres (hash truncado não serve pra forjar nada).
+// Qual aplicação do Mercado Pago é a nossa? O access token traz o número da
+// aplicação embutido no segundo pedaço (APP_USR-<aplicacao>-<data>-<hash>-<user>).
+// Devolve SÓ esse número — nunca o token. O número da aplicação não é segredo:
+// ele aparece na própria URL do painel do Mercado Pago (…/credentials?id=<numero>).
+// Serve pra saber, sem chutar, de qual das aplicações copiar a assinatura secreta.
+function idDaAplicacao() {
+  const pedacos = String(process.env.MP_ACCESS_TOKEN || '').split('-');
+  return /^\d{6,}$/.test(pedacos[1] || '') ? pedacos[1] : 'formato-inesperado';
+}
+
 function investigarManifesto({ segredo, idBody, idUrl, requestId, ts, v1 }) {
   try {
     const hmac = (texto) => crypto.createHmac('sha256', segredo).update(texto).digest('hex');
@@ -233,7 +243,7 @@ function investigarManifesto({ segredo, idBody, idUrl, requestId, ts, v1 }) {
     if (acertou) {
       console.error(`[MP][INVESTIGA] A CHAVE ESTÁ CERTA e o MANIFESTO É QUE ESTÁ ERRADO. Montagem que bate: "${acertou[0]}". Corrigir no código.`);
     } else {
-      console.error(`[MP][INVESTIGA] NENHUMA das ${variantes.length} montagens bate com a chave publicada -> a MP_WEBHOOK_SECRET provavelmente e de OUTRA aplicacao do Mercado Pago. id(body)=${idBody || '-'} id(url)=${idUrl || '-'} request-id=${requestId ? 'veio' : 'NAO veio'} ts=${ts} v1(10 primeiros)=${alvo.slice(0, 10)} nosso(10 primeiros)=${hmac(variantes[0] ? variantes[0][1] : '').slice(0, 10)}`);
+      console.error(`[MP][INVESTIGA] NENHUMA das ${variantes.length} montagens bate com a chave publicada -> a MP_WEBHOOK_SECRET provavelmente e de OUTRA aplicacao do Mercado Pago. COPIAR A ASSINATURA SECRETA DA APLICACAO NUMERO ${idDaAplicacao()} (e a que o nosso MP_ACCESS_TOKEN usa; no painel do Mercado Pago esse numero aparece na URL, em credentials?id=...). id(body)=${idBody || '-'} id(url)=${idUrl || '-'} request-id=${requestId ? 'veio' : 'NAO veio'} ts=${ts} v1(10 primeiros)=${alvo.slice(0, 10)} nosso(10 primeiros)=${hmac(variantes[0] ? variantes[0][1] : '').slice(0, 10)}`);
     }
   } catch (e) { console.warn('[MP][INVESTIGA] falhou:', e?.message); }
 }
