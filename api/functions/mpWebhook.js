@@ -129,8 +129,15 @@ function sb(path, opts = {}) {
 }
 
 export default async function handler(req, res) {
+  // 🔴 PONTO 121: guarda o id da venda que ESTA execução marcou como paga. O
+  // catch lá embaixo precisa saber disso pra devolver ao estado anterior — se
+  // ficar dentro do try, ele não enxerga.
+  let flipadaAgora = null;
   try {
-    if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(200).json({ ok: false, error: 'config' });
+    // ⚠️ Config ausente responde 500, não 200. Com 200 o Mercado Pago considera
+    // entregue e NUNCA reenvia: uma janela de deploy quebrado engolia todas as
+    // notificações do período, para sempre.
+    if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(500).json({ ok: false, error: 'config' });
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     // o id do pagamento vem em data.id (body) ou ?data.id / ?id (query)
     const url = new URL(req.url, 'http://x');
@@ -219,14 +226,66 @@ export default async function handler(req, res) {
     // marcar-paid) NÃO é atômica: dois webhooks liam 'pending' ao mesmo tempo, os dois passavam
     // e a comissão era paga EM DOBRO (aconteceu numa venda real). Aqui só flipa quem pegar a linha
     // AINDA em pending_payment; os outros recebem 0 linhas e param. Só quem flipou paga a comissão.
-    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=eq.pending_payment`, {
+    //
+    // 🔴 PONTO 121 (21/08/2026) — PIX PAGO EM PEDIDO CANCELADO (risco #11)
+    // O filtro aceitava SÓ 'pending_payment'. Mas o cliente pode fechar o pedido,
+    // desistir e clicar em Excluir: o sistema (certo) não apaga a linha, marca
+    // 'canceled' justamente pra conseguir reconciliar se o pagamento chegar
+    // atrasado. Só que o QR PIX continua vivo — nenhum criador de cobrança define
+    // validade, e ninguém cancela a cobrança no MP. Se o cliente paga o QR antigo,
+    // o flip não casava, o código caía no `already_paid` e respondia "ok".
+    // Resultado: o dinheiro ENTROU, ninguém foi creditado, ninguém foi avisado, e
+    // o log AFIRMAVA que já estava pago. A reconciliação que o comentário promete
+    // simplesmente não existia.
+    // Agora 'canceled'/'cancelado' também podem ser flipados: o pagamento é real e
+    // o cliente tem direito ao que comprou. A barreira do `status === 'paid'` lá em
+    // cima continua garantindo execução única.
+    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=in.(pending_payment,canceled,cancelado,cancelled)`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
     });
     const flipped = await flip.json().catch(() => []);
     if (!Array.isArray(flipped) || !flipped.length) {
-      return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+      // 🔴 PONTO 121 — "não consegui virar" NÃO é "já estava paga".
+      // Antes os dois casos devolviam a mesma resposta alegre. Se a venda está
+      // mesmo 'paid', é corrida de webhook e está tudo bem. Qualquer OUTRO estado
+      // aqui significa dinheiro que entrou e não foi processado — e isso não pode
+      // sair com 200/ok, senão o Mercado Pago para de reenviar e o caso se perde.
+      const conf = await (await sb(`catalog_sales?select=status&id=eq.${sale.id}&limit=1`)).json().catch(() => null);
+      const agora = Array.isArray(conf) ? conf[0]?.status : null;
+      if (agora === 'paid') {
+        return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+      }
+      console.error(`[MP] PAGAMENTO RECEBIDO E NÃO PROCESSADO — venda ${sale.id} está em '${agora}', pagamento ${pay.id}, R$ ${pay.transaction_amount}. Resolver na mão.`);
+      return res.status(500).json({ ok: false, nao_processado: true, sale_id: sale.id, status_atual: agora });
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 121 — O FLIP ACONTECE ANTES DO CRÉDITO (risco #10)
+    // ══════════════════════════════════════════════════════════════════════════
+    // A venda é marcada 'paid' aqui, e só DEPOIS o efeito acontece (creditar a
+    // carteira, ativar a adesão, ativar o plano, liberar o produto). Se qualquer
+    // coisa falhar nesse meio — conflito de escrita, comprador inexistente,
+    // timeout, erro do banco — o sistema respondia 'ok' e seguia. Quando o
+    // Mercado Pago reenviava, a barreira do `status === 'paid'` barrava na hora e
+    // o crédito NUNCA mais acontecia. Sem alerta, sem fila, sem reconciliação.
+    //
+    // A rede de segurança abaixo, `devolverPendente`, é usada em todos os
+    // caminhos de efeito: se o efeito falhar ou estourar, a venda VOLTA para
+    // 'pending_payment' e a resposta sai 500 — o MP reenvia e a próxima tentativa
+    // refaz o trabalho do zero. É preferível reprocessar do que perder.
+    flipadaAgora = sale.id;
+
+    const devolverPendente = async (motivo, extra = {}) => {
+      try {
+        await sb(`catalog_sales?id=eq.${sale.id}&status=eq.paid`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ status: 'pending_payment' }),
+        });
+      } catch (_) { /* o log abaixo é o que garante o rastro */ }
+      console.error(`[MP] EFEITO FALHOU após marcar como paga — venda ${sale.id} devolvida para pending_payment. Motivo: ${motivo}. Pagamento ${pay.id}.`);
+      return res.status(500).json({ ok: false, efeito_falhou: true, sale_id: sale.id, motivo, ...extra });
+    };
 
     // 🏪 PDV (balcão) pago com PIX real: só AGORA baixa estoque e paga comissão
     if (sale.source === 'pdv') {
@@ -263,11 +322,20 @@ export default async function handler(req, res) {
     if (sale.kind === 'operacao_deposit') {
       // 💵 saldo de operação: só credita. Sem comissão, sem bônus, sem estoque.
       const r = await creditWalletDeposit(sale);
+      // 🔴 PONTO 121: creditWalletDeposit NÃO lança exceção — devolve
+      // { credited: 0, error: 'cas_conflict' | 'buyer_notfound' }. Antes esse erro
+      // virava só um campo na resposta 200 e ninguém no repositório inteiro lia
+      // esses códigos. Dinheiro entrava e o saldo não subia, calado.
+      if (!r.credited) return devolverPendente(`credito_operacao_falhou:${r.error || 'sem_credito'}`, r);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, operacao: true, ...r });
     }
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
+      // 🔴 PONTO 121: sem crédito, a venda VOLTA pra pendente e a resposta sai 500 —
+      // o Mercado Pago reenvia e a próxima tentativa credita. Antes o cliente pagava
+      // o PIX, o saldo não subia, e o webhook respondia "ok" pro MP nunca mais tentar.
+      if (!r.credited) return devolverPendente(`credito_deposito_falhou:${r.error || 'sem_credito'}`, r);
       // 🎟️ Cupom de 10% também no aporte de carteira (>= R$ 100) — bloqueado, à
       // parte do saldo de lance (mesma regra do passaporte, ver comentário acima).
       const bonus = sale.kind === 'wallet_deposit' ? await criarCupomPassaporte(sale) : null;
@@ -307,6 +375,26 @@ export default async function handler(req, res) {
     const envio2 = await gerarEnvioAutomatico(sale);
     return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission, envio: envio2 });
   } catch (e) {
-    return res.status(200).json({ ok: false, error: String(e?.message || e) });
+    // 🔴 PONTO 121 (21/08/2026) — EXCEÇÃO DEPOIS DO FLIP NÃO PODE SAIR COM 200.
+    // Antes qualquer estouro aqui virava `{ ok: false }` com HTTP 200. Pro Mercado
+    // Pago, 200 quer dizer "recebi e resolvi" — ele para de reenviar. Só que a
+    // venda já estava marcada 'paid' e o efeito não tinha acontecido: o crédito
+    // nunca mais vinha, e não havia alerta, fila de pendência nem reconciliação.
+    //
+    // Agora: se esta execução chegou a marcar a venda como paga, ela é DEVOLVIDA
+    // para 'pending_payment' e a resposta sai 500. O MP reenvia e a próxima
+    // tentativa refaz o trabalho do zero. Reprocessar é sempre melhor que perder.
+    if (flipadaAgora) {
+      try {
+        await sb(`catalog_sales?id=eq.${flipadaAgora}&status=eq.paid`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ status: 'pending_payment' }),
+        });
+      } catch (_) { /* o log abaixo é o rastro que sobra */ }
+      console.error(`[MP] EXCEÇÃO após marcar como paga — venda ${flipadaAgora} devolvida para pending_payment: ${e?.message}`);
+      return res.status(500).json({ ok: false, efeito_falhou: true, sale_id: flipadaAgora, error: String(e?.message || e) });
+    }
+    console.error(`[MP] Exceção no webhook: ${e?.message}`);
+    return res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 }
