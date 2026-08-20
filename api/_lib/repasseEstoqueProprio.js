@@ -34,6 +34,42 @@ function sb(path, opts = {}) {
 export async function liberarRepasseEstoqueProprio({ sale, ownerId, consumos, comissaoTotal = 0 }) {
   if (!ownerId || !Array.isArray(consumos) || !consumos.length) return { ok: true, nada: true };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔒 PONTO 120 (21/08/2026) — TRAVA DE ESTOQUE PRÓPRIO (decisão do dono)
+  // ══════════════════════════════════════════════════════════════════════════
+  // Textual: "essa regra eu tentei me antecipar, mas ainda não está acontecendo,
+  // porque ninguém ainda tem estoque próprio. Todo pagamento de distribuição de
+  // renda está sendo por estoque principal ou consignado. Acho que é uma regra
+  // que a gente tem que deixar bloqueada."
+  //
+  // POR QUE PRECISA DA TRAVA (risco #07 da auditoria): existem DOIS mecanismos
+  // pagando o vendedor pela MESMA venda, e nenhum sabe do outro:
+  //   1. este repasse — custo destravado + margem, creditado NA HORA;
+  //   2. o escrow (migração 20260716_saldo_a_liberar.sql) — lança 100% do valor
+  //      da venda pro seller_id, liberado em 7 dias, por gatilho no banco.
+  // Venda de R$ 1.000 com peça de custo R$ 400: o lojista terminaria com
+  // R$ 1.000 (escrow) + R$ 700 (custo+margem) = R$ 1.700. E como o segundo
+  // pedaço só aparece 7 dias depois, o rombo cresceria em silêncio.
+  //
+  // 📕 O DOCUMENTO OFICIAL (seção 6-C, "uma comissão NÃO paga duas coisas") diz
+  // que comissão de venda remunera o ESFORÇO e sai pela árvore, e que margem da
+  // mercadoria remunera o CAPITAL e é do dono da peça — independentes, as duas
+  // legítimas. O documento NÃO descreve em lugar nenhum um terceiro pagamento de
+  // 100% do valor da venda. Ou seja: a lógica DESTE arquivo é a que está de
+  // acordo com o plano. Ela só não pode conviver com o escrow como ele está.
+  //
+  // COMO DESTRAVAR, quando a regra do escrow estiver decidida: publicar
+  // REPASSE_ESTOQUE_PROPRIO_ATIVO=true na Vercel. Sem código novo, sem deploy.
+  if (String(process.env.REPASSE_ESTOQUE_PROPRIO_ATIVO || '').toLowerCase() !== 'true') {
+    // Não é erro: é regra desligada de propósito. Só loga quando havia mesmo
+    // peça de estoque próprio na venda, pra o aviso significar alguma coisa.
+    const proprio = consumos.filter((c) => c.origem === 'comprado' || c.origem === 'consignado');
+    if (proprio.length) {
+      console.warn(`[REPASSE] Estoque próprio DESLIGADO (PONTO 120). Venda ${sale?.id} tinha ${proprio.length} peça(s) de estoque próprio e NÃO gerou repasse. Publicar REPASSE_ESTOQUE_PROPRIO_ATIVO=true quando a regra do escrow estiver definida.`);
+    }
+    return { ok: true, bloqueado: true, motivo: 'repasse_estoque_proprio_desligado' };
+  }
+
   // trava de idempotência por venda
   const ja = await (await sb(`store_payouts?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&limit=1`)).json();
   if (Array.isArray(ja) && ja.length) return { ok: true, ja_liberado: true };

@@ -128,14 +128,151 @@ function sb(path, opts = {}) {
   });
 }
 
-export default async function handler(req, res) {
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 122 (21/08/2026) — A PORTA DO DINHEIRO ESTAVA SEM FECHADURA (risco #27)
+// ══════════════════════════════════════════════════════════════════════════════
+// Esta rota é pública (tem que ser — quem chama é o Mercado Pago) e não conferia
+// NADA sobre quem estava batendo. O `import crypto` no topo do arquivo estava lá
+// desde sempre, sem uso: alguém começou esta trava e não terminou.
+//
+// SENDO JUSTO COM O CÓDIGO ANTIGO: o estrago não é "qualquer um marca venda como
+// paga". O handler não confia no corpo — ele busca o pagamento na API do MP com o
+// nosso token e só age se o MP disser `approved`. Forjar pagamento por aqui não dá.
+// O que dá, sem assinatura:
+//   • disparar processamento com IDs de pagamento chutados, à vontade;
+//   • fazer a rota gastar chamada de API do MP e do banco a cada tiro (a conta e
+//     o rate limit são nossos);
+//   • forçar a hora do processamento de pagamentos reais de terceiros.
+// É blindagem, não remendo de rombo — mas é a blindagem que todo gateway manda pôr.
+//
+// COMO LIGAR — EM DUAS ETAPAS, DE PROPÓSITO:
+//
+//   etapa 1 (observar): publicar só MP_WEBHOOK_SECRET na Vercel. A função confere
+//     a assinatura e ANOTA NO LOG se bateu ou não, mas NÃO recusa nada.
+//   etapa 2 (bloquear): depois de ver no log que bate em pagamento de verdade,
+//     publicar MP_WEBHOOK_MODO=bloquear. Aí assinatura errada vira 401.
+//
+// A chave secreta sai em Mercado Pago → Suas integrações → a aplicação →
+// Webhooks → "Assinatura secreta" — e ela SÓ EXISTE depois que o webhook estiver
+// configurado naquela tela.
+//
+// POR QUE DUAS ETAPAS, E NÃO LIGAR DIRETO (decisão de 21/08/2026):
+// hoje o Mercado Pago nos notifica porque cada cobrança leva `notification_url`
+// dentro dela — não porque exista webhook cadastrado no painel. Eu NÃO tenho
+// certeza de que a notificação que chega por esse caminho venha assinada com a
+// mesma chave. Se não vier, ligar a trava direto recusaria TODA notificação e
+// derrubaria o recebimento de pagamentos. O log da etapa 1 responde essa pergunta
+// com pagamento real, sem arriscar um centavo. Padrão sem MP_WEBHOOK_MODO =
+// observar: quem esquecer de configurar não quebra nada.
+// Lê cabeçalho sem depender do formato: no Node os headers vêm como objeto de
+// chaves minúsculas; em runtime tipo Edge vêm como Headers (com .get). Ler só de
+// um jeito faria a assinatura "sumir" por motivo de plataforma, não de segurança.
+function lerCabecalho(req, nome) {
+  const h = req?.headers;
+  if (!h) return '';
+  if (typeof h.get === 'function') return String(h.get(nome) || '');
+  return String(h[nome] || h[nome.toLowerCase()] || h[nome.toUpperCase()] || '');
+}
+
+// 🔎 DIAGNÓSTICO (21/08/2026) — a pergunta que o código não sabia responder.
+// A notificação do Mercado Pago chega aqui por DOIS caminhos possíveis: o webhook
+// cadastrado no painel, e o `notification_url` que cada cobrança leva dentro dela
+// (é o que as 12 rotas de pagamento deste repositório usam). A documentação do MP
+// afirma que a assinatura vai "na URL registrada", e não diz o que acontece no
+// segundo caminho. Como nenhuma versão anterior deste arquivo LEU cabeçalho
+// nenhum, não existe registro em lugar nenhum — nem no código, nem no banco.
+// Esta linha faz a própria notificação real responder, sem mexer em configuração
+// e sem risco: lista só os NOMES dos cabeçalhos que chegaram (nunca o valor da
+// assinatura) e diz se o x-signature veio.
+function diagnosticarCabecalhos(req, payId) {
   try {
-    if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(200).json({ ok: false, error: 'config' });
+    const h = req?.headers;
+    const nomes = h
+      ? (typeof h.keys === 'function' ? Array.from(h.keys()) : Object.keys(h))
+      : [];
+    const temAssinatura = !!lerCabecalho(req, 'x-signature');
+    console.log(`[MP][DIAG] pagamento ${payId} · x-signature: ${temAssinatura ? 'VEIO' : 'NÃO VEIO'} · x-request-id: ${lerCabecalho(req, 'x-request-id') ? 'VEIO' : 'NÃO VEIO'} · user-agent: ${lerCabecalho(req, 'user-agent').slice(0, 60)} · cabeçalhos: ${nomes.join(',')}`);
+  } catch (_) { /* diagnóstico nunca pode atrapalhar */ }
+}
+
+function conferirAssinatura(req, payId) {
+  const segredo = process.env.MP_WEBHOOK_SECRET;
+  const bloqueia = String(process.env.MP_WEBHOOK_MODO || '').toLowerCase() === 'bloquear';
+  // Resultado quando a conferência falha: em modo observação vira aviso e passa.
+  const reprovar = (motivo) => (bloqueia
+    ? { ok: false, motivo }
+    : (console.warn(`[MP] ASSINATURA NÃO CONFERE (${motivo}) — modo OBSERVAÇÃO, nada foi bloqueado. Pagamento ${payId}.`), { ok: true, verificado: false, motivo }));
+
+  if (!segredo) {
+    console.warn('[MP] MP_WEBHOOK_SECRET não publicada — webhook aceitando sem conferir assinatura (PONTO 122).');
+    return { ok: true, verificado: false };
+  }
+  try {
+    const cabecalho = lerCabecalho(req, 'x-signature');
+    const requestId = lerCabecalho(req, 'x-request-id');
+    const campos = {};
+    for (const parte of cabecalho.split(',')) {
+      const i = parte.indexOf('=');
+      if (i > 0) campos[parte.slice(0, i).trim()] = parte.slice(i + 1).trim();
+    }
+    const ts = campos.ts;
+    const v1 = campos.v1;
+    if (!ts || !v1) return reprovar('x-signature ausente ou incompleto');
+
+    // Manifesto exigido pelo MP: id:<data.id>;request-id:<x-request-id>;ts:<ts>;
+    // O id entra em minúsculas quando tem letra; pedaço sem valor sai do manifesto.
+    const bruto = String(payId);
+    const idNorm = /[a-zA-Z]/.test(bruto) ? bruto.toLowerCase() : bruto;
+    let manifesto = `id:${idNorm};`;
+    if (requestId) manifesto += `request-id:${requestId};`;
+    manifesto += `ts:${ts};`;
+
+    const esperado = crypto.createHmac('sha256', segredo).update(manifesto).digest('hex');
+    const a = Buffer.from(esperado, 'utf8');
+    const b = Buffer.from(String(v1), 'utf8');
+    // timingSafeEqual exige tamanhos iguais — comparar antes evita a exceção.
+    const bate = a.length === b.length && crypto.timingSafeEqual(a, b);
+    if (bate) {
+      if (!bloqueia) console.warn(`[MP] ASSINATURA CONFERE (modo OBSERVAÇÃO) — pagamento ${payId}. Pode publicar MP_WEBHOOK_MODO=bloquear.`);
+      return { ok: true, verificado: true };
+    }
+    return reprovar('assinatura não confere');
+  } catch (e) {
+    return reprovar(`erro ao conferir assinatura: ${e?.message}`);
+  }
+}
+
+export default async function handler(req, res) {
+  // 🔴 PONTO 121: guarda o id da venda que ESTA execução marcou como paga. O
+  // catch lá embaixo precisa saber disso pra devolver ao estado anterior — se
+  // ficar dentro do try, ele não enxerga.
+  let flipadaAgora = null;
+  try {
+    // ⚠️ Config ausente responde 500, não 200. Com 200 o Mercado Pago considera
+    // entregue e NUNCA reenvia: uma janela de deploy quebrado engolia todas as
+    // notificações do período, para sempre.
+    if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(500).json({ ok: false, error: 'config' });
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     // o id do pagamento vem em data.id (body) ou ?data.id / ?id (query)
     const url = new URL(req.url, 'http://x');
     const payId = body?.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || body?.id;
     if (!payId) return res.status(200).json({ ok: true, ignored: true });
+
+    // 🔒 PONTO 122 (risco #27) — só depois de saber o payId dá pra montar o
+    // manifesto que o Mercado Pago assina. Assinatura errada é 401 e para aqui:
+    // não gasta chamada na API do MP nem consulta no banco.
+    // GET continua aceito de propósito — a notificação IPN antiga do MP chega
+    // como GET com ?topic=payment&id=..., e é justamente ela que as duas linhas
+    // acima leem da query. Recusar GET desligaria esse caminho.
+    if (!['POST', 'GET'].includes(String(req.method || '').toUpperCase())) {
+      return res.status(405).json({ ok: false, error: 'metodo_nao_permitido' });
+    }
+    diagnosticarCabecalhos(req, payId);
+    const assinatura = conferirAssinatura(req, payId);
+    if (!assinatura.ok) {
+      console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
+      return res.status(401).json({ ok: false, error: 'assinatura_invalida' });
+    }
 
     // BUSCA o pagamento real no MP (fonte de verdade — não confia no corpo do webhook)
     const r = await fetch(`https://api.mercadopago.com/v1/payments/${payId}`, { headers: { Authorization: `Bearer ${MP_TOKEN}` } });
@@ -219,14 +356,66 @@ export default async function handler(req, res) {
     // marcar-paid) NÃO é atômica: dois webhooks liam 'pending' ao mesmo tempo, os dois passavam
     // e a comissão era paga EM DOBRO (aconteceu numa venda real). Aqui só flipa quem pegar a linha
     // AINDA em pending_payment; os outros recebem 0 linhas e param. Só quem flipou paga a comissão.
-    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=eq.pending_payment`, {
+    //
+    // 🔴 PONTO 121 (21/08/2026) — PIX PAGO EM PEDIDO CANCELADO (risco #11)
+    // O filtro aceitava SÓ 'pending_payment'. Mas o cliente pode fechar o pedido,
+    // desistir e clicar em Excluir: o sistema (certo) não apaga a linha, marca
+    // 'canceled' justamente pra conseguir reconciliar se o pagamento chegar
+    // atrasado. Só que o QR PIX continua vivo — nenhum criador de cobrança define
+    // validade, e ninguém cancela a cobrança no MP. Se o cliente paga o QR antigo,
+    // o flip não casava, o código caía no `already_paid` e respondia "ok".
+    // Resultado: o dinheiro ENTROU, ninguém foi creditado, ninguém foi avisado, e
+    // o log AFIRMAVA que já estava pago. A reconciliação que o comentário promete
+    // simplesmente não existia.
+    // Agora 'canceled'/'cancelado' também podem ser flipados: o pagamento é real e
+    // o cliente tem direito ao que comprou. A barreira do `status === 'paid'` lá em
+    // cima continua garantindo execução única.
+    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=in.(pending_payment,canceled,cancelado,cancelled)`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
     });
     const flipped = await flip.json().catch(() => []);
     if (!Array.isArray(flipped) || !flipped.length) {
-      return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+      // 🔴 PONTO 121 — "não consegui virar" NÃO é "já estava paga".
+      // Antes os dois casos devolviam a mesma resposta alegre. Se a venda está
+      // mesmo 'paid', é corrida de webhook e está tudo bem. Qualquer OUTRO estado
+      // aqui significa dinheiro que entrou e não foi processado — e isso não pode
+      // sair com 200/ok, senão o Mercado Pago para de reenviar e o caso se perde.
+      const conf = await (await sb(`catalog_sales?select=status&id=eq.${sale.id}&limit=1`)).json().catch(() => null);
+      const agora = Array.isArray(conf) ? conf[0]?.status : null;
+      if (agora === 'paid') {
+        return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+      }
+      console.error(`[MP] PAGAMENTO RECEBIDO E NÃO PROCESSADO — venda ${sale.id} está em '${agora}', pagamento ${pay.id}, R$ ${pay.transaction_amount}. Resolver na mão.`);
+      return res.status(500).json({ ok: false, nao_processado: true, sale_id: sale.id, status_atual: agora });
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 121 — O FLIP ACONTECE ANTES DO CRÉDITO (risco #10)
+    // ══════════════════════════════════════════════════════════════════════════
+    // A venda é marcada 'paid' aqui, e só DEPOIS o efeito acontece (creditar a
+    // carteira, ativar a adesão, ativar o plano, liberar o produto). Se qualquer
+    // coisa falhar nesse meio — conflito de escrita, comprador inexistente,
+    // timeout, erro do banco — o sistema respondia 'ok' e seguia. Quando o
+    // Mercado Pago reenviava, a barreira do `status === 'paid'` barrava na hora e
+    // o crédito NUNCA mais acontecia. Sem alerta, sem fila, sem reconciliação.
+    //
+    // A rede de segurança abaixo, `devolverPendente`, é usada em todos os
+    // caminhos de efeito: se o efeito falhar ou estourar, a venda VOLTA para
+    // 'pending_payment' e a resposta sai 500 — o MP reenvia e a próxima tentativa
+    // refaz o trabalho do zero. É preferível reprocessar do que perder.
+    flipadaAgora = sale.id;
+
+    const devolverPendente = async (motivo, extra = {}) => {
+      try {
+        await sb(`catalog_sales?id=eq.${sale.id}&status=eq.paid`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ status: 'pending_payment' }),
+        });
+      } catch (_) { /* o log abaixo é o que garante o rastro */ }
+      console.error(`[MP] EFEITO FALHOU após marcar como paga — venda ${sale.id} devolvida para pending_payment. Motivo: ${motivo}. Pagamento ${pay.id}.`);
+      return res.status(500).json({ ok: false, efeito_falhou: true, sale_id: sale.id, motivo, ...extra });
+    };
 
     // 🏪 PDV (balcão) pago com PIX real: só AGORA baixa estoque e paga comissão
     if (sale.source === 'pdv') {
@@ -263,11 +452,20 @@ export default async function handler(req, res) {
     if (sale.kind === 'operacao_deposit') {
       // 💵 saldo de operação: só credita. Sem comissão, sem bônus, sem estoque.
       const r = await creditWalletDeposit(sale);
+      // 🔴 PONTO 121: creditWalletDeposit NÃO lança exceção — devolve
+      // { credited: 0, error: 'cas_conflict' | 'buyer_notfound' }. Antes esse erro
+      // virava só um campo na resposta 200 e ninguém no repositório inteiro lia
+      // esses códigos. Dinheiro entrava e o saldo não subia, calado.
+      if (!r.credited) return devolverPendente(`credito_operacao_falhou:${r.error || 'sem_credito'}`, r);
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, operacao: true, ...r });
     }
     if (sale.kind === 'wallet_deposit' || sale.kind === 'commission_deposit') {
       // recarga de carteira: credita saldo e para aqui (sem fulfillment, sem comissão)
       const r = await creditWalletDeposit(sale);
+      // 🔴 PONTO 121: sem crédito, a venda VOLTA pra pendente e a resposta sai 500 —
+      // o Mercado Pago reenvia e a próxima tentativa credita. Antes o cliente pagava
+      // o PIX, o saldo não subia, e o webhook respondia "ok" pro MP nunca mais tentar.
+      if (!r.credited) return devolverPendente(`credito_deposito_falhou:${r.error || 'sem_credito'}`, r);
       // 🎟️ Cupom de 10% também no aporte de carteira (>= R$ 100) — bloqueado, à
       // parte do saldo de lance (mesma regra do passaporte, ver comentário acima).
       const bonus = sale.kind === 'wallet_deposit' ? await criarCupomPassaporte(sale) : null;
@@ -307,6 +505,26 @@ export default async function handler(req, res) {
     const envio2 = await gerarEnvioAutomatico(sale);
     return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission, envio: envio2 });
   } catch (e) {
-    return res.status(200).json({ ok: false, error: String(e?.message || e) });
+    // 🔴 PONTO 121 (21/08/2026) — EXCEÇÃO DEPOIS DO FLIP NÃO PODE SAIR COM 200.
+    // Antes qualquer estouro aqui virava `{ ok: false }` com HTTP 200. Pro Mercado
+    // Pago, 200 quer dizer "recebi e resolvi" — ele para de reenviar. Só que a
+    // venda já estava marcada 'paid' e o efeito não tinha acontecido: o crédito
+    // nunca mais vinha, e não havia alerta, fila de pendência nem reconciliação.
+    //
+    // Agora: se esta execução chegou a marcar a venda como paga, ela é DEVOLVIDA
+    // para 'pending_payment' e a resposta sai 500. O MP reenvia e a próxima
+    // tentativa refaz o trabalho do zero. Reprocessar é sempre melhor que perder.
+    if (flipadaAgora) {
+      try {
+        await sb(`catalog_sales?id=eq.${flipadaAgora}&status=eq.paid`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ status: 'pending_payment' }),
+        });
+      } catch (_) { /* o log abaixo é o rastro que sobra */ }
+      console.error(`[MP] EXCEÇÃO após marcar como paga — venda ${flipadaAgora} devolvida para pending_payment: ${e?.message}`);
+      return res.status(500).json({ ok: false, efeito_falhou: true, sale_id: flipadaAgora, error: String(e?.message || e) });
+    }
+    console.error(`[MP] Exceção no webhook: ${e?.message}`);
+    return res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 }

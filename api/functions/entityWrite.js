@@ -69,6 +69,49 @@ async function devolverReservaDoLeilao(auctionId, motivo) {
     const lider = auction?.winner_id ? String(auction.winner_id) : '';
     if (!lider || auction?.order_status === 'paid') return null;
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 122 (21/08/2026) — CANCELAR E DEPOIS APAGAR DEVOLVIA DUAS VEZES
+    // ══════════════════════════════════════════════════════════════════════════
+    // (risco #21 da auditoria) São dois caminhos diferentes chamando esta mesma
+    // função, e nada marcava o leilão como "já devolvido". O admin cancela o
+    // leilão (devolve) e depois apaga o mesmo leilão da tela — `winner_id` e
+    // `current_price` continuam gravados, `order_status` não é 'paid', então a
+    // devolução roda de novo.
+    //
+    // O SEGUNDO PAGAMENTO NÃO SAI DO NADA: `liberar` é limitado pelo
+    // saldo_reservado TOTAL da conta, que não sabe de qual leilão é cada pedaço.
+    // Se essa pessoa está liderando OUTRO leilão, a segunda devolução solta o
+    // dinheiro DAQUELE — o lance dela continua vivo lá, valendo, sem lastro
+    // nenhum. Se ela ganhar, não tem saldo pra pagar.
+    //
+    // A trava é o próprio livro-caixa, por (leilão + pessoa). Fica em (leilão +
+    // pessoa) de propósito, não só em leilão: o encerramento normal devolve pro
+    // líder ANTERIOR, e apagar depois precisa continuar podendo devolver pro
+    // vencedor, que é outra pessoa. E os tipos são só estes dois — a devolução
+    // por cobertura pode acontecer várias vezes no mesmo leilão pra mesma pessoa
+    // (ela lidera, é coberta, volta a liderar) e não pode entrar nesta conta.
+    try {
+      const rLedger = await sb(
+        `reserva_ledger?select=id&auction_id=eq.${encodeURIComponent(auctionId)}` +
+        `&user_id=eq.${encodeURIComponent(lider)}` +
+        `&tipo=in.(devolucao_leilao_cancelado,devolucao_leilao_excluido)&limit=1`
+      );
+      // Falha FECHADA: `sb` não lança em HTTP 4xx/5xx, devolve a resposta. Sem
+      // checar `ok` aqui, um erro do banco viraria "não achei nada" e liberaria
+      // a segunda devolução — exatamente o que esta trava existe pra impedir.
+      if (!rLedger.ok) throw new Error(`livro-caixa respondeu ${rLedger.status}`);
+      const jaFeita = await rLedger.json();
+      if (Array.isArray(jaFeita) && jaFeita.length) {
+        return { user_id: lider, valor: 0, ja_devolvido: true };
+      }
+    } catch (e) {
+      // Não dá pra confirmar se já devolveu. Prefere NÃO devolver: dinheiro preso
+      // a mais é resolvido pela faxinaReservasOrfas; dinheiro solto a mais vira
+      // lance sem lastro em outro leilão e não tem como voltar atrás.
+      console.error('[DEVOLUCAO RESERVA] não deu pra checar duplicidade, abortando por segurança:', e?.message);
+      return null;
+    }
+
     const valorPreso = money((Number(auction?.current_price) || 0) + (Number(auction?.frete_reservado_valor) || 0));
     if (valorPreso <= 0) return null;
 
@@ -94,7 +137,7 @@ async function devolverReservaDoLeilao(auctionId, motivo) {
       if (!Array.isArray(updated) || !updated.length) continue; // corrida: relê e tenta de novo
 
       try {
-        await sb('reserva_ledger', {
+        const rGrava = await sb('reserva_ledger', {
           method: 'POST',
           headers: { Prefer: 'return=minimal' },
           body: JSON.stringify({
@@ -108,7 +151,15 @@ async function devolverReservaDoLeilao(auctionId, motivo) {
             origem: `entityWrite:${motivo}`,
           }),
         });
-      } catch (e) { console.warn('[DEVOLUCAO RESERVA] livro-caixa:', e?.message); }
+        // `sb` não lança em erro HTTP — sem esta checagem o catch abaixo nunca
+        // rodava e a falha da trava passava despercebida.
+        if (!rGrava.ok) throw new Error(`HTTP ${rGrava.status}: ${(await rGrava.text()).slice(0, 160)}`);
+      } catch (e) {
+        // 🔴 PONTO 122: esta linha deixou de ser só rastro — ela É a trava que
+        // impede a segunda devolução. Se não gravar, a trava não existe pro
+        // próximo caminho. Erro alto, não aviso baixinho.
+        console.error(`[DEVOLUCAO RESERVA] LIVRO-CAIXA NÃO GRAVOU — leilão ${auctionId}, pessoa ${lider}, R$ ${liberar}. A trava anti-devolução-dupla ficou ABERTA neste leilão: ${e?.message}`);
+      }
 
       return { user_id: lider, valor: liberar };
     }
