@@ -539,26 +539,27 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                     </div>
                   )}
 
-                  {/* 🩺 20/08/2026 (4ª rodada) — dono testou e reportou produtos de
-                      marcas diferentes vindo juntos (Mondial, Arno, Oster pra um
-                      anúncio só "Air Fryer fritadeira eletrica"). Investigado a fundo:
-                      não existe comparação de imagem por conteúdo em NENHUM lugar do
-                      sistema (nem no importador de foto que ele citou — aquele é
-                      manual, o admin clica pra escolher). O único jeito de confirmar
-                      o produto EXATO é a busca por imagem (Google Lens,
-                      source === 'google_lens_imagem'); texto sozinho, em título sem
-                      marca/modelo/litragem, só consegue confirmar a CATEGORIA. Deixa
-                      isso visível em vez de fingir a mesma certeza nos dois casos. */}
+                  {/* 🩺 20/08/2026 (5ª rodada) — dono mostrou o fluxo manual que "nunca
+                      erra": botão direito na foto > Google Lens > aba "Correspondências
+                      exatas". Confirmado: o SearchAPI tem search_type=exact_matches —
+                      literalmente a mesma aba, mesma API que já usamos (PONTO 90 em
+                      marketSearch.js). Três níveis de confiança agora, cada um com seu
+                      selo — nunca finge a mesma certeza pros três casos. */}
                   {!comparisonData.isFactoryDirect && comparisonData.source && (
-                    comparisonData.source === 'google_lens_imagem' ? (
+                    comparisonData.source === 'google_lens_exato' ? (
                       <div className="flex items-center gap-2 text-[11px] text-emerald-400/90 -mt-2">
                         <ImageIcon className="w-3.5 h-3.5 shrink-0" />
-                        Confirmado por imagem (Google Lens) — o produto exato, não só a categoria.
+                        Correspondência EXATA por imagem (Google Lens) — mesmo produto, confirmado pelo próprio Google.
+                      </div>
+                    ) : comparisonData.source === 'google_lens_similar' ? (
+                      <div className="flex items-center gap-2 text-[11px] text-sky-300/90 -mt-2">
+                        <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                        Confirmado por imagem (Google Lens) — visualmente correspondente ao produto.
                       </div>
                     ) : (
                       <div className="flex items-start gap-2 text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 -mt-2">
                         <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>Comparado só pelo nome — o título deste anúncio não tem marca/modelo/tamanho pra confirmar o produto exato por imagem. Pode incluir marcas parecidas da mesma categoria.</span>
+                        <span>Comparado só pelo nome — não foi possível confirmar por imagem nesta busca. Pode incluir marcas parecidas da mesma categoria.</span>
                       </div>
                     )
                   )}

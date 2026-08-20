@@ -1,6 +1,8 @@
 // marketSearch — busca de preço de mercado compartilhada (Leilão NoZap).
 // Fonte única usada por comparaiPrices (modal Comparaí) E calculateProductPricing (painel).
-// Cascata: Google Shopping (SearchAPI) -> SerpAPI (se houver) -> Zoom. Primeira com resultado relevante vence.
+// Cascata (20/08/2026): Google Lens exato (correspondência exata por imagem) -> Google Lens
+// visual (mesma foto, similaridade) -> Google Shopping (SearchAPI) -> SerpAPI (se houver) ->
+// Zoom. Primeira com resultado relevante vence.
 // Retorna a MÉDIA do mercado (é a referência do Heloim: venda = média - 20%).
 
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
@@ -115,10 +117,33 @@ async function fetchSerpApi(query) {
   }));
 }
 
-// ---- BUSCA POR IMAGEM (Google Lens via SearchAPI) — acha o PRODUTO EXATO, não por nome ----
-// É o método principal: "torneira monocomando" por texto casa torneira profissional (R$920);
-// por imagem o Lens acha a mesma torneira no ML (R$89,99). Bem mais assertivo.
-async function fetchGoogleLens(imageUrl) {
+// ---- BUSCA POR IMAGEM (Google Lens via SearchAPI) — CORRESPONDÊNCIA EXATA primeiro ----
+// 🎯 PONTO 90 (20/08/2026) — dono mostrou o fluxo manual que "nunca erra": botão
+// direito na foto > "Pesquisar imagem com o Google Lens" > aba "Correspondências
+// exatas" do próprio Google — só produto IDÊNTICO, curado pelo Google, não
+// "parecido". Confirmado na documentação do SearchAPI: o parâmetro search_type
+// aceita 'exact_matches' — é literalmente a mesma aba, pela mesma API que já
+// usamos. O código usava search_type=all (o padrão, que mistura exato com
+// visualmente similar) — é essa mistura que trazia produto errado. Agora tenta
+// exact_matches PRIMEIRO (confiança máxima); só cai pro 'all' (visual_matches)
+// se a busca exata não trouxer nada — e mesmo esse fallback continua passando
+// pela trava de nome+número (relevantes()), não é bypass.
+async function fetchGoogleLensExato(imageUrl) {
+  const u = `https://www.searchapi.io/api/v1/search?engine=google_lens&search_type=exact_matches&url=${encodeURIComponent(imageUrl)}&gl=br&hl=pt-br&api_key=${SEARCHAPI_KEY}`;
+  const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || data?.error) throw new Error(`Lens exato: ${data?.error || resp.status}`);
+  const em = data.exact_matches || [];
+  return em.map((m) => ({
+    store: m.source || m.source_name || 'Loja',
+    productNameFound: m.title || '',
+    price: Number(m.extracted_price) || Number(m.price?.extracted_value) || 0,
+    url: m.link || '#',
+    image: m.thumbnail || '',
+  })).filter((r) => r.price > 0);
+}
+
+async function fetchGoogleLensSimilar(imageUrl) {
   const u = `https://www.searchapi.io/api/v1/search?engine=google_lens&search_type=all&url=${encodeURIComponent(imageUrl)}&gl=br&hl=pt-br&api_key=${SEARCHAPI_KEY}`;
   const resp = await fetch(u, { signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
   const data = await resp.json().catch(() => ({}));
@@ -198,7 +223,10 @@ export async function searchMarket(title, imageUrl) {
   };
 
   const fontes = [];
-  if (imageUrl && SEARCHAPI_KEY) fontes.push({ nome: 'google_lens_imagem', fn: () => fetchGoogleLens(imageUrl) });
+  if (imageUrl && SEARCHAPI_KEY) {
+    fontes.push({ nome: 'google_lens_exato', fn: () => fetchGoogleLensExato(imageUrl) });
+    fontes.push({ nome: 'google_lens_similar', fn: () => fetchGoogleLensSimilar(imageUrl) });
+  }
   if (cleaned && cleaned.length >= 4) {
     if (SEARCHAPI_KEY) fontes.push({ nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) });
     if (SERPAPI_KEY) fontes.push({ nome: 'serpapi', fn: () => fetchSerpApi(cleaned) });
