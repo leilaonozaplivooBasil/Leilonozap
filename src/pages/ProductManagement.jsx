@@ -335,23 +335,39 @@ export default function ProductManagement() {
       // um produto antigo devolvia "Nenhum produto encontrado" mesmo com ele vivo
       // no estoque e à venda na loja — e não havia como dar baixa nele.
       // Mesmo padrão de paginação já usado em api/functions/reconciliarEstoqueLoja.js.
-      // O `vistos` existe porque a paginação é por posição: se alguém cadastrar um
-      // produto no meio do carregamento, tudo desloca uma casa e o bloco seguinte
-      // repetiria a última linha do anterior — duplicando item na lista e nos totais.
+      // Paginação por CURSOR (keyset), não por posição. Paginar por offset é frágil
+      // aqui: um cadastro ou uma exclusão no meio do carregamento desloca todas as
+      // linhas seguintes, e a página seguinte repete ou PULA um produto — e produto
+      // pulado não tem como ser recuperado depois. Ancorando no último `id` lido,
+      // cada bloco continua exatamente de onde o anterior parou, aconteça o que
+      // acontecer com as outras linhas.
+      // `id` serve de âncora porque é único e o adapter já ordena por ele em toda
+      // consulta (Ponto 93 em src/api/base44Adapter.js). Ordenamos por created_date
+      // para exibir aqui, depois de ter o conjunto completo em mãos.
       const PAGE = 1000;
-      const MAX_PRODUTOS = 50000; // trava de segurança contra laço infinito
+      const MAX_BLOCOS = 50; // trava de segurança contra laço infinito
       const allProducts = [];
       const vistos = new Set();
-      for (let offset = 0; offset < MAX_PRODUTOS; offset += PAGE) {
-        const bloco = await base44.entities.Product.filter({}, '-created_date', PAGE, offset);
+      let ultimoId = '';
+      for (let bloco_n = 0; bloco_n < MAX_BLOCOS; bloco_n++) {
+        const filtro = ultimoId ? { id: { $gt: ultimoId } } : {};
+        const bloco = await base44.entities.Product.filter(filtro, 'id', PAGE);
         if (!Array.isArray(bloco) || bloco.length === 0) break;
         for (const prod of bloco) {
           if (!prod?.id || vistos.has(prod.id)) continue;
           vistos.add(prod.id);
           allProducts.push(prod);
         }
-        if (bloco.length < PAGE) break;
+        ultimoId = bloco[bloco.length - 1]?.id || '';
+        if (bloco.length < PAGE || !ultimoId) break;
       }
+      // mais novo primeiro, com o mesmo desempate por id que o banco usa
+      allProducts.sort((a, b) => {
+        const da = a?.created_date || '';
+        const db = b?.created_date || '';
+        if (da !== db) return da < db ? 1 : -1;
+        return String(a?.id) < String(b?.id) ? -1 : 1;
+      });
       setProducts(allProducts);
       setFilteredProducts(allProducts);
 
@@ -536,7 +552,18 @@ export default function ProductManagement() {
     e.preventDefault();
 
     try {
-      const totalQuantity = parseInt(formData.quantity) + (editingProduct?.quantity_sold || 0);
+      // 🔢 Quantidade: aceita ZERO, mas exige um número escrito de propósito.
+      // Campo vazio NÃO vale como zero: zerar o estoque agora também tira o produto
+      // da loja, então apagar o campo sem querer e salvar seria destrutivo demais
+      // para passar calado. Quem quer zerar, digita 0.
+      const qtdTexto = String(formData.quantity ?? '').trim();
+      const qtdNum = Number(qtdTexto);
+      if (qtdTexto === '' || !Number.isInteger(qtdNum) || qtdNum < 0) {
+        alert('Informe a Quantidade Total: um número inteiro de 0 para cima. Digite 0 para zerar o estoque.');
+        return;
+      }
+
+      const totalQuantity = qtdNum + (editingProduct?.quantity_sold || 0);
       const custoUnitario = totalQuantity > 0 ? parseFloat(formData.cost_price) / totalQuantity : parseFloat(formData.cost_price);
       const quantidadeVendida = editingProduct?.quantity_sold || 0;
       const profit = formData.sold_amount ? (parseFloat(formData.sold_amount) - (custoUnitario * quantidadeVendida)) : 0;
@@ -554,7 +581,8 @@ export default function ProductManagement() {
         // era salvo com 1 peça. Na prática: abrir um produto já zerado, corrigir só a
         // descrição e clicar em Atualizar RESSUSCITAVA uma unidade — e, como o
         // catalog_active seguia ligado, ela voltava a ser comprável na loja.
-        quantity: Math.max(0, parseInt(formData.quantity, 10) || 0),
+        // Já validado logo acima: inteiro, maior ou igual a zero, escrito de propósito.
+        quantity: qtdNum,
         qty_perfeito: parseInt(formData.qty_perfeito) || 0,
         qty_bom: parseInt(formData.qty_bom) || 0,
         qty_ruim: 0, // Sempre zero - ruim não existe mais
@@ -1461,7 +1489,11 @@ export default function ProductManagement() {
                         value={formData.quantity}
                         onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                         className="bg-gray-700 text-white"
-                        min="1"
+                        /* min="0": com min="1" o navegador barrava o zero antes de o
+                           formulário rodar, e dar baixa pelo campo era impossível. */
+                        min="0"
+                        step="1"
+                        required
                       />
                     </div>
 
