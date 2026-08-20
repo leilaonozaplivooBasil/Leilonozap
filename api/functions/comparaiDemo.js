@@ -28,7 +28,17 @@ export default async function handler(req, res) {
     }
 
     const resultado = await searchMarket(query, null);
-    return res.status(200).json({ success: true, ...resultado });
+    // 🩺 Diagnóstico do método PRINCIPAL (20/08/2026, pedido do dono) — a
+    // busca por imagem (Google Lens) só entra em ação em produto/leilão real
+    // (que tem foto cadastrada); esta demo é texto livre, sem imagem, então
+    // NUNCA testa esse caminho. O que dá pra provar aqui, sem vazar a chave,
+    // é SE a SEARCHAPI_KEY está configurada — é o único interruptor que liga
+    // ou desliga o método principal em todo o site (loja e leilão).
+    return res.status(200).json({
+      success: true,
+      ...resultado,
+      searchApiImagemAtiva: !!process.env.SEARCHAPI_KEY,
+    });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });
   }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Loader2, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Search, Loader2, ExternalLink, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const EXEMPLOS = ['Fone de ouvido bluetooth', 'Air fryer 5 litros', 'Cadeira gamer'];
@@ -15,6 +15,7 @@ export default function CompareAquiProvaViva() {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState(null);
+  const [imagemAtiva, setImagemAtiva] = useState(null);
 
   const buscar = async (termo) => {
     const q = (termo ?? query).trim();
@@ -26,6 +27,7 @@ export default function CompareAquiProvaViva() {
     try {
       const r = await base44.functions.invoke('comparaiDemo', { query: q });
       const data = r?.data || r;
+      if (typeof data?.searchApiImagemAtiva === 'boolean') setImagemAtiva(data.searchApiImagemAtiva);
       if (!data?.success) {
         setErro(data?.error || 'Não encontramos preços reais para comparar agora — tente um nome mais específico.');
       } else if (!data.found) {
@@ -46,9 +48,17 @@ export default function CompareAquiProvaViva() {
         <CheckCircle2 className="w-5 h-5 text-emerald-400" />
         <h3 className="text-lg font-semibold text-white">Teste agora, ao vivo</h3>
       </div>
-      <p className="text-sm text-gray-400 mb-4">
+      <p className="text-sm text-gray-400 mb-1">
         Digite qualquer produto e veja o CompareAQUI buscar preços reais na hora — sem sair daqui.
       </p>
+      {imagemAtiva !== null && (
+        <p className={`text-[11px] mb-3 flex items-center gap-1.5 ${imagemAtiva ? 'text-emerald-400/90' : 'text-amber-300/90'}`}>
+          {imagemAtiva ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />}
+          {imagemAtiva
+            ? 'Método principal (busca por foto do produto) ativo em toda a loja e leilão.'
+            : 'Método principal por foto está DESATIVADO agora (falta configurar SEARCHAPI_KEY na Vercel) — rodando só por nome.'}
+        </p>
+      )}
 
       <div className="flex gap-2 mb-3">
         <input
