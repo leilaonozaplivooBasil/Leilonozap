@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, AlertTriangle, Factory, Trophy } from 'lucide-react';
+import { Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw, AlertTriangle, Factory, Trophy, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 
@@ -38,6 +38,14 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   const [showLogoEditor, setShowLogoEditor] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [tempLogoUrl, setTempLogoUrl] = useState(localAuction?.supplier_logo_url || '');
+
+  // 20/08/2026 (3ª rodada) — dono: "ainda não consigo clicar nas imagens...
+  // ainda não consigo clicar nos links pra abrir o modal dentro". As linhas
+  // viraram <div> (sem href) na rodada anterior pra tirar a navegação pra
+  // fora do site, mas ficaram sem NENHUMA interação — clicar não fazia
+  // nada. Clicar agora abre um modal de detalhe (dentro do site, sem sair)
+  // com a foto grande, nome completo da loja/produto e o preço.
+  const [selectedProof, setSelectedProof] = useState(null);
 
   // Mercado Livre primeiro (quando aparece no resultado real), o resto mantém
   // a ordem original da busca — não inventa nada, só reordena o que já veio.
@@ -374,7 +382,11 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-2xl rounded-2xl bg-gray-900 text-white border border-emerald-500/25 shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        {/* 20/08/2026 (3ª rodada) — dono ADOROU o fundo translúcido esverdeado
+            ("água meio transparente"), o pedido era só trocar a BORDA pra azul
+            brilhante da marca CompareAQUI (não o fundo). Fundo voltou ao
+            gradiente translúcido; borda agora é azul com um leve glow branco. */}
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-2xl rounded-2xl bg-gradient-to-br from-gray-900 via-emerald-950/40 to-gray-900 text-white border-2 border-sky-400/80 ring-1 ring-white/25 shadow-2xl shadow-sky-500/20 max-h-[90vh] overflow-y-auto overflow-x-hidden">
 
           <DialogHeader>
             {/* 🩹 20/08/2026 — dono reportou "dois X" no fechar: este componente
@@ -543,9 +555,11 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                       </div>
                       <div className="space-y-1.5 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
                         {sortedComparisons.slice(0, 10).map((item, i) => (
-                          <div
+                          <button
                             key={i}
-                            className="flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
+                            type="button"
+                            onClick={() => setSelectedProof(item)}
+                            className="w-full flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden text-left hover:bg-white/[0.07] hover:border-sky-400/40 active:scale-[0.99] transition-all cursor-pointer"
                           >
                             {/* Foto real do produto, vinda da mesma fonte (Google
                                 Shopping/Zoom) — a prova visual que dá pra trazer
@@ -571,10 +585,11 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                               </div>
                               <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
                             </div>
-                            <div className="shrink-0 font-slab font-bold text-white">
-                              R$ {fmtBR(item.price)}
+                            <div className="shrink-0 flex items-center gap-1">
+                              <span className="font-slab font-bold text-white">R$ {fmtBR(item.price)}</span>
+                              <ChevronRight className="w-4 h-4 text-sky-400" />
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -671,6 +686,68 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* MODAL DETALHE DA LOJA — 20/08/2026 (3ª rodada): clicar numa linha da
+          lista de lojas agora abre este detalhe (foto grande + nome completo
+          + preço), tudo dentro do site. Não abre a página da loja de verdade
+          (Google/ML bloqueiam isso via X-Frame-Options — não é algo que dá
+          pra contornar), então este modal deixa claro que é o resultado real
+          retornado pela busca, sem fingir ser a página externa. */}
+      {selectedProof && (
+        <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
+          <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-md rounded-2xl bg-gradient-to-br from-gray-900 via-emerald-950/40 to-gray-900 text-white border-2 border-sky-400/80 ring-1 ring-white/25 shadow-2xl shadow-sky-500/20">
+            <DialogHeader>
+              <DialogTitle className="text-lg pr-8 flex items-center gap-2">
+                {isMercadoLivre(selectedProof) && (
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide bg-yellow-400 text-yellow-950 px-2 py-0.5 rounded">
+                    Mercado Livre
+                  </span>
+                )}
+                <span className="truncate">{selectedProof.store}</span>
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {selectedProof.image ? (
+                <img
+                  src={selectedProof.image}
+                  alt=""
+                  className="w-full max-h-64 object-contain rounded-xl border border-white/10 bg-white/5"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-full h-40 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                  <ImageIcon className="w-8 h-8 text-gray-600" />
+                </div>
+              )}
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/90 mb-1">Produto encontrado</div>
+                <p className="text-gray-200 break-words">{selectedProof.productNameFound || selectedProof.store}</p>
+              </div>
+
+              <div className="rounded-lg bg-white/[0.04] border border-white/10 px-4 py-3 text-center">
+                <div className="text-[11px] text-gray-400 uppercase tracking-wide">Preço encontrado</div>
+                <div className="font-slab text-3xl font-black text-orange-400">R$ {fmtBR(selectedProof.price)}</div>
+              </div>
+
+              <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+                Resultado real, buscado agora mesmo no Google Shopping/Zoom. Não abrimos a página da loja
+                aqui dentro porque elas mesmas bloqueiam isso por segurança — mas esse é o dado real que
+                elas retornaram, sem sair do Leilão NoZap.
+              </p>
+
+              <Button
+                onClick={() => setSelectedProof(null)}
+                variant="outline"
+                className="w-full border-sky-400 text-sky-300 hover:bg-sky-900/20"
+              >
+                Fechar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* MODAL EDITOR DE LOGO */}
       <Dialog open={showLogoEditor} onOpenChange={setShowLogoEditor}>
