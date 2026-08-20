@@ -32,16 +32,27 @@ export default function AdminUsers() {
 
   const loadData = useCallback(async () => {
     try {
+      // 🔒 SEM LOGIN TAMBÉM É BARRADO (20/08/2026).
+      // A conferência de cargo vivia inteira dentro de `if (savedUser)`. Quem se
+      // identificava e não era admin era barrado; quem NÃO se identificava pulava o
+      // bloco e a tela seguia direto para AppUser.list() logo abaixo. A trava só
+      // funcionava contra quem se apresentava.
+      // Aqui o dado é de PESSOA, não de produto: a listagem traz todas as colunas de
+      // app_users — cpf, endereço, telefone, saldos e as colunas de senha.
+      // Mesmo padrão já aplicado em ProductManagement.jsx e usado por CRM.jsx.
       const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-        
-        if (user.role !== 'admin' && user.role !== 'super_admin') {
-          alert("Acesso negado! Apenas administradores.");
-          navigate(createPageUrl('Home'));
-          return;
-        }
+      let user = null;
+      try { user = savedUser ? JSON.parse(savedUser) : null; } catch (_) { user = null; }
+      if (!user?.id) {
+        navigate(createPageUrl('Home'));
+        return;
+      }
+      setCurrentUser(user);
+
+      if (user.role !== 'admin' && user.role !== 'super_admin') {
+        alert("Acesso negado! Apenas administradores.");
+        navigate(createPageUrl('Home'));
+        return;
       }
 
       const allUsers = await AppUser.list('-created_date', 1000);
