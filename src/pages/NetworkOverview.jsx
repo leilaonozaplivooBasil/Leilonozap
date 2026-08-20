@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
 import NetworkFinanceBadges from "../components/network/NetworkFinanceBadges";
 import ConversionBox from "../components/network/ConversionBox";
+import PainelLucroDiario from "../components/network/PainelLucroDiario";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -556,7 +557,7 @@ export default function NetworkOverview() {
   const [purgeBlockReasons, setPurgeBlockReasons] = useState([]);
   // 💰 Depósitos na Carteira Digital (saldo pra lance/passaporte) e compras
   // confirmadas na Loja Virtual — dois números de propósitos diferentes, nunca somados.
-  const [financeStats, setFinanceStats] = useState({ depositsCount: 0, depositsTotal: 0, purchasesCount: 0, purchasesTotal: 0, buyerIds: [] });
+  const [financeStats, setFinanceStats] = useState({ depositsCount: 0, depositsTotal: 0, purchasesCount: 0, purchasesTotal: 0, depositsOperacaoCount: 0, depositsOperacaoTotal: 0, purchasesToday: [], purchasesUltimos12Meses: [], arrematesToday: [], buyerIds: [] });
 
   const fetchFinanceStats = useCallback(async () => {
     try {
@@ -567,20 +568,43 @@ export default function NetworkOverview() {
       const sales = await base44.entities.CatalogSale.list();
       const list = Array.isArray(sales) ? sales : [];
       const MARCO_OFICIAL = new Date('2026-08-01T00:00:00Z');
+      const hoje = new Date();
+      const ehHoje = (dataStr) => {
+        const d = new Date(dataStr);
+        return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth() && d.getDate() === hoje.getDate();
+      };
       // 🔧 vendas do PDV gravam status em português ("entregue") em vez de
       // "delivered" — sem isso, pagamentos reais feitos no balcão (ex: a venda
       // de R$250 da Lenice) ficavam fora da soma por não bater com o enum em inglês.
       const isPaga = (s) => ['paid', 'shipped', 'delivered', 'entregue'].includes(s.status);
       // stripe_session_id vem redigido como "[REDACTED]" mesmo quando não é
       // rastro real — só conta se for um valor de verdade.
-      const isDinheiroReal = (s) => Boolean(s.mp_payment_id || s.stripe_payment_intent || (s.stripe_session_id && s.stripe_session_id !== '[REDACTED]'));
+      const temRastroGateway = (s) => Boolean(s.mp_payment_id || s.stripe_payment_intent || (s.stripe_session_id && s.stripe_session_id !== '[REDACTED]'));
+      // 🩹 CAUSA-RAIZ da venda da Elenice (R$450) sumida do painel (19/08/2026):
+      // uma venda de PDV paga com "Saldo de Operação" ou "Saldo de Comissão" é
+      // dinheiro que JÁ entrou de verdade — só que numa etapa ANTERIOR (o
+      // depósito que abasteceu esse saldo). A venda em si é um débito interno,
+      // sem gateway próprio, então o filtro de rastro a jogava fora inteira.
+      // Passa a confiar no payment_method para essas duas formas de pagamento
+      // internas, sem exigir rastro de gateway NESTA linha.
+      const PAGAMENTOS_SALDO_INTERNO = ['operacao', 'saldo'];
+      const isDinheiroReal = (s) => temRastroGateway(s) || PAGAMENTOS_SALDO_INTERNO.includes(s.payment_method);
       const isPosMarco = (s) => new Date(s.created_date) >= MARCO_OFICIAL;
       const isReal = (s) => isPaga(s) && isDinheiroReal(s) && isPosMarco(s);
       const deposits = list.filter(s => s.kind === 'wallet_deposit' && isReal(s));
       const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isReal(s));
+      // 💰 Saldo de Operação (PDV) fica FORA do somatório de "deposits" de
+      // propósito: esse dinheiro já é contado quando a venda que ele financiou
+      // aparece em "purchases" (fix acima). Somar os dois em "Valor total
+      // gerado" contaria o MESMO real duas vezes — uma vez no depósito, outra
+      // na compra que o gastou. Vira uma métrica própria no painel novo.
+      const depositsOperacao = list.filter(s => s.kind === 'operacao_deposit' && isReal(s));
+      // 🎯 Arremates de leilão — comissão é OUTRA regra (5% fixo pro indicador,
+      // não os 30% do plano de carreira), por isso ficam num balde à parte.
+      const arremates = list.filter(s => s.kind === 'arremate' && isReal(s));
       // pessoas únicas que geraram dinheiro real (depósito OU compra) — usado na
       // caixa de conversão. Um mesmo comprador não conta duas vezes.
-      const realSales = [...deposits, ...purchases];
+      const realSales = [...deposits, ...purchases, ...depositsOperacao];
       const buyerIds = [...new Set(realSales.map(s => s.buyer_id).filter(Boolean))];
       // 🔧 "Compradores últimos 30 dias" é pela DATA DA COMPRA (quem comprou no
       // período), não pela data de cadastro do comprador — antes contava só quem
@@ -593,6 +617,18 @@ export default function NetworkOverview() {
         depositsTotal: deposits.reduce((sum, d) => sum + (d.total_amount || 0), 0),
         purchasesCount: purchases.length,
         purchasesTotal: purchases.reduce((sum, s) => sum + (s.total_amount || 0), 0),
+        depositsOperacaoCount: depositsOperacao.length,
+        depositsOperacaoTotal: depositsOperacao.reduce((sum, d) => sum + (d.total_amount || 0), 0),
+        // 📅 vendas/depósitos de HOJE, pra alimentar o painel de lucro diário —
+        // filtro de data feito aqui, não na renderização, pra não recalcular a
+        // lista inteira de novo a cada render.
+        purchasesToday: purchases.filter(s => ehHoje(s.created_date)),
+        depositsToday: deposits.filter(s => ehHoje(s.created_date)),
+        depositsOperacaoToday: depositsOperacao.filter(s => ehHoje(s.created_date)),
+        // 📈 base pro cálculo de RBT12 (receita bruta últimos 12 meses) —
+        // alimenta a alíquota efetiva do Simples no painel de lucro.
+        purchasesUltimos12Meses: purchases.filter(s => new Date(s.created_date) >= new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)),
+        arrematesToday: arremates.filter(s => ehHoje(s.created_date)),
         buyerIds,
         recentBuyerIds,
       });
@@ -1598,6 +1634,16 @@ export default function NetworkOverview() {
 
           <div className="mb-2">
             <ConversionBox conversion={conversion} depositsCount={financeStats.depositsCount} valorTotal={(financeStats.depositsTotal || 0) + (financeStats.purchasesTotal || 0)} />
+          </div>
+
+          <div className="mb-2">
+            <PainelLucroDiario
+              purchasesToday={financeStats.purchasesToday}
+              arrematesToday={financeStats.arrematesToday}
+              depositsToday={financeStats.depositsToday}
+              depositsOperacaoToday={financeStats.depositsOperacaoToday}
+              purchasesUltimos12Meses={financeStats.purchasesUltimos12Meses}
+            />
           </div>
 
           {showStats && (
