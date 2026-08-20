@@ -42,6 +42,27 @@ export default async function handler(req, res) {
     if (!buyerEmail) return res.status(200).json({ success: false, error: 'E-mail obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
+    // 📋 PONTO 110 (21/08/2026) — GUARDAR O CPF QUE O COMPRADOR DIGITOU.
+    // O checkout da loja pede o CPF (src/pages/Cart.jsx:591) e ele chegava aqui
+    // só pra montar o `payer` da cobrança no Mercado Pago — e era DESCARTADO.
+    // Depois, na hora de gerar a etiqueta, o melhorEnvioShipment.js procurava em
+    // app_users.cpf, não achava nada, e o pedido travava com "O comprador não tem
+    // CPF cadastrado — a transportadora exige". A logística tinha que ligar pro
+    // cliente pedir o CPF que ele JÁ tinha digitado.
+    //
+    // Best-effort e SÓ preenche quem está vazio (o filtro `or(cpf.is.null,cpf.eq.)`
+    // garante que a gente nunca sobrescreve um CPF já cadastrado com um digitado
+    // errado no checkout). Nada aqui pode derrubar o pagamento: try/catch mudo e
+    // fora do caminho crítico.
+    if (buyerCpf.length === 11 && buyerId) {
+      try {
+        await sb(`app_users?id=eq.${encodeURIComponent(buyerId)}&or=(cpf.is.null,cpf.eq.)`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ cpf: buyerCpf }),
+        });
+      } catch (_) { /* o pagamento é o que importa; a etiqueta ainda resgata do MP */ }
+    }
+
     // 💳 Cartão de crédito via Mercado Pago (token gerado pelo SDK JS no navegador).
     // Branch ADITIVO — não reaproveita nem altera nenhuma linha do fluxo PIX abaixo.
     if (billingType === 'CREDIT_CARD') {

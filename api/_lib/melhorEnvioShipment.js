@@ -138,7 +138,26 @@ async function tentarGerarEnvio(sale) {
     const token = await getAccessToken(ambiente);
     if (!token) return { ok: false, skipped: 'melhor_envio_nao_autorizado' };
 
-    // documento e telefone do destinatário — busca no cadastro (exigidos pela transportadora)
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 110 (21/08/2026) — "O comprador não tem CPF cadastrado"
+    // ══════════════════════════════════════════════════════════════════════
+    // O checkout da loja PEDE o CPF e o comprador digita (src/pages/Cart.jsx:591
+    // manda buyer_cpf). Só que ninguém GRAVA: o createMPWalletDeposit usa esse
+    // CPF apenas pra montar o `payer` da cobrança no Mercado Pago e descarta.
+    // Aqui a etiqueta procurava só em app_users.cpf — vazio pra quem nunca
+    // preencheu o perfil — e travava com 'destinatario_sem_cpf'.
+    //
+    // Não era regressão: "funcionava" quando o comprador já tinha CPF no
+    // cadastro por outro motivo (KYC, cadastro antigo). Quem chegou pelo
+    // checkout novo nunca teve.
+    //
+    // Agora são três fontes, em ordem, e a última resgata o passado:
+    //   1. o cadastro (app_users.cpf) — como sempre foi;
+    //   2. a própria venda (buyer_cpf na linha ou dentro do raw_base44);
+    //   3. o MERCADO PAGO — o CPF que o comprador digitou VIAJOU pra lá como
+    //      payer.identification.number. Se o pagamento existe, o dado existe.
+    //      É o que destrava os pedidos que já estão parados hoje.
+    // Achando pelo caminho 2 ou 3, grava no cadastro pra não precisar de novo.
     let cpfDestino = '';
     let phoneDestino = String(sale.buyer_phone || '').replace(/\D/g, '');
     if (sale.buyer_id) {
@@ -147,6 +166,42 @@ async function tentarGerarEnvio(sale) {
       cpfDestino = String(userRow?.cpf || '').replace(/\D/g, '');
       if (!phoneDestino && userRow?.phone) phoneDestino = String(userRow.phone).replace(/\D/g, '');
     }
+
+    // 2) o CPF que veio no checkout, se alguém tiver gravado na venda
+    if (cpfDestino.length !== 11) {
+      const daVenda = String(sale.buyer_cpf || raw.buyer_cpf || raw.customer?.cpf || '').replace(/\D/g, '');
+      if (daVenda.length === 11) cpfDestino = daVenda;
+    }
+
+    // 3) resgate no Mercado Pago — best-effort, nunca derruba a etiqueta
+    if (cpfDestino.length !== 11 && sale.mp_payment_id && process.env.MP_ACCESS_TOKEN) {
+      try {
+        const r = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(sale.mp_payment_id)}`, {
+          headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+        });
+        if (r.ok) {
+          const pay = await r.json();
+          const doMp = String(pay?.payer?.identification?.number || '').replace(/\D/g, '');
+          if (doMp.length === 11 && String(pay?.payer?.identification?.type || 'CPF').toUpperCase() === 'CPF') {
+            cpfDestino = doMp;
+            console.warn(`[ENVIO] CPF do comprador resgatado do Mercado Pago (venda ${sale.id}). Gravando no cadastro.`);
+          }
+        }
+      } catch (e) {
+        console.warn(`[ENVIO] Falha ao resgatar CPF no Mercado Pago (venda ${sale.id}):`, e?.message);
+      }
+    }
+
+    // achou fora do cadastro → grava, pra próxima etiqueta não depender disso
+    if (cpfDestino.length === 11 && sale.buyer_id) {
+      try {
+        await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}&or=(cpf.is.null,cpf.eq.)`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ cpf: cpfDestino }),
+        });
+      } catch (_) { /* secundário: a etiqueta sai do mesmo jeito */ }
+    }
+
     if (cpfDestino.length !== 11) return { ok: false, skipped: 'destinatario_sem_cpf' };
 
     const addr = raw.address || {};
