@@ -2,6 +2,7 @@
 // Busca via helper compartilhado api/_lib/marketSearch.js (mesma fonte do painel de precificação).
 // Mantém o MESMO formato de resposta da function original do Base44.
 import { searchMarket } from '../_lib/marketSearch.js';
+import { chamarRuntimeBase44 } from '../_lib/base44Runtime.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -44,6 +45,43 @@ export default async function handler(req, res) {
     const imgUrl = Array.isArray(entity.image_urls) && entity.image_urls[0] ? entity.image_urls[0]
       : (Array.isArray(entity.images) && entity.images[0] ? entity.images[0] : null);
     const mk = await searchMarket(searchTitle, imgUrl); // busca por imagem primeiro
+
+    // 🌉 PONTO 92 (20/08/2026) — PONTE DE PREÇO PRO RUNTIME BASE44.
+    // Provado pelo diagnóstico na tela do dono: aqui na Vercel a SEARCHAPI_KEY
+    // respondeu "You have used all of the searches for the month" nas TRÊS
+    // fontes, a SERPAPI_KEY não está publicada, e o Zoom trouxe 0 relevantes.
+    // Mas a ponte pro Base44 respondeu com 12 fotos — ou seja, a SERPAPI DE LÁ
+    // está viva e com saldo. A function comparaiPrices do runtime Base44 usa
+    // exatamente essa chave, NÃO exige login e devolve o MESMO formato de
+    // resposta desta aqui. Então, quando tudo aqui falha, perguntamos pra lá.
+    // ⚠️ Sem recursão: o endpoint do runtime executa a versão Deno
+    // (base44/functions/comparaiPrices/entry.ts), que é outro arquivo.
+    if (!mk.found) {
+      try {
+        const ponte = await chamarRuntimeBase44(
+          'comparaiPrices',
+          auctionId ? { auctionId } : { productId },
+          20000,
+        );
+        const comps = ponte?.comparison?.comparisons;
+        if (ponte?.success && Array.isArray(comps) && comps.length > 0) {
+          return res.status(200).json({
+            success: true,
+            comparison: {
+              ...ponte.comparison,
+              comparisons: comps.map((c) => ({ ...c, matchLevel: c.matchLevel || 'texto' })),
+              source: 'ponte_base44_shopping',
+              attempts: [...(mk.attempts || []), `ponte_base44_shopping: ${comps.length} anúncios com preço`],
+            },
+            cached: false,
+          });
+        }
+        mk.attempts = [...(mk.attempts || []), `ponte_base44_shopping: ${String(ponte?.error || 'sem resultado').slice(0, 90)}`];
+      } catch (e) {
+        mk.attempts = [...(mk.attempts || []), `ponte_base44_shopping: ${String(e?.message || e).slice(0, 90)}`];
+      }
+    }
+
     if (!mk.found) {
       // 🔦 PONTO 91 (20/08/2026) — a tela dizia sempre a MESMA frase ("não
       // encontramos preços") para causas totalmente diferentes: chave não
