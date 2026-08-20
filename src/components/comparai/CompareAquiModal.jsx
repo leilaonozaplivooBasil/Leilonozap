@@ -352,22 +352,22 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 text-white border-blue-500/30 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg md:max-w-2xl rounded-2xl bg-gradient-to-br from-gray-900 via-emerald-950/40 to-gray-900 text-white border-emerald-500/20 max-h-[90vh] overflow-y-auto overflow-x-hidden">
           
           <button onClick={onClose} className="absolute top-4 right-4 z-20 text-white hover:text-red-400 transition-colors p-2" disabled={isSharing}>
             <X className="w-6 h-6" />
           </button>
 
           <DialogHeader>
-            <DialogTitle className="text-2xl pr-12">
-              <img 
+            <DialogTitle className="text-xl sm:text-2xl pr-10">
+              <img
                 src={CompareAquiIcon}
                 alt="CompareAQUI"
-                className="w-16 h-16 rounded-full bg-white p-2 shadow-lg"
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white p-2 shadow-lg"
               />
-              <div>
-                <div className="text-blue-400 font-bold text-2xl">CompareAQUI</div>
-                <div className="text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
+              <div className="min-w-0">
+                <div className="font-slab text-emerald-400 font-bold text-xl sm:text-2xl">CompareAQUI</div>
+                <div className="text-xs sm:text-sm font-normal text-gray-400">Plataforma Independente de Comparação de Preços</div>
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -434,67 +434,67 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                 <div ref={screenshotRef} className="space-y-4 p-4 bg-black rounded-xl">
                   
                   {/* CARD 1: LANCE NOZAP */}
-                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-xl p-5">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                      <div className="flex items-center gap-3">
-                        <img 
+                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-xl p-4 sm:p-5 overflow-hidden">
+                    <div className="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
                           src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
                           alt="NoZap"
-                          className="w-12 h-12 rounded-full border-2 border-green-400"
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-green-400 shrink-0"
                         />
-                        <div>
-                          <h3 className="text-white font-bold text-lg mb-1">{localAuction.title}</h3>
-                          <span className="text-green-400 text-sm font-semibold">Site Analisado - Leilão NoZap</span>
+                        <div className="min-w-0">
+                          <h3 className="text-white font-bold text-base sm:text-lg mb-1 break-words">{localAuction.title}</h3>
+                          <span className="text-green-400 text-xs sm:text-sm font-semibold">Site Analisado - Leilão NoZap</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-4xl md:text-5xl font-bold text-green-400">
+                      <div className="text-right shrink-0">
+                        <div className="font-slab text-3xl sm:text-4xl md:text-5xl font-bold text-green-400">
                           R$ {fmtBR((localAuction.current_price || localAuction.starting_price))}
                         </div>
-                        <div className="text-green-300 text-sm mt-1">Lance Atual neste Site</div>
+                        <div className="text-green-300 text-xs sm:text-sm mt-1">Lance Atual neste Site</div>
                       </div>
                     </div>
                   </div>
 
                   {/* CARD 2: FABRICANTE/MERCADO */}
                   {comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 ? (
-                    <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-2 border-blue-500 rounded-xl p-6 text-center">
-                      <div className="text-blue-300 text-xs font-medium mb-4 uppercase">Preço no Fabricante</div>
-                      
+                    <div className="bg-gradient-to-br from-amber-900/25 to-yellow-900/15 border-2 border-amber-600/50 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
+                      <div className="text-amber-300 text-xs font-medium mb-4 uppercase tracking-wide">Preço no Fabricante</div>
+
                       {localAuction.supplier_logo_url && (
-                        <img 
-                          src={localAuction.supplier_logo_url} 
+                        <img
+                          src={localAuction.supplier_logo_url}
                           alt="Logo"
-                          className="w-24 h-24 mx-auto object-contain bg-white rounded-xl p-2 shadow-lg mb-3"
+                          className="w-20 h-20 sm:w-24 sm:h-24 mx-auto object-contain bg-white rounded-xl p-2 shadow-lg mb-3"
                         />
                       )}
-                      
-                      <div className="text-blue-200 text-sm font-semibold mb-3">
+
+                      <div className="text-amber-100 text-sm font-semibold mb-3 break-words">
                         {comparisonData.comparisons[0].store}
                       </div>
-                      
-                      <div className="text-4xl font-black text-white">
+
+                      <div className="font-slab text-3xl sm:text-4xl font-black text-white">
                         R$ {fmtBR(comparisonData.comparisons[0].price)}
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-orange-900/30 to-red-900/20 border-2 border-orange-500 rounded-xl p-6 text-center">
+                    <div className="bg-gradient-to-br from-orange-900/30 to-amber-900/15 border-2 border-orange-500/70 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
                       <div className="flex items-center justify-center gap-2 mb-4">
-                        <img 
+                        <img
                           src={CompareAquiIcon}
                           alt="CompareAQUI"
-                          className="w-10 h-10"
+                          className="w-9 h-9 sm:w-10 sm:h-10 shrink-0"
                         />
-                        <div className="text-orange-300 text-sm font-bold uppercase">{comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>
+                        <div className="text-orange-300 text-xs sm:text-sm font-bold uppercase tracking-wide">{comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>
                       </div>
-                      
-                      <div className="text-5xl font-black text-orange-400 mb-2">
+
+                      <div className="font-slab text-4xl sm:text-5xl font-black text-orange-400 mb-2">
                         R$ {fmtBR((comparisonData.referencePrice || comparisonData.averageMarketPrice || comparisonData.cheapestMarketPrice))}
                       </div>
-                      
-                      <div className="text-orange-300 text-sm">
-                        {comparisonData.isManualPrice 
-                          ? 'Preço inserido manualmente' 
+
+                      <div className="text-orange-300 text-xs sm:text-sm">
+                        {comparisonData.isManualPrice
+                          ? 'Preço inserido manualmente'
                           : `Preço médio entre ${comparisonData.totalStoresAnalyzed || 'várias'} lojas`}
                       </div>
                     </div>
@@ -502,31 +502,32 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
                   {/* CARD 2.5: LOJAS COMPARADAS — PROVA (20/08/2026, pedido do dono) —
                       a API já devolvia comparisonData.comparisons (loja, produto achado,
-                      preço, link) mas o modal só mostrava a MÉDIA, nunca a lista real que
-                      comprova de onde ela veio. */}
+                      preço) mas o modal só mostrava a MÉDIA, nunca a lista real que
+                      comprova de onde ela veio. 20/08/2026 (2ª rodada): virou <div>
+                      sem link/target="_blank" — o dono foi explícito: o cliente NUNCA
+                      pode ser levado pra fora do site, nem pra "comprovar". A prova fica
+                      só nos dados (loja, produto achado, preço). w-0+flex-1+min-w-0 +
+                      overflow-hidden em cascata evita o vazamento de texto pro lado de
+                      fora do card em qualquer largura de tela. */}
                   {!comparisonData.isFactoryDirect && comparisonData.comparisons?.length > 0 && (
-                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
-                      <div className="text-gray-300 text-xs font-bold uppercase mb-3">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 sm:p-5 overflow-hidden">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/90 mb-3">
                         Lojas comparadas ({comparisonData.comparisons.length})
                       </div>
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
                         {comparisonData.comparisons.slice(0, 10).map((item, i) => (
-                          <a
+                          <div
                             key={i}
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors"
+                            className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
                           >
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-gray-300 truncate">{item.store}</span>
-                              <span className="block text-[11px] text-gray-500 truncate">{item.productNameFound}</span>
-                            </span>
-                            <span className="shrink-0 flex items-center gap-1.5 font-bold text-white">
+                            <div className="w-0 flex-1 min-w-0">
+                              <p className="text-gray-300 truncate">{item.store}</p>
+                              <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
+                            </div>
+                            <div className="shrink-0 font-slab font-bold text-white">
                               R$ {fmtBR(item.price)}
-                              <ExternalLink className="w-3 h-3 text-gray-500" />
-                            </span>
-                          </a>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -534,21 +535,21 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
                   {/* CARD 3: ECONOMIA */}
                   {comparisonData.savings > 0 && (
-                    <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-2 border-green-500 rounded-xl p-6 text-center">
+                    <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-2 border-green-500 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
                       <div className="flex items-center justify-center gap-2 mb-4">
-                        <img 
+                        <img
                           src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/93fa90082_image.png"
                           alt="NoZap"
-                          className="w-10 h-10"
+                          className="w-9 h-9 sm:w-10 sm:h-10 shrink-0"
                         />
-                        <div className="text-green-300 text-sm font-bold uppercase">Você Economiza</div>
+                        <div className="text-green-300 text-xs sm:text-sm font-bold uppercase tracking-wide">Você Economiza</div>
                       </div>
-                      
-                      <div className="text-6xl font-black text-green-400 mb-2">
+
+                      <div className="font-slab text-4xl sm:text-5xl md:text-6xl font-black text-green-400 mb-2 break-words">
                         R$ {fmtBR(comparisonData.savings)}
                       </div>
-                      
-                      <div className="text-2xl font-bold text-green-300">
+
+                      <div className="text-xl sm:text-2xl font-bold text-green-300">
                         {comparisonData.savingsPercent}% MAIS BARATO!
                       </div>
                     </div>
@@ -556,14 +557,14 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
                   {/* CARD 4: VENCEDOR */}
                   {comparisonData.savings > 0 && (
-                    <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500 rounded-xl p-6 text-center">
-                      <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
-                        <Trophy className="w-6 h-6 text-emerald-400" />
+                    <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-2 border-green-500 rounded-xl p-5 sm:p-6 text-center overflow-hidden">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto mb-3">
+                        <Trophy className="w-6 h-6 text-amber-400" />
                       </div>
-                      <h3 className="text-2xl font-bold text-white mb-2">LEILÃO NOZAP VENCEU</h3>
-                      
-                      <p className="text-green-300 text-lg">
-                        O preço do Leilão NoZap é <span className="font-bold text-yellow-300">
+                      <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">LEILÃO NOZAP VENCEU</h3>
+
+                      <p className="text-green-300 text-base sm:text-lg break-words">
+                        O preço do Leilão NoZap é <span className="font-bold text-amber-300">
                           {comparisonData.savingsPercent}%
                         </span> menor que {comparisonData.isFactoryDirect ? 'o fabricante' : 'o mercado'}!
                       </p>
@@ -591,23 +592,15 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                   )}
                 </Button>
 
-                {/* OUTROS BOTÕES */}
+                {/* OUTROS BOTÕES — 20/08/2026: removido "Ver no Site do Fabricante"
+                    (window.open pra fora do site) — pedido explícito do dono: o
+                    cliente nunca sai do Leilão NoZap, a prova fica só nos dados
+                    já mostrados no card acima (loja, foto, preço). */}
                 <div className="flex flex-col gap-3">
-                  {isFactoryProduct && comparisonData.comparisons?.[0]?.url && (
-                    <Button
-                      onClick={() => window.open(comparisonData.comparisons[0].url, '_blank')}
-                      variant="outline"
-                      className="w-full border-blue-500 text-blue-400 hover:bg-blue-900/20"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Ver no Site do Fabricante
-                    </Button>
-                  )}
-
-                  <Button 
-                    onClick={() => handleCompare()} 
-                    variant="outline" 
-                    className="w-full border-blue-500 text-blue-400 hover:bg-blue-900/20"
+                  <Button
+                    onClick={() => handleCompare()}
+                    variant="outline"
+                    className="w-full border-emerald-500 text-emerald-400 hover:bg-emerald-900/20"
                     disabled={isLoading}
                   >
                     <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -619,7 +612,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                   <Button
                     onClick={() => setShowLogoEditor(true)}
                     variant="outline"
-                    className="w-full border-blue-500 text-blue-400 hover:bg-blue-900/20"
+                    className="w-full border-emerald-500 text-emerald-400 hover:bg-emerald-900/20"
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Editar Logo do Fabricante

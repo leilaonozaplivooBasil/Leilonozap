@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Loader2, ExternalLink, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const EXEMPLOS = ['Fone de ouvido bluetooth', 'Air fryer 5 litros', 'Cadeira gamer'];
@@ -108,24 +108,20 @@ export default function CompareAquiProvaViva() {
             </p>
             <p className="text-[10.5px] text-gray-500">{resultado.count} loja{resultado.count === 1 ? '' : 's'} comparada{resultado.count === 1 ? '' : 's'} em tempo real</p>
           </div>
-          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
             {(resultado.results || []).slice(0, 6).map((item, i) => (
-              <a
+              <div
                 key={i}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors"
+                className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm overflow-hidden"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-gray-300 truncate">{item.store}</span>
-                  <span className="block text-[11px] text-gray-500 truncate">{item.productNameFound}</span>
-                </span>
-                <span className="shrink-0 flex items-center gap-1.5 font-bold text-white">
+                <div className="w-0 flex-1 min-w-0">
+                  <p className="text-gray-300 truncate">{item.store}</p>
+                  <p className="text-[11px] text-gray-500 truncate">{item.productNameFound}</p>
+                </div>
+                <div className="shrink-0 font-bold text-white">
                   R$ {Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  <ExternalLink className="w-3 h-3 text-gray-500" />
-                </span>
-              </a>
+                </div>
+              </div>
             ))}
           </div>
         </div>
