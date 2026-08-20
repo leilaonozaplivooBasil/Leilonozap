@@ -187,6 +187,8 @@ export default function CatalogOrdersAdmin() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [reprocessandoEnvioId, setReprocessandoEnvioId] = useState(null);
   const [cpfInput, setCpfInput] = useState('');
+  // PONTO 113: permite reabrir o campo mesmo quando o CPF atual ja e valido
+  const [editandoCpf, setEditandoCpf] = useState(false);
   const [salvandoCpf, setSalvandoCpf] = useState(false);
 
   useEffect(() => {
@@ -274,6 +276,7 @@ export default function CatalogOrdersAdmin() {
     setTrackingCode(order.tracking_code || '');
     setNewStatus(order.status);
     setCpfInput('');
+    setEditandoCpf(false);
   };
 
   const handleSalvarCpf = async () => {
@@ -299,6 +302,7 @@ export default function CatalogOrdersAdmin() {
       setSelectedOrder((prev) => prev ? { ...prev, _buyer: { ...(prev._buyer || {}), cpf: cpfSalvo } } : prev);
       setOrders((prev) => prev.map((o) => o.id === selectedOrder.id ? { ...o, _buyer: { ...(o._buyer || {}), cpf: cpfSalvo } } : o));
       setCpfInput('');
+      setEditandoCpf(false);
       toast.success('CPF salvo! Agora clique em "Reprocessar envio".');
     } catch (e) {
       toast.error('Erro ao salvar CPF.');
@@ -593,26 +597,67 @@ export default function CatalogOrdersAdmin() {
                 {(selectedOrder.buyer_phone || selectedOrder._buyer?.phone) && (
                   <p className="text-sm text-gray-400">Telefone/WhatsApp: <span className="text-white">{selectedOrder.buyer_phone || selectedOrder._buyer?.phone}</span></p>
                 )}
-                {selectedOrder._buyer?.cpf ? (
+                {/* 🔴 PONTO 113 (21/08/2026) — O CAMPO DE CPF SÓ APARECIA PRA QUEM NÃO TINHA CPF.
+                    A condição era `_buyer?.cpf ? (texto) : (campo)`. Quem tinha um CPF
+                    ERRADO — como o 99999999999 que veio do checkout sem validação — caía
+                    no primeiro ramo: via o CPF impresso na tela e NENHUM jeito de trocar.
+                    A etiqueta mandava "corrija em Gerenciar" e no Gerenciar não havia o quê
+                    corrigir. Agora o campo aparece SEMPRE que o CPF não passa na
+                    conferência, e fica disponível por um "Editar" quando está certo. */}
+                {selectedOrder.buyer_id ? (() => {
+                  const cpfAtual = String(selectedOrder._buyer?.cpf || '').replace(/\D/g, '');
+                  const valido = cpfTemDigitoValido(cpfAtual);
+                  const precisaEditar = !valido || editandoCpf;
+                  return (
+                    <div className="space-y-1 pt-0.5">
+                      {cpfAtual ? (
+                        <p className={`text-sm ${valido ? 'text-gray-400' : 'text-red-400'}`}>
+                          CPF: <span className={`font-mono ${valido ? 'text-white' : 'text-red-300 line-through'}`}>{cpfAtual}</span>
+                          {!valido && <span className="ml-1 text-xs">— inválido, não passa na conferência</span>}
+                          {valido && !editandoCpf && (
+                            <button
+                              type="button"
+                              onClick={() => { setCpfInput(cpfAtual); setEditandoCpf(true); }}
+                              className="ml-2 text-xs text-blue-400 underline hover:text-blue-300"
+                            >
+                              editar
+                            </button>
+                          )}
+                        </p>
+                      ) : (
+                        <span className="text-sm text-amber-400">CPF não cadastrado</span>
+                      )}
+                      {precisaEditar && (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={cpfInput}
+                            onChange={(e) => setCpfInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                            placeholder="CPF do comprador"
+                            className="h-7 w-40 bg-gray-600 border-gray-500 text-white text-xs font-mono px-2"
+                          />
+                          <Button
+                            size="sm"
+                            className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700"
+                            disabled={salvandoCpf || !cpfTemDigitoValido(cpfInput)}
+                            onClick={handleSalvarCpf}
+                          >
+                            {salvandoCpf ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
+                          </Button>
+                          {editandoCpf && valido && (
+                            <button
+                              type="button"
+                              onClick={() => { setEditandoCpf(false); setCpfInput(''); }}
+                              className="text-xs text-gray-400 underline hover:text-gray-300"
+                            >
+                              cancelar
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : selectedOrder._buyer?.cpf ? (
                   <p className="text-sm text-gray-400">CPF: <span className="text-white font-mono">{selectedOrder._buyer.cpf}</span></p>
-                ) : selectedOrder.buyer_id ? (
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <span className="text-sm text-amber-400">CPF não cadastrado</span>
-                    <Input
-                      value={cpfInput}
-                      onChange={(e) => setCpfInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                      placeholder="00000000000"
-                      className="h-7 w-36 bg-gray-600 border-gray-500 text-white text-xs font-mono px-2"
-                    />
-                    <Button
-                      size="sm"
-                      className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700"
-                      disabled={salvandoCpf || cpfInput.replace(/\D/g,'').length !== 11}
-                      onClick={handleSalvarCpf}
-                    >
-                      {salvandoCpf ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
-                    </Button>
-                  </div>
                 ) : null}
                 <p className="text-sm text-gray-400">Email: <span className="text-white">{selectedOrder.buyer_email}</span></p>
                 <p className="text-sm text-gray-400">Data/Hora: <span className="text-white">{getDataHora(selectedOrder)}</span></p>
