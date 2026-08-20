@@ -91,6 +91,28 @@ const ALIAS = {
 // executiva, que era o que sustentava a ordem de busca invertida deste arquivo.
 // Foi REMOVIDA. A leitura oficial é readExecutiveOwner(), em resolveExecutivo.js
 // — que se declara FONTE ÚNICA justamente para isto não acontecer de novo.
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 105 (21/08/2026) — CONTA ARQUIVADA CORTAVA A CADEIA INTEIRA
+// ══════════════════════════════════════════════════════════════════════════════
+// Os chamadores carregavam os usuários com `active=neq.false` e mandavam essa
+// lista pra cá. A intenção do filtro era boa e está escrita no storeFulfill.js:63
+// — "conta desativada (ex.: duplicata) NÃO entra nos pools". Mas o efeito
+// colateral era outro: a lista vira o `byId`, e o `byId` é o que a montarCadeia()
+// usa pra SUBIR a árvore pelo referred_by_id.
+//
+// Resultado: bastava UMA conta arquivada no meio da linha para o `byId.get()`
+// devolver undefined, a caminhada PARAR ali, e TODO MUNDO acima perder a
+// comissão daquela venda. O dinheiro ia calado pra empresa. Uma conta duplicada
+// arquivada por higiene de cadastro derrubava a renda de uma estrutura inteira.
+//
+// A regra certa é: a conta arquivada é um PEDÁGIO, não um muro. A cadeia passa
+// através dela; ela é que não recebe. É exatamente o que o laço da cadeia já
+// fazia com quem não tem cargo de rede (`continue`, não `break`).
+//
+// Por isso o filtro agora mora AQUI, no motor, e não em cada chamador — assim
+// nenhum caminho novo repete o erro. Os chamadores passam TODO MUNDO.
+const estaAtivo = (u) => u?.active !== false;
+
 const temCargo = (u, cargo) => {
   const meus = Array.isArray(u?.career_levels) ? u.career_levels : [];
   return (ALIAS[cargo] || [cargo]).some((c) => meus.includes(c));
@@ -138,7 +160,11 @@ export function calcularTopo(sale, users) {
 
   const byId = new Map(users.map((u) => [u.id, u]));
   const chain = montarCadeia(sale.seller_id, byId);
-  const elegiveisPool = users.filter((u) => u.full_name !== EMPRESA);
+  // 🔴 PONTO 105: o `estaAtivo` que era feito pelo chamador (e cortava a cadeia)
+  // agora é feito aqui — só na hora de RECEBER. A conta arquivada continua no
+  // `byId`, então a montarCadeia() passa por ela e a linha inteira acima segue
+  // ganhando; ela é que não entra nos pools.
+  const elegiveisPool = users.filter((u) => u.full_name !== EMPRESA && estaAtivo(u));
 
   // 💰 Pool sem perda de centavo: divide a fatia em CENTAVOS INTEIROS pelo método do maior
   // resto. Antes, round2 por pessoa engolia frações (1% ÷ 7 fundadores numa venda de R$ 2,00
@@ -255,6 +281,10 @@ export function calcularComissao(sale, users) {
   let pctCadeia = 0;  // quanto do teto de 20% já foi distribuído
   for (const u of chain) {
     if (pctCadeia >= CADEIA_TETO - 0.0001) break;
+    // 🔴 PONTO 105: conta arquivada é PEDÁGIO, não muro — `continue`, nunca
+    // `break`. Ela não recebe, e como o `pisoPago` não sobe, o rebate dela vai
+    // inteiro pro próximo upline ATIVO, em vez de sobrar pra empresa.
+    if (!estaAtivo(u)) continue;
     const nivel = nivelDe(u);
     if (!nivel) continue;                 // sem cargo de rede (ex.: 'usuario') → não recebe
     const rebate = nivel.pct - pisoPago;  // upline de nível igual ou menor não ganha nada

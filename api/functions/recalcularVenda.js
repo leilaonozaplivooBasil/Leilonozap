@@ -65,7 +65,11 @@ export default async function handler(req, res) {
       'app_users?select=id,full_name,email,career_levels,referred_by_id,commission_balance,licenciado_context,active&limit=5000'
     )).json());
     const byId = new Map(users.map((u) => [u.id, u]));
-    const ativos = users.filter((u) => u.active !== false);
+    // 🔴 PONTO 105 (21/08/2026): filtrar as contas arquivadas ANTES do motor era
+    // o que cortava a cadeia — a lista vira o byId que a árvore usa pra subir.
+    // Quem decide quem RECEBE agora é o arvoreOficial.js. Aqui passa todo mundo,
+    // senão o recálculo devolve um número diferente do que a venda pagou.
+    const ativos = users;
 
     // troca de loja, quando a venda registrou o vendedor errado
     let novoSeller = venda.seller_id;

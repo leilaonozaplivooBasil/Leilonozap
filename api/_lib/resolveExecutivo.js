@@ -45,6 +45,16 @@ export function isExecutivo(user) {
   return EXEC_ALIASES.some((c) => meus.includes(c));
 }
 
+// 🔴 PONTO 105 (21/08/2026): conta arquivada não RECEBE, mas a árvore passa
+// através dela. Aqui isso significa: um executivo arquivado não leva o 1% — a
+// busca continua subindo em vez de parar nele.
+const estaAtivo = (u) => u?.active !== false;
+
+/** Executivo que pode efetivamente receber: tem o cargo E está ativo. */
+function podeReceberComoExecutivo(u) {
+  return Boolean(u) && isExecutivo(u) && estaAtivo(u);
+}
+
 /** Lê a carteira migrada — coluna dedicada ou dentro do licenciado_context (JSON). */
 export function readExecutiveOwner(user) {
   if (!user) return null;
@@ -88,11 +98,11 @@ export function resolveExecutivo(anchor, byId, users, opcoes = {}) {
 
     // 1) carteira migrada da PRÓPRIA pessoa vence — inclusive sobre a árvore
     const dono = byId.get(readExecutiveOwner(atual));
-    if (dono && isExecutivo(dono)) return dono;
+    if (podeReceberComoExecutivo(dono)) return dono;
 
     // 2) a própria pessoa é executiva (ex.: executivo atuando como parceiro
     //    dentro da estrutura que ele mesmo comanda)
-    if (isExecutivo(atual)) return atual;
+    if (podeReceberComoExecutivo(atual)) return atual;
 
     // 3) sobe para quem indicou
     atual = atual.referred_by_id ? byId.get(atual.referred_by_id) : null;
@@ -101,5 +111,5 @@ export function resolveExecutivo(anchor, byId, users, opcoes = {}) {
   // Linha sem nenhum executivo acima → executivo raiz (salvo quem pediu pra não)
   if (opcoes.semFallbackRaiz) return null;
   const lista = Array.isArray(users) ? users : [];
-  return lista.find((u) => isExecutivo(u) && levelsOf(u).includes(FALLBACK_EXECUTIVE_LEVEL)) || null;
+  return lista.find((u) => podeReceberComoExecutivo(u) && levelsOf(u).includes(FALLBACK_EXECUTIVE_LEVEL)) || null;
 }

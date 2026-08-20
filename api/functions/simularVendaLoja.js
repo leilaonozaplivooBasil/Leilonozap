@@ -49,8 +49,12 @@ export default async function handler(req, res) {
     const users = lista(await (await sb(
       'app_users?select=id,full_name,email,store_slug,store_name,career_levels,primary_career_level,referred_by_id,active,licenciado_context&limit=5000'
     )).json());
-    // o motor real só considera contas ativas
-    const ativos = users.filter((u) => u.active !== false);
+    // 🔴 PONTO 105 (21/08/2026): aqui filtrava as contas arquivadas ANTES de
+    // entregar ao motor — e era isso que cortava a cadeia, porque a lista vira o
+    // byId que a árvore usa pra subir pelo referred_by_id. Quem decide quem
+    // RECEBE agora é o próprio arvoreOficial.js. O simulador passa TODO MUNDO,
+    // senão ele simula uma coisa e a venda real paga outra.
+    const ativos = users;
     const byId = new Map(users.map((u) => [u.id, u]));
 
     let dono = null;
