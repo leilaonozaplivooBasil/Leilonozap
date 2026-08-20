@@ -303,21 +303,64 @@ export async function finalizeOneAuction(auction) {
       // reterFatiaDaRede(). O PAGAMENTO em si não mudou: continua 5% pro
       // indicador do arrematante e mais ninguém.
       let pctDistribuido = 0;
-      if (u.referred_by_id && !auction.is_investment_plan) {
+      // 🔴 PONTO 109 — A FLAG `is_investment_plan` NÃO É CONFIÁVEL.
+      // Medido no banco em 21/08/2026: 36 leilões "Plano de Investimento: Plano V"
+      // de R$ 5.000 cada, e a flag marcada em ZERO deles. O documento oficial é
+      // claro que plano de investimento NÃO comissiona, mas a única trava era
+      // essa flag — que ninguém preenche.
+      //
+      // Com o SELECT consertado logo abaixo, esses leilões passariam a pagar 5%
+      // de R$ 5.000 = R$ 250 cada. R$ 9.000 de comissão indevida por descuido de
+      // cadastro. Por isso o título entra como REDE DE SEGURANÇA — a flag
+      // continua sendo a regra, o título é o que evita o prejuízo quando ela
+      // vem em branco. O aviso no log serve pra alguém ir marcar a flag.
+      const pareceInvestimento = /plano\s+de\s+investimento/i.test(String(auction.title || ''));
+      if (pareceInvestimento && !auction.is_investment_plan) {
+        console.warn(`[FINALIZE] Leilão ${auctionId} parece Plano de Investimento pelo título mas está SEM a flag is_investment_plan. Não comissionando. Marcar a flag no cadastro.`);
+      }
+      if (u.referred_by_id && !auction.is_investment_plan && !pareceInvestimento) {
         try {
+          // ══════════════════════════════════════════════════════════════════
+          // 🔴 PONTO 109 (21/08/2026) — OS 5% DO LEILÃO NUNCA FORAM PAGOS
+          // ══════════════════════════════════════════════════════════════════
+          // Este SELECT pedia `valora_pay_balance` e `test_valora_balance`.
+          // NENHUMA das duas existe no banco — são nomes herdados do Base44 que
+          // nunca viraram coluna aqui. O front-end já sabia disso e está escrito
+          // em src/pages/NetworkOverview.jsx:1047: "A tabela app_users tem
+          // commission_balance; 'valora_pay_balance' não existe". O back-end
+          // nunca soube.
+          //
+          // O que acontecia, silenciosamente:
+          //   PostgREST recusa a consulta inteira (42703, column does not exist)
+          //   → .json() devolve um OBJETO de erro, não um array
+          //   → ?.[0] vira undefined
+          //   → `if (lic)` dá falso
+          //   → o bloco inteiro é pulado e NINGUÉM recebe
+          // Tudo dentro de um try/catch com console.warn: falhava sem barulho.
+          //
+          // Medido na produção: os 46 arremates de agosto com winner_id têm ZERO
+          // linha de comissão, e a conta que receberia a maior parte tinha
+          // R$ 68,60 em vez dos milhares esperados. Não é "alguns arremates não
+          // distribuíram" — é que NENHUM arremate jamais distribuiu.
+          //
+          // A coluna de teste que EXISTE é `test_wallet_balance`
+          // (supabase/migrations/20260803_test_wallet_balance.sql).
+          //
+          // ⚠️ E leilão de TESTE não pode mais tocar commission_balance: antes o
+          // patch somava lá SEMPRE, e só a coluna fantasma separava teste de
+          // real. Consertar o SELECT sem consertar isso transformaria "não paga
+          // ninguém" em "paga dinheiro de verdade por leilão de brincadeira".
           const lic = (await (await sb(
-            `app_users?select=id,full_name,network_bids_count,commission_balance,test_valora_balance,valora_pay_balance&id=eq.${enc(u.referred_by_id)}&limit=1`
+            `app_users?select=id,full_name,network_bids_count,commission_balance,test_wallet_balance&id=eq.${enc(u.referred_by_id)}&limit=1`
           )).json())?.[0];
           if (lic) {
             const commission = money(finalPrice * 0.05);
-            const patch = {
-              network_bids_count: (Number(lic.network_bids_count) || 0) + 1,
-              commission_balance: money((Number(lic.commission_balance) || 0) + commission),
-            };
-            if (auction.is_test_auction === true) {
-              patch.test_valora_balance = money((Number(lic.test_valora_balance) || 0) + commission);
+            const ehTeste = auction.is_test_auction === true;
+            const patch = { network_bids_count: (Number(lic.network_bids_count) || 0) + 1 };
+            if (ehTeste) {
+              patch.test_wallet_balance = money((Number(lic.test_wallet_balance) || 0) + commission);
             } else {
-              patch.valora_pay_balance = money((Number(lic.valora_pay_balance) || 0) + commission);
+              patch.commission_balance = money((Number(lic.commission_balance) || 0) + commission);
             }
             await sb(`app_users?id=eq.${enc(lic.id)}`, { method: 'PATCH', body: JSON.stringify(patch) });
             pctDistribuido = PCT_INDICADOR_LEILAO;
