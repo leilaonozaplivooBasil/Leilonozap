@@ -26,6 +26,32 @@ function sb(path, opts = {}) {
 // CADEIA (20%): operação + comercial só recebem se estiverem na cadeia da venda; sem dono, empresa.
 // ⚠️ sem seller_id (venda orgânica) NÃO retorna zero: o topo tem que receber.
 async function payStoreCommissions(sale) {
+  // 🔴 PONTO 97 (21/08/2026) — LEILÃO NÃO É LOJA. A auditoria geral confirmou
+  // vazamento de dinheiro REAL e SACÁVEL em todo arremate.
+  //
+  // O que acontecia: o martelo paga corretamente 5% ao indicador do arrematante
+  // (finalizeAuctionCore.js:192 — e o comentário lá é explícito: "Paga no
+  // MARTELO e está correto... NÃO mover este gatilho para o fluxo de
+  // pagamento"). Só que DEPOIS, quando o vencedor pagava, a venda com
+  // kind:'arremate' era jogada aqui dentro, no motor de 30% da LOJA, que solta
+  // ~9% em pools de governança — e esses pools não dependem de cadeia, então
+  // pagam SEMPRE. Num arremate de R$ 1.000 saíam R$ 140 em vez de R$ 50.
+  //
+  // 📕 docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md:214 — "O LEILÃO NÃO SEGUE A
+  // REGRA DA LOJA VIRTUAL. São modelos diferentes. Não aplicar aqui os 30% /
+  // cadeia telescópica / pools do topo." Linha 222: "Restante: fica
+  // integralmente com a empresa."
+  //
+  // A guarda fica AQUI, e não no chamador, de propósito: os DOIS caminhos de
+  // pagamento do arremate (saldo, settleAuctionWithBalance.js:179; e PIX, no
+  // fall-through de mpWebhook.js:239) passam por esta função. Uma trava só
+  // fecha os dois — sem precisar editar arquivo de zona vermelha.
+  //
+  // ⚠️ Só a COMISSÃO é bloqueada. O resto do fulfillStoreOrder (baixa de
+  // estoque, consignado, repasse de estoque próprio) segue rodando normal no
+  // arremate — aquilo é logística e acerto de custo, não comissão.
+  if (sale.kind === 'arremate') return 0;
+
   const value = Number(sale.total_amount) || 0;
   if (!value) return 0;
 
