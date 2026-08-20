@@ -45,6 +45,16 @@ export function isExecutivo(user) {
   return EXEC_ALIASES.some((c) => meus.includes(c));
 }
 
+// 🔴 PONTO 105 (21/08/2026): conta arquivada não RECEBE, mas a árvore passa
+// através dela. Aqui isso significa: um executivo arquivado não leva o 1% — a
+// busca continua subindo em vez de parar nele.
+const estaAtivo = (u) => u?.active !== false;
+
+/** Executivo que pode efetivamente receber: tem o cargo E está ativo. */
+function podeReceberComoExecutivo(u) {
+  return Boolean(u) && isExecutivo(u) && estaAtivo(u);
+}
+
 /** Lê a carteira migrada — coluna dedicada ou dentro do licenciado_context (JSON). */
 export function readExecutiveOwner(user) {
   if (!user) return null;
@@ -64,9 +74,20 @@ export function readExecutiveOwner(user) {
  * @param anchor  usuário dono da venda (vendedor/âncora)
  * @param byId    Map de id → usuário
  * @param users   lista de usuários ativos (para achar o executivo raiz)
- * @returns o usuário executivo, ou null se não houver nenhum no sistema
+ * @param opcoes  { semFallbackRaiz } — quando true, linha sem executivo devolve
+ *                null em vez de cair no executivo raiz.
+ *
+ * 🔀 SOBRE `semFallbackRaiz` (PONTO 103, 21/08/2026): os dois motores que
+ * chamam esta função tratam a linha VAZIA de formas diferentes, e as duas são
+ * regra de negócio legítima — não é bug:
+ *   • topPool.js       → cai no executivo raiz (comportamento padrão).
+ *   • arvoreOficial.js → a fatia de 1% fica com a EMPRESA ("3º ninguém → fica
+ *     com a EMPRESA. Não se divide entre executivos." — Gabriel, 27/07/2026).
+ * A ORDEM DE BUSCA, essa sim, tem que ser uma só — e é a desta função.
+ *
+ * @returns o usuário executivo, ou null
  */
-export function resolveExecutivo(anchor, byId, users) {
+export function resolveExecutivo(anchor, byId, users, opcoes = {}) {
   if (!anchor) return null;
 
   const vistos = new Set();
@@ -77,17 +98,18 @@ export function resolveExecutivo(anchor, byId, users) {
 
     // 1) carteira migrada da PRÓPRIA pessoa vence — inclusive sobre a árvore
     const dono = byId.get(readExecutiveOwner(atual));
-    if (dono && isExecutivo(dono)) return dono;
+    if (podeReceberComoExecutivo(dono)) return dono;
 
     // 2) a própria pessoa é executiva (ex.: executivo atuando como parceiro
     //    dentro da estrutura que ele mesmo comanda)
-    if (isExecutivo(atual)) return atual;
+    if (podeReceberComoExecutivo(atual)) return atual;
 
     // 3) sobe para quem indicou
     atual = atual.referred_by_id ? byId.get(atual.referred_by_id) : null;
   }
 
-  // Linha sem nenhum executivo acima → executivo raiz
+  // Linha sem nenhum executivo acima → executivo raiz (salvo quem pediu pra não)
+  if (opcoes.semFallbackRaiz) return null;
   const lista = Array.isArray(users) ? users : [];
-  return lista.find((u) => isExecutivo(u) && levelsOf(u).includes(FALLBACK_EXECUTIVE_LEVEL)) || null;
+  return lista.find((u) => podeReceberComoExecutivo(u) && levelsOf(u).includes(FALLBACK_EXECUTIVE_LEVEL)) || null;
 }

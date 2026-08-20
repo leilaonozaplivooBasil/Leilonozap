@@ -60,8 +60,16 @@ async function payStoreCommissions(sale) {
   const jaTem = await (await sb(`commission_records?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&limit=1`)).json();
   if (Array.isArray(jaTem) && jaTem.length) return 0;
 
-  // active=neq.false → conta desativada (ex.: duplicata) NÃO entra nos pools
-  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id,licenciado_context&active=neq.false&limit=2000')).json();
+  // 🔴 PONTO 105 (21/08/2026): aqui havia um `&active=neq.false`, com a intenção
+  // certa ("conta desativada, ex. duplicata, NÃO entra nos pools") e um efeito
+  // colateral grave: esta lista vira o `byId` que a árvore usa pra SUBIR pelo
+  // referred_by_id. Uma conta arquivada no meio da linha fazia a caminhada PARAR
+  // ali, e todo mundo acima perdia a comissão daquela venda — calado, com o
+  // dinheiro indo pra empresa.
+  // Agora carregamos TODO MUNDO (com a coluna `active` junto) e quem decide quem
+  // recebe é o motor, em api/_lib/arvoreOficial.js. A conta arquivada virou
+  // pedágio: a cadeia passa por ela, ela é que não ganha.
+  const users = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id,licenciado_context,active&limit=5000')).json();
   if (!Array.isArray(users) || !users.length) return 0;
   const { assignments, companyPercent, companyAmount } = calcularComissao(sale, users);
 

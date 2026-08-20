@@ -142,6 +142,56 @@ export default async function handler(req, res) {
     const pay = await r.json();
     if (!r.ok || !pay?.id) return res.status(200).json({ ok: true, notfound: true });
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 102 (21/08/2026) — CHARGEBACK ERA DESCARTADO EM SILÊNCIO
+    // ══════════════════════════════════════════════════════════════════════════
+    // Esta linha era só `if (pay.status !== 'approved') return { ok: true }`.
+    // Qualquer status que não fosse 'approved' caía fora sem nada acontecer —
+    // inclusive os que significam DINHEIRO INDO EMBORA:
+    //
+    //   charged_back  o comprador contestou no cartão e o banco estornou
+    //   refunded      devolução total
+    //   cancelled     pagamento cancelado depois de aprovado
+    //
+    // O estrago: a venda já tinha sido cumprida quando o pagamento aprovou —
+    // estoque baixado, comissão de 30% creditada e sacável, escrow do vendedor
+    // contando os 7 dias. Aí o dinheiro voltava pro comprador e o sistema
+    // respondia "ok" pro Mercado Pago e seguia a vida. Ninguém era avisado.
+    // A rede sacava a comissão de uma venda que foi estornada, e o prejuízo
+    // aparecia só na conciliação bancária, semanas depois.
+    //
+    // Agora esses três statuses caem no MESMO cancelar_venda() que o
+    // cancelamento manual usa (migração 20260821_cancelamento_estorna.sql):
+    // prende o escrow, estorna a comissão já creditada e reporta o que não deu
+    // pra recuperar de quem já sacou. Função atômica e idempotente — webhook do
+    // MP dispara várias vezes e chamar de novo não estorna em dobro.
+    //
+    // ⚠️ 'in_mediation' (disputa aberta, dinheiro ainda não devolvido) NÃO entra
+    // aqui de propósito: estornar comissão de uma disputa que a loja pode ganhar
+    // puniria a rede à toa. Só registra alto no log pro humano acompanhar.
+    const ESTORNADOS = ['charged_back', 'refunded', 'cancelled', 'canceled'];
+    if (ESTORNADOS.includes(String(pay.status))) {
+      const idVenda = pay.external_reference;
+      console.error(`[MP] ESTORNO RECEBIDO (${pay.status}) — pagamento ${pay.id}, venda ${idVenda}. Desfazendo comissão e escrow.`);
+      if (!idVenda) return res.status(200).json({ ok: true, status: pay.status, sem_referencia: true });
+      const rpc = await sb('rpc/cancelar_venda', {
+        method: 'POST',
+        body: JSON.stringify({ _sale_id: String(idVenda), _motivo: `Mercado Pago: ${pay.status} (pagamento ${pay.id})` }),
+      });
+      if (!rpc.ok) {
+        const t = await rpc.text();
+        console.error(`[MP] FALHA AO ESTORNAR a venda ${idVenda} — resolver na mão: ${t.slice(0, 200)}`);
+        return res.status(200).json({ ok: false, status: pay.status, estorno_falhou: true });
+      }
+      const estorno = await rpc.json().catch(() => null);
+      console.error(`[MP] Estorno aplicado na venda ${idVenda}: ${JSON.stringify(estorno)}`);
+      return res.status(200).json({ ok: true, status: pay.status, estornado: true, estorno });
+    }
+    if (String(pay.status) === 'in_mediation') {
+      console.error(`[MP] DISPUTA ABERTA — pagamento ${pay.id}, venda ${pay.external_reference}. Nada foi estornado ainda; acompanhar.`);
+      return res.status(200).json({ ok: true, status: pay.status, em_disputa: true });
+    }
+
     if (pay.status !== 'approved') return res.status(200).json({ ok: true, status: pay.status });
 
     const saleId = pay.external_reference;

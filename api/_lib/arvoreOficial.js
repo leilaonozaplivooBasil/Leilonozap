@@ -16,6 +16,12 @@
 //   Empresa 60% + Rede 30% + Tributos 10% = 100%.
 //
 // ⚠️ NÃO altere percentuais sem ordem do Santana: o plano é contrato com a rede.
+//
+// 🔴 A REGRA DO EXECUTIVO (1%) NÃO MORA AQUI. Ela vive em resolveExecutivo.js,
+// que se declara FONTE ÚNICA. Este arquivo tinha uma cópia com a ordem de busca
+// INVERTIDA e pagava o 1% a outra pessoa — ver PONTO 103 mais abaixo.
+import { resolveExecutivo } from './resolveExecutivo.js';
+
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 // pool: divide a fatia entre TODOS que têm o cargo (governança)
@@ -81,21 +87,31 @@ const ALIAS = {
   diretoria_executiva: ['diretoria_executiva', 'diretoria'],
   diretoria_operacao: ['diretoria_operacao', 'diretor'],
 };
-// Carteira executiva: qual Sócio Executivo é dono da estrutura desta pessoa. Fica na
-// coluna dedicada quando ela existir, ou dentro de licenciado_context (JSON livre)
-// enquanto a migration não roda. É o que o painel da rede grava ao trocar a estrutura.
-const lerCarteiraExecutiva = (u) => {
-  if (!u) return null;
-  if (u.executive_owner_id) return u.executive_owner_id;
-  const ctx = u.licenciado_context;
-  if (!ctx) return null;
-  try {
-    const p = typeof ctx === 'string' ? JSON.parse(ctx) : ctx;
-    return p?.executive_owner_id || null;
-  } catch {
-    return null;
-  }
-};
+// ⚠️ PONTO 103 (21/08/2026): aqui existia uma CÓPIA da leitura de carteira
+// executiva, que era o que sustentava a ordem de busca invertida deste arquivo.
+// Foi REMOVIDA. A leitura oficial é readExecutiveOwner(), em resolveExecutivo.js
+// — que se declara FONTE ÚNICA justamente para isto não acontecer de novo.
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 105 (21/08/2026) — CONTA ARQUIVADA CORTAVA A CADEIA INTEIRA
+// ══════════════════════════════════════════════════════════════════════════════
+// Os chamadores carregavam os usuários com `active=neq.false` e mandavam essa
+// lista pra cá. A intenção do filtro era boa e está escrita no storeFulfill.js:63
+// — "conta desativada (ex.: duplicata) NÃO entra nos pools". Mas o efeito
+// colateral era outro: a lista vira o `byId`, e o `byId` é o que a montarCadeia()
+// usa pra SUBIR a árvore pelo referred_by_id.
+//
+// Resultado: bastava UMA conta arquivada no meio da linha para o `byId.get()`
+// devolver undefined, a caminhada PARAR ali, e TODO MUNDO acima perder a
+// comissão daquela venda. O dinheiro ia calado pra empresa. Uma conta duplicada
+// arquivada por higiene de cadastro derrubava a renda de uma estrutura inteira.
+//
+// A regra certa é: a conta arquivada é um PEDÁGIO, não um muro. A cadeia passa
+// através dela; ela é que não recebe. É exatamente o que o laço da cadeia já
+// fazia com quem não tem cargo de rede (`continue`, não `break`).
+//
+// Por isso o filtro agora mora AQUI, no motor, e não em cada chamador — assim
+// nenhum caminho novo repete o erro. Os chamadores passam TODO MUNDO.
+const estaAtivo = (u) => u?.active !== false;
 
 const temCargo = (u, cargo) => {
   const meus = Array.isArray(u?.career_levels) ? u.career_levels : [];
@@ -144,7 +160,11 @@ export function calcularTopo(sale, users) {
 
   const byId = new Map(users.map((u) => [u.id, u]));
   const chain = montarCadeia(sale.seller_id, byId);
-  const elegiveisPool = users.filter((u) => u.full_name !== EMPRESA);
+  // 🔴 PONTO 105: o `estaAtivo` que era feito pelo chamador (e cortava a cadeia)
+  // agora é feito aqui — só na hora de RECEBER. A conta arquivada continua no
+  // `byId`, então a montarCadeia() passa por ela e a linha inteira acima segue
+  // ganhando; ela é que não entra nos pools.
+  const elegiveisPool = users.filter((u) => u.full_name !== EMPRESA && estaAtivo(u));
 
   // 💰 Pool sem perda de centavo: divide a fatia em CENTAVOS INTEIROS pelo método do maior
   // resto. Antes, round2 por pessoa engolia frações (1% ÷ 7 fundadores numa venda de R$ 2,00
@@ -186,14 +206,33 @@ export function calcularTopo(sale, users) {
   //      painel da rede) — cobre a venda cuja cadeia não tem executivo, mas pertence
   //      à estrutura de um;
   //   3º ninguém → a fatia fica com a EMPRESA. Não se divide entre executivos.
-  let exec = chain.find((u) => temCargo(u, 'executivo'));
-  if (!exec) {
-    for (const u of chain) {
-      const donoId = lerCarteiraExecutiva(u);
-      const dono = donoId ? byId.get(donoId) : null;
-      if (dono && temCargo(dono, 'executivo')) { exec = dono; break; }
-    }
-  }
+  //
+  // ⚠️ PONTO 103 (21/08/2026) — A ORDEM ACIMA ESTAVA INVERTIDA NO CÓDIGO.
+  // O que rodava aqui era:
+  //
+  //     let exec = chain.find((u) => temCargo(u, 'executivo'));   // cargo primeiro
+  //     if (!exec) { ...só então procurava a carteira executiva... }
+  //
+  // Isso varre a CADEIA INTEIRA pelo cargo antes de olhar UMA carteira. Mas a
+  // regra congelada pelo dono em 04/08/2026 (api/_lib/resolveExecutivo.js, que
+  // se declara "FONTE ÚNICA — não duplicar esta lógica em nenhum lugar") é
+  // PESSOA POR PESSOA, do mais próximo pro mais longe: a carteira DELA vence,
+  // depois o cargo DELA, e só então sobe.
+  //
+  // A diferença paga gente diferente. Vendedor A com carteira migrada para X,
+  // e o upline B com cargo de executivo:
+  //     regra congelada → X   (o dono da carteira de A)
+  //     código antigo   → B   (o cargo lá em cima)
+  // É exatamente o "sequestro de estrutura" que o cabeçalho da fonte única diz
+  // que a regra existe para impedir. E o topPool.js já chamava a fonte única —
+  // ou seja, os dois motores da plataforma pagavam o 1% a pessoas diferentes na
+  // mesma venda.
+  //
+  // Agora este arquivo chama a fonte única também. `semFallbackRaiz` preserva o
+  // que ESTE motor sempre fez com a linha vazia: a fatia fica com a empresa, em
+  // vez de cair no executivo raiz (que é o que o topPool faz). A ordem passa a
+  // ser uma só; o destino da sobra continua sendo decisão de cada motor.
+  const exec = resolveExecutivo(chain[0] || null, byId, users, { semFallbackRaiz: true });
   if (exec) {
     // fatia individual: centavos inteiros (o resíduo do arredondamento sobra pra empresa, sem sumir)
     assignments.push({ role: 'executivo', user_id: exec.id, user_name: exec.full_name, percent: PCT_EXECUTIVO, amount: Math.round(valor * PCT_EXECUTIVO) / 100, tipo: 'estrutura' });
@@ -242,6 +281,10 @@ export function calcularComissao(sale, users) {
   let pctCadeia = 0;  // quanto do teto de 20% já foi distribuído
   for (const u of chain) {
     if (pctCadeia >= CADEIA_TETO - 0.0001) break;
+    // 🔴 PONTO 105: conta arquivada é PEDÁGIO, não muro — `continue`, nunca
+    // `break`. Ela não recebe, e como o `pisoPago` não sobe, o rebate dela vai
+    // inteiro pro próximo upline ATIVO, em vez de sobrar pra empresa.
+    if (!estaAtivo(u)) continue;
     const nivel = nivelDe(u);
     if (!nivel) continue;                 // sem cargo de rede (ex.: 'usuario') → não recebe
     const rebate = nivel.pct - pisoPago;  // upline de nível igual ou menor não ganha nada

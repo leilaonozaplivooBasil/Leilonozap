@@ -122,10 +122,15 @@ export async function pagarComissaoBalcao({ saleId, produtoTitulo, base, comprad
   // pedir uma coluna que ainda não existe faz o PostgREST devolver erro, o topo viria
   // vazio e o balcão pagaria 0% de topo em silêncio. A carteira executiva é lida de
   // licenciado_context pelo próprio motor, então não precisa de coluna dedicada aqui.
-  const usersAtivos = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id,licenciado_context&active=neq.false&limit=2000')).json();
+  // 🔴 PONTO 105 (21/08/2026): aqui havia um `&active=neq.false`. Mesmo problema
+  // do storeFulfill.js — esta lista vira o `byId` que a árvore usa pra subir pelo
+  // referred_by_id, então uma conta arquivada no meio da linha CORTAVA a cadeia e
+  // todo mundo acima perdia. Agora vai todo mundo (com a coluna `active`) e quem
+  // decide quem recebe é o motor, em api/_lib/arvoreOficial.js.
+  const usersTodos = await (await sb('app_users?select=id,full_name,career_levels,referred_by_id,licenciado_context,active&limit=5000')).json();
   let topo = { assignments: [], companyPercent: 0 };
-  if (Array.isArray(usersAtivos) && usersAtivos.length) {
-    topo = calcularTopo({ id: saleId, total_amount: valor, seller_id: balcao.id }, usersAtivos);
+  if (Array.isArray(usersTodos) && usersTodos.length) {
+    topo = calcularTopo({ id: saleId, total_amount: valor, seller_id: balcao.id }, usersTodos);
   }
   for (const a of topo.assignments) {
     if (a.amount > 0.001) registros.push(novoRegistro(a.user_id, a.user_name, a.role, a.percent, a.amount));

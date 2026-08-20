@@ -106,8 +106,42 @@ export default async function handler(req, res) {
     const vendas = lista(await (await sb(
       `catalog_sales?select=id,total_amount,status,kind,buyer_id,seller_id,created_at&status=eq.paid&order=created_at.asc&limit=${limite}`
     )).json());
-    const ledger = lista(await (await sb('commission_ledger?select=sale_id&limit=20000')).json());
-    const jaPagas = new Set(ledger.map((l) => l.sale_id));
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 104 (21/08/2026) — O BACKFILL REPAGAVA OS 30%
+    // ══════════════════════════════════════════════════════════════════════════
+    // A trava de idempotência olhava SÓ o commission_ledger:
+    //
+    //     const ledger  = ...'commission_ledger?select=sale_id'...
+    //     const jaPagas = new Set(ledger.map((l) => l.sale_id));
+    //
+    // Só que o motor VIVO de comissão (api/_lib/storeFulfill.js) não escreve no
+    // commission_ledger — ele escreve em commission_records. São tabelas
+    // diferentes. A trava estava perguntando na tabela errada.
+    //
+    // Pior: o que enche o commission_ledger hoje é a trigger de ESCROW
+    // (trg_sale_to_ledger, migração 20260716_saldo_a_liberar.sql), que grava uma
+    // linha `role_in_sale='venda'` com o valor cheio para o VENDEDOR. Isso é
+    // escrow, não comissão. A trava confundia as duas coisas, e errava dos dois
+    // lados:
+    //
+    //   • FALSO POSITIVO — venda com vendedor tem linha de escrow mesmo sem
+    //     nenhuma comissão distribuída. O backfill PULAVA e o buraco continuava.
+    //   • FALSO NEGATIVO — venda ORGÂNICA (sem seller_id) não dispara a trigger.
+    //     Se ela já tinha recebido os 30% pelo motor vivo, o backfill não via
+    //     nada no ledger e PAGAVA TUDO DE NOVO. Comissão em dobro, creditada
+    //     como saldo sacável.
+    //
+    // Agora a trava pergunta nas DUAS tabelas, e ignora as linhas de escrow, que
+    // nunca foram comissão:
+    const ledger = lista(await (await sb('commission_ledger?select=sale_id,role_in_sale&limit=20000')).json());
+    const records = lista(await (await sb('commission_records?select=sale_id&status=neq.canceled&limit=20000')).json());
+    const jaPagas = new Set([
+      // do ledger: só o que ESTE backfill gravou (cadeia/topo). A linha de
+      // escrow, role_in_sale='venda', não conta como comissão paga.
+      ...ledger.filter((l) => l.role_in_sale !== 'venda').map((l) => l.sale_id),
+      // do motor vivo: qualquer venda que já tem registro de comissão
+      ...records.map((r) => r.sale_id),
+    ].filter(Boolean));
 
     const pendentes = vendas.filter(
       (v) => !jaPagas.has(v.id) && Number(v.total_amount) > 0 && v.kind !== 'wallet_deposit' && v.kind !== 'commission_deposit'
