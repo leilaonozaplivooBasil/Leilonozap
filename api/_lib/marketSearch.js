@@ -55,6 +55,21 @@ function singularAproximado(w) {
   return w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w;
 }
 
+// 🎯 PONTO 89 (20/08/2026) — "inadmissível vim produtos aleatórios". Causa-raiz
+// confirmada: título com poucas palavras genéricas ("caixa de som") batia com
+// QUALQUER caixa de som do mercado, de marca/potência diferente. O sinal mais
+// forte de identidade de produto é o NÚMERO (capacidade, potência, voltagem,
+// tamanho, modelo — "500", "60", "18", "256"): dois produtos "parecidos"
+// quase nunca compartilham o mesmo número. IMPORTANTE: extrai do título
+// ORIGINAL (antes do cleanTitle), não do já limpo — cleanTitle corta pra 5
+// palavras E descarta número solto sem letra colada (ex.: "5" em "5 Litros"
+// desaparece, "40W" nem sobrevive ao corte), o que apagava esse sinal antes
+// mesmo dele ser usado. Compara número INTEIRO (não substring — "5".includes
+// bateria errado dentro de "500"), por isso usa Set de tokens, não .includes().
+function extrairNumeros(texto) {
+  return new Set((String(texto || '').match(/\d+/g) || []).filter((n) => n.length <= 6));
+}
+
 async function fetchZoom(query) {
   const url = `https://www.zoom.com.br/search?q=${encodeURIComponent(query)}`;
   const resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept-Language': 'pt-BR,pt;q=0.9' }, signal: AbortSignal.timeout(FONTE_TIMEOUT_MS) });
@@ -140,35 +155,50 @@ async function fetchSearchApi(query) {
 export async function searchMarket(title, imageUrl) {
   const cleaned = cleanTitle(title);
   const titleWords = cleaned.toLowerCase().split(' ').filter((w) => w.length > 2).map(normalizarTexto);
-  // busca por imagem: os matches já são visuais, não filtra por palavra (só preço válido).
+  const numerosTitulo = extrairNumeros(title);
+
+  // 🎯 PONTO 89 (20/08/2026) — "inadmissível vim produtos aleatórios, ela está
+  // trazendo vários produtos parecidos". Duas causas-raiz confirmadas:
   //
-  // busca por texto — DOIS NÍVEIS (19/08/2026, "impossível não achar o produto"):
-  //   1) ESTRITO: exige 2 palavras do título batendo, normalizado (sem acento,
-  //      singular/plural aproximado) — mesma exigência de antes, só que menos
-  //      frágil a "não" vs "nao", "fone" vs "fones", etc.
+  //  1) BUSCA POR IMAGEM (Lens) não cruzava com o título de jeito NENHUM — só
+  //     exigia preço válido, aceitando qualquer "visualmente parecido" que o
+  //     Lens devolvesse, mesmo sendo outro produto/marca. Agora passa pelo
+  //     MESMO cruzamento de nome + especificação que a busca por texto.
+  //  2) O limiar de "quantas palavras do título precisam bater" ficava sempre
+  //     travado em 2, não importa quão descritivo fosse o título — "caixa de
+  //     som" batia com qualquer caixa de som do mercado. Agora escala com o
+  //     tamanho do título, e SEMPRE exige bater a especificação numérica
+  //     (capacidade/potência/voltagem/tamanho) quando o título tiver uma —
+  //     é o sinal mais forte de que é o MESMO produto, não um parecido.
+  //
+  // DOIS NÍVEIS (19/08/2026, "impossível não achar o produto"), agora com a
+  // trava de especificação em ambos:
+  //   1) ESTRITO: título com 4+ palavras relevantes exige 3 batendo; títulos
+  //      menores mantêm a exigência de 2 (ou 1, se só tiver 1 palavra).
   //   2) RELAXADO: só entra em ação quando o estrito não achou NADA nesta
-  //      fonte — aceita 1 palavra batendo. Prefere devolver um resultado
-  //      plausível (a média ainda filtra preços fora da faixa depois) a
-  //      "indisponível" quando o título é curto ou a grafia varia entre lojas.
-  const relevantes = (raw, isImage) => {
+  //      fonte — aceita 1 palavra batendo. Mesmo assim, a especificação
+  //      numérica (quando existe) continua obrigatória — não vira licença
+  //      pra trazer produto errado, só afrouxa a exigência de palavras.
+  const relevantes = (raw) => {
     const comPreco = raw.filter((c) => isValidPrice(c.price));
-    if (isImage) return comPreco;
 
     const pontuados = comPreco.map((c) => {
       const found = normalizarTexto(c.productNameFound || '');
       const hits = titleWords.filter((w) => found.includes(w) || found.includes(singularAproximado(w))).length;
-      return { item: c, hits };
+      const numerosFound = extrairNumeros(c.productNameFound);
+      const especOk = numerosTitulo.size === 0 || [...numerosTitulo].some((n) => numerosFound.has(n));
+      return { item: c, hits, especOk };
     });
 
-    const limiarEstrito = Math.min(2, titleWords.length);
-    const estrito = pontuados.filter((p) => p.hits >= limiarEstrito).map((p) => p.item);
+    const limiarEstrito = titleWords.length >= 4 ? 3 : Math.min(2, titleWords.length);
+    const estrito = pontuados.filter((p) => p.hits >= limiarEstrito && p.especOk).map((p) => p.item);
     if (estrito.length > 0) return estrito;
 
-    return pontuados.filter((p) => p.hits >= 1).map((p) => p.item);
+    return pontuados.filter((p) => p.hits >= 1 && p.especOk).map((p) => p.item);
   };
 
   const fontes = [];
-  if (imageUrl && SEARCHAPI_KEY) fontes.push({ nome: 'google_lens_imagem', image: true, fn: () => fetchGoogleLens(imageUrl) });
+  if (imageUrl && SEARCHAPI_KEY) fontes.push({ nome: 'google_lens_imagem', fn: () => fetchGoogleLens(imageUrl) });
   if (cleaned && cleaned.length >= 4) {
     if (SEARCHAPI_KEY) fontes.push({ nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) });
     if (SERPAPI_KEY) fontes.push({ nome: 'serpapi', fn: () => fetchSerpApi(cleaned) });
@@ -191,7 +221,7 @@ export async function searchMarket(title, imageUrl) {
     }
     try {
       const raw = await f.fn();
-      const r = relevantes(raw, f.image);
+      const r = relevantes(raw);
       falhas.push(`${f.nome}: ${raw.length} brutos, ${r.length} relevantes`);
       if (r.length > 0) {
         // MÉDIA APARADA (robusta a outliers): a busca casa itens parecidos mas de tamanhos/capacidades
