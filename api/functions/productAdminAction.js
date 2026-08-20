@@ -61,7 +61,14 @@ export default async function handler(req, res) {
         const ps = await (await sb(`products?select=description,quantity&id=eq.${encodeURIComponent(productId)}&limit=1`)).json();
         prodSnap = Array.isArray(ps) ? ps[0] : null;
       } catch (_) { /* segue */ }
-      patch = { quantity: 0, qty_perfeito: 0, qty_bom: 0, qty_oficina: 0, qty_ruim: 0, updated_date: now };
+      // 🛒 catalog_active: false — zerou, sai da vitrine (20/08/2026).
+      // O bloco lá embaixo já dizia "Zerou o estoque -> some da vitrine", mas só
+      // desligava o store_inventory (as lojas da rede). O produto do catálogo
+      // central continuava com catalog_active = true, e a Loja Virtual lista por
+      // catalog_active sem nunca olhar a quantidade — então o item zerado seguia
+      // na prateleira. Eram 82 produtos nessa situação. A baixa automática de
+      // venda já fazia certo (api/_lib/baixaEstoque.js); só a baixa manual não.
+      patch = { quantity: 0, qty_perfeito: 0, qty_bom: 0, qty_oficina: 0, qty_ruim: 0, catalog_active: false, updated_date: now };
     } else if (action === 'update' || action === 'setField') {
       const fields = body?.fields || {};
       for (const k of Object.keys(fields)) { if (ALLOWED.includes(k)) patch[k] = fields[k]; }
@@ -76,6 +83,13 @@ export default async function handler(req, res) {
       if (Object.keys(patch).length <= 1) return res.status(400).json({ success: false, error: 'Nenhum campo válido pra atualizar' });
     } else {
       return res.status(400).json({ success: false, error: 'Ação inválida' });
+    }
+
+    // 🛒 Estoque zerado nunca fica à venda, venha a baixa de onde vier.
+    // Sem isto, quem zerasse pelo campo "Quantidade Total" + Atualizar (em vez do
+    // botão Zerar Estoque) deixava o produto zerado E publicado na loja.
+    if (Object.prototype.hasOwnProperty.call(patch, 'quantity') && Number(patch.quantity) <= 0) {
+      patch.catalog_active = false;
     }
 
     const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) });

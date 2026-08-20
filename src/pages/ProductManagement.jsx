@@ -327,13 +327,50 @@ export default function ProductManagement() {
         }
       }
 
-      const allProducts = await base44.entities.Product.list('-created_date', 5000);
+      // 📦 CARREGA O CATÁLOGO INTEIRO, EM BLOCOS (20/08/2026).
+      // Antes era uma tacada só: Product.list('-created_date', 5000). Só que o
+      // Supabase corta a resposta em 1.000 linhas por padrão e NÃO avisa — então a
+      // tela recebia os 1.000 produtos mais NOVOS e os outros 2.141 simplesmente
+      // não existiam aqui. Como a busca filtra o que já está na memória, procurar
+      // um produto antigo devolvia "Nenhum produto encontrado" mesmo com ele vivo
+      // no estoque e à venda na loja — e não havia como dar baixa nele.
+      // Mesmo padrão de paginação já usado em api/functions/reconciliarEstoqueLoja.js.
+      // O `vistos` existe porque a paginação é por posição: se alguém cadastrar um
+      // produto no meio do carregamento, tudo desloca uma casa e o bloco seguinte
+      // repetiria a última linha do anterior — duplicando item na lista e nos totais.
+      const PAGE = 1000;
+      const MAX_PRODUTOS = 50000; // trava de segurança contra laço infinito
+      const allProducts = [];
+      const vistos = new Set();
+      for (let offset = 0; offset < MAX_PRODUTOS; offset += PAGE) {
+        const bloco = await base44.entities.Product.filter({}, '-created_date', PAGE, offset);
+        if (!Array.isArray(bloco) || bloco.length === 0) break;
+        for (const prod of bloco) {
+          if (!prod?.id || vistos.has(prod.id)) continue;
+          vistos.add(prod.id);
+          allProducts.push(prod);
+        }
+        if (bloco.length < PAGE) break;
+      }
       setProducts(allProducts);
       setFilteredProducts(allProducts);
 
-      // Salva no cache
-      sessionStorage.setItem('products_cache_v3', JSON.stringify(allProducts));
-      sessionStorage.setItem('products_cache_time_v3', Date.now().toString());
+      // Salva no cache.
+      // ⚠️ Com o catálogo inteiro o JSON passa de vários MB e pode estourar a cota
+      // do sessionStorage. Se estourar, a gravação lança erro e cairia no catch lá
+      // embaixo, fazendo a tela dizer que falhou ao carregar — com os produtos já
+      // na mão. Então o cache é opcional: falhou, seguimos sem ele. E apagamos o
+      // cache velho junto, senão a próxima abertura serviria a lista truncada antiga.
+      try {
+        sessionStorage.setItem('products_cache_v3', JSON.stringify(allProducts));
+        sessionStorage.setItem('products_cache_time_v3', Date.now().toString());
+      } catch (e) {
+        try {
+          sessionStorage.removeItem('products_cache_v3');
+          sessionStorage.removeItem('products_cache_time_v3');
+        } catch (_) { /* sem cache mesmo */ }
+        console.warn('[ESTOQUE] cache desligado nesta sessão (catálogo maior que a cota):', e?.message);
+      }
 
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
@@ -438,11 +475,14 @@ export default function ProductManagement() {
     }
 
     if (hideZeroStock) {
-      filtered = filtered.filter(p =>
-        (p.qty_perfeito || 0) > 0 ||
-        (p.qty_bom || 0) > 0 ||
-        (p.qty_oficina || 0) > 0
-      );
+      // 📏 RÉGUA ÚNICA: quem manda é a QUANTIDADE (20/08/2026).
+      // Antes este filtro media pela classificação (Perfeito/Bom/Oficina). Como a
+      // venda baixa a quantidade e NUNCA mexe na classificação, a régua estava
+      // errada nos dois sentidos: 350 produtos com peça de verdade sumiam da tela
+      // por estarem sem classificação preenchida, e 150 já vendidos continuavam
+      // aparecendo como se tivessem estoque. "Zerado" agora quer dizer uma coisa
+      // só — não tem peça —, igual à vitrine (src/pages/Catalog.jsx).
+      filtered = filtered.filter(p => (p.quantity || 0) > 0);
     }
 
     setFilteredProducts(filtered);
@@ -509,7 +549,12 @@ export default function ProductManagement() {
         selling_price_wholesale: parseFloat(formData.selling_price_wholesale) || 0,
         sold_amount: parseFloat(formData.sold_amount || 0),
         status: formData.status || 'ESTOQUE',
-        quantity: Math.max(1, parseInt(formData.quantity) || 1),
+        // 🔢 Aceita ZERO (20/08/2026). Antes: Math.max(1, parseInt(...) || 1).
+        // Em JavaScript o zero é "falsy", então digitar 0 caía no `|| 1` e o produto
+        // era salvo com 1 peça. Na prática: abrir um produto já zerado, corrigir só a
+        // descrição e clicar em Atualizar RESSUSCITAVA uma unidade — e, como o
+        // catalog_active seguia ligado, ela voltava a ser comprável na loja.
+        quantity: Math.max(0, parseInt(formData.quantity, 10) || 0),
         qty_perfeito: parseInt(formData.qty_perfeito) || 0,
         qty_bom: parseInt(formData.qty_bom) || 0,
         qty_ruim: 0, // Sempre zero - ruim não existe mais
