@@ -195,7 +195,50 @@ function diagnosticarCabecalhos(req, payId) {
   } catch (_) { /* diagnóstico nunca pode atrapalhar */ }
 }
 
-function conferirAssinatura(req, payId) {
+// 🔬 INVESTIGADOR DE MANIFESTO (21/08/2026) — roda SÓ quando a conferência falha.
+//
+// Quando a assinatura não bate, existem exatamente duas explicações, e elas pedem
+// providências opostas:
+//   (a) a CHAVE está errada — é de outra aplicação do Mercado Pago. Conserta-se
+//       trocando MP_WEBHOOK_SECRET na Vercel, sem tocar em código.
+//   (b) o MANIFESTO está errado — a gente monta o texto assinado de um jeito e o
+//       MP monta de outro. Conserta-se no código, sem tocar em configuração.
+//
+// Chutar entre as duas custa um deploy e um pagamento de teste por tentativa.
+// Então aqui a gente testa TODAS as montagens plausíveis do manifesto com a chave
+// que está publicada. Se alguma bater, é o caso (b) e o log diz qual — conserto
+// direto. Se NENHUMA bater, é o caso (a): a chave não é dessa aplicação.
+//
+// Nada de segredo vai pro log: o manifesto é feito de id de pagamento, id de
+// requisição e carimbo de tempo. A chave nunca é impressa, e da assinatura só
+// saem os 10 primeiros caracteres (hash truncado não serve pra forjar nada).
+function investigarManifesto({ segredo, idBody, idUrl, requestId, ts, v1 }) {
+  try {
+    const hmac = (texto) => crypto.createHmac('sha256', segredo).update(texto).digest('hex');
+    const min = (x) => (/[a-zA-Z]/.test(String(x)) ? String(x).toLowerCase() : String(x));
+    const variantes = [];
+    const add = (nome, texto) => { if (texto) variantes.push([nome, texto]); };
+
+    for (const [rotulo, bruto] of [['body', idBody], ['url', idUrl]]) {
+      if (!bruto) continue;
+      for (const [caso, valor] of [['min', min(bruto)], ['cru', String(bruto)]]) {
+        add(`${rotulo}/${caso}/com-request-id`, requestId ? `id:${valor};request-id:${requestId};ts:${ts};` : '');
+        add(`${rotulo}/${caso}/sem-request-id`, `id:${valor};ts:${ts};`);
+        add(`${rotulo}/${caso}/sem-ponto-e-virgula-final`, requestId ? `id:${valor};request-id:${requestId};ts:${ts}` : '');
+      }
+    }
+
+    const alvo = String(v1 || '').toLowerCase();
+    const acertou = variantes.find(([, texto]) => hmac(texto) === alvo);
+    if (acertou) {
+      console.error(`[MP][INVESTIGA] A CHAVE ESTÁ CERTA e o MANIFESTO É QUE ESTÁ ERRADO. Montagem que bate: "${acertou[0]}". Corrigir no código.`);
+    } else {
+      console.error(`[MP][INVESTIGA] NENHUMA das ${variantes.length} montagens bate com a chave publicada -> a MP_WEBHOOK_SECRET provavelmente e de OUTRA aplicacao do Mercado Pago. id(body)=${idBody || '-'} id(url)=${idUrl || '-'} request-id=${requestId ? 'veio' : 'NAO veio'} ts=${ts} v1(10 primeiros)=${alvo.slice(0, 10)} nosso(10 primeiros)=${hmac(variantes[0] ? variantes[0][1] : '').slice(0, 10)}`);
+    }
+  } catch (e) { console.warn('[MP][INVESTIGA] falhou:', e?.message); }
+}
+
+function conferirAssinatura(req, payId, idUrl = '') {
   const segredo = process.env.MP_WEBHOOK_SECRET;
   const bloqueia = String(process.env.MP_WEBHOOK_MODO || '').toLowerCase() === 'bloquear';
   // Resultado quando a conferência falha: em modo observação vira aviso e passa.
@@ -236,6 +279,7 @@ function conferirAssinatura(req, payId) {
       if (!bloqueia) console.warn(`[MP] ASSINATURA CONFERE (modo OBSERVAÇÃO) — pagamento ${payId}. Pode publicar MP_WEBHOOK_MODO=bloquear.`);
       return { ok: true, verificado: true };
     }
+    investigarManifesto({ segredo, idBody: payId, idUrl, requestId, ts, v1 });
     return reprovar('assinatura não confere');
   } catch (e) {
     return reprovar(`erro ao conferir assinatura: ${e?.message}`);
@@ -268,7 +312,9 @@ export default async function handler(req, res) {
       return res.status(405).json({ ok: false, error: 'metodo_nao_permitido' });
     }
     diagnosticarCabecalhos(req, payId);
-    const assinatura = conferirAssinatura(req, payId);
+    // O MP documenta o manifesto com o "data.id_url" — o valor que vem na QUERY da
+    // notificação, que nem sempre é o mesmo do corpo. Vai junto pra investigação.
+    const assinatura = conferirAssinatura(req, payId, url.searchParams.get('data.id') || url.searchParams.get('id') || '');
     if (!assinatura.ok) {
       console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
       return res.status(401).json({ ok: false, error: 'assinatura_invalida' });
