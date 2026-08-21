@@ -2,6 +2,7 @@
 // Faz bcrypt compare + auto-migração de senha em texto plano. NUNCA devolve o hash pro client.
 import bcrypt from 'bcryptjs';
 
+import { emitirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -45,7 +46,10 @@ export default async function handler(req, res) {
     if (!valid) return fail();
 
     delete user.password; // jamais devolve hash
-    return res.status(200).json({ success: true, user });
+    // 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js. É aqui, e só
+    // aqui, que ele nasce: depois da senha (ou do Google) ter sido conferida.
+    // O navegador guarda e manda em toda chamada seguinte, no cabeçalho x-sessao.
+    return res.status(200).json({ success: true, user, sessao: emitirSessao(user?.id) });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao entrar', details: String(e?.message || e) });
   }

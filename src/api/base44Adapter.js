@@ -383,17 +383,44 @@ function _logarFalhaServidor(dados) {
 
 const APP_ID = '68d536db3c26ff51f79c4137';
 
+// 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js.
+// Até hoje o site provava quem era mandando o `user_id` dentro do corpo, e o
+// servidor acreditava. Agora o login devolve um crachá assinado e ele viaja no
+// cabeçalho `x-sessao` de TODA chamada. Este é o único lugar do front que fala
+// com /api/functions — por isso a mudança é só aqui, e nenhuma tela precisou
+// ser alterada uma por uma.
+// Leitura e escrita protegidas: navegador anônimo, modo privativo ou storage
+// bloqueado não podem derrubar chamada nenhuma.
+const CHAVE_SESSAO = 'sessaoToken';
+function lerCracha() {
+  try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch { return ''; }
+}
+function guardarCracha(t) {
+  try { if (t) localStorage.setItem(CHAVE_SESSAO, t); } catch { /* sem storage, segue sem crachá */ }
+}
+
 async function invokeFunction(name, body, options = {}) {
   const url = `/api/functions/${name}`;
   try {
+    const cracha = lerCracha();
     const resp = await fetch(url, {
       method: options.method || 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-App-Id': APP_ID, ...(options.headers || {}) },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Id': APP_ID,
+        ...(cracha ? { 'x-sessao': cracha } : {}),
+        ...(options.headers || {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await resp.text().catch(() => '');
     let parsed = null;
     try { parsed = JSON.parse(text); } catch { parsed = null; }
+
+    // Qualquer rota que faça login/cadastro devolve `sessao`. Guardar aqui, no
+    // caminho comum, faz as cinco telas de entrada do site funcionarem sem
+    // precisar mexer em nenhuma delas.
+    if (parsed && typeof parsed === 'object' && parsed.sessao) guardarCracha(parsed.sessao);
 
     // 🩹 CAUSA-RAIZ do "Erro ao enviar lance (função indisponível — status 404)":
     // functions como submitAtomicBid usam 404 de PROPÓSITO pra "leilão não encontrado"

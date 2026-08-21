@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
+import { emitirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
@@ -181,7 +182,10 @@ export default async function handler(req, res) {
 
     const u = { ...rows[0] };
     delete u.password; // nunca devolve o hash pro client
-    return res.status(200).json({ success: true, user: u, needs_adesao: needsAdesao });
+    // 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js. É aqui, e só
+    // aqui, que ele nasce: depois da senha (ou do Google) ter sido conferida.
+    // O navegador guarda e manda em toda chamada seguinte, no cabeçalho x-sessao.
+    return res.status(200).json({ success: true, user: u, sessao: emitirSessao(u?.id), needs_adesao: needsAdesao });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao cadastrar', details: String(e?.message || e) });
   }
