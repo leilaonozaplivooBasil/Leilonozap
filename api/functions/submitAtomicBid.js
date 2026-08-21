@@ -97,6 +97,57 @@ async function releaseHold(userId, valor, auctionId = null) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔐 CRACHÁ DE SESSÃO — CÓPIA INLINE, DE PROPÓSITO (21/08/2026)
+// ══════════════════════════════════════════════════════════════════════════════
+// A regra oficial mora em api/_lib/sessao.js. Aqui ela é COPIADA em vez de
+// importada porque esta rota é autocontida por lei: import de 2 níveis a partir
+// de api/functions/ já derrubou o lance em produção (ver o cabeçalho de
+// submitAtomicBid.js). São 20 linhas duplicadas contra o risco de derrubar o
+// lance de novo — o troco é barato.
+//
+// ETAPA 1: enquanto SESSAO_MODO não for 'bloquear', NADA é recusado. Só anota
+// no log quem chamou sem crachá, pra a gente ver com tráfego real se sobrou
+// alguma tela do site que ainda não manda.
+import crypto from 'crypto';
+
+function _conferirCracha(req, idDoCorpo, rota) {
+  const bloqueia = String(process.env.SESSAO_MODO || '').toLowerCase() === 'bloquear';
+  const chave = process.env.SESSAO_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const alvo = String(idDoCorpo || '').trim();
+  let motivo = 'ok';
+  let bate = false;
+  try {
+    const h = req?.headers || {};
+    const cracha = String((typeof h.get === 'function' ? h.get('x-sessao') : h['x-sessao']) || '').trim();
+    const p = cracha.split('.');
+    if (!chave) motivo = 'sem_chave_no_servidor';
+    else if (!cracha) motivo = 'sem_cracha';
+    else if (p.length !== 3 || p[0] !== 'v1') motivo = 'formato';
+    else {
+      const esperado = Buffer.from(
+        crypto.createHmac('sha256', chave).update(`sessao-v1|${p[1]}`).digest('base64')
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), 'utf8');
+      const veio = Buffer.from(p[2], 'utf8');
+      if (esperado.length !== veio.length || !crypto.timingSafeEqual(esperado, veio)) motivo = 'assinatura';
+      else {
+        const d = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+        if (!d?.u) motivo = 'formato';
+        else if (!(Number(d.x) > Date.now())) motivo = 'vencido';
+        else if (alvo && String(d.u) !== alvo) motivo = 'cracha_de_outra_pessoa';
+        else bate = true;
+      }
+    }
+  } catch (e) { motivo = `erro:${e?.message}`; }
+  if (bate) return { liberado: true, http: 200 };
+  if (!bloqueia) {
+    console.warn(`[SESSAO] ${rota}: chamada SEM crachá válido (${motivo}) para o id ${alvo || '?'} — ETAPA 1, nada foi bloqueado.`);
+    return { liberado: true, http: 200 };
+  }
+  console.error(`[SESSAO] ${rota}: RECUSADA (${motivo}) para o id ${alvo || '?'}.`);
+  return { liberado: false, http: 401 };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') {
@@ -110,6 +161,8 @@ export default async function handler(req, res) {
     const auctionId = String(body?.auction_id || '').trim();
     const bidAmount = parseFloat(body?.amount);
     const userId = String(body?.user_id || '').trim();
+    const _ses = _conferirCracha(req, userId, 'submitAtomicBid');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const bidderName = body?.bidder_name;
     // 🚚 Frete calculado uma vez na sala e somado ao lance na reserva de saldo.
     const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);

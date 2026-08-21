@@ -23,6 +23,7 @@
 // que qualquer outro e deixa o motor de encerramento de sempre resolver".
 import { fetchAuction, finalizeOneAuction, hasServerEnv } from '../_lib/finalizeAuctionCore.js';
 
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -157,6 +158,11 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const auctionId = String(body?.auction_id || '').trim();
     const userId = String(body?.user_id || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, userId, 'submitAtomicBuyNow');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!auctionId || !userId) return res.status(400).json({ success: false, message: 'Parâmetros inválidos' });
 
     const userRows = await (await sb(`app_users?select=id,full_name,nickname&id=eq.${enc(userId)}&limit=1`)).json();

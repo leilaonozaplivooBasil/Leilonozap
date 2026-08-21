@@ -4,6 +4,7 @@
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
 
+import { exigirSessao } from '../_lib/sessao.js';
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 // Ajuste ATÔMICO do saldo de comissão (CAS: só grava se o saldo não mudou no meio).
@@ -47,6 +48,12 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     const buyerId = String(body?.buyer_id || '').trim();
+
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, buyerId, 'payWithBalance');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const items = Array.isArray(body?.items) ? body.items : [];
     if (!buyerId) return res.status(400).json({ success: false, error: 'Usuário obrigatório' });
     if (!items.length) return res.status(400).json({ success: false, error: 'Carrinho vazio' });

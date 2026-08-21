@@ -3,6 +3,7 @@
 // mas roda como função Vercel (mesmo runtime das outras rotas de auth em produção).
 import crypto from 'crypto';
 
+import { emitirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -171,7 +172,10 @@ export default async function handler(req, res) {
     delete user.password; // jamais devolve senha/hash
     // ⏱️ duracao_ms: o front registra no log do sistema quando passa do limite,
     // pra a lentidão do Google deixar de ser invisível.
-    return res.status(200).json({ success: true, user, duracao_ms: Date.now() - t0 });
+    // 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js. É aqui, e só
+    // aqui, que ele nasce: depois da senha (ou do Google) ter sido conferida.
+    // O navegador guarda e manda em toda chamada seguinte, no cabeçalho x-sessao.
+    return res.status(200).json({ success: true, user, sessao: emitirSessao(user?.id), duracao_ms: Date.now() - t0 });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao entrar com Google', details: String(e?.message || e), duracao_ms: Date.now() - t0 });
   }
