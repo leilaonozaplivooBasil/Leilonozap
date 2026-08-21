@@ -20,6 +20,89 @@ function sb(path, opts = {}) {
 const cents = (n) => Math.round((Number(n) || 0) * 100);
 const fromCents = (c) => c / 100;
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🚚 O PACOTE DE ENTREGA DO ARREMATE — corrigido em 21/08/2026
+// ══════════════════════════════════════════════════════════════════════════════
+// COMO ESTAVA, e os quatro defeitos numa linha só:
+//
+//   ...(freteAmount > 0 ? { raw_base44: { frete: { valor: freteAmount }, amount_charged: amount } } : {})
+//
+//   ① `delivery_type` NUNCA era gravado. E as duas pontas discordam do valor
+//      ausente: CatalogOrdersAdmin.jsx só esconde a etiqueta quando é 'pickup',
+//      melhorEnvioShipment.js só aceita quando é 'delivery'. Resultado: a tela
+//      mostrava "Etiqueta pendente" e o servidor respondia "é retirada no
+//      balcão". Acontecia em TODO arremate, não em alguns.
+//   ② Com frete zero, o `raw_base44` inteiro deixava de existir — sem frete,
+//      sem amount_charged, sem nada. Foi o caso do pedido ARD5856D19.
+//   ③ O frete ia como `{ valor }` só. melhorEnvioShipment.js exige `frete.id`
+//      (o serviço escolhido) ou devolve 'sem_frete_id'. Ou seja: mesmo o
+//      arremate COM frete jamais geraria etiqueta. E sem `empresa`/`servico`,
+//      a tela mostrava "Frete: R$ 11,60" sem nome de transportadora.
+//   ④ Nenhum endereço de entrega era gravado. A Melhor Envio precisa dele.
+//
+// COMO FICOU: o raw_base44 nasce SEMPRE, com delivery_type, endereço do
+// vencedor e o frete completo.
+//
+// ⚠️ POR QUE O DETALHE DO FRETE É RESOLVIDO AQUI, E NÃO NO LANCE
+// O caminho óbvio seria o lance já gravar id/empresa/serviço. Não dá: o PATCH
+// do lance (submitAtomicBid.js) não aceita campo que não exista na tabela —
+// coluna inexistente ali faz o PostgREST devolver 42703 e TODO lance morre.
+// Foi o que derrubou a produção de 03/08 15:03 até o PONTO 83, e está anotado
+// no cabeçalho daquele arquivo. Então aqui a gente RECOTA o frete com o CEP do
+// vencedor só para descobrir o `id` do serviço.
+//
+// ⚠️ O VALOR COBRADO NÃO MUDA. Quem manda é `frete_reservado_valor`, que foi o
+// que o cliente viu e teve reservado no lance. A recotação serve só para achar
+// o id/empresa/serviço da etiqueta. Se ela falhar, o pedido nasce com o valor
+// certo e sem id — vira etiqueta pendente, que é um problema de logística, não
+// de dinheiro.
+async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auctionId }) {
+  const cep = String(user?.address_zip_code || '').replace(/\D/g, '');
+  const endereco = {
+    street: user?.address_street || null,
+    number: user?.address_number || null,
+    complement: user?.address_complement || null,
+    neighborhood: user?.address_neighborhood || null,
+    city: user?.address_city || null,
+    state: user?.address_state || null,
+    zip: cep || null,
+  };
+  const temEndereco = !!(endereco.street && cep.length === 8);
+
+  const raw = {
+    // sem endereço utilizável não dá pra despachar: marca retirada e a logística
+    // trata como balcão, em vez de ficar pendurado em "etiqueta pendente".
+    delivery_type: temEndereco && freteAmount > 0 ? 'delivery' : 'pickup',
+    address: temEndereco ? endereco : null,
+    amount_charged: amount,
+    produto_amount: produtoAmount,
+    origem: 'settleAuctionWithBalance',
+    frete: { id: null, valor: freteAmount, empresa: null, servico: null, prazo: null, cep: cep || null },
+  };
+
+  if (!(temEndereco && freteAmount > 0)) return raw;
+
+  // recotação só para descobrir o serviço — nunca para mudar o valor
+  try {
+    const { cotarOpcoes } = await import('../_lib/frete.js');
+    const r = await cotarOpcoes({ cep, items: [{ id: auctionId, quantidade: 1 }] });
+    if (r?.ok && Array.isArray(r.opcoes) && r.opcoes.length) {
+      // pega a opção de preço mais próximo do que foi efetivamente reservado
+      const escolhida = r.opcoes.reduce((melhor, o) =>
+        Math.abs(o.preco - freteAmount) < Math.abs(melhor.preco - freteAmount) ? o : melhor, r.opcoes[0]);
+      raw.frete.id = escolhida.id;
+      raw.frete.empresa = escolhida.empresa || null;
+      raw.frete.servico = escolhida.nome || null;
+      raw.frete.prazo = escolhida.prazo ?? null;
+      raw.frete.valor_recotado = escolhida.preco;   // trilha: dá pra comparar depois
+    }
+  } catch (e) {
+    console.warn('[SETTLE] recotacao de frete falhou (pedido segue com o valor reservado):', e?.message);
+  }
+  return raw;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -64,7 +147,7 @@ export default async function handler(req, res) {
     // REGRA OFICIAL AGORA: o arremate consome PRIMEIRO o saldo_reservado (que já é
     // dele, travado pra este fim) e só busca o saldo_disponivel se faltar.
     // A conferência de suficiência passa a ser sobre reservado + disponível.
-    const uRows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado,full_name,email,cpf&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    const uRows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado,full_name,email,cpf,phone,address_street,address_number,address_complement,address_neighborhood,address_city,address_state,address_zip_code&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
     const user = Array.isArray(uRows) ? uRows[0] : null;
     if (!user) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
     const totalDisponivelCents = cents(user.saldo_disponivel) + cents(user.saldo_reservado);
@@ -162,10 +245,12 @@ export default async function handler(req, res) {
     }
 
     // venda já paga (mesma rota do arremate via PIX, sem gateway)
+    const rawArremate = await montarRawArremate({ user, freteAmount, amount, produtoAmount, auctionId });
     const saleId = oid();
     const sale = {
       id: saleId, base44_id: saleId, kind: 'arremate',
       buyer_id: userId, buyer_email: user.email || '', buyer_name: user.full_name || auction.winner_name || 'Vencedor',
+      buyer_phone: user.phone || null, buyer_cpf: user.cpf || null,
       product_title: `Arremate — ${auction.title}`.slice(0, 200),
       product_image: auction.image_urls?.[0] || null,
       // total_amount é a base da comissão — fica só com o produto, frete nunca comissiona.
@@ -173,9 +258,8 @@ export default async function handler(req, res) {
       status: 'paid', payment_method: 'saldo',
       tracking_code: 'AR' + saleId.slice(0, 8).toUpperCase(),
       created_date: new Date().toISOString(),
-      // 🚚 Frete cobrado junto do arremate — vai em raw_base44 (mesmo padrão da Loja Virtual)
-      // pra logística ver quanto separar pra pagar a transportadora, sem entrar na base de comissão.
-      ...(freteAmount > 0 ? { raw_base44: { frete: { valor: freteAmount }, amount_charged: amount } } : {}),
+      // 🚚 raw_base44 do arremate — ver montarRawArremate() logo acima do handler.
+      raw_base44: rawArremate,
     };
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(sale) });
 

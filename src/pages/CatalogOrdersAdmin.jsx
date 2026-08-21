@@ -146,7 +146,14 @@ const needsLabel = (order) => {
   if (order.status !== 'paid' && order.status !== 'preparando') return false;
   let raw = order?.raw_base44;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
-  if ((raw?.delivery_type || '') === 'pickup') return false;
+  // ⚠️ 21/08/2026 — AS DUAS PONTAS PRECISAM CONCORDAR SOBRE O VALOR AUSENTE.
+  // Aqui a regra era "esconde se for pickup", e no servidor
+  // (api/_lib/melhorEnvioShipment.js:151) é "só gera se for delivery". Pedido de
+  // arremate nascia SEM delivery_type nenhum — então a tela mostrava "Etiqueta
+  // pendente" com o botão, e o clique respondia "é retirada no balcão". Os dois
+  // estavam certos pela própria regra, e o operador é que ficava sem entender.
+  // Agora as duas usam o mesmo critério: só é etiquetável quem é 'delivery'.
+  if ((raw?.delivery_type || '') !== 'delivery') return false;
   return !raw?.melhor_envio?.order_id;
 };
 
