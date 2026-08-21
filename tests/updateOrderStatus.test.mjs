@@ -159,3 +159,51 @@ describe('updateOrderStatus — quem não é dono nem admin', () => {
     assert.equal(r.code, 400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PONTO 117 (21/08/2026) — dois status que não se falavam. O dono clicou
+// "Entregue" na Jornada da Entrega e o pedido não saiu da aba "Pagos" (a aba
+// filtra por `status`, a Jornada só grava `fulfillment_status`). Depois marcou
+// "Pago" no status principal e o pedido não saiu de "Enviados" (handleSaveOrder
+// tinha uma regra que ressuscitava 'shipped' sozinha). Provado aqui pelo lado
+// do servidor: os dois caminhos agora gravam os dois campos, coerentes.
+describe('updateOrderStatus — PONTO 117: status e fulfillment_status ficam coerentes', () => {
+  test('manda status "delivered" sem fulfillment explícito → deriva fulfillment_status "entregue"', async () => {
+    const r = await chamar({ actorId: ADMIN, saleId: 'venda-shipped-01', status: 'delivered' });
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo.fulfillment_status, 'entregue');
+    const escrita = escritas.find((e) => e.u.includes('venda-shipped-01'));
+    assert.equal(escrita?.body.fulfillment_status, 'entregue');
+  });
+
+  test('Jornada da Entrega manda fulfillment "entregue" + status mapeado → os dois são gravados', async () => {
+    const r = await chamar({ actorId: ADMIN, saleId: 'venda-paga-02', status: 'entregue', fulfillment: 'entregue' });
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo.status, 'entregue');
+    assert.equal(r.corpo.fulfillment_status, 'entregue');
+    const escrita = escritas.find((e) => e.u.includes('venda-paga-02'));
+    assert.equal(escrita?.body.status, 'entregue');
+    assert.equal(escrita?.body.fulfillment_status, 'entregue');
+  });
+
+  test('status "paid" explícito SEMPRE grava "paid" — nunca volta pra "shipped" sozinho', async () => {
+    // venda-shipped-01 já está com status 'shipped'; admin corrige pra 'paid'.
+    const r = await chamar({ actorId: ADMIN, saleId: 'venda-shipped-01', status: 'paid', tracking: 'BR000000000BR' });
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo.status, 'paid', 'a rota nao deveria trocar sozinha pra "shipped"');
+    const escrita = escritas.find((e) => e.u.includes('venda-shipped-01'));
+    assert.equal(escrita?.body.status, 'paid');
+  });
+
+  test('fulfillment fora da lista é rejeitado com 400', async () => {
+    const r = await chamar({ actorId: ADMIN, saleId: 'venda-paga-02', status: 'shipped', fulfillment: 'etapa-inventada' });
+    assert.equal(r.corpo?.success, false);
+    assert.equal(r.code, 400);
+  });
+
+  test('cancelamento não tenta gravar fulfillment_status (a RPC já resolve o status sozinha)', async () => {
+    const r = await chamar({ actorId: ADMIN, saleId: 'venda-shipped-01', status: 'canceled' });
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal('fulfillment_status' in r.corpo, false);
+  });
+});

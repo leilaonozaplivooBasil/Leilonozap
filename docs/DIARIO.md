@@ -345,6 +345,68 @@ vocabulários e o travamento de cancelamento pago nos dois lados. `npm test`:
 BRANCH**. Não mergeado, não deployado, não validado em produção. O dono ainda
 não pode testar isto ao vivo.
 
+---
+
+**Atualização — mesmo dia, dono respondeu "SIM" para mergear e subir.**
+
+- PR #78 aberto, CI verde (`lint · build · testes`, run `32520176021`).
+- Mergeado em `main` por squash (padrão deste repo — confirmado olhando
+  `7c63099d ... (#77)`, `a8a19474 ... #76`): commit `e4437e74`.
+- CI de `main` para `e4437e74`: verde. Status `Vercel` no mesmo commit:
+  **"Deployment has completed"** (verificado direto na API do GitHub, não
+  pela Vercel MCP — ela não está conectada nesta sessão agora, então não dá
+  pra confirmar por aqui, com certeza absoluta, que o alvo foi
+  especificamente "production" e não preview; é o mesmo padrão de status
+  que os deploys de produção anteriores desta sessão sempre mostraram nesta
+  branch, e este projeto não tem outro branch de deploy além de `main`).
+
+**Vocabulário do protocolo, atualizado:** **MERGEADO e DEPLOYADO.** Ainda
+**NÃO VALIDADO EM PRODUÇÃO** — falta o dono tentar editar um pedido de
+verdade na tela e confirmar que salva.
+
+---
+
+**Atualização — dono testou ao vivo e achou DOIS bugs novos, na hora.**
+
+Print 1: marcou "Entregue" na Jornada da Entrega, o pedido continuou na aba
+"Pagos". Mensagem: "eu mudei que foi entregue e não apareceu aqui". Print 2:
+corrigiu um pedido de volta pra "Pago", ele continuou na aba "Enviados".
+Mensagem: "eu preciso que toda atualização coloque onde de fato está".
+
+**CLAUDE — causa raiz dos dois, com arquivo:linha, sem achismo:**
+
+1. `OrderFulfillmentSteps.jsx` — a Jornada da Entrega (onde o dono clicou
+   "Entregue") grava **só** `fulfillment_status`, o campo que alimenta
+   "Acompanhar Pedido" (visão do COMPRADOR). As abas/contadores desta
+   própria tela (`CatalogOrdersAdmin.jsx`) filtram por `status`, um campo
+   **completamente separado**. Clicar "Entregue" ali nunca poderia mover o
+   pedido de aba — os dois campos não se falavam.
+2. `handleSaveOrder` tinha uma linha (`if (newStatus === 'paid')
+   updateData.status = 'shipped'`) que **ressuscitava** o status 'shipped'
+   sozinha sempre que o campo de rastreio não estava vazio — e ele quase
+   nunca está vazio, porque todo pedido nasce com um rastreio provisório
+   pré-preenchido. Resultado: escolher "Pago" pra corrigir um pedido
+   marcado errado, na prática, não fazia nada.
+
+**Correção (commit `36c28da1`, mesma branch):**
+
+- Removida a regra que ressuscitava 'shipped' — o status salvo passa a ser
+  sempre, literalmente, o que está selecionado na tela.
+- `updateOrderStatus.js` ganhou um mapeamento `status → fulfillment_status`:
+  quando o status principal muda e ninguém mandou uma etapa explícita, a
+  rota deriva uma etapa coerente sozinha — "Acompanhar Pedido" não fica
+  mais atrasado em relação ao que o admin realmente marcou.
+- `handleSetFulfillment` (a Jornada) agora manda `status` **e**
+  `fulfillment` juntos, numa chamada só, pra rota dedicada — sentido
+  inverso do mapeamento acima.
+
+**Prova:** 5 testes novos (PONTO 117) cobrindo os dois sentidos do
+mapeamento e confirmando que 'paid' explícito nunca mais vira 'shipped'
+sozinho. `npm test`: **219/219**. `npm run build`: exit 0. `git push`: feito.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Ainda não mergeado
+nem deployado — vai no mesmo PR/ciclo do próximo "SIM" do dono.
+
 **O que falta desta frente (itens 2 a 7 do pedido original, ainda não
 iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
 etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
