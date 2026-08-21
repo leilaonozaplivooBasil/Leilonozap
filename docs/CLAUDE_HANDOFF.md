@@ -1,8 +1,27 @@
 # CLAUDE → OPENAI HANDOFF
 
 > Canal técnico entre Claude (investigação/implementação) e OpenAI (auditoria
-> independente + execução operacional). Contém **somente o estado atual**.
-> Sem PII, senha, chave, token ou documento (REGRA 4).
+> independente + execução operacional).
+> Sem PII, senha, chave, token ou documento (REGRA 2).
+
+## MAPA — comece por aqui
+
+Este arquivo é a **porta única**. Nada precisa ser printado, colado ou explicado
+por fora: se aconteceu, está em um destes lugares.
+
+| Onde | O que tem | Regra |
+|---|---|---|
+| **Este arquivo** | Estado atual, decisões do dono, perguntas abertas, o que falta | Só o estado de AGORA |
+| `docs/DIARIO.md` | **Registro de tudo que foi conversado**, em ordem, com data | Só cresce, nunca é podado |
+| `docs/PLANO_REMEDIACAO.md` | Plano ordenado de remediação | |
+| `docs/OPENAI_RETURN.md` | Devolutivas da OpenAI, na íntegra | |
+| `docs/remediacao_NAO_APLICADA/` | SQL preparado e **não aplicado** | Nada aqui rodou |
+| `git log` da branch | Cada correção, com o porquê na mensagem | |
+
+**Links diretos** (a OpenAI lê sem precisar de print):
+
+- Handoff: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/CLAUDE_HANDOFF.md`
+- Diário: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/DIARIO.md`
 
 ## 0. PROTOCOLO OPERACIONAL PERMANENTE
 
@@ -38,6 +57,31 @@ OpenAI deve:
 <próxima ação em uma frase>
 ```
 
+### Registro integral da conversa — regra nova, 21/08/2026
+
+> Decisão do dono, nesta data: *"tudo que você conversar comigo tem que estar no
+> handoff. Você me comunica aqui, mas coloca no handoff também. Até a nossa
+> comunicação. Pra não ter nenhum ruído, eu não precisava ficar printando nada."*
+
+Motivo: o dono estava tirando print do chat para mostrar à OpenAI. Print se
+perde, sai fora de ordem, corta o contexto e gera ruído entre as duas IAs.
+
+**O que passa a valer:**
+
+1. **Nada existe só no chat.** Toda resposta que eu der ao dono — análise,
+   correção, recusa, dúvida, opinião, discordância — é registrada em
+   `docs/DIARIO.md` no mesmo ciclo, antes do push.
+2. **A pergunta dele também entra**, resumida com fidelidade, para o registro
+   fazer sentido sozinho.
+3. **Vale para o desconfortável também.** Erro meu, hipótese derrubada, ideia
+   recusada, divergência com a OpenAI: entra igual. Registro filtrado é pior que
+   registro nenhum, porque parece completo.
+4. **A OpenAI lê o diário, não o print.** Nenhum pedido a ela deve depender de
+   algo que só foi dito no chat.
+5. **O diário é append-only.** Nunca reescrito, nunca podado, nunca "limpo".
+
+---
+
 ### Regras fixas
 
 | # | Regra |
@@ -52,6 +96,9 @@ OpenAI deve:
 | 8 | Nunca assumir que commit chegou em produção. Registrar separadamente: COMMIT CRIADO · PR CRIADO · PR MERGEADO · DEPLOY PREVIEW · DEPLOY PRODUÇÃO. |
 | 9 | Fontes de verdade: **Supabase** para o estado do banco, **Vercel** para produção, **GitHub** para código e histórico. Arquivo versionado é intenção, não estado. |
 | 10 | Antes de alteração estrutural: snapshot → correção → teste → rollback disponível → validação independente. |
+| 11 | **Nada existe só no chat.** Toda conversa com o dono entra em `docs/DIARIO.md` no mesmo ciclo. Ver seção acima. |
+| 12 | Decisão do dono vira linha numerada em **DECISÕES DO DONO** neste arquivo. Nenhuma das duas IAs re-discute decisão já registrada. |
+| 13 | Pergunta que espera resposta vira linha numerada em **PERGUNTAS ABERTAS**, com dono da resposta. Não fica solta no meio do texto. |
 
 ---
 
@@ -65,6 +112,43 @@ OpenAI deve:
 
 **Os 11 bloqueadores da auditoria de 21/08: 11/11 corrigidos na branch.**
 Nenhum deles chegou a produção — todos nasceram e morreram nesta branch.
+
+---
+
+## 1.1 DECISÕES DO DONO — registradas, não se re-discute
+
+> REGRA 12. Decisão registrada aqui é ponto final para as duas IAs. Só o dono
+> muda, e quando mudar vira linha nova, nunca edição da antiga.
+
+| # | Data | Decisão |
+|---|---|---|
+| D1 | 21/08 | **Não aceitar lance nem arremate sem frete.** "Vai gerar um problema grande." |
+| D2 | 21/08 | Cobrar o frete do saldo do cliente no pedido que veio sem frete — **manualmente**, depois de corrigido, e nunca mais deixar acontecer. |
+| D3 | 21/08 | **Não mergear** até a OpenAI reauditar. Ordem: correção → teste da rota real → build → handoff → auditoria → merge. |
+| D4 | 21/08 | **Não ligar** `FRETE_MODO=bloquear` agora. |
+| D5 | 21/08 | **Não voltar** ao pg_cron/A14 antes de fechar a frente de frete. |
+| D6 | 21/08 | Toda etapa termina com handoff atualizado + commit + push, **sem o dono pedir**. |
+| D7 | 21/08 | **Tudo que for conversado no chat entra no diário.** Sem print, sem cópia manual. |
+| D8 | — | "Não quero que você seja política, quero que você me confronte e seja sênior." |
+| D9 | — | "Só corrigir se de fato estiver pendente, sem achismo." Toda afirmação precisa de arquivo:linha. |
+| D10 | — | Nunca dizer que o sistema está "100% seguro". |
+
+---
+
+## 1.2 PERGUNTAS ABERTAS — quem deve a resposta
+
+> REGRA 13. Pergunta que espera alguém não fica solta no texto.
+
+| # | Pergunta | Quem responde | Status |
+|---|---|---|---|
+| P1 | A volta segura do `product_id` no `submitAtomicBid` é aceitável, ou o risco de perder a conferência de produto supera o de matar o lance? | OpenAI | ABERTA |
+| P2 | `reserveBidBalance` não confere o produto do selo (decisão de latência, não esquecimento). Aceitável? | OpenAI | ABERTA |
+| P3 | A RPC 06, com a invariante nova, está correta para aplicar? | OpenAI | ABERTA |
+| P4 | Autorizar a aplicação da RPC 06 no banco? Sem ela a rota **recusa** cobrar o frete pendente. | Dono | ABERTA |
+| P5 | Quando ligar `FRETE_MODO=bloquear`? Depende do log da etapa 1 ficar limpo. | Dono | ABERTA |
+| P6 | **Parar de mandar print para a OpenAI e mandar só o link do diário?** Ela lê GitHub. O print corta contexto, sai fora de ordem e é trabalho manual do dono. | Dono | ABERTA |
+| P7 | **A OpenAI também passa a escrever no diário?** Hoje a devolutiva dela chega por `OPENAI_RETURN.md` e o dono cola. Se ela registrar direto, o diário vira a conversa das três partes, e some o último ponto de perda. | Dono + OpenAI | ABERTA |
+| P8 | **Adotar encerramento de ciclo em 5 linhas fixas** (Branch · Commit · Estado · O que mudou de verdade · Quem age agora)? Padroniza o que o dono lê e o que a OpenAI recebe. | Dono | ABERTA |
 
 ---
 
