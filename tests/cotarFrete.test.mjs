@@ -7,6 +7,7 @@
 // corpo NÃO influencia o que é assinado.
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 
 process.env.VITE_SUPABASE_URL = 'https://exemplo.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'chave-de-teste';
@@ -56,9 +57,15 @@ function fazerRes() {
   r.setHeader = () => {}; r.status = (c) => { r.code = c; return r; }; r.json = (v) => { r.corpo = v; return r; };
   return r;
 }
-async function chamar(body) {
+const b64url = (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+function cracha(uid) {
+  const c = b64url(JSON.stringify({ u: uid, x: Date.now() + 3600_000 }));
+  return `v1.${c}.${b64url(crypto.createHmac('sha256', process.env.SESSAO_SECRET).update(`sessao-v1|${c}`).digest())}`;
+}
+/** `crachaDe: undefined` = manda o crachá do próprio USER. `null` = sem crachá. */
+async function chamar(body, crachaDe = USER) {
   const r = fazerRes();
-  await handler({ method: 'POST', headers: {}, body }, r);
+  await handler({ method: 'POST', headers: crachaDe ? { 'x-sessao': cracha(crachaDe) } : {}, body }, r);
   return r;
 }
 
@@ -128,16 +135,19 @@ describe('ROTA REAL · cotarFrete — o servidor escolhe o que assina', () => {
     assert.equal(estado.idsCotados.length, 0, 'chegou a cotar mesmo sem produto');
   });
 
-  test('CF8 · auction_id sem user_id é recusado — selo é sempre de alguém', async () => {
+  test('CF8 · B14 · sem user_id no corpo funciona: a identidade sai do CRACHÁ', async () => {
+    // Depois do B14 o corpo não é mais fonte de identidade. Mandar só o leilão
+    // é o caminho CERTO — quem cota é quem o crachá diz que é.
     const r = await chamar({ auction_id: LEILAO });
-    assert.equal(r.code, 400);
-    assert.equal(r.corpo?.success, false);
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    const v = conferirSelo(r.corpo.opcoes[0].selo, { auctionId: LEILAO, userId: USER });
+    assert.equal(v.ok, true, 'o selo não saiu no nome do dono do crachá');
   });
 
   test('CF9 · caminho da LOJA (sem auction_id) segue como era, e SEM selo', async () => {
     // Ali o frete é reconferido no checkout e não vira reserva — assinar seria
     // dar um selo válido para um pacote descrito pelo cliente.
-    const r = await chamar({ cep: '01001000', items: [{ product_id: PRODUTO, quantidade: 1 }] });
+    const r = await chamar({ cep: '01001000', items: [{ product_id: PRODUTO, quantidade: 1 }] }, null);
     assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
     assert.equal(r.corpo.opcoes.length, 2);
     for (const o of r.corpo.opcoes) assert.equal(o.selo, undefined, 'a loja recebeu selo de leilão');
@@ -147,5 +157,59 @@ describe('ROTA REAL · cotarFrete — o servidor escolhe o que assina', () => {
     const r = fazerRes();
     await handler({ method: 'GET', headers: {}, body: {} }, r);
     assert.equal(r.code, 405);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('BLOQUEADOR 14 · selo financeiro exige identidade, e ela vem do crachá', () => {
+  test('B14a · SEM crachá é RECUSADO mesmo com SESSAO_MODO em observação', async () => {
+    // Toda outra rota, em modo observação, libera e só anota no log. Esta não:
+    // ela é nova (não há aba antiga que a conheça) e o que ela devolve é uma
+    // AUTORIZAÇÃO FINANCEIRA — o selo é o que faz o servidor reservar dinheiro.
+    delete process.env.SESSAO_MODO;
+    const r = await chamar({ auction_id: LEILAO, user_id: USER }, null);
+    assert.equal(r.code, 401, `PASSOU sem crachá: ${JSON.stringify(r.corpo)}`);
+    assert.equal(r.corpo?.error, 'nao_autenticado');
+    assert.equal(r.corpo?.opcoes, undefined, 'devolveu opções para quem não se identificou');
+  });
+
+  test('B14b · sem crachá NÃO vaza o CEP de ninguém', async () => {
+    // O selo é Base64, não é cifra: HMAC prova origem, não esconde conteúdo.
+    // Como a rota lia o CEP do cadastro do `user_id` do corpo e o devolvia, sem
+    // crachá dava pra descobrir o endereço de qualquer pessoa mandando o id dela.
+    const r = await chamar({ auction_id: LEILAO, user_id: USER }, null);
+    const texto = JSON.stringify(r.corpo || {});
+    assert.equal(texto.includes(CEP_CADASTRO), false, 'VAZOU o CEP para quem não se identificou');
+  });
+
+  test('B14c · crachá de uma pessoa não cota no nome de outra', async () => {
+    const r = await chamar({ auction_id: LEILAO, user_id: 'user-9999' }, USER);
+    assert.equal(r.code, 403);
+    assert.equal(r.corpo?.error, 'cracha_de_outra_pessoa');
+  });
+
+  test('B14d · crachá vencido não vale', async () => {
+    const c = b64url(JSON.stringify({ u: USER, x: Date.now() - 1000 }));
+    const vencido = `v1.${c}.${b64url(crypto.createHmac('sha256', process.env.SESSAO_SECRET).update(`sessao-v1|${c}`).digest())}`;
+    const r = fazerRes();
+    await handler({ method: 'POST', headers: { 'x-sessao': vencido }, body: { auction_id: LEILAO } }, r);
+    assert.equal(r.code, 401);
+    assert.equal(r.corpo?.motivo, 'vencido');
+  });
+
+  test('B14e · crachá com assinatura forjada não vale', async () => {
+    const c = b64url(JSON.stringify({ u: USER, x: Date.now() + 3600_000 }));
+    const r = fazerRes();
+    await handler({ method: 'POST', headers: { 'x-sessao': `v1.${c}.assinaturafalsa` }, body: { auction_id: LEILAO } }, r);
+    assert.equal(r.code, 401);
+    assert.equal(r.corpo?.motivo, 'assinatura');
+  });
+
+  test('B14f · a LOJA continua sem exigir crachá e continua sem selo', async () => {
+    // Lá o frete é reconferido no checkout e não vira reserva. Exigir crachá ali
+    // quebraria o visitante que ainda não entrou, sem ganho de segurança.
+    const r = await chamar({ cep: '01001000', items: [{ product_id: PRODUTO, quantidade: 1 }] }, null);
+    assert.equal(r.corpo?.success, true);
+    for (const o of r.corpo.opcoes) assert.equal(o.selo, undefined);
   });
 });

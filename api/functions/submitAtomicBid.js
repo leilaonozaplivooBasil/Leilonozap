@@ -215,7 +215,9 @@ export default async function handler(req, res) {
     }
 
     // Identidade: valida que o usuário existe (substitui o auth.me() do Base44)
-    const userResp = await sb(`app_users?select=id,full_name,nickname,saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(userId)}&limit=1`);
+    // 🚚 B15 — `address_zip_code` entra NESTE select, que já existia. Sem ida
+    // nova ao banco: o custo do B15 é zero no caminho do lance.
+    const userResp = await sb(`app_users?select=id,full_name,nickname,saldo_disponivel,saldo_reservado,address_zip_code&id=eq.${encodeURIComponent(userId)}&limit=1`);
     const user = Array.isArray(userResp.data) ? userResp.data[0] : null;
     if (!user) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
@@ -233,10 +235,32 @@ export default async function handler(req, res) {
     let getResp = await sb(
       `auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE},product_id`
     );
+    // 🔴 BLOQUEADOR 16 (auditoria OpenAI, 21/08/2026) — A VOLTA SEGURA ESTAVA
+    //    ABRINDO A PORTA EM VEZ DE FECHAR.
+    // Como estava: QUALQUER falha no select relia sem `product_id` e DESLIGAVA a
+    // conferência de produto do selo. Rede instável, permissão, PostgREST fora
+    // do ar — tudo virava "pode passar sem conferir". Isso é fail-open num
+    // controle de segurança, e é pior que não ter o controle, porque parece que
+    // tem.
+    // Como ficou: a volta só existe para o caso que a motivou — coluna
+    // inexistente (42703). E mesmo assim, com FRETE_MODO=bloquear a rota falha
+    // FECHADO: sem poder conferir o produto, não passa lance.
+    // Produção já tem `auctions.product_id`; a volta é cinto de segurança de
+    // uma hipótese que hoje é falsa, não um caminho normal.
     let temColunaProduto = true;
     if (!getResp.ok) {
+      const detalhe = JSON.stringify(getResp.data)?.slice(0, 300) || '';
+      const colunaNaoExiste = /42703|does not exist|column .* does not exist/i.test(detalhe);
+      if (!colunaNaoExiste) {
+        console.error('[FRETE] submitAtomicBid: select do leilão falhou e NÃO é coluna inexistente —', detalhe);
+        return res.status(503).json({
+          success: false,
+          message: 'Não conseguimos ler o leilão agora. Tente de novo em instantes.',
+          debug: getResp.data,
+        });
+      }
+      console.warn('[FRETE] submitAtomicBid: auctions sem coluna product_id (42703) — relendo sem ela.');
       temColunaProduto = false;
-      console.warn('[FRETE] submitAtomicBid: select com product_id falhou, relendo sem ele —', JSON.stringify(getResp.data)?.slice(0, 200));
       getResp = await sb(`auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE}`);
     }
     const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
@@ -268,6 +292,34 @@ export default async function handler(req, res) {
         if (produtoDoLeilao) { _freteOk = false; _freteMotivo = 'selo_sem_produto'; }
       } else if (String(_frete.productId) !== produtoDoLeilao) {
         _freteOk = false; _freteMotivo = 'selo_de_outro_produto';
+      }
+    }
+    // 🔴 B16 — sem poder conferir o produto, o bloqueio recusa. Fail-CLOSED.
+    if (_freteOk && !temColunaProduto && String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear') {
+      _freteOk = false; _freteMotivo = 'produto_nao_conferivel';
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 15 — SELO DE CEP ANTIGO VALIA DEPOIS DE TROCAR O ENDEREÇO
+    // ══════════════════════════════════════════════════════════════════════
+    // O selo carrega o CEP para o qual o frete foi cotado, mas ninguém comparava
+    // esse CEP com o CEP ATUAL do cadastro. O caminho: cota para um CEP barato,
+    // guarda o selo, troca o endereço no perfil, dá o lance dentro dos 30
+    // minutos. O servidor reservava o frete do CEP antigo e a entrega saía para
+    // o novo. A diferença sai do bolso da empresa.
+    if (_freteOk) {
+      const cepAtual = String(user.address_zip_code || '').replace(/\D/g, '');
+      const cepDoSelo = String(_frete.cep || '').replace(/\D/g, '');
+      if (!cepDoSelo) {
+        _freteOk = false; _freteMotivo = 'selo_sem_cep';
+      } else if (cepDoSelo !== cepAtual) {
+        // ⚠️ Escrito assim de propósito. A primeira versão desta trava era
+        // `cepDoSelo && cepAtual && cepDoSelo !== cepAtual` — e o `cepAtual &&`
+        // abria um buraco: quem APAGASSE o CEP do perfil depois de cotar passava
+        // reto, porque a comparação nem acontecia. "Não tenho CEP agora" não é
+        // prova de que o CEP do selo é o certo; é o contrário.
+        _freteOk = false;
+        _freteMotivo = cepAtual ? 'selo_de_outro_cep' : 'cadastro_sem_cep';
       }
     }
 

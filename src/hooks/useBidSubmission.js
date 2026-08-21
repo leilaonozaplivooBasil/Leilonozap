@@ -183,7 +183,17 @@ export default function useBidSubmission({
         }
         setUserWallet({ balance: reserveData.new_balance });
         wasDebited = true;
-        debitedAmount = totalReservar;
+        // 🔴 B17 — o estorno usa o valor que o SERVIDOR reservou, nunca a conta
+        // local. `totalReservar` é o palpite da tela; `reserved_amount` é o que
+        // de fato saiu do saldo. Divergir aqui deixa dinheiro presoou solta
+        // dinheiro a mais. O fallback só existe para a etapa 1 do rollout, com
+        // servidor antigo que ainda não devolve o campo.
+        debitedAmount = Number.isFinite(Number(reserveData?.reserved_amount))
+          ? Number(reserveData.reserved_amount)
+          : totalReservar;
+        if (reserveData?.reserved_amount != null && Math.abs(Number(reserveData.reserved_amount) - totalReservar) >= 0.01) {
+          console.warn(`[FRETE] a tela calculou R$ ${totalReservar} e o servidor reservou R$ ${reserveData.reserved_amount}. Estorno usa o do servidor.`);
+        }
       } catch (reserveError) {
         console.warn("⚠️ Erro ao reservar saldo:", reserveError.message);
         setShowLowBalanceModal(true);

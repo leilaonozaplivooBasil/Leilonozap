@@ -40,7 +40,7 @@ beforeEach(() => {
       winner_id: null, winner_name: null, modo_chamada: false, data_abertura_lances: null,
       frete_reservado_valor: 0,
     },
-    lances: [], patchesLeilao: [],
+    lances: [], patchesLeilao: [], cepDoCadastro: CEP, leiturasUsuario: 0,
   };
   fetchReal = globalThis.fetch;
   globalThis.fetch = async (url, opts = {}) => {
@@ -73,10 +73,11 @@ beforeEach(() => {
       return json([{ saldo_disponivel: mundo.disponivel, saldo_reservado: mundo.reservado }]);
     }
     if (u.includes('app_users')) {
+      mundo.leiturasUsuario++;
       return json([{
         id: USER, full_name: 'Fulano de Teste', nickname: 'fulano',
         saldo_disponivel: mundo.disponivel, saldo_reservado: mundo.reservado,
-        address_zip_code: CEP,
+        address_zip_code: mundo.cepDoCadastro,
       }]);
     }
     return json([]);
@@ -207,5 +208,136 @@ describe('INTEGRAÇÃO · ETAPA 1 (FRETE_MODO desligado) não derruba ninguém',
     const { res } = await circuitoCompleto(50);
     assert.equal(res.corpo.valor_do_servidor, true, 'ignorou o selo só porque o bloqueio está desligado');
     assert.equal(Math.round(mundo.reservado * 100) / 100, 61.6);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('BLOQUEADOR 15 · selo de CEP antigo não vale depois de trocar endereço', () => {
+  test('B15 · cota no CEP A, muda o cadastro para o CEP B, o selo A é RECUSADO', async () => {
+    // O caminho do ataque, sem ferramenta nenhuma: cota para um CEP barato,
+    // guarda o selo, troca o endereço no perfil e dá o lance dentro dos 30
+    // minutos. O servidor reservava o frete do CEP antigo e a entrega saía para
+    // o novo. A diferença sai do bolso da empresa.
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    const seloDoCepAntigo = cot.corpo.opcoes[0].selo;
+
+    mundo.cepDoCadastro = '69900000';   // mudou de endereço
+
+    const bid = await rodar(darLance, {
+      auction_id: LEILAO, user_id: USER, amount: 50,
+      bidder_name: 'fulano', frete_selo: seloDoCepAntigo,
+    });
+    assert.equal(bid.corpo?.sem_frete, true, 'aceitou frete cotado para o endereço antigo');
+    assert.equal(bid.corpo?.motivo, 'selo_de_outro_cep');
+    assert.equal(mundo.lances.length, 0);
+  });
+
+  test('B15 · sem trocar o endereço, o mesmo selo continua valendo', async () => {
+    // A trava não pode virar recusa de gente honesta.
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    const bid = await rodar(darLance, {
+      auction_id: LEILAO, user_id: USER, amount: 50,
+      bidder_name: 'fulano', frete_selo: cot.corpo.opcoes[0].selo,
+    });
+    assert.equal(bid.corpo?.success, true, JSON.stringify(bid.corpo));
+  });
+
+  test('B15 · a conferência de CEP não custa ida nova ao banco', async () => {
+    // `address_zip_code` entrou no SELECT de app_users que já existia.
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    mundo.leiturasUsuario = 0;
+    await rodar(darLance, {
+      auction_id: LEILAO, user_id: USER, amount: 50,
+      bidder_name: 'fulano', frete_selo: cot.corpo.opcoes[0].selo,
+    });
+    assert.ok(mundo.leiturasUsuario <= 2, `${mundo.leiturasUsuario} leituras de app_users no caminho do lance`);
+  });
+});
+
+describe('BLOQUEADOR 16 · não conseguir conferir o produto NÃO libera o lance', () => {
+  test('B16 · erro que não é coluna inexistente devolve 503, não passa lance', async () => {
+    // Antes: QUALQUER erro no select relia sem `product_id` e DESLIGAVA a
+    // conferência de produto. Rede, permissão, PostgREST fora do ar — tudo
+    // virava "pode passar sem conferir". Fail-open num controle de segurança é
+    // pior que não ter o controle, porque parece que tem.
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    const selo = cot.corpo.opcoes[0].selo;
+
+    const real = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('/auctions?') && String(u).includes('product_id')) {
+        return { ok: false, status: 503, json: async () => ({ message: 'upstream' }), text: async () => '{"message":"upstream"}' };
+      }
+      return real(u, o);
+    };
+    const bid = await rodar(darLance, { auction_id: LEILAO, user_id: USER, amount: 50, bidder_name: 'fulano', frete_selo: selo });
+    globalThis.fetch = real;
+
+    assert.equal(bid.code, 503, `passou com ${bid.code}: ${JSON.stringify(bid.corpo)}`);
+    assert.equal(mundo.lances.length, 0);
+  });
+
+  test('B16 · coluna inexistente (42703) relê sem ela, e com bloqueio falha FECHADO', async () => {
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    const selo = cot.corpo.opcoes[0].selo;
+
+    const real = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('/auctions?') && String(u).includes('product_id')) {
+        return { ok: false, status: 400, json: async () => ({ code: '42703', message: 'column auctions.product_id does not exist' }), text: async () => '{"code":"42703"}' };
+      }
+      return real(u, o);
+    };
+    const bid = await rodar(darLance, { auction_id: LEILAO, user_id: USER, amount: 50, bidder_name: 'fulano', frete_selo: selo });
+    globalThis.fetch = real;
+
+    assert.equal(bid.corpo?.sem_frete, true, 'passou lance sem poder conferir o produto');
+    assert.equal(bid.corpo?.motivo, 'produto_nao_conferivel');
+    assert.equal(mundo.lances.length, 0);
+  });
+});
+
+describe('BLOQUEADOR 17 · o estorno usa o valor que o SERVIDOR reservou', () => {
+  test('B17 · a reserva devolve reserved_amount, e ele bate com o que saiu do saldo', async () => {
+    // Sem este campo, a tela liberava o hold pela conta que ELA fez. Se as duas
+    // contas divergirem (frete local desatualizado), o servidor reserva X e a
+    // tela manda soltar Y: sobra ou some dinheiro na reserva do cliente.
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    const res = await rodar(reservar, {
+      user_id: USER, auction_id: LEILAO, bid_amount: 50,
+      frete_selo: cot.corpo.opcoes[0].selo,
+      amount: 51,                       // a tela achava que o frete era R$ 1
+    });
+    assert.equal(res.corpo?.success, true, JSON.stringify(res.corpo));
+    assert.equal(res.corpo.reserved_amount, 61.6, 'não devolveu o valor realmente reservado');
+    assert.equal(Math.round(mundo.reservado * 100) / 100, res.corpo.reserved_amount,
+      'reserved_amount não bate com o que de fato saiu do saldo');
+    assert.notEqual(res.corpo.reserved_amount, 51, 'devolveu a conta do navegador');
+  });
+});
+
+describe('BLOQUEADOR 15 · o buraco que a primeira versão da trava deixou', () => {
+  test('B15 · APAGAR o CEP do perfil depois de cotar também é recusado', async () => {
+    // A primeira versão comparava só quando o cadastro TINHA CEP. Quem apagasse
+    // o CEP passava reto — e "não tenho CEP agora" não prova que o CEP do selo é
+    // o certo; prova o contrário.
+    process.env.FRETE_MODO = 'bloquear';
+    const cot = await rodar(cotarFrete, { auction_id: LEILAO, user_id: USER });
+    const selo = cot.corpo.opcoes[0].selo;
+
+    mundo.cepDoCadastro = null;
+
+    const bid = await rodar(darLance, {
+      auction_id: LEILAO, user_id: USER, amount: 50, bidder_name: 'fulano', frete_selo: selo,
+    });
+    assert.equal(bid.corpo?.sem_frete, true, 'apagou o CEP e o selo antigo continuou valendo');
+    assert.equal(bid.corpo?.motivo, 'cadastro_sem_cep');
+    assert.equal(mundo.lances.length, 0);
   });
 });

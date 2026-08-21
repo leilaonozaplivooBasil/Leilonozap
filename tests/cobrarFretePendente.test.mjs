@@ -39,7 +39,7 @@ beforeEach(() => {
     // ⚙️ BLOQUEADOR 8 — a RPC transacional é o caminho oficial. Por padrão ela
     // NÃO existe no banco (é o estado real hoje: 06_rpc_cobrar_frete.sql não foi
     // aplicado), então a rota tem que RECUSAR em vez de cair na compensação.
-    rpcDisponivel: false, rpcChamadas: [],
+    rpcDisponivel: false, rpcChamadas: [], rpcRecusaCom: null,
     marcaAtual: null,   // trava da marca de cobrança em andamento
     vendas: {
       [V_SEM_FRETE]: { id: V_SEM_FRETE, kind: 'arremate', buyer_id: COMPRADOR, buyer_name: 'Comprador', product_title: 'Arremate — Repelente', total_amount: 4.2, status: 'paid', raw_base44: { auction_id: LEILAO } },
@@ -69,10 +69,12 @@ beforeEach(() => {
         return { ok: false, status: 404, json: async () => null, text: async () => JSON.stringify({ code: 'PGRST202', message: 'Could not find the function' }) };
       }
       const p = JSON.parse(opts.body);
-      // a RPC de verdade recusa se o raw não bater com o valor — o dublê
-      // reproduz essa invariante, senão o teste não prova nada.
-      const noRaw = Number(p?._raw?.frete?.valor);
-      if (Math.round(noRaw * 100) !== Math.round(Number(p._valor) * 100)) {
+      // 🔴 B18 — a RPC recusa devolvendo HTTP 200 com ok:false. O dublê PRECISA
+      // reproduzir isso, senão o teste não prova nada sobre o defeito real.
+      if (estado.rpcRecusaCom) return json({ ok: false, motivo: estado.rpcRecusaCom });
+      // invariante da função: o frete gravado tem que bater com o valor debitado
+      const noFrete = Number(p?._frete?.valor);
+      if (Math.round(noFrete * 100) !== Math.round(Number(p._valor) * 100)) {
         return json({ ok: false, motivo: 'raw_nao_bate_com_valor' });
       }
       estado.saldo = Math.round((estado.saldo - Number(p._valor)) * 100) / 100;
@@ -361,10 +363,15 @@ describe('BLOQUEADOR 8 · sem transação no banco, não cobra', () => {
     await chamar({ actorId: ADMIN, sale_id: V_SEM_FRETE, executar: true }, ADMIN);
     assert.equal(estado.rpcChamadas.length, 1);
     const p = estado.rpcChamadas[0];
-    assert.deepEqual(Object.keys(p).sort(), ['_actor', '_raw', '_sale_id', '_valor']);
+    // ⚠️ A1 É INVARIANTE DE REGRESSÃO. Se alguém voltar a mandar `_user_id` ou
+    // `_actor_id`, o PostgREST devolve 404, a rota lê 404 como "RPC não
+    // aplicada", e o sistema mente para sempre. Este deepEqual é a trava.
+    assert.deepEqual(Object.keys(p).sort(), ['_actor', '_endereco', '_frete', '_sale_id', '_valor']);
     assert.equal(p._valor, 11.6);
-    assert.equal(p._raw.frete.valor, 11.6, 'o raw enviado à RPC não bate com o valor debitado');
-    assert.equal(p._raw.delivery_type, 'delivery', 'cobrou frete e gravou o pedido como não-entrega');
+    assert.equal(p._frete.valor, 11.6, 'o frete enviado à RPC não bate com o valor debitado');
+    // 🔴 B19 — a RPC não recebe mais o documento inteiro do pedido.
+    assert.equal(p._raw, undefined, 'voltou a mandar o documento inteiro — é o B19 reaberto');
+    assert.equal(p._frete.delivery_type, undefined);
   });
 
   test('B8 · cobrança travada bloqueia TAMBÉM o caminho da RPC', async () => {
@@ -436,5 +443,192 @@ describe('BLOQUEADOR 10 · apenas_completar não pode mentir sucesso', () => {
     globalThis.fetch = antes;
     assert.equal(r.corpo?.success, false);
     assert.equal(r.corpo?.http, 500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('BLOQUEADOR 18 · HTTP 200 da RPC não é "cobrou"', () => {
+  // O PostgREST devolve 200 para uma função que RECUSOU: do ponto de vista dele
+  // a chamada funcionou. Eu tratava `rpc.ok` como sucesso e respondia
+  // "debitado: true" para uma transação que não moveu um centavo. O operador
+  // marcaria o pedido como resolvido e o frete ficaria a descoberto.
+  for (const [motivo, trecho] of [
+    ['ja_tem_frete', /já tem frete/i],
+    ['saldo_insuficiente', /saldo/i],
+    ['raw_nao_bate_com_valor', /não bate|defeito de código/i],
+    ['raw_nao_e_delivery', /entrega/i],
+    ['cobranca_em_andamento', /recusada|nada foi cobrado/i],
+  ]) {
+    test(`B18 · RPC responde HTTP 200 + ${motivo} → rota diz FALHA e nada debitado`, async () => {
+      estado.rpcDisponivel = true;
+      estado.rpcRecusaCom = motivo;
+      const r = await chamar({ actorId: ADMIN, sale_id: V_SEM_FRETE, executar: true }, ADMIN);
+      assert.equal(r.corpo?.success, false, `DISSE QUE COBROU: ${JSON.stringify(r.corpo)}`);
+      assert.equal(r.corpo?.debitado, false, 'marcou debitado numa transação que recusou');
+      assert.equal(r.corpo?.motivo, motivo);
+      assert.match(r.corpo?.error || '', trecho);
+      assert.equal(estado.saldo, 50, 'o saldo mudou numa recusa');
+      assert.equal(debitou(), false);
+    });
+  }
+
+  test('B18 · recusa da RPC NÃO cai na compensação por trás', async () => {
+    estado.rpcDisponivel = true;
+    estado.rpcRecusaCom = 'saldo_insuficiente';
+    comCompensacao();
+    const r = await chamar({ actorId: ADMIN, sale_id: V_SEM_FRETE, executar: true }, ADMIN);
+    assert.equal(r.corpo?.success, false);
+    assert.equal(debitou(), false, 'recusou na RPC e cobrou pela compensação mesmo assim');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('BLOQUEADOR 20 · não cobrar dinheiro por semelhança de título', () => {
+  const semVinculo = 'venda-sem-vinculo';
+  const doisIguais = () => {
+    estado.vendas[semVinculo] = {
+      id: semVinculo, kind: 'arremate', buyer_id: COMPRADOR, buyer_name: 'Comprador',
+      product_title: 'Arremate — Repelente', total_amount: 4.2, status: 'paid', raw_base44: {},
+    };
+  };
+
+  test('B20 · pedido sem auction_id: CONFERÊNCIA sugere, mas EXECUTAR recusa', async () => {
+    doisIguais();
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('/auctions?') && String(u).includes('winner_id')) {
+        return { ok: true, status: 200, json: async () => [{ id: LEILAO, product_id: PRODUTO, title: 'Repelente' }], text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const conf = await chamar({ actorId: ADMIN, sale_id: semVinculo }, ADMIN);
+    const exec = await chamar({ actorId: ADMIN, sale_id: semVinculo, executar: true }, ADMIN);
+    globalThis.fetch = antes;
+
+    assert.equal(conf.corpo?.modo, 'conferencia', JSON.stringify(conf.corpo));
+    assert.equal(exec.corpo?.success, false, 'COBROU com vínculo identificado por palpite');
+    assert.match(exec.corpo?.error || '', /semelhança de título|não tem o leilão gravado/i);
+    assert.equal(debitou(), false);
+  });
+
+  test('B20 · dois leilões do mesmo comprador com o mesmo título → RECUSA e lista', async () => {
+    doisIguais();
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('/auctions?') && String(u).includes('winner_id')) {
+        return { ok: true, status: 200, json: async () => ([
+          { id: 'auc-A', product_id: 'prod-A', title: 'Repelente', current_price: 4.2 },
+          { id: 'auc-B', product_id: 'prod-B', title: 'Repelente', current_price: 9.9 },
+        ]), text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ actorId: ADMIN, sale_id: semVinculo, executar: true }, ADMIN);
+    globalThis.fetch = antes;
+
+    assert.equal(r.corpo?.success, false);
+    assert.equal(r.corpo?.ambiguo, true);
+    assert.equal(r.corpo?.candidatos?.length, 2, 'não listou os candidatos para o operador decidir');
+    assert.equal(debitou(), false, 'COBROU escolhendo o primeiro de dois leilões iguais');
+  });
+
+  test('B20 · auction_id informado de leilão de OUTRA pessoa é recusado', async () => {
+    estado.rpcDisponivel = true;
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('/auctions?') && String(u).includes('id=eq.')) {
+        return { ok: true, status: 200, json: async () => [{ id: LEILAO, product_id: PRODUTO, title: 'X', winner_id: 'outra-pessoa' }], text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ actorId: ADMIN, sale_id: V_SEM_FRETE, auction_id: LEILAO, executar: true }, ADMIN);
+    globalThis.fetch = antes;
+
+    assert.equal(r.corpo?.success, false);
+    assert.match(r.corpo?.error || '', /não foi arrematado pelo comprador/i);
+    assert.equal(estado.rpcChamadas.length, 0);
+  });
+
+  test('B20 · auction_id explícito e coerente LIBERA a cobrança', async () => {
+    doisIguais();
+    estado.rpcDisponivel = true;
+    const r = await chamar({ actorId: ADMIN, sale_id: semVinculo, auction_id: LEILAO, executar: true }, ADMIN);
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo?.via, 'rpc');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('BLOQUEADOR 21 · apenas_completar não pode gravar serviço incompatível', () => {
+  // COTAÇÃO do dublê: PAC R$ 11,60. Vou acrescentar uma opção bem mais barata
+  // para que "a mais barata" e "a mais próxima do pago" sejam DIFERENTES —
+  // é exatamente aí que o defeito aparecia.
+  const comDuasOpcoes = () => {
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('melhorenvio.com.br')) {
+        return { ok: true, status: 200, text: async () => JSON.stringify([
+          { id: 3, name: 'Mini', company: { name: 'Correios' }, price: '4.00', delivery_time: 9 },
+          { id: 7, name: 'PAC', company: { name: 'Correios' }, price: '11.60', delivery_time: 5 },
+        ]) };
+      }
+      return antes(u, o);
+    };
+    return () => { globalThis.fetch = antes; };
+  };
+
+  test('B21 · grava o serviço de preço MAIS PRÓXIMO do pago, não o mais barato', async () => {
+    const restaura = comDuasOpcoes();
+    const r = await chamar({ actorId: ADMIN, sale_id: V_COM_FRETE, apenas_completar: true, executar: true }, ADMIN);
+    restaura();
+
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    const g = JSON.parse(estado.patches.find((p) => p.u.includes('catalog_sales') && p.method === 'PATCH').body);
+    assert.equal(g.raw_base44.frete.valor, 11.6, 'mexeu no valor que o cliente já pagou');
+    assert.equal(g.raw_base44.frete.id, '7', 'gravou o serviço mais BARATO (R$ 4) num pedido que pagou R$ 11,60');
+    assert.equal(g.raw_base44.frete.servico_escolhido_por, 'preco_mais_proximo_do_pago');
+  });
+
+  test('B21 · registra o valor recotado e NÃO finge que o serviço é o original', async () => {
+    const restaura = comDuasOpcoes();
+    const r = await chamar({ actorId: ADMIN, sale_id: V_COM_FRETE, apenas_completar: true, executar: true }, ADMIN);
+    restaura();
+
+    const g = JSON.parse(estado.patches.find((p) => p.u.includes('catalog_sales') && p.method === 'PATCH').body);
+    assert.equal(g.raw_base44.frete.valor_recotado, 11.6);
+    assert.equal(g.raw_base44.frete.servico_confirmado_da_cotacao_original, false,
+      'apresentou o serviço como se fosse o que o cliente contratou no lance');
+    assert.equal(r.corpo?.diferenca_para_o_pago, 0);
+  });
+
+  test('B21 · operador pode escolher a opção explicitamente, e a escolha vence', async () => {
+    const restaura = comDuasOpcoes();
+    const r = await chamar({ actorId: ADMIN, sale_id: V_COM_FRETE, apenas_completar: true, frete_id: '3', executar: true }, ADMIN);
+    restaura();
+
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    const g = JSON.parse(estado.patches.find((p) => p.u.includes('catalog_sales') && p.method === 'PATCH').body);
+    assert.equal(g.raw_base44.frete.id, '3');
+    assert.equal(g.raw_base44.frete.servico_escolhido_por, 'operador');
+    assert.equal(g.raw_base44.frete.valor, 11.6, 'a escolha do operador não pode mudar o valor já pago');
+  });
+
+  test('B21 · a conferência avisa a diferença ANTES de gravar', async () => {
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('melhorenvio.com.br')) {
+        return { ok: true, status: 200, text: async () => JSON.stringify([
+          { id: 9, name: 'SEDEX', company: { name: 'Correios' }, price: '30.00', delivery_time: 2 },
+        ]) };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ actorId: ADMIN, sale_id: V_COM_FRETE, apenas_completar: true }, ADMIN);
+    globalThis.fetch = antes;
+
+    assert.equal(r.corpo?.alterado, false);
+    assert.equal(r.corpo?.cotacao_de_hoje, 30);
+    assert.ok(Math.abs(r.corpo?.diferenca_para_o_pago - 18.4) < 0.001);
+    assert.match(r.corpo?.aviso || '', /diferença sai da empresa/i);
   });
 });

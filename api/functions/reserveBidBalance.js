@@ -236,6 +236,13 @@ export default async function handler(req, res) {
         });
         return res.status(200).json({
           success: true,
+          // 🔴 B17 — O VALOR QUE O SERVIDOR REALMENTE RESERVOU.
+          // Sem isto, a tela liberava o hold usando a conta que ELA fez. Se as
+          // duas contas divergissem (frete local desatualizado, selo mais novo),
+          // o servidor reservava X e a tela mandava soltar Y: sobra ou some
+          // dinheiro na reserva do cliente. Este campo é a única fonte válida
+          // para o estorno.
+          reserved_amount: amount,
           valor_do_servidor: podeCalcular,
           lance: podeCalcular ? bidAmount : null,
           frete: podeCalcular ? _selo.valor : null,

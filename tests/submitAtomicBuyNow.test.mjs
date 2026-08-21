@@ -84,7 +84,9 @@ function novoMundo(ajustes = {}) {
     ledger: [],              // reserva_ledger
     // interruptores de falha, para os testes de caminho ruim
     falharInsertLance: false,
-    falharPatchFrete: false,
+    // 🔴 B12 — o cenário que os testes antigos NÃO cobriam: `fetch` LANÇANDO,
+    // não respondendo HTTP 500. DNS, TLS, socket fechado, timeout do runtime.
+    lancarEm: null,        // ex.: {tabela:'auction_messages', metodo:'POST'}
     falharClaimFinalize: false,
     freteIndisponivel: false,
     ...ajustes,
@@ -122,6 +124,12 @@ function roteador(url, opcoes = {}) {
   }
 
   const caminho = url.split('/rest/v1/')[1] || '';
+
+  if (mundo.lancarEm && caminho.startsWith(mundo.lancarEm.tabela)
+      && (!mundo.lancarEm.metodo || mundo.lancarEm.metodo === metodo)) {
+    if (mundo.lancarEm.apenasUmaVez) mundo.lancarEm = null;
+    throw new TypeError('fetch failed');   // é assim que o undici estoura
+  }
 
   // ── app_users ─────────────────────────────────────────────────────────
   if (caminho.startsWith('app_users')) {
@@ -320,28 +328,85 @@ describe('ROTA REAL · submitAtomicBuyNow — falha DEPOIS da reserva', () => {
     assert.equal(totalDisponivel(), 1000, 'não devolveu tudo');
   });
 
-  test('BR11 · PATCH do frete falhou → estorno total E o lance fantasma some', async () => {
-    // BLOQUEADOR 6: sem apagar o lance, o cron de encerramento leria depois
-    // aquele auction_message (que é o MAIOR lance do leilão) e declararia
-    // vencedor alguém cujo dinheiro já voltou.
-    mundo.falharPatchFrete = true;
+  test('BR11 · B12 · fetch LANÇA no insert do lance → estorna, nada preso', async () => {
+    // Antes: a exceção pulava a checagem de `resp.ok` e caía no catch externo,
+    // que não sabe que houve reserva. Dinheiro preso, sem log, sem devolução.
+    mundo.lancarEm = { tabela: 'auction_messages', metodo: 'POST' };
     const res = fazerRes();
     await handler(fazerReq({ auction_id: LEILAO, user_id: USER }), res);
 
     assert.equal(res.statusCode, 500);
-    assert.equal(totalReservado(), 0);
+    assert.equal(res.corpo.success, false);
+    assert.equal(totalReservado(), 0, 'DINHEIRO PRESO: exceção de rede não estornou');
     assert.equal(totalDisponivel(), 1000);
-    assert.equal(mundo.lances.length, 0, 'LANCE FANTASMA: sobrou lance sem lastro no leilão');
+    assert.equal(mundo.lances.length, 0);
   });
 
-  test('BR12 · o DELETE do lance fantasma é mesmo disparado', async () => {
-    mundo.falharPatchFrete = true;
+  test('BR12 · B12 · fetch LANÇA na finalização → estorna E apaga o lance', async () => {
+    // Aqui o lance JÁ foi inserido quando a exceção acontece. A barreira precisa
+    // desfazer as DUAS coisas, na ordem inversa.
+    mundo.lancarEm = { tabela: 'auctions', metodo: 'PATCH' };
     const res = fazerRes();
     await handler(fazerReq({ auction_id: LEILAO, user_id: USER }), res);
 
-    const deletes = chamadas.filter((c) => c.metodo === 'DELETE' && c.url.includes('auction_messages'));
-    assert.equal(deletes.length, 1, 'nenhum DELETE de auction_messages foi emitido');
     assert.equal(res.corpo.success, false);
+    assert.equal(totalReservado(), 0, 'DINHEIRO PRESO');
+    assert.equal(totalDisponivel(), 1000);
+    assert.equal(mundo.lances.length, 0, 'LANCE FANTASMA sobrou depois de exceção');
+  });
+
+  test('BR12b · B12 · se o estorno TAMBÉM falhar, grita precisa_intervencao', async () => {
+    // O pior caso: não dá pra desfazer. A regra é nunca esconder — responde
+    // falha, marca precisa_intervencao e diz o que ficou pendente.
+    mundo.lancarEm = { tabela: 'auction_messages', metodo: 'POST' };
+    const roteadorReal = globalThis.fetch;
+    globalThis.fetch = async (url, opcoes) => {
+      const u = String(url);
+      if (u.includes('app_users') && (opcoes?.method || 'GET') === 'PATCH') {
+        const b = JSON.parse(opcoes.body);
+        // só a DEVOLUÇÃO falha (saldo subindo); a reserva precisa passar, senão
+        // o teste nem chega na barreira de compensação.
+        if (Number(b.saldo_disponivel) > Number(mundo.usuario.saldo_disponivel)) {
+          return { ok: true, status: 200, json: async () => [], text: async () => '[]' };
+        }
+      }
+      return roteadorReal(url, opcoes);
+    };
+    const res = fazerRes();
+    await handler(fazerReq({ auction_id: LEILAO, user_id: USER }), res);
+    globalThis.fetch = roteadorReal;
+
+    assert.equal(res.corpo.success, false);
+    assert.equal(res.corpo.precisa_intervencao, true, 'escondeu que o dinheiro ficou preso');
+    assert.ok(Array.isArray(res.corpo.pendencias) && res.corpo.pendencias.length > 0);
+    assert.match(String(res.corpo.message), /suporte/i);
+  });
+
+  test('BR14 · B13 · o frete NÃO é gravado por PATCH solto no leilão', async () => {
+    // O PATCH sem trava saiu. Quem grava `frete_reservado_valor` é o claim
+    // atômico do vencedor — a mesma escrita que decide quem ganhou.
+    const res = fazerRes();
+    await handler(fazerReq({ auction_id: LEILAO, user_id: USER }), res);
+
+    assert.equal(res.corpo.success, true, JSON.stringify(res.corpo));
+    const patchesLeilao = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('auctions?'));
+    assert.equal(patchesLeilao.length, 1, `${patchesLeilao.length} PATCHes no leilão — só o claim pode existir`);
+    assert.ok(patchesLeilao[0].url.includes('status=in.(active,processing)'),
+      'existe PATCH em auctions SEM trava de status — é o defeito do B13');
+    assert.equal(patchesLeilao[0].corpo.frete_reservado_valor, FRETE);
+    assert.equal(patchesLeilao[0].corpo.winner_id, USER, 'frete e vencedor têm que sair na MESMA escrita');
+  });
+
+
+  test('BR13b · o estorno grava linha no livro-caixa da reserva', async () => {
+    mundo.lancarEm = { tabela: 'auctions', metodo: 'PATCH' };
+    const res = fazerRes();
+    await handler(fazerReq({ auction_id: LEILAO, user_id: USER }), res);
+
+    assert.equal(res.corpo.success, false);
+    const devolucoes = mundo.ledger.filter((l) => l.tipo === 'devolucao_arremate_falhou');
+    assert.equal(devolucoes.length, 1);
+    assert.equal(devolucoes[0].valor, BUY_NOW + FRETE, 'estornou valor diferente do reservado');
   });
 
   test('BR13 · perdeu a corrida do encerramento → devolve tudo e limpa o lance', async () => {
@@ -356,16 +421,6 @@ describe('ROTA REAL · submitAtomicBuyNow — falha DEPOIS da reserva', () => {
     assert.equal(mundo.lances.length, 0);
   });
 
-  test('BR14 · o estorno grava linha no livro-caixa da reserva', async () => {
-    mundo.falharPatchFrete = true;
-    const res = fazerRes();
-    await handler(fazerReq({ auction_id: LEILAO, user_id: USER }), res);
-
-    assert.equal(res.corpo.success, false);
-    const devolucoes = mundo.ledger.filter((l) => l.tipo === 'devolucao_arremate_falhou');
-    assert.equal(devolucoes.length, 1);
-    assert.equal(devolucoes[0].valor, BUY_NOW + FRETE, 'estornou valor diferente do reservado');
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -391,5 +446,86 @@ describe('ROTA REAL · submitAtomicBuyNow — porta de entrada', () => {
     assert.equal(res.statusCode, 409);
     assert.equal(totalReservado(), 0);
     assert.equal(mundo.lances.length, 0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ROTA REAL · finalizeAuction — onde o BLOQUEADOR 13 de fato vive
+// ═══════════════════════════════════════════════════════════════════════════
+// O frete do vencedor deixou de ser gravado por PATCH solto e passou a sair
+// DENTRO do claim atômico. Quem exercita esse claim com um lance que não é do
+// próprio Buy Now é a finalização — a rota do cron e do fim do relógio.
+const { default: finalizar } = await import('../api/functions/finalizeAuction.js');
+
+describe('ROTA REAL · finalizeAuction — B13, frete decidido no claim do vencedor', () => {
+  const encerravel = () => {
+    mundo.leilao.end_time = new Date(Date.now() - 10_000).toISOString();
+  };
+
+  test('BF1 · o frete gravado é o do LANCE VENCEDOR, na mesma escrita do vencedor', async () => {
+    encerravel();
+    mundo.leilao.frete_reservado_valor = 99;   // lixo do líder anterior
+    mundo.lances.push(
+      { id: 'b1', message_type: 'bid', sender_id: 'outro', sender_name: 'Outro', bid_amount: 100, frete_amount: 99 },
+      { id: 'b2', message_type: 'bid', sender_id: USER, sender_name: 'fulano', bid_amount: 300, frete_amount: 14.9 },
+    );
+    const res = fazerRes();
+    await finalizar(fazerReq({ auction_id: LEILAO }), res);
+
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)')).pop();
+    assert.ok(claim, 'nenhum claim atômico emitido');
+    assert.equal(claim.corpo.winner_id, USER);
+    assert.equal(claim.corpo.frete_reservado_valor, 14.9,
+      'o vencedor herdou o frete do líder anterior — é o bug AR3BEF1939');
+    // e não existe NENHUM outro PATCH mexendo no frete fora do claim
+    const soltos = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('auctions?')
+      && !c.url.includes('status=in.(active,processing)')
+      && c.corpo && 'frete_reservado_valor' in c.corpo);
+    assert.equal(soltos.length, 0, 'existe PATCH de frete SEM trava de status');
+  });
+
+  test('BF2 · lance vencedor com frete_amount NULL NÃO vira frete zero', async () => {
+    // Lance legado. NULL não é zero: zero diria "esta pessoa não paga frete",
+    // que é exatamente o defeito que originou toda esta frente.
+    encerravel();
+    mundo.leilao.frete_reservado_valor = 7.5;
+    mundo.lances.push({ id: 'b-legado', message_type: 'bid', sender_id: USER, sender_name: 'fulano', bid_amount: 300, frete_amount: null });
+    const res = fazerRes();
+    await finalizar(fazerReq({ auction_id: LEILAO }), res);
+
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)')).pop();
+    assert.ok(claim, 'nenhum claim emitido');
+    assert.equal(claim.corpo.frete_reservado_valor, 7.5, 'lance legado virou frete ZERO');
+  });
+
+  test('BF3 · leilão sem lance nenhum não escreve frete no claim', async () => {
+    encerravel();
+    const res = fazerRes();
+    await finalizar(fazerReq({ auction_id: LEILAO }), res);
+
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)')).pop();
+    assert.ok(claim);
+    assert.equal(claim.corpo.winner_id, null);
+    assert.equal('frete_reservado_valor' in claim.corpo, false, 'gravou frete num leilão sem vencedor');
+  });
+
+  test('BF4 · erro que NÃO é coluna inexistente não encerra o leilão sem frete', async () => {
+    // Fail-closed: rede/permissão/PostgREST não podem virar "encerra assim mesmo".
+    encerravel();
+    const roteadorReal = globalThis.fetch;
+    globalThis.fetch = async (url, opcoes) => {
+      const u = String(url);
+      if (u.includes('auction_messages') && u.includes('frete_amount')) {
+        return { ok: false, status: 503, json: async () => null, text: async () => 'upstream indisponivel' };
+      }
+      return roteadorReal(url, opcoes);
+    };
+    const res = fazerRes();
+    await finalizar(fazerReq({ auction_id: LEILAO }), res);
+    globalThis.fetch = roteadorReal;
+
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)'));
+    assert.equal(claim.length, 0, 'ENCERROU o leilão sem conseguir ler os lances');
+    assert.equal(res.corpo?.success, false);
   });
 });

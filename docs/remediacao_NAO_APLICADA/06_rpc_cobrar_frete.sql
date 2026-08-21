@@ -18,26 +18,61 @@
 -- passar a chamá-la em vez do caminho de compensação.
 
 CREATE OR REPLACE FUNCTION public.cobrar_frete_pendente(
-  _sale_id  text,
-  _valor    numeric,
-  _raw      jsonb,
-  _actor    text
+  _sale_id   text,
+  _valor     numeric,
+  _frete     jsonb,
+  _actor     text,
+  _endereco  jsonb DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+-- ⚠️ A ASSINATURA É INVARIANTE DE REGRESSÃO (achado A1).
+-- Os nomes abaixo são exatamente os que a rota manda. NUNCA voltar a aceitar
+-- `_user_id` ou `_actor_id`: argumento que não existe faz o PostgREST responder
+-- 404, a rota lê 404 como "RPC não aplicada", e passaria a vida dizendo que
+-- falta aplicar uma função que está aplicada. Falha silenciosa, invisível.
+--
+-- 🔴 BLOQUEADOR 19 — a função NÃO recebe mais o documento inteiro do pedido.
+-- Antes o chamador lia `raw_base44` por HTTP, montava o documento e mandava
+-- pronto. O `FOR UPDATE` impede duas cobranças concorrentes, mas não impede que
+-- OUTRO fluxo tenha atualizado o pedido entre a leitura do chamador e a trava —
+-- e aí a função gravava por cima com um documento velho. Agora ela recebe só o
+-- bloco do frete e monta o documento em cima do `raw_base44` lido DENTRO da
+-- própria trava, que é o único garantidamente atual.
 DECLARE
   _venda   record;
   _saldo   numeric;
   _novo    numeric;
+  _raw     jsonb;
 BEGIN
   IF _valor IS NULL OR _valor <= 0 THEN
     RETURN jsonb_build_object('ok', false, 'motivo', 'valor_invalido');
   END IF;
+  IF _frete IS NULL OR jsonb_typeof(_frete) <> 'object' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'frete_invalido');
+  END IF;
+
+  -- ══════════════════════════════════════════════════════════════════════════
+  -- 🔒 INVARIANTE EXIGIDA PELA AUDITORIA OPENAI (21/08/2026)
+  -- ══════════════════════════════════════════════════════════════════════════
+  -- A função debita `_valor` e grava `_frete` — dois números que vêm SEPARADOS
+  -- do chamador. Nada garantia que fossem o mesmo. Um erro de montagem no
+  -- servidor (ou uma chamada mal-intencionada, já que isto é SECURITY DEFINER)
+  -- debitaria R$ 40 e gravaria "frete R$ 4". O cliente pagaria 40 e todo
+  -- relatório diria 4 — divergência silenciosa, transação "bem-sucedida".
+  -- Compara em CENTAVOS: dinheiro não depende de arredondamento de texto.
+  IF round(COALESCE((_frete ->> 'valor')::numeric, -1), 2) IS DISTINCT FROM round(_valor, 2) THEN
+    RETURN jsonb_build_object(
+      'ok', false, 'motivo', 'raw_nao_bate_com_valor',
+      'valor_debitado_pedido', _valor,
+      'valor_no_raw', (_frete ->> 'valor')
+    );
+  END IF;
 
   -- trava a linha da venda: duas cobranças simultâneas fazem fila aqui
-  SELECT id, kind, buyer_id, raw_base44 INTO _venda
+  SELECT id, kind, buyer_id, raw_base44, total_amount INTO _venda
     FROM public.catalog_sales WHERE id = _sale_id FOR UPDATE;
   IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', false, 'motivo', 'pedido_nao_encontrado');
@@ -47,6 +82,29 @@ BEGIN
   END IF;
   IF COALESCE((_venda.raw_base44 -> 'frete' ->> 'valor')::numeric, 0) > 0 THEN
     RETURN jsonb_build_object('ok', false, 'motivo', 'ja_tem_frete');
+  END IF;
+  -- cobrança de outro processo ainda em aberto: não empilha
+  IF _venda.raw_base44 -> 'frete' -> 'cobranca_em_andamento' IS NOT NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'cobranca_em_andamento');
+  END IF;
+
+  -- ── documento novo montado AQUI, sobre o raw lido dentro do FOR UPDATE ─────
+  _raw := COALESCE(_venda.raw_base44, '{}'::jsonb)
+          || jsonb_build_object(
+               'delivery_type', 'delivery',
+               'frete', _frete,
+               'amount_charged', round(
+                 COALESCE((_venda.raw_base44 ->> 'amount_charged')::numeric,
+                          _venda.total_amount, 0) + _valor, 2)
+             );
+  IF _endereco IS NOT NULL AND jsonb_typeof(_endereco) = 'object' THEN
+    _raw := _raw || jsonb_build_object('address', _endereco);
+  END IF;
+
+  -- O pedido tem que sair como ENTREGA. Cobrar frete e gravar 'pickup' é o
+  -- defeito F9 entrando pela porta dos fundos.
+  IF COALESCE(_raw ->> 'delivery_type', '') IS DISTINCT FROM 'delivery' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'raw_nao_e_delivery');
   END IF;
 
   -- trava a linha do comprador: o saldo não muda debaixo da gente
@@ -58,31 +116,6 @@ BEGIN
   IF _saldo < _valor THEN
     RETURN jsonb_build_object('ok', false, 'motivo', 'saldo_insuficiente',
                               'saldo', _saldo, 'falta', round(_valor - _saldo, 2));
-  END IF;
-
-  -- ══════════════════════════════════════════════════════════════════════════
-  -- 🔒 INVARIANTE EXIGIDA PELA AUDITORIA OPENAI (21/08/2026)
-  -- ══════════════════════════════════════════════════════════════════════════
-  -- A RPC debita `_valor` e grava `_raw` — dois números que VÊM SEPARADOS do
-  -- chamador. Nada garantia que fossem o mesmo. Um erro de montagem no servidor
-  -- (ou uma chamada mal-intencionada, já que a função é SECURITY DEFINER)
-  -- debitaria R$ 40 e gravaria no pedido "frete R$ 4". O cliente pagaria 40 e
-  -- todo relatório que lê o pedido diria 4 — divergência silenciosa, e a
-  -- transação inteira pareceria bem-sucedida.
-  -- Compara em CENTAVOS: numeric aqui é dinheiro, e 11.60 tem que bater com
-  -- 11.60 sem depender de arredondamento de texto.
-  IF round(COALESCE((_raw -> 'frete' ->> 'valor')::numeric, -1), 2) IS DISTINCT FROM round(_valor, 2) THEN
-    RETURN jsonb_build_object(
-      'ok', false, 'motivo', 'raw_nao_bate_com_valor',
-      'valor_debitado_pedido', _valor,
-      'valor_no_raw', (_raw -> 'frete' ->> 'valor')
-    );
-  END IF;
-  -- O pedido tem que sair como ENTREGA. Cobrar frete e gravar 'pickup' é o
-  -- defeito F9 entrando pela porta dos fundos.
-  IF COALESCE(_raw ->> 'delivery_type', '') IS DISTINCT FROM 'delivery' THEN
-    RETURN jsonb_build_object('ok', false, 'motivo', 'raw_nao_e_delivery',
-                              'delivery_type', _raw ->> 'delivery_type');
   END IF;
 
   _novo := round(_saldo - _valor, 2);
@@ -99,8 +132,14 @@ BEGIN
 END $$;
 
 -- fechada por padrão; só o servidor executa
-REVOKE ALL ON FUNCTION public.cobrar_frete_pendente(text, numeric, jsonb, text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.cobrar_frete_pendente(text, numeric, jsonb, text) TO service_role;
+-- ⚠️ A assinatura mudou (B19: recebe `_frete`, não o documento inteiro).
+-- Se a versão de 4 argumentos tiver sido aplicada em algum momento, ela PRECISA
+-- sair: duas sobrecargas com o mesmo nome deixam o PostgREST ambíguo e ele passa
+-- a recusar as duas com PGRST203 — que a rota leria como "RPC não aplicada".
+DROP FUNCTION IF EXISTS public.cobrar_frete_pendente(text, numeric, jsonb, text);
+
+REVOKE ALL ON FUNCTION public.cobrar_frete_pendente(text, numeric, jsonb, text, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.cobrar_frete_pendente(text, numeric, jsonb, text, jsonb) TO service_role;
 
 -- ── ROLLBACK ────────────────────────────────────────────────────────────────
 -- DROP FUNCTION IF EXISTS public.cobrar_frete_pendente(text, numeric, jsonb, text);

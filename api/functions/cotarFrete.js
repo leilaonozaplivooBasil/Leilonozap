@@ -57,18 +57,44 @@ export default async function handler(req, res) {
 
     // ── CAMINHO DO LEILÃO: servidor manda em tudo ─────────────────────────
     if (auctionId) {
-      if (!userId) {
-        return res.status(400).json({ success: false, configured: true, error: 'Informe quem está cotando.' });
-      }
-      // 🔐 Crachá de sessão — ETAPA 1 (só anota no log enquanto SESSAO_MODO não
-      // for 'bloquear'). Esta rota não move dinheiro, mas emite selo que MOVE:
-      // sem isto qualquer um pede selo no nome de qualquer pessoa.
+      // ══════════════════════════════════════════════════════════════════════
+      // 🔴 BLOQUEADOR 14 (auditoria OpenAI, 21/08/2026) — SELO FINANCEIRO EXIGE
+      //    IDENTIDADE, E ELA NÃO PODE VIR DO CORPO
+      // ══════════════════════════════════════════════════════════════════════
+      // A versão anterior chamava `exigirSessao`, que em modo observação LIBERA
+      // quem chegou sem crachá e só anota no log. Isso é o rollout em duas
+      // etapas, e ele existe para rotas ANTIGAS, com abas já abertas no meio de
+      // leilão ao vivo. Este caminho é NOVO — não há aba antiga que o conheça —
+      // e o que ele devolve é uma AUTORIZAÇÃO FINANCEIRA: o selo é o que faz o
+      // servidor reservar dinheiro depois. Rota assim não nasce fail-open.
+      //
+      // E tem um segundo estrago, que eu não tinha visto: o selo é Base64, não
+      // é cifra. HMAC prova que o servidor emitiu; não esconde o conteúdo. Como
+      // a rota lê o CEP do cadastro do `user_id` que vier no corpo e o devolve
+      // (no campo `cep` e dentro do selo), sem crachá obrigatório qualquer um
+      // descobre o CEP de qualquer pessoa mandando o id dela. Vazamento de
+      // endereço, não só de frete.
+      //
+      // Então: crachá válido obrigatório, e a identidade sai DO CRACHÁ, nunca do
+      // corpo. `user_id` no corpo passa a ser, no máximo, conferência.
       const { exigirSessao } = await import('../_lib/sessao.js');
-      const _ses = exigirSessao(req, userId, 'cotarFrete');
-      if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
+      const _ses = exigirSessao(req, null, 'cotarFrete');
+      if (!_ses.liberado || _ses.motivo !== 'ok' || !_ses.userId) {
+        console.error(`[FRETE] cotarFrete: RECUSADA sem crachá válido (${_ses.motivo}).`);
+        return res.status(401).json({
+          success: false, error: 'nao_autenticado', motivo: _ses.motivo,
+          detalhe: 'A cotação do leilão emite um selo que autoriza reserva de saldo, então exige crachá de sessão válido mesmo com SESSAO_MODO em observação.',
+        });
+      }
+      // 🔑 A identidade é a do crachá. Ponto.
+      const donoDaCotacao = String(_ses.userId);
+      if (userId && userId !== donoDaCotacao) {
+        console.error(`[FRETE] cotarFrete: corpo pediu ${userId} com crachá de ${donoDaCotacao}.`);
+        return res.status(403).json({ success: false, error: 'cracha_de_outra_pessoa' });
+      }
 
       // ⚠️ body.items e body.cep NÃO são lidos aqui. De propósito.
-      const cot = await cotarFreteDoLeilao({ auctionId, userId });
+      const cot = await cotarFreteDoLeilao({ auctionId, userId: donoDaCotacao });
       if (!cot.ok) {
         return res.status(200).json({ success: false, configured: true, motivo: cot.motivo, error: {
           sem_cep: 'Cadastre seu CEP no perfil para calcularmos o frete.',
@@ -82,7 +108,7 @@ export default async function handler(req, res) {
       const opcoes = cot.opcoes.map((o) => ({
         ...o,
         selo: emitirSelo({
-          auctionId, userId, freteId: o.id, valor: o.preco,
+          auctionId, userId: donoDaCotacao, freteId: o.id, valor: o.preco,
           cep: cot.cep, productId: cot.productId,
           empresa: o.empresa, servico: o.nome, prazo: o.prazo,
         }),

@@ -242,7 +242,8 @@ export default async function handler(req, res) {
     //
     // COMO FICOU: o servidor cota o frete pelo `auction.product_id` e pelo CEP do
     // cadastro do vencedor, reserva produto + frete, grava o frete no lance e
-    // SOBRESCREVE o `frete_reservado_valor` com o do novo vencedor.
+    // SOBRESCREVE o frete no lance. Desde o B13, o `frete_reservado_valor` do
+    // leilão é gravado pela finalização, dentro do claim do vencedor.
     const cot = await cotarFreteDoLeilao({ auctionId, userId, auction, freteId: body?.frete_id || null });
     if (!cot.ok) {
       // Sem frete não passa. Decisão do dono em 21/08: "não podemos de maneira
@@ -287,76 +288,121 @@ export default async function handler(req, res) {
 
     const winnerName = user.nickname || user.full_name || 'Anônimo';
 
-    const bidInsertResp = await sb('auction_messages', {
-      method: 'POST', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        auction_id: auctionId,
-        message_type: 'bid',
-        sender_id: userId,
-        sender_name: winnerName,
-        bid_amount: buyNowPrice,
-        created_date: new Date().toISOString(),
-        timestamp: new Date().toISOString(),
-        frete_amount: frete.valor,
-        content: `🔥 ARREMATE RÁPIDO! R$ ${buyNowPrice.toFixed(2).replace('.', ',')}`,
-        is_system_message: false,
-      }),
-    });
-    const bidInsertData = await bidInsertResp.json().catch(() => null);
-    const bidRow = Array.isArray(bidInsertData) ? bidInsertData[0] : null;
-    if (!bidInsertResp.ok || !bidRow) {
-      await estornar(userId, totalReservar, auctionId);
-      return res.status(500).json({ success: false, message: 'Não foi possível registrar o arremate. Tente novamente.' });
-    }
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 12 (auditoria OpenAI, 21/08/2026) — BARREIRA DE COMPENSAÇÃO
+    // ══════════════════════════════════════════════════════════════════════════
+    // O dinheiro JÁ SAIU da carteira neste ponto. Antes, cada passo daqui pra
+    // frente conferia `resp.ok` e estornava — o que cobre HTTP 400/500, mas NÃO
+    // cobre `fetch` LANÇANDO. E `fetch` lança de verdade: DNS, TLS, socket
+    // fechado, timeout do runtime. Nesse caso a exceção pulava tudo e caía no
+    // catch lá de fora, que não sabe que houve reserva e não estorna.
+    // Resultado: dinheiro presoem saldo_reservado, arremate falhado, silêncio.
+    //
+    // A correção não é mais um `try` por passo. É uma barreira: daqui até o fim,
+    // TUDO roda dentro de um bloco que sabe o que já foi feito
+    // (`feito.reservado`, `feito.bidId`) e desfaz na ordem inversa. Nenhuma
+    // exceção posterior à reserva chega ao catch externo sem passar por aqui.
+    const feito = { reservado: true, bidId: null };
 
-    // 🚚 O FRETE DO LEILÃO PASSA A SER O DESTE VENCEDOR.
-    // Sem esta linha o `frete_reservado_valor` do líder ANTERIOR sobrevive ao
-    // arremate — e a liquidação (settleAuctionWithBalance.js:47) cobra do novo
-    // vencedor um frete que foi cotado para o CEP de outra pessoa. Foi
-    // exatamente o que aconteceu no AR3BEF1939: R$ 11,60 de um lance de R$ 6,80
-    // que ficou pendurado no leilão.
-    const patchFrete = await sb(`auctions?id=eq.${enc(auctionId)}`, {
-      method: 'PATCH', headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ frete_reservado_valor: frete.valor }),
-    });
-    if (!patchFrete.ok) {
-      // Não dá pra seguir: o encerramento leria o frete errado e cobraria errado.
-      await estornar(userId, totalReservar, auctionId);
-      const limpou = await apagarLanceFantasma(bidRow.id);
-      if (!limpou) console.error('[BUYNOW] precisa_intervencao: lance', bidRow.id, 'do leilao', auctionId, 'ficou sem lastro');
-      return res.status(500).json({ success: false, message: 'Não foi possível registrar o frete do arremate. Nada foi cobrado.' });
-    }
+    /**
+     * Desfaz o que deu certo até agora. Devolve o que NÃO conseguiu desfazer —
+     * lista vazia significa "o cliente está exatamente como antes de clicar".
+     */
+    const desfazer = async () => {
+      const pendencias = [];
+      if (feito.bidId) {
+        const limpou = await apagarLanceFantasma(feito.bidId);
+        if (!limpou) pendencias.push(`lance ${feito.bidId} não apagado`);
+      }
+      if (feito.reservado) {
+        const devolveu = await estornar(userId, totalReservar, auctionId);
+        if (!devolveu) pendencias.push(`R$ ${totalReservar.toFixed(2)} não estornados do usuário ${userId}`);
+        else feito.reservado = false;
+      }
+      if (pendencias.length) {
+        console.error(`[BUYNOW] PRECISA_INTERVENCAO — leilão ${auctionId}: ${pendencias.join(' · ')}`);
+      }
+      return pendencias;
+    };
 
-    // 🏁 Delega o encerramento pro motor único (mesmo do cron e do botão de
-    // encerrar): apura vencedor pelo maior lance, comissão, Cupom Passaporte,
-    // devolução do líder anterior. Best-effort de estorno se, por alguma corrida
-    // rara, este usuário não sair como vencedor.
-    let payload;
-    try {
-      payload = await finalizeOneAuction(auction);
-    } catch (e) {
-      await estornar(userId, totalReservar, auctionId);
-      const limpou = await apagarLanceFantasma(bidRow.id);
-      if (!limpou) console.error('[BUYNOW] precisa_intervencao: lance', bidRow.id, 'do leilao', auctionId, 'ficou sem lastro');
-      return res.status(500).json({ success: false, message: 'Erro ao encerrar o leilão: ' + String(e?.message || e) });
-    }
-
-    if (payload?.result?.winner_id !== userId) {
-      // Perdeu a corrida de encerramento (outro processo fechou primeiro) — devolve o dinheiro.
-      // Aqui o leilão JÁ ENCERROU com outro vencedor, então apagar o lance é
-      // higiene de histórico e proteção contra reprocessamento, não correção de
-      // vencedor.
-      await estornar(userId, totalReservar, auctionId);
-      await apagarLanceFantasma(bidRow.id);
-      return res.status(409).json({
-        success: false, conflict: true,
-        message: 'Outra pessoa arrematou este leilão antes. Seu saldo foi devolvido.',
-        current_state: payload?.result || null,
+    /** Encerra em falha SEMPRE desfazendo antes, e nunca escondendo o que sobrou. */
+    const falhar = async (http, corpo) => {
+      const pendencias = await desfazer();
+      return res.status(http).json({
+        ...corpo,
+        success: false,
+        ...(pendencias.length ? {
+          precisa_intervencao: true,
+          pendencias,
+          message: `${corpo.message || 'Não foi possível concluir o arremate.'} ATENÇÃO: parte da operação não pôde ser desfeita automaticamente — o suporte já foi avisado.`,
+        } : {}),
       });
-    }
+    };
 
-    return res.status(200).json({ success: true, message: 'Arremate confirmado!', ...payload });
+    try {
+      const bidInsertResp = await sb('auction_messages', {
+        method: 'POST', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          auction_id: auctionId,
+          message_type: 'bid',
+          sender_id: userId,
+          sender_name: winnerName,
+          bid_amount: buyNowPrice,
+          created_date: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
+          frete_amount: frete.valor,
+          content: `🔥 ARREMATE RÁPIDO! R$ ${buyNowPrice.toFixed(2).replace('.', ',')}`,
+          is_system_message: false,
+        }),
+      });
+      const bidInsertData = await bidInsertResp.json().catch(() => null);
+      const bidRow = Array.isArray(bidInsertData) ? bidInsertData[0] : null;
+      if (!bidInsertResp.ok || !bidRow) {
+        return await falhar(500, { message: 'Não foi possível registrar o arremate. Tente novamente.' });
+      }
+      feito.bidId = bidRow.id;
+
+      // ══════════════════════════════════════════════════════════════════════
+      // 🚚 BLOQUEADOR 13 — O PATCH SOLTO DE `frete_reservado_valor` SAIU DAQUI
+      // ══════════════════════════════════════════════════════════════════════
+      // Existia aqui um PATCH direto em `auctions?id=eq.<id>` gravando o frete.
+      // Ele não tinha trava de status nem de version, e — pior — quando o
+      // arremate falhava depois, o estorno devolvia o dinheiro e apagava o
+      // lance, mas o frete FICAVA no leilão, contaminando o vencedor de verdade.
+      //
+      // Agora o frete é decidido dentro do claim atômico do vencedor, em
+      // finalizeAuctionCore.js: quem ganha a corrida do claim grava vencedor E
+      // frete na MESMA escrita. O lance já carrega `frete_amount`, que é de onde
+      // a apuração tira o valor. Nada a fazer aqui — e é esse "nada" que fecha
+      // o buraco: sem escrita solta, não existe escrita para reverter.
+
+      // 🏁 Delega o encerramento pro motor único (mesmo do cron e do botão de
+      // encerrar): apura vencedor pelo maior lance, comissão, Cupom Passaporte,
+      // devolução do líder anterior.
+      const payload = await finalizeOneAuction(auction);
+
+      if (payload?.result?.winner_id !== userId) {
+        // Perdeu a corrida de encerramento (outro processo fechou primeiro).
+        return await falhar(409, {
+          conflict: true,
+          message: 'Outra pessoa arrematou este leilão antes. Seu saldo foi devolvido.',
+          current_state: payload?.result || null,
+        });
+      }
+
+      // ✅ Ponto de não-retorno: o arremate é oficialmente deste usuário.
+      feito.reservado = false;
+      feito.bidId = null;
+      return res.status(200).json({ success: true, message: 'Arremate confirmado!', ...payload });
+    } catch (e) {
+      // 🔴 É AQUI que o B12 é fechado: exceção de rede depois da reserva não
+      // escapa mais para o catch externo.
+      console.error('[BUYNOW] exceção após a reserva:', e?.message);
+      return await falhar(500, { message: 'Erro ao processar o arremate: ' + String(e?.message || e) });
+    }
   } catch (e) {
+    // Catch EXTERNO: só alcança falhas ANTES da reserva. Depois dela, a
+    // barreira de compensação acima trata tudo e nunca deixa passar.
     return res.status(500).json({ success: false, message: 'Erro ao processar arremate: ' + String(e?.message || e) });
   }
 }

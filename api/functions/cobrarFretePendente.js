@@ -33,28 +33,37 @@ import { exigirSessao } from '../_lib/sessao.js';
 // caminhos (a RPC transacional e a compensação legada) — se as duas montassem o
 // pedido cada uma do seu jeito, a invariante da RPC
 // (`_raw.frete.valor` = `_valor`) passaria num caminho e falharia no outro.
+// 🚚 SÓ O BLOCO DO FRETE. É isto que vai para a RPC (B19): ela monta o documento
+// novo em cima do `raw_base44` lido dentro do próprio `FOR UPDATE`, e não recebe
+// mais uma cópia inteira do pedido que pode ter envelhecido no caminho.
+function blocoFreteCobrado({ cep, valorCobrar, escolhida, actorId, ehOverride, overrideMotivo, marcaId }) {
+  return {
+    id: escolhida?.id || null,
+    valor: valorCobrar,
+    empresa: escolhida?.empresa || null,
+    servico: escolhida?.nome || null,
+    prazo: escolhida?.prazo ?? null,
+    cep,
+    cobrado_depois: true,
+    cobrado_em: new Date().toISOString(),
+    cobrado_por: actorId,
+    cobranca_id: marcaId,
+    motivo: 'arremate liquidado sem frete — cobranca posterior autorizada pelo admin',
+    // ⚠️ nunca apresentar override como se a transportadora tivesse validado
+    validado_pela_transportadora: !ehOverride,
+    ...(ehOverride ? { override: true, override_motivo: overrideMotivo, cotacao_real: escolhida?.preco ?? null } : {}),
+  };
+}
+
+// 📦 O pedido inteiro depois da cobrança. Usado SÓ pelo caminho legado de
+// compensação, que grava por HTTP e por isso precisa montar o documento aqui.
 function montarRawCobrado({ raw, endereco, cep, valorCobrar, escolhida, actorId, ehOverride, overrideMotivo, marcaId, venda }) {
   const c = (n) => Math.round((Number(n) || 0) * 100);
   return {
     ...raw,
     delivery_type: 'delivery',
     address: endereco,
-    frete: {
-      id: escolhida?.id || null,
-      valor: valorCobrar,
-      empresa: escolhida?.empresa || null,
-      servico: escolhida?.nome || null,
-      prazo: escolhida?.prazo ?? null,
-      cep,
-      cobrado_depois: true,
-      cobrado_em: new Date().toISOString(),
-      cobrado_por: actorId,
-      cobranca_id: marcaId,
-      motivo: 'arremate liquidado sem frete — cobranca posterior autorizada pelo admin',
-      // ⚠️ nunca apresentar override como se a transportadora tivesse validado
-      validado_pela_transportadora: !ehOverride,
-      ...(ehOverride ? { override: true, override_motivo: overrideMotivo, cotacao_real: escolhida?.preco ?? null } : {}),
-    },
+    frete: blocoFreteCobrado({ cep, valorCobrar, escolhida, actorId, ehOverride, overrideMotivo, marcaId }),
     amount_charged: (c(Number(raw.amount_charged) || Number(venda.total_amount) || 0) + c(valorCobrar)) / 100,
   };
 }
@@ -200,16 +209,62 @@ export default async function handler(req, res) {
     let leilao = null;
     const auctionIdDoRaw = auctionIdInformado || String(raw?.auction_id || '').trim();
     if (auctionIdDoRaw) {
-      const aRows = await (await sb(`auctions?select=id,product_id,title,current_price,starting_price&id=eq.${enc(auctionIdDoRaw)}&limit=1`)).json();
+      const aRows = await (await sb(`auctions?select=id,product_id,title,current_price,starting_price,winner_id&id=eq.${enc(auctionIdDoRaw)}&limit=1`)).json();
       leilao = Array.isArray(aRows) ? aRows[0] : null;
+      // 🔒 B20 — `auction_id` informado no corpo é entrada de fora. Tem que bater
+      // com o comprador do pedido, senão daria pra cotar o frete de um leilão
+      // qualquer e cobrar no pedido de outra pessoa.
+      if (leilao && auctionIdInformado && leilao.winner_id && String(leilao.winner_id) !== String(venda.buyer_id)) {
+        return res.status(200).json({
+          success: false, debitado: false,
+          error: 'O leilão informado não foi arrematado pelo comprador deste pedido. Nada foi cobrado.',
+        });
+      }
     }
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 20 (auditoria OpenAI, 21/08/2026) — HEURÍSTICA NÃO COBRA
+    // ══════════════════════════════════════════════════════════════════════
+    // Para pedido sem `auction_id`, eu pegava até 50 leilões do vencedor e usava
+    // o PRIMEIRO com título igual. Duas pessoas não confundem, mas a MESMA
+    // pessoa pode ter arrematado dois leilões com o mesmo título — produto
+    // repetido é o caso normal de um leilão, não a exceção. Aí a cotação sairia
+    // do produto errado e o cliente pagaria o frete de outra caixa.
+    // Palpite serve para SUGERIR na conferência. Não serve para tirar dinheiro.
+    let leilaoAmbiguo = false;
+    let candidatos = [];
     if (!leilao) {
       // pedido antigo: o título da venda é `Arremate — <título do leilão>`
       const tituloLeilao = String(venda.product_title || '').replace(/^Arremate\s*[—-]\s*/, '').trim();
       const aRows = await (await sb(`auctions?select=id,product_id,title,current_price,starting_price&winner_id=eq.${enc(venda.buyer_id)}&order=updated_date.desc&limit=50`)).json();
       const lista = Array.isArray(aRows) ? aRows : [];
-      leilao = lista.find((a) => String(a.title || '').trim() === tituloLeilao) || null;
-      if (leilao) console.warn(`[FRETE-PENDENTE] pedido ${saleId} sem auction_id no raw; leilão ${leilao.id} identificado pelo título.`);
+      candidatos = lista.filter((a) => String(a.title || '').trim() === tituloLeilao);
+      if (candidatos.length === 1) {
+        leilao = candidatos[0];
+        console.warn(`[FRETE-PENDENTE] pedido ${saleId} sem auction_id no raw; leilão ${leilao.id} identificado pelo título (candidato único).`);
+      } else if (candidatos.length > 1) {
+        leilaoAmbiguo = true;
+        console.error(`[FRETE-PENDENTE] pedido ${saleId}: ${candidatos.length} leilões do mesmo comprador com o título "${tituloLeilao}".`);
+      }
+    }
+    if (leilaoAmbiguo) {
+      return res.status(200).json({
+        success: false, debitado: false, ambiguo: true,
+        error: `Existem ${candidatos.length} leilões deste comprador com o mesmo título. Não dá pra saber qual gerou este pedido, e cobrar por palpite sairia do produto errado.`,
+        dica: 'Repita a chamada com auction_id: "<id do leilão certo>".',
+        candidatos: candidatos.map((a) => ({ id: a.id, titulo: a.title, valor_final: a.current_price })),
+      });
+    }
+    // 🔒 Identificação por palpite pode SUGERIR, mas nunca cobrar. Se o vínculo
+    // não está gravado no pedido nem foi informado explicitamente, o modo
+    // `executar` para aqui.
+    const vinculoProvado = Boolean(auctionIdInformado || String(raw?.auction_id || '').trim());
+    if (executar && !apenasCompletar && leilao && !vinculoProvado) {
+      return res.status(200).json({
+        success: false, debitado: false,
+        error: 'Este pedido não tem o leilão gravado. O leilão abaixo foi identificado por semelhança de título — isso serve para conferir, não para cobrar.',
+        dica: 'Confira e repita com auction_id: "<id>" para autorizar a cobrança.',
+        leilao_provavel: { id: leilao.id, titulo: leilao.title, valor_final: leilao.current_price },
+      });
     }
     if (!leilao) {
       return res.status(200).json({
@@ -274,6 +329,30 @@ export default async function handler(req, res) {
 
     // ── MODO COMPLETAR: sem débito, sem saldo, só grava o que faltou ────────
     if (apenasCompletar) {
+      // ══════════════════════════════════════════════════════════════════════
+      // 🔴 BLOQUEADOR 21 (auditoria OpenAI, 21/08/2026) — SERVIÇO INCOMPATÍVEL
+      //    COM O FRETE QUE JÁ FOI PAGO
+      // ══════════════════════════════════════════════════════════════════════
+      // Aqui o valor NÃO muda: o cliente já pagou `freteAtual` no lance. Mas eu
+      // gravava o ID e o nome do serviço da opção MAIS BARATA da cotação de
+      // hoje, porque era o padrão de `cotarFreteDoLeilao` quando ninguém escolhe.
+      // Resultado possível: o pedido diz "pagou R$ 11,60" e carrega o ID de um
+      // serviço que custa R$ 25 — a etiqueta sai por esse serviço e a diferença
+      // aparece na fatura da transportadora, sem ninguém entender de onde veio.
+      //
+      // Agora, quando o operador não escolhe explicitamente, a opção é a de
+      // preço MAIS PRÓXIMO do que foi pago, e o pedido registra os dois números
+      // lado a lado. Nunca fingir que o serviço gravado é exatamente o que foi
+      // cotado lá atrás — porque não é, e a diferença precisa ser visível.
+      let servicoCompletar = escolhida;
+      let diferenca = null;
+      if (!freteIdEscolhido && Array.isArray(opcoes) && opcoes.length && freteAtual > 0) {
+        servicoCompletar = opcoes.reduce((melhor, o) =>
+          Math.abs(Number(o.preco) - freteAtual) < Math.abs(Number(melhor.preco) - freteAtual) ? o : melhor, opcoes[0]);
+      }
+      if (servicoCompletar && freteAtual > 0) {
+        diferenca = Math.round((Number(servicoCompletar.preco) - freteAtual) * 100) / 100;
+      }
       const rawCompleto = {
         ...raw,
         delivery_type: 'delivery',
@@ -281,11 +360,18 @@ export default async function handler(req, res) {
         frete: {
           ...(raw.frete || {}),
           valor: freteAtual,                          // ⚠️ o valor NÃO muda
-          id: escolhida?.id || raw?.frete?.id || null,
-          empresa: escolhida?.empresa || raw?.frete?.empresa || null,
-          servico: escolhida?.nome || raw?.frete?.servico || null,
-          prazo: escolhida?.prazo ?? raw?.frete?.prazo ?? null,
+          id: servicoCompletar?.id || raw?.frete?.id || null,
+          empresa: servicoCompletar?.empresa || raw?.frete?.empresa || null,
+          servico: servicoCompletar?.nome || raw?.frete?.servico || null,
+          prazo: servicoCompletar?.prazo ?? raw?.frete?.prazo ?? null,
           cep,
+          // 🔍 trilha honesta: o que foi PAGO e o que a cotação de HOJE custa.
+          valor_recotado: servicoCompletar?.preco ?? null,
+          diferenca_para_o_pago: diferenca,
+          servico_escolhido_por: freteIdEscolhido ? 'operador' : (servicoCompletar ? 'preco_mais_proximo_do_pago' : 'nenhum'),
+          // 🔴 o serviço NÃO é comprovadamente o que foi cotado no lance:
+          // o pedido nasceu sem serviço nenhum, por isso esta rota existe.
+          servico_confirmado_da_cotacao_original: false,
           completado_em: new Date().toISOString(),
           completado_por: actorId,
           motivo: 'frete ja pago no lance; pedido nasceu sem delivery_type/endereco/servico',
@@ -296,8 +382,13 @@ export default async function handler(req, res) {
           success: true, modo: 'conferencia', debitado: false, alterado: false,
           pedido: { id: venda.id, titulo: venda.product_title, comprador: venda.buyer_name },
           frete_ja_pago: freteAtual,
+          cotacao_de_hoje: servicoCompletar?.preco ?? null,
+          diferenca_para_o_pago: diferenca,
+          opcoes,
           vai_gravar: { delivery_type: 'delivery', endereco, servico: rawCompleto.frete },
-          aviso: 'Nada foi cobrado e nada foi alterado. Para gravar, repita com executar: true.',
+          aviso: (diferenca != null && Math.abs(diferenca) >= 0.01)
+            ? `ATENÇÃO: o cliente pagou R$ ${freteAtual.toFixed(2)} e o serviço mais próximo hoje custa R$ ${Number(servicoCompletar.preco).toFixed(2)} (diferença de R$ ${diferenca.toFixed(2)}). O valor cobrado NÃO muda — a diferença sai da empresa. Escolha outra opção com frete_id se preferir. Para gravar, repita com executar: true.`
+            : 'Nada foi cobrado e nada foi alterado. Para gravar, repita com executar: true.',
         });
       }
       // 🔴 BLOQUEADOR 10 — este PATCH não era conferido. `fetch` NÃO lança em
@@ -321,6 +412,8 @@ export default async function handler(req, res) {
         success: true, debitado: false, alterado: true,
         pedido: { id: venda.id, titulo: venda.product_title, comprador: venda.buyer_name },
         frete_ja_pago: freteAtual,
+        cotacao_de_hoje: servicoCompletar?.preco ?? null,
+        diferenca_para_o_pago: diferenca,
         servico: rawCompleto.frete,
         proximo_passo: 'Pedido completo. A etiqueta já pode ser gerada pelo botão Etiqueta.',
       });
@@ -389,24 +482,73 @@ export default async function handler(req, res) {
     // ⚠️ A assinatura é (_sale_id text, _valor numeric, _raw jsonb, _actor text).
     // O `_raw` é o pedido JÁ MONTADO: a RPC grava exatamente o que vier aqui, e
     // se recusa a gravar se `_raw.frete.valor` não for igual a `_valor`.
-    const rawRpc = montarRawCobrado({
-      raw, endereco, cep, valorCobrar, escolhida, actorId, ehOverride, overrideMotivo,
-      marcaId: `rpc_${saleId.slice(0, 8)}`, venda,
-    });
+    // ⚠️ A1 É INVARIANTE DE REGRESSÃO. A assinatura é
+    // (_sale_id text, _valor numeric, _frete jsonb, _actor text). NUNCA voltar a
+    // mandar `_user_id` ou `_actor_id`: argumento inexistente faz o PostgREST
+    // responder 404, o código lê 404 como "RPC não aplicada", e a rota diria
+    // PARA SEMPRE que falta aplicar uma RPC já aplicada. Falha silenciosa.
+    //
+    // 🔴 BLOQUEADOR 19 (auditoria OpenAI, 21/08/2026) — O `_raw` INTEIRO SAIU.
+    // Antes o chamador lia `raw_base44`, montava o documento completo e mandava
+    // para a RPC gravar. O `FOR UPDATE` da RPC impede duas RPCs concorrentes,
+    // mas NÃO impede que outro fluxo (o `apenas_completar`, a tela de pedidos,
+    // um webhook) tenha atualizado o pedido entre a minha leitura e a minha
+    // trava. A RPC pegaria a trava depois e sobrescreveria a atualização recente
+    // com o documento que eu li antes. Overwrite silencioso.
+    //
+    // Agora o chamador manda SÓ o bloco do frete. Quem monta o documento novo é
+    // a RPC, em cima do `raw_base44` lido DENTRO do `FOR UPDATE` — o único que
+    // é garantidamente atual.
+    const freteRpc = blocoFreteCobrado({ cep, valorCobrar, escolhida, actorId, ehOverride, overrideMotivo, marcaId: `rpc_${saleId.slice(0, 8)}` });
     const rpc = await sb('rpc/cobrar_frete_pendente', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ _sale_id: saleId, _valor: valorCobrar, _raw: rawRpc, _actor: actorId }),
+      body: JSON.stringify({
+        _sale_id: saleId, _valor: valorCobrar, _frete: freteRpc, _actor: actorId,
+        _endereco: endereco,
+      }),
     });
     if (rpc.ok) {
       const saida = await rpc.json().catch(() => null);
+      // ══════════════════════════════════════════════════════════════════════
+      // 🔴 BLOQUEADOR 18 — HTTP 200 NÃO É "COBROU".
+      // ══════════════════════════════════════════════════════════════════════
+      // A função devolve `{ok:false, motivo:'saldo_insuficiente'}`,
+      // `{ok:false, motivo:'ja_tem_frete'}`, `{ok:false,
+      // motivo:'raw_nao_bate_com_valor'}` — e o PostgREST entrega tudo isso como
+      // HTTP 200, porque do ponto de vista dele a chamada funcionou. Eu tratava
+      // `rpc.ok` como sucesso e respondia "cobrança concluída, debitado: true"
+      // para uma transação que RECUSOU e não moveu um centavo. O operador
+      // marcaria o pedido como resolvido e o frete continuaria a descoberto.
+      // Agora o que decide é o resultado LÓGICO.
+      const lista = Array.isArray(saida) ? saida[0] : saida;
+      const resultado = (lista && typeof lista === 'object' && 'ok' in lista) ? lista : (lista?.cobrar_frete_pendente ?? lista);
+      if (resultado?.ok !== true) {
+        console.error(`[FRETE-PENDENTE] RPC recusou (${resultado?.motivo || 'sem motivo'}) — pedido ${saleId}. NADA foi cobrado.`);
+        return res.status(200).json({
+          success: false, debitado: false, via: 'rpc',
+          motivo: resultado?.motivo || 'rpc_recusou',
+          error: {
+            saldo_insuficiente: 'O comprador não tem saldo suficiente. Nada foi cobrado.',
+            ja_tem_frete: 'Este pedido já tem frete cobrado. Nada foi cobrado.',
+            raw_nao_bate_com_valor: 'O valor a debitar não bate com o frete que seria gravado no pedido. A transação foi recusada e nada foi cobrado — isto é defeito de código, avise o suporte.',
+            raw_nao_e_delivery: 'A transação recusou porque o pedido não sairia como entrega. Nada foi cobrado.',
+            valor_invalido: 'Valor de frete inválido. Nada foi cobrado.',
+            pedido_nao_encontrado: 'Pedido não encontrado. Nada foi cobrado.',
+            nao_e_arremate: 'Este pedido não é um arremate. Nada foi cobrado.',
+            comprador_nao_encontrado: 'Comprador não encontrado. Nada foi cobrado.',
+            pedido_mudou: 'O pedido foi alterado por outro processo durante a cobrança. Nada foi cobrado — confira e tente de novo.',
+          }[resultado?.motivo] || 'A cobrança transacional foi recusada. Nada foi cobrado.',
+          resultado,
+        });
+      }
       console.warn(`[FRETE-PENDENTE] cobrança transacional OK — pedido ${saleId}, R$ ${valorCobrar}, por ${actorId}.`);
       return res.status(200).json({
         success: true, debitado: true, via: 'rpc',
         pedido: { id: venda.id, titulo: venda.product_title, comprador: venda.buyer_name },
         frete_cobrado: valorCobrar,
         servico: escolhida ? { id: escolhida.id, empresa: escolhida.empresa, nome: escolhida.nome, prazo: escolhida.prazo } : null,
-        resultado: saida,
+        resultado,
       });
     }
     const erroRpc = await rpc.text().catch(() => '');
