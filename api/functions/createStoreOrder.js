@@ -134,7 +134,9 @@ export default async function handler(req, res) {
           ? [{ title: `Frete - ${[frete.empresa, frete.servico].filter(Boolean).join(' ') || 'Entrega'}`.slice(0, 200), quantity: 1, unit_price: round2(frete.valor), currency_id: 'BRL' }]
           : []),
       ],
-      payer: { email: customer.email || 'comprador@leilaonozap.net', name: cFirst || 'Cliente', surname: cRest.join(' ') || 'NoZap' },
+      // 🔴 PONTO 124 (21/08/2026): payer sem CPF — o ramo PIX logo acima (linha 116)
+      // já manda `identification`, este de cartão ficou sem. Ver createMPCatalogCardCheckout.js.
+      payer: { email: customer.email || 'comprador@leilaonozap.net', name: cFirst || 'Cliente', surname: cRest.join(' ') || 'NoZap', ...(customer.cpf ? { identification: { type: 'CPF', number: String(customer.cpf).replace(/\D/g, '') } } : {}) },
       external_reference: saleId,
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
       back_urls: { success: `${BASE_URL}/loja/${slug}?pago=${tracking}`, failure: `${BASE_URL}/loja/${slug}`, pending: `${BASE_URL}/loja/${slug}` },
