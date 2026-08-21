@@ -6,6 +6,11 @@ import assert from 'node:assert/strict';
 import { conferirUrl, buscarComSeguranca } from '../api/_lib/urlSegura.js';
 
 const fetchReal = globalThis.fetch;
+
+// DNS de mentira: todo nome ficticio dos testes resolve para um IP publico.
+// Sem isto os testes dependeriam de rede real e de nomes que existam.
+const dnsPublico = async () => [{ address: '93.184.216.34', family: 4 }];
+const dnsInterno = async () => [{ address: '10.0.0.5', family: 4 }];
 afterEach(() => { globalThis.fetch = fetchReal; });
 
 // ── dublê de resposta ────────────────────────────────────────────────────────
@@ -94,7 +99,7 @@ describe('buscarComSeguranca — redirecionamento', () => {
       if (String(u).endsWith('/foto.jpg')) return resposta(302, { location: 'http://169.254.169.254/latest/' });
       return resposta(200, { 'content-type': 'image/jpeg' }, corpoStream([bytes(10)]));
     };
-    const r = await buscarComSeguranca('https://atacante.com/foto.jpg', { maxBytes: 1e6, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://atacante.com/foto.jpg', { resolverDNS: dnsPublico, maxBytes: 1e6, tiposAceitos: ['image/'] });
     assert.equal(r.ok, false);
     assert.match(r.motivo, /^redirecionou_para_/);
     assert.equal(visitadas.some((v) => v.includes('169.254')), false, 'o servidor CHEGOU a buscar a URL interna');
@@ -108,7 +113,7 @@ describe('buscarComSeguranca — redirecionamento', () => {
       if (String(u).endsWith('/b.jpg')) return resposta(302, { location: 'http://127.0.0.1:6379/' });
       return resposta(200, { 'content-type': 'image/jpeg' }, corpoStream([bytes(10)]));
     };
-    const r = await buscarComSeguranca('https://atacante.com/a.jpg', { maxBytes: 1e6, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://atacante.com/a.jpg', { resolverDNS: dnsPublico, maxBytes: 1e6, tiposAceitos: ['image/'] });
     assert.equal(r.ok, false);
     assert.equal(visitadas.some((v) => v.includes('127.0.0.1')), false);
   });
@@ -119,14 +124,14 @@ describe('buscarComSeguranca — redirecionamento', () => {
       if (String(u).endsWith('/2.jpg')) return resposta(302, { location: 'https://cdn.bom.com/3.jpg' });
       return resposta(200, { 'content-type': 'image/png' }, corpoStream([bytes(64)]));
     };
-    const r = await buscarComSeguranca('https://cdn.bom.com/1.jpg', { maxBytes: 1e6, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://cdn.bom.com/1.jpg', { resolverDNS: dnsPublico, maxBytes: 1e6, tiposAceitos: ['image/'] });
     assert.equal(r.ok, true);
     assert.equal(r.buffer.byteLength, 64);
   });
 
   test('laco de redirecionamento e cortado', async () => {
     globalThis.fetch = async () => resposta(302, { location: 'https://cdn.bom.com/loop.jpg' });
-    const r = await buscarComSeguranca('https://cdn.bom.com/loop.jpg', { maxBytes: 1e6 });
+    const r = await buscarComSeguranca('https://cdn.bom.com/loop.jpg', { resolverDNS: dnsPublico, maxBytes: 1e6 });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'redirecionamento_demais');
   });
@@ -136,7 +141,7 @@ describe('buscarComSeguranca — redirecionamento', () => {
 describe('buscarComSeguranca — teto de tamanho', () => {
   test('resposta pequena e normal passa', async () => {
     globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg', 'content-length': '1024' }, corpoStream([bytes(1024)]));
-    const r = await buscarComSeguranca('https://cdn.bom.com/ok.jpg', { maxBytes: 8192, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://cdn.bom.com/ok.jpg', { resolverDNS: dnsPublico, maxBytes: 8192, tiposAceitos: ['image/'] });
     assert.equal(r.ok, true);
     assert.equal(r.buffer.byteLength, 1024);
   });
@@ -151,7 +156,7 @@ describe('buscarComSeguranca — teto de tamanho', () => {
     corpo.getReader = (...a) => { pegouLeitor = true; return getReaderOriginal(...a); };
 
     globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg', 'content-length': '99000000' }, corpo);
-    const r = await buscarComSeguranca('https://cdn.bom.com/g.jpg', { maxBytes: 8192, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://cdn.bom.com/g.jpg', { resolverDNS: dnsPublico, maxBytes: 8192, tiposAceitos: ['image/'] });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'arquivo_grande_demais');
     assert.equal(pegouLeitor, false, 'comecou a ler o corpo mesmo com o tamanho declarado acima do teto');
@@ -165,7 +170,7 @@ describe('buscarComSeguranca — teto de tamanho', () => {
       pull(c) { const p = pedacos.shift(); if (!p) { c.close(); return; } entregues++; c.enqueue(p); },
     });
     globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg' }, corpo);
-    const r = await buscarComSeguranca('https://cdn.bom.com/sem-len.jpg', { maxBytes: 4096, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://cdn.bom.com/sem-len.jpg', { resolverDNS: dnsPublico, maxBytes: 4096, tiposAceitos: ['image/'] });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'arquivo_grande_demais');
     assert.ok(entregues <= 6, `leu ${entregues} pedacos de 20 — deveria ter cortado por volta do 5º`);
@@ -178,7 +183,7 @@ describe('buscarComSeguranca — teto de tamanho', () => {
       pull(c) { const p = pedacos.shift(); if (!p) { c.close(); return; } entregues++; c.enqueue(p); },
     });
     globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg', 'content-length': '10' }, corpo);
-    const r = await buscarComSeguranca('https://cdn.bom.com/mente.jpg', { maxBytes: 4096, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://cdn.bom.com/mente.jpg', { resolverDNS: dnsPublico, maxBytes: 4096, tiposAceitos: ['image/'] });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'arquivo_grande_demais');
     assert.ok(entregues <= 6, `leu ${entregues} pedacos — o corte por contagem nao funcionou`);
@@ -189,7 +194,7 @@ describe('buscarComSeguranca — teto de tamanho', () => {
 describe('buscarComSeguranca — tipo e tempo', () => {
   test('html se passando por imagem e recusado', async () => {
     globalThis.fetch = async () => resposta(200, { 'content-type': 'text/html' }, corpoStream([bytes(10)]));
-    const r = await buscarComSeguranca('https://cdn.bom.com/pagina.html', { maxBytes: 1e6, tiposAceitos: ['image/'] });
+    const r = await buscarComSeguranca('https://cdn.bom.com/pagina.html', { resolverDNS: dnsPublico, maxBytes: 1e6, tiposAceitos: ['image/'] });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'tipo_nao_aceito');
   });
@@ -205,7 +210,7 @@ describe('buscarComSeguranca — tipo e tempo', () => {
     // signal, ele penduraria aqui — foi o que aconteceu na primeira execução.
     globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg' }, corpo);
     const inicio = Date.now();
-    const r = await buscarComSeguranca('https://lento.com/f.jpg', { maxBytes: 1e9, tiposAceitos: ['image/'], timeoutMs: 300 });
+    const r = await buscarComSeguranca('https://lento.com/f.jpg', { resolverDNS: dnsPublico, maxBytes: 1e9, tiposAceitos: ['image/'], timeoutMs: 300 });
     const gasto = Date.now() - inicio;
     assert.equal(r.ok, false, 'o servidor lento nao foi cortado');
     assert.ok(gasto < 4000, `demorou ${gasto}ms — o prazo nao funcionou`);
@@ -217,16 +222,62 @@ describe('buscarComSeguranca — tipo e tempo', () => {
         const e = new Error('abortado'); e.name = 'AbortError'; rej(e);
       });
     });
-    const r = await buscarComSeguranca('https://travado.com/f.jpg', { maxBytes: 1e6, timeoutMs: 1000 });
+    const r = await buscarComSeguranca('https://travado.com/f.jpg', { resolverDNS: dnsPublico, maxBytes: 1e6, timeoutMs: 1000 });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'tempo_esgotado');
   });
 
   test('origem que responde erro devolve motivo proprio', async () => {
     globalThis.fetch = async () => resposta(404, {});
-    const r = await buscarComSeguranca('https://cdn.bom.com/sumiu.jpg', { maxBytes: 1e6 });
+    const r = await buscarComSeguranca('https://cdn.bom.com/sumiu.jpg', { resolverDNS: dnsPublico, maxBytes: 1e6 });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'origem_respondeu_erro');
     assert.equal(r.status, 404);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('buscarComSeguranca — nome publico que aponta pra dentro', () => {
+  test('dominio publico resolvendo para 10.0.0.5 e barrado', async () => {
+    let buscou = false;
+    globalThis.fetch = async () => { buscou = true; return resposta(200, { 'content-type': 'image/jpeg' }, corpoStream([bytes(10)])); };
+    const r = await buscarComSeguranca('https://interno.exemplo.com/f.jpg', {
+      resolverDNS: dnsInterno, maxBytes: 1e6, tiposAceitos: ['image/'],
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'dns_aponta_para_rede_interna');
+    assert.equal(buscou, false, 'chegou a buscar um nome que resolve pra rede interna');
+  });
+
+  test('redirecionamento para nome que resolve pra dentro tambem e barrado', async () => {
+    const visitadas = [];
+    let chamadas = 0;
+    globalThis.fetch = async (u) => { visitadas.push(String(u)); return resposta(302, { location: 'https://interno.exemplo.com/x.jpg' }); };
+    const r = await buscarComSeguranca('https://cdn.bom.com/1.jpg', {
+      resolverDNS: async (h) => (h === 'cdn.bom.com' ? [{ address: '93.184.216.34', family: 4 }] : [{ address: '127.0.0.1', family: 4 }]),
+      maxBytes: 1e6,
+    });
+    assert.equal(r.ok, false);
+    assert.match(r.motivo, /^redirecionou_para_dns/);
+    assert.equal(visitadas.some((v) => v.includes('interno.exemplo.com')), false);
+  });
+
+  test('DNS que nao resolve e recusado', async () => {
+    globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg' }, corpoStream([bytes(10)]));
+    const r = await buscarComSeguranca('https://nao-existe.exemplo/f.jpg', {
+      resolverDNS: async () => { throw new Error('ENOTFOUND'); }, maxBytes: 1e6,
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'dns_nao_resolveu');
+  });
+
+  test('IPv6 devolvido pelo DNS tambem e conferido', async () => {
+    globalThis.fetch = async () => resposta(200, { 'content-type': 'image/jpeg' }, corpoStream([bytes(10)]));
+    const r = await buscarComSeguranca('https://duplo.exemplo.com/f.jpg', {
+      resolverDNS: async () => [{ address: '93.184.216.34', family: 4 }, { address: 'fd00::1', family: 6 }],
+      maxBytes: 1e6,
+    });
+    assert.equal(r.ok, false, 'passou mesmo com um IPv6 interno na resposta do DNS');
+    assert.equal(r.motivo, 'dns_aponta_para_rede_interna');
   });
 });

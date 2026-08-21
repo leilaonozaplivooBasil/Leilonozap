@@ -30,6 +30,8 @@
 // esse resto é a rede da hospedagem, não código de aplicação. Está anotado de
 // propósito — não é lista de "100% seguro".
 
+import dns from 'node:dns/promises';
+
 /** Quantos saltos de redirecionamento a gente aceita seguir. */
 const MAX_SALTOS = 3;
 
@@ -145,6 +147,64 @@ export function conferirUrl(bruta, opcoes = {}) {
   return { ok: true, motivo: 'ok', url: u };
 }
 
+/**
+ * Resolve o nome e confere CADA endereço que o DNS devolveu.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════
+ * O QUE ISTO FECHA — e o que NÃO fecha
+ * ══════════════════════════════════════════════════════════════════════════════
+ * `conferirUrl` barra o que está ESCRITO na URL. Não barra um domínio público
+ * cujo DNS aponta para dentro:
+ *     https://interno.exemplo.com  →  A  →  10.0.0.5
+ * Nomes assim existem de montão e são o caminho fácil (127.0.0.1.nip.io,
+ * localtest.me e afins). Aqui o nome é resolvido e TODO endereço devolvido passa
+ * pela mesma régua de rede interna.
+ *
+ * ⚠️ NÃO FECHA DNS REBINDING. Entre esta conferência e a conexão de verdade
+ * existe uma janela: quem controla o DNS pode responder um IP público agora e um
+ * IP interno um instante depois, com TTL zero. Fechar isso de verdade exige fixar
+ * o IP conferido na conexão — o `fetch` do runtime não permite isso sem trocar o
+ * dispatcher. Fica registrado como risco residual, não como resolvido.
+ * Quem fecha o resto é a rede da hospedagem, não código de aplicação.
+ */
+async function conferirDNS(hostname, resolver = null) {
+  // IP escrito direto na URL já foi conferido por conferirUrl; não há o que resolver.
+  if (/^\[?[0-9a-f:.]+\]?$/i.test(hostname) && (octetos(hostname) || hostname.includes(':'))) {
+    return { ok: true, motivo: 'ok' };
+  }
+  // `resolver` existe para o teste poder trocar o DNS por um dublê. Em produção
+  // fica nulo e usa o resolvedor do sistema. Sem isso, o teste dependeria de
+  // rede de verdade e de nomes que existam — o que o tornaria instável e lento.
+  let enderecos;
+  try {
+    enderecos = resolver
+      ? await resolver(hostname)
+      : await dns.lookup(hostname, { all: true, verbatim: true });
+  } catch {
+    return { ok: false, motivo: 'dns_nao_resolveu' };
+  }
+  if (!enderecos?.length) return { ok: false, motivo: 'dns_sem_endereco' };
+
+  for (const { address, family } of enderecos) {
+    if (family === 4) {
+      const oct = octetos(address);
+      if (!oct || ipv4Proibido(oct)) return { ok: false, motivo: 'dns_aponta_para_rede_interna' };
+    } else if (ipv6Proibido(address)) {
+      return { ok: false, motivo: 'dns_aponta_para_rede_interna' };
+    }
+  }
+  return { ok: true, motivo: 'ok' };
+}
+
+/**
+ * Descarta o corpo de uma resposta que a gente não vai usar.
+ * Sem isso, um 3xx ou um 404 com corpo gigante fica pendurado no socket até o
+ * runtime resolver limpar. Achado da auditoria independente da OpenAI.
+ */
+function descartarCorpo(resposta) {
+  try { resposta?.body?.cancel?.(); } catch { /* já fechado */ }
+}
+
 /** Teto de tempo padrão para a busca inteira, incluindo os redirecionamentos. */
 const TIMEOUT_PADRAO_MS = 10_000;
 
@@ -247,12 +307,13 @@ async function lerComTeto(resposta, maxBytes, abortador, prazoFinal) {
  *   maxBytes       teto de tamanho do corpo; passou disso, a conexão é cortada
  *   tiposAceitos   prefixos de content-type aceitos (ex.: ['image/'])
  *   timeoutMs      prazo total, incluindo redirecionamentos (padrão 10s)
+ *   resolverDNS    só para teste: troca o resolvedor de nomes por um dublê
  * @returns {Promise<{ok:boolean, motivo:string, status?:number, tipo?:string, buffer?:ArrayBuffer, urlFinal?:string}>}
  */
 export async function buscarComSeguranca(bruta, opcoes = {}) {
   const {
     headers = {}, permitirHttp = false, maxBytes = 0,
-    tiposAceitos = null, timeoutMs = TIMEOUT_PADRAO_MS,
+    tiposAceitos = null, timeoutMs = TIMEOUT_PADRAO_MS, resolverDNS = null,
   } = opcoes;
 
   const prazoFinal = Date.now() + Math.max(1000, Number(timeoutMs) || TIMEOUT_PADRAO_MS);
@@ -262,6 +323,12 @@ export async function buscarComSeguranca(bruta, opcoes = {}) {
     const conf = conferirUrl(alvo, { permitirHttp });
     if (!conf.ok) {
       return { ok: false, motivo: salto === 0 ? conf.motivo : `redirecionou_para_${conf.motivo}` };
+    }
+
+    // 🔒 o nome pode ser público e apontar para dentro — resolve e confere
+    const dnsOk = await conferirDNS(conf.url.hostname, resolverDNS);
+    if (!dnsOk.ok) {
+      return { ok: false, motivo: salto === 0 ? dnsOk.motivo : `redirecionou_para_${dnsOk.motivo}` };
     }
 
     const restante = prazoFinal - Date.now();
@@ -282,6 +349,7 @@ export async function buscarComSeguranca(bruta, opcoes = {}) {
       }
 
       if (resposta.status >= 300 && resposta.status < 400) {
+        descartarCorpo(resposta);   // o corpo do 3xx não serve pra nada
         const destino = resposta.headers.get('location');
         if (!destino) return { ok: false, motivo: 'redirecionamento_sem_destino', status: resposta.status };
         // Location pode ser relativo ("/outra.jpg") — resolve contra a atual.
@@ -290,10 +358,14 @@ export async function buscarComSeguranca(bruta, opcoes = {}) {
         continue;  // o próximo giro do laço confere a URL nova ANTES de buscar
       }
 
-      if (!resposta.ok) return { ok: false, motivo: 'origem_respondeu_erro', status: resposta.status };
+      if (!resposta.ok) {
+        descartarCorpo(resposta);
+        return { ok: false, motivo: 'origem_respondeu_erro', status: resposta.status };
+      }
 
       const tipo = (resposta.headers.get('content-type') || '').toLowerCase();
       if (tiposAceitos && !tiposAceitos.some((p) => tipo.startsWith(p))) {
+        descartarCorpo(resposta);
         try { abortador.abort(); } catch { /* ok */ }   // não baixa o que não serve
         return { ok: false, motivo: 'tipo_nao_aceito', status: resposta.status, tipo };
       }
@@ -301,6 +373,7 @@ export async function buscarComSeguranca(bruta, opcoes = {}) {
       // 1ª barreira: o que a origem DECLARA. Barato, evita começar a baixar.
       const declarado = Number(resposta.headers.get('content-length') || 0);
       if (maxBytes > 0 && declarado > maxBytes) {
+        descartarCorpo(resposta);
         try { abortador.abort(); } catch { /* ok */ }
         return { ok: false, motivo: 'arquivo_grande_demais', status: resposta.status, tipo };
       }
