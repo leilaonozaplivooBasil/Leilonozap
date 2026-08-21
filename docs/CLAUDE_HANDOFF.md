@@ -57,201 +57,130 @@ OpenAI deve:
 
 ## 1. ESTADO
 
-Data/hora: **2026-08-21 07:20 UTC**
+- **Branch:** `claude/project-structure-analysis-r1prad`
+- **Commit:** `767b3c44`
+- **Produção:** intocada. **Banco:** intocado. **pg_cron:** intocado.
+- **`npm test`:** 162/162 · **`npm run build`:** exit 0 · worktree limpa
+- **Merge:** NÃO. Aguarda nova auditoria OpenAI.
 
-Branch: `claude/project-structure-analysis-r1prad`
-Base: `56efd74b` · Head: `e8b46e0e` (+ o commit deste handoff)
-Main conhecida: **`9b0659f3`** — a main andou (PRs #68, #69, #70). **Sem conflito**, verificado.
-
-Modo: **IMPLEMENTAÇÃO EM BRANCH · PRODUÇÃO INTOCADA**
-
-```
-Produção alterada ..... NÃO      Banco alterado ........ NÃO
-main alterada ......... NÃO      Merge ................. NÃO
-pg_cron ............... NÃO tocado    RLS ............... intocada
-Nenhum saldo debitado. Nenhum pedido alterado. Cobrança do ARD5856D19 NÃO executada.
-```
-
-`npm run build` exit 0 · `npm test` **98/98** · worktree limpa.
+**Os 11 bloqueadores da auditoria de 21/08: 11/11 corrigidos na branch.**
+Nenhum deles chegou a produção — todos nasceram e morreram nesta branch.
 
 ---
 
-## 2. O QUE FOI ANALISADO
+## 2. OS 11 BLOQUEADORES — O QUE FOI FEITO
 
-Confrontação de F6–F12 e reconstrução da arquitetura de frete: lance normal,
-Buy Now, liquidação, pedido e cobrança de legado.
+| # | Defeito | Correção | Prova |
+|---|---------|----------|-------|
+| B1 | `submitAtomicBuyNow`: `reserva.success` sem checagem e `winnerName` sem declaração → dinheiro reservado + `ReferenceError` no catch que não estorna | checagem e declaração restauradas | 11 dos 17 testes novos falham sem a correção — verificado revertendo |
+| B2 | Testes E–H exercitavam o ajudante, não o handler | 17 testes da **rota real** `submitAtomicBuyNow` | `tests/submitAtomicBuyNow.test.mjs` |
+| B3 | `cotarFrete` assinava `body.items`/`body.cep` | com `auction_id`, o corpo perde a autoridade: produto de `auctions.product_id`, CEP do cadastro. Selo passa a carregar `product_id` | `tests/cotarFrete.test.mjs` (CF3, CF4) |
+| B4 | Tela não mandava selo → `FRETE_MODO=bloquear` recusaria todo lance legítimo | `AuctionRoom` manda `auction_id`+`user_id`, guarda o selo, exige selo na trava de UI; `useBidSubmission` devolve `frete_selo` | `tests/integracaoFrete.test.mjs` IF1 |
+| B5 | `reserveBidBalance` movia `body.amount` | servidor calcula `bid_amount` + frete do selo | RB1: ataque `amount: 0.01` |
+| B6 | Lance fantasma no Buy Now | todo estorno apaga o `auction_message`; se o DELETE falhar, loga `precisa_intervencao` | BR11, BR12, BR13 |
+| B7 | `cobrarFretePendente` cotava com `id: saleId` (F8 de novo) | acha o leilão e cota pelo `product_id`; `settleAuctionWithBalance` passa a gravar `auction_id` no pedido | B7 · id na Melhor Envio |
+| B8 | Corrida na marca; `limparMarca()` sobrescrevia gravação boa | tenta a RPC transacional e **recusa** se ela não existir; compensação só com `FRETE_COBRANCA_COMPENSACAO=liberar`; marca com trava; guarda de cobrança travada subiu para antes da RPC | 5 testes B8 |
+| B9 | Rota de débito aceitava modo observação | crachá **obrigatório** desde o primeiro deploy, independente de `SESSAO_MODO` | B9 · admin sem crachá = 401 |
+| B10 | `apenas_completar` respondia sucesso sem conferir o PATCH | confere e devolve o status | B10 · HTTP 400 e 500 |
+| B11 | `delivery_pendente` aceito na tela, recusado no servidor | não ganha botão de etiqueta; ganha aviso "Entrega pendente — completar endereço"; servidor devolve `endereco_incompleto` em vez de "retirada no balcão" | — |
+
+**RPC 06** ganhou a invariante exigida: `(_raw->'frete'->>'valor')::numeric = _valor`
+comparado em centavos, mais `delivery_type = 'delivery'`. **Continua NÃO APLICADA.**
 
 ---
 
-## 3. ACHADOS
+## 3. O QUE MUDOU DE ARQUITETURA
 
-### 🔴 HIPÓTESES MINHAS DERRUBADAS — a OpenAI achou a causa raiz real
+**O servidor é a única autoridade sobre o frete.** Três lugares decidiam antes;
+agora é um só.
 
-| Minha hipótese | Veredito |
-|---|---|
-| (a) corrida da cotação assíncrona | **DERRUBADA** como causa principal |
-| (b) produto sem dimensões | **DERRUBADA** como causa principal |
+1. `cotarFrete` recebe `auction_id` + `user_id`. Lê o leilão, lê o produto, lê o
+   CEP do cadastro. **Ignora `items` e `cep` do corpo.** Assina cada opção.
+2. O selo (`frete-v1|`, HMAC, 30 min) carrega leilão, pessoa, produto, CEP e
+   valor em centavos.
+3. `reserveBidBalance` confere o selo e calcula `bid_amount + frete`.
+4. `submitAtomicBid` confere o selo **e o produto contra o leilão atual**.
+5. `submitAtomicBuyNow` cota no servidor, reserva produto + frete, e sobrescreve
+   `frete_reservado_valor` com o do novo vencedor.
 
-**Os dois pedidos foram ARREMATE RÁPIDO (Buy Now), não lance normal.** O
-histórico mostra `🔥 ARREMATE RÁPIDO!` com `frete_amount = 0` nos dois. Meu
-diagnóstico F5 descrevia um caminho que existe e é real, mas **não é o que
-produziu esses pedidos**.
+**Rollout em duas etapas continua valendo** (`FRETE_MODO`). Sem a variável, aba
+antiga passa e o log denuncia. `FRETE_MODO=bloquear` **não foi ligado**.
 
-### CAUSA RAIZ REAL — F6
+⚠️ **`submitAtomicBid` continua com UM único import** (`crypto`). Conferido.
+O `select` do leilão ganhou `product_id` **com volta segura**: se a coluna não
+existir, relê o select antigo e segue sem a conferência de produto — coluna nova
+num select transformaria todo lance em 404 (PONTO 83).
 
-`submitAtomicBuyNow.js` reservava `buyNowPrice` (só o produto), criava o lance
-com `frete_amount: 0` e **nunca tocava em `auctions.frete_reservado_valor`**.
+---
 
-```
-ARD5856D19   leilão sem líder anterior  → frete_reservado_valor = 0
-                                        → arremate com frete ZERO
-                                        → a empresa paga a transportadora
+## 4. TESTES — 162, e o que eles provam
 
-AR3BEF1939   lance anterior R$ 6,80 + frete R$ 11,60 (outro CEP)
-             → Buy Now R$ 10,00 com frete_amount = 0
-             → mas o leilão manteve frete_reservado_valor = 11,60
-             → o pedido HERDOU R$ 11,60 que o Buy Now nunca calculou
-```
-
-Os dois resultados aparentemente contraditórios, a mesma causa.
-
-### F7–F12 — todos confirmados, e **F8 a F12 eram erros meus**
-
-| | Achado | Status |
+| Arquivo | Casos | O que cobre |
 |---|---|---|
-| F7 | `freteBloqueia` é só UX; `submitAtomicBid` seguia lendo `body.frete_valor` | **confirmado** |
-| F8 | `montarRawArremate` cotava por `auction.id`, caindo na caixa mínima dos Correios | **confirmado — meu erro** |
-| F9 | entrega paga virava `pickup` silencioso quando faltava endereço | **confirmado — meu erro** |
-| F10 | débito + gravação sem verificação: saldo debitado com pedido intacto | **confirmado — meu erro** |
-| F11 | rota atuava sobre qualquer `catalog_sale`, não só arremate | **confirmado — meu erro** |
-| F12 | valor manual virava direto o cobrado | **confirmado — meu erro** |
+| `urlSegura.test.mjs` | 46 | SSRF |
+| `manageCoupons.test.mjs` | 19 | cupons |
+| `cobrarFretePendente.test.mjs` | 28 | B7, B8, B9, B10 + F10/F11/F12 |
+| `freteLeilao.test.mjs` | 22 | motor de frete + 7 adversariais do selo (B3) |
+| `submitAtomicBuyNow.test.mjs` | 17 | **rota real** do Buy Now (B1, B2, B6) |
+| `reserveBidBalance.test.mjs` | 12 | **rota real** da reserva (B5) |
+| `cotarFrete.test.mjs` | 10 | **rota real** da emissão do selo (B3) |
+| `integracaoFrete.test.mjs` | 8 | **circuito inteiro** COTAÇÃO→SELO→RESERVA→LANCE |
 
-E um que **o próprio código me entregou durante a correção**: com a reserva
-virando produto + frete, os **três** `estornar(userId, buyNowPrice)` deixariam o
-frete preso na reserva do cliente para sempre. Corrigidos para `totalReservar`.
-
----
-
-## 4. HIPÓTESES AINDA NÃO PROVADAS
-
-1. **Quantos outros arremates estão sem frete.** `05_arremates_sem_frete_leitura.sql`
-   segue sem rodar. Agora sabemos que o filtro certo é **Buy Now**, não lance.
-2. A14 / `pg_cron` × Vercel — congelado a pedido, para fechar o frete primeiro.
+A regra que o dono fixou está cumprida: **todo caminho que movimenta dinheiro
+tem teste do handler real.** O único dublê é o `fetch` global.
 
 ---
 
-## 5. ALTERAÇÕES REALIZADAS — 6 commits
+## 5. O QUE A OPENAI PRECISA AUDITAR AGORA
 
-| Commit | O quê |
-|---|---|
-| `b767ff33` | `freteLeilao.js` (motor único, cota por `product_id`) + `freteSelo.js` (HMAC) + `cotarFrete` assinando as opções |
-| `3a155e8f` | **F6** — Buy Now reserva produto+frete, grava `frete_amount` e sobrescreve `frete_reservado_valor` |
-| `ef15223f` | **F7** — o frete do lance vem do selo do servidor, com rollout em duas etapas |
-| `a8982b93` | **F8/F9** — cota pelo produto certo; `delivery_pendente` em vez de `pickup` silencioso |
-| `7af0ef52` | **F10/F11/F12** — três passos verificados com compensação; escopo `kind='arremate'`; override com justificativa |
-| `e8b46e0e` | 30 testes novos (A–R) |
-
-### A decisão de arquitetura, e por que não foi "recotar dentro do lance"
-
-`submitAtomicBid.js` e `reserveBidBalance.js` são **autocontidos por lei** —
-import de 2 níveis já derrubou o lance em produção. E pôr uma chamada de rede à
-Melhor Envio no caminho do lance é somar latência e ponto de falha externo num
-leilão ao vivo com gente clicando no mesmo segundo.
-
-Então: **`cotarFrete` assina cada opção com HMAC; o lance só confere a
-assinatura.** `crypto` já está importado lá. Sem rede, sem import novo.
-Verificado: `submitAtomicBid.js` continua com **um único import**.
-
-É o mesmo desenho do crachá de sessão, pelo mesmo motivo — o dado se prova
-sozinho.
-
-**Rollout em duas etapas**, igual ao crachá e ao webhook do MP: enquanto
-`FRETE_MODO` não for `bloquear`, lance sem selo válido **passa e fica no log**.
-Ligar direto recusaria toda aba já aberta, no meio de leilão ao vivo.
-
-### O que ainda é compensação, e não transação
-
-`cobrarFretePendente` faz três escritas verificadas com estorno. Funciona e está
-testado — mas se o processo morrer entre o débito e o estorno, sobra pendência
-manual. A RPC transacional de verdade está em
-`docs/remediacao_NAO_APLICADA/06_rpc_cobrar_frete.sql`, **não aplicada**, com
-`FOR UPDATE` nas duas linhas, `REVOKE` antes do `GRANT` e rollback documentado.
+1. **B1 de verdade morreu?** `api/functions/submitAtomicBuyNow.js` — conferir que
+   todo caminho após a reserva estorna E limpa o lance.
+2. **B3 fecha mesmo?** `api/functions/cotarFrete.js` — existe algum jeito de o
+   corpo influenciar o que é assinado?
+3. **B5:** algum caminho ainda reserva por `body.amount` com selo válido presente?
+4. **B8:** a RPC 06, com a invariante nova, está correta para aplicar?
+5. **A volta segura do `product_id`** no `submitAtomicBid` é aceitável, ou o
+   risco de perder a conferência de produto supera o de matar o lance?
+6. **Residual conhecido:** `reserveBidBalance` **não** confere o produto do selo
+   (não lê o leilão, e ler custaria uma ida ao banco no caminho do lance ao
+   vivo). Quem confere é o `submitAtomicBid`. Isto é decisão, não esquecimento —
+   dizer se é aceitável.
 
 ---
 
-## 6. AÇÃO NECESSÁRIA DA SEGUNDA IA
+## 6. NÃO FOI FEITO — de propósito
 
-1. **Auditar os 6 commits antes de qualquer merge.** Prioridade: `3a155e8f`
-   (Buy Now, mexe em reserva de saldo) e `7af0ef52` (debita cliente).
-2. **Atacar o selo.** É a peça nova que sustenta a trava financeira: dá para
-   forjar, reusar em outro leilão, reusar depois de vencido, ou fazer o lance
-   aceitar `frete_valor` do corpo com `FRETE_MODO=bloquear` ligado?
-3. **Revisar `06_rpc_cobrar_frete.sql`** — o `FOR UPDATE` nas duas linhas cobre
-   as corridas? Falta algum caminho de erro?
-4. **Rodar `05_arremates_sem_frete_leitura.sql`** — agora com a leitura certa:
-   procurar por Buy Now, não por lance.
-5. Dizer se concorda com o rollout em duas etapas do `FRETE_MODO` ou se acha
-   que deve nascer bloqueando.
+- ❌ Merge · ❌ produção · ❌ banco · ❌ `FRETE_MODO=bloquear`
+- ❌ RPC 06 aplicada · ❌ cobrança do `ARD5856D19` · ❌ completar o `AR3BEF1939`
+- ❌ A14/pg_cron (dois motores de encerramento ainda correndo por minuto)
+- ❌ revogação das 9 RPCs · ❌ RLS Livoo · ❌ `wcfg_read`
+- ❌ 150 políticas `authenticated_*` · ❌ upload anônimo · ❌ `SESSAO_MODO=bloquear`
+- ❌ as 26 senhas em texto puro
+
+Tudo isso segue congelado atrás da frente de frete, por ordem do dono.
 
 ---
 
-## 7. SQL PARA EXECUÇÃO
+## 7. RISCO RESIDUAL REGISTRADO
 
-TIPO: **READ_ONLY** · RISCO: **ZERO**
-`docs/remediacao_NAO_APLICADA/05_arremates_sem_frete_leitura.sql`
-
-Mais esta, para separar Buy Now de lance normal nos pedidos sem frete:
-
-```sql
-SELECT s.id, s.tracking_code, s.product_title, s.total_amount, s.created_date,
-       COALESCE((s.raw_base44 -> 'frete' ->> 'valor')::numeric, 0) AS frete_no_pedido,
-       EXISTS (SELECT 1 FROM public.auction_messages m
-                WHERE m.sender_id = s.buyer_id
-                  AND m.content ILIKE '%ARREMATE RÁPIDO%'
-                  AND m.bid_amount = s.total_amount) AS foi_buy_now
-FROM public.catalog_sales s
-WHERE s.kind = 'arremate'
-  AND COALESCE((s.raw_base44 -> 'frete' ->> 'valor')::numeric, 0) = 0
-ORDER BY s.created_date DESC LIMIT 200;
-```
+- **DNS rebinding** em `urlSegura.js` — não resolvido, documentado.
+- **`reserveBidBalance` sem conferência de produto** — ver item 6 acima.
+- **Selo de 30 min** congela o preço da transportadora nesse intervalo. Tolerância
+  deliberada, igual à de qualquer carrinho.
+- **Migrations drifted**: `supabase/migrations/` nunca foi pipeline. Produção é a
+  única fonte de verdade.
 
 ---
 
-## 8. ROLLBACK
+## 8. DECISÃO PENDENTE DO DONO
 
-Código: `git revert` — os 6 commits são independentes.
-RPC: não aplicada; o `DROP` está comentado no próprio arquivo.
-`FRETE_MODO`: não publicado; apagar a variável volta à etapa 1.
-
----
-
-## 9. O QUE A SEGUNDA IA PRECISA TE DEVOLVER
-
-- crítica ao selo (`freteSelo.js`) — tentativa real de forjar ou reusar
-- crítica ao `3a155e8f` e ao `7af0ef52`, caminho a caminho de dinheiro
-- crítica ao `06_rpc_cobrar_frete.sql`
-- resultado das consultas: **quantos arremates sem frete, e quantos foram Buy Now**
-- posição sobre o rollout em duas etapas do `FRETE_MODO`
-
-**REGRA 4:** contagens, ids de pedido, valores agregados. Nenhum dado de pessoa.
-**REGRA 12:** divergiu → registrar e parar.
+1. Aplicar a **RPC 06** (depois da revisão da OpenAI) — é o que destrava a
+   cobrança do frete pendente. Hoje a rota **recusa** cobrar sem ela.
+2. Ligar **`FRETE_MODO=bloquear`** depois que o log da etapa 1 ficar limpo.
 
 ---
 
-## 10. DECISÃO PENDENTE DO DONO
+## 9. PRÓXIMO PASSO
 
-1. **Merge do PR.** Enquanto não subir, **todo Buy Now continua nascendo sem
-   frete** — o defeito está em produção agora.
-2. **`FRETE_MODO=bloquear`** — depois do log limpo, não junto do merge.
-3. **Cobrança do `ARD5856D19`** — não executada. Roda em conferência primeiro.
-4. **Completar o `AR3BEF1939`** — `apenas_completar`, sem cobrar nada.
-5. **Aplicar a RPC `06`** — opcional; a compensação já funciona.
-
----
-
-## 11. PRÓXIMO PASSO RECOMENDADO
-
-OpenAI ataca o selo e audita os dois commits que mexem em dinheiro
-(`3a155e8f`, `7af0ef52`), porque o merge dessa frente é urgente — o Buy Now
-está em produção nascendo sem frete — e a pressa é justamente o que costuma
-deixar passar defeito em código de dinheiro.
+**OpenAI audita os 4 commits novos** (`50bb0233`, `894fe738`, `3a289c47`,
+`767b3c44`) antes de qualquer merge. Nada vai para produção antes disso.
