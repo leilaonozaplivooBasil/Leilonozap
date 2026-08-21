@@ -185,17 +185,26 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
+    const table = String(body?.table || '').trim();
+    const action = String(body?.action || '');
+    const id = body?.id != null ? String(body.id) : null;
     // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
     // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
     // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
     // O rótulo leva tabela e ação: o log de produção mostrou 9 mil chamadas desta
     // rota em meia hora e não dava pra saber de ONDE vinham. Agora a própria
     // linha do log diz o que estava sendo escrito.
+    //
+    // 🔴 PONTO 123 (21/08/2026) — TODA CHAMADA A ESTA ROTA ESTAVA QUEBRADA.
+    // `table` e `action` eram usados aqui (no rótulo do crachá) ANTES de serem
+    // declarados com `const` mais abaixo. Em JS isso não lê "undefined" — estoura
+    // ReferenceError ("Cannot access 'table' before initialization") por causa da
+    // zona morta temporal do `const`. Resultado: TODA escrita de admin/estoque por
+    // aqui (produtos, leilões, lotes, categorias — tudo que passa por entityWrite)
+    // falhava sempre, desde o PR #66. As duas declarações subiram pra antes desta
+    // chamada — é só isso que faltava.
     const _ses = exigirSessao(req, actorId, `entityWrite:${table}/${action}`, true);
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
-    const table = String(body?.table || '').trim();
-    const action = String(body?.action || '');
-    const id = body?.id != null ? String(body.id) : null;
     if (!actorId || !CONTENT_TABLES.has(table) || !['create', 'update', 'delete', 'bulkCreate'].includes(action)) {
       return res.status(400).json({ success: false, error: 'Parâmetros inválidos ou tabela não permitida' });
     }
