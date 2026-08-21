@@ -201,7 +201,14 @@ export default async function handler(req, res) {
     }
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config ausente' });
 
-    const actorArr = await (await sb(`app_users?select=id,role,career_levels&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
+    // 🩹 Sem `.catch()` aqui, uma resposta não-JSON do Supabase (timeout, erro 5xx,
+    // corpo vazio) derrubava o `.json()` com uma mensagem críptica de parse — o
+    // operador via só "Erro" e não dava pra saber que a checagem de permissão
+    // foi quem falhou.
+    const actorResp = await sb(`app_users?select=id,role,career_levels&id=eq.${encodeURIComponent(actorId)}&limit=1`);
+    const actorArr = await actorResp.json().catch((e) => {
+      throw new Error(`Falha ao verificar permissão do usuário (resposta inválida do banco): ${e?.message || e}`);
+    });
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
     const ok = actor && (['admin', 'super_admin'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
     if (!ok) return res.status(403).json({ success: false, error: 'Sem permissão' });
@@ -302,6 +309,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, rows: ur.rows, removidos: ur.removed, reserva_devolvida: reservaDevolvidaCancel });
   } catch (e) {
-    return res.status(200).json({ success: false, error: 'Erro', details: String(e?.message || e) });
+    // 🩹 Antes disto o campo `error` vinha sempre com a palavra fixa "Erro" — a
+    // causa real ficava só em `details`, que o adapter do front nunca lê (prioriza
+    // `error`). Resultado: toda exceção não prevista aqui virava "Não foi possível
+    // publicar: Erro" pro operador, sem pista nenhuma do que realmente aconteceu.
+    const msg = String(e?.message || e);
+    console.error('[entityWrite] exceção não tratada:', msg);
+    return res.status(200).json({ success: false, error: msg, details: msg });
   }
 }
