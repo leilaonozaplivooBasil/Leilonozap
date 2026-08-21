@@ -1,0 +1,57 @@
+name: OpenAI one-shot status sync patch
+
+on:
+  push:
+    branches:
+      - openai/catalog-status-sync
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'fix(pedidos): sincroniza status local com jornada'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: openai/catalog-status-sync
+          fetch-depth: 0
+
+      - name: Aplicar patch cirúrgico e validar diff
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/CatalogOrdersAdmin.jsx')
+          text = path.read_text(encoding='utf-8')
+          needle = """      setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
+                setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+                toast.success('Etapa da entrega atualizada!');"""
+          replacement = """      setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
+                setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+                setNewStatus(patch.status);
+                toast.success('Etapa da entrega atualizada!');"""
+
+          if text.count(needle) != 1:
+              raise SystemExit(f'GUARD FAIL: trecho esperado apareceu {text.count(needle)} vezes; nada será alterado')
+
+          updated = text.replace(needle, replacement, 1)
+          path.write_text(updated, encoding='utf-8')
+          PY
+
+          git diff --check
+          test "$(git diff --numstat -- src/pages/CatalogOrdersAdmin.jsx | awk '{print $1":"$2}')" = "1:0"
+          test "$(git diff --name-only | wc -l | tr -d ' ')" = "1"
+          git diff -- src/pages/CatalogOrdersAdmin.jsx
+
+      - name: Commitar somente a linha validada e remover workflow temporário
+        shell: bash
+        run: |
+          git config user.name "OpenAI"
+          git config user.email "noreply@openai.com"
+          git add src/pages/CatalogOrdersAdmin.jsx
+          git rm .github/workflows/openai-status-sync-once.yml
+          git commit -m "fix(pedidos): sincroniza status local com jornada"
+          git push origin HEAD:openai/catalog-status-sync
