@@ -473,3 +473,76 @@ código** — nenhum webhook, nenhuma consulta automática; falta checar a
 documentação oficial deles); comunicação de "etiqueta enviada"; passo de
 etiqueta na Jornada da Entrega; proposta de redesenho da tela inteira, a
 apresentar ao dono antes de qualquer implementação ampla.
+
+---
+
+## 11. AUDITORIA SOMENTE-LEITURA — PR #86/#87, pedido feito pela OpenAI (21/08/2026)
+
+> A OpenAI abriu duas branches/PRs próprias sobre a frente de Gestão de
+> Pedidos: `openai/catalog-status-sync` (**PR #86**, destino de produção,
+> `head 65a82898`) e `openai/catalog-status-sync-preview` (**PR #87**, harness
+> de staging isolado, `head 9797f7cb`, aponta pro Supabase `preview-staging`
+> — project ref `obipnfhwiaafxeqgfeop`, NÃO é o projeto de produção
+> `gezvviyegtxytnwjkrjv`). Pediu auditoria técnica completa, somente leitura,
+> sem nenhuma alteração de código, comparando as duas contra `main`. Resposta
+> completa abaixo — nenhum arquivo foi tocado nesta rodada.
+
+**Verificação antes de confiar no que a mensagem descrevia (REGRA 9):**
+confirmei via `list_branches` e `pull_request_read` que as duas branches e
+as duas PRs existem de verdade, ambas draft, ambas abertas pela conta
+`leilaonozaplivooBasil`, base `main@e296d56a` (o commit que acabei de
+deployar nos PONTOs 116-119). **Não conectei a nenhum projeto Supabase**
+(nem o `preview-staging`) — REGRA 13, nunca tocar projeto sem confirmação
+explícita de qual é o certo. Isso limita a certeza de duas partes da
+auditoria (ver achado C abaixo), marcadas como não confirmadas.
+
+### 🔴 Achado crítico, fora da lista pedida: harness de admin fake por hostname
+
+`src/api/plataformaClient.js` na PR #87 loga **qualquer visitante** como
+admin (`localStorage.currentUser = {id:'preview-admin', role:'admin', ...}`)
+só porque o hostname termina em `.vercel.app` — **todo** deploy de preview
+deste projeto cai nesse padrão, não só esta branch. `src/api/supabaseClient.js`
+na mesma PR reaponta **todo** tráfego Supabase pro staging sob a mesma
+condição, com a chave publicável do staging hardcoded no arquivo. Já está
+coberto pela própria regra da OpenAI de não mergear a #87 — registrado aqui
+com força porque é o tipo de código que sobrevive um merge acidental e vira
+bypass de autenticação em produção.
+
+### Causas-raiz das 3 regressões pedidas
+
+| # | Sintoma (print do dono) | Causa raiz | Arquivo/função |
+|---|---|---|---|
+| A | Checkbox de conferência → "Erro ao salvar" | `handleTogglePacked` manda `{raw_base44}` (1 chave, confirmado no código); no Preview isso passa por um Proxy que só libera se `id === 'preview-order-status-sync'` literal — qualquer outro id, ou falha na Edge Function `preview-api`, ou CORS — tudo vira o mesmo toast genérico, que **engole `error.message`** | `CatalogOrdersAdmin.jsx:370` + `plataformaClient.js` (PR #87) |
+| B | Jornada = "Pedido recebido" com Status = "Preparando" | Causa raiz é **minha** (gap do PONTO 117): o dropdown de status só tem itens em inglês, mas `updateOrderStatus.js` grava/aceita português também. A "correção" das PRs foi pior: `select.jsx` (componente **genérico, compartilhado por todo o app**) ganhou um remapeamento silencioso `preparando→paid` etc — o rótulo mostra uma coisa, o valor real que o Radix considera selecionado é outra. Reabrir o dropdown sem trocar nada pode gravar `status` errado sozinho | `select.jsx` (PR #86/#87, revert total recomendado) + dropdown de status em `CatalogOrdersAdmin.jsx` |
+| C | Jornada (Embalando→Entregue) volta a dar "Erro ao atualizar etapa da entrega" | **Não confirmado — preciso do código da Edge Function `preview-api`, que não consegui ler.** Hipótese mais provável: ela reimplementa a lógica de `updateOrderStatus.js` em vez de usar a rota real, e ficou desatualizada em relação aos PONTOs 116-119 de hoje (não reconhece o campo `fulfillment`, ou usa a `ALLOWED` antiga, ou o `actorId` fictício `preview-admin` não existe na tabela `app_users` do staging) | Edge Function `preview-api` (fora deste repositório) |
+
+### Os dois itens à parte pedidos (D, E)
+
+- **Imagem do produto:** `order.product_image` já existe e já é usado na
+  lista — só não é repassado pro card de conferência (`getItemsForChecklist`
+  descarta tudo além de título/qtd). Cobre pedido de 1 item (a maioria, e
+  todos os 6 prints do dono). Pedido com múltiplos itens não tem imagem por
+  item em lugar nenhum do banco hoje (`items_json`/`raw_base44.items` só
+  guardam `product_id`/`title`/`qty`) — resolver isso é trabalho novo
+  (lookup por `product_id` ou gravar imagem na criação do pedido), fora do
+  escopo "usar dado que já existe".
+- **Etiqueta Melhor Envio:** `raw_base44.melhor_envio.{order_id,protocol,
+  label_url}` já é suficiente — sem inventar estado nem chamar a API de
+  novo, é só exibir condicionalmente + link de impressão.
+
+### Recomendação, na ordem
+
+1. Reverter `select.jsx` por completo — prioridade máxima, é o achado B.
+2. Resolver o vocabulário duplo do status na fonte (itens PT no dropdown, ou
+   tradução só na borda da leitura/escrita — nunca dentro de um primitive).
+3. Ler o código de `preview-api` antes de decidir a correção do achado C —
+   a arquitetura correta é essa função **proxiar** pro `updateOrderStatus.js`
+   real contra o banco de staging, não reimplementar a regra por fora (isso
+   garante divergência a cada mudança futura).
+4. Trocar `toast.error('Erro ao salvar')` genérico por mensagem com o erro
+   real — sem isso ninguém diagnostica de fora do console.
+5. Imagem no card (pedido de 1 item) + bloco de etiqueta na Jornada.
+
+**Nada foi escrito nesta rodada.** Resposta completa e sem cortes também
+publicada como comentário nas PRs #86 e #87, pra a OpenAI ver direto onde
+está trabalhando. Aguardando revisão dela antes de qualquer implementação.
