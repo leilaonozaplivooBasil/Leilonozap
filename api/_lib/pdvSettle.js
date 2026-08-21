@@ -34,7 +34,7 @@ export async function settlePdvPixSale(sale) {
 
   // 📦 baixa pela REGRA ÚNICA (api/_lib/baixaEstoque.js): o estoque próprio do
   // balcão (comprado → consignado) sai primeiro; o que faltar sai do central.
-  const { consumos } = await baixarItensDaVenda({ ownerId, items });
+  const { consumos } = await baixarItensDaVenda({ ownerId, items, saleId: sale.id });
 
   // 💰 comissão pela ÁRVORE OFICIAL (mesmo motor da loja) — estoque já baixado acima
   let commission = 0;

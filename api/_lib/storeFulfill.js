@@ -201,9 +201,11 @@ export async function fulfillStoreOrder(sale) {
   // 📦 baixa pela regra única: primeiro o estoque PRÓPRIO do vendedor
   // (comprado → consignado), só depois o estoque central.
   let consumos = [];
+  let faltas = [];
   if (items.length) {
-    const r = await baixarItensDaVenda({ ownerId: sale.seller_id, items });
+    const r = await baixarItensDaVenda({ ownerId: sale.seller_id, items, saleId: sale.id });
     consumos = r.consumos;
+    faltas = r.faltas;
   }
   const baixados = items.length;
   const commission = await payStoreCommissions(sale);
@@ -223,6 +225,11 @@ export async function fulfillStoreOrder(sale) {
       console.error(`[LOJA] Repasse de estoque próprio falhou na venda ${sale.id}:`, e?.message);
     }
   }
-  await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission, fulfillment_status: 'a_enviar' }) });
-  return { loja: true, baixados, commission };
+  // 🔴 PONTO 125 (21/08/2026): pagamento já confirmado, dinheiro já entrou — não dá
+  // pra recusar a venda aqui. O que dá pra fazer é não deixar seguir como se tivesse
+  // dado tudo certo: falta de estoque vira 'sem_estoque' em vez de 'a_enviar', pra
+  // alguém tratar (repor, reembolsar, avisar o cliente) em vez de a peça ir junto
+  // sem existir.
+  await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission, fulfillment_status: faltas.length ? 'sem_estoque' : 'a_enviar' }) });
+  return { loja: true, baixados, commission, faltas };
 }

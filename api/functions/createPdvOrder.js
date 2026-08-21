@@ -101,6 +101,11 @@ export default async function handler(req, res) {
         total += unit * qty; totalQty += qty;
         lines.push({ p, qty, unit, si });
       } else {
+        // 🔴 PONTO 125 (21/08/2026): faltava aqui a MESMA conferência que o ramo do dono
+        // de loja já tem duas linhas acima. Vendedor da rede vendendo do estoque central
+        // vendia qualquer quantidade de qualquer coisa, inclusive item zerado — a baixa
+        // (baixaEstoque.js) descartava calada o que não existia. Agora recusa antes de vender.
+        if ((Number(p.quantity) || 0) < qty) return res.status(200).json({ success: false, error: `Estoque insuficiente de "${(p.description || '').slice(0, 40)}" (tem ${Number(p.quantity) || 0}).` });
         const unit = it.price != null && it.price !== '' ? round2(it.price) : round2(p.price_catalog || p.selling_price_retail || 0);
         total += unit * qty; totalQty += qty;
         sellerId = sellerId || p.distribuidor_id || null;
@@ -342,7 +347,7 @@ export default async function handler(req, res) {
     // 📦 baixa pela REGRA ÚNICA (api/_lib/baixaEstoque.js): o estoque PRÓPRIO do balcão
     // (comprado → consignado) sai primeiro; o que faltar sai do estoque central.
     const donoEstoque = isStoreOwner ? actorId : sellerId;
-    const { consumos } = await baixarItensDaVenda({ ownerId: donoEstoque, items: itemsJson });
+    const { consumos } = await baixarItensDaVenda({ ownerId: donoEstoque, items: itemsJson, saleId });
 
     // 🤝 peça consignada vendida: a dívida dela morre AGORA (débito no saldo, já
     // conferido pela trava acima — nunca deixa saldo negativo nem dívida sobrando)
