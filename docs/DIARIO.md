@@ -345,6 +345,25 @@ vocabulários e o travamento de cancelamento pago nos dois lados. `npm test`:
 BRANCH**. Não mergeado, não deployado, não validado em produção. O dono ainda
 não pode testar isto ao vivo.
 
+---
+
+**Atualização — mesmo dia, dono respondeu "SIM" para mergear e subir.**
+
+- PR #78 aberto, CI verde (`lint · build · testes`, run `32520176021`).
+- Mergeado em `main` por squash (padrão deste repo — confirmado olhando
+  `7c63099d ... (#77)`, `a8a19474 ... #76`): commit `e4437e74`.
+- CI de `main` para `e4437e74`: verde. Status `Vercel` no mesmo commit:
+  **"Deployment has completed"** (verificado direto na API do GitHub, não
+  pela Vercel MCP — ela não está conectada nesta sessão agora, então não dá
+  pra confirmar por aqui, com certeza absoluta, que o alvo foi
+  especificamente "production" e não preview; é o mesmo padrão de status
+  que os deploys de produção anteriores desta sessão sempre mostraram nesta
+  branch, e este projeto não tem outro branch de deploy além de `main`).
+
+**Vocabulário do protocolo, atualizado:** **MERGEADO e DEPLOYADO.** Ainda
+**NÃO VALIDADO EM PRODUÇÃO** — falta o dono tentar editar um pedido de
+verdade na tela e confirmar que salva.
+
 **O que falta desta frente (itens 2 a 7 do pedido original, ainda não
 iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
 etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
