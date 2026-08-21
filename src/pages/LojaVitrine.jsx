@@ -63,7 +63,14 @@ export default function LojaVitrine() {
   useEffect(() => { if (sp.get('pago')) { setCart({}); toast.success('Pagamento confirmado! Pedido ' + sp.get('pago')); } }, [sp]);
 
   const store = data?.store;
-  const items = data?.items || [];
+  // 🔴 PONTO 125 (21/08/2026): a RPC loja_vitrine (busca E navegação normal, é a
+  // mesma) não filtra por estoque — devolvia produto zerado igual aos outros, com
+  // "0 em estoque" escrito no card. O botão "Adicionar" já ficava desabilitado
+  // (inCart >= quantity, e 0 >= 0), mas o produto continuava LISTADO — inclusive
+  // reaparecendo quando o cliente buscava pelo nome. Catalog.jsx (o catálogo geral)
+  // já esconde esgotado por padrão (stockFilter='inStock'); aqui não existia
+  // filtro nenhum. Igualando o comportamento: some da lista, não fica só desabilitado.
+  const items = (data?.items || []).filter((it) => Number(it.quantity) > 0);
   const cartItems = Object.entries(cart).map(([id, v]) => ({ id, ...v }));
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
