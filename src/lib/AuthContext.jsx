@@ -1,144 +1,112 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+/**
+ * AuthContext — estado de sessão do app.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 🔴 21/08/2026 — O QUE ESTE ARQUIVO ERA, E POR QUE FOI REESCRITO
+ * ══════════════════════════════════════════════════════════════════════════════
+ * Este era o último lugar do projeto que importava o SDK da Base44 de verdade
+ * (`@base44/sdk/dist/utils/axios-client`). Ele montava um cliente HTTP e, em
+ * TODA abertura de página, chamava:
+ *
+ *     /api/apps/public/prod/public-settings/by-id/<appId>
+ *
+ * Essa rota NÃO EXISTE neste projeto (não há pasta api/apps). Ou seja: a
+ * chamada dava 404, caía no catch e gravava authError.type = 'unknown'.
+ *
+ * E não era inofensivo. Enquanto essa chamada morta não voltava, o App inteiro
+ * ficava preso num spinner de tela cheia:
+ *
+ *     if (isLoadingPublicSettings || isLoadingAuth) return <spinner/>   (App.jsx:160)
+ *
+ * Ou seja: TODO visitante esperava uma ida-e-volta de rede fadada ao 404 antes
+ * de ver o primeiro pixel do site. O próprio App.jsx já dizia, em comentário,
+ * que a autenticação de verdade é outra ("Este app usa autenticação custom —
+ * AppUser + LoginModal"), e ignorava o erro de propósito.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════
+ * O QUE ELE FAZ AGORA
+ * ══════════════════════════════════════════════════════════════════════════════
+ * Lê a sessão de onde ela realmente vive — localStorage.currentUser, gravado
+ * pelo LoginModal e pelas telas de cadastro — de forma SÍNCRONA. Sem rede, sem
+ * spinner, sem SDK. A FORMA exportada é exatamente a mesma de antes
+ * (user, isAuthenticated, isLoadingAuth, isLoadingPublicSettings, authError,
+ * appPublicSettings, logout, navigateToLogin, checkAppState), então App.jsx e
+ * NavigationTracker.jsx não precisaram de uma linha de mudança.
+ *
+ * `logout` também apaga o crachá de sessão (ver api/_lib/sessao.js): sair tem
+ * que soltar as duas coisas, senão a próxima pessoa na mesma máquina herdaria
+ * um crachá válido.
+ */
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
-  const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+/** Lê o usuário salvo, sem nunca deixar um storage corrompido derrubar o app. */
+function lerUsuarioSalvo() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('currentUser') : null;
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    return u && u.id ? u : null;
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    checkAppState();
+export const AuthProvider = ({ children }) => {
+  // Estado inicial já resolvido: nada de esperar rede para pintar a tela.
+  const [user, setUser] = useState(lerUsuarioSalvo);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!lerUsuarioSalvo());
+
+  // Mantidos por compatibilidade com quem consome o contexto. Sempre resolvidos.
+  const isLoadingAuth = false;
+  const isLoadingPublicSettings = false;
+  const authError = null;
+  const appPublicSettings = null;
+
+  const checkAppState = useCallback(() => {
+    const u = lerUsuarioSalvo();
+    setUser(u);
+    setIsAuthenticated(!!u);
   }, []);
 
-  const checkAppState = async () => {
-    try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }
-  };
+  // Outra aba fez login ou logout? O evento 'storage' só dispara entre abas —
+  // é de graça e mantém as duas em sincronia.
+  useEffect(() => {
+    const aoMudar = (e) => {
+      if (!e || e.key === 'currentUser' || e.key === null) checkAppState();
+    };
+    window.addEventListener('storage', aoMudar);
+    return () => window.removeEventListener('storage', aoMudar);
+  }, [checkAppState]);
 
-  const checkUserAuth = async () => {
+  const logout = useCallback((shouldRedirect = true) => {
     try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
-    }
-  };
-
-  const logout = (shouldRedirect = true) => {
+      localStorage.removeItem('currentUser');
+      // 🔐 o crachá de sessão sai junto — ver api/_lib/sessao.js
+      localStorage.removeItem('sessaoToken');
+    } catch { /* sem storage: segue */ }
     setUser(null);
     setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
-  };
+    if (shouldRedirect && typeof window !== 'undefined') window.location.href = '/';
+  }, []);
 
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
-  };
+  const navigateToLogin = useCallback(() => {
+    // O login mora no LoginModal, dentro do próprio site. A Home abre o modal.
+    if (typeof window !== 'undefined') window.location.href = '/';
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
       isLoadingAuth,
       isLoadingPublicSettings,
       authError,
       appPublicSettings,
       logout,
       navigateToLogin,
-      checkAppState
+      checkAppState,
     }}>
       {children}
     </AuthContext.Provider>

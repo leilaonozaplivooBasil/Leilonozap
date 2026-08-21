@@ -1,4 +1,5 @@
-import base44 from "@base44/vite-plugin"
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -22,6 +23,10 @@ const versionStampPlugin = () => ({
 // https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   logLevel: 'error',
+  // Atalho `@` → src/. Antes vinha de brinde no plugin da Base44; agora é nosso.
+  resolve: {
+    alias: { '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'src') },
+  },
   // 🔖 Carimbo da versão DENTRO do bundle. É a referência real de comparação:
   // sem isso, um aparelho preso em cache antigo nunca descobre que está velho
   // (ver comentário em src/hooks/useAppVersion.js).
@@ -29,12 +34,18 @@ export default defineConfig(({ command }) => ({
   // produção: remove console.* e debugger do bundle (mantém em dev)
   esbuild: command === 'build' ? { drop: ['console', 'debugger'] } : {},
   plugins: [
-    base44({
-      legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
-      hmrNotifier: true,
-      navigationNotifier: true,
-      visualEditAgent: true
-    }),
+    // 🔴 21/08/2026 — O PLUGIN DA BASE44 SAIU DAQUI.
+    // Era `base44({ legacySDKImports, hmrNotifier, navigationNotifier,
+    // visualEditAgent })`. São ferramentas do EDITOR VISUAL da plataforma
+    // Base44, que este projeto não usa mais — o código foi todo trazido pra cá
+    // e roda em Vercel + Supabase. Ele injetava avisos de HMR e de navegação e
+    // o agente de edição visual no build, e imprimia "[base44] Proxy not
+    // enabled" em toda compilação.
+    // ⚠️ ELE FAZIA UMA COISA DE VERDADE, e quase passou batido: era o plugin
+    // que registrava o atalho `@` → `src`. Sem ele o build morre logo no
+    // primeiro import ("Rollup failed to resolve import '@/App.jsx'"). O atalho
+    // agora é declarado em `resolve.alias` aqui embaixo — configuração padrão do
+    // Vite, sem depender de plugin de ninguém. Build conferido, passa.
     react(),
     versionStampPlugin(),
     // 📱 PWA: manifest + service worker (o mobile é o espelho instalável do desktop).
