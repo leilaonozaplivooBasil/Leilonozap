@@ -6,43 +6,11 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-// Compatibilidade restrita aos status legados da Gestão de Pedidos.
-// A Jornada grava alguns estados em português, enquanto o dropdown histórico
-// possui opções equivalentes em inglês. Mantemos o valor real no estado do
-// formulário, mas damos ao Radix um item equivalente para ele nunca ficar vazio.
-const LEGACY_STATUS_ALIAS = {
-  preparando: { value: "paid", label: "Preparando" },
-  saiu_entrega: { value: "shipped", label: "Saiu para entrega" },
-  entregue: { value: "delivered", label: "Entregue" },
-  cancelado: { value: "canceled", label: "Cancelado" },
-}
-
-const LegacySelectValueContext = React.createContext(null)
-
-const Select = ({ value, children, ...props }) => {
-  const legacy = LEGACY_STATUS_ALIAS[value] || null
-  const radixValue = legacy?.value || value
-
-  return (
-    <LegacySelectValueContext.Provider value={legacy?.label || null}>
-      <SelectPrimitive.Root value={radixValue} {...props}>
-        {children}
-      </SelectPrimitive.Root>
-    </LegacySelectValueContext.Provider>
-  )
-}
+const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
 
-const SelectValue = React.forwardRef(({ children, ...props }, ref) => {
-  const legacyLabel = React.useContext(LegacySelectValueContext)
-  return (
-    <SelectPrimitive.Value ref={ref} {...props}>
-      {children ?? legacyLabel ?? undefined}
-    </SelectPrimitive.Value>
-  )
-})
-SelectValue.displayName = SelectPrimitive.Value.displayName
+const SelectValue = SelectPrimitive.Value
 
 const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Trigger

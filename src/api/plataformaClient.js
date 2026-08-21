@@ -13,22 +13,31 @@
  * valia. Este arquivo é esse adapter: por fora parece a API antiga, por dentro
  * fala só com o Supabase e as rotas da Vercel do próprio projeto.
  *
- * PREVIEW ISOLADO: somente nesta branch de teste, acessos *.vercel.app usam a
+ * PREVIEW ISOLADO: somente nesta branch de teste, e só com a variável de
+ * ambiente `VITE_PREVIEW_STAGING=true` explicitamente configurada na Vercel
+ * (ver comentário no fim de `supabaseClient.js`), acessos *.vercel.app usam a
  * Edge Function preview-api do Supabase preview-staging. A correção real de
  * produção continua separada.
+ *
+ * 🔴 PONTO 121 (21/08/2026) — antes o harness ativava sozinho só por causa do
+ * hostname terminar em `.vercel.app` (bate em QUALQUER preview deste projeto)
+ * e usava um JWT hardcoded separado, diferente da chave que `supabaseClient.js`
+ * já usava pro mesmo projeto — provavelmente a causa dos 401 que a OpenAI
+ * achou nos logs depois da v2 da Edge Function (duas chaves divergentes pro
+ * mesmo projeto). Agora reaproveita a MESMA chave resolvida em
+ * `supabaseClient.js` (uma fonte só) e exige a variável de ambiente explícita.
  * ══════════════════════════════════════════════════════════════════════════
  */
 import { plataforma as basePlataforma } from './plataformaAdapter';
-export { supabase } from './supabaseClient';
+import { supabase, PREVIEW_STAGING, SUPABASE_URL, SUPABASE_KEY } from './supabaseClient';
+export { supabase };
 
-const PREVIEW_STAGING = typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app');
-const PREVIEW_API = 'https://obipnfhwiaafxeqgfeop.supabase.co/functions/v1/preview-api';
-// Chave anon pública da branch de teste — não é service_role nem segredo de servidor.
-const PREVIEW_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Im9iaXBuZmh3aWFhZnhlcWdmZW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNDgzNDAsImV4cCI6MjEwMjkyNDM0MH0.XS42_n2QWWtzV07Et7dUnr5juvRufrnSBJfbql7CwvI';
+const PREVIEW_API = PREVIEW_STAGING ? `${SUPABASE_URL}/functions/v1/preview-api` : '';
 
-// Harness TEMPORÁRIO: entra como admin fictício somente em deploy *.vercel.app
-// desta branch. Nenhum usuário ou dado real de produção é usado.
-if (PREVIEW_STAGING && typeof localStorage !== 'undefined') {
+// Harness TEMPORÁRIO: entra como admin fictício somente com PREVIEW_STAGING
+// ativo (hostname de preview + variável de ambiente explícita) E chave
+// resolvida. Nenhum usuário ou dado real de produção é usado.
+if (PREVIEW_STAGING && SUPABASE_KEY && typeof localStorage !== 'undefined') {
   localStorage.setItem('currentUser', JSON.stringify({
     id: 'preview-admin',
     email: 'preview@leilaonozap.test',
@@ -51,8 +60,8 @@ async function previewInvoke(name, body = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: PREVIEW_ANON_JWT,
-        Authorization: `Bearer ${PREVIEW_ANON_JWT}`,
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
       },
       body: JSON.stringify(body || {}),
     });

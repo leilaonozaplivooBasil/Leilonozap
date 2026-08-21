@@ -31,7 +31,15 @@ export default function OrderItemsChecklist({ items, packedIndices = [], onToggl
             }`}>
               {packed && <Check className="h-4 w-4 text-white" />}
             </span>
-            <Package className={`h-5 w-5 shrink-0 ${packed ? 'text-green-400' : 'text-gray-400'}`} />
+            {it.image ? (
+              <img
+                src={it.image}
+                alt={it.title}
+                className="h-10 w-10 shrink-0 rounded object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }}
+              />
+            ) : null}
+            <Package className={`h-5 w-5 shrink-0 ${packed ? 'text-green-400' : 'text-gray-400'} ${it.image ? 'hidden' : ''}`} />
             <div className="min-w-0 flex-1">
               <p className={`text-sm font-medium ${packed ? 'text-green-300 line-through' : 'text-white'}`}>{it.title}</p>
               <p className={`text-[10px] ${packed ? 'text-green-400' : 'text-gray-500'}`}>{packed ? 'Conferido' : 'Pendente de conferência'}</p>
