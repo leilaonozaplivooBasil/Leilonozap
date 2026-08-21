@@ -524,12 +524,35 @@ export default function AuctionRoom() {
 
   // 📜 PONTO 67 — GATE DE UI: nenhum lance sai sem o aceite do Termo de Adesão.
   // Nada de financeiro acontece aqui: só decide se chama submitBid ou abre o termo.
+  // 🚚 TRAVA DE FRETE — 21/08/2026, decisão do dono: "não podemos de maneira
+  // nenhuma aceitar lances ou arrematar sem frete".
+  //
+  // O QUE ACONTECIA: `freteStatus` só era usado para EXIBIR o aviso na tela. Se a
+  // cotação falhasse, se o CEP não estivesse no cadastro, ou se a pessoa clicasse
+  // antes de a cotação assíncrona voltar, `freteValor` continuava 0 e o lance saía
+  // assim mesmo. O pedido nascia sem frete e a empresa pagava a transportadora do
+  // próprio bolso — foi o caso do ARD5856D19 (21/08 11:20), enquanto o AR3BEF1939
+  // do MESMO cliente, 3 minutos depois, saiu com R$ 11,60 certinho.
+  //
+  // Agora nenhum lance e nenhum arremate passa sem frete cotado. O texto diz o que
+  // fazer em cada caso, porque "erro" no meio de um leilão ao vivo sem instrução
+  // faz a pessoa desistir.
+  const freteBloqueia = useCallback(() => {
+    if (freteStatus === 'ok' && freteValor > 0) return null;
+    if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
+    if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
+    if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
+    return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
+  }, [freteStatus, freteValor, freteCep]);
+
   const handleSubmitBidComTermo = useCallback((amount) => {
     // 📣 PONTO 69 — trava de segurança: nenhum lance sai antes da abertura
     if (emChamada(auction)) {
       alert("Este leilão ainda não abriu para lances.");
       return;
     }
+    const semFrete = freteBloqueia();
+    if (semFrete) { alert(semFrete); return; }
     if (currentUser && !jaAceitouTermo(currentUser)) {
       setPendingBidAmount(amount);
       setShowTermoModal(true);
@@ -537,7 +560,7 @@ export default function AuctionRoom() {
     }
     trackCtaClick('participar_leilao', 'leilao');
     submitBid(amount);
-  }, [currentUser, submitBid]);
+  }, [currentUser, submitBid, freteBloqueia]);
 
   const aceitarTermoEContinuar = useCallback(async () => {
     setShowTermoModal(false);
@@ -683,6 +706,10 @@ export default function AuctionRoom() {
       return;
     }
 
+    // 🚚 mesma trava do lance: arremate sem frete cotado não sai
+    const semFreteArremate = freteBloqueia();
+    if (semFreteArremate) { alert(semFreteArremate); return; }
+
     // 🛡️ PONTO 70 — sem preço REAL de arremate imediato, a ação nem começa
     const buyNowAmount = precoArremateAgora(auction);
     if (buyNowAmount === null) {
@@ -709,7 +736,7 @@ export default function AuctionRoom() {
     }
 
     setShowBuyNowModal(true);
-  }, [auction, currentUser]);
+  }, [auction, currentUser, freteBloqueia]);
 
   const confirmBuyNow = useCallback(async () => {
     if (!auction || !currentUser) return;
