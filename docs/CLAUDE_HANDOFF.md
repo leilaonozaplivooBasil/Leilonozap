@@ -4,6 +4,57 @@
 > independente + execução operacional). Contém **somente o estado atual**.
 > Sem PII, senha, chave, token ou documento (REGRA 4).
 
+## 0. PROTOCOLO OPERACIONAL PERMANENTE
+
+> **Esta seção é fixa.** Ela NÃO é estado e NÃO entra na regra de "somente o
+> estado atual" — nunca deve ser podada quando o resto do arquivo for reescrito.
+> Vigora a partir de 21/08/2026, por decisão do dono.
+
+### Encerramento automático de etapa
+
+Toda etapa relevante — investigação, confronto com a OpenAI, implementação,
+revisão, teste, diagnóstico, preparação de SQL, análise de resultado — só é
+considerada encerrada depois de:
+
+1. atualizar este arquivo com o estado novo;
+2. `git commit` **somente** deste arquivo;
+3. `git push` na branch de trabalho.
+
+**Não esperar o dono pedir para publicar.** A pergunta "você publicou?" não deve
+mais precisar existir.
+
+### Resposta ao dono no fim de cada etapa
+
+Somente isto, nada além:
+
+```
+HANDOFF PUBLICADO
+
+Branch:
+Commit:
+Estado:
+
+OpenAI deve:
+<próxima ação em uma frase>
+```
+
+### Regras fixas
+
+| # | Regra |
+|---|---|
+| 1 | O handoff contém **somente o estado atual** (exceto esta seção 0). Sem histórico acumulado. |
+| 2 | **Nunca** colocar secret, token, senha, chave de serviço, documento de KYC, CPF, chave PIX ou PII individual. Resultado sempre resumido de forma segura. |
+| 3 | SQL `READ_ONLY` pode ser encaminhado direto para a OpenAI executar. |
+| 4 | SQL que altere produção deve vir marcado `WRITE_PRODUCTION` ou `DDL_MIGRATION`, com objetivo, risco e rollback. |
+| 5 | **Não pedir ao dono** para abrir o SQL Editor, rodar consulta, copiar resultado ou mandar print quando a OpenAI puder fazer. Colocar a consulta aqui. |
+| 6 | Divergência entre Claude e OpenAI → registrar, **parar**, e não alterar produção até resolver. |
+| 7 | Autorização de escrita de Claude em modo leitura: **apenas este arquivo**, na branch de trabalho. Nunca código, banco, produção, merge, deploy ou `main`. |
+| 8 | Nunca assumir que commit chegou em produção. Registrar separadamente: COMMIT CRIADO · PR CRIADO · PR MERGEADO · DEPLOY PREVIEW · DEPLOY PRODUÇÃO. |
+| 9 | Fontes de verdade: **Supabase** para o estado do banco, **Vercel** para produção, **GitHub** para código e histórico. Arquivo versionado é intenção, não estado. |
+| 10 | Antes de alteração estrutural: snapshot → correção → teste → rollback disponível → validação independente. |
+
+---
+
 ## 1. ESTADO
 
 Data/hora: **2026-08-21 04:41 UTC**
