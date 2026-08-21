@@ -15,6 +15,16 @@
 // a conta SerpAPI válida e com saldo. E a SEARCHAPI_KEY (usada pelo Compare Aqui)
 // está com a cota do mês esgotada. As duas chaves locais seguem como reserva.
 import { chamarRuntimeBase44, urlsDeImagem } from '../_lib/base44Runtime.js';
+// 🔒 FASE 1, item 5 (21/08/2026) — REGRA 6 (Comparai / busca visual).
+// A `imageUrl` vem do navegador e é repassada pro Google Lens (SearchAPI/SerpAPI)
+// e pra ponte do runtime Base44. Aqui o servidor NÃO busca a URL — quem busca é o
+// Google — então isto não é SSRF clássico. O que a conferência resolve:
+//   • impede que o serviço externo seja apontado pra endereço interno nosso;
+//   • impede file:// e data: chegarem ao motor de busca;
+//   • impede queimar cota da conta SerpAPI/SearchAPI com URL lixo.
+// O MOTOR DE BUSCA NÃO FOI TROCADO: a cascata runtime→SearchAPI→SerpAPI segue
+// exatamente igual. Só a porta de entrada ganhou fechadura.
+import { conferirUrl } from '../_lib/urlSegura.js';
 
 const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
@@ -71,12 +81,15 @@ export default async function handler(req, res) {
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const imageUrl = String(body?.imageUrl || '').trim();
 
-    if (!/^https?:\/\//i.test(imageUrl)) {
+    const porteiro = conferirUrl(imageUrl, { permitirHttp: true });
+    if (!porteiro.ok) {
       return res.status(400).json({
         success: false,
         images: [],
-        motivo: 'sem_imagem',
-        error: 'Envie a URL de uma foto do produto (imageUrl)',
+        motivo: porteiro.motivo === 'url_vazia' ? 'sem_imagem' : 'url_recusada',
+        error: porteiro.motivo === 'url_vazia'
+          ? 'Envie a URL de uma foto do produto (imageUrl)'
+          : `URL de foto recusada: ${porteiro.motivo}`,
       });
     }
 
