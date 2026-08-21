@@ -29,6 +29,7 @@ export default function useBidSubmission({
   userWallet,
   setUserWallet,
   freteValor = 0,
+  freteSelo = null,
 }) {
   const [isSubmittingBid, setIsSubmittingBid] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -164,8 +165,14 @@ export default function useBidSubmission({
       // Reserva lance + frete juntos: é o total que fica travado até alguém superar.
       const totalReservar = addMoney(bidAmount, freteValor);
       try {
+        // 🔏 BLOQUEADOR 5: `amount` continua indo, mas SÓ como diagnóstico —
+        // o servidor agora calcula `bid_amount + frete do selo` e ignora ele como
+        // autoridade. Enquanto FRETE_MODO não for 'bloquear', a divergência entre
+        // os dois valores vai para o log, que é o sinal que a gente quer ver antes
+        // de ligar o bloqueio.
         const reserveResult = await base44.functions.invoke('reserveBidBalance', {
           user_id: currentUser.id, amount: totalReservar, auction_id: auctionId,
+          bid_amount: bidAmount, frete_selo: freteSelo,
           description: `Reserva de lance - R$ ${fmtBR(bidAmount)}${freteValor > 0 ? ` + frete R$ ${fmtBR(freteValor)}` : ''}`
         });
         const reserveData = reserveResult?.data || reserveResult;
@@ -176,7 +183,17 @@ export default function useBidSubmission({
         }
         setUserWallet({ balance: reserveData.new_balance });
         wasDebited = true;
-        debitedAmount = totalReservar;
+        // 🔴 B17 — o estorno usa o valor que o SERVIDOR reservou, nunca a conta
+        // local. `totalReservar` é o palpite da tela; `reserved_amount` é o que
+        // de fato saiu do saldo. Divergir aqui deixa dinheiro presoou solta
+        // dinheiro a mais. O fallback só existe para a etapa 1 do rollout, com
+        // servidor antigo que ainda não devolve o campo.
+        debitedAmount = Number.isFinite(Number(reserveData?.reserved_amount))
+          ? Number(reserveData.reserved_amount)
+          : totalReservar;
+        if (reserveData?.reserved_amount != null && Math.abs(Number(reserveData.reserved_amount) - totalReservar) >= 0.01) {
+          console.warn(`[FRETE] a tela calculou R$ ${totalReservar} e o servidor reservou R$ ${reserveData.reserved_amount}. Estorno usa o do servidor.`);
+        }
       } catch (reserveError) {
         console.warn("⚠️ Erro ao reservar saldo:", reserveError.message);
         setShowLowBalanceModal(true);
@@ -214,6 +231,9 @@ export default function useBidSubmission({
         amount: bidAmount,
         user_id: currentUser.id,
         bidder_name: currentUser.nickname || currentUser.full_name,
+        // 🔏 O selo é o que vale. `frete_valor` fica só para a etapa 1 do rollout,
+        // para não zerar o frete de quem ainda está com a aba antiga aberta.
+        frete_selo: freteSelo,
         frete_valor: freteValor
       });
       const atomicData = atomicResult?.data || atomicResult;
@@ -348,7 +368,7 @@ export default function useBidSubmission({
         setIsSubmittingBid(false);
       }, 400);
     }
-  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet, freteValor]);
+  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet, freteValor, freteSelo]);
 
   return {
     submitBid,

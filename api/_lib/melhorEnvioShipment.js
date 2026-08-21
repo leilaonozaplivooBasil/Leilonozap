@@ -148,6 +148,22 @@ async function tentarGerarEnvio(sale) {
     if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
     raw = raw || {};
 
+    // 🔴 BLOQUEADOR 11 (auditoria OpenAI, 21/08/2026) — FRENTE E FUNDO DISCORDAVAM.
+    // A tela de pedidos passou a considerar 'delivery_pendente' como "pode gerar
+    // etiqueta", mas aqui só 'delivery' passava — e o pedido pendente caía no
+    // rótulo 'retirada_na_loja', que é justamente a mentira que o F9 corrigiu:
+    // o cliente PAGOU frete, aquilo nunca foi retirada. O operador clicava,
+    // recebia "retirada na loja" e não tinha o que fazer com a informação.
+    //
+    // 'delivery_pendente' agora tem motivo próprio e instrução. A tela deixou de
+    // oferecer o botão nesse estado (ver src/pages/CatalogOrdersAdmin.jsx): o
+    // pedido vira 'delivery' quando o endereço é completado, e aí a etiqueta sai.
+    if (raw.delivery_type === 'delivery_pendente') {
+      return {
+        ok: false, skipped: 'endereco_incompleto',
+        detalhe: 'O comprador pagou o frete mas está sem endereço completo. Complete o endereço do pedido antes de gerar a etiqueta.',
+      };
+    }
     if (raw.delivery_type !== 'delivery') return { ok: false, skipped: 'retirada_na_loja' };
     if (raw.melhor_envio?.order_id) return { ok: false, skipped: 'ja_gerado' };
     const frete = raw.frete;

@@ -267,15 +267,66 @@ export async function finalizeOneAuction(auction) {
   // 🏆 Apura o vencedor pelo MAIOR lance realmente gravado no banco. Busca TODOS
   // os lances (não só o topo) — o Cupom Passaporte precisa saber, por pessoa, qual
   // foi o MAIOR lance dela neste leilão pra liberar/cancelar só a fatia certa.
-  const allBids = await (await sb(
-    `auction_messages?select=sender_id,sender_name,bid_amount,created_date&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
-  )).json();
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🚚 BLOQUEADOR 13 (auditoria OpenAI, 21/08/2026) — O FRETE PRECISA SER DECIDIDO
+  //    NO MESMO CLAIM QUE DECIDE O VENCEDOR
+  // ══════════════════════════════════════════════════════════════════════════
+  // ANTES: o Buy Now dava um PATCH separado em `frete_reservado_valor`, SEM trava
+  // de status nem de version. Dois problemas reais:
+  //
+  //   1. Se o arremate falhasse depois (finalização quebrou, ou outro processo
+  //      venceu a corrida), o estorno devolvia o dinheiro e apagava o lance —
+  //      mas o `frete_reservado_valor` FICAVA com o frete daquela tentativa.
+  //      O vencedor de verdade herdava o frete de quem perdeu, cotado para outro
+  //      CEP. É o mesmo estrago do AR3BEF1939, agora pela porta do rollback.
+  //   2. Sem trava, o PATCH podia alterar o frete de um leilão que outro processo
+  //      já tinha encerrado.
+  //
+  // AGORA: ninguém escreve `frete_reservado_valor` fora daqui como decisão final.
+  // A apuração lê o `frete_amount` do lance vencedor e grava o frete DENTRO do
+  // claim atômico, junto de winner_id/winner_name/current_price/status. Quem
+  // ganha a corrida do claim define vencedor E frete na mesma escrita — não há
+  // janela entre uma coisa e outra.
+  const COLUNAS_BID = 'sender_id,sender_name,bid_amount,created_date';
+  let respBids = await sb(
+    `auction_messages?select=${COLUNAS_BID},frete_amount&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
+  );
+  let temColunaFrete = true;
+  if (!respBids.ok) {
+    // ⚠️ Volta segura SÓ para coluna inexistente (42703). Qualquer outro erro
+    // (rede, permissão, PostgREST) NÃO pode virar "encerra sem frete" — aí o
+    // certo é deixar estourar e o leilão não encerrar, e não encerrar errado.
+    const detalhe = await respBids.text().catch(() => '');
+    if (!/42703|does not exist|column .* does not exist/i.test(detalhe)) {
+      throw new Error(`[FINALIZE] leitura dos lances falhou (HTTP ${respBids.status}): ${detalhe.slice(0, 200)}`);
+    }
+    console.warn('[FINALIZE] auction_messages sem coluna frete_amount — relendo sem ela.');
+    temColunaFrete = false;
+    respBids = await sb(
+      `auction_messages?select=${COLUNAS_BID}&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
+    );
+  }
+  const allBids = await respBids.json();
   const bidsList = Array.isArray(allBids) ? allBids : [];
   const topBid = bidsList[0] || null;
 
   const winnerId = topBid?.sender_id || null;
   const winnerName = topBid?.sender_name || null;
   const finalPrice = money(topBid?.bid_amount || auction.current_price || auction.starting_price);
+
+  // 🚚 Frete do lance VENCEDOR. Lance legado tem `frete_amount` NULL — e NULL não
+  // é zero: zero significaria "esta pessoa não paga frete", que é justamente o
+  // defeito que originou toda esta frente. Sem valor no lance, mantém o que o
+  // leilão já tem, que é o frete do líder corrente gravado a cada lance.
+  const freteDoTopBid = (temColunaFrete && topBid && topBid.frete_amount != null)
+    ? money(topBid.frete_amount)
+    : null;
+  const freteVencedor = freteDoTopBid != null
+    ? freteDoTopBid
+    : money(auction.frete_reservado_valor || 0);
+  if (winnerId && freteDoTopBid == null) {
+    console.warn(`[FINALIZE] leilão ${auctionId}: lance vencedor sem frete_amount — mantendo o frete atual do leilão (R$ ${freteVencedor}). Lance legado.`);
+  }
 
   // maior lance de CADA participante neste leilão (bidsList já vem ordenado
   // desc por valor, então o primeiro encontrado de cada sender_id é o maior dele)
@@ -298,6 +349,8 @@ export async function finalizeOneAuction(auction) {
         winner_name: winnerName,
         current_price: finalPrice,
         order_status: winnerId ? 'awaiting_payment' : null,
+        // 🚚 B13 — o frete do vencedor entra AQUI, na mesma escrita atômica.
+        ...(winnerId ? { frete_reservado_valor: freteVencedor } : {}),
       }),
     }
   );

@@ -165,7 +165,47 @@ export default async function handler(req, res) {
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const bidderName = body?.bidder_name;
     // 🚚 Frete calculado uma vez na sala e somado ao lance na reserva de saldo.
-    const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🚚 F7 — O FRETE VEM DO SELO DO SERVIDOR, NUNCA DO NAVEGADOR
+    // ══════════════════════════════════════════════════════════════════════════
+    // COMO ESTAVA:
+    //     const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);
+    // Ou seja: quanto de frete era financeiramente reservado num lance era o que
+    // o navegador dissesse. Chamada direta com `frete_valor: 0` arrematava sem
+    // pagar frete. O bloqueio que entrou em AuctionRoom.jsx (commit 3b21010e) é
+    // UX — ajuda o cliente honesto e não segura quem fala direto com a API.
+    //
+    // AGORA: a rota cotarFrete assina cada opção (api/_lib/freteSelo.js) e o
+    // navegador devolve o selo aqui. Este arquivo é AUTOCONTIDO por lei — import
+    // de 2 níveis já derrubou o lance em produção — então a conferência é uma
+    // cópia curta da mesma lógica, do mesmo jeito que o crachá de sessão já faz
+    // logo acima. `crypto` já está importado; não há rede nem latência nova no
+    // caminho do lance.
+    const _frete = (() => {
+      const semChave = !(process.env.SESSAO_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY);
+      if (semChave) return { ok: false, motivo: 'sem_chave_no_servidor', valor: 0 };
+      const selo = String(body?.frete_selo || '').trim();
+      if (!selo) return { ok: false, motivo: 'sem_selo', valor: 0 };
+      try {
+        const p = selo.split('.');
+        if (p.length !== 3 || p[0] !== 'f1') return { ok: false, motivo: 'formato', valor: 0 };
+        const chaveSelo = process.env.SESSAO_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const esperado = Buffer.from(
+          crypto.createHmac('sha256', chaveSelo).update(`frete-v1|${p[1]}`).digest()
+            .toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), 'utf8');
+        const veio = Buffer.from(p[2], 'utf8');
+        if (esperado.length !== veio.length || !crypto.timingSafeEqual(esperado, veio)) {
+          return { ok: false, motivo: 'assinatura', valor: 0 };
+        }
+        const d = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+        if (!(Number(d.x) > Date.now())) return { ok: false, motivo: 'vencido', valor: 0 };
+        if (String(d.a) !== String(auctionId)) return { ok: false, motivo: 'selo_de_outro_leilao', valor: 0 };
+        if (String(d.u) !== String(userId)) return { ok: false, motivo: 'selo_de_outra_pessoa', valor: 0 };
+        return { ok: true, motivo: 'ok', valor: (Number(d.v) || 0) / 100, id: d.f || null, cep: d.c || null, productId: d.pid || null };
+      } catch (e) {
+        return { ok: false, motivo: `erro:${e?.message}`, valor: 0 };
+      }
+    })();
 
     if (!auctionId || !bidAmount || bidAmount <= 0 || !userId) {
       return res.status(400).json({ success: false, message: 'Parâmetros inválidos' });
@@ -175,15 +215,54 @@ export default async function handler(req, res) {
     }
 
     // Identidade: valida que o usuário existe (substitui o auth.me() do Base44)
-    const userResp = await sb(`app_users?select=id,full_name,nickname,saldo_disponivel,saldo_reservado&id=eq.${encodeURIComponent(userId)}&limit=1`);
+    // 🚚 B15 — `address_zip_code` entra NESTE select, que já existia. Sem ida
+    // nova ao banco: o custo do B15 é zero no caminho do lance.
+    const userResp = await sb(`app_users?select=id,full_name,nickname,saldo_disponivel,saldo_reservado,address_zip_code&id=eq.${encodeURIComponent(userId)}&limit=1`);
     const user = Array.isArray(userResp.data) ? userResp.data[0] : null;
     if (!user) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
 
-    const getResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor`
+    // ⚠️ COLUNA NOVA NO SELECT = RISCO DE MATAR TODO LANCE.
+    // Se `product_id` não existir na tabela, o PostgREST devolve 42703 e o
+    // `if (!getResp.ok)` logo abaixo transforma TODO lance em 404. Já aconteceu
+    // em produção com uma coluna num PATCH (PONTO 83): os lances morreram de
+    // 03/08 15:03 até alguém perceber. Então aqui o select tem VOLTA: pede a
+    // coluna, e se a resposta não vier boa, relê exatamente o select antigo e
+    // segue sem a conferência de produto. Nunca troca segurança de frete por
+    // leilão parado.
+    const COLUNAS_BASE = 'id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor';
+    let getResp = await sb(
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE},product_id`
     );
+    // 🔴 BLOQUEADOR 16 (auditoria OpenAI, 21/08/2026) — A VOLTA SEGURA ESTAVA
+    //    ABRINDO A PORTA EM VEZ DE FECHAR.
+    // Como estava: QUALQUER falha no select relia sem `product_id` e DESLIGAVA a
+    // conferência de produto do selo. Rede instável, permissão, PostgREST fora
+    // do ar — tudo virava "pode passar sem conferir". Isso é fail-open num
+    // controle de segurança, e é pior que não ter o controle, porque parece que
+    // tem.
+    // Como ficou: a volta só existe para o caso que a motivou — coluna
+    // inexistente (42703). E mesmo assim, com FRETE_MODO=bloquear a rota falha
+    // FECHADO: sem poder conferir o produto, não passa lance.
+    // Produção já tem `auctions.product_id`; a volta é cinto de segurança de
+    // uma hipótese que hoje é falsa, não um caminho normal.
+    let temColunaProduto = true;
+    if (!getResp.ok) {
+      const detalhe = JSON.stringify(getResp.data)?.slice(0, 300) || '';
+      const colunaNaoExiste = /42703|does not exist|column .* does not exist/i.test(detalhe);
+      if (!colunaNaoExiste) {
+        console.error('[FRETE] submitAtomicBid: select do leilão falhou e NÃO é coluna inexistente —', detalhe);
+        return res.status(503).json({
+          success: false,
+          message: 'Não conseguimos ler o leilão agora. Tente de novo em instantes.',
+          debug: getResp.data,
+        });
+      }
+      console.warn('[FRETE] submitAtomicBid: auctions sem coluna product_id (42703) — relendo sem ela.');
+      temColunaProduto = false;
+      getResp = await sb(`auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE}`);
+    }
     const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
     if (!getResp.ok || !auction) {
@@ -193,6 +272,97 @@ export default async function handler(req, res) {
         success: false,
         message: getResp.ok ? 'Leilão não encontrado' : 'Erro ao buscar leilão',
         debug: !getResp.ok ? getResp.data : { auctionId },
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🚚 DECISÃO DO FRETE — depois de ler o leilão, porque agora ela olha o PRODUTO
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 3 (auditoria OpenAI, 21/08/2026): assinatura válida não é o
+    // mesmo que cotação válida. O selo passa a dizer PARA QUE PRODUTO o preço
+    // foi calculado, e aqui isso é conferido contra o produto que o leilão tem
+    // AGORA. Fecha a janela de 30 minutos em que o leilão troca de produto e um
+    // selo de caneta paga o frete de uma geladeira.
+    let _freteOk = _frete.ok;
+    let _freteMotivo = _frete.motivo;
+    if (_freteOk && temColunaProduto) {
+      const produtoDoLeilao = auction.product_id ? String(auction.product_id) : '';
+      if (!_frete.productId) {
+        // selo emitido antes do campo existir — não passa quando o leilão TEM produto
+        if (produtoDoLeilao) { _freteOk = false; _freteMotivo = 'selo_sem_produto'; }
+      } else if (String(_frete.productId) !== produtoDoLeilao) {
+        _freteOk = false; _freteMotivo = 'selo_de_outro_produto';
+      }
+    }
+    // 🔴 B16 — sem poder conferir o produto, o bloqueio recusa. Fail-CLOSED.
+    if (_freteOk && !temColunaProduto && String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear') {
+      _freteOk = false; _freteMotivo = 'produto_nao_conferivel';
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 15 — SELO DE CEP ANTIGO VALIA DEPOIS DE TROCAR O ENDEREÇO
+    // ══════════════════════════════════════════════════════════════════════
+    // O selo carrega o CEP para o qual o frete foi cotado, mas ninguém comparava
+    // esse CEP com o CEP ATUAL do cadastro. O caminho: cota para um CEP barato,
+    // guarda o selo, troca o endereço no perfil, dá o lance dentro dos 30
+    // minutos. O servidor reservava o frete do CEP antigo e a entrega saía para
+    // o novo. A diferença sai do bolso da empresa.
+    if (_freteOk) {
+      const cepAtual = String(user.address_zip_code || '').replace(/\D/g, '');
+      const cepDoSelo = String(_frete.cep || '').replace(/\D/g, '');
+      if (!cepDoSelo) {
+        _freteOk = false; _freteMotivo = 'selo_sem_cep';
+      } else if (cepDoSelo !== cepAtual) {
+        // ⚠️ Escrito assim de propósito. A primeira versão desta trava era
+        // `cepDoSelo && cepAtual && cepDoSelo !== cepAtual` — e o `cepAtual &&`
+        // abria um buraco: quem APAGASSE o CEP do perfil depois de cotar passava
+        // reto, porque a comparação nem acontecia. "Não tenho CEP agora" não é
+        // prova de que o CEP do selo é o certo; é o contrário.
+        _freteOk = false;
+        _freteMotivo = cepAtual ? 'selo_de_outro_cep' : 'cadastro_sem_cep';
+      }
+    }
+
+    // ⚠️ ROLLOUT EM DUAS ETAPAS, igual ao crachá e ao webhook do MP — os dois
+    // deram certo. Enquanto FRETE_MODO não for 'bloquear', o lance sem selo
+    // válido PASSA e só fica anotado no log. Ligar direto recusaria todo lance
+    // de qualquer aba já aberta que ainda não conhece o selo, no meio de leilão
+    // ao vivo. Depois de o log ficar limpo, publica-se FRETE_MODO=bloquear.
+    const _freteBloqueia = String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear';
+    if (!_freteOk) {
+      if (_freteBloqueia) {
+        return res.status(400).json({
+          success: false, sem_frete: true, motivo: _freteMotivo,
+          message: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
+        });
+      }
+      console.warn(`[FRETE] submitAtomicBid: lance SEM selo válido (${_freteMotivo}) no leilão ${auctionId} — ETAPA 1, nada foi bloqueado.`);
+    }
+    // O valor financeiro é o do SELO. `body.frete_valor` fica só como reserva da
+    // etapa 1, para não zerar o frete de quem ainda está com a aba antiga.
+    const freteValor = _freteOk
+      ? _frete.valor
+      : Math.max(0, parseFloat(body?.frete_valor) || 0);
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 FRETE ZERO NUNCA PASSA — nem na etapa 1 de observação.
+    // ══════════════════════════════════════════════════════════════════════
+    // O rollout em duas etapas existe para não recusar quem está com uma aba
+    // antiga aberta: aquela aba não conhece o selo, mas MANDA `frete_valor`,
+    // porque a tela sempre calculou o frete. Então "sem selo" pode passar.
+    // "Sem frete nenhum" NÃO pode — é literalmente o defeito que originou tudo
+    // isto (ARD5856D19) e a decisão do dono em 21/08: "não podemos de maneira
+    // nenhuma aceitar lances ou arrematar sem frete".
+    //
+    // Leilão não tem retirada no balcão: toda venda de leilão é entrega. Não
+    // existe caso legítimo de lance com frete zero, então recusar aqui não
+    // derruba ninguém honesto — só fecha a chamada direta de API que manda
+    // `frete_valor: 0` e ficaria esperando o FRETE_MODO ser ligado.
+    if (!(freteValor > 0)) {
+      console.error(`[FRETE] submitAtomicBid: RECUSADO lance com frete ZERO no leilão ${auctionId} (selo: ${_freteMotivo}).`);
+      return res.status(400).json({
+        success: false, sem_frete: true, motivo: 'frete_zero',
+        message: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
       });
     }
 

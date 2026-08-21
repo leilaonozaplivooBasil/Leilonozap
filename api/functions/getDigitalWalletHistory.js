@@ -3,6 +3,7 @@
 // em produção (base44.functions.invoke roteia para /api/functions/, não pro Deno).
 // Sem este arquivo, a tela "Carteira Digital" (Perfil → Carteira Digital) recebia 404
 // e, dependendo do estado, acabava caindo no ErrorBoundary em loop ("Detectamos um problema").
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -30,6 +31,11 @@ export default async function handler(req, res) {
     // 🔒 blindagem contra IDOR — mesma regra do getMyWallet.js: sem actor_id continua
     // liberado (self-service de sempre), pedir o extrato de OUTRA pessoa exige admin real.
     const actorId = String(body?.actor_id || userId).trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'getDigitalWalletHistory');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (actorId !== userId) {
       const actorRows = await (await sb(`app_users?select=primary_career_level,role&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
       const actor = Array.isArray(actorRows) ? actorRows[0] : null;

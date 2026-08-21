@@ -9,6 +9,8 @@
 // Retorna a MÉDIA do mercado (é a referência do Heloim: venda = média - 20%).
 
 import { chamarRuntimeBase44 } from './base44Runtime.js';
+// 🔒 FASE 1, item 5 (21/08/2026) — REGRA 6. Ver o bloco em searchMarket().
+import { conferirUrl } from './urlSegura.js';
 
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 const SEARCHAPI_KEY = process.env.SEARCHAPI_KEY;
@@ -311,6 +313,25 @@ async function fetchSearchApi(query) {
 // Texto (nome) é só fallback quando não há imagem ou o Lens não trouxe nada.
 // { found, source, avg, min, max, count, results:[{store,productNameFound,price,url,image}] }
 export async function searchMarket(title, imageUrl) {
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔒 PORTEIRO DA FOTO — FASE 1, item 5 (21/08/2026). REGRA 6 do dono.
+  // ══════════════════════════════════════════════════════════════════════════
+  // A ARQUITETURA DA BUSCA VISUAL NÃO MUDOU. A cascata continua exatamente a
+  // mesma — Lens exato → Lens visual → Shopping por texto —, com os mesmos
+  // validadores e a mesma regra de ouro. O que entrou foi UMA conferência na
+  // porta: se a URL da foto não for um endereço público de verdade, a busca
+  // POR IMAGEM é pulada e a cascata segue pelo TEXTO, como já faz quando o
+  // produto não tem foto cadastrada. Nada é derrubado; no pior caso o Comparai
+  // responde com o caminho de texto.
+  //
+  // Por que importa mesmo o servidor não buscando a URL: quem busca é o Google.
+  // Sem porteiro, dava pra apontar a SerpAPI/SearchAPI (que pagamos por consulta)
+  // pra qualquer endereço, inclusive interno, e queimar cota com URL lixo.
+  let fotoRecusada = '';
+  if (imageUrl) {
+    const porteiro = conferirUrl(imageUrl, { permitirHttp: true });
+    if (!porteiro.ok) { fotoRecusada = porteiro.motivo; imageUrl = null; }
+  }
   const cleaned = cleanTitle(title);
   const titleWords = cleaned.toLowerCase().split(' ').filter((w) => w.length > 2).map(normalizarTexto);
   const numerosTitulo = extrairNumeros(title);
@@ -458,7 +479,8 @@ export async function searchMarket(title, imageUrl) {
   // entrava no array e nada era registrado, então "chave não publicada" ficava
   // indistinguível de "não achei preço". Agora vira uma linha explícita no
   // diagnóstico, que o modal exibe na tela de erro.
-  if (!imageUrl) falhas.push('busca por imagem: produto sem foto cadastrada — pulada');
+  if (!imageUrl && fotoRecusada) falhas.push(`busca por imagem: URL da foto recusada pelo porteiro (${fotoRecusada}) — pulada`);
+  else if (!imageUrl) falhas.push('busca por imagem: produto sem foto cadastrada — pulada');
   if (!SERPAPI_KEY) {
     falhas.push('⚠️ SERPAPI_KEY não publicada na Vercel — busca por imagem independente DESLIGADA (é a chave que destrava tudo sem Base44)');
   }

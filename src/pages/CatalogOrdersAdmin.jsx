@@ -73,6 +73,7 @@ const CARGO_LABEL = { vendedor: 'Vendedor', licenciado_catalogo: 'Licenciado', e
 // quando o envio não é gerado — usado no botão "Reprocessar envio" abaixo.
 const MOTIVO_ENVIO_LABEL = {
   retirada_na_loja: 'Pedido é retirada no balcão, não precisa de etiqueta.',
+  endereco_incompleto: 'O comprador pagou o frete mas está sem endereço completo. Complete o endereço antes de gerar a etiqueta.',
   ja_gerado: 'Etiqueta já tinha sido gerada.',
   sem_frete_id: 'O pedido não tem a transportadora/serviço de frete escolhido salvo.',
   remetente_nao_configurado: 'Faltam dados do remetente (endereço da loja) configurados no servidor.',
@@ -146,8 +147,53 @@ const needsLabel = (order) => {
   if (order.status !== 'paid' && order.status !== 'preparando') return false;
   let raw = order?.raw_base44;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
-  if ((raw?.delivery_type || '') === 'pickup') return false;
+  // ⚠️ 21/08/2026 — AS DUAS PONTAS PRECISAM CONCORDAR SOBRE O VALOR AUSENTE.
+  // Aqui a regra era "esconde se for pickup", e no servidor
+  // (api/_lib/melhorEnvioShipment.js:151) é "só gera se for delivery". Pedido de
+  // arremate nascia SEM delivery_type nenhum — então a tela mostrava "Etiqueta
+  // pendente" com o botão, e o clique respondia "é retirada no balcão". Os dois
+  // estavam certos pela própria regra, e o operador é que ficava sem entender.
+  // Agora as duas usam o mesmo critério: só é etiquetável quem é 'delivery'.
+  //
+  // 🔴 BLOQUEADOR 11 (auditoria OpenAI, 21/08/2026): eu tinha acrescentado
+  // 'delivery_pendente' AQUI e esquecido do servidor, que continuou aceitando só
+  // 'delivery' (api/_lib/melhorEnvioShipment.js). Ou seja: reproduzi exatamente
+  // a discordância frente/fundo que este comentário diz ter corrigido — botão na
+  // tela, recusa no clique. 'delivery_pendente' é PENDÊNCIA DE ENDEREÇO, não
+  // pendência de etiqueta: não ganha botão de etiqueta, ganha aviso próprio
+  // (ver `precisaEndereco` logo abaixo). Vira 'delivery' quando o endereço é
+  // completado — e aí sim a etiqueta sai.
+  if (raw?.delivery_type !== 'delivery') return false;
   return !raw?.melhor_envio?.order_id;
+};
+
+// 🚚 CASO AR3BEF1939 — FRETE PAGO E PEDIDO SEM `delivery_type`.
+// O arremate antigo nasceu com `raw_base44 = { frete: { valor: 11.60 }, ... }` e
+// NADA de `delivery_type`. O gerador de etiqueta faz
+// `if (raw.delivery_type !== 'delivery')` → `undefined !== 'delivery'` → e
+// responde "retirada no balcão". Ninguém marcou retirada: o campo simplesmente
+// nunca existiu. O cliente pagou entrega, então aquilo É entrega.
+// Aqui a tela mostra o botão que completa os dados que faltam — SEM cobrar nada.
+const precisaCompletarEntrega = (order) => {
+  if (isPassaporte(order)) return false;
+  if (order.status !== 'paid' && order.status !== 'preparando') return false;
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  if (!raw) return false;
+  if (raw?.melhor_envio?.order_id) return false;
+  const fretePago = Number(raw?.frete?.valor) > 0;
+  return fretePago && raw?.delivery_type !== 'delivery';
+};
+
+// 🏠 Frete pago, endereço faltando. A logística precisa VER isso e agir: pedir o
+// endereço ao comprador e completar o pedido. Nunca é retirada no balcão — o
+// cliente pagou entrega.
+const precisaEndereco = (order) => {
+  if (isPassaporte(order)) return false;
+  if (order.status !== 'paid' && order.status !== 'preparando') return false;
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  return raw?.delivery_type === 'delivery_pendente' && !raw?.melhor_envio?.order_id;
 };
 
 // 📍 Endereço de entrega — cada checkout grava o endereço num lugar diferente:
@@ -186,6 +232,8 @@ export default function CatalogOrdersAdmin() {
   const [newStatus, setNewStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [reprocessandoEnvioId, setReprocessandoEnvioId] = useState(null);
+  const [completandoEntregaId, setCompletandoEntregaId] = useState(null);
+  const [confirmarCompletar, setConfirmarCompletar] = useState(null);
   const [cpfInput, setCpfInput] = useState('');
   // PONTO 113: permite reabrir o campo mesmo quando o CPF atual ja e valido
   const [editandoCpf, setEditandoCpf] = useState(false);
@@ -340,6 +388,56 @@ export default function CatalogOrdersAdmin() {
     }
   };
 
+  // 🚚 Completa os dados de entrega de um arremate que JÁ PAGOU o frete.
+  // ⚠️ NÃO COBRA NADA. A rota roda em `apenas_completar`, que por contrato não
+  // toca em saldo: só grava delivery_type, endereço, CEP e o serviço da
+  // transportadora, mantendo o valor que o cliente já pagou.
+  // Primeiro chama em modo CONFERÊNCIA e mostra o que vai gravar; o segundo
+  // clique executa. Assim ninguém altera pedido às cegas.
+  const handleCompletarEntrega = async (order, executar = false) => {
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { actorId = null; }
+    if (!actorId) { toast.error('Sessão não identificada. Entre novamente.'); return; }
+
+    setCompletandoEntregaId(order.id);
+    try {
+      const r = await base44.functions.invoke('cobrarFretePendente', {
+        actorId, sale_id: order.id, apenas_completar: true, executar,
+      });
+      const data = r?.data || r;
+      if (!data?.success) {
+        toast.error(data?.error || 'Não foi possível completar a entrega.');
+        return;
+      }
+      if (!executar) {
+        const dif = Number(data?.diferenca_para_o_pago);
+        toast.info(
+          `Frete já pago: R$ ${fmtBR(data.frete_ja_pago)}. ` +
+          (Number.isFinite(dif) && Math.abs(dif) >= 0.01
+            ? `A cotação de hoje é R$ ${fmtBR(data.cotacao_de_hoje)}. Nada será cobrado do cliente. `
+            : '') +
+          'Clique de novo para gravar.',
+          { duration: 9000 }
+        );
+        setConfirmarCompletar(order.id);
+        return;
+      }
+      toast.success('Entrega completada. A etiqueta já pode ser gerada.');
+      setConfirmarCompletar(null);
+      const patch = (o) => {
+        let raw = o.raw_base44;
+        if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
+        return { ...o, raw_base44: { ...(raw || {}), delivery_type: 'delivery', frete: data.servico } };
+      };
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? patch(o) : o)));
+      setSelectedOrder((prev) => (prev && prev.id === order.id ? patch(prev) : prev));
+    } catch (e) {
+      toast.error('Erro ao completar a entrega: ' + (e?.message || e));
+    } finally {
+      setCompletandoEntregaId(null);
+    }
+  };
+
   // 🚚 Testa/reexecuta o envio automático pra ESTA venda específica e mostra na hora
   // o motivo exato (ver api/functions/reprocessarEnvioMelhorEnvio.js) — sem isso, a
   // única forma de saber por que a etiqueta não foi gerada era abrir o banco direto.
@@ -484,8 +582,10 @@ export default function CatalogOrdersAdmin() {
               const config = getDisplayStatusConfig(order);
               const StatusIcon = config.icon;
               const pendingLabel = needsLabel(order);
+              const faltaEndereco = precisaEndereco(order);
+              const faltaCompletar = precisaCompletarEntrega(order);
               return (
-                <Card key={order.id} className={`bg-gray-800 border-gray-700 hover:border-gray-600 transition-all ${pendingLabel ? 'border-l-4 border-l-amber-500' : ''}`}>
+                <Card key={order.id} className={`bg-gray-800 border-gray-700 hover:border-gray-600 transition-all ${pendingLabel ? 'border-l-4 border-l-amber-500' : faltaEndereco ? 'border-l-4 border-l-orange-500' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -508,6 +608,16 @@ export default function CatalogOrdersAdmin() {
                           {pendingLabel && (
                             <span className="text-amber-400 text-xs font-medium inline-flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3" />Etiqueta pendente
+                            </span>
+                          )}
+                          {faltaCompletar && (
+                            <span className="text-sky-400 text-xs font-medium inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />Frete pago — falta configurar entrega
+                            </span>
+                          )}
+                          {faltaEndereco && (
+                            <span className="text-orange-400 text-xs font-medium inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />Entrega pendente — completar endereço
                             </span>
                           )}
                           {order._vendedor_nome && (
@@ -547,6 +657,19 @@ export default function CatalogOrdersAdmin() {
                           <StatusIcon className="w-3 h-3" />
                           {config.label}
                         </Badge>
+                        {faltaCompletar && (
+                          <Button
+                            size="sm"
+                            disabled={completandoEntregaId === order.id}
+                            onClick={() => handleCompletarEntrega(order, confirmarCompletar === order.id)}
+                            className="bg-sky-600 hover:bg-sky-700 text-white text-xs h-8 px-2"
+                            title="Completar os dados de entrega. NÃO cobra nada do cliente."
+                          >
+                            {completandoEntregaId === order.id
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : <><Truck className="w-3 h-3 mr-1" />{confirmarCompletar === order.id ? 'Confirmar' : 'Completar entrega'}</>}
+                          </Button>
+                        )}
                         {pendingLabel && (
                           <Button
                             size="sm"

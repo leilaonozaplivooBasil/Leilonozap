@@ -1,4 +1,5 @@
 // approveWithdrawal — admin aprova (paga) ou rejeita (devolve saldo) um pedido de saque.
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -16,6 +17,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const { actor_id, withdrawal_id, decision, reason, mp_transfer_id } = body || {};
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actor_id, 'approveWithdrawal');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!withdrawal_id || !['approve', 'reject'].includes(decision)) return res.status(400).json({ success: false, error: 'Parâmetros inválidos' });
     if (!await isAdmin(actor_id)) return res.status(403).json({ success: false, error: 'Apenas admin pode aprovar saque' });
 

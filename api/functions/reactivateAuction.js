@@ -1,4 +1,5 @@
 // reactivateAuction — admin reativa leilão finalizado (PATCH via service role key, bypassa RLS)
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = 'https://gezvviyegtxytnwjkrjv.supabase.co';
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -23,6 +24,11 @@ export default async function handler(req, res) {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const { actor_id, auctionId, payload } = body || {};
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actor_id, 'reactivateAuction');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
 
     if (!auctionId || !payload) return res.status(400).json({ success: false, error: 'auctionId e payload são obrigatórios' });
     if (!await isAdmin(actor_id)) return res.status(403).json({ success: false, error: 'Apenas admin pode reativar leilão' });

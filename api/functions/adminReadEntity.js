@@ -2,6 +2,7 @@
 // cargo de estoque). Espelho de LEITURA do entityWrite.js: recebe a TABELA já resolvida + método
 // (list/filter). Ignora RLS via service_role. Mesma whitelist de tabelas de conteúdo do entityWrite.
 // Tabelas sensíveis (app_users, wallets, saques, pagamentos) NÃO entram aqui.
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
@@ -58,6 +59,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'adminReadEntity');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const table = String(body?.table || '').trim();
     const method = String(body?.method || 'list');
     if (!actorId || !CONTENT_TABLES.has(table) || !['list', 'filter'].includes(method)) {

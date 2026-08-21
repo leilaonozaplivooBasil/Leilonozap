@@ -2,6 +2,7 @@
 // A meta vale pra TODOS da categoria do login escolhido. Guard de escrita: super_admin/admin (CEO).
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -23,6 +24,11 @@ export default async function handler(req, res) {
 
     // escrita/busca exige CEO/admin
     const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'manageMetas');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const actorArr = await (await sb(`app_users?select=id,role,full_name&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
     if (!actor || !['admin', 'super_admin'].includes(actor.role)) return res.status(403).json({ success: false, error: 'Só o CEO/admin pode definir metas' });

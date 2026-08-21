@@ -1,6 +1,7 @@
 // adminSetPassword — define a senha de um usuário diretamente (service_role), sem código por e-mail.
 // Uso ADMIN: o ator (actorId) precisa ser admin/super_admin. Grava o hash na tabela isolada app_users_auth.
 import bcrypt from 'bcryptjs';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -83,6 +84,11 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     if (!body || typeof body !== 'object') body = {};
     const actorId = String(body.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'adminSetPassword');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const userId = String(body.userId || '').trim();
     const email = String(body.email || '').trim().toLowerCase();
     const newPassword = String(body.newPassword || body.password || '');
