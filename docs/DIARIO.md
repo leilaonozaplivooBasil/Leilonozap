@@ -480,6 +480,54 @@ mexe). `npm test`: **225/225**. `npm run build`: exit 0. `git push`: feito.
 
 **Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.**
 
+---
+
+**Atualização — mergeado e deployado (PR #80, commit `5ef23387`)**, CI verde,
+Vercel confirmou "Deployment has completed". Mesmo padrão de correção rápida
+e isolada já autorizado pelo dono nesta mesma tarde.
+
+**Vocabulário do protocolo:** **MERGEADO e DEPLOYADO.**
+
+---
+
+**Atualização — dono testou de novo, achou um QUARTO problema na mesma
+tarde, no mesmo campo.** Print: pedido com rastreio **provisório** que já
+estava salvo desde a criação (não digitou nada novo), "Pago" selecionado,
+clicou Salvar, toast de sucesso — continuou "Pago". Mensagem: "POIRRA NAO
+AETS SATAUALIZANDO... VAMOS RESOLVER SEM ACHISMO".
+
+**CLAUDE — antes de mexer em qualquer linha, confirmei que NÃO havia bug de
+escrita:** pela regra do PONTO 118 (só promove se o rastreio **mudou**), e o
+rastreio deste pedido não mudou — o comportamento estava exatamente como
+programado. O problema real não era o código, era a PROMESSA na tela: o
+aviso embaixo do campo de rastreio nunca foi atualizado e continuava dizendo
+*"ao adicionar o código, o status vira Enviado automaticamente"* — e não
+tem como o dono, olhando o campo, saber se aquele código é novo ou já
+estava lá. Duas correções seguidas (PONTO 117 "tem rastreio" → PONTO 118
+"rastreio mudou") tentaram adivinhar a intenção pelo conteúdo de um campo
+de texto, e as duas confundiram em algum caso real.
+
+**Decisão de design, pra não virar um quinto ponto amanhã:** parar de
+adivinhar. **PONTO 119** — removida a promoção automática por completo. O
+status salvo é sempre, literalmente, o que está selecionado no dropdown,
+sem exceção nenhuma. Pra marcar "Enviado", o admin escolhe "Enviado" —
+continua exigindo rastreio pra isso. Removida a função pura
+`src/lib/pedidoStatus.js` (existia só pra essa promoção, agora sem uso) e
+seu teste. Aviso do campo corrigido pra descrever o que a tela de fato faz
+("Obrigatório para marcar o status como 'Enviado' acima").
+
+`npm test`: **219/219** (6 testes do PONTO 118 removidos junto com a lógica
+que eles testavam — não fazia sentido manter teste de comportamento
+deletado). `npm run build`: exit 0.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.**
+
+**Risco de processo, repetido de propósito porque ainda vale:** toda vez que
+uma PR é mergeada por squash, resetar a branch pro `main` atual **antes** do
+próximo commit — inclusive desta vez, feito via `checkout -B` + `cherry-pick`
++ `push --force-with-lease` com o SHA remoto conferido, exatamente como no
+PONTO 117.
+
 **O que falta desta frente (itens 2 a 7 do pedido original, ainda não
 iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
 etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
