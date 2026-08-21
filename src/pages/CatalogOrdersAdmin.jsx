@@ -73,6 +73,7 @@ const CARGO_LABEL = { vendedor: 'Vendedor', licenciado_catalogo: 'Licenciado', e
 // quando o envio não é gerado — usado no botão "Reprocessar envio" abaixo.
 const MOTIVO_ENVIO_LABEL = {
   retirada_na_loja: 'Pedido é retirada no balcão, não precisa de etiqueta.',
+  endereco_incompleto: 'O comprador pagou o frete mas está sem endereço completo. Complete o endereço antes de gerar a etiqueta.',
   ja_gerado: 'Etiqueta já tinha sido gerada.',
   sem_frete_id: 'O pedido não tem a transportadora/serviço de frete escolhido salvo.',
   remetente_nao_configurado: 'Faltam dados do remetente (endereço da loja) configurados no servidor.',
@@ -153,10 +154,28 @@ const needsLabel = (order) => {
   // pendente" com o botão, e o clique respondia "é retirada no balcão". Os dois
   // estavam certos pela própria regra, e o operador é que ficava sem entender.
   // Agora as duas usam o mesmo critério: só é etiquetável quem é 'delivery'.
-  // 'delivery_pendente' = frete pago mas sem endereco: a etiqueta continua
-  // pendente de propósito, e a tela mostra o aviso para a logística agir.
-  if (!['delivery', 'delivery_pendente'].includes(raw?.delivery_type || '')) return false;
+  //
+  // 🔴 BLOQUEADOR 11 (auditoria OpenAI, 21/08/2026): eu tinha acrescentado
+  // 'delivery_pendente' AQUI e esquecido do servidor, que continuou aceitando só
+  // 'delivery' (api/_lib/melhorEnvioShipment.js). Ou seja: reproduzi exatamente
+  // a discordância frente/fundo que este comentário diz ter corrigido — botão na
+  // tela, recusa no clique. 'delivery_pendente' é PENDÊNCIA DE ENDEREÇO, não
+  // pendência de etiqueta: não ganha botão de etiqueta, ganha aviso próprio
+  // (ver `precisaEndereco` logo abaixo). Vira 'delivery' quando o endereço é
+  // completado — e aí sim a etiqueta sai.
+  if (raw?.delivery_type !== 'delivery') return false;
   return !raw?.melhor_envio?.order_id;
+};
+
+// 🏠 Frete pago, endereço faltando. A logística precisa VER isso e agir: pedir o
+// endereço ao comprador e completar o pedido. Nunca é retirada no balcão — o
+// cliente pagou entrega.
+const precisaEndereco = (order) => {
+  if (isPassaporte(order)) return false;
+  if (order.status !== 'paid' && order.status !== 'preparando') return false;
+  let raw = order?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  return raw?.delivery_type === 'delivery_pendente' && !raw?.melhor_envio?.order_id;
 };
 
 // 📍 Endereço de entrega — cada checkout grava o endereço num lugar diferente:
@@ -493,8 +512,9 @@ export default function CatalogOrdersAdmin() {
               const config = getDisplayStatusConfig(order);
               const StatusIcon = config.icon;
               const pendingLabel = needsLabel(order);
+              const faltaEndereco = precisaEndereco(order);
               return (
-                <Card key={order.id} className={`bg-gray-800 border-gray-700 hover:border-gray-600 transition-all ${pendingLabel ? 'border-l-4 border-l-amber-500' : ''}`}>
+                <Card key={order.id} className={`bg-gray-800 border-gray-700 hover:border-gray-600 transition-all ${pendingLabel ? 'border-l-4 border-l-amber-500' : faltaEndereco ? 'border-l-4 border-l-orange-500' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -517,6 +537,11 @@ export default function CatalogOrdersAdmin() {
                           {pendingLabel && (
                             <span className="text-amber-400 text-xs font-medium inline-flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3" />Etiqueta pendente
+                            </span>
+                          )}
+                          {faltaEndereco && (
+                            <span className="text-orange-400 text-xs font-medium inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />Entrega pendente — completar endereço
                             </span>
                           )}
                           {order._vendedor_nome && (

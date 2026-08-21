@@ -60,6 +60,31 @@ BEGIN
                               'saldo', _saldo, 'falta', round(_valor - _saldo, 2));
   END IF;
 
+  -- ══════════════════════════════════════════════════════════════════════════
+  -- 🔒 INVARIANTE EXIGIDA PELA AUDITORIA OPENAI (21/08/2026)
+  -- ══════════════════════════════════════════════════════════════════════════
+  -- A RPC debita `_valor` e grava `_raw` — dois números que VÊM SEPARADOS do
+  -- chamador. Nada garantia que fossem o mesmo. Um erro de montagem no servidor
+  -- (ou uma chamada mal-intencionada, já que a função é SECURITY DEFINER)
+  -- debitaria R$ 40 e gravaria no pedido "frete R$ 4". O cliente pagaria 40 e
+  -- todo relatório que lê o pedido diria 4 — divergência silenciosa, e a
+  -- transação inteira pareceria bem-sucedida.
+  -- Compara em CENTAVOS: numeric aqui é dinheiro, e 11.60 tem que bater com
+  -- 11.60 sem depender de arredondamento de texto.
+  IF round(COALESCE((_raw -> 'frete' ->> 'valor')::numeric, -1), 2) IS DISTINCT FROM round(_valor, 2) THEN
+    RETURN jsonb_build_object(
+      'ok', false, 'motivo', 'raw_nao_bate_com_valor',
+      'valor_debitado_pedido', _valor,
+      'valor_no_raw', (_raw -> 'frete' ->> 'valor')
+    );
+  END IF;
+  -- O pedido tem que sair como ENTREGA. Cobrar frete e gravar 'pickup' é o
+  -- defeito F9 entrando pela porta dos fundos.
+  IF COALESCE(_raw ->> 'delivery_type', '') IS DISTINCT FROM 'delivery' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'raw_nao_e_delivery',
+                              'delivery_type', _raw ->> 'delivery_type');
+  END IF;
+
   _novo := round(_saldo - _valor, 2);
 
   -- ── as duas escritas, na mesma transação ──────────────────────────────────

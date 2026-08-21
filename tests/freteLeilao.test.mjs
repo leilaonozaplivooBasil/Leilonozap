@@ -232,3 +232,79 @@ describe('submitAtomicBuyNow — frete do arremate rapido (F6)', () => {
     assert.equal(r.frete.valor, 31.4, 'o frete tem que sair do CEP de quem esta arrematando');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADVERSARIAL — os ataques que a auditoria OpenAI pediu, contra o selo v2
+// ═══════════════════════════════════════════════════════════════════════════
+// O BLOQUEADOR 3 foi: "assinatura válida não é o mesmo que cotação válida".
+// O selo passou a carregar produto e CEP, e quem confere pode EXIGIR os dois.
+const PRODUTO = 'prod-0001';
+const OUTRO_PRODUTO = 'prod-9999';
+
+describe('BLOQUEADOR 3 · o selo tem que provar produto e CEP, não só assinatura', () => {
+  const seloBom = () => emitirSelo({
+    auctionId: LEILAO, userId: USER, freteId: 'me-1', valor: 11.6,
+    cep: '01001000', productId: PRODUTO, empresa: 'Correios', servico: 'SEDEX', prazo: 3,
+  });
+
+  test('B3a · selo bom passa quando produto e CEP são exigidos', () => {
+    const r = conferirSelo(seloBom(), { auctionId: LEILAO, userId: USER, productId: PRODUTO, cep: '01001000' });
+    assert.equal(r.ok, true, r.motivo);
+    assert.equal(r.frete.valor, 11.6);
+    assert.equal(r.frete.productId, PRODUTO);
+  });
+
+  test('B3b · selo de OUTRO produto é recusado', () => {
+    // O ataque: cotar a caneta, arrematar a geladeira.
+    const r = conferirSelo(seloBom(), { auctionId: LEILAO, userId: USER, productId: OUTRO_PRODUTO });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'selo_de_outro_produto');
+    assert.equal(r.frete, null);
+  });
+
+  test('B3c · selo de OUTRO CEP é recusado', () => {
+    // O ataque: cotar para a cidade do galpão, entregar do outro lado do país.
+    const r = conferirSelo(seloBom(), { auctionId: LEILAO, userId: USER, cep: '69900000' });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'selo_de_outro_cep');
+  });
+
+  test('B3d · selo ANTIGO, sem produto, não passa onde o produto é exigido', () => {
+    // Selo emitido antes do campo existir. Não há tolerância: ele dura 30
+    // minutos, então não há nada legítimo em circulação para poupar.
+    const antigo = emitirSelo({ auctionId: LEILAO, userId: USER, freteId: 'me-1', valor: 11.6, cep: '01001000' });
+    const r = conferirSelo(antigo, { auctionId: LEILAO, userId: USER, productId: PRODUTO });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'selo_sem_produto');
+  });
+
+  test('B3e · trocar o produto DENTRO do selo quebra a assinatura', () => {
+    const s = seloBom();
+    const p = s.split('.');
+    const corpo = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    corpo.pid = OUTRO_PRODUTO;
+    const falso = Buffer.from(JSON.stringify(corpo)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const r = conferirSelo(`f1.${falso}.${p[2]}`, { auctionId: LEILAO, userId: USER, productId: OUTRO_PRODUTO });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'assinatura');
+  });
+
+  test('B3f · selo vencido não passa nem com produto e CEP certos', () => {
+    const s = seloBom();
+    const p = s.split('.');
+    const corpo = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    corpo.x = Date.now() - 1000;
+    const vencido = Buffer.from(JSON.stringify(corpo)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const assinatura = crypto.createHmac('sha256', process.env.SESSAO_SECRET).update(`frete-v1|${vencido}`).digest()
+      .toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const r = conferirSelo(`f1.${vencido}.${assinatura}`, { auctionId: LEILAO, userId: USER, productId: PRODUTO });
+    assert.equal(r.ok, false);
+    assert.equal(r.motivo, 'vencido', 'selo vencido com assinatura recalculada passou');
+  });
+
+  test('B3g · o valor do selo é o do SERVIDOR — em centavos, sem erro de float', () => {
+    const s = emitirSelo({ auctionId: LEILAO, userId: USER, freteId: 'x', valor: 0.1 + 0.2, cep: '01001000', productId: PRODUTO });
+    const r = conferirSelo(s, { auctionId: LEILAO, userId: USER, productId: PRODUTO });
+    assert.equal(r.frete.valor, 0.3, 'o float vazou para o valor financeiro');
+  });
+});

@@ -85,6 +85,15 @@ async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auc
     amount_charged: amount,
     produto_amount: produtoAmount,
     origem: 'settleAuctionWithBalance',
+    // 🔗 BLOQUEADOR 7 (auditoria OpenAI, 21/08/2026) — DE ONDE VEIO ESTE PEDIDO.
+    // O pedido de arremate nascia sem NENHUMA referência ao leilão que o gerou.
+    // Quem precisasse recotar o frete depois (a rota cobrarFretePendente) não
+    // tinha como descobrir o produto, e acabava passando o id da VENDA para
+    // `cotarOpcoes` — que procura em `products`, não acha, e cai na caixa mínima
+    // dos Correios. Mesmo defeito F8, um andar acima. Agora o vínculo fica
+    // gravado no pedido.
+    auction_id: auction?.id || null,
+    product_id: auction?.product_id || null,
     frete: { id: null, valor: freteAmount, empresa: null, servico: null, prazo: null, cep: cep || null },
   };
 
