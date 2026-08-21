@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Search, ArrowRightLeft, User, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from "sonner";
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function TransferirSaldo() {
   const navigate = useNavigate();
@@ -75,7 +75,7 @@ export default function TransferirSaldo() {
   const handleTransfer = async () => {
     setIsSubmitting(true);
     try {
-      const response = await base44.functions.invoke('transferBalance', {
+      const response = await plataforma.functions.invoke('transferBalance', {
         receiver_id: recipient.id,
         amount: parseFloat(amount),
         note

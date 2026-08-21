@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { toast } from 'sonner';
 import { Handshake, Loader2, CalendarClock, Undo2, AlertTriangle } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function ConsignadoCard({ user }) {
   const carregar = async () => {
     if (!user?.id) { setCarregando(false); return; }
     setCarregando(true);
-    const r = await base44.functions.invoke('manageConsignacao', { actorId: user.id, action: 'list', escopo: 'meu' });
+    const r = await plataforma.functions.invoke('manageConsignacao', { actorId: user.id, action: 'list', escopo: 'meu' });
     setLista((r?.consignacoes || []).filter((c) => ['pendente', 'aprovada'].includes(c.status)));
     setCarregando(false);
   };
@@ -25,7 +25,7 @@ export default function ConsignadoCard({ user }) {
 
   const devolver = async (c) => {
     setDevolvendo(c.id);
-    const r = await base44.functions.invoke('manageConsignacao', { actorId: user.id, action: 'devolver', consignacao_id: c.id });
+    const r = await plataforma.functions.invoke('manageConsignacao', { actorId: user.id, action: 'devolver', consignacao_id: c.id });
     if (r?.success) { toast.success(`Devolvido. Dívida baixada: ${money(r.divida_baixada)}`); carregar(); }
     else toast.error(r?.error || 'Não foi possível devolver');
     setDevolvendo(''); setConfirmar(null);

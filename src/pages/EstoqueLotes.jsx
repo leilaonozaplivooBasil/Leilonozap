@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -71,7 +71,7 @@ export default function EstoqueLotes() {
 
   const navigate = useNavigate();
 
-  // ✍️ Escrita de LoteRecebido pelo adapter Supabase (base44.entities.LoteRecebido).
+  // ✍️ Escrita de LoteRecebido pelo adapter Supabase (plataforma.entities.LoteRecebido).
   // O app foi migrado do Base44 para o Supabase (tabela lotes_recebidos). Quando o
   // usuário é admin/super_admin, o adapter roteia automaticamente as escritas
   // (create/update/delete) para /api/functions/entityWrite (service_role no Supabase).
@@ -79,21 +79,21 @@ export default function EstoqueLotes() {
 
   useEffect(() => { loadLotes(); }, []);
 
-  // Escrita de LoteRecebido pelo adapter de entidade (base44.entities.LoteRecebido).
+  // Escrita de LoteRecebido pelo adapter de entidade (plataforma.entities.LoteRecebido).
   // O adapter roteia automaticamente create/update/delete de admin/super_admin para a rota
   // Vercel /api/functions/entityWrite (service_role → tabela lotes_recebidos), que JÁ existe
   // em produção e é o mesmo caminho usado por todas as outras páginas do painel.
   const writeLote = async (method, { id, data } = {}) => {
-    if (method === 'create') return base44.entities.LoteRecebido.create(data || {});
-    if (method === 'update') return base44.entities.LoteRecebido.update(id, data || {});
-    if (method === 'delete') return base44.entities.LoteRecebido.delete(id);
+    if (method === 'create') return plataforma.entities.LoteRecebido.create(data || {});
+    if (method === 'update') return plataforma.entities.LoteRecebido.update(id, data || {});
+    if (method === 'delete') return plataforma.entities.LoteRecebido.delete(id);
     throw new Error(`Método '${method}' não suportado`);
   };
 
   const loadLotes = async () => {
     setIsLoading(true);
     try {
-      const data = await base44.entities.LoteRecebido.list('-created_date', 100);
+      const data = await plataforma.entities.LoteRecebido.list('-created_date', 100);
       setLotes(data || []);
     } catch (e) {
       console.error(e);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -57,7 +57,7 @@ export default function CreateCatalogProduct() {
     try {
       const uploadedUrls = [];
       for (const file of files) {
-        const result = await base44.integrations.Core.UploadFile({ file });
+        const result = await plataforma.integrations.Core.UploadFile({ file });
         if (result?.file_url) {
           uploadedUrls.push(result.file_url);
         }
@@ -110,7 +110,7 @@ export default function CreateCatalogProduct() {
         deposit_name: 'Bangu'
       };
 
-      await base44.entities.Product.create(productData);
+      await plataforma.entities.Product.create(productData);
       
       // Limpa cache
       sessionStorage.removeItem('products_cache_v3');

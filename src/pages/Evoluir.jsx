@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ArrowUp, Check, X, Loader2, TrendingUp, Package, Users, Crown } from 'lucide-react';
@@ -51,7 +51,7 @@ export default function Evoluir() {
     if (!user?.id) { toast.error('Faça login para evoluir.'); return; }
     setProcessing(true);
     try {
-      const r = await base44.functions.invoke('createAdesaoPayment', {
+      const r = await plataforma.functions.invoke('createAdesaoPayment', {
         user: { id: user.id, name: user.full_name, email: user.email, cpf: user.cpf }, adesao_level: selected.id, gateway,
       });
       if (!r?.success) { toast.error(r?.error || 'Erro ao iniciar pagamento'); setProcessing(false); return; }

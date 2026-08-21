@@ -1,6 +1,6 @@
 // getDigitalWalletHistory — extrato da Carteira Digital do usuário (versão Vercel).
 // Espelho fiel de base44/functions/getDigitalWalletHistory/entry.ts, que nunca é chamada
-// em produção (base44.functions.invoke roteia para /api/functions/, não pro Deno).
+// em produção (plataforma.functions.invoke roteia para /api/functions/, não pro Deno).
 // Sem este arquivo, a tela "Carteira Digital" (Perfil → Carteira Digital) recebia 404
 // e, dependendo do estado, acabava caindo no ErrorBoundary em loop ("Detectamos um problema").
 import { exigirSessao } from '../_lib/sessao.js';

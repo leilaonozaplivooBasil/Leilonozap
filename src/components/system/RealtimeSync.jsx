@@ -45,8 +45,8 @@ export function useRealtimeSync({
     }
 
     try {
-      const { base44 } = await import('@/api/base44Client');
-      const Entity = base44.entities[entityName];
+      const { plataforma } = await import('@/api/plataformaClient');
+      const Entity = plataforma.entities[entityName];
       
       if (!Entity) return;
       

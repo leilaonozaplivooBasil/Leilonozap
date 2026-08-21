@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Sparkles, Download, Loader2, Image as ImageIcon } from "lucide-react";
 
 const LOGO_URL = "/brand/icon-3d.webp";
@@ -147,7 +147,7 @@ export default function PromoVideoGenerator({ product }) {
     const prompt = `A stunning high-quality product photography of "${productName}" on a premium dark background with dramatic lighting. Professional studio shot with green (#25d366) accent lighting and subtle bokeh effects. Clean, elegant composition suitable for social media. No text, no logos, no watermarks. Leave the bottom 12% of the image as clean dark space.`;
 
     try {
-      const result = await base44.integrations.Core.GenerateImage({
+      const result = await plataforma.integrations.Core.GenerateImage({
         prompt,
         existing_image_urls: product.image_urls?.[0] ? [product.image_urls[0]] : undefined,
       });

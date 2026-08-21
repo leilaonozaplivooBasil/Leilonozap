@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { toast } from 'sonner';
 import { Loader2, Copy, Check, QrCode, X } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function PixPdvModal({ pix, total, onConfirmed, onCancel }) {
   const check = async () => {
     if (confirmedRef.current) return;
     try {
-      const r = await base44.functions.invoke('checkPaymentStatus', { payment_id: pix.payment_id });
+      const r = await plataforma.functions.invoke('checkPaymentStatus', { payment_id: pix.payment_id });
       if (r?.status === 'confirmed' && !confirmedRef.current) {
         confirmedRef.current = true;
         onConfirmed();

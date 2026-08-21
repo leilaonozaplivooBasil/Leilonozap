@@ -9,14 +9,14 @@
 // • Nunca lança erro pra cima — falha em silêncio e só registra no console.
 // • Se falhar, o fluxo antigo (gerar o PDF na hora) continua atendendo.
 // • O servidor é idempotente: chamar duas vezes não duplica arquivo.
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export function arquivarDocumentoAssinado(assinaturaId) {
   if (!assinaturaId) return;
 
   // Fire-and-forget de propósito: o `catch` garante que nenhuma falha de rede
   // vire "unhandled rejection" na tela do parceiro.
-  base44.functions
+  plataforma.functions
     .invoke('arquivarDocumentoAssinado', { assinatura_id: assinaturaId })
     .then((resp) => {
       if (resp?.success) {

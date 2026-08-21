@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // Versão do texto jurídico vigente (PONTO 70 — 01/08/2026: débito e devolução imediatos)
 export const TERMO_VERSAO = '2026-08-01';
@@ -40,7 +40,7 @@ export async function registrarAceiteTermo(user) {
   // Persistência com trilha de auditoria (data + versão do termo) via rota server-side
   // dedicada — a escrita direta em AppUser é barrada pelo RLS para usuário comum.
   try {
-    const r = await base44.functions.invoke('registrarAceiteTermo', {
+    const r = await plataforma.functions.invoke('registrarAceiteTermo', {
       user_id: user.id,
       email: user.email,
       termo_versao: TERMO_VERSAO,

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 
 export default function CheckoutPage() {
     const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
@@ -115,7 +115,7 @@ export default function CheckoutPage() {
             // Criar pagamento ASAAS
             console.log('📤 Criando pagamento ASAAS...');
             
-            const paymentResponse = await base44.functions.invoke('createMPWalletDeposit', {
+            const paymentResponse = await plataforma.functions.invoke('createMPWalletDeposit', {
                 auction_id: auction.id,
                 buyer_name: firstName.trim(),
                 buyer_email: email.trim(),

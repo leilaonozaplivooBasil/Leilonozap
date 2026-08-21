@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, Loader2, PackageX } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import PixNovoModal from '@/components/catalog/PixNovoModal';
 
 // 💳 "Pagar novamente" — coração da recuperação de venda.
@@ -18,7 +18,7 @@ export default function PagarNovamenteBotao({ order }) {
     setCarregando(true);
     try {
       const uid = order.buyer_id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
-      const r = await base44.functions.invoke('regerarPixPedido', { sale_id: order.id, user_id: uid });
+      const r = await plataforma.functions.invoke('regerarPixPedido', { sale_id: order.id, user_id: uid });
 
       if (r?.success) {
         setPix(r);

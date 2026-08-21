@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { toast } from 'sonner';
 import { Search, Loader2, Plus, Minus, Package, Handshake, Send } from 'lucide-react';
@@ -57,7 +57,7 @@ export default function PedirConsignado({ user }) {
   const solicitar = async () => {
     if (!itens.length) return;
     setEnviando(true);
-    const r = await base44.functions.invoke('createConsignacao', {
+    const r = await plataforma.functions.invoke('createConsignacao', {
       actorId: user.id,
       items: itens.map((i) => ({ product_id: i.id, quantity: i.qtd })),
     });

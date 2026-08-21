@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ import SelecaoParcelas from '@/components/payment/SelecaoParcelas';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { ehDestinoValido, DESTINO_PADRAO } from '@/lib/origemDeposito';
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 // 💳 Mesma taxa aplicada no backend (createMPWalletDeposit) — só para exibir o valor
 // cobrado no cartão ANTES de enviar; quem calcula o valor real cobrado é o servidor.
 const CARD_SURCHARGE_RATE = 0.0499;
@@ -102,7 +102,7 @@ export default function AuctionCheckoutModern() {
             document.body.appendChild(script);
           });
         }
-        const keyResp = await base44.functions.invoke('getMPPublicKey', {});
+        const keyResp = await plataforma.functions.invoke('getMPPublicKey', {});
         const publicKey = keyResp?.data?.public_key || keyResp?.public_key;
         if (!cancelled && window.MercadoPago && publicKey) {
           mpInstanceRef.current = new window.MercadoPago(publicKey, { locale: 'pt-BR' });
@@ -320,7 +320,7 @@ export default function AuctionCheckoutModern() {
       // o saldo pelo webhook real (mpWebhook → catalog_sales → app_users.saldo_disponivel).
       // "createMercadoPagoDeposit" é uma função exclusiva do Base44 (não existe na Vercel/produção)
       // — chamá-la aqui quebrava o depósito fora do preview com erro "not_implemented".
-      const paymentResponse = await base44.functions.invoke('createMPWalletDeposit', {
+      const paymentResponse = await plataforma.functions.invoke('createMPWalletDeposit', {
           auction_id: isInvestorCapital ? auction.id : (isWalletDeposit ? null : auction.id),
           buyer_id: currentUser?.id || null,
           buyer_name: firstName.trim(),
@@ -370,7 +370,7 @@ export default function AuctionCheckoutModern() {
             address_state: addressState.trim(),
             address_zip_code: addressZip.trim()
           };
-          base44.entities.AppUser.update(currentUser.id, updateData).then(() => {
+          plataforma.entities.AppUser.update(currentUser.id, updateData).then(() => {
             const saved = localStorage.getItem('currentUser');
             if (saved) {
               const parsed = JSON.parse(saved);
@@ -541,7 +541,7 @@ export default function AuctionCheckoutModern() {
 
     const checkPaymentStatus = async () => {
       try {
-        const result = await base44.functions.invoke('checkPaymentStatus', {
+        const result = await plataforma.functions.invoke('checkPaymentStatus', {
           payment_id: pixData.payment_id
         });
         const data = result?.data || result;

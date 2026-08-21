@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
-const GenerateImage = (params) => base44.integrations.Core.GenerateImage(params);
+const AppUser = plataforma.entities.AppUser;
+const GenerateImage = (params) => plataforma.integrations.Core.GenerateImage(params);
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -139,7 +139,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
       // O indicador é resolvido no servidor pelo ref_code (link de indicação).
       let createdUser;
       try {
-        const resp = await base44.functions.invoke('publicRegister', {
+        const resp = await plataforma.functions.invoke('publicRegister', {
           full_name: fullName.trim(),
           email: normalizedEmail,
           password,

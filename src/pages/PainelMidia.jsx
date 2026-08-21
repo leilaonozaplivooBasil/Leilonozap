@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -134,7 +134,7 @@ export default function PainelMidia() {
 
   const loadAll = useCallback(async () => {
     try {
-      const data = await base44.entities.BannerImage.list('order');
+      const data = await plataforma.entities.BannerImage.list('order');
       setBanners(data || []);
     } catch (error) {
       console.error('Erro ao carregar mídia:', error);
@@ -156,7 +156,7 @@ export default function PainelMidia() {
   // ===== Upload =====
   const uploadFile = async (file, { toWebP = true } = {}) => {
     const finalFile = toWebP ? await convertToWebP(file, 0.9) : file;
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: finalFile });
+    const { file_url } = await plataforma.integrations.Core.UploadFile({ file: finalFile });
     return file_url;
   };
 
@@ -188,7 +188,7 @@ export default function PainelMidia() {
     setIsSaving(true);
     try {
       const image_url = await uploadFile(croppedFile);
-      await base44.entities.BannerImage.create({
+      await plataforma.entities.BannerImage.create({
         context: location.key,
         device_type: device,
         image_url,
@@ -225,7 +225,7 @@ export default function PainelMidia() {
     setIsSaving(true);
     try {
       const image_url = await uploadFile(croppedFile);
-      await base44.entities.BannerImage.update(replaceId, { image_url });
+      await plataforma.entities.BannerImage.update(replaceId, { image_url });
       toast.success('Imagem trocada!');
       loadAll();
     } catch (error) {
@@ -238,7 +238,7 @@ export default function PainelMidia() {
 
   const handleToggleActive = async (banner) => {
     try {
-      await base44.entities.BannerImage.update(banner.id, { is_active: !banner.is_active });
+      await plataforma.entities.BannerImage.update(banner.id, { is_active: !banner.is_active });
       loadAll();
     } catch {
       toast.error('Erro ao atualizar status');
@@ -248,7 +248,7 @@ export default function PainelMidia() {
   const handleDelete = async (banner) => {
     if (!confirm('Excluir este banner?')) return;
     try {
-      await base44.entities.BannerImage.delete(banner.id);
+      await plataforma.entities.BannerImage.delete(banner.id);
       toast.success('Banner excluído');
       loadAll();
     } catch {
@@ -263,8 +263,8 @@ export default function PainelMidia() {
     const b = list[j];
     try {
       await Promise.all([
-        base44.entities.BannerImage.update(a.id, { order: j }),
-        base44.entities.BannerImage.update(b.id, { order: index }),
+        plataforma.entities.BannerImage.update(a.id, { order: j }),
+        plataforma.entities.BannerImage.update(b.id, { order: index }),
       ]);
       loadAll();
     } catch {
@@ -275,7 +275,7 @@ export default function PainelMidia() {
   const handleSaveLink = async (banner, link_url) => {
     if ((banner.link_url || '') === (link_url || '')) return;
     try {
-      await base44.entities.BannerImage.update(banner.id, { link_url });
+      await plataforma.entities.BannerImage.update(banner.id, { link_url });
       toast.success('Link salvo');
       loadAll();
     } catch {
@@ -306,9 +306,9 @@ export default function PainelMidia() {
       const image_url = await uploadFile(file, { toWebP: false });
       const existing = banners.find((b) => b.context === item.key);
       if (existing) {
-        await base44.entities.BannerImage.update(existing.id, { image_url, is_active: true });
+        await plataforma.entities.BannerImage.update(existing.id, { image_url, is_active: true });
       } else {
-        await base44.entities.BannerImage.create({
+        await plataforma.entities.BannerImage.create({
           context: item.key,
           device_type: 'desktop',
           image_url,
@@ -334,7 +334,7 @@ export default function PainelMidia() {
     if (!existing) return;
     if (!confirm(`Voltar ${item.label} para o padrão do site?`)) return;
     try {
-      await base44.entities.BannerImage.delete(existing.id);
+      await plataforma.entities.BannerImage.delete(existing.id);
       invalidateSiteMediaCache();
       toast.success('Padrão restaurado');
       loadAll();

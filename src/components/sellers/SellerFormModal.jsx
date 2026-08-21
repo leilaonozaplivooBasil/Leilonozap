@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Camera, Search, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,7 +62,7 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
     const doc = normalizeCpf(cpf);
     if (!doc) return;
     try {
-      const rows = await base44.entities.AppUser.filter({ cpf: doc });
+      const rows = await plataforma.entities.AppUser.filter({ cpf: doc });
       if (rows && rows.length > 0) {
         const u = rows[0];
         setFoundUser(u);
@@ -88,7 +88,7 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
     if (!file) return;
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       setAvatarUrl(file_url);
     } catch (err) {
       toast.error("Erro ao enviar foto: " + (err.message || "desconhecido"));
@@ -117,7 +117,7 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
     setIsSubmitting(true);
     try {
       if (isEditMode) {
-        const data = await base44.functions.invoke("updateSeller", {
+        const data = await plataforma.functions.invoke("updateSeller", {
           seller_id: editingSeller.id,
           actor_id: getActorId(),
           full_name: fullName.trim(),
@@ -134,7 +134,7 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
           toast.error(data?.error || "Erro ao atualizar vendedor");
         }
       } else {
-        const data = await base44.functions.invoke("registerSeller", {
+        const data = await plataforma.functions.invoke("registerSeller", {
           actor_id: getActorId(),
           cpf: normalizeCpf(cpf),
           full_name: fullName.trim(),

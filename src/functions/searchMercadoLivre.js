@@ -6,8 +6,8 @@
 // sozinho, e fora dele o build quebra ("Could not load /src/functions/searchMercadoLivre").
 // Este wrapper segue o mesmo padrão dos vizinhos em src/functions/ e faz o build
 // passar nos dois ambientes. A função em si vive em base44/functions/searchMercadoLivre.
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export async function searchMercadoLivre(params) {
-    return base44.functions.invoke('searchMercadoLivre', params);
+    return plataforma.functions.invoke('searchMercadoLivre', params);
 }

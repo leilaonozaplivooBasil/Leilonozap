@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,10 @@ import LojistaDashboardStats from "@/components/lojista/LojistaDashboardStats";
 import LojistaDashboardTabs from "@/components/lojista/LojistaDashboardTabs";
 import { usePanelVisibility } from "@/hooks/usePanelVisibility";
 
-const StoreEntity = base44.entities.Store;
-const AuctionEntity = base44.entities.Auction;
-const CatalogSaleEntity = base44.entities.CatalogSale;
-const AppUserEntity = base44.entities.AppUser;
+const StoreEntity = plataforma.entities.Store;
+const AuctionEntity = plataforma.entities.Auction;
+const CatalogSaleEntity = plataforma.entities.CatalogSale;
+const AppUserEntity = plataforma.entities.AppUser;
 
 // Status que contam como venda concluída — em inglês (legado) e português (planilha NEXUS).
 const VENDA_CONCLUIDA = ['paid', 'shipped', 'delivered', 'pago', 'enviado', 'entregue', 'concluido', 'concluído'];
@@ -108,7 +108,7 @@ export default function LojistaDashboard() {
     setIsLoading(true);
     try {
       // 🔒 Auth segura: valida credenciais no backend, sem trafegar senhas
-      const response = await base44.functions.invoke('lojistaAuth', {
+      const response = await plataforma.functions.invoke('lojistaAuth', {
         login: loginForm.login,
         password: loginForm.password
       });

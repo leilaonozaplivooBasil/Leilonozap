@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const Product = base44.entities.Product;
-const Auction = base44.entities.Auction;
-const User = { me: () => base44.auth.me() };
-const UploadFile = (params) => base44.integrations.Core.UploadFile(params);
+const Product = plataforma.entities.Product;
+const Auction = plataforma.entities.Auction;
+const User = { me: () => plataforma.auth.me() };
+const UploadFile = (params) => plataforma.integrations.Core.UploadFile(params);
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -179,7 +179,7 @@ export default function EditCatalogProduct() {
             // 🏬 propaga o preço para a vitrine das lojas (store_inventory.price), que era um snapshot congelado
             if (priceCatalog > 0) {
                 try {
-                    await base44.functions.invoke('syncStoreProduct', { product_id: productId, price: priceCatalog, actor_id: getActorId() });
+                    await plataforma.functions.invoke('syncStoreProduct', { product_id: productId, price: priceCatalog, actor_id: getActorId() });
                 } catch (e) { console.warn('syncStoreProduct falhou (preço na loja pode demorar a refletir):', e?.message); }
             }
 
@@ -201,7 +201,7 @@ export default function EditCatalogProduct() {
         try {
             await Product.update(productId, { catalog_active: false });
             try {
-                await base44.functions.invoke('syncStoreProduct', { product_id: productId, active: false, actor_id: getActorId() });
+                await plataforma.functions.invoke('syncStoreProduct', { product_id: productId, active: false, actor_id: getActorId() });
             } catch (e) { console.warn('syncStoreProduct(active=false) falhou:', e?.message); }
             setIsRemoving(false);
             alert("✅ Produto retirado da loja. Continua na gestão/estoque.");

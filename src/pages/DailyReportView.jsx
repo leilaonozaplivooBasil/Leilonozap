@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
@@ -44,9 +44,9 @@ export default function DailyReportView() {
     setIsLoading(true);
     // Load sales, commissions and products in parallel
     const [salesList, commList, prodList] = await Promise.all([
-      base44.entities.Sale.list('-sale_datetime', 2000),
-      base44.entities.SaleCommission.list('-created_date', 5000),
-      base44.entities.Product.list('-created_date', 500),
+      plataforma.entities.Sale.list('-sale_datetime', 2000),
+      plataforma.entities.SaleCommission.list('-created_date', 5000),
+      plataforma.entities.Product.list('-created_date', 500),
     ]);
 
     const prodsMap = {};

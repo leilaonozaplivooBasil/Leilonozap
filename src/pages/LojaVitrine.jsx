@@ -4,7 +4,7 @@ import { money } from '@/lib/format';
 import { copyLink } from '@/lib/clipboard';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import CompareAquiModal from '@/components/comparai/CompareAquiModal';
 // PONTO 82 — checkout com frete real vive em componente próprio (este arquivo já era longo)

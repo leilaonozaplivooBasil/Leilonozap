@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
 
   const loadFormulas = async () => {
     try {
-      const allFormulas = await base44.entities.PricingFormula.filter({ is_active: true });
+      const allFormulas = await plataforma.entities.PricingFormula.filter({ is_active: true });
       setFormulas(allFormulas);
     } catch (error) {
       // Não bloqueia o uso da calculadora (o cálculo usa tabela de margens fixa,
@@ -128,7 +128,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
 
     setIsLoading(true);
     try {
-      await base44.entities.Product.update(product.id, {
+      await plataforma.entities.Product.update(product.id, {
         market_value: parseFloat(marketValue),
         calculated_price: calculatedPrice,
         discount_percentage: discountPercentage,

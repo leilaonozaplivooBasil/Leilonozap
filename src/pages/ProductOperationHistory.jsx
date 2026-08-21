@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ export default function ProductOperationHistory() {
           }
         }
 
-        const allOperations = await base44.entities.ProductOperation.list('-operation_date', 500);
+        const allOperations = await plataforma.entities.ProductOperation.list('-operation_date', 500);
         setOperations(allOperations);
         setFilteredOperations(allOperations);
       } catch (error) {

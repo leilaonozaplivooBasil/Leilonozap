@@ -4,15 +4,15 @@ import { Package, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCirc
 import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
 import LoteArrematadoOverlay from '../components/lotes/LoteArrematadoOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
 import ModeloBModal from '../components/lotes/ModeloBModal';
 
-const Auction = base44.entities.Auction;
-const AppUser = base44.entities.AppUser;
-const LoteCota = base44.entities.LoteCota;
-const SystemLog = base44.entities.SystemLog;
+const Auction = plataforma.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const LoteCota = plataforma.entities.LoteCota;
+const SystemLog = plataforma.entities.SystemLog;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 

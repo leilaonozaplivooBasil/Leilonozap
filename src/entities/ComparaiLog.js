@@ -1,3 +1,3 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-export const ComparaiLog = base44.entities.ComparaiLog;
+export const ComparaiLog = plataforma.entities.ComparaiLog;

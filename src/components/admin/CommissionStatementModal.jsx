@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const CommissionRecord = base44.entities.CommissionRecord;
-const CatalogSale = base44.entities.CatalogSale;
-const Auction = base44.entities.Auction;
+const CommissionRecord = plataforma.entities.CommissionRecord;
+const CatalogSale = plataforma.entities.CatalogSale;
+const Auction = plataforma.entities.Auction;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";

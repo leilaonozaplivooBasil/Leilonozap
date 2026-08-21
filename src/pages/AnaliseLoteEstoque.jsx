@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, ArrowLeft, Eye, Warehouse } from 'lucide-react';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
@@ -328,7 +328,7 @@ function AnaliseLoteEstoque() {
         if (!loteAtual) return;
         setIsSaving(true);
         try {
-            await base44.entities.LoteRecebido.create({
+            await plataforma.entities.LoteRecebido.create({
                 nome_lote: loteAtual.nomeLote || loteAtual.nomePlanilha || 'Lote sem nome',
                 marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
                 valor_lote: calculations?.custoTotal || 0,

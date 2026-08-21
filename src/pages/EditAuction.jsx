@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const Auction = base44.entities.Auction;
-const AppUser = base44.entities.AppUser;
-const User = { me: () => base44.auth.me() };
-const AuctionMessage = base44.entities.AuctionMessage;
-const UploadFile = (params) => base44.integrations.Core.UploadFile(params);
-const FeaturedProduct = base44.entities.FeaturedProduct;
+const Auction = plataforma.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const User = { me: () => plataforma.auth.me() };
+const AuctionMessage = plataforma.entities.AuctionMessage;
+const UploadFile = (params) => plataforma.integrations.Core.UploadFile(params);
+const FeaturedProduct = plataforma.entities.FeaturedProduct;
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -566,7 +566,7 @@ export default function EditAuction() {
     // e o mapa de posições ocupadas por OUTROS leilões.
     // ⚠️ O vínculo com o leilão é guardado em raw_base44.auction_id (coluna JSON já
     // existente na tabela) — não existe coluna "auction_id" própria, então a leitura
-    // usa o Supabase direto (o adapter base44.entities esconde raw_base44).
+    // usa o Supabase direto (o adapter plataforma.entities esconde raw_base44).
     const loadFeaturedInfo = useCallback(async () => {
         if (!auctionId) return;
         try {

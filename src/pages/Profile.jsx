@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const User = { me: () => base44.auth.me(), updateMyUserData: (data) => base44.auth.updateMe(data), logout: () => base44.auth.logout() };
-const AppUser = base44.entities.AppUser;
-const AuctionMessage = base44.entities.AuctionMessage;
-const GenerateImage = (params) => base44.integrations.Core.GenerateImage(params);
-const UploadFile = (params) => base44.integrations.Core.UploadFile(params);
-const InvokeLLM = (params) => base44.integrations.Core.InvokeLLM(params); // Adicionado InvokeLLM
+const User = { me: () => plataforma.auth.me(), updateMyUserData: (data) => plataforma.auth.updateMe(data), logout: () => plataforma.auth.logout() };
+const AppUser = plataforma.entities.AppUser;
+const AuctionMessage = plataforma.entities.AuctionMessage;
+const GenerateImage = (params) => plataforma.integrations.Core.GenerateImage(params);
+const UploadFile = (params) => plataforma.integrations.Core.UploadFile(params);
+const InvokeLLM = (params) => plataforma.integrations.Core.InvokeLLM(params); // Adicionado InvokeLLM
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Adicionado CardDescription
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,8 +121,8 @@ export default function Profile() {
       // Busca DIRETO no servidor por buyer_id e buyer_email (antes baixava 500
       // pedidos de TODO MUNDO e filtrava no cliente).
       const [byId, byEmail] = await Promise.all([
-        user.id ? base44.entities.CatalogSale.filter({ buyer_id: user.id }, '-created_date', 500).catch(() => []) : [],
-        user.email ? base44.entities.CatalogSale.filter({ buyer_email: user.email }, '-created_date', 500).catch(() => []) : [],
+        user.id ? plataforma.entities.CatalogSale.filter({ buyer_id: user.id }, '-created_date', 500).catch(() => []) : [],
+        user.email ? plataforma.entities.CatalogSale.filter({ buyer_email: user.email }, '-created_date', 500).catch(() => []) : [],
       ]);
       const seen = new Set();
       const merged = [...(byId || []), ...(byEmail || [])].filter(o => {
@@ -180,7 +180,7 @@ export default function Profile() {
     setConfirmingId(order.id);
     try {
       const uid = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
-      const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
+      const r = await plataforma.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
       if (r?.success) {
         setConfirmedIds(prev => new Set(prev).add(order.id));
         toast({ title: 'Recebimento confirmado!', description: 'Pagamento liberado pro vendedor.' });
@@ -198,7 +198,7 @@ export default function Profile() {
 
   const doDeleteOrder = async (order) => {
     try {
-      await base44.entities.CatalogSale.delete(order.id);
+      await plataforma.entities.CatalogSale.delete(order.id);
       setCatalogOrders(prev => prev.filter(o => o.id !== order.id));
       toast({ title: 'Pedido excluído' });
     } catch (err) {
@@ -452,7 +452,7 @@ export default function Profile() {
       // Troca de senha: vai pela rota própria (valida a senha atual e grava o
       // hash). Se falhar, avisa e não continua — o usuário precisa saber.
       if (passwordData.newPassword) {
-        const r = await base44.functions.invoke('changeOwnPassword', {
+        const r = await plataforma.functions.invoke('changeOwnPassword', {
           userId: currentUser.id,
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

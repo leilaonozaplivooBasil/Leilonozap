@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Search, ArrowLeft, Pencil, Mail, CheckCircle2, Loader2, ChevronRight, KeyRound } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 
-const Arrematante = base44.entities.Arrematante;
+const Arrematante = plataforma.entities.Arrematante;
 
 const maskCPF = (cpf) => {
     const d = (cpf || '').replace(/\D/g, '');
@@ -78,7 +78,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
         if (!emailData.subject || !emailData.body) { toast.error('Preencha assunto e corpo.'); return; }
         setSendingEmail(true);
         try {
-            await base44.integrations.Core.SendEmail({
+            await plataforma.integrations.Core.SendEmail({
                 to: selected.email,
                 subject: emailData.subject,
                 body: emailData.body,
@@ -118,7 +118,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
             const senhaTemp = 'Acesso@' + Math.floor(1000 + Math.random() * 9000);
             console.log('DEBUG handleEnviarAcesso - selected objeto:', selected);
             console.log('DEBUG handleEnviarAcesso - email que será enviado:', selected?.email);
-            await base44.integrations.Core.SendEmail({
+            await plataforma.integrations.Core.SendEmail({
                 to: selected.email,
                 subject: 'Seu acesso ao Leilão NoZap',
                 body: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0d1117;color:#e6edf3;padding:32px;border-radius:12px;">

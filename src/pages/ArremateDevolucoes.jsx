@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import AuctionCard from "../components/auction/AuctionCard";
 import { Flame, ShieldCheck, Truck, Package } from "lucide-react";
 import foguinho from "@/assets/foguinho-animado.webp";
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 
 // 🔥 Arremate & Devoluções — setor próprio (antes era só um toggle de filtro escondido na Home,
 // sem página nem URL). Mesma mecânica do Direto de Fábrica, mas com product_source='return_resale'.

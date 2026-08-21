@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { supabase } from '@/api/supabaseClient';
 import useTotalProdutosLoja from '@/hooks/useTotalProdutosLoja';
 import TourLojaGuia from './TourLojaGuia';
@@ -80,7 +80,7 @@ export default function ParceiroTourLoja({ canal = 'loja', onClose }) {
   useEffect(() => {
     if (eLeilao) return;
     let ativo = true;
-    base44.entities.Category.filter({ parent_category_id: null, is_active: true })
+    plataforma.entities.Category.filter({ parent_category_id: null, is_active: true })
       .then((lista) => { if (ativo) setCategorias((lista || []).filter((c) => c?.id && c?.name)); })
       .catch(() => { if (ativo) setCategorias([]); });
     return () => { ativo = false; };
@@ -90,13 +90,13 @@ export default function ParceiroTourLoja({ canal = 'loja', onClose }) {
     if (eLeilao) {
       const filtro = { status: 'active' };
       if (cat !== 'all') filtro.category = cat;
-      return base44.entities.Auction
+      return plataforma.entities.Auction
         .filter(filtro, '-created_date', PAGINA, deslocamento)
         .then((lista) => (lista || []).filter((a) => a?.id && a?.image_urls?.[0]));
     }
     const filtro = { catalog_active: true };
     if (cat !== 'all') filtro.category_id = cat;
-    return base44.entities.Product
+    return plataforma.entities.Product
       .filter(filtro, '-created_date', PAGINA, deslocamento)
       .then((lista) => (lista || []).filter((p) => p?.id && p?.image_urls?.[0]));
   }, [eLeilao]);

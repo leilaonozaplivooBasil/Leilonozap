@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Users, Loader2 } from 'lucide-react';
 
-const LoteCota = base44.entities.LoteCota;
+const LoteCota = plataforma.entities.LoteCota;
 
 /**
  * CotasProgressBar

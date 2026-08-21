@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, CheckCircle2, DollarSign, History, ShieldCheck, AlertCircle, TrendingUp, ArrowLeft, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { usePanelVisibility } from '@/hooks/usePanelVisibility';
 
-const AppUser = base44.entities.AppUser;
-const Auction = base44.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const Auction = plataforma.entities.Auction;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -46,7 +46,7 @@ export default function CarteiraInvestidor() {
 
             const [auctions, walletTx] = await Promise.all([
                 Auction.filter({ winner_id: user.id }),
-                base44.entities.WalletTransaction.filter({ user_id: user.id })
+                plataforma.entities.WalletTransaction.filter({ user_id: user.id })
             ]);
             setLotesParticipando(auctions || []);
             setHistorico((walletTx || []).sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));

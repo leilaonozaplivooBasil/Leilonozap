@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -119,7 +119,7 @@ export default function ActivePartners() {
   const toggleInstallmentPaid = async (installment) => {
     try {
       // Busca a compra para atualizar
-      const purchases = await base44.entities.PartnerPlanPurchase.filter({ id: installment.purchase_id });
+      const purchases = await plataforma.entities.PartnerPlanPurchase.filter({ id: installment.purchase_id });
       if (!purchases || purchases.length === 0) return;
       
       const targetPurchase = purchases[0];
@@ -141,7 +141,7 @@ export default function ActivePartners() {
         }];
       }
       
-      await base44.entities.PartnerPlanPurchase.update(installment.purchase_id, {
+      await plataforma.entities.PartnerPlanPurchase.update(installment.purchase_id, {
         purchase_periods: updatedPeriods
       });
       
@@ -169,7 +169,7 @@ export default function ActivePartners() {
       const purchases = response?.data?.purchases || [];
 
       // 2️⃣ Buscar usuários com planos ativos no sistema antigo (AppUser)
-      const usersWithPlans = await base44.entities.AppUser.list('-partner_plan_activated_at', 500);
+      const usersWithPlans = await plataforma.entities.AppUser.list('-partner_plan_activated_at', 500);
       
       // 3️⃣ CRIAR SET de user_ids que JÁ TEM planos no sistema novo
       const userIdsWithNewPlans = new Set(purchases.map(p => p.user_id));
@@ -249,14 +249,14 @@ export default function ActivePartners() {
       // Verificar se é ativação legacy ou nova
       if (editingPurchase.activation_source === 'legacy') {
         // Atualizar no AppUser
-        await base44.entities.AppUser.update(editingPurchase.user_id, {
+        await plataforma.entities.AppUser.update(editingPurchase.user_id, {
           active_partner_plan: editFormData.plan_name || null,
           partner_plan_amount: parseFloat(editFormData.plan_amount) || 0,
           partner_plan_activated_at: activationDateTime
         });
       } else {
         // Atualizar no PartnerPlanPurchase
-        await base44.entities.PartnerPlanPurchase.update(editingPurchase.id, {
+        await plataforma.entities.PartnerPlanPurchase.update(editingPurchase.id, {
           plan_name: editFormData.plan_name || null,
           plan_amount: parseFloat(editFormData.plan_amount) || 0,
           activated_at: activationDateTime,
@@ -270,7 +270,7 @@ export default function ActivePartners() {
       }
 
       // Log da edição
-      await base44.entities.SystemLog.create({
+      await plataforma.entities.SystemLog.create({
         step: 'PARTNER_PURCHASE_EDITED',
         status: 'success',
         message: `Compra de plano editada para ${editingPurchase.user_name}`,
@@ -302,19 +302,19 @@ export default function ActivePartners() {
       // Verificar se é ativação legacy ou nova
       if (purchase.activation_source === 'legacy') {
         // Desativar no AppUser
-        await base44.entities.AppUser.update(purchase.user_id, {
+        await plataforma.entities.AppUser.update(purchase.user_id, {
           active_partner_plan: null,
           partner_plan_amount: null,
           partner_plan_activated_at: null
         });
       } else {
         // Desativar no PartnerPlanPurchase
-        await base44.entities.PartnerPlanPurchase.update(purchase.id, {
+        await plataforma.entities.PartnerPlanPurchase.update(purchase.id, {
           status: 'canceled'
         });
       }
 
-      await base44.entities.SystemLog.create({
+      await plataforma.entities.SystemLog.create({
         step: 'PARTNER_PURCHASE_CANCELED',
         status: 'success',
         message: `Compra de plano cancelada para ${purchase.user_name}`,

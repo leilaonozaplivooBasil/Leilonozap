@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, AlertTriangle, RefreshCw, X, ShoppingBag, ArrowRight } from 'lucide-react';
@@ -20,7 +20,7 @@ export default function CatalogSyncCard() {
   // Verifica estado (count) — rápido e leve
   const checkStatus = useCallback(async () => {
     try {
-      const res = await base44.functions.invoke('syncCatalogPrices', { action: 'count' });
+      const res = await plataforma.functions.invoke('syncCatalogPrices', { action: 'count' });
       const count = res?.data?.out_of_sync || 0;
       setOutOfSyncCount(count);
       setStatus(count > 0 ? 'out_of_sync' : 'synced');
@@ -41,7 +41,7 @@ export default function CatalogSyncCard() {
     setIsModalOpen(true);
     setIsLoadingPreview(true);
     try {
-      const res = await base44.functions.invoke('syncCatalogPrices', { action: 'preview' });
+      const res = await plataforma.functions.invoke('syncCatalogPrices', { action: 'preview' });
       setPreviewProducts(res?.data?.products || []);
     } catch (err) {
       alert('❌ Erro ao carregar lista: ' + err.message);
@@ -59,7 +59,7 @@ export default function CatalogSyncCard() {
     setIsApplying(true);
     try {
       const ids = previewProducts.map(p => p.id);
-      const res = await base44.functions.invoke('syncCatalogPrices', {
+      const res = await plataforma.functions.invoke('syncCatalogPrices', {
         action: 'apply',
         product_ids: ids
       });

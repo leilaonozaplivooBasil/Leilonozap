@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,9 +70,9 @@ export default function PartnerPlanActivation() {
       
       let users;
       if (isCpf) {
-        users = await base44.entities.AppUser.filter({ cpf: cleanTerm }, '-created_date', 10);
+        users = await plataforma.entities.AppUser.filter({ cpf: cleanTerm }, '-created_date', 10);
       } else {
-        users = await base44.entities.AppUser.filter({ email: cleanTerm }, '-created_date', 10);
+        users = await plataforma.entities.AppUser.filter({ email: cleanTerm }, '-created_date', 10);
       }
       
       if (users && users.length > 0) {
@@ -135,7 +135,7 @@ export default function PartnerPlanActivation() {
       }
 
       // ✅ CRIAR REGISTRO DE COMPRA INDIVIDUAL (cada ativação = 1 registro)
-      const newPurchase = await base44.entities.PartnerPlanPurchase.create({
+      const newPurchase = await plataforma.entities.PartnerPlanPurchase.create({
         user_id: foundUser.id,
         user_name: foundUser.full_name,
         user_email: foundUser.email,
@@ -154,7 +154,7 @@ export default function PartnerPlanActivation() {
       // O AppUser mantém os campos para compatibilidade mas não é mais fonte de verdade
 
       // Log da ativação
-      await base44.entities.SystemLog.create({
+      await plataforma.entities.SystemLog.create({
         step: 'PARTNER_PLAN_ACTIVATED',
         status: 'success',
         message: `Plano ${planName} ativado para ${foundUser.full_name}`,

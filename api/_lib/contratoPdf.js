@@ -3,7 +3,7 @@
 // CAUSA-RAIZ do "PDF não gerado" (06/08/2026): a função existia SÓ como função
 // Deno (base44/functions/generateContractPDF) e funcionava lá. Mas o app no
 // navegador manda toda chamada de servidor para /api/functions/<nome> (ver
-// src/api/base44Adapter.js). Como não existia /api/functions/generateContractPDF,
+// src/api/plataformaAdapter.js). Como não existia /api/functions/generateContractPDF,
 // o adapter devolvia { ok:false, error:'not_implemented' }, o front não achava
 // pdf_base64 e mostrava "PDF não gerado" — em Baixar E em Compartilhar.
 //

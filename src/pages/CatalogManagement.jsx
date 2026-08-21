@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ export default function CatalogManagement() {
   })();
   // escrita via service_role (anon não persiste). uid = ator logado.
   const _uid = (() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.id; } catch { return null; } })();
-  const _ew = (entity, action, id, data) => base44.functions.invoke('adminEntityWrite', { actorId: _uid, entity, action, id, data });
+  const _ew = (entity, action, id, data) => plataforma.functions.invoke('adminEntityWrite', { actorId: _uid, entity, action, id, data });
   const [catalogBanners, setCatalogBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
@@ -79,7 +79,7 @@ export default function CatalogManagement() {
   const loadBanners = async () => {
     try {
       // Filtrar apenas banners de catálogo (adicione uma nova propriedade 'context' na entidade BannerImage)
-      const data = await base44.entities.BannerImage.filter({ context: 'catalog' }, 'order');
+      const data = await plataforma.entities.BannerImage.filter({ context: 'catalog' }, 'order');
       setCatalogBanners(data || []);
     } catch (error) {
       console.error('Erro ao carregar banners:', error);
@@ -97,7 +97,7 @@ export default function CatalogManagement() {
 
   const loadCatalogSettings = async () => {
     try {
-      const settings = await base44.entities.CatalogSettings.list();
+      const settings = await plataforma.entities.CatalogSettings.list();
       if (settings && settings.length > 0) {
         setCatalogSettings(settings[0]);
       } else {
@@ -115,7 +115,7 @@ export default function CatalogManagement() {
   const loadProducts = async () => {
     setLoadingProducts(true);
     try {
-      const data = await base44.entities.Product.list('-updated_date', 100);
+      const data = await plataforma.entities.Product.list('-updated_date', 100);
       setProducts(data || []);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
@@ -131,7 +131,7 @@ export default function CatalogManagement() {
     }
     
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       return file_url;
     } catch (error) {
       console.error('Erro ao fazer upload:', error);

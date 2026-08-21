@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,7 +49,7 @@ export default function ArquitetoIA() {
   useEffect(() => {
     if (!conversationId) return;
 
-    const unsubscribe = base44.agents.subscribeToConversation(conversationId, (data) => {
+    const unsubscribe = plataforma.agents.subscribeToConversation(conversationId, (data) => {
       setMessages(data.messages || []);
     });
 
@@ -62,7 +62,7 @@ export default function ArquitetoIA() {
 
   const initConversation = async () => {
     try {
-      const conversation = await base44.agents.createConversation({
+      const conversation = await plataforma.agents.createConversation({
         agent_name: "arquiteto_base44",
         metadata: {
           name: "Sessão do Arquiteto",
@@ -84,8 +84,8 @@ export default function ArquitetoIA() {
     setInput("");
 
     try {
-      const conversation = await base44.agents.getConversation(conversationId);
-      await base44.agents.addMessage(conversation, {
+      const conversation = await plataforma.agents.getConversation(conversationId);
+      await plataforma.agents.addMessage(conversation, {
         role: "user",
         content: userMessage
       });
@@ -101,7 +101,7 @@ export default function ArquitetoIA() {
     if (!confirm("Limpar toda a conversa?")) return;
     
     try {
-      const conversation = await base44.agents.createConversation({
+      const conversation = await plataforma.agents.createConversation({
         agent_name: "arquiteto_base44",
         metadata: {
           name: "Nova Sessão",
@@ -119,8 +119,8 @@ export default function ArquitetoIA() {
   const analyzeSystemHealth = async () => {
     setIsAnalyzing(true);
     try {
-      const SystemLog = base44.entities.SystemLog;
-      const Auction = base44.entities.Auction;
+      const SystemLog = plataforma.entities.SystemLog;
+      const Auction = plataforma.entities.Auction;
       
       // Análise rápida dos últimos 7 dias
       const sevenDaysAgo = new Date();
@@ -143,8 +143,8 @@ export default function ArquitetoIA() {
       
       // Envia análise automática para o Arquiteto
       if (conversationId) {
-        const conversation = await base44.agents.getConversation(conversationId);
-        await base44.agents.addMessage(conversation, {
+        const conversation = await plataforma.agents.getConversation(conversationId);
+        await plataforma.agents.addMessage(conversation, {
           role: "user",
           content: `Analise a saúde do sistema:\n- ${errors.length} erros nos últimos registros\n- ${stuckAuctions.length} leilões potencialmente travados\n- ${auctions.length} leilões ativos no total\n\nIdentifique problemas críticos e sugira correções.`
         });
@@ -209,7 +209,7 @@ export default function ArquitetoIA() {
                   Analisar Sistema
                 </Button>
                 <a
-                  href={base44.agents.getWhatsAppConnectURL('arquiteto_base44')}
+                  href={plataforma.agents.getWhatsAppConnectURL('arquiteto_base44')}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

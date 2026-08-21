@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
 export default function SellerWithdrawalModal({
   isOpen,
@@ -53,7 +53,7 @@ export default function SellerWithdrawalModal({
 
     setIsSubmitting(true);
     try {
-      const response = await base44.functions.invoke("requestSellerWithdrawal", {
+      const response = await plataforma.functions.invoke("requestSellerWithdrawal", {
         amount: amountNum,
         pix_key: pixKey.trim(),
         pix_key_type: pixKeyType,

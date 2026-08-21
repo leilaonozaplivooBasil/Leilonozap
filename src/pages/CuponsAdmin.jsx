@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Ticket, Plus, Trash2, Loader2, Power } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,8 +22,7 @@ export default function CuponsAdmin() {
 
   const load = async () => {
     setLoading(true);
-    const r = await base44.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'list' });
-    if (r && r.success === false) toast.error(r.error || 'Falha ao carregar cupons');
+    const r = await plataforma.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'list' });    if (r && r.success === false) toast.error(r.error || 'Falha ao carregar cupons');
     setCoupons(r?.coupons || []);
     setLoading(false);
   };
@@ -33,8 +32,7 @@ export default function CuponsAdmin() {
     e.preventDefault();
     if (!form.code.trim() || !form.valor) { toast.error('Preencha código e valor'); return; }
     setSaving(true);
-    const r = await base44.functions.invoke('manageCoupons', {
-      actorId: idDoAdmin(),
+    const r = await plataforma.functions.invoke('manageCoupons', {      actorId: idDoAdmin(),
       action: 'create',
       code: form.code, tipo: form.tipo, valor: Number(form.valor),
       min_order: form.min_order ? Number(form.min_order) : 0,
@@ -49,9 +47,8 @@ export default function CuponsAdmin() {
     load();
   };
 
-  const toggle = async (c) => { await base44.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'toggle', id: c.id, active: !c.active }); load(); };
-  const excluir = async (c) => { if (!window.confirm(`Excluir o cupom ${c.code}?`)) return; await base44.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'delete', id: c.id }); load(); };
-
+  const toggle = async (c) => { await plataforma.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'toggle', id: c.id, active: !c.active }); load(); };
+  const excluir = async (c) => { if (!window.confirm(`Excluir o cupom ${c.code}?`)) return; await plataforma.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'delete', id: c.id }); load(); };
   const inp = 'bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-green-500 focus:outline-none w-full';
 
   return (

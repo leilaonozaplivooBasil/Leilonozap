@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
 /**
  * Componente invisível que rastreia tempos de carregamento de páginas.
@@ -20,7 +20,7 @@ export default function PagePerformanceTracker({ pageName }) {
       requestAnimationFrame(() => {
         const loadTime = Math.round(performance.now() - startTime);
 
-        base44.analytics.track({
+        plataforma.analytics.track({
           eventName: "page_load_time",
           properties: {
             page: pageName,

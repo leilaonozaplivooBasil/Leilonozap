@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,7 @@ export default function StockPosition() {
         }
       }
 
-      const allProducts = await base44.entities.Product.list('-created_date', 1000);
+      const allProducts = await plataforma.entities.Product.list('-created_date', 1000);
       setProducts(allProducts);
       setFilteredProducts(allProducts);
     } catch (error) {

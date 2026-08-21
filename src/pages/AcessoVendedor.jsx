@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import bcrypt from 'bcryptjs';
 import { Eye, EyeOff, CheckCircle, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { saveSession } from '@/lib/session';
@@ -37,7 +37,7 @@ export default function AcessoVendedor() {
 
       if (userId) {
         try {
-          const u = await base44.entities.AppUser.filter({ id: userId });
+          const u = await plataforma.entities.AppUser.filter({ id: userId });
           if (u && u.length > 0 && u[0].access_token === token) {
             users = u;
           }
@@ -45,7 +45,7 @@ export default function AcessoVendedor() {
       }
 
       if (users.length === 0) {
-        users = await base44.entities.AppUser.filter({ access_token: token });
+        users = await plataforma.entities.AppUser.filter({ access_token: token });
       }
 
       if (!users || users.length === 0) {
@@ -87,7 +87,7 @@ export default function AcessoVendedor() {
     setIsSubmitting(true);
     try {
       const hashed = bcrypt.hashSync(newPassword, bcrypt.genSaltSync(10));
-      await base44.entities.AppUser.update(seller.id, {
+      await plataforma.entities.AppUser.update(seller.id, {
         password: hashed,
         access_token: null,
         access_token_expires: null,

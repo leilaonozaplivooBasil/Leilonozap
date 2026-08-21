@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { money, addMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 // 👁️ Só observabilidade: nenhum dado pessoal, nenhuma interferência no lance.
 import { trackEvent } from "@/lib/analytics";
 
-const Auction = base44.entities.Auction;
-const AuctionMessage = base44.entities.AuctionMessage;
-const AppUser = base44.entities.AppUser;
+const Auction = plataforma.entities.Auction;
+const AuctionMessage = plataforma.entities.AuctionMessage;
+const AppUser = plataforma.entities.AppUser;
 
 const COUNTDOWN_DURATION = 142;
 const BID_EXTENSION_SECONDS = 22;
@@ -53,7 +53,7 @@ export default function useBidSubmission({
     // na carteira (e o que precisa estar disponível) é lance + frete.
     const totalComFrete = addMoney(money(parseFloat(amount)), freteValor);
     try {
-      const freshResult = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
+      const freshResult = await plataforma.functions.invoke('getMyWallet', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
       const freshBalance = typeof freshData?.saldo_disponivel === 'number' ? freshData.saldo_disponivel : null;
       if (freshBalance !== null) {
@@ -97,7 +97,7 @@ export default function useBidSubmission({
     // Usa função backend (releaseBidHold) porque a DigitalWallet tem RLS write: admin-only
     const releaseHold = async (reason) => {
       try {
-        const releaseResult = await base44.functions.invoke('releaseBidHold', {
+        const releaseResult = await plataforma.functions.invoke('releaseBidHold', {
           user_id: currentUser.id,
           auction_id: auctionId,
           amount: debitedAmount,
@@ -170,7 +170,7 @@ export default function useBidSubmission({
         // autoridade. Enquanto FRETE_MODO não for 'bloquear', a divergência entre
         // os dois valores vai para o log, que é o sinal que a gente quer ver antes
         // de ligar o bloqueio.
-        const reserveResult = await base44.functions.invoke('reserveBidBalance', {
+        const reserveResult = await plataforma.functions.invoke('reserveBidBalance', {
           user_id: currentUser.id, amount: totalReservar, auction_id: auctionId,
           bid_amount: bidAmount, frete_selo: freteSelo,
           description: `Reserva de lance - R$ ${fmtBR(bidAmount)}${freteValor > 0 ? ` + frete R$ ${fmtBR(freteValor)}` : ''}`
@@ -226,7 +226,7 @@ export default function useBidSubmission({
       // Supabase real) — evita a condição de corrida em que dois lances simultâneos
       // passavam os dois e um sobrescrevia o outro, deixando saldo reservado sem lance
       // correspondente. Só cria a mensagem de chat DEPOIS de confirmar que este lance venceu.
-      const atomicResult = await base44.functions.invoke('submitAtomicBid', {
+      const atomicResult = await plataforma.functions.invoke('submitAtomicBid', {
         auction_id: auctionId,
         amount: bidAmount,
         user_id: currentUser.id,
@@ -285,7 +285,7 @@ export default function useBidSubmission({
       // submitAtomicBid, no mesmo instante em que o lance vence. Aqui só atualizamos o
       // saldo exibido. Liberar também pelo navegador causaria DUPLA liberação.
       try {
-        const balanceRefresh = await base44.functions.invoke('getMyWallet', { user_id: currentUser.id });
+        const balanceRefresh = await plataforma.functions.invoke('getMyWallet', { user_id: currentUser.id });
         const balanceData = balanceRefresh?.data || balanceRefresh;
         if (typeof balanceData?.saldo_disponivel === 'number') {
           setUserWallet({ balance: balanceData.saldo_disponivel });

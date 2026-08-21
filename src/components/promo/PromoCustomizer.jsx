@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, RotateCcw } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
 export default function PromoCustomizer({ product, overrides, onChange }) {
   const fileInputRef = useRef(null);
@@ -13,7 +13,7 @@ export default function PromoCustomizer({ product, overrides, onChange }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
     onChange({ ...overrides, imageUrl: file_url });
   };
 

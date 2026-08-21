@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { ShieldCheck, Gavel, Clock, BadgeCheck } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { VERSAO_TERMO } from '@/lib/termoSigiloTexto';
 import { arquivarDocumentoAssinado } from '@/lib/arquivarDocumento';
 import ParceiroTermoSigiloTexto from './ParceiroTermoSigiloTexto';
@@ -48,7 +48,7 @@ export default function ParceiroTermoSigilo({ user, registro, onAssinado, libera
   const registrar = async (assinaturaPng) => {
     setSalvando(true);
     try {
-      const resp = await base44.functions.invoke('registrarAssinaturaContrato', {
+      const resp = await plataforma.functions.invoke('registrarAssinaturaContrato', {
         documento: 'termo_confidencialidade',
         versao: VERSAO_TERMO,
         user_id: user?.id,

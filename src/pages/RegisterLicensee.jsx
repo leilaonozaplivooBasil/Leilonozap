@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,7 @@ export default function RegisterLicensee() {
     queryKey: ["licensees"],
     queryFn: async () => {
       // Busca todos os AppUsers que são ou já foram licenciados
-      const res = await base44.entities.AppUser.list("-updated_date", 1000);
+      const res = await plataforma.entities.AppUser.list("-updated_date", 1000);
       return (res || []).filter(u =>
         (u.career_levels || []).includes("licenciado_catalogo") ||
         u.role === "licensee" ||

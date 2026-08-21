@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
-const Product = base44.entities.Product;
-const User = { me: () => base44.auth.me() };
-const AppUser = base44.entities.AppUser;
-const Store = base44.entities.Store;
+const Product = plataforma.entities.Product;
+const User = { me: () => plataforma.auth.me() };
+const AppUser = plataforma.entities.AppUser;
+const Store = plataforma.entities.Store;
 import { Filter, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -90,7 +90,7 @@ export default function Catalog() {
     try {
       const f = { catalog_active: true };
       if (selectedCategory && selectedCategory !== "all") f.category_id = selectedCategory;
-      const next = await base44.entities.Product.filter(f, "-created_date", PAGE, products.length);
+      const next = await plataforma.entities.Product.filter(f, "-created_date", PAGE, products.length);
       if (Array.isArray(next) && next.length > 0) {
         setProducts((prev) => {
           const seen = new Set(prev.map((p) => p.id));
@@ -463,7 +463,7 @@ export default function Catalog() {
       console.error("❌ Erro:", error);
       
       try {
-        await base44.entities.SystemLog.create({
+        await plataforma.entities.SystemLog.create({
           step: 'FETCH_CATALOG_PRODUCTS',
           status: 'error',
           message: `Failed to load products: ${error.message}`,
@@ -520,7 +520,7 @@ export default function Catalog() {
 
       // Carrega categorias
       try {
-        const allCategories = await base44.entities.Category.filter({ parent_category_id: null, is_active: true });
+        const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
         setCategories((allCategories || []).filter(c => c.is_active !== false));
       } catch (error) {
         console.debug('Erro ao carregar categorias:', error);
@@ -536,7 +536,7 @@ export default function Catalog() {
         } else {
           setTimeout(async () => {
             try {
-              const bannerData = await base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' });
+              const bannerData = await plataforma.entities.BannerImage.filter({ is_active: true, context: 'catalog' });
               const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
               setBanners(sortedBanners);
               sessionStorage.setItem('catalog_banners_cache', JSON.stringify(sortedBanners));

@@ -7,11 +7,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
-const Auction = base44.entities.Auction;
-const User = { me: () => base44.auth.me() };
-const AppUser = base44.entities.AppUser;
+const Auction = plataforma.entities.Auction;
+const User = { me: () => plataforma.auth.me() };
+const AppUser = plataforma.entities.AppUser;
 import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkLocation } from "@/functions/checkLocation";
@@ -225,7 +225,7 @@ export default function Home() {
   // atualiza o card na hora, sem esperar o polling. Se a publication do Supabase não
   // incluir a tabela, o canal fica mudo e o polling continua como fallback.
   useEffect(() => {
-    const unsubscribe = base44.entities.Auction.subscribe((payload) => {
+    const unsubscribe = plataforma.entities.Auction.subscribe((payload) => {
       const row = payload?.new;
       if (!row?.id) return;
       setAuctions((prev) => {
@@ -504,7 +504,7 @@ export default function Home() {
     }
 
     try {
-      const nozapFavorites = await base44.entities.FavoriteAuction.filter({ user_id: userId, context: 'nozap' });
+      const nozapFavorites = await plataforma.entities.FavoriteAuction.filter({ user_id: userId, context: 'nozap' });
       const nozapFavoriteIds = nozapFavorites.map((f) => f.auction_id);
       setUserFavorites(nozapFavoriteIds);
 
@@ -588,7 +588,7 @@ export default function Home() {
 
   const loadProductStock = React.useCallback(async () => {
     try {
-      const products = await base44.entities.Product.list('-created_date', 200);
+      const products = await plataforma.entities.Product.list('-created_date', 200);
       const stockMap = {};
       products.forEach(p => {
         if (p.id) {
@@ -748,7 +748,7 @@ export default function Home() {
         // "desktop", então o carrossel os escondia no celular e sobrava só o vídeo.
         // Marcamos como "any": a MESMA arte serve os dois tamanhos (padrão da Loja
         // Virtual). Os banners velhos (sem context) continuam de fora.
-        base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
+        plataforma.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
         // Só o PRIMEIRO banner de imagem entra no carrossel: a segunda arte
         // não enquadra em nenhuma proporção (fica sempre cortada nas laterais).
         const imageBanners = (bannerData || [])

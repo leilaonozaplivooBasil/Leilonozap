@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,7 @@ export default function LicenseeOrders(){
     queryKey: ["licensee", licenseeId],
     enabled: !!licenseeId,
     queryFn: async () => {
-      const rows = await base44.entities.AppUser.filter({ id: licenseeId });
+      const rows = await plataforma.entities.AppUser.filter({ id: licenseeId });
       return rows?.[0] || null;
     }
   });
@@ -45,7 +45,7 @@ export default function LicenseeOrders(){
     queryKey: ["catalogSales"],
     queryFn: async () => {
       // Carrega últimas 1000 vendas (ajuste conforme necessário)
-      const rows = await base44.entities.CatalogSale.list("-created_date", 1000);
+      const rows = await plataforma.entities.CatalogSale.list("-created_date", 1000);
       return rows || [];
     },
     initialData: []

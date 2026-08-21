@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, Loader2, Share2 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
 const XEosLogo = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/9402aeaa5_leilonozap3.png";
 const NoZapLogo = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
@@ -49,7 +49,7 @@ export default function DailyRanking({ allSales }) {
 
       // Busca comissões
       const commissionsPromises = saleIds.map(saleId => 
-        base44.entities.SaleCommission.filter({ sale_id: saleId }).catch(() => [])
+        plataforma.entities.SaleCommission.filter({ sale_id: saleId }).catch(() => [])
       );
       const commissionsArrays = await Promise.all(commissionsPromises);
       const commissionsForDay = commissionsArrays.flat();

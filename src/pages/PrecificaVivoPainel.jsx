@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +25,8 @@ export default function PrecificaVivoPainel() {
   const loadData = useCallback(async () => {
     try {
       const [statsRes, historyData] = await Promise.all([
-        base44.functions.invoke('precificaVivoControl', { action: 'get_stats' }),
-        base44.entities.PriceHistory.list('-created_date', 50)
+        plataforma.functions.invoke('precificaVivoControl', { action: 'get_stats' }),
+        plataforma.entities.PriceHistory.list('-created_date', 50)
       ]);
       setStats(statsRes?.data || null);
       setHistory(historyData || []);
@@ -50,7 +50,7 @@ export default function PrecificaVivoPainel() {
     setIsRunning(true);
     setLastRunResult(null);
     try {
-      const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_now' });
+      const res = await plataforma.functions.invoke('precificaVivoControl', { action: 'run_now' });
       setLastRunResult(res?.data?.result || res?.data);
       alert('Execução concluída! Veja o resultado no painel.');
       await loadData();
@@ -67,7 +67,7 @@ export default function PrecificaVivoPainel() {
     setIsTestRunning(true);
     setLastRunResult(null);
     try {
-      const res = await base44.functions.invoke('precificaVivoControl', { action: 'run_test' });
+      const res = await plataforma.functions.invoke('precificaVivoControl', { action: 'run_test' });
       setLastRunResult(res?.data?.result || res?.data);
       alert('Teste concluído! Veja o resultado no painel.');
       await loadData();

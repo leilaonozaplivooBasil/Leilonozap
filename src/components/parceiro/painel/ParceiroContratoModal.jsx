@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import ParceiroContratoTexto from './ParceiroContratoTexto';
 
 // 📄 Leitura do Contrato de Parceria + baixar/compartilhar o PDF.
@@ -11,7 +11,7 @@ import ParceiroContratoTexto from './ParceiroContratoTexto';
 // de base64 → blob → Web Share/download. Nada de lógica alterado.
 export default function ParceiroContratoModal({ dadosPdf, onVoltar }) {
   const gerarBlob = async () => {
-    const response = await base44.functions.invoke('generateContractPDF', {
+    const response = await plataforma.functions.invoke('generateContractPDF', {
       format: 'base64',
       ...dadosPdf,
     });

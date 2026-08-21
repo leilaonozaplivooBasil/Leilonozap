@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
 import {
@@ -57,7 +57,7 @@ export default function PedidosDistribuidor() {
 
     // transportadoras — isolado: se a function não existir, só esconde a aba
     try {
-      const c = await base44.functions.invoke('manageCarriers', { action: 'list', ownerId: u?.id });
+      const c = await plataforma.functions.invoke('manageCarriers', { action: 'list', ownerId: u?.id });
       const payload = c?.data || c || {};
       setCarriers(payload.carriers || []);
       setTableMissing(!!payload.table_missing);
@@ -73,7 +73,7 @@ export default function PedidosDistribuidor() {
   const advance = async (order, toStatus) => {
     setBusy(order.id);
     try {
-      const r = await base44.functions.invoke('updateOrderStatus', { actorId: user.id, saleId: order.id, status: toStatus });
+      const r = await plataforma.functions.invoke('updateOrderStatus', { actorId: user.id, saleId: order.id, status: toStatus });
       if (!r?.success) { toast.error(r?.error || 'Falha ao atualizar'); setBusy(''); return; }
       toast.success('Status atualizado!');
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: toStatus } : o)));
@@ -85,7 +85,7 @@ export default function PedidosDistribuidor() {
     if (!newCarrier.nome.trim()) { toast.error('Dê um nome à transportadora.'); return; }
     setBusy('add-carrier');
     try {
-      const r = await base44.functions.invoke('manageCarriers', {
+      const r = await plataforma.functions.invoke('manageCarriers', {
         action: 'add', actorId: user.id, ownerId: user.id,
         nome: newCarrier.nome.trim(), tipo: newCarrier.tipo,
         prazo_dias: newCarrier.prazo_dias ? Number(newCarrier.prazo_dias) : null,
@@ -103,7 +103,7 @@ export default function PedidosDistribuidor() {
   const removeCarrier = async (id) => {
     setBusy(id);
     try {
-      await base44.functions.invoke('manageCarriers', { action: 'remove', actorId: user.id, id });
+      await plataforma.functions.invoke('manageCarriers', { action: 'remove', actorId: user.id, id });
       setCarriers((prev) => prev.filter((c) => c.id !== id));
     } catch (e) { toast.error('Erro'); }
     setBusy('');

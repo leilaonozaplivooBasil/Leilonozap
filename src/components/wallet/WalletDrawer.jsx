@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,8 +82,8 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     setLoading(true);
     try {
       const [walletRes, historyRes] = await Promise.all([
-        base44.functions.invoke('getMyWallet', { user_id: currentUser.id }),
-        base44.functions.invoke('getDigitalWalletHistory', { user_id: currentUser.id }),
+        plataforma.functions.invoke('getMyWallet', { user_id: currentUser.id }),
+        plataforma.functions.invoke('getDigitalWalletHistory', { user_id: currentUser.id }),
       ]);
       const w = walletRes?.data || walletRes;
       const h = historyRes?.data || historyRes;
@@ -118,7 +118,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
     if (view !== 'pix' || !pixData?.payment_id) return;
     const check = async () => {
       try {
-        const result = await base44.functions.invoke('checkPaymentStatus', { payment_id: pixData.payment_id });
+        const result = await plataforma.functions.invoke('checkPaymentStatus', { payment_id: pixData.payment_id });
         const data = result?.data || result;
         if (data?.found && data?.status === 'confirmed') {
           clearInterval(pollRef.current);
@@ -165,7 +165,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       // 🔒 createMPWalletDeposit é a função real publicada na Vercel (gera PIX via Mercado
       // Pago). "createMercadoPagoDeposit" só existe do lado Base44 e quebrava com
       // not_implemented no site publicado — mesmo ajuste já feito no checkout do leilão.
-      const result = await base44.functions.invoke('createMPWalletDeposit', {
+      const result = await plataforma.functions.invoke('createMPWalletDeposit', {
         auction_id: null,
         buyer_id: currentUser.id,
         buyer_name: currentUser.full_name || 'Cliente',

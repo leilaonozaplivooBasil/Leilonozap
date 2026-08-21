@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -70,8 +70,8 @@ export default function RegisterBatches() {
       if (needFallback) {
         try {
           const [bList, lList] = await Promise.all([
-            base44.asServiceRole.entities.BatchRegistration.list(),
-            base44.asServiceRole.entities.LoteRecebido.list(),
+            plataforma.asServiceRole.entities.BatchRegistration.list(),
+            plataforma.asServiceRole.entities.LoteRecebido.list(),
           ]);
           allBatches = Array.isArray(bList) ? bList : [];
           allLotes = Array.isArray(lList) ? lList : [];
@@ -132,7 +132,7 @@ export default function RegisterBatches() {
             await new Promise(resolve => setTimeout(resolve, 2000));
           }
           
-          const productsInStock = await base44.entities.Product.filter({ lot: lote.numero_lote });
+          const productsInStock = await plataforma.entities.Product.filter({ lot: lote.numero_lote });
           const expectedCount = lote.produtos?.reduce((sum, p) => sum + (p.quantidade || 1), 0) || 0;
           const foundQty = productsInStock.reduce((sum, p) => sum + (p.quantity || 0) + (p.quantity_sold || 0), 0);
           
@@ -171,7 +171,7 @@ export default function RegisterBatches() {
     setProgress('📤 Enviando arquivo...');
 
     try {
-      const uploadResult = await base44.integrations.Core.UploadFile({ file });
+      const uploadResult = await plataforma.integrations.Core.UploadFile({ file });
 
       if (!uploadResult?.file_url) {
         throw new Error('Falha ao fazer upload');
@@ -180,7 +180,7 @@ export default function RegisterBatches() {
       const isSpreadsheet = file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/);
       setProgress(isSpreadsheet ? '🤖 Extraindo dados da planilha...' : '🤖 Extraindo dados da nota fiscal...');
 
-      const extractResponse = await base44.functions.invoke('extractBatchReceipt', {
+      const extractResponse = await plataforma.functions.invoke('extractBatchReceipt', {
         file_url: uploadResult.file_url
       });
 
@@ -224,7 +224,7 @@ export default function RegisterBatches() {
   const handleDeleteBatch = async (batchId) => {
     if (!confirm('Excluir este leilão?')) return;
     try {
-      await base44.entities.BatchRegistration.delete(batchId);
+      await plataforma.entities.BatchRegistration.delete(batchId);
       alert('✅ Leilão excluído!');
       await loadBatches();
     } catch (error) {
@@ -247,7 +247,7 @@ export default function RegisterBatches() {
       const valorComFrete = (extractedData.valor_total || 0) + (freteValue || 0);
       const custoPorUnidade = totalProdutosGlobal > 0 ? valorComFrete / totalProdutosGlobal : 0;
 
-      await base44.entities.BatchRegistration.create({
+      await plataforma.entities.BatchRegistration.create({
         numero_leilao: extractedData.numero_leilao,
         lotes: extractedData.lotes,
         valor_total: valorComFrete,
@@ -310,7 +310,7 @@ export default function RegisterBatches() {
       let totalCriados = 0;
       for (const chave in produtosAgrupados) {
         const prod = produtosAgrupados[chave];
-        await base44.entities.Product.create({
+        await plataforma.entities.Product.create({
           date: prod.date,
           lot: prod.lot,
           description: prod.description,
@@ -325,7 +325,7 @@ export default function RegisterBatches() {
       }
 
       // Atualiza o batch para "convertido"
-      await base44.entities.BatchRegistration.update(batch.id, {
+      await plataforma.entities.BatchRegistration.update(batch.id, {
         status: 'convertido'
       });
 
@@ -379,7 +379,7 @@ export default function RegisterBatches() {
       let totalCriados = 0;
       for (const nome in produtosAgrupados) {
         const prod = produtosAgrupados[nome];
-        await base44.entities.Product.create({
+        await plataforma.entities.Product.create({
           date: prod.date,
           lot: prod.lot,
           description: prod.description,
@@ -442,7 +442,7 @@ export default function RegisterBatches() {
         localStorage.setItem('productCodeMap', JSON.stringify(codeMap));
       } catch {}
 
-      await base44.entities.BatchRegistration.create({
+      await plataforma.entities.BatchRegistration.create({
         numero_leilao: manualBatch.numero_leilao,
         nome_origem: manualBatch.nome_origem || '',
         lotes: manualBatch.lotes,
@@ -554,7 +554,7 @@ export default function RegisterBatches() {
         localStorage.setItem('productCodeMap', JSON.stringify(codeMap));
       } catch {}
 
-      await base44.entities.BatchRegistration.update(editingBatch.id, {
+      await plataforma.entities.BatchRegistration.update(editingBatch.id, {
         numero_leilao: manualBatch.numero_leilao,
         nome_origem: manualBatch.nome_origem || '',
         lotes: manualBatch.lotes,
@@ -798,7 +798,7 @@ export default function RegisterBatches() {
                     onConvert={batch.status === 'pendente' ? () => handleConvertToProducts(batch) : undefined}
                     onViewFile={batch.recibo_url ? () => window.open(batch.recibo_url, '_blank') : undefined}
                     onRename={async (newName) => {
-                      await base44.entities.BatchRegistration.update(batch.id, { nome_origem: newName });
+                      await plataforma.entities.BatchRegistration.update(batch.id, { nome_origem: newName });
                       await loadBatches();
                     }}
                     expandedContent={

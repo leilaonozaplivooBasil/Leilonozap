@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,9 +11,9 @@ import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress'
 import { getReferral } from '@/lib/referral';
 import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 
-const Product = base44.entities.Product;
-const Auction = base44.entities.Auction;
-const CatalogSale = base44.entities.CatalogSale;
+const Product = plataforma.entities.Product;
+const Auction = plataforma.entities.Auction;
+const CatalogSale = plataforma.entities.CatalogSale;
 
 function validateCPF(cpf) {
     const c = String(cpf || '').replace(/\D/g, '');
@@ -155,7 +155,7 @@ export default function CatalogCheckout2() {
             // 👑 REGRA DE DONO ÚNICO — dono real do cadastro tem precedência sobre o link
             const referralCode = await resolverRefCodeDaVenda(savedUser);
 
-            const mp = await base44.functions.invoke('createMPPix', {
+            const mp = await plataforma.functions.invoke('createMPPix', {
                 items: [{ product_id: product.id, quantity: 1 }],
                 buyer: { id: savedUser.id, name: firstName.trim(), email: email.trim(), cpf: cpf.replace(/\D/g, '') },
                 delivery_type: deliveryType,
@@ -195,7 +195,7 @@ export default function CatalogCheckout2() {
                     address_state: addressState.trim(),
                     address_zip_code: addressZip.trim(),
                 };
-                base44.entities.AppUser.update(currentUser.id, profileUpdate).then(() => {
+                plataforma.entities.AppUser.update(currentUser.id, profileUpdate).then(() => {
                     const saved = localStorage.getItem('currentUser');
                     if (saved) {
                         try { localStorage.setItem('currentUser', JSON.stringify({ ...JSON.parse(saved), ...profileUpdate })); } catch { /* ok */ }
@@ -218,7 +218,7 @@ export default function CatalogCheckout2() {
 
         const checkStatus = async () => {
             try {
-                const result = await base44.functions.invoke('checkPaymentStatus', {
+                const result = await plataforma.functions.invoke('checkPaymentStatus', {
                     payment_id: pixData.payment_id
                 });
                 const data = result?.data || result;

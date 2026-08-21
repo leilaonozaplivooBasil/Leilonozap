@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { X, Check, Loader2, History } from "lucide-react";
 import { trackPurchase } from "@/lib/tracking";
 
@@ -26,7 +26,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
     setSettle({ state: 'processing', balance: null, needed: null });
     (async () => {
       try {
-        const result = await base44.functions.invoke('settleAuctionWithBalance', {
+        const result = await plataforma.functions.invoke('settleAuctionWithBalance', {
           auction_id: auction.id,
           user_id: currentUser.id,
         });

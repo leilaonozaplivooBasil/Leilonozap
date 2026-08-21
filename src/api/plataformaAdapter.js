@@ -1,6 +1,25 @@
 /**
- * Adapter Base44 SDK → Supabase.
- * Exporta um objeto `base44` com a mesma interface do SDK original
+ * ══════════════════════════════════════════════════════════════════════════
+ * 📜 MEMÓRIA DO PROJETO — leia antes de mexer aqui (21/08/2026)
+ * ══════════════════════════════════════════════════════════════════════════
+ * A Leilão NoZap NASCEU na Base44 — plataforma de criar app com IA, a
+ * primeira IA do projeto, a que montou a base inicial. Fica registrado aqui
+ * de propósito: não é vergonha, é história.
+ *
+ * O app cortou o cordão com os SERVIDORES da Base44 (SDK, plugin, mídia —
+ * tudo saiu de lá). Só ficou a FORMA da API (`.entities`, `.functions.invoke`,
+ * `.auth`), porque centenas de telas já chamavam esse formato. Este arquivo é
+ * esse adapter: por fora parece o SDK antigo, por dentro fala só com o
+ * Supabase e as rotas da Vercel do próprio projeto — a pasta `base44/` na
+ * raiz do repo guarda os arquivos originais como espelho histórico.
+ *
+ * O identificador chamava-se `base44`; virou `plataforma` em 21/08/2026 a
+ * pedido do dono — o nome antigo confundia, parecendo dependência viva do
+ * servidor de terceiro, quando só o nome tinha ficado velho.
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Adapter da API estilo Base44 → Supabase.
+ * Exporta um objeto `plataforma` com a mesma interface do SDK original
  * para que TODAS as páginas continuem funcionando sem mudança.
  *
  * Métodos suportados nas entidades:
@@ -318,7 +337,7 @@ async function _routeWrite(table, action, id, payload) {
 function entityProxy(entity) {
   const table = TABLE_MAP[entity];
   if (!table) {
-    console.warn(`[base44Adapter] Entidade desconhecida: ${entity}`);
+    console.warn(`[plataformaAdapter] Entidade desconhecida: ${entity}`);
     return null;
   }
 
@@ -439,7 +458,7 @@ const entities = new Proxy(
 // (pagamento, comissão, lance, frete, carteira).
 //
 // ⚠️ POR QUE O IMPORT É SOB DEMANDA (e não no topo do arquivo):
-// `logDedupe` importa `base44`, que é ESTE arquivo → import no topo cria
+// `logDedupe` importa `plataforma`, que é ESTE arquivo → import no topo cria
 // DEPENDÊNCIA CIRCULAR e pode quebrar o carregamento do app inteiro.
 // Carregar só no momento do erro corta o ciclo. NÃO mover para o topo.
 //
@@ -525,7 +544,7 @@ async function invokeFunction(name, body, options = {}) {
         }
         return parsed;
       }
-      if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
+      if (typeof console !== 'undefined') console.warn(`[plataforma.functions] '${name}' não implementada ainda (${resp.status}) — stub`);
       _logarFalhaServidor({
         step: 'Servidor_Funcao_Inexistente',
         status: 'error',
@@ -567,7 +586,7 @@ async function invokeFunction(name, body, options = {}) {
     return parsed !== null ? parsed : {};
   } catch (err) {
     if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
-      if (typeof console !== 'undefined') console.warn(`[base44.functions] '${name}' fetch falhou — stub`, err.message);
+      if (typeof console !== 'undefined') console.warn(`[plataforma.functions] '${name}' fetch falhou — stub`, err.message);
       _logarFalhaServidor({
         step: 'Servidor_Falha_Rede',
         status: 'error',
@@ -591,7 +610,7 @@ const functions = new Proxy(
   {
     get(target, name) {
       if (name in target) return target[name];
-      // Compat: base44.functions.someFunction(body) ou base44.functions.invoke(name, body)
+      // Compat: plataforma.functions.someFunction(body) ou plataforma.functions.invoke(name, body)
       return (body, opts) => invokeFunction(name, body, opts);
     },
   }
@@ -608,7 +627,7 @@ async function invokeIntegration(name, body) {
       body: body ? JSON.stringify(body) : undefined,
     });
     if (resp.status === 404) {
-      if (typeof console !== 'undefined') console.warn(`[base44.integrations.Core] '${name}' não implementada — stub`);
+      if (typeof console !== 'undefined') console.warn(`[plataforma.integrations.Core] '${name}' não implementada — stub`);
       return { ok: false, error: 'not_implemented', name };
     }
     if (!resp.ok) {
@@ -618,7 +637,7 @@ async function invokeIntegration(name, body) {
     return resp.json();
   } catch (err) {
     if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
-      if (typeof console !== 'undefined') console.warn(`[base44.integrations.Core] '${name}' fetch falhou — stub`, err.message);
+      if (typeof console !== 'undefined') console.warn(`[plataforma.integrations.Core] '${name}' fetch falhou — stub`, err.message);
       return { ok: false, error: 'network_or_not_implemented', name };
     }
     throw err;
@@ -645,7 +664,7 @@ const Core = new Proxy(CoreImpl, {
   get(target, name) {
     if (name in target) return target[name];
     if (typeof name === 'symbol') return undefined;
-    // base44.integrations.Core.InvokeLLM(body) etc → POST /api/integrations/<name>
+    // plataforma.integrations.Core.InvokeLLM(body) etc → POST /api/integrations/<name>
     return (body) => invokeIntegration(name, body);
   },
 });
@@ -765,7 +784,7 @@ const analytics = {
 // Service role (alias) — usado por functions server-side; no client cai no mesmo
 const asServiceRole = { entities, functions, integrations };
 
-export const base44 = {
+export const plataforma = {
   entities,
   functions,
   integrations,
@@ -777,4 +796,4 @@ export const base44 = {
   __supabase: supabase,
 };
 
-export default base44;
+export default plataforma;

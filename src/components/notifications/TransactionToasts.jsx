@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
 import { AnimatePresence, motion } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { X, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 
 const SEEN_KEY = 'txNotifySeenIds';
@@ -88,7 +88,7 @@ export default function TransactionToasts() {
 
         let result;
         try {
-          result = await base44.functions.invoke('getTransactionNotifications', { user_id: user.id });
+          result = await plataforma.functions.invoke('getTransactionNotifications', { user_id: user.id });
         } catch (erro) {
           // Limite atingido: para de insistir e dobra a espera (backoff exponencial).
           if (ehRateLimit(erro, null)) return 'limite';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Loader2, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -46,8 +46,8 @@ export default function WalletExtractAdmin({ userId }) {
     setErro(null);
     try {
       const [walletRes, historyRes] = await Promise.all([
-        base44.functions.invoke('getMyWallet', { user_id: userId, actor_id: admin.id }),
-        base44.functions.invoke('getDigitalWalletHistory', { user_id: userId, actor_id: admin.id }),
+        plataforma.functions.invoke('getMyWallet', { user_id: userId, actor_id: admin.id }),
+        plataforma.functions.invoke('getDigitalWalletHistory', { user_id: userId, actor_id: admin.id }),
       ]);
       const w = walletRes?.data || walletRes;
       const h = historyRes?.data || historyRes;

@@ -4,9 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function UserPasswordModal({ user, isOpen, onClose, onSave }) {
     const [newPassword, setNewPassword] = useState('');
@@ -23,7 +23,7 @@ export default function UserPasswordModal({ user, isOpen, onClose, onSave }) {
         setIsSaving(true);
         try {
             // Usa função backend para bypass de RLS
-            await base44.functions.invoke('updateUserPassword', {
+            await plataforma.functions.invoke('updateUserPassword', {
                 user_id: user.id,
                 new_password: newPassword
             });

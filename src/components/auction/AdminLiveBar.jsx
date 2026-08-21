@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Pause, Play, Square, Loader2, ShieldCheck } from 'lucide-react';
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 
 /**
  * Barra de controle do ADMIN dentro da sala de leilão: pausar/retomar, estender

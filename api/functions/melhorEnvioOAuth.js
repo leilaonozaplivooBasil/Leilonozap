@@ -9,7 +9,7 @@
 // função falhar, o cálculo de frete do site segue funcionando normalmente.
 //
 // ⚠️ POR QUE ESTA VERSÃO VERCEL EXISTE: o adapter do app
-// (src/api/base44Adapter.js) manda base44.functions.invoke para
+// (src/api/plataformaAdapter.js) manda plataforma.functions.invoke para
 // /api/functions/<nome>. A versão Deno em base44/functions/melhorEnvioOAuth
 // NÃO é alcançável pelo navegador deste app — ela fica lá só como referência.
 // Mexeu aqui, considere espelhar lá.

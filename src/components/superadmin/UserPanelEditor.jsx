@@ -4,10 +4,10 @@ import { X, Save, Shield, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { getAllPanels } from "@/lib/panelResolver";
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function UserPanelEditor({ user, onClose, onSaved }) {
   const [selected, setSelected] = useState([]);

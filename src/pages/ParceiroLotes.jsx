@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Package, DollarSign, RefreshCw, Eye, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 
-const Auction = base44.entities.Auction;
-const AppUser = base44.entities.AppUser;
+const Auction = plataforma.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 

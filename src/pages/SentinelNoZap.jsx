@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,7 +29,7 @@ export default function SentinelNoZap() {
 
         // Verifica se está autenticado na plataforma Base44 (necessário para agents API)
         try {
-          const isAuth = await base44.auth.isAuthenticated();
+          const isAuth = await plataforma.auth.isAuthenticated();
           if (!isAuth) {
             // Tenta redirecionar para login da plataforma
             setInitError('Você precisa estar logado na plataforma Base44 para usar o Sentinel. Clique no botão abaixo.');
@@ -57,7 +57,7 @@ export default function SentinelNoZap() {
 
   useEffect(() => {
     if (!conversationId) return;
-    const unsubscribe = base44.agents.subscribeToConversation(conversationId, (data) => {
+    const unsubscribe = plataforma.agents.subscribeToConversation(conversationId, (data) => {
       setMessages(data.messages || []);
     });
     return () => unsubscribe();
@@ -70,7 +70,7 @@ export default function SentinelNoZap() {
   const initConversation = async () => {
     try {
       // Tenta buscar conversas existentes para reaproveitar
-      const existing = await base44.agents.listConversations({ agent_name: "arquiteto_base44" });
+      const existing = await plataforma.agents.listConversations({ agent_name: "arquiteto_base44" });
       if (existing && existing.length > 0) {
         // Usa a conversa mais recente
         const latest = existing[0];
@@ -82,7 +82,7 @@ export default function SentinelNoZap() {
         return;
       }
 
-      const conversation = await base44.agents.createConversation({
+      const conversation = await plataforma.agents.createConversation({
         agent_name: "arquiteto_base44",
         metadata: { name: "Sessão Sentinel", description: "Monitoramento do sistema NoZap" }
       });
@@ -101,8 +101,8 @@ export default function SentinelNoZap() {
     setIsSending(true);
     if (!overrideMessage) setInput("");
     try {
-      const conversation = await base44.agents.getConversation(conversationId);
-      await base44.agents.addMessage(conversation, { role: "user", content: messageText });
+      const conversation = await plataforma.agents.getConversation(conversationId);
+      await plataforma.agents.addMessage(conversation, { role: "user", content: messageText });
     } catch (error) {
       console.error('❌ Sentinel send error:', error);
       toast.error("Erro ao enviar: " + (error.message || 'Tente novamente'));
@@ -114,7 +114,7 @@ export default function SentinelNoZap() {
   const clearConversation = async () => {
     if (!confirm("🗑️ Limpar toda a conversa?")) return;
     try {
-      const conversation = await base44.agents.createConversation({
+      const conversation = await plataforma.agents.createConversation({
         agent_name: "arquiteto_base44",
         metadata: { name: "Nova Sessão Sentinel", description: "Monitoramento" }
       });
@@ -154,7 +154,7 @@ export default function SentinelNoZap() {
           <p className="text-gray-400 text-sm mb-6">{initError}</p>
           <div className="space-y-3">
             <Button
-              onClick={() => base44.auth.redirectToLogin(window.location.href)}
+              onClick={() => plataforma.auth.redirectToLogin(window.location.href)}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
             >
               Fazer Login na Plataforma
@@ -195,7 +195,7 @@ export default function SentinelNoZap() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <a href={base44.agents.getWhatsAppConnectURL('arquiteto_base44')} target="_blank" rel="noopener noreferrer">
+                <a href={plataforma.agents.getWhatsAppConnectURL('arquiteto_base44')} target="_blank" rel="noopener noreferrer">
                   <Button variant="ghost" size="sm" className="text-green-400 hover:text-green-300 hover:bg-green-600/20">
                     <MessageCircle className="w-4 h-4 mr-2" />
                     WhatsApp

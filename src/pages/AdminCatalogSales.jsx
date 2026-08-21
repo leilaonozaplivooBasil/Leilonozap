@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Search, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
-const CatalogSale = base44.entities.CatalogSale;
-const Auction = base44.entities.Auction;
-const AppUser = base44.entities.AppUser;
+const CatalogSale = plataforma.entities.CatalogSale;
+const Auction = plataforma.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
 
 export default function AdminCatalogSales() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -162,7 +162,7 @@ export default function AdminCatalogSales() {
   const handleBackfillAsaas = async () => {
     setIsUpdating(true);
     try {
-      const { data } = await base44.functions.invoke('asaasBackfillCustomers', {});
+      const { data } = await plataforma.functions.invoke('asaasBackfillCustomers', {});
       const created = data?.created ?? 0;
       const skipped = data?.skipped ?? 0;
       const errors = data?.errors ?? 0;

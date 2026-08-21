@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Award, Upload, ClipboardList, UserRound, TrendingUp, Trophy, Landmark, Network, Star, Briefcase } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from "sonner";
 // P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
 import { CAREER_LEVELS, normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
@@ -19,7 +19,7 @@ import {
     requiresExecutive,
 } from '@/lib/executiveStructure';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 // Explica em linguagem simples o que cada Permissão de Trabalho libera —
 // mostrado embaixo do seletor para quem está escolhendo o cargo do usuário.
@@ -100,7 +100,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
         setIsUploadingAvatar(true);
         try {
-            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
             if (!file_url) throw new Error('o servidor não devolveu a URL do arquivo');
             setUserData(prev => ({ ...prev, avatar_url: file_url }));
             toast.success('Foto anexada — salve para confirmar.');

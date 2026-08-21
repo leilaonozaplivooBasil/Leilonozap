@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { fmtBR } from "@/lib/money";
 import { Loader2, QrCode, Copy, CheckCircle2, CreditCard } from "lucide-react";
 
@@ -34,7 +34,7 @@ export default function VendedorFretePagamento({ freteValor = 0, complemento = 0
   const startPolling = (paymentId) => {
     const check = async () => {
       try {
-        const res = await base44.functions.invoke("checkPaymentStatus", { payment_id: paymentId });
+        const res = await plataforma.functions.invoke("checkPaymentStatus", { payment_id: paymentId });
         const status = res?.data?.status || res?.status;
         if (status === "confirmed" || status === "approved") {
           clearInterval(pollRef.current);
@@ -53,7 +53,7 @@ export default function VendedorFretePagamento({ freteValor = 0, complemento = 0
   const handlePagar = async () => {
     setCreating(true);
     try {
-      const res = await base44.functions.invoke("createSellerFreightPayment", {
+      const res = await plataforma.functions.invoke("createSellerFreightPayment", {
         user_id: user.id,
         items,
         cep,

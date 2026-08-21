@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { money } from '@/lib/format';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { buscarRegiao } from '@/lib/regiaoInteligenciaCache';
 import { MapPin, Users2, TrendingUp, Network, Loader2 } from 'lucide-react';
 
@@ -25,7 +25,7 @@ export default function RegiaoCard({ user }) {
   useEffect(() => {
     if (!cep && !cidade) { setLoading(false); setData({ available: false }); return; }
     let alive = true;
-    buscarRegiao(base44, { cep, cidade, uf }).then((r) => {
+    buscarRegiao(plataforma, { cep, cidade, uf }).then((r) => {
       if (!alive) return;
       setData(r);
       setLoading(false);

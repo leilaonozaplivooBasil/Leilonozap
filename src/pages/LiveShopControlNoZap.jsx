@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Play, Square, Tv, Plus, Zap, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-const LiveSession = base44.entities.LiveSession;
-const Auction = base44.entities.Auction;
+const LiveSession = plataforma.entities.LiveSession;
+const Auction = plataforma.entities.Auction;
 
 export default function LiveShopControlNoZap() {
   const [session, setSession] = useState(null);
@@ -183,7 +183,7 @@ export default function LiveShopControlNoZap() {
 
     setIsUploadingFrame(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       setFrameImage(file_url);
       
       await LiveSession.update(session.id, {
@@ -205,7 +205,7 @@ export default function LiveShopControlNoZap() {
 
     setIsUploadingPause(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       setPauseImage(file_url);
       
       await LiveSession.update(session.id, {
@@ -240,7 +240,7 @@ export default function LiveShopControlNoZap() {
     if (!file) return;
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       setQuickProduct({ ...quickProduct, image_url: file_url });
       toast.success("Imagem enviada!");
     } catch (error) {

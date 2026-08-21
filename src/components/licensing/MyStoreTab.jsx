@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ export default function MyStoreTab({ user }) {
     if (!file) return;
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       setAvatarUrl(file_url);
     } catch (err) {
       toast.error("Erro ao enviar foto: " + (err.message || "desconhecido"));
@@ -42,7 +42,7 @@ export default function MyStoreTab({ user }) {
     }
     setIsSaving(true);
     try {
-      const data = await base44.functions.invoke("updateSeller", {
+      const data = await plataforma.functions.invoke("updateSeller", {
         seller_id: user.id,
         actor_id: user.id,
         store_name: storeName.trim(),

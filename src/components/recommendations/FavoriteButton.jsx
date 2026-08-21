@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const FavoriteAuction = base44.entities.FavoriteAuction;
+const FavoriteAuction = plataforma.entities.FavoriteAuction;
 
 // Cache global para evitar múltiplas requisições
 const favoritesCache = {

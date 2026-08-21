@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { Upload, FileSpreadsheet, Loader2, Check, X, Download, Image as ImageIcon } from 'lucide-react';
 
@@ -85,7 +85,7 @@ export default function PlanilhaImport({ onDone }) {
         images: mapping.images ? r[mapping.images] : null,
         notes: mapping.notes ? r[mapping.notes] : null,
       })).filter((it) => String(it.name || '').trim());
-      const res = await base44.functions.invoke('bulkImportProducts', { actorId: user.id, items, publish: true });
+      const res = await plataforma.functions.invoke('bulkImportProducts', { actorId: user.id, items, publish: true });
       setResult(res);
       if (res?.success) { toast.success(`${res.inserted} produto(s) publicados na loja!`); onDone && onDone(); }
       else toast.error(res?.error || 'Falha na importação.');

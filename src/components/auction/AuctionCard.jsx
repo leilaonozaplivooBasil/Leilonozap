@@ -16,7 +16,7 @@ import { addMoney, gteMoney, fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,7 +110,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       const user = JSON.parse(savedUser);
 
       // 🆕 Carrega saldo da CARTEIRA DIGITAL
-      const digitalWallets = await base44.entities.DigitalWallet.filter({ user_id: user.id });
+      const digitalWallets = await plataforma.entities.DigitalWallet.filter({ user_id: user.id });
       const digitalWallet = digitalWallets && digitalWallets.length > 0 ? digitalWallets[0] : null;
 
       const currentBalance = digitalWallet?.balance || 0;

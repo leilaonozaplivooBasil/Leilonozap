@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,8 @@ import { approveWithdrawal } from "@/functions/approveWithdrawal";
 import { rejectWithdrawal } from "@/functions/rejectWithdrawal";
 import { toast } from "sonner";
 
-const WithdrawalRequest = base44.entities.WithdrawalRequest;
-const AppUser = base44.entities.AppUser;
+const WithdrawalRequest = plataforma.entities.WithdrawalRequest;
+const AppUser = plataforma.entities.AppUser;
 
 export default function AdminWithdrawals() {
   const [withdrawals, setWithdrawals] = useState([]);

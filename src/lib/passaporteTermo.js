@@ -1,6 +1,6 @@
 // Aceite dos termos do Passaporte de Lances — PONTO 68.
 // Exigido ANTES do primeiro depósito (na página do Passaporte e na carteira).
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export const VERSAO_TERMO_PASSAPORTE = '2026-08-01';
 
@@ -18,7 +18,7 @@ export async function registrarAceitePassaporte(user) {
   if (!user?.id) return { ok: false, error: 'sem_usuario' };
   try { localStorage.setItem(chaveLocal(user.id), '1'); } catch { /* segue */ }
   try {
-    const r = await base44.functions.invoke('registrarAceitePassaporte', {
+    const r = await plataforma.functions.invoke('registrarAceitePassaporte', {
       user_id: user.id,
       email: user.email,
       termo_versao: VERSAO_TERMO_PASSAPORTE,

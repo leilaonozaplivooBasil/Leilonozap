@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ export default function StressTest() {
     setResults(null);
 
     try {
-      const response = await base44.functions.invoke('stressTest', {
+      const response = await plataforma.functions.invoke('stressTest', {
         concurrent_users: parseInt(concurrentUsers)
       });
 

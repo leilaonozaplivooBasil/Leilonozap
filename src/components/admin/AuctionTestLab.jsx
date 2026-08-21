@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { resetTestValora } from "@/functions/resetTestValora";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 
 function formatTestAuctionTime(endTime, status) {
   if (status !== 'active') return 'Encerrado';

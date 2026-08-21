@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ export default function InfluencersDashboard() {
 
       try {
         // Carrega todos os leads
-        const allLeads = await base44.entities.InfluencerLead.list("-created_date", 500);
+        const allLeads = await plataforma.entities.InfluencerLead.list("-created_date", 500);
         
         // Agrupa por influenciador
         const influencerMap = {};
@@ -75,7 +75,7 @@ export default function InfluencersDashboard() {
         setInfluencers(Object.values(influencerMap));
 
         // Carrega solicitações de saque
-        const withdrawals = await base44.entities.WithdrawalRequest.list("-created_date", 100);
+        const withdrawals = await plataforma.entities.WithdrawalRequest.list("-created_date", 100);
         setWithdrawalRequests(withdrawals);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -94,7 +94,7 @@ export default function InfluencersDashboard() {
     }
 
     try {
-      const influencerPurchases = await base44.entities.InfluencerPurchase.filter(
+      const influencerPurchases = await plataforma.entities.InfluencerPurchase.filter(
         { influencer_id: influencerId },
         "-purchase_date",
         100
@@ -133,7 +133,7 @@ export default function InfluencersDashboard() {
       toast.success("Saque aprovado com sucesso!");
       
       // Recarrega lista
-      const withdrawals = await base44.entities.WithdrawalRequest.list("-created_date", 100);
+      const withdrawals = await plataforma.entities.WithdrawalRequest.list("-created_date", 100);
       setWithdrawalRequests(withdrawals);
     } catch (error) {
       toast.error("Erro ao aprovar saque: " + error.message);
@@ -149,7 +149,7 @@ export default function InfluencersDashboard() {
       toast.success("Saque rejeitado!");
       
       // Recarrega lista
-      const withdrawals = await base44.entities.WithdrawalRequest.list("-created_date", 100);
+      const withdrawals = await plataforma.entities.WithdrawalRequest.list("-created_date", 100);
       setWithdrawalRequests(withdrawals);
     } catch (error) {
       toast.error("Erro ao rejeitar saque: " + error.message);

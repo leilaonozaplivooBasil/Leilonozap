@@ -1,3 +1,3 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-export const LoteCota = base44.entities.LoteCota;
+export const LoteCota = plataforma.entities.LoteCota;

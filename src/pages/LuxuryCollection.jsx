@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,7 +26,7 @@ const [banners, setBanners] = useState([]);
     setValidating(true);
     setErrorMsg("");
     try {
-      const res = await base44.functions.invoke('redeemLuxuryAccessCode', { code: value });
+      const res = await plataforma.functions.invoke('redeemLuxuryAccessCode', { code: value });
       const ok = res?.data?.success === true;
       if (ok) {
         sessionStorage.setItem('luxury_access_ok', 'true');
@@ -70,7 +70,7 @@ const [banners, setBanners] = useState([]);
     async function load() {
       try {
         setIsLoading(true);
-        const list = await base44.entities.LuxuryAuction.list("-created_date", 200);
+        const list = await plataforma.entities.LuxuryAuction.list("-created_date", 200);
         if (!mounted) return;
         setAuctions(Array.isArray(list) ? list : []);
       } finally {
@@ -79,7 +79,7 @@ const [banners, setBanners] = useState([]);
     }
     load();
 
-    const unsub = base44.entities.LuxuryAuction.subscribe((evt) => {
+    const unsub = plataforma.entities.LuxuryAuction.subscribe((evt) => {
       setAuctions((prev) => {
         if (evt.type === "create") return [evt.data, ...prev];
         if (evt.type === "update") return prev.map((a) => (a.id === evt.id ? evt.data : a));
@@ -95,7 +95,7 @@ const [banners, setBanners] = useState([]);
 
   useEffect(() => {
   if (!isAuthorized) return;
-  base44.entities.BannerImage.filter({ context: 'luxurycollection' }).then((bannerData) => {
+  plataforma.entities.BannerImage.filter({ context: 'luxurycollection' }).then((bannerData) => {
     const sortedBanners = (bannerData || [])
       .filter((b) => b.is_active)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -71,7 +71,7 @@ export default function CatalogOrderTracking() {
     if (!saleId) { setIsLoading(false); return; }
     try {
       if (!silent) setIsLoading(true);
-      const result = await base44.functions.invoke('getCatalogOrderById', { sale_id: saleId });
+      const result = await plataforma.functions.invoke('getCatalogOrderById', { sale_id: saleId });
       const data = result?.data || result;
       if (data?.found && data?.order) setOrder(data.order);
     } catch (error) {
@@ -116,7 +116,7 @@ export default function CatalogOrderTracking() {
     setConfirming(true);
     try {
       const uid = currentUser?.id;
-      const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
+      const r = await plataforma.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
       if (r?.success) {
         setReceiptConfirmed(true);
         toast({ title: '✅ Recebimento confirmado!', description: 'Pagamento liberado pro vendedor. Obrigado!' });

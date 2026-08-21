@@ -10,7 +10,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { money } from '@/lib/format';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import { X, Loader2, ShieldCheck, MessageCircle, Copy, CheckCircle2, Truck, Store as StoreIcon } from 'lucide-react';
@@ -51,7 +51,7 @@ export default function LojaCheckout({ slug, store, cartItems, total, onClose, o
     if (isEntrega && !form.address.trim()) { toast.error('Informe o endereço de entrega.'); return; }
     setSending(true);
     try {
-      const r = await base44.functions.invoke('createStoreOrder', {
+      const r = await plataforma.functions.invoke('createStoreOrder', {
         slug,
         gateway,
         items: itensParaFrete,

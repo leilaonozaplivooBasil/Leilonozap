@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ShieldCheck, ArrowDownToLine, Loader2, Check, X, ExternalLink, Settings } from 'lucide-react';
@@ -14,7 +14,7 @@ export default function AdminFinanceiro() {
   const [busy, setBusy] = useState('');
 
   const load = async (u) => {
-    const r = await base44.functions.invoke('getAdminFinanceQueue', { actor_id: u.id });
+    const r = await plataforma.functions.invoke('getAdminFinanceQueue', { actor_id: u.id });
     if (r?.success) setData({ kyc: r.kyc || [], withdrawals: r.withdrawals || [] });
     else if (r?.error) toast.error(r.error);
     setLoading(false);
@@ -29,7 +29,7 @@ export default function AdminFinanceiro() {
     let reason = null;
     if (decision === 'reprovado') { reason = window.prompt('Motivo da reprovação:') || 'Documentos inválidos'; }
     setBusy('k' + userId);
-    const r = await base44.functions.invoke('reviewKyc', { actor_id: user.id, user_id: userId, decision, reason });
+    const r = await plataforma.functions.invoke('reviewKyc', { actor_id: user.id, user_id: userId, decision, reason });
     if (r?.success) { toast.success(decision === 'aprovado' ? 'KYC aprovado' : 'KYC reprovado'); await load(user); } else toast.error(r?.error || 'Erro');
     setBusy('');
   };
@@ -37,7 +37,7 @@ export default function AdminFinanceiro() {
     let reason = null;
     if (decision === 'reject') { reason = window.prompt('Motivo da rejeição:') || 'Rejeitado'; }
     setBusy('w' + id);
-    const r = await base44.functions.invoke('approveWithdrawal', { actor_id: user.id, withdrawal_id: id, decision, reason });
+    const r = await plataforma.functions.invoke('approveWithdrawal', { actor_id: user.id, withdrawal_id: id, decision, reason });
     if (r?.success) { toast.success(decision === 'approve' ? 'Saque marcado como pago' : 'Saque rejeitado'); await load(user); } else toast.error(r?.error || 'Erro');
     setBusy('');
   };

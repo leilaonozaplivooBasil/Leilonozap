@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import { Input } from '@/components/ui/input';
 import { Search, Landmark, Loader2 } from 'lucide-react';
@@ -21,8 +21,8 @@ export default function PagamentosComissoes() {
     setLoading(true);
     try {
       const [comms, users] = await Promise.all([
-        base44.entities.CommissionRecord.list('-created_date', 5000),
-        base44.entities.AppUser.list(),
+        plataforma.entities.CommissionRecord.list('-created_date', 5000),
+        plataforma.entities.AppUser.list(),
       ]);
       setCommissions(comms || []);
       const map = {};
@@ -80,7 +80,7 @@ export default function PagamentosComissoes() {
 
   const handleSalvarPix = async (userId, pixKey, pixType) => {
     try {
-      await base44.entities.AppUser.update(userId, { pix_key: pixKey, pix_key_type: pixType });
+      await plataforma.entities.AppUser.update(userId, { pix_key: pixKey, pix_key_type: pixType });
       toast.success('Chave PIX salva');
       await carregar();
     } catch (e) {
@@ -90,7 +90,7 @@ export default function PagamentosComissoes() {
 
   const handleMarcarPago = async (ids) => {
     try {
-      await Promise.all(ids.map((id) => base44.entities.CommissionRecord.update(id, { status: 'paid' })));
+      await Promise.all(ids.map((id) => plataforma.entities.CommissionRecord.update(id, { status: 'paid' })));
       toast.success('Comissões marcadas como pagas');
       await carregar();
     } catch (e) {

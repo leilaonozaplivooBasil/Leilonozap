@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
-const Auction = base44.entities.Auction;
-const AuctionMessage = base44.entities.AuctionMessage;
+const Auction = plataforma.entities.Auction;
+const AuctionMessage = plataforma.entities.AuctionMessage;
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
 import { format } from 'date-fns';
@@ -100,7 +100,12 @@ export default function AuctionRoom() {
   // ele quem cotou. Sem guardar e devolver o selo, ligar FRETE_MODO=bloquear
   // recusaria TODO lance legítimo vindo da tela.
   const [freteSelo, setFreteSelo] = useState(null);
-  const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep|needs_login
+  // 📮 ENDEREÇO NA HORA DO LANCE (21/08/2026) — decisão do dono: "eu não posso
+  // ficar com pedido preso por conta de coisas manuais". CEP já era exigido;
+  // agora rua/número também, com a mesma caixinha do CEP — sem virar tela nova.
+  const [enderecoAtual, setEnderecoAtual] = useState(null);
+  const [salvandoEndereco, setSalvandoEndereco] = useState(false);
+  const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep|needs_login|needs_address
   const [freteCep, setFreteCep] = useState('');
   const freteCalcRef = useRef(false);
 
@@ -231,7 +236,7 @@ export default function AuctionRoom() {
         // 🆕 Carrega saldo da carteira digital via backend (contorna RLS)
         // 🛡️ NÃO sobrescreve para 0 se a função falhar — mantém saldo anterior
         try {
-          const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+          const result = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
           const walletData = result?.data || result;
           if (typeof walletData?.balance === 'number') {
             setUserWallet({ balance: walletData.balance, held_balance: walletData.held_balance || 0 });
@@ -257,7 +262,7 @@ export default function AuctionRoom() {
       const savedUser = localStorage.getItem('currentUser');
       if (!savedUser) return;
       const user = JSON.parse(savedUser);
-      const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+      const result = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
       const walletData = result?.data || result;
       if (typeof walletData?.balance === 'number') {
         setUserWallet({ balance: walletData.balance, held_balance: walletData.held_balance || 0 });
@@ -328,7 +333,7 @@ export default function AuctionRoom() {
       let result = null;
       for (let attempt = 0; attempt < 3 && !result; attempt++) {
         try {
-          const resp = await base44.functions.invoke('finalizeAuction', { auction_id: auction.id });
+          const resp = await plataforma.functions.invoke('finalizeAuction', { auction_id: auction.id });
           const data = resp?.data || resp;
           if (data?.success && data.result) {
             result = data.result;
@@ -491,7 +496,7 @@ export default function AuctionRoom() {
       // inseguro: o servidor assinava o pacote que o navegador descrevesse.
       // Agora a tela manda só QUEM e QUAL LEILÃO. Produto e CEP saem do banco,
       // no servidor. `items` não é mais enviado — e não é mais lido lá.
-      const result = await base44.functions.invoke('cotarFrete', {
+      const result = await plataforma.functions.invoke('cotarFrete', {
         auction_id: auction.id,
         user_id: currentUser?.id,
         cep,
@@ -501,7 +506,12 @@ export default function AuctionRoom() {
         const escolhida = data.opcoes[0];
         setFreteValor(money(escolhida.preco));
         setFreteSelo(escolhida.selo || null);
-        setFreteStatus('ok');
+        setEnderecoAtual(data.endereco_atual || null);
+        // 📮 CEP cota o frete, mas despachar exige RUA + NÚMERO. Sem isso o
+        // pedido nasce igual ao AR3BEF1939: pago, mas sem como sair do galpão.
+        // A caixinha de endereço abre no lugar do "frete calculado" até
+        // confirmar — mesmo padrão visual do CEP, sem página nova.
+        setFreteStatus(data.endereco_completo ? 'ok' : 'needs_address');
       } else {
         setFreteValor(0);
         setFreteSelo(null);
@@ -569,11 +579,35 @@ export default function AuctionRoom() {
       return 'Não conseguimos confirmar o frete com o servidor. Recarregue a página e tente de novo.';
     }
     if (freteStatus === 'needs_login') return 'Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.';
+    if (freteStatus === 'needs_address') return 'Complete seu endereço de entrega para dar o lance.';
     if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
     if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
     if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
     return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
   }, [freteStatus, freteValor, freteCep, freteSelo]);
+
+  // 📮 Salva rua/número (e o resto que o CEP já trouxe) e libera o lance na
+  // hora — sem recotar frete de novo, o valor já é o mesmo.
+  const handleConfirmarEndereco = useCallback(async (dados) => {
+    if (!currentUser?.id) return;
+    setSalvandoEndereco(true);
+    try {
+      const AppUser = plataforma.entities.AppUser;
+      await AppUser.update(currentUser.id, dados);
+      try {
+        const cached = localStorage.getItem('currentUser');
+        const baseUser = cached ? JSON.parse(cached) : currentUser;
+        localStorage.setItem('currentUser', JSON.stringify({ ...baseUser, ...dados }));
+      } catch (_) { /* segue sem cache — não impede o lance */ }
+      setEnderecoAtual(dados);
+      setFreteStatus('ok');
+    } catch (e) {
+      console.error('[ENDERECO] falhou salvar:', e?.message);
+      alert('Não foi possível salvar seu endereço. Tente de novo.');
+    } finally {
+      setSalvandoEndereco(false);
+    }
+  }, [currentUser]);
 
   const handleSubmitBidComTermo = useCallback((amount) => {
     // 📣 PONTO 69 — trava de segurança: nenhum lance sai antes da abertura
@@ -749,7 +783,7 @@ export default function AuctionRoom() {
 
     // Verifica saldo antes de abrir o modal de arremate
     try {
-      const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+      const freshResult = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
       const freshData = freshResult?.data || freshResult;
       const freshBalance = typeof freshData?.balance === 'number' ? freshData.balance : (userWallet?.balance ?? 0);
       if (typeof freshData?.balance === 'number') {
@@ -781,7 +815,7 @@ export default function AuctionRoom() {
       // se uma delas falhasse DEPOIS do débito, o dinheiro saía da carteira e
       // nunca voltava, sem leilão ganho e sem produto (causa real por trás do
       // "Erro ao processar arremate. Tente novamente.").
-      const result = await base44.functions.invoke('submitAtomicBuyNow', {
+      const result = await plataforma.functions.invoke('submitAtomicBuyNow', {
         auction_id: auction.id,
         user_id: currentUser.id,
       });
@@ -816,7 +850,7 @@ export default function AuctionRoom() {
 
       // 💰 saldo real pós-arremate — o servidor já debitou de verdade
       try {
-        const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+        const freshResult = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
         const freshData = freshResult?.data || freshResult;
         if (typeof freshData?.balance === 'number') setUserWallet({ balance: freshData.balance });
       } catch (_) { /* saldo se corrige no próximo sync normal */ }
@@ -1019,9 +1053,9 @@ export default function AuctionRoom() {
               if (confirm('⚠️ REATIVAR? (vai limpar histórico de lances)')) {
                 try {
                   // 1. Limpar lances
-                  const allBids = await base44.entities.Bid.filter({ auction_id: auction.id });
+                  const allBids = await plataforma.entities.Bid.filter({ auction_id: auction.id });
                   for (const bid of allBids) {
-                    await base44.entities.Bid.delete(bid.id);
+                    await plataforma.entities.Bid.delete(bid.id);
                   }
 
                   // 2. Limpar mensagens
@@ -1268,6 +1302,10 @@ export default function AuctionRoom() {
               cep={freteCep}
               onChangeCep={setFreteCep}
               onCalcular={calcularFreteLance}
+              enderecoAtual={enderecoAtual}
+              onConfirmarEndereco={handleConfirmarEndereco}
+              salvandoEndereco={salvandoEndereco}
+              onEditarEndereco={() => setFreteStatus('needs_address')}
             />
           )}
           <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} freteValor={freteValor} isFirstBid={!auction?.winner_id} />

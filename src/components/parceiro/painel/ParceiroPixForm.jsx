@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import ParceiroAssinatura from './ParceiroAssinatura';
 
 // ✅ Validação de CPF (mesma regra usada antes em InvestorDashboard)
@@ -76,7 +76,7 @@ export default function ParceiroPixForm({
     setIsProcessing(true);
     try {
       toast.info('Gerando QR Code PIX...');
-      const response = await base44.functions.invoke('createPartnerPlanPix', {
+      const response = await plataforma.functions.invoke('createPartnerPlanPix', {
         licensee_id: currentUser.id,
         user_name: name,
         user_email: email,
@@ -113,7 +113,7 @@ export default function ParceiroPixForm({
   const assinar = async (png) => {
     setSalvandoAssinatura(true);
     try {
-      const resp = await base44.functions.invoke('registrarAssinaturaContrato', {
+      const resp = await plataforma.functions.invoke('registrarAssinaturaContrato', {
         user_id: currentUser?.id,
         nome: formData?.name,
         cpf: formData?.cpf,

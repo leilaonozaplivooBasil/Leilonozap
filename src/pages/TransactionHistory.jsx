@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export default function TransactionHistory() {
   const loadPayments = async () => {
     setIsLoading(true);
     try {
-      const transactions = await base44.entities.AsaasPayment.list('-created_date', 500);
+      const transactions = await plataforma.entities.AsaasPayment.list('-created_date', 500);
       setPayments(transactions);
       setFilteredPayments(transactions);
       setLastUpdated(new Date());

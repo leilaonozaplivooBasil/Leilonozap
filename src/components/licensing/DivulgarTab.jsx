@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, MessageCircle, Download, QrCode as QrIcon, Megaphone } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { proxyImage } from "@/functions/proxyImage";
 
 // 📣 Aba DIVULGAR — tudo que o licenciado precisa pra trazer gente, num lugar só.
@@ -63,7 +63,7 @@ export default function DivulgarTab({ user, isSaiDeBaixo = false }) {
     let alive = true;
     (async () => {
       try {
-        const items = await base44.entities.FeaturedProduct.filter({ is_active: true }, 'order', 1);
+        const items = await plataforma.entities.FeaturedProduct.filter({ is_active: true }, 'order', 1);
         const fp = items && items[0];
         if (alive && fp && fp.image_url) setFeaturedImage(fp.image_url);
       } catch { /* sem destaque — segue sem imagem */ }

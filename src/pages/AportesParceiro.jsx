@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { Loader2, RefreshCw, Wallet } from 'lucide-react';
 import AportesResumo from '@/components/aportes/AportesResumo';
@@ -22,7 +22,7 @@ export default function AportesParceiro() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const lista = await base44.entities.CatalogSale.filter({ kind: 'partner_plan' }, '-created_date', 300);
+    const lista = await plataforma.entities.CatalogSale.filter({ kind: 'partner_plan' }, '-created_date', 300);
     setAportes(Array.isArray(lista) ? lista : []);
     setCarregando(false);
   }, []);

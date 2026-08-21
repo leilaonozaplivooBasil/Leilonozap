@@ -5,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Mail, Phone, MessageCircle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUserEntity = base44.entities.AppUser;
+const AppUserEntity = plataforma.entities.AppUser;
 
 export default function CatalogClients({ catalogSales = [] }) {
   const [searchTerm, setSearchTerm] = useState('');

@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { getReferral } from '@/lib/referral';
 
 // 👑 REGRA DE DONO ÚNICO — PARTE 3 (CHECKOUT)
@@ -33,7 +33,7 @@ export async function resolverRefCodeDaVenda(usuario) {
 
     // 2) Cliente com dono definido no cadastro: o dono real manda
     if (usuario.referred_by_id) {
-      const donos = await base44.entities.AppUser.filter({ id: usuario.referred_by_id });
+      const donos = await plataforma.entities.AppUser.filter({ id: usuario.referred_by_id });
       const dono = donos?.[0];
       if (dono?.referral_code) return dono.referral_code;
     }

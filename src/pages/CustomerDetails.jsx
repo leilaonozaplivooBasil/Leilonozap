@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,7 +47,7 @@ export default function CustomerDetails() {
 
   const loadNegotiations = async (customerId) => {
     try {
-      const data = await base44.entities.Negotiation.filter({ customer_id: customerId });
+      const data = await plataforma.entities.Negotiation.filter({ customer_id: customerId });
       setNegotiations(data.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
     } catch (error) {
       console.error('Erro ao carregar negociações:', error);
@@ -56,7 +56,7 @@ export default function CustomerDetails() {
 
   const loadSellers = async () => {
     try {
-      const data = await base44.entities.Seller.filter({ is_active: true });
+      const data = await plataforma.entities.Seller.filter({ is_active: true });
       setSellers(data);
     } catch (error) {
       console.error('Erro ao carregar vendedores:', error);
@@ -65,7 +65,7 @@ export default function CustomerDetails() {
 
   const loadProducts = async () => {
     try {
-      const allProducts = await base44.entities.Product.list('-created_date', 500);
+      const allProducts = await plataforma.entities.Product.list('-created_date', 500);
       // Filtra apenas produtos com estoque disponível
       const inStock = allProducts.filter(p => (p.quantity || 0) > 0);
       setProducts(inStock);
@@ -77,7 +77,7 @@ export default function CustomerDetails() {
   const loadCustomer = async (id) => {
     try {
       setIsLoading(true);
-      const customers = await base44.entities.Customer.filter({ id });
+      const customers = await plataforma.entities.Customer.filter({ id });
       
       if (customers.length === 0) {
         navigate(createPageUrl('CRM'));
@@ -118,7 +118,7 @@ export default function CustomerDetails() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      await base44.entities.Customer.update(customer.id, formData);
+      await plataforma.entities.Customer.update(customer.id, formData);
       alert('✅ Dados salvos com sucesso!');
       await loadCustomer(customer.id);
     } catch (error) {

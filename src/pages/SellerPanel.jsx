@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, RotateCw, AlertTriangle } from "lucide-react";
@@ -58,7 +58,7 @@ export default function SellerPanel() {
     if (!user) return;
     try {
       setIsError(false);
-      const response = await base44.functions.invoke('getSellerDashboardData', { seller_id: user.id });
+      const response = await plataforma.functions.invoke('getSellerDashboardData', { seller_id: user.id });
       const data = response?.data;
       if (data?.success) {
         setDashboardData(data);

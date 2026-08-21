@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ function cpfTemDigitoValido(valor) {
   return calc(9) === parseInt(cpf[9], 10) && calc(10) === parseInt(cpf[10], 10);
 }
 
-const CatalogSale = base44.entities.CatalogSale;
+const CatalogSale = plataforma.entities.CatalogSale;
 
 // 📦 Só produto físico entra nesta fila de envio. Kinds digitais puros (depósito de
 // carteira, comissão, adesão, etc.) são outras cobranças na mesma tabela — não precisam
@@ -248,17 +248,17 @@ export default function CatalogOrdersAdmin() {
     try {
       // Lê direto da tabela catalog_sales (getCatalogOrders é stub da migração — retornava vazio).
       // O acesso de admin já é protegido pela rota (RequireRole) + RLS de leitura.
-      const allOrders = await base44.entities.CatalogSale.filter({}, '-created_date', 1000);
+      const allOrders = await plataforma.entities.CatalogSale.filter({}, '-created_date', 1000);
       const physicos = Array.isArray(allOrders) ? allOrders.filter(isPedidoFisico) : [];
 
       // 🔗 Identifica a quem o comprador está ligado diretamente (quem indicou/recrutou
       // ele — referred_by_id). Não é a comissão DESSA venda (depósito não paga comissão),
       // é o vínculo do comprador na rede, pra saber de qual vendedor ele é.
       const buyerIds = Array.from(new Set(physicos.map(o => o.buyer_id).filter(Boolean)));
-      const buyers = buyerIds.length ? await base44.entities.AppUser.filter({ id: { $in: buyerIds } }) : [];
+      const buyers = buyerIds.length ? await plataforma.entities.AppUser.filter({ id: { $in: buyerIds } }) : [];
       const buyerMap = Object.fromEntries(buyers.map(b => [b.id, b]));
       const referrerIds = Array.from(new Set(buyers.map(b => b.referred_by_id).filter(Boolean)));
-      const referrers = referrerIds.length ? await base44.entities.AppUser.filter({ id: { $in: referrerIds } }) : [];
+      const referrers = referrerIds.length ? await plataforma.entities.AppUser.filter({ id: { $in: referrerIds } }) : [];
       const referrerMap = Object.fromEntries(referrers.map(r => [r.id, r]));
 
       const comVendedor = physicos.map(o => {
@@ -343,7 +343,7 @@ export default function CatalogOrdersAdmin() {
     if (!actorId) { toast.error('Sessão não identificada.'); return; }
     setSalvandoCpf(true);
     try {
-      const r = await base44.functions.invoke('atualizarCpfComprador', { actorId, buyer_id: selectedOrder.buyer_id, cpf: cpfLimpo });
+      const r = await plataforma.functions.invoke('atualizarCpfComprador', { actorId, buyer_id: selectedOrder.buyer_id, cpf: cpfLimpo });
       const data = r?.data || r;
       if (!data?.ok) { toast.error(data?.error || 'Não foi possível salvar o CPF.'); return; }
       const cpfSalvo = data.cpf || cpfLimpo;
@@ -401,7 +401,7 @@ export default function CatalogOrdersAdmin() {
 
     setCompletandoEntregaId(order.id);
     try {
-      const r = await base44.functions.invoke('cobrarFretePendente', {
+      const r = await plataforma.functions.invoke('cobrarFretePendente', {
         actorId, sale_id: order.id, apenas_completar: true, executar,
       });
       const data = r?.data || r;
@@ -448,7 +448,7 @@ export default function CatalogOrdersAdmin() {
 
     setReprocessandoEnvioId(order.id);
     try {
-      const r = await base44.functions.invoke('reprocessarEnvioMelhorEnvio', { actorId, sale_id: order.id });
+      const r = await plataforma.functions.invoke('reprocessarEnvioMelhorEnvio', { actorId, sale_id: order.id });
       const data = r?.data || r;
       if (!data?.ok) { toast.error(data?.error || 'Não foi possível reprocessar.'); return; }
       const resultado = data.resultado;

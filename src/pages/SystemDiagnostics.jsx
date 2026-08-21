@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, Play, Zap, Stethoscope, Smartphone } from 'lucide-react';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { toast } from "sonner";
 import PortalPageHeader from '@/components/common/PortalPageHeader';
 // 🕵️ PONTO 88 (FASE 2) — resumo em português no topo. Só leitura; não altera
@@ -95,12 +95,12 @@ export default function SystemDiagnostics() {
 
     try {
       if (action === 'close_expired') {
-        const response = await base44.functions.invoke('closeExpiredAuctions', {});
+        const response = await plataforma.functions.invoke('closeExpiredAuctions', {});
         if (response.error) throw new Error(response.error);
         
         toast.success(`Sucesso! ${response.data?.closed || 0} leilões foram encerrados.`, { id: loadingToast });
       } else if (action === 'health_check') {
-        const response = await base44.functions.invoke('systemHealthCheck', { action: 'full_test' });
+        const response = await plataforma.functions.invoke('systemHealthCheck', { action: 'full_test' });
         if (response.error) throw new Error(response.error);
         
         toast.success("Health Check concluído! Verifique os novos logs.", { id: loadingToast });

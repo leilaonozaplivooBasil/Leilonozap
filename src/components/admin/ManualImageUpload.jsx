@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, UploadCloud, Trash2, Upload, Image as ImageIcon } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { toast } from "sonner";
 import { convertToWebP } from "@/lib/convertToWebP";
 
@@ -19,7 +19,7 @@ export default function ManualImageUpload({ onApply }) {
     try {
       for (const f of files) {
         const wf = await convertToWebP(f);
-        const result = await base44.integrations.Core.UploadFile({ file: wf });
+        const result = await plataforma.integrations.Core.UploadFile({ file: wf });
         if (result?.file_url) uploadedUrls.push(result.file_url);
       }
       if (uploadedUrls.length > 0) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { registrarAceiteTermo } from '@/lib/termoAdesao';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 import { useSectionTracking, trackLead } from '@/lib/tracking';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function Register() {
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ export default function Register() {
     try {
       // Passa o código do link de indicação: sem ele o cadastro por Google caía
       // no Site Oficial e o indicador real perdia a pessoa da árvore.
-      const result = await base44.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
+      const result = await plataforma.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível continuar com o Google.'));
         setIsGoogleLoading(false);
@@ -118,7 +118,7 @@ export default function Register() {
     const emCache = clientIdEmCache();
     if (emCache) renderGoogleButton(emCache);
     (async () => {
-      const clientId = await buscarClientId(base44);
+      const clientId = await buscarClientId(plataforma);
       if (clientId && clientId !== emCache) renderGoogleButton(clientId);
     })();
     return () => { cancelled = true; };
@@ -298,7 +298,7 @@ export default function Register() {
 
       // 🔒 Cadastro via backend service_role (anon não pode inserir em app_users por RLS).
       const refForBackend = getReferral() || getInfluencerCode() || '';
-      const reg = await base44.functions.invoke('publicRegister', {
+      const reg = await plataforma.functions.invoke('publicRegister', {
         full_name: fullName.trim(),
         display_first_name: firstName || null,
         display_last_name: lastName || null,

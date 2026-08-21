@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Copy, Sparkles, MessageCircle, Instagram, Check, Loader2 } from "lucide-react";
 
 export default function PromoTextGenerator({ product }) {
@@ -17,7 +17,7 @@ export default function PromoTextGenerator({ product }) {
 
   const generateTexts = async () => {
     setLoading(true);
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await plataforma.integrations.Core.InvokeLLM({
       prompt: `Gere textos promocionais para o seguinte produto de um leilão/catálogo online chamado "Leilão NoZap":
 
 Produto: ${product.description}

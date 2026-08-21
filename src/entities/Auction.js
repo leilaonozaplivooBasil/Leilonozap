@@ -1,3 +1,3 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-export const Auction = base44.entities.Auction;
+export const Auction = plataforma.entities.Auction;

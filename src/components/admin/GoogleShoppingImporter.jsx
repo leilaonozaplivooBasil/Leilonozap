@@ -3,7 +3,7 @@ import { fmtBR } from '@/lib/money';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, Check, Image as ImageIcon, Star } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { toast } from "sonner";
 
 export default function GoogleShoppingImporter({ onApply }) {
@@ -24,7 +24,7 @@ export default function GoogleShoppingImporter({ onApply }) {
     setSelectedImages([]);
 
     try {
-      const response = await base44.functions.invoke("extractGoogleShoppingImages", {
+      const response = await plataforma.functions.invoke("extractGoogleShoppingImages", {
         productName: name,
       });
 

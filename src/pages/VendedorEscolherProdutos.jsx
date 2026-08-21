@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
 import { Loader2, CheckCircle2, Truck, Store } from "lucide-react";
@@ -48,7 +48,7 @@ export default function VendedorEscolherProdutos() {
           return;
         }
         const localUser = JSON.parse(saved);
-        const fresh = await base44.entities.AppUser.filter({ id: localUser.id });
+        const fresh = await plataforma.entities.AppUser.filter({ id: localUser.id });
         const freshUser = fresh?.[0] || localUser;
 
         if (!(freshUser.seller_credit_balance > 0)) {
@@ -57,7 +57,7 @@ export default function VendedorEscolherProdutos() {
         }
         setUser(freshUser);
 
-        const prods = await base44.entities.Product.filter({ catalog_active: true }, "-created_date", 240);
+        const prods = await plataforma.entities.Product.filter({ catalog_active: true }, "-created_date", 240);
         setProducts(prods || []);
 
         // 🔁 Restaura carrinho/entrega salvos (sobrevive ao redirecionamento com recarga total
@@ -160,7 +160,7 @@ export default function VendedorEscolherProdutos() {
         ? [freteSel?.empresa, freteSel?.nome].filter(Boolean).join(" ") || "A combinar"
         : "Retirada na loja";
 
-      const res = await base44.functions.invoke("finalizeSellerOrder", {
+      const res = await plataforma.functions.invoke("finalizeSellerOrder", {
         user_id: user.id,
         items,
         delivery_method: deliveryMethod,

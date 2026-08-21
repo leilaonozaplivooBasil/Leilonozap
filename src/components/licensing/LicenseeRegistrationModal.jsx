@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -106,7 +106,7 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
 
             // 🔐 Cadastro REAL via rota server-side (service_role). O AppUser.create anon era
             // bloqueado por RLS (42501) e o cadastro nunca finalizava.
-            const resp = await base44.functions.invoke('createLicensee', {
+            const resp = await plataforma.functions.invoke('createLicensee', {
                 full_name: fullName.trim(),
                 nickname: nickname.trim(),
                 email: normalizedEmail,

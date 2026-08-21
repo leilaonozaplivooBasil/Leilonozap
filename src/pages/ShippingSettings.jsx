@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +59,7 @@ export default function ShippingSettings() {
 
     // Carregar configurações existentes
     try {
-      const settings = await base44.entities.FreteSettings.list();
+      const settings = await plataforma.entities.FreteSettings.list();
       if (settings.length > 0) {
         const config = settings[0];
         setSettingsId(config.id);
@@ -92,10 +92,10 @@ export default function ShippingSettings() {
 
     try {
       if (settingsId) {
-        await base44.entities.FreteSettings.update(settingsId, formData);
+        await plataforma.entities.FreteSettings.update(settingsId, formData);
         toast.success("✅ Configurações atualizadas com sucesso!");
       } else {
-        const newConfig = await base44.entities.FreteSettings.create(formData);
+        const newConfig = await plataforma.entities.FreteSettings.create(formData);
         setSettingsId(newConfig.id);
         toast.success("✅ Configurações criadas com sucesso!");
       }
@@ -115,7 +115,7 @@ export default function ShippingSettings() {
     setIsTesting(true);
 
     try {
-      const response = await base44.functions.invoke('testCorreiosConnection', {
+      const response = await plataforma.functions.invoke('testCorreiosConnection', {
         client_id: formData.client_id,
         client_secret: formData.client_secret,
         cep_origem: formData.cep_origem || '22790-703'

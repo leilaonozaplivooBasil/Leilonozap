@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import {
   Loader2, Check, ArrowRight, Package, Users, TrendingUp, ShieldCheck,
@@ -103,7 +103,7 @@ export default function Cadastro() {
     if (form.password.length < 6) { toast.error('Senha de no mínimo 6 caracteres.'); return; }
     setSending(true);
     try {
-      const r = await base44.functions.invoke('sendEmailCode', { email: form.email.trim().toLowerCase(), purpose: 'signup' });
+      const r = await plataforma.functions.invoke('sendEmailCode', { email: form.email.trim().toLowerCase(), purpose: 'signup' });
       if (!r?.success) { toast.error(r?.error || 'Erro ao enviar código.'); setSending(false); return; }
       toast.success('Código enviado pro seu e-mail!');
       setStep('code');
@@ -115,7 +115,7 @@ export default function Cadastro() {
     if (code.length < 4) { toast.error('Digite o código recebido.'); return; }
     setSending(true);
     try {
-      const r = await base44.functions.invoke('registerNetworkUser', {
+      const r = await plataforma.functions.invoke('registerNetworkUser', {
         full_name: form.full_name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
@@ -146,7 +146,7 @@ export default function Cadastro() {
     if (!u?.id) { toast.error('Sessão expirada, refaça o cadastro.'); return; }
     setSending(true);
     try {
-      const r = await base44.functions.invoke('createAdesaoPayment', {
+      const r = await plataforma.functions.invoke('createAdesaoPayment', {
         user: { id: u.id, name: u.full_name, email: u.email, cpf: u.cpf }, adesao_level: cargo, gateway,
       });
       if (!r?.success) { toast.error(r?.error || 'Erro ao iniciar pagamento.'); setSending(false); return; }

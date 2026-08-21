@@ -3,12 +3,12 @@ import { Search, Crown, Settings, Loader2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { resolveUserPanels } from "@/lib/panelResolver";
 import UserPanelEditor from "@/components/superadmin/UserPanelEditor";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function SuperAdminPanels() {
   const [users, setUsers] = useState([]);

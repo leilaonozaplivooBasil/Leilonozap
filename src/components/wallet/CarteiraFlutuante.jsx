@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wallet } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 💰 PONTO 84 — CARTEIRA FLUTUANTE (DESKTOP)
 // No PONTO 82 a carteira saiu do flutuante da sala e foi pro cabeçalho — mas o
@@ -20,7 +20,7 @@ export default function CarteiraFlutuante({ user }) {
   const carregarSaldo = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+      const result = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
       const data = result?.data || result;
       if (typeof data?.balance === 'number') {
         setBalance(data.balance);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export default function LuxuryAccessManager() {
   const load = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.LuxuryAccessCode.list("-created_date", 200);
+      const list = await plataforma.entities.LuxuryAccessCode.list("-created_date", 200);
       setCodes(Array.isArray(list) ? list : []);
     } finally { setLoading(false); }
   };
@@ -49,9 +49,9 @@ export default function LuxuryAccessManager() {
     if (!newCode.trim()) return;
     setSaving(true);
     try {
-      const exists = await base44.entities.LuxuryAccessCode.filter({ code: newCode.trim() });
+      const exists = await plataforma.entities.LuxuryAccessCode.filter({ code: newCode.trim() });
       if (!Array.isArray(exists) || exists.length === 0) {
-        await base44.entities.LuxuryAccessCode.create({
+        await plataforma.entities.LuxuryAccessCode.create({
           code: newCode.trim(),
           label: label || undefined,
           person_name: personName || undefined,
@@ -68,17 +68,17 @@ export default function LuxuryAccessManager() {
   };
 
   const toggleActive = async (c) => {
-    await base44.entities.LuxuryAccessCode.update(c.id, { is_active: !c.is_active });
+    await plataforma.entities.LuxuryAccessCode.update(c.id, { is_active: !c.is_active });
     await load();
   };
 
   const resetUse = async (c) => {
-    await base44.entities.LuxuryAccessCode.update(c.id, { is_used: false, is_active: true, used_by_user_id: null, used_at: null });
+    await plataforma.entities.LuxuryAccessCode.update(c.id, { is_used: false, is_active: true, used_by_user_id: null, used_at: null });
     await load();
   };
 
   const remove = async (c) => {
-    await base44.entities.LuxuryAccessCode.delete(c.id);
+    await plataforma.entities.LuxuryAccessCode.delete(c.id);
     await load();
   };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ export default function AdminDepositosConfirmados() {
     queryFn: async () => {
       const actorId = getActorId();
       if (!actorId) return [];
-      const response = await base44.functions.invoke('adminListDeposits', { actorId });
+      const response = await plataforma.functions.invoke('adminListDeposits', { actorId });
       const data = response?.data || response;
       if (!data?.success) throw new Error(data?.error || 'Falha ao carregar depósitos');
       return Array.isArray(data.deposits) ? data.deposits : [];
@@ -86,7 +86,7 @@ export default function AdminDepositosConfirmados() {
 
     for (const tx of expiredPix) {
       try {
-        await base44.entities.CatalogSale.delete(tx.id);
+        await plataforma.entities.CatalogSale.delete(tx.id);
         deleted++;
       } catch (err) {
         console.error('[CleanupPix] Falha ao deletar tx:', tx.id, err);

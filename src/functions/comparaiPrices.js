@@ -1,5 +1,5 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export async function comparaiPrices(params) {
-    return base44.functions.invoke('comparaiPrices', params);
+    return plataforma.functions.invoke('comparaiPrices', params);
 }

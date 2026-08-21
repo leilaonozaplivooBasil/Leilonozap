@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Upload, Check, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 🪪 Envio dos documentos de identificação exigidos para validar o termo.
 // Um card por documento. Aceita foto (câmera do celular) ou PDF.
@@ -19,7 +19,7 @@ function CampoDoc({ rotulo, ajuda, valor, onEnviado, userId, chave }) {
     setEnviando(true);
     try {
       const limpo = (file.name || 'doc').replace(/[^a-zA-Z0-9._-]/g, '_');
-      const { file_url } = await base44.integrations.Core.UploadFile({
+      const { file_url } = await plataforma.integrations.Core.UploadFile({
         file,
         path: `parceiro-nda/${userId || 'sem-id'}/${chave}_${Date.now()}_${limpo}`,
       });

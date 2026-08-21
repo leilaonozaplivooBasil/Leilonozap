@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { supabase } from '@/api/supabaseClient';
@@ -149,7 +149,7 @@ export default function Cart() {
 
         // Tenta buscar dados mais completos do AppUser
         try {
-          const appUsers = await base44.entities.AppUser.filter({ id: user.id });
+          const appUsers = await plataforma.entities.AppUser.filter({ id: user.id });
           if (appUsers && appUsers.length > 0) {
             const fullUser = appUsers[0];
             setSaldo(Number(fullUser.commission_balance) || 0);
@@ -232,7 +232,7 @@ export default function Cart() {
   useEffect(() => {
     if (!currentUser?.id) return;
     let ativo = true;
-    base44.functions.invoke('passaporteCoupon', { user_id: currentUser.id })
+    plataforma.functions.invoke('passaporteCoupon', { user_id: currentUser.id })
       .then((r) => { if (ativo && r?.success) setPassaporteStatus({ liberado: r.liberado, tem_bloqueado: r.tem_bloqueado }); })
       .catch(() => { /* sem cupom → carrinho segue normal */ });
     return () => { ativo = false; };
@@ -272,7 +272,7 @@ export default function Cart() {
     // Função de checagem reutilizável
     const checkPayment = async () => {
       try {
-        const result = await base44.functions.invoke('checkPaymentStatus', {
+        const result = await plataforma.functions.invoke('checkPaymentStatus', {
           payment_id: paymentId
         });
         const data = result?.data || result;
@@ -415,7 +415,7 @@ export default function Cart() {
       // PONTO 73 — cotação real via Melhor Envio (a mesma função usada na página do produto).
       // Antes chamava 'calcularFrete' (Correios legado, sem credencial) e sempre caía no
       // "frete combinado no WhatsApp" — era essa a causa de o frete nunca aparecer aqui.
-      const r = await base44.functions.invoke('cotarFrete', {
+      const r = await plataforma.functions.invoke('cotarFrete', {
         cep,
         items: cartItems.map((it) => ({ id: it.id, quantidade: it.quantity || 1, valor: it.price_catalog || it.selling_price_wholesale || 0 })),
       });
@@ -571,7 +571,7 @@ export default function Cart() {
 
     // 💾 Persiste os dados no perfil (vale em qualquer dispositivo) — não bloqueia o checkout
     if (freshUser?.id) {
-      base44.entities.AppUser.update(freshUser.id, {
+      plataforma.entities.AppUser.update(freshUser.id, {
         phone: formData.phone.trim(),
         cpf: formData.cpf.replace(/\D/g, ''),
         ...(deliveryMethod === 'delivery' ? {
@@ -628,7 +628,7 @@ export default function Cart() {
       // Saldo de comissão (commission_balance) — redime comissão em produto da plataforma.
       // Validação de preço/estoque/saldo e baixa são ATÔMICAS no servidor (comprar_com_saldo).
       if (paymentType === 'SALDO') {
-        const pay = await base44.functions.invoke('payWithBalance', {
+        const pay = await plataforma.functions.invoke('payWithBalance', {
           buyer_id: freshUser.id,
           buyer_name: formData.name.trim(),
           buyer_phone: formData.phone.replace(/\D/g, ''),
@@ -660,7 +660,7 @@ export default function Cart() {
 
       // Cartão via Mercado Pago Checkout Pro (página hospedada e segura) — redireciona pro pagamento
       if (paymentType === 'CREDIT_CARD') {
-        const st = await base44.functions.invoke('createMPCatalogCardCheckout', {
+        const st = await plataforma.functions.invoke('createMPCatalogCardCheckout', {
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
@@ -678,7 +678,7 @@ export default function Cart() {
 
       // PIX via Mercado Pago — cria a venda + gera o PIX (valor validado no servidor, anti-fraude)
       if (paymentType === 'PIX') {
-        const mp = await base44.functions.invoke('createMPPix', {
+        const mp = await plataforma.functions.invoke('createMPPix', {
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
           buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
@@ -703,7 +703,7 @@ export default function Cart() {
         return; // createMPPix já criou a venda — não segue o fluxo antigo (ASAAS stub)
       }
 
-      const paymentRaw = await base44.functions.invoke('createMPWalletDeposit', paymentPayload);
+      const paymentRaw = await plataforma.functions.invoke('createMPWalletDeposit', paymentPayload);
       const paymentResponse = paymentRaw?.data || paymentRaw;
 
       toast.dismiss('checkout-loading');
@@ -740,7 +740,7 @@ export default function Cart() {
 
       if (referralCode) {
         try {
-          const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
+          const licensees = await plataforma.entities.AppUser.filter({ referral_code: referralCode });
           if (licensees?.[0]) { licenseeData = licensees[0]; licenseeId = licenseeData.id; }
         } catch (e) { /* ignora — não bloqueia pagamento */ }
       }
@@ -779,13 +779,13 @@ export default function Cart() {
 
       let allCreatedSales = [];
       try {
-        const createdSalesResult = await base44.entities.CatalogSale.bulkCreate(salesToCreate);
+        const createdSalesResult = await plataforma.entities.CatalogSale.bulkCreate(salesToCreate);
         allCreatedSales = createdSalesResult || [];
       } catch (e) {
         console.warn('CatalogSale.bulkCreate falhou, tentando individualmente:', e.message);
         for (const saleData of salesToCreate) {
           try {
-            const sale = await base44.entities.CatalogSale.create(saleData);
+            const sale = await plataforma.entities.CatalogSale.create(saleData);
             allCreatedSales.push(sale);
           } catch (createErr) {
             console.warn('Erro ao criar CatalogSale individual:', createErr.message);
@@ -800,7 +800,7 @@ export default function Cart() {
         const saleIds = allCreatedSales.map(s => s.id).filter(Boolean).join(',');
         if (saleIds) {
           try {
-            await base44.functions.invoke('linkPaymentToCatalogSale', {
+            await plataforma.functions.invoke('linkPaymentToCatalogSale', {
               payment_id: paymentResponse.payment_id,
               catalog_sale_ids: saleIds
             });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,12 +55,12 @@ export default function AddFunds() {
       setUser(currentUser);
 
       // Carregar pacotes de depósito
-      const depositPackages = await base44.entities.DepositPackage.filter({ is_active: true });
+      const depositPackages = await plataforma.entities.DepositPackage.filter({ is_active: true });
       const sortedPackages = depositPackages.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
       setPackages(sortedPackages);
 
       // Carregar transações recentes da carteira digital
-      const transactions = await base44.entities.DigitalWalletTransaction.filter({ 
+      const transactions = await plataforma.entities.DigitalWalletTransaction.filter({ 
         user_id: currentUser.id,
         type: "deposit",
         status: "confirmed"

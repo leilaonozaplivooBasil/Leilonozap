@@ -1,9 +1,9 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 /**
  * Invoca a função de sistema para distribuir comissões de leilão.
  * @param {Object} params 
  */
 export async function distributeAuctionCommissions(params) {
-    return base44.functions.invoke('distributeAuctionCommissions', params);
+    return plataforma.functions.invoke('distributeAuctionCommissions', params);
 }

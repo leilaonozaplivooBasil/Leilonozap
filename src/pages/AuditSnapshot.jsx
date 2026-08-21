@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,7 @@ export default function AuditSnapshot() {
     console.log('🔐 Tentando baixar snapshot com email:', me?.email);
     
     try {
-      const response = await base44.functions.invoke('exportAuditData', {
+      const response = await plataforma.functions.invoke('exportAuditData', {
         start_date: startDate,
         end_date: endDate,
         requester_email: me?.email || localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')).email : null

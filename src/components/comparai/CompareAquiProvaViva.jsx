@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Loader2, CheckCircle2, AlertTriangle, ChevronRight, Image as ImageIcon } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import LogoLoja from './LogoLoja';
@@ -35,7 +35,7 @@ export default function CompareAquiProvaViva() {
     setErro(null);
     setResultado(null);
     try {
-      const r = await base44.functions.invoke('comparaiDemo', { query: q });
+      const r = await plataforma.functions.invoke('comparaiDemo', { query: q });
       const data = r?.data || r;
       if (typeof data?.searchApiImagemAtiva === 'boolean') setImagemAtiva(data.searchApiImagemAtiva);
       if (!data?.success) {

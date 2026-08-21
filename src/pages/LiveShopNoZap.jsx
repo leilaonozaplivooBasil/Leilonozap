@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { money, addMoney, mulMoney, gteMoney, fmtBR } from "@/lib/money";
 import { Eye, ShoppingBag, ChevronLeft, ChevronRight, Zap, TrendingUp, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,10 @@ import ProximosNaLive from "@/components/liveshop/ProximosNaLive";
 import SelosLivoo from "@/components/liveshop/SelosLivoo";
 import FundoRosaLive from "@/components/liveshop/FundoRosaLive";
 
-const Auction = base44.entities.Auction;
-const Bid = base44.entities.Bid;
-const AppUser = base44.entities.AppUser;
-const LiveSession = base44.entities.LiveSession;
+const Auction = plataforma.entities.Auction;
+const Bid = plataforma.entities.Bid;
+const AppUser = plataforma.entities.AppUser;
+const LiveSession = plataforma.entities.LiveSession;
 
 export default function LiveShopNoZap() {
   const [currentUser, setCurrentUser] = useState(null);

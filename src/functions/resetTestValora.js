@@ -1,5 +1,5 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export async function resetTestValora(params) {
-    return base44.functions.invoke('resetTestValora', params);
+    return plataforma.functions.invoke('resetTestValora', params);
 }

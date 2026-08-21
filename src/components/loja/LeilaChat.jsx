@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { X, Send, Bot } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import leilaSuporte from "@/assets/leila-suporte.webp";
 
 // 🤖 A persona da Leila vive no config do agente: base44/agents/leila_atendente.jsonc
-// O chat usa base44.agents (API nativa da Base44) — sem função backend intermediária.
+// O chat usa plataforma.agents (API nativa da Base44) — sem função backend intermediária.
 
 // 🤖 A persona da Leila vive no config do agente: base44/agents/leila_atendente.jsonc
 // O chat chama a Deno function "leilaChat" (base44/functions/leilaChat/entry.ts)
@@ -113,7 +113,7 @@ export default function LeilaChat({ open, onClose }) {
         userId = saved?.id || null;
       } catch {}
 
-      const resp = await base44.functions.invoke("leilaChat", {
+      const resp = await plataforma.functions.invoke("leilaChat", {
         message: text,
         conversation_id: conversationIdRef.current,
         user_id: userId,

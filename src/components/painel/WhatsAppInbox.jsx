@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { Bot, Power, Loader2, Send, Search, QrCode, RefreshCw, BrainCircuit, User as UserIcon
 } from 'lucide-react';
@@ -18,7 +18,7 @@ export default function WhatsAppInbox({ user }) {
   const [showTrain, setShowTrain] = useState(false);
   const endRef = useRef(null);
 
-  const call = (action, extra = {}) => base44.functions.invoke('waProxy', { action, actorId: user.id, ownerId: user.id, ...extra });
+  const call = (action, extra = {}) => plataforma.functions.invoke('waProxy', { action, actorId: user.id, ownerId: user.id, ...extra });
 
   const loadCfg = async () => {
     const r = await call('getConfig');

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,7 @@ export default function CreateLuxuryAuction() {
     if (!file) return;
     setIsUploading(true);
     try {
-      const res = await base44.integrations.Core.UploadFile({ file });
+      const res = await plataforma.integrations.Core.UploadFile({ file });
       if (res?.file_url) setImages((prev) => [...prev, res.file_url]);
     } finally {
       setIsUploading(false);
@@ -53,7 +53,7 @@ export default function CreateLuxuryAuction() {
     setIsSaving(true);
     try {
 
-      await base44.entities.LuxuryAuction.create({
+      await plataforma.entities.LuxuryAuction.create({
         title: title.trim(),
         description: description.trim(),
         image_urls: images,
@@ -85,9 +85,9 @@ export default function CreateLuxuryAuction() {
     if (!code) return;
     setSavingVip(true);
     try {
-      const exists = await base44.entities.LuxuryAccessCode.filter({ code });
+      const exists = await plataforma.entities.LuxuryAccessCode.filter({ code });
       if (!Array.isArray(exists) || exists.length === 0) {
-        await base44.entities.LuxuryAccessCode.create({
+        await plataforma.entities.LuxuryAccessCode.create({
           code,
           label: vipLabel || undefined,
           is_active: false,
@@ -108,7 +108,7 @@ export default function CreateLuxuryAuction() {
     if (!title.trim()) { alert("Preencha o título primeiro"); return; }
     setIsGeneratingDesc(true);
     try {
-      const res = await base44.integrations.Core.InvokeLLM({
+      const res = await plataforma.integrations.Core.InvokeLLM({
         prompt: `Escreva uma descrição comercial curta, clara e atraente para um produto de luxo com o título: "${title}". Use tom premium, em português, 3-5 frases, sem emojis, sem markdown.`,
       });
       if (res) {

@@ -22,7 +22,7 @@ let esperaAtual = ESPERA_INICIAL_MS;
 
 const INDISPONIVEL = { available: false };
 
-export async function buscarRegiao(base44, { cep = '', cidade = '', uf = '' }) {
+export async function buscarRegiao(plataforma, { cep = '', cidade = '', uf = '' }) {
   if (!cep && !cidade) return INDISPONIVEL;
 
   const chave = `${cep}|${cidade}|${uf}`.toLowerCase();
@@ -43,7 +43,7 @@ export async function buscarRegiao(base44, { cep = '', cidade = '', uf = '' }) {
 
   const promessa = (async () => {
     try {
-      const r = await base44.functions.invoke('regiaoInteligencia', { cep, cidade, uf });
+      const r = await plataforma.functions.invoke('regiaoInteligencia', { cep, cidade, uf });
       const dados = r || INDISPONIVEL;
       cache.set(chave, { dados, em: Date.now() });
       esperaAtual = ESPERA_INICIAL_MS; // deu certo: zera o castigo

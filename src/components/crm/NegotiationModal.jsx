@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ export default function NegotiationModal({ customer, onClose, onSave, sellers })
 
   const loadProducts = async () => {
     try {
-      const allProducts = await base44.entities.Product.list('-created_date', 500);
+      const allProducts = await plataforma.entities.Product.list('-created_date', 500);
       const inStock = allProducts.filter(p => (p.quantity || 0) > 0);
       setProducts(inStock);
     } catch (error) {
@@ -115,10 +115,10 @@ export default function NegotiationModal({ customer, onClose, onSave, sellers })
         closed_by: status !== 'em_andamento' ? sellerData?.name : null
       };
 
-      await base44.entities.Negotiation.create(negotiationData);
+      await plataforma.entities.Negotiation.create(negotiationData);
 
       // Atualiza customer
-      await base44.entities.Customer.update(customer.id, {
+      await plataforma.entities.Customer.update(customer.id, {
         purchase_status: status === 'fechada' ? 'aguardando_pagamento' : 'em_negociacao',
         total_spent: status === 'fechada' 
           ? (customer.total_spent || 0) + totalValue 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import CartaoPassaporte from '@/components/passaporte/CartaoPassaporte';
 import BeneficiosPassaporte from '@/components/passaporte/BeneficiosPassaporte';
 import AvisoLegalPassaporte from '@/components/passaporte/AvisoLegalPassaporte';
@@ -22,7 +22,7 @@ export default function PassaporteLances() {
 
   useEffect(() => {
     if (!currentUser?.id) return;
-    base44.entities.Passaporte?.filter?.({ user_id: currentUser.id, status: 'ativo' })
+    plataforma.entities.Passaporte?.filter?.({ user_id: currentUser.id, status: 'ativo' })
       .then((rows) => { if (Array.isArray(rows) && rows.length) setMeuPassaporte(rows[0]); })
       .catch(() => {});
   }, [currentUser?.id]);
