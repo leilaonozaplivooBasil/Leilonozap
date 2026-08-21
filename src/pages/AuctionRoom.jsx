@@ -95,6 +95,11 @@ export default function AuctionRoom() {
   // 🚚 Frete: calculado UMA VEZ por sessão na sala (nunca por clique de lance) —
   // depende só do CEP + dimensões do produto, nunca do valor do lance.
   const [freteValor, setFreteValor] = useState(0);
+  // 🔏 BLOQUEADOR 4 (auditoria OpenAI, 21/08/2026): guardar só o PREÇO não serve.
+  // O preço é sugestão; o SELO é o que o servidor aceita como prova de que foi
+  // ele quem cotou. Sem guardar e devolver o selo, ligar FRETE_MODO=bloquear
+  // recusaria TODO lance legítimo vindo da tela.
+  const [freteSelo, setFreteSelo] = useState(null);
   const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep
   const [freteCep, setFreteCep] = useState('');
   const freteCalcRef = useRef(false);
@@ -464,6 +469,7 @@ export default function AuctionRoom() {
     userWallet,
     setUserWallet,
     freteValor,
+    freteSelo,
   });
 
   // 🚚 Cota o frete UMA VEZ (CEP do perfil + dimensões do produto do leilão via
@@ -478,37 +484,36 @@ export default function AuctionRoom() {
     }
     setFreteStatus('loading');
     try {
-      let dims = {};
-      if (auction.product_id) {
-        const prods = await base44.entities.Product.filter({ id: auction.product_id });
-        if (Array.isArray(prods) && prods[0]) dims = prods[0];
-      }
+      // 🔴 O QUE MUDOU (BLOQUEADOR 3 + 4):
+      // Antes esta tela montava o `items` — e mandava `id: auction.id`, que é o
+      // id do LEILÃO, não o do produto. O servidor procurava aquilo em `products`,
+      // não achava, e cotava a caixa mínima dos Correios. Além de errado, era
+      // inseguro: o servidor assinava o pacote que o navegador descrevesse.
+      // Agora a tela manda só QUEM e QUAL LEILÃO. Produto e CEP saem do banco,
+      // no servidor. `items` não é mais enviado — e não é mais lido lá.
       const result = await base44.functions.invoke('cotarFrete', {
+        auction_id: auction.id,
+        user_id: currentUser?.id,
         cep,
-        items: [{
-          id: auction.id,
-          peso: dims.peso,
-          altura: dims.altura,
-          largura: dims.largura,
-          comprimento: dims.comprimento,
-          valor: money(auction.current_price || auction.starting_price),
-          quantidade: 1,
-        }],
       });
       const data = result?.data || result;
       if (data?.success && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
-        setFreteValor(money(data.opcoes[0].preco));
+        const escolhida = data.opcoes[0];
+        setFreteValor(money(escolhida.preco));
+        setFreteSelo(escolhida.selo || null);
         setFreteStatus('ok');
       } else {
         setFreteValor(0);
-        setFreteStatus('error');
+        setFreteSelo(null);
+        setFreteStatus(data?.motivo === 'sem_cep' ? 'needs_cep' : 'error');
       }
     } catch (e) {
       console.warn('⚠️ [FRETE] Erro ao calcular frete do leilão:', e.message);
       setFreteValor(0);
+      setFreteSelo(null);
       setFreteStatus('error');
     }
-  }, [auction]);
+  }, [auction, currentUser]);
 
   useEffect(() => {
     if (!auction || !currentUser || freteCalcRef.current) return;
@@ -538,12 +543,17 @@ export default function AuctionRoom() {
   // fazer em cada caso, porque "erro" no meio de um leilão ao vivo sem instrução
   // faz a pessoa desistir.
   const freteBloqueia = useCallback(() => {
-    if (freteStatus === 'ok' && freteValor > 0) return null;
+    if (freteStatus === 'ok' && freteValor > 0 && freteSelo) return null;
+    // selo ausente com cotação "ok" só acontece se a rota antiga responder — e aí
+    // o lance seria recusado no servidor assim que FRETE_MODO=bloquear subir.
+    if (freteStatus === 'ok' && freteValor > 0 && !freteSelo) {
+      return 'Não conseguimos confirmar o frete com o servidor. Recarregue a página e tente de novo.';
+    }
     if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
     if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
     if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
     return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
-  }, [freteStatus, freteValor, freteCep]);
+  }, [freteStatus, freteValor, freteCep, freteSelo]);
 
   const handleSubmitBidComTermo = useCallback((amount) => {
     // 📣 PONTO 69 — trava de segurança: nenhum lance sai antes da abertura

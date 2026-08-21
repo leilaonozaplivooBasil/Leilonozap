@@ -78,6 +78,36 @@ function _conferirCracha(req, idDoCorpo, rota) {
   return { liberado: false, http: 401 };
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔏 SELO DO FRETE — CÓPIA INLINE, PELO MESMO MOTIVO DO CRACHÁ ACIMA
+// ══════════════════════════════════════════════════════════════════════════════
+// A regra oficial mora em api/_lib/freteSelo.js. Aqui é copiada porque esta rota
+// é autocontida por lei. Só usa `crypto`, que já está importado.
+function _conferirSelo(selo, auctionId, userId) {
+  const chave = process.env.SESSAO_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!chave) return { ok: false, motivo: 'sem_chave_no_servidor', valor: 0 };
+  const txt = String(selo || '').trim();
+  if (!txt) return { ok: false, motivo: 'sem_selo', valor: 0 };
+  try {
+    const p = txt.split('.');
+    if (p.length !== 3 || p[0] !== 'f1') return { ok: false, motivo: 'formato', valor: 0 };
+    const esperado = Buffer.from(
+      crypto.createHmac('sha256', chave).update(`frete-v1|${p[1]}`).digest()
+        .toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), 'utf8');
+    const veio = Buffer.from(p[2], 'utf8');
+    if (esperado.length !== veio.length || !crypto.timingSafeEqual(esperado, veio)) {
+      return { ok: false, motivo: 'assinatura', valor: 0 };
+    }
+    const d = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    if (!(Number(d.x) > Date.now())) return { ok: false, motivo: 'vencido', valor: 0 };
+    if (auctionId && String(d.a) !== String(auctionId)) return { ok: false, motivo: 'selo_de_outro_leilao', valor: 0 };
+    if (String(d.u) !== String(userId)) return { ok: false, motivo: 'selo_de_outra_pessoa', valor: 0 };
+    return { ok: true, motivo: 'ok', valor: Math.round(Number(d.v) || 0) / 100, id: d.f || null, productId: d.pid || null };
+  } catch (e) {
+    return { ok: false, motivo: `erro:${e?.message}`, valor: 0 };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -86,12 +116,57 @@ export default async function handler(req, res) {
     const userId = String(body?.user_id || '').trim();
     const _ses = _conferirCracha(req, userId, 'reserveBidBalance');
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
-    const amount = money(body?.amount);
     // 🔗 PONTO CEGO CORRIGIDO (18/08/2026): a reserva nascia SEM saber de qual leilão
     // era — por isso R$ 13,20 de uma conta ficaram irrastreáveis na auditoria. Agora o
     // leilão vem no corpo e é gravado no livro-caixa. Opcional: se não vier, a reserva
     // continua funcionando exatamente como antes (compatibilidade preservada).
     const auctionId = String(body?.auction_id || '').trim() || null;
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 5 (auditoria OpenAI, 21/08/2026) — QUEM DECIDIA O VALOR
+    // ══════════════════════════════════════════════════════════════════════
+    // COMO ESTAVA:  const amount = money(body?.amount);
+    // Uma linha. O NAVEGADOR calculava `bidAmount + freteValor` e o servidor
+    // movia exatamente aquilo de saldo_disponivel para saldo_reservado. Todo o
+    // trabalho do selo do frete — servidor cota, servidor assina, lance confere
+    // — era contornado aqui: bastava chamar esta rota direto com
+    // `amount: 0.01` e o lance ficava reservado por um centavo.
+    //
+    // COMO FICOU: o valor é montado NO SERVIDOR, `bid_amount` (o lance, que o
+    // submitAtomicBid revalida contra o incremento do leilão) mais o frete que
+    // sai do SELO ASSINADO. `body.amount` deixa de ser autoridade.
+    //
+    // ⚠️ Esta rota NÃO confere o produto do selo: ela não lê o leilão, e ler
+    // custaria uma ida ao banco no caminho do lance ao vivo. Quem confere o
+    // produto é o submitAtomicBid, que já lê o leilão de qualquer jeito e é
+    // quem de fato grava o lance. Aqui o selo prova leilão, pessoa, validade e
+    // assinatura — o suficiente para o valor reservado não vir do cliente.
+    const bidAmount = money(body?.bid_amount);
+    const _selo = _conferirSelo(body?.frete_selo, auctionId, userId);
+    const _freteBloqueia = String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear';
+    const podeCalcular = bidAmount > 0 && _selo.ok;
+
+    let amount;
+    if (podeCalcular) {
+      amount = money(bidAmount + _selo.valor);
+      const pedido = money(body?.amount);
+      if (pedido > 0 && Math.abs(pedido - amount) >= 0.01) {
+        // Não é erro: é o sinal que a gente quer ver antes de ligar o bloqueio.
+        console.warn(`[FRETE] reserveBidBalance: navegador pediu ${pedido} e o servidor calculou ${amount} (lance ${bidAmount} + frete ${_selo.valor}) no leilão ${auctionId || '?'}.`);
+      }
+    } else {
+      // ⚠️ ROLLOUT EM DUAS ETAPAS, igual ao crachá, ao webhook do MP e ao lance.
+      const motivo = bidAmount > 0 ? _selo.motivo : 'sem_bid_amount';
+      if (_freteBloqueia) {
+        return res.status(400).json({
+          success: false, sem_frete: true, motivo,
+          error: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
+        });
+      }
+      console.warn(`[FRETE] reserveBidBalance: reserva SEM valor do servidor (${motivo}) no leilão ${auctionId || '?'} — ETAPA 1, usando o valor do navegador.`);
+      amount = money(body?.amount);
+    }
+
     if (!userId || amount <= 0) return res.status(400).json({ success: false, error: 'Dados inválidos' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -157,10 +232,13 @@ export default async function handler(req, res) {
           valor: amount,
           saldo_antes: reservadoAtual,
           saldo_depois: money(row.saldo_reservado),
-          origem: 'functions/reserveBidBalance',
+          origem: podeCalcular ? 'functions/reserveBidBalance(servidor)' : 'functions/reserveBidBalance(navegador)',
         });
         return res.status(200).json({
           success: true,
+          valor_do_servidor: podeCalcular,
+          lance: podeCalcular ? bidAmount : null,
+          frete: podeCalcular ? _selo.valor : null,
           balance: row.saldo_disponivel,
           held: row.saldo_reservado,
           new_balance: row.saldo_disponivel,

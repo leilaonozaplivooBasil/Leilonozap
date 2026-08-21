@@ -201,32 +201,11 @@ export default async function handler(req, res) {
         if (!(Number(d.x) > Date.now())) return { ok: false, motivo: 'vencido', valor: 0 };
         if (String(d.a) !== String(auctionId)) return { ok: false, motivo: 'selo_de_outro_leilao', valor: 0 };
         if (String(d.u) !== String(userId)) return { ok: false, motivo: 'selo_de_outra_pessoa', valor: 0 };
-        return { ok: true, motivo: 'ok', valor: (Number(d.v) || 0) / 100, id: d.f || null, cep: d.c || null };
+        return { ok: true, motivo: 'ok', valor: (Number(d.v) || 0) / 100, id: d.f || null, cep: d.c || null, productId: d.pid || null };
       } catch (e) {
         return { ok: false, motivo: `erro:${e?.message}`, valor: 0 };
       }
     })();
-
-    // ⚠️ ROLLOUT EM DUAS ETAPAS, igual ao crachá e ao webhook do MP — os dois
-    // deram certo. Enquanto FRETE_MODO não for 'bloquear', o lance sem selo
-    // válido PASSA e só fica anotado no log. Ligar direto recusaria todo lance
-    // de qualquer aba já aberta que ainda não conhece o selo, no meio de leilão
-    // ao vivo. Depois de o log ficar limpo, publica-se FRETE_MODO=bloquear.
-    const _freteBloqueia = String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear';
-    if (!_frete.ok) {
-      if (_freteBloqueia) {
-        return res.status(400).json({
-          success: false, sem_frete: true, motivo: _frete.motivo,
-          message: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
-        });
-      }
-      console.warn(`[FRETE] submitAtomicBid: lance SEM selo válido (${_frete.motivo}) no leilão ${auctionId} — ETAPA 1, nada foi bloqueado.`);
-    }
-    // O valor financeiro é o do SELO. `body.frete_valor` fica só como reserva da
-    // etapa 1, para não zerar o frete de quem ainda está com a aba antiga.
-    const freteValor = _frete.ok
-      ? _frete.valor
-      : Math.max(0, parseFloat(body?.frete_valor) || 0);
 
     if (!auctionId || !bidAmount || bidAmount <= 0 || !userId) {
       return res.status(400).json({ success: false, message: 'Parâmetros inválidos' });
@@ -242,9 +221,24 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, message: 'Não autorizado' });
     }
 
-    const getResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor`
+    // ⚠️ COLUNA NOVA NO SELECT = RISCO DE MATAR TODO LANCE.
+    // Se `product_id` não existir na tabela, o PostgREST devolve 42703 e o
+    // `if (!getResp.ok)` logo abaixo transforma TODO lance em 404. Já aconteceu
+    // em produção com uma coluna num PATCH (PONTO 83): os lances morreram de
+    // 03/08 15:03 até alguém perceber. Então aqui o select tem VOLTA: pede a
+    // coluna, e se a resposta não vier boa, relê exatamente o select antigo e
+    // segue sem a conferência de produto. Nunca troca segurança de frete por
+    // leilão parado.
+    const COLUNAS_BASE = 'id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor';
+    let getResp = await sb(
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE},product_id`
     );
+    let temColunaProduto = true;
+    if (!getResp.ok) {
+      temColunaProduto = false;
+      console.warn('[FRETE] submitAtomicBid: select com product_id falhou, relendo sem ele —', JSON.stringify(getResp.data)?.slice(0, 200));
+      getResp = await sb(`auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE}`);
+    }
     const auction = Array.isArray(getResp.data) ? getResp.data[0] : null;
 
     if (!getResp.ok || !auction) {
@@ -256,6 +250,47 @@ export default async function handler(req, res) {
         debug: !getResp.ok ? getResp.data : { auctionId },
       });
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🚚 DECISÃO DO FRETE — depois de ler o leilão, porque agora ela olha o PRODUTO
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 BLOQUEADOR 3 (auditoria OpenAI, 21/08/2026): assinatura válida não é o
+    // mesmo que cotação válida. O selo passa a dizer PARA QUE PRODUTO o preço
+    // foi calculado, e aqui isso é conferido contra o produto que o leilão tem
+    // AGORA. Fecha a janela de 30 minutos em que o leilão troca de produto e um
+    // selo de caneta paga o frete de uma geladeira.
+    let _freteOk = _frete.ok;
+    let _freteMotivo = _frete.motivo;
+    if (_freteOk && temColunaProduto) {
+      const produtoDoLeilao = auction.product_id ? String(auction.product_id) : '';
+      if (!_frete.productId) {
+        // selo emitido antes do campo existir — não passa quando o leilão TEM produto
+        if (produtoDoLeilao) { _freteOk = false; _freteMotivo = 'selo_sem_produto'; }
+      } else if (String(_frete.productId) !== produtoDoLeilao) {
+        _freteOk = false; _freteMotivo = 'selo_de_outro_produto';
+      }
+    }
+
+    // ⚠️ ROLLOUT EM DUAS ETAPAS, igual ao crachá e ao webhook do MP — os dois
+    // deram certo. Enquanto FRETE_MODO não for 'bloquear', o lance sem selo
+    // válido PASSA e só fica anotado no log. Ligar direto recusaria todo lance
+    // de qualquer aba já aberta que ainda não conhece o selo, no meio de leilão
+    // ao vivo. Depois de o log ficar limpo, publica-se FRETE_MODO=bloquear.
+    const _freteBloqueia = String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear';
+    if (!_freteOk) {
+      if (_freteBloqueia) {
+        return res.status(400).json({
+          success: false, sem_frete: true, motivo: _freteMotivo,
+          message: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
+        });
+      }
+      console.warn(`[FRETE] submitAtomicBid: lance SEM selo válido (${_freteMotivo}) no leilão ${auctionId} — ETAPA 1, nada foi bloqueado.`);
+    }
+    // O valor financeiro é o do SELO. `body.frete_valor` fica só como reserva da
+    // etapa 1, para não zerar o frete de quem ainda está com a aba antiga.
+    const freteValor = _freteOk
+      ? _frete.valor
+      : Math.max(0, parseFloat(body?.frete_valor) || 0);
 
     // 📣 PONTO 69 — MODO CHAMADA: leilão visível mas ainda fechado para lances.
     // Guarda ANTES de qualquer escrita/valor — nada de saldo é tocado aqui.

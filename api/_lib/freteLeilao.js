@@ -80,10 +80,15 @@ export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, au
 
   return {
     ok: true, motivo: 'ok', opcoes: r.opcoes,
+    // productId sobe junto porque o selo do frete precisa dele (BLOQUEADOR 3):
+    // quem assina tem de dizer PARA QUE PRODUTO aquele preço foi calculado.
+    productId: String(leilao.product_id),
+    cep: cepUsar,
     frete: {
       id: String(escolhida.id), valor: money(escolhida.preco),
       empresa: escolhida.empresa || null, servico: escolhida.nome || null,
       prazo: escolhida.prazo ?? null, cep: cepUsar,
+      productId: String(leilao.product_id),
     },
   };
 }
