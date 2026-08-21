@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { thumbUrl } from '@/lib/imgThumb';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import {
     Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users,
@@ -16,9 +16,9 @@ import AtualizarGradesModal from '@/components/lotes/AtualizarGradesModal';
 import ArrematantesModal from '@/components/lotes/ArrematantesModal';
 import { useSecureRole } from '@/components/hooks/useSecureRole';
 
-const Auction = base44.entities.Auction;
-const AppUser = base44.entities.AppUser;
-const Arrematante = base44.entities.Arrematante;
+const Auction = plataforma.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const Arrematante = plataforma.entities.Arrematante;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -319,7 +319,7 @@ export default function GestaoLotes() {
                 order_status: 'paid'
             });
             try {
-                const autorizacoes = await base44.asServiceRole.entities.LanceAutorizado.filter({
+                const autorizacoes = await plataforma.asServiceRole.entities.LanceAutorizado.filter({
                     investidor_id: vencedor.id,
                     auction_id: lote.id,
                     status_autorizacao: 'confirmada'
@@ -328,23 +328,23 @@ export default function GestaoLotes() {
                     const auth = autorizacoes[0];
                     const depositoTotal = auth.deposito_confirmado || 0;
                     const saldoRestante = Math.max(0, depositoTotal - valorFinal);
-                    await base44.entities.AppUser.update(vencedor.id, {
+                    await plataforma.entities.AppUser.update(vencedor.id, {
                         saldo_alocado: Math.max(0, (vencedor.saldo_alocado || 0) - depositoTotal),
                         saldo_disponivel: (vencedor.saldo_disponivel || 0) + saldoRestante
                     });
-                    await base44.entities.WalletTransaction.create({
+                    await plataforma.entities.WalletTransaction.create({
                         user_id: vencedor.id, type: 'purchase', direction: 'debit',
                         amount: valorFinal, status: 'confirmed', related_auction_id: lote.id,
                         description: `Arremate: ${lote.title} - ${new Date().toLocaleDateString('pt-BR')}`
                     });
                     if (saldoRestante > 0) {
-                        await base44.entities.WalletTransaction.create({
+                        await plataforma.entities.WalletTransaction.create({
                             user_id: vencedor.id, type: 'refund', direction: 'credit',
                             amount: saldoRestante, status: 'confirmed', related_auction_id: lote.id,
                             description: `Saldo restante liberado: ${lote.title}`
                         });
                     }
-                    await base44.asServiceRole.entities.LanceAutorizado.update(auth.id, {
+                    await plataforma.asServiceRole.entities.LanceAutorizado.update(auth.id, {
                         status_autorizacao: 'concluida',
                         data_conclusao: new Date().toISOString(),
                         observacoes: `Arremate registrado em ${new Date().toLocaleDateString('pt-BR')} por R$ ${fmtBR(valorFinal)}. Saldo restante liberado: R$ ${fmtBR(saldoRestante)}`

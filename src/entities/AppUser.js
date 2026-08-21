@@ -1,3 +1,3 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-export const AppUser = base44.entities.AppUser;
+export const AppUser = plataforma.entities.AppUser;

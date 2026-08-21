@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import bcrypt from 'bcryptjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, Eye, EyeOff, AlertCircle, Mail, KeyRound, CheckCircle, ArrowLeft } from 'lucide-react';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function AcessoArrematante() {
   const navigate = useNavigate();
@@ -117,7 +117,7 @@ export default function AcessoArrematante() {
       setGeneratedCode(code);
       setResetUserId(user.id);
 
-      await base44.functions.invoke('sendPasswordResetEmail', {
+      await plataforma.functions.invoke('sendPasswordResetEmail', {
         email: normalized,
         code,
         userName: user.full_name?.split(' ')[0] || 'Usuário'
@@ -148,7 +148,7 @@ export default function AcessoArrematante() {
     if (newPassword !== confirmPassword) { setResetMessage('As senhas não coincidem.'); return; }
     setIsResetting(true);
     try {
-      await base44.functions.invoke('updateUserPassword', {
+      await plataforma.functions.invoke('updateUserPassword', {
         user_id: resetUserId,
         new_password: newPassword
       });

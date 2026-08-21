@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Upload, FileText, Loader2, X, CheckCircle2, Receipt, Table2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
 const DOC_TYPES = [
   { key: "boleto", label: "Boleto", icon: FileText, color: "text-emerald-400", accept: "image/*,.pdf" },
@@ -87,12 +87,12 @@ export default function BoletoUploader({ onExtracted, onBulkExtracted }) {
       setPreview({ type: "file", name: file.name });
     }
 
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
 
     setUploading(false);
     setExtracting(true);
 
-    const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+    const result = await plataforma.integrations.Core.ExtractDataFromUploadedFile({
       file_url,
       json_schema: EXTRACTION_SCHEMAS[selectedType]
     });

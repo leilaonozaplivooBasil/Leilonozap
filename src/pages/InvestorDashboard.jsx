@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
 import ParceiroSidebar from '@/components/parceiro/painel/ParceiroSidebar';
 import ParceiroPainelGate from '@/components/parceiro/painel/ParceiroPainelGate';
@@ -32,7 +32,7 @@ import {
   Receipt,
 } from 'lucide-react';
 
-const FeaturedProduct = base44.entities.FeaturedProduct;
+const FeaturedProduct = plataforma.entities.FeaturedProduct;
 
 // 🧭 Telas do painel (padrão "tela a tela" do Painel de Alavancagem).
 const TELAS = [
@@ -220,11 +220,11 @@ export default function InvestorDashboard() {
       }
 
       const userFromStorage = JSON.parse(savedUserJSON);
-      const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
+      const freshUsers = await plataforma.entities.AppUser.filter({ id: userFromStorage.id });
       const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
 
       try {
-        await base44.entities.AppUser.update(user.id, {
+        await plataforma.entities.AppUser.update(user.id, {
           last_dashboard_access: new Date().toISOString(),
         });
       } catch (e) {
@@ -235,7 +235,7 @@ export default function InvestorDashboard() {
 
       // 📜 Já assinou o Termo de Confidencialidade? (somente leitura)
       try {
-        const resp = await base44.functions.invoke('consultarAssinaturaSigilo', {
+        const resp = await plataforma.functions.invoke('consultarAssinaturaSigilo', {
           user_id: user.id,
           documento: 'termo_confidencialidade',
         });
@@ -248,7 +248,7 @@ export default function InvestorDashboard() {
       // ✍️ Já assinou o Contrato de Parceria? (somente leitura)
       // O servidor grava 'contrato_parceria' — é o que libera as telas financeiras.
       try {
-        const resp = await base44.functions.invoke('consultarAssinaturaSigilo', {
+        const resp = await plataforma.functions.invoke('consultarAssinaturaSigilo', {
           user_id: user.id,
           documento: 'contrato_parceria',
         });

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import usePixAporteStatus from '@/hooks/usePixAporteStatus';
 import ParceiroPixConfirmado from './ParceiroPixConfirmado';
@@ -113,7 +113,7 @@ export default function ParceiroPixQrCode({ pixData, valor, plano, onCancelar, o
           setIsCheckingPayment(true);
           try {
             toast.info('Verificando pagamento PIX...');
-            const response = await base44.functions.invoke('checkPartnerPlanPayment', {
+            const response = await plataforma.functions.invoke('checkPartnerPlanPayment', {
               billing_id: pixData.billing_id,
             });
             if (response?.data?.is_paid || response?.is_paid) {

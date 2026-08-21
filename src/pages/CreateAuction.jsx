@@ -2,11 +2,11 @@ import React, { useState, useCallback, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
-const Auction = base44.entities.Auction;
-const User = { me: () => base44.auth.me() };
-const AppUser = base44.entities.AppUser;
+const Auction = plataforma.entities.Auction;
+const User = { me: () => plataforma.auth.me() };
+const AppUser = plataforma.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
 import { Button } from "@/components/ui/button";
 
@@ -203,7 +203,7 @@ export default function CreateAuction() {
         setManualStep(1);
         try {
           console.log('🔍 [ML_URL] Tentando extractMLImages...');
-          const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', { productUrl: decodedUrl }));
+          const mlResponse = await withRetry(() => plataforma.functions.invoke('extractMLImages', { productUrl: decodedUrl }));
           
           if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
             // Sucesso direto via extractMLImages
@@ -234,7 +234,7 @@ export default function CreateAuction() {
               toast.info('🔄 Buscando pelo nome do produto...');
               console.log('🔍 [ML_URL] Buscando por nome:', productNameFromUrl);
               
-              const nameResponse = await withRetry(() => base44.functions.invoke('searchProductByName', {
+              const nameResponse = await withRetry(() => plataforma.functions.invoke('searchProductByName', {
                 productName: productNameFromUrl
               }));
               
@@ -268,7 +268,7 @@ export default function CreateAuction() {
 
   const loadProductData = async (productId) => {
     try {
-      const Product = base44.entities.Product;
+      const Product = plataforma.entities.Product;
       const products = await Product.filter({ id: productId });
 
       if (products.length > 0) {
@@ -310,7 +310,7 @@ export default function CreateAuction() {
           setIsProcessing(true);
           setManualStep(1);
           try {
-            const gsResponse = await base44.functions.invoke('extractGoogleShoppingImages', {
+            const gsResponse = await plataforma.functions.invoke('extractGoogleShoppingImages', {
               productName: productDescription
             });
             const gsData = gsResponse?.data?.data;
@@ -346,7 +346,7 @@ export default function CreateAuction() {
             setIsProcessing(true);
             setManualStep(1);
             try {
-              const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', {
+              const mlResponse = await withRetry(() => plataforma.functions.invoke('extractMLImages', {
                 productUrl: sourceUrl
               }));
 
@@ -394,7 +394,7 @@ export default function CreateAuction() {
 
   const loadStores = async () => {
     try {
-      const StoreEntity = base44.entities.Store;
+      const StoreEntity = plataforma.entities.Store;
       const allStores = await StoreEntity.filter({ status: 'active' });
       setStores(allStores);
     } catch (error) {
@@ -441,7 +441,7 @@ export default function CreateAuction() {
     try {
       console.log('🔍 Buscando produto:', productName);
 
-      const response = await withRetry(() => base44.functions.invoke('searchProductByName', {
+      const response = await withRetry(() => plataforma.functions.invoke('searchProductByName', {
         productName: productName.trim()
       }));
 
@@ -510,7 +510,7 @@ export default function CreateAuction() {
       };
 
       console.log('🎯 Buscando anúncio único no Mercado Livre...');
-      const response = await base44.functions.invoke('searchProductByName', payload);
+      const response = await plataforma.functions.invoke('searchProductByName', payload);
 
       if (!response || response.status !== 200 || !response.data.found) {
         throw new Error(response?.data?.error || 'Anúncio do Mercado Livre não encontrado.');
@@ -578,7 +578,7 @@ export default function CreateAuction() {
     toast.info('🤖 Importando dados e imagens do anúncio...');
 
     try {
-      const response = await base44.functions.invoke('searchProductByName', {
+      const response = await plataforma.functions.invoke('searchProductByName', {
         productName: confirmedProductName || productName.trim(),
         adUrl: ad.url
       });
@@ -690,7 +690,7 @@ export default function CreateAuction() {
 
     try {
       console.log('🚀 [GTIN] Iniciando busca para:', gtinCode);
-      const response = await withRetry(() => base44.functions.invoke('searchProductByGTIN', {
+      const response = await withRetry(() => plataforma.functions.invoke('searchProductByGTIN', {
         gtin: gtinCode.trim()
       }));
 
@@ -872,7 +872,7 @@ export default function CreateAuction() {
 
     setIsUploading(true);
     try {
-      const wfLogo = await convertToWebP(file); const result = await base44.integrations.Core.UploadFile({ file: wfLogo });
+      const wfLogo = await convertToWebP(file); const result = await plataforma.integrations.Core.UploadFile({ file: wfLogo });
 
       if (result?.file_url) {
         setFormData(prev => ({ ...prev, supplier_logo_url: result.file_url }));
@@ -894,7 +894,7 @@ export default function CreateAuction() {
 
     try {
       const finalImageUrls = formData.image_urls.filter(url => url && url.trim() !== "");
-      const Product = base44.entities.Product;
+      const Product = plataforma.entities.Product;
       let createdAuction = null;
       // Preço da Loja Virtual = valor digitado pelo admin (já com −20% do mercado real).
       // Sem esse preço, NÃO publicamos nem no leilão nem no catálogo — não há fallback automático.
@@ -1269,7 +1269,7 @@ export default function CreateAuction() {
                             setIsProcessing(true);
                             setManualStep(1);
                             try {
-                              const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', {
+                              const mlResponse = await withRetry(() => plataforma.functions.invoke('extractMLImages', {
                                 productUrl: url
                               }));
 

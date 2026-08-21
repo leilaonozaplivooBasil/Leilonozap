@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import ParceiroSecao from './ParceiroSecao';
 import ParceiroTourLoja from './ParceiroTourLoja';
 
@@ -13,7 +13,7 @@ export default function ParceiroVitrineOperacao() {
 
   useEffect(() => {
     let ativo = true;
-    base44.entities.Product.list('-created_date', 24)
+    plataforma.entities.Product.list('-created_date', 24)
       .then((lista) => {
         if (!ativo) return;
         const comFoto = (lista || []).filter((p) => p?.image_urls?.[0]).slice(0, 6);

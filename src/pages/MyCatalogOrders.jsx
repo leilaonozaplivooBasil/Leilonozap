@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, Package, ArrowLeft, Filter, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -57,7 +57,7 @@ export default function MyCatalogOrders() {
     // Lê direto da tabela catalog_sales (a function getMyCatalogOrders é stub da migração e
     // resolve com {ok:false} sem lançar erro — por isso o fallback antigo nunca rodava).
     try {
-      const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
+      const directResult = await plataforma.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
       const list = (Array.isArray(directResult) ? directResult : []).filter((o) => !isWalletDeposit(o));
       // anexa as avaliações que o cliente já deu (pra mostrar "Você avaliou")
       try {
@@ -154,7 +154,7 @@ export default function MyCatalogOrders() {
     setConfirmingId(order.id);
     try {
       const uid = currentUser?.id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
-      const r = await base44.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
+      const r = await plataforma.functions.invoke('confirmarRecebimento', { user_id: uid, sale_id: order.id });
       if (r?.success) {
         setConfirmedIds(prev => new Set(prev).add(order.id));
         toast.success('Recebimento confirmado! Pagamento liberado pro vendedor.');
@@ -174,7 +174,7 @@ export default function MyCatalogOrders() {
   // protegida por RLS (navegador não escreve nela). A rota valida dono + status.
   const excluirPedido = async (order) => {
     const uid = currentUser?.id || JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
-    const r = await base44.functions.invoke('excluirMeuPedido', { user_id: uid, sale_id: order.id });
+    const r = await plataforma.functions.invoke('excluirMeuPedido', { user_id: uid, sale_id: order.id });
     if (r?.success) return true;
     throw new Error(r?.error === 'not_implemented' || r?.error === 'network_or_not_implemented'
       ? 'Exclusão indisponível neste ambiente (só funciona no site publicado)'

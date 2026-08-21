@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,13 +30,13 @@ export default function OrderTracking() {
         setIsLoading(true);
         
         // Busca leilão
-        const auctionData = await base44.entities.Auction.filter({ id: auctionId });
+        const auctionData = await plataforma.entities.Auction.filter({ id: auctionId });
         if (auctionData.length > 0) {
           setAuction(auctionData[0]);
         }
 
         // Busca pagamento
-        const paymentData = await base44.entities.Payment.filter({ auction_id: auctionId });
+        const paymentData = await plataforma.entities.Payment.filter({ auction_id: auctionId });
         if (paymentData.length > 0) {
           setPayment(paymentData[0]);
         }

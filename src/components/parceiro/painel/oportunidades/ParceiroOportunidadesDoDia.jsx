@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { normalizarLoteRecebido } from '@/lib/loteParceiro';
 import OportunidadeCard from './OportunidadeCard';
 import OportunidadeDetalheModal from './OportunidadeDetalheModal';
@@ -15,7 +15,7 @@ export default function ParceiroOportunidadesDoDia({ onParticipar }) {
 
   const carregar = useCallback(async () => {
     try {
-      const dados = await base44.entities.LoteRecebido.filter(
+      const dados = await plataforma.entities.LoteRecebido.filter(
         { publicado_parceiro: true },
         '-created_date',
         100

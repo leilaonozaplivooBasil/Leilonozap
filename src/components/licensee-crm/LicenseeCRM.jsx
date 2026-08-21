@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Loader2, RefreshCw } from 'lucide-react';
 
@@ -8,7 +8,7 @@ import LeadFilters from './LeadFilters';
 import LeadTable from './LeadTable';
 import LeadFormModal from './LeadFormModal';
 
-const LicenseeLead = base44.entities.LicenseeLead;
+const LicenseeLead = plataforma.entities.LicenseeLead;
 
 export default function LicenseeCRM() {
   const [leads, setLeads] = useState([]);

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { fmtBR } from '@/lib/money';
 import { useLocation, Link } from "react-router-dom";
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, Package, Clock, TrendingUp, Shield, Info, Flame } from "lucide-react";
 import { createPageUrl } from "@/utils";

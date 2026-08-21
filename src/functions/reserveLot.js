@@ -1,9 +1,9 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 /**
  * Invoca a função de sistema para reservar um lote.
  * @param {Object} params 
  */
 export async function reserveLot(params) {
-    return base44.functions.invoke('reserveLot', params);
+    return plataforma.functions.invoke('reserveLot', params);
 }

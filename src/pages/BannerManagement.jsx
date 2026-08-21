@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ export default function BannerManagement() {
 
   const loadBanners = async () => {
     try {
-      const data = await base44.entities.BannerImage.filter({ context: 'home' }, 'order');
+      const data = await plataforma.entities.BannerImage.filter({ context: 'home' }, 'order');
       setBanners(data || []);
     } catch (error) {
       console.error('Erro ao carregar banners:', error);
@@ -36,7 +36,7 @@ export default function BannerManagement() {
 
   const loadFeaturedProducts = async () => {
     try {
-      const data = await base44.entities.FeaturedProduct.list('order');
+      const data = await plataforma.entities.FeaturedProduct.list('order');
       setFeaturedProducts(data || []);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
@@ -61,7 +61,7 @@ export default function BannerManagement() {
     try {
       // Converte para WebP antes do upload (reduz ~25-35% sem perda visível)
       const webpFile = await convertToWebP(file, 0.90);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file: webpFile });
       return file_url;
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
@@ -72,7 +72,7 @@ export default function BannerManagement() {
 
   const handleCreateBanner = async (formData) => {
     try {
-      await base44.entities.BannerImage.create({
+      await plataforma.entities.BannerImage.create({
         ...formData,
         context: 'home',
         order: banners.length
@@ -88,7 +88,7 @@ export default function BannerManagement() {
 
   const handleUpdateBanner = async (id, formData) => {
     try {
-      await base44.entities.BannerImage.update(id, formData);
+      await plataforma.entities.BannerImage.update(id, formData);
       toast.success('Banner atualizado com sucesso!');
       loadBanners();
       setEditingBanner(null);
@@ -102,7 +102,7 @@ export default function BannerManagement() {
     if (!confirm('Tem certeza que deseja excluir este banner?')) return;
     
     try {
-      await base44.entities.BannerImage.delete(id);
+      await plataforma.entities.BannerImage.delete(id);
       toast.success('Banner excluído com sucesso!');
       loadBanners();
     } catch (error) {
@@ -113,7 +113,7 @@ export default function BannerManagement() {
 
   const handleToggleActive = async (banner) => {
     try {
-      await base44.entities.BannerImage.update(banner.id, {
+      await plataforma.entities.BannerImage.update(banner.id, {
         is_active: !banner.is_active
       });
       loadBanners();
@@ -126,7 +126,7 @@ export default function BannerManagement() {
 
   const handleCreateProduct = async (formData) => {
     try {
-      await base44.entities.FeaturedProduct.create({
+      await plataforma.entities.FeaturedProduct.create({
         ...formData,
         order: featuredProducts.length
       });
@@ -141,7 +141,7 @@ export default function BannerManagement() {
 
   const handleUpdateProduct = async (id, formData) => {
     try {
-      await base44.entities.FeaturedProduct.update(id, formData);
+      await plataforma.entities.FeaturedProduct.update(id, formData);
       toast.success('Produto atualizado com sucesso!');
       loadFeaturedProducts();
       setEditingProduct(null);
@@ -155,7 +155,7 @@ export default function BannerManagement() {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
     
     try {
-      await base44.entities.FeaturedProduct.delete(id);
+      await plataforma.entities.FeaturedProduct.delete(id);
       toast.success('Produto excluído com sucesso!');
       loadFeaturedProducts();
     } catch (error) {
@@ -166,7 +166,7 @@ export default function BannerManagement() {
 
   const handleToggleProductActive = async (product) => {
     try {
-      await base44.entities.FeaturedProduct.update(product.id, {
+      await plataforma.entities.FeaturedProduct.update(product.id, {
         is_active: !product.is_active
       });
       loadFeaturedProducts();
@@ -195,12 +195,12 @@ export default function BannerManagement() {
     try {
       // Definimos as fontes de dados
       const sourcesDef = [
-        { name: 'Banners Home', fetcher: () => base44.entities.BannerImage.list(), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
-        { name: 'Produtos em Destaque', fetcher: () => base44.entities.FeaturedProduct.list(), updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Banners Luxury', fetcher: () => base44.entities.BannerImage.filter({ context: 'luxurycollection' }), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
-        { name: 'Produtos do Catálogo', fetcher: () => base44.entities.CatalogProduct.list(), updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Leilões (Produtos)', fetcher: () => base44.entities.Auction.list(), updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
-        { name: 'Lojistas (Logos)', fetcher: () => base44.entities.Store ? base44.entities.Store.list() : Promise.resolve([]), updateApi: (id, data) => base44.entities.Store.update(id, data), fields: ['logo_url'] },
+        { name: 'Banners Home', fetcher: () => plataforma.entities.BannerImage.list(), updateApi: (id, data) => plataforma.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos em Destaque', fetcher: () => plataforma.entities.FeaturedProduct.list(), updateApi: (id, data) => plataforma.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Banners Luxury', fetcher: () => plataforma.entities.BannerImage.filter({ context: 'luxurycollection' }), updateApi: (id, data) => plataforma.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos do Catálogo', fetcher: () => plataforma.entities.CatalogProduct.list(), updateApi: (id, data) => plataforma.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Leilões (Produtos)', fetcher: () => plataforma.entities.Auction.list(), updateApi: (id, data) => plataforma.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
+        { name: 'Lojistas (Logos)', fetcher: () => plataforma.entities.Store ? plataforma.entities.Store.list() : Promise.resolve([]), updateApi: (id, data) => plataforma.entities.Store.update(id, data), fields: ['logo_url'] },
       ];
 
       const sources = [];
@@ -283,7 +283,7 @@ export default function BannerManagement() {
             const webpFile = await convertToWebP(file, 0.90, 1920, true);
             
             // Força a conversão e upload de qualquer imagem que não seja WebP, a pedido do usuário
-            const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+            const { file_url } = await plataforma.integrations.Core.UploadFile({ file: webpFile });
             
             if (isArray) {
               const newArray = [...item[field]];
@@ -338,7 +338,7 @@ export default function BannerManagement() {
     try {
       await Promise.all(
         items.map((item, index) =>
-          base44.entities.BannerImage.update(item.id, { order: index })
+          plataforma.entities.BannerImage.update(item.id, { order: index })
         )
       );
       toast.success('Ordem atualizada!');
@@ -361,7 +361,7 @@ export default function BannerManagement() {
     try {
       await Promise.all(
         items.map((item, index) =>
-          base44.entities.FeaturedProduct.update(item.id, { order: index })
+          plataforma.entities.FeaturedProduct.update(item.id, { order: index })
         )
       );
       toast.success('Ordem atualizada!');

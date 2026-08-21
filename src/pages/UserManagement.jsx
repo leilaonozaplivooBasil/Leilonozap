@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -110,14 +110,14 @@ export default function UserManagement() {
     try {
       // Atualiza senha se foi alterada
       if (editFormData.password && editFormData.password !== editingUser.password) {
-        await base44.functions.invoke('updateUserPassword', {
+        await plataforma.functions.invoke('updateUserPassword', {
           user_id: editingUser.id,
           new_password: editFormData.password
         });
       }
 
       // Atualiza outros dados
-      await base44.functions.invoke('updateUserData', {
+      await plataforma.functions.invoke('updateUserData', {
         user_id: editingUser.id,
         data: {
           full_name: editFormData.full_name.trim(),

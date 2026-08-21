@@ -1,5 +1,5 @@
 // proxyImage — Rota Vercel que faltava. O cliente chama /api/functions/proxyImage
-// (via base44.functions.invoke) pra contornar CORS de imagens externas. A função
+// (via plataforma.functions.invoke) pra contornar CORS de imagens externas. A função
 // Base44 existe (base44/functions/proxyImage/entry.ts) mas a rota Vercel nunca
 // foi criada — sem ela, o proxy retorna 404 e o share com imagem externa falha.
 //

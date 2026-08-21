@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Loader2, Store, Zap, ShoppingCart, ChartColumn } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -23,7 +23,7 @@ export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await base44.functions.invoke('searchGoogleShopping', {
+      const response = await plataforma.functions.invoke('searchGoogleShopping', {
         productName: productName
       });
 

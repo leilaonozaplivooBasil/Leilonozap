@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import MetaBanner from '@/components/painel/MetaBanner';
@@ -90,7 +90,7 @@ export default function PainelDistribuidor() {
       try {
         const [dash, wallet, lv, rp, rede] = await Promise.all([
           _isLoja ? supabase.rpc('loja_dash', { _owner: u.id }) : supabase.rpc('distribuidor_dash', { dist_id: u.id }),
-          base44.functions.invoke('getMyWallet', { user_id: u.id }),
+          plataforma.functions.invoke('getMyWallet', { user_id: u.id }),
           supabase.from('career_levels').select('id,nome,adesao_valor,ordem').eq('bloco', 'rede').order('ordem'),
           supabase.from('register_permissions').select('can_register_level,bonus_adesao_pct').eq('actor_level', u.primary_career_level),
           supabase.rpc('distribuidor_rede', { dist_id: u.id }),
@@ -106,8 +106,8 @@ export default function PainelDistribuidor() {
       // fornecedores + funcionários (não bloqueiam a tela)
       try {
         const [sup, emp] = await Promise.all([
-          base44.functions.invoke('manageSuppliers', { action: 'list', ownerId: u.id }),
-          base44.functions.invoke('manageEmployees', { action: 'list', employerId: u.id }),
+          plataforma.functions.invoke('manageSuppliers', { action: 'list', ownerId: u.id }),
+          plataforma.functions.invoke('manageEmployees', { action: 'list', employerId: u.id }),
         ]);
         setSuppliers(sup?.suppliers || []);
         setEmployees(emp?.employees || []);
@@ -136,7 +136,7 @@ export default function PainelDistribuidor() {
     if (!supForm.nome.trim()) { toast.error('Nome do fornecedor é obrigatório.'); return; }
     setBusy('add-sup');
     try {
-      const r = await base44.functions.invoke('manageSuppliers', { action: 'add', actorId: user.id, ownerId: user.id, ...supForm });
+      const r = await plataforma.functions.invoke('manageSuppliers', { action: 'add', actorId: user.id, ownerId: user.id, ...supForm });
       if (!r?.success) { toast.error(r?.error || 'Falha ao salvar'); setBusy(''); return; }
       toast.success('Fornecedor cadastrado!');
       setSuppliers((p) => [r.supplier, ...p]);
@@ -144,14 +144,14 @@ export default function PainelDistribuidor() {
     } catch { toast.error('Erro'); }
     setBusy('');
   };
-  const removeSupplier = async (id) => { setBusy(id); try { await base44.functions.invoke('manageSuppliers', { action: 'remove', actorId: user.id, id }); setSuppliers((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
+  const removeSupplier = async (id) => { setBusy(id); try { await plataforma.functions.invoke('manageSuppliers', { action: 'remove', actorId: user.id, id }); setSuppliers((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
 
   // Funcionários do PDV
   const addEmployee = async () => {
     if (!empForm.full_name.trim() || !empForm.email.trim() || empForm.password.length < 6) { toast.error('Nome, e-mail e senha (mín. 6).'); return; }
     setBusy('add-emp');
     try {
-      const r = await base44.functions.invoke('manageEmployees', { action: 'add', actorId: user.id, employerId: user.id, ...empForm, email: empForm.email.trim().toLowerCase() });
+      const r = await plataforma.functions.invoke('manageEmployees', { action: 'add', actorId: user.id, employerId: user.id, ...empForm, email: empForm.email.trim().toLowerCase() });
       if (!r?.success) { toast.error(r?.error || 'Falha ao criar'); setBusy(''); return; }
       toast.success('Funcionário criado! Já pode logar e tirar pedidos.');
       setEmployees((p) => [r.employee, ...p]);
@@ -159,7 +159,7 @@ export default function PainelDistribuidor() {
     } catch { toast.error('Erro'); }
     setBusy('');
   };
-  const removeEmployee = async (id) => { setBusy(id); try { await base44.functions.invoke('manageEmployees', { action: 'remove', actorId: user.id, id }); setEmployees((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
+  const removeEmployee = async (id) => { setBusy(id); try { await plataforma.functions.invoke('manageEmployees', { action: 'remove', actorId: user.id, id }); setEmployees((p) => p.filter((x) => x.id !== id)); } catch { toast.error('Erro'); } setBusy(''); };
 
   // Trocar senha
   const trocarSenha = async () => {
@@ -167,7 +167,7 @@ export default function PainelDistribuidor() {
     if (pwForm.nova !== pwForm.conf) { toast.error('A confirmação não bate com a nova senha.'); return; }
     setBusy('senha');
     try {
-      const r = await base44.functions.invoke('changeOwnPassword', { userId: user.id, currentPassword: pwForm.atual, newPassword: pwForm.nova });
+      const r = await plataforma.functions.invoke('changeOwnPassword', { userId: user.id, currentPassword: pwForm.atual, newPassword: pwForm.nova });
       if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
       toast.success('Senha alterada com sucesso!');
       setPwForm({ atual: '', nova: '', conf: '' });
@@ -181,7 +181,7 @@ export default function PainelDistribuidor() {
     try {
       const isDist = user.primary_career_level === 'distribuidor';
       const [wa, ativ] = await Promise.all([
-        base44.functions.invoke('manageConfig', { action: 'get', chave: 'whatsapp_suporte' }),
+        plataforma.functions.invoke('manageConfig', { action: 'get', chave: 'whatsapp_suporte' }),
         supabase.rpc('painel_atividade', { _owner: user.id, _is_dist: isDist, _lim: 40 }),
       ]);
       setAtend({ whatsapp: wa?.valor || '', atividade: ativ.data || [] });
@@ -191,7 +191,7 @@ export default function PainelDistribuidor() {
   const salvarWhats = async () => {
     setBusy('wa');
     try {
-      const r = await base44.functions.invoke('manageConfig', { action: 'set', actorId: user.id, chave: 'whatsapp_suporte', valor: onlyDigits(waEdit) });
+      const r = await plataforma.functions.invoke('manageConfig', { action: 'set', actorId: user.id, chave: 'whatsapp_suporte', valor: onlyDigits(waEdit) });
       if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
       setAtend((a) => ({ ...a, whatsapp: onlyDigits(waEdit) })); toast.success('WhatsApp do suporte salvo!');
     } catch { toast.error('Erro'); }
@@ -200,7 +200,7 @@ export default function PainelDistribuidor() {
   const perguntarIA = async () => {
     setBusy('ia'); setIaAns('');
     try {
-      const r = await base44.functions.invoke('atendimentoIA', { ownerId: user.id, isDist: user.primary_career_level === 'distribuidor', question: iaQ });
+      const r = await plataforma.functions.invoke('atendimentoIA', { ownerId: user.id, isDist: user.primary_career_level === 'distribuidor', question: iaQ });
       if (r?.needs_key) { setIaAns('⚙️ ' + r.message); }
       else if (!r?.success) { setIaAns('❌ ' + (r?.error || 'IA indisponível')); }
       else setIaAns(r.answer);

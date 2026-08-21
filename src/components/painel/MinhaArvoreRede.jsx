@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Loader2, Network, Maximize2, Minimize2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -20,7 +20,7 @@ import UserEditModal from '@/components/admin/UserEditModal';
 // Nenhuma regra de comissão é tocada aqui: mudar o indicador usa a MESMA rota do
 // Painel de Controle (adminUpdateUser), que é quem valida permissão e grava.
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function MinhaArvoreRede({ user }) {
   const [todos, setTodos] = useState(null);
@@ -75,7 +75,7 @@ export default function MinhaArvoreRede({ user }) {
       toast.error('Só o administrador pode mudar a posição na árvore.');
       throw new Error('sem permissão');
     }
-    const r = await base44.functions.invoke('adminUpdateUser', {
+    const r = await plataforma.functions.invoke('adminUpdateUser', {
       userId: idMovido,
       updates: { referred_by_id: idNovoPai },
       actorId: user.id,

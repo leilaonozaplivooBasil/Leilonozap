@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export default function PaymentFailure() {
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('orderId');
   const [order, setOrder] = useState(null);
 
-  useEffect(() => { (async ()=> { const list = await base44.entities.AsaasOrder.filter({ id: orderId }); setOrder(list?.[0] || null); })(); }, [orderId]);
+  useEffect(() => { (async ()=> { const list = await plataforma.entities.AsaasOrder.filter({ id: orderId }); setOrder(list?.[0] || null); })(); }, [orderId]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Search, X, Loader2, Package, Gavel, Store } from 'lucide-react';
 
-const Product = base44.entities.Product;
-const Auction = base44.entities.Auction;
+const Product = plataforma.entities.Product;
+const Auction = plataforma.entities.Auction;
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
 /**

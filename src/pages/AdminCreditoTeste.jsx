@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Loader2, Search, Wallet } from "lucide-react";
 
 // 🧪 Admin-only — credita "saldo de teste" (test_wallet_balance) em qualquer usuário,
@@ -18,7 +18,7 @@ export default function AdminCreditoTeste() {
     setSearching(true);
     setFound(null);
     try {
-      const users = await base44.entities.AppUser.filter({ email: email.trim() });
+      const users = await plataforma.entities.AppUser.filter({ email: email.trim() });
       if (!users?.[0]) {
         toast.error("Usuário não encontrado.");
       } else {
@@ -38,7 +38,7 @@ export default function AdminCreditoTeste() {
     try {
       const saved = localStorage.getItem("currentUser");
       const admin = saved ? JSON.parse(saved) : null;
-      const res = await base44.functions.invoke("creditTestWalletBalance", {
+      const res = await plataforma.functions.invoke("creditTestWalletBalance", {
         requester_id: admin?.id,
         target_user_id: found.id,
         amount: value,

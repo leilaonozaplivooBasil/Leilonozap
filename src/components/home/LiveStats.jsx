@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Eye, TrendingUp } from 'lucide-react';
 
 // Flag global para evitar múltiplas instâncias fazendo chamadas simultâneas
@@ -49,13 +49,13 @@ export default function LiveStats() {
     globalStatsLoading = true;
 
     try {
-      const sessions = await base44.entities.LiveSession.list('-last_heartbeat', 100);
+      const sessions = await plataforma.entities.LiveSession.list('-last_heartbeat', 100);
       const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
       const uniqueOnlineUsers = sessions.filter(s => new Date(s.last_heartbeat) >= sixtySecondsAgo).length;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const bids = await base44.entities.Bid.list('-timestamp', 200);
+      const bids = await plataforma.entities.Bid.list('-timestamp', 200);
       const totalBidsValue = bids
         .filter(bid => new Date(bid.timestamp) >= today)
         .reduce((sum, bid) => sum + (bid.amount || 0), 0);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, ChevronRight, Wallet } from 'lucide-react';
 import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
@@ -9,8 +9,8 @@ import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
 import VisualizarLoteReservedBanner from '../components/lotes/VisualizarLoteReservedBanner';
 import { createPageUrl } from '@/utils';
 
-const Auction = base44.entities.Auction;
-const AppUser = base44.entities.AppUser;
+const Auction = plataforma.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 

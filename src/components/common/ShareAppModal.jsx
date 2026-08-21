@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Share2, Copy, MessageCircle, Mail, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { toast } from "sonner";
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { proxyImage } from "@/functions/proxyImage";
 
 export default function ShareAppModal({ isOpen, onClose, context = "default" }) {
@@ -24,7 +24,7 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
     let alive = true;
     (async () => {
       try {
-        const items = await base44.entities.FeaturedProduct.filter({ is_active: true }, 'order', 1);
+        const items = await plataforma.entities.FeaturedProduct.filter({ is_active: true }, 'order', 1);
         const fp = items && items[0];
         if (alive && fp && fp.image_url) setFeaturedImage(fp.image_url);
       } catch { /* sem destaque — segue sem imagem */ }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // Mídia institucional gerenciada pelo Painel de Mídia (/PainelMidia).
 // Logo e favicon customizados vivem na tabela banner_images com contexts
@@ -21,8 +21,8 @@ export default function useSiteMedia() {
     (async () => {
       try {
         const [logos, favicons] = await Promise.all([
-          base44.entities.BannerImage.filter({ context: 'site_logo', is_active: true }),
-          base44.entities.BannerImage.filter({ context: 'site_favicon', is_active: true }),
+          plataforma.entities.BannerImage.filter({ context: 'site_logo', is_active: true }),
+          plataforma.entities.BannerImage.filter({ context: 'site_favicon', is_active: true }),
         ]);
         const next = {
           logoUrl: logos?.[0]?.image_url || LOGO_FALLBACK,

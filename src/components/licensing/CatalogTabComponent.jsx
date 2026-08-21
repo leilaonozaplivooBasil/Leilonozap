@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, Package } from 'lucide-react';
@@ -7,7 +7,7 @@ import CatalogProductCard from '../catalog/CatalogProductCard';
 import RotatingBanner from '../banner/RotatingBanner';
 import { CATALOG_BANNERS } from '../loja/LojaShopeeHeader';
 
-const Product = base44.entities.Product;
+const Product = plataforma.entities.Product;
 
 export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   const [products, setProducts] = useState([]);

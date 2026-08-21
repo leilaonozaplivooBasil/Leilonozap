@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
-const Auction = base44.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const Auction = plataforma.entities.Auction;
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -64,7 +64,7 @@ import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 import { useSectionTracking } from '@/lib/tracking';
 
-const Product = base44.entities.Product;
+const Product = plataforma.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
   <Card
     onClick={onClick}
@@ -355,7 +355,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       await delay(500);
 
       const withdrawals = await fetchWithRetry(
-        () => base44.entities.WithdrawalRequest.filter({ influencer_id: user.id }, "-created_date", 100)
+        () => plataforma.entities.WithdrawalRequest.filter({ influencer_id: user.id }, "-created_date", 100)
       );
 
       setMyWithdrawals(Array.isArray(withdrawals) ? withdrawals : []);
@@ -411,7 +411,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor)
       let ownSales = [];
       try {
-        const CatalogSale = base44.entities.CatalogSale;
+        const CatalogSale = plataforma.entities.CatalogSale;
 
         // ✅ ISOLAMENTO CRÍTICO: Filtrar NO SERVIDOR, não na UI
         // Busca vendas onde licensee_id = meu ID (minha loja direta)
@@ -439,8 +439,8 @@ const DashboardContent = ({ user, isAdmin }) => {
       // que geraram registros de comissão para este usuário. Isolado em seu
       // próprio try/catch para NUNCA apagar as vendas próprias já carregadas.
       try {
-        const CatalogSale = base44.entities.CatalogSale;
-        const commissionRecords = await base44.entities.CommissionRecord.filter(
+        const CatalogSale = plataforma.entities.CatalogSale;
+        const commissionRecords = await plataforma.entities.CommissionRecord.filter(
           { user_id: user.id, sale_type: 'catalog' },
           '-created_date',
           300
@@ -479,7 +479,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     try {
       await delay(500);
       // 🔴 Nunca exibir comissões canceladas (ex: depósitos de carteira via PIX que não geram comissão)
-      const records = await base44.entities.CommissionRecord.filter({ user_id: user.id, status: { $ne: 'canceled' } }, "-created_date", 200);
+      const records = await plataforma.entities.CommissionRecord.filter({ user_id: user.id, status: { $ne: 'canceled' } }, "-created_date", 200);
       setMyCommissionRecords(Array.isArray(records) ? records : []);
     } catch (error) {
       console.error("Erro ao buscar comissões:", error);
@@ -768,8 +768,8 @@ const DashboardContent = ({ user, isAdmin }) => {
         throw new Error("Valor inválido");
       }
 
-      const base44Client = (await import('@/api/base44Client')).base44;
-      await base44Client.functions.invoke('updateUserNetwork', {
+      const plataformaClient = (await import('@/api/plataformaClient')).plataforma;
+      await plataformaClient.functions.invoke('updateUserNetwork', {
         target_user_id: selectedLicenseeId,
         update_data: {
           commission_balance: (licensee.commission_balance || 0) + amount
@@ -802,8 +802,8 @@ const DashboardContent = ({ user, isAdmin }) => {
       let updated = 0;
       for (const userId of selectedUsersToLink) {
         try {
-          const base44Client = (await import('@/api/base44Client')).base44;
-          await base44Client.functions.invoke('updateUserNetwork', {
+          const plataformaClient = (await import('@/api/plataformaClient')).plataforma;
+          await plataformaClient.functions.invoke('updateUserNetwork', {
             target_user_id: userId,
             update_data: { referred_by_id: selectedLicenseeForLink }
           });
@@ -964,7 +964,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     try {
       console.log('📡 [VIGIA] Testando conexão com função requestWithdrawal...');
 
-      const response = await base44.functions.invoke('requestWithdrawal', {
+      const response = await plataforma.functions.invoke('requestWithdrawal', {
         amount,
         pix_key: pixKey,
         pix_key_type: pixKeyType
@@ -1009,7 +1009,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         // Cria registro de erro no banco
         try {
-          await base44.entities.SystemLog.create({
+          await plataforma.entities.SystemLog.create({
             step: 'WITHDRAWAL_404_ERROR',
             status: 'error',
             message: 'Função requestWithdrawal retornou 404',

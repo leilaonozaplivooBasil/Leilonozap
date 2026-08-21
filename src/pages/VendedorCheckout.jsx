@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
 import { Loader2, ShoppingBag, QrCode, Copy, CheckCircle2, UserPlus, Clock, CreditCard, Wallet } from "lucide-react";
@@ -55,7 +55,7 @@ export default function VendedorCheckout() {
   useEffect(() => {
     (async () => {
       try {
-        const prods = await base44.entities.Product.filter({ catalog_active: true }, "-created_date", 500);
+        const prods = await plataforma.entities.Product.filter({ catalog_active: true }, "-created_date", 500);
         setProducts(prods || []);
 
         const saved = localStorage.getItem("currentUser");
@@ -65,7 +65,7 @@ export default function VendedorCheckout() {
         }
         const localUser = JSON.parse(saved);
 
-        const fresh = await base44.entities.AppUser.filter({ id: localUser.id });
+        const fresh = await plataforma.entities.AppUser.filter({ id: localUser.id });
         const freshUser = fresh?.[0] || localUser;
         setUser(freshUser);
         setAddress({
@@ -149,14 +149,14 @@ export default function VendedorCheckout() {
     try {
       // 🧪 Saldo de teste (admin) — não gera PIX/cartão, debita o saldo de teste e libera direto
       if (gateway === "test_balance") {
-        const res = await base44.functions.invoke("payAdhesionWithTestBalance", {
+        const res = await plataforma.functions.invoke("payAdhesionWithTestBalance", {
           user_id: user.id,
           amount: VALOR_ADESAO,
         });
         if (res?.success) {
           setConfirmed(true);
           setTimeout(async () => {
-            const fresh = await base44.entities.AppUser.filter({ id: user.id });
+            const fresh = await plataforma.entities.AppUser.filter({ id: user.id });
             const freshUser = fresh?.[0];
             if (freshUser) localStorage.setItem("currentUser", JSON.stringify(freshUser));
             navigate(createPageUrl("VendedorEscolherProdutos"), { replace: true });
@@ -167,7 +167,7 @@ export default function VendedorCheckout() {
         setCreating(false);
         return;
       }
-      const res = await base44.functions.invoke("createSellerAdhesionPayment", {
+      const res = await plataforma.functions.invoke("createSellerAdhesionPayment", {
         user_id: user.id,
         amount: VALOR_ADESAO,
         buyer_name: user.full_name,
@@ -196,14 +196,14 @@ export default function VendedorCheckout() {
   const startPolling = (paymentId) => {
     const check = async () => {
       try {
-        const res = await base44.functions.invoke("checkPaymentStatus", { payment_id: paymentId });
+        const res = await plataforma.functions.invoke("checkPaymentStatus", { payment_id: paymentId });
         const status = res?.data?.status;
         if (status === "confirmed" || status === "approved") {
           clearInterval(pollRef.current);
           setConfirmed(true);
           // aguarda o webhook creditar o saldo, então segue pra escolha de produtos
           setTimeout(async () => {
-            const fresh = await base44.entities.AppUser.filter({ id: user.id });
+            const fresh = await plataforma.entities.AppUser.filter({ id: user.id });
             const freshUser = fresh?.[0];
             if (freshUser) localStorage.setItem("currentUser", JSON.stringify(freshUser));
             navigate(createPageUrl("VendedorEscolherProdutos"), { replace: true });

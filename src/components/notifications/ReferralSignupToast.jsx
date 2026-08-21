@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { X, UserPlus } from 'lucide-react';
 
 const SEEN_KEY = 'referralSignupSeenIds';
@@ -36,7 +36,7 @@ export default function ReferralSignupToast() {
         const user = JSON.parse(savedUser);
         if (!user?.id) return;
 
-        const referred = await base44.entities.AppUser.filter({ referred_by_id: user.id }, '-created_date', 10);
+        const referred = await plataforma.entities.AppUser.filter({ referred_by_id: user.id }, '-created_date', 10);
         if (!Array.isArray(referred) || referred.length === 0) return;
 
         const seen = getSeen();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Input } from "@/components/ui/input";
 import { Search, Package } from "lucide-react";
 
@@ -11,7 +11,7 @@ export default function ProductSelector({ onSelect, selectedProduct }) {
 
   useEffect(() => {
     const load = async () => {
-      const data = await base44.entities.Product.filter({ catalog_active: true });
+      const data = await plataforma.entities.Product.filter({ catalog_active: true });
       setProducts(data);
       setLoading(false);
     };

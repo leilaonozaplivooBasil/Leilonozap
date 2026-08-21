@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse, ShoppingBag, MapPin, Sparkles } from 'lucide-react';
 import GradeItemsModal from './GradeItemsModal';
 import PublicarOportunidadeModal from './PublicarOportunidadeModal';
@@ -277,7 +277,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             if (dataLeilao && horarioLeilao) endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
             else if (dataLeilao) endTime = new Date(`${dataLeilao}T12:00:00`);
             else { endTime = new Date(); endTime.setDate(endTime.getDate() + 30); }
-            await base44.entities.Auction.create({
+            await plataforma.entities.Auction.create({
                 title: loteAtual.nomeLote,
                 description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)}`,
                 starting_price: calculations.custoTotal, current_price: calculations.custoTotal, increment: 100,
@@ -311,7 +311,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                 qtd: i.qtd || 1,
                 valor_mercado: i.valor || 0,
             }));
-            const resp = await base44.functions.invoke('loteRecebidoWrite', {
+            const resp = await plataforma.functions.invoke('loteRecebidoWrite', {
                 method: 'create',
                 caller_email,
                 data: {
@@ -373,7 +373,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             }
             const itensAgrupados = Array.from(mapaAgrupado.values());
 
-            await base44.entities.LoteRecebido.create({
+            await plataforma.entities.LoteRecebido.create({
                 nome_lote: loteAtual.nomeLote,
                 marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
                 valor_lote: calculations?.custoTotal || 0,

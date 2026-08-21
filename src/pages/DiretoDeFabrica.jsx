@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import AuctionCard from "../components/auction/AuctionCard";
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 
 // 🔎 PONTO 73 — a vitrine lia só os 40 leilões mais recentes ("-created_date", 40).
 // Como existem 53 itens de fábrica espalhados em 152 leilões, produtos válidos

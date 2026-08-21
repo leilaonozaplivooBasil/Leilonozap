@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { getReferral } from '@/lib/referral';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 
-const AppUser = base44.entities.AppUser;
-const SendEmail = (params) => base44.integrations.Core.SendEmail(params);
+const AppUser = plataforma.entities.AppUser;
+const SendEmail = (params) => plataforma.integrations.Core.SendEmail(params);
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     try {
       // Entrar com Google também CRIA conta na primeira vez: sem o código do link
       // a pessoa entrava solta e caía no Site Oficial, tirando-a da árvore de quem indicou.
-      const result = await base44.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
+      const result = await plataforma.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível entrar com o Google.'));
         setIsLogging(false);
@@ -57,7 +57,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       // ⏱️ Lentidão do Google deixa rastro (só quando passa de 2,5s, pra não
       // encher o log a cada login normal).
       if (Number(result.duracao_ms) > 2500) {
-        base44.entities.SystemLog.create({
+        plataforma.entities.SystemLog.create({
           step: 'Login_Google_Lento',
           status: 'warning',
           message: `Login com Google levou ${result.duracao_ms}ms no servidor`,
@@ -110,7 +110,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     const emCache = clientIdEmCache();
     if (emCache) renderGoogleButton(emCache);
     (async () => {
-      const clientId = await buscarClientId(base44);
+      const clientId = await buscarClientId(plataforma);
       if (clientId && clientId !== emCache) renderGoogleButton(clientId);
     })();
 
@@ -163,7 +163,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       }
 
       // 🔒 Senha validada NO SERVIDOR (o hash não fica exposto no client/anon key)
-      const _login = await base44.functions.invoke('login', { email: normalizedEmail, password });
+      const _login = await plataforma.functions.invoke('login', { email: normalizedEmail, password });
       if (!_login?.success) {
         setErrorMessage("❌ " + (_login?.error || 'E-mail ou senha incorretos.'));
         setIsLogging(false);
@@ -178,7 +178,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       // 🆕 LOGGING NO SYSTEMLOG
       try {
-        await base44.entities.SystemLog.create({
+        await plataforma.entities.SystemLog.create({
           step: 'User_Login_Success',
           status: 'success',
           message: `Login bem-sucedido: ${user.full_name}`,
@@ -208,7 +208,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         } catch (err) {
           console.error("Erro no callback:", err);
           // 🆕 LOGA ERRO NO CALLBACK
-          base44.entities.SystemLog.create({
+          plataforma.entities.SystemLog.create({
             step: 'Login_Callback_Error',
             status: 'error',
             message: `Erro ao executar callback de sucesso: ${err.message}`,
@@ -223,7 +223,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       // 🆕 LOGA ERRO NO SYSTEMLOG
       try {
-        await base44.entities.SystemLog.create({
+        await plataforma.entities.SystemLog.create({
           step: 'User_Login_Failed',
           status: 'error',
           message: `Falha no login: ${error.message}`,
@@ -261,7 +261,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       const normalizedResetEmail = resetEmail.toLowerCase().trim();
 
       // Envia código de 6 dígitos por e-mail (gerado e validado no servidor — sem link mágico)
-      const result = await base44.functions.invoke('sendEmailCode', {
+      const result = await plataforma.functions.invoke('sendEmailCode', {
         email: normalizedResetEmail,
         purpose: 'reset'
       });
@@ -308,7 +308,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
     try {
       // Redefine a senha no servidor (valida o código + grava bcrypt, bypassa RLS)
-      const result = await base44.functions.invoke('resetPassword', {
+      const result = await plataforma.functions.invoke('resetPassword', {
         email: resetEmail.toLowerCase().trim(),
         code: verificationCode.trim(),
         newPassword

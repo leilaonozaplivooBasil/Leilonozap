@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { jsPDF } from 'jspdf';
 
 const NoZapLogo = "/brand/icon-3d-256.png";
@@ -22,7 +22,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       // Carrega produtos para fallback de custo em vendas antigas (sem product_cost)
       let productsMap = {};
       try {
-        const allProducts = await base44.entities.Product.list('-created_date', 500);
+        const allProducts = await plataforma.entities.Product.list('-created_date', 500);
         allProducts.forEach(p => { productsMap[p.id] = p; });
       } catch (e) {
         console.warn('Não foi possível carregar produtos para custos');

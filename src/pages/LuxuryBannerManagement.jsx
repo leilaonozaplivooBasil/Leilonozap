@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ export default function LuxuryBannerManagement() {
 
   const loadBanners = async () => {
     try {
-      const data = await base44.entities.BannerImage.filter({ context: "luxurycollection" }, "order");
+      const data = await plataforma.entities.BannerImage.filter({ context: "luxurycollection" }, "order");
       setBanners(data || []);
     } catch (e) {
       console.error(e);
@@ -35,7 +35,7 @@ export default function LuxuryBannerManagement() {
     try {
       // Converte para WebP antes do upload (reduz ~25-35% sem perda visível)
       const webpFile = await convertToWebP(file, 0.90);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file: webpFile });
       return file_url;
     } catch (e) {
       toast.error("Erro ao enviar imagem");
@@ -45,7 +45,7 @@ export default function LuxuryBannerManagement() {
 
   const handleCreateBanner = async (formData) => {
     try {
-      await base44.entities.BannerImage.create({
+      await plataforma.entities.BannerImage.create({
         ...formData,
         context: "luxurycollection",
         order: banners.length,
@@ -60,7 +60,7 @@ export default function LuxuryBannerManagement() {
 
   const handleUpdateBanner = async (id, formData) => {
     try {
-      await base44.entities.BannerImage.update(id, formData);
+      await plataforma.entities.BannerImage.update(id, formData);
       toast.success("Banner atualizado!");
       setEditingBanner(null);
       loadBanners();
@@ -72,7 +72,7 @@ export default function LuxuryBannerManagement() {
   const handleDeleteBanner = async (id) => {
     if (!confirm("Excluir este banner?")) return;
     try {
-      await base44.entities.BannerImage.delete(id);
+      await plataforma.entities.BannerImage.delete(id);
       toast.success("Banner excluído");
       loadBanners();
     } catch (e) {
@@ -82,7 +82,7 @@ export default function LuxuryBannerManagement() {
 
   const handleToggleActive = async (banner) => {
     try {
-      await base44.entities.BannerImage.update(banner.id, { is_active: !banner.is_active });
+      await plataforma.entities.BannerImage.update(banner.id, { is_active: !banner.is_active });
       loadBanners();
     } catch (e) {
       toast.error("Erro ao atualizar status");
@@ -96,7 +96,7 @@ export default function LuxuryBannerManagement() {
     items.splice(result.destination.index, 0, reordered);
     setBanners(items);
     try {
-      await Promise.all(items.map((b, i) => base44.entities.BannerImage.update(b.id, { order: i })));
+      await Promise.all(items.map((b, i) => plataforma.entities.BannerImage.update(b.id, { order: i })));
       toast.success("Ordem atualizada");
     } catch (e) {
       toast.error("Erro ao atualizar ordem");

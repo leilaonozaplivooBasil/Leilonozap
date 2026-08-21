@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Loader2, AlertTriangle, ShieldAlert, Search } from 'lucide-react';
 
 // 🕵️ AUDITORIA DE CADASTROS (12/08/2026) — pedido do Gabriel após suspeita de que uma
@@ -31,7 +31,7 @@ export default function AuditoriaCadastros() {
         // vem de system_logs — só existe pra cadastros feitos DEPOIS da auditoria
         // (12/08/2026). Cadastros mais antigos não têm esse registro.
         try {
-          const resp = await base44.functions.invoke('getSystemLogsCadastro', {});
+          const resp = await plataforma.functions.invoke('getSystemLogsCadastro', {});
           if (resp?.success && Array.isArray(resp.logs)) {
             const map = {};
             resp.logs.forEach((l) => { if (l.entity_id && !map[l.entity_id]) map[l.entity_id] = l; });

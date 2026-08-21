@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { pagesConfig } from '@/pages.config.jsx';
 
 export default function NavigationTracker() {
@@ -34,7 +34,7 @@ export default function NavigationTracker() {
         if (isAuthenticated && pageName) {
             // appLogs pode não existir em todas as versões do SDK — falha silenciosa
             try {
-                base44?.appLogs?.logUserInApp?.(pageName)?.catch?.(() => {});
+                plataforma?.appLogs?.logUserInApp?.(pageName)?.catch?.(() => {});
             } catch (_) { /* ignora */ }
         }
     }, [location, isAuthenticated, Pages, mainPageKey]);

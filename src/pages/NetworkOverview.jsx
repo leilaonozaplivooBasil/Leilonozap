@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
-const Auction = base44.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const Auction = plataforma.entities.Auction;
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -565,7 +565,7 @@ export default function NetworkOverview() {
       // em auditarFase1Marco): "dinheiro real" só conta se a venda está PAGA,
       // tem RASTRO de gateway (mp_payment_id/stripe) e é a partir de 01/08/2026
       // (pré-lançamento oficial). Sem os 3 critérios juntos, é teste — não entra.
-      const sales = await base44.entities.CatalogSale.list();
+      const sales = await plataforma.entities.CatalogSale.list();
       const list = Array.isArray(sales) ? sales : [];
       const MARCO_OFICIAL = new Date('2026-08-01T00:00:00Z');
       const hoje = new Date();
@@ -673,7 +673,7 @@ export default function NetworkOverview() {
   // Auditoria: quem excluiu/moveu/promoveu quem (gravada pelo servidor em system_logs)
   const loadAudit = useCallback(async () => {
     try {
-      const rows = await base44.entities.SystemLog?.list?.('-created_date', 300);
+      const rows = await plataforma.entities.SystemLog?.list?.('-created_date', 300);
       const list = (Array.isArray(rows) ? rows : [])
         .map((r) => ({ ...(r.raw_base44 || {}), created_at: r.created_at || r.created_date }))
         .filter((r) => r.kind === 'network_audit');
@@ -826,7 +826,7 @@ export default function NetworkOverview() {
     if (!actor) {
       throw new Error('faça login como admin para alterar a árvore genealógica');
     }
-    const result = await base44.functions.invoke('adminUpdateUser', {
+    const result = await plataforma.functions.invoke('adminUpdateUser', {
       userId,
       updates,
       actorId: actor,
@@ -988,7 +988,7 @@ export default function NetworkOverview() {
 
     setIsPromoting(true);
     try {
-      const base44Client = (await import('@/api/base44Client')).base44;
+      const plataformaClient = (await import('@/api/plataformaClient')).plataforma;
       await saveUserFields(promotingUser.id, {
           career_levels: selectedLevels,
           primary_career_level: primaryLevel,
@@ -1089,7 +1089,7 @@ export default function NetworkOverview() {
 
     setIsLinking(true);
     try {
-      const base44Client = (await import('@/api/base44Client')).base44;
+      const plataformaClient = (await import('@/api/plataformaClient')).plataforma;
 
       for (const userId of selectedUsersToLink) {
         if (userId === licensee.id) continue; // ignora auto-vínculo
@@ -1153,7 +1153,7 @@ export default function NetworkOverview() {
 
         if (isDescendant(draggedId, targetId)) {
           // Quebra o ciclo: solta o alvo na raiz antes de mover o arrastado
-          const base44Client = (await import('@/api/base44Client')).base44;
+          const plataformaClient = (await import('@/api/plataformaClient')).plataforma;
           await saveUserFields(targetId, { referred_by_id: null });
         }
       }
@@ -1480,7 +1480,7 @@ export default function NetworkOverview() {
       }
 
       // 2) Manda para a lixeira (nada é apagado)
-      const result = await base44.functions.invoke('adminUpdateUser', {
+      const result = await plataforma.functions.invoke('adminUpdateUser', {
         userId: user.id,
         updates: { active: false },
         actorId,
@@ -1509,7 +1509,7 @@ export default function NetworkOverview() {
   const handleRestoreUser = async (user) => {
     if (!requireSuperAdmin()) return;
     try {
-      const result = await base44.functions.invoke('adminUpdateUser', {
+      const result = await plataforma.functions.invoke('adminUpdateUser', {
         userId: user.id,
         updates: { active: true },
         actorId,
@@ -1534,7 +1534,7 @@ export default function NetworkOverview() {
     if (!user) return;
     setIsPurging(true);
     try {
-      const result = await base44.functions.invoke('hardDeleteUser', {
+      const result = await plataforma.functions.invoke('hardDeleteUser', {
         userId: user.id,
         actorId,
       });

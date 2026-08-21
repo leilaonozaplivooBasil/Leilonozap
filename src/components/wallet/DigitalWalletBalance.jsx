@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Wallet, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -18,7 +18,7 @@ export default function DigitalWalletBalance({ userId, showActions = true }) {
   const loadBalance = async () => {
     try {
       // Usa backend function para contornar RLS
-      const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: userId });
+      const result = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: userId });
       const data = result?.data || result;
       setBalance(data?.balance || 0);
     } catch (error) {

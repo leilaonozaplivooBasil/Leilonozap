@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { money } from '@/lib/format';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import {
   Package, Loader2, Search, Plus, Minus, Trash2,
@@ -65,17 +65,17 @@ export default function MeuEstoque() {
   const setQty = async (it, qty) => {
     qty = Math.max(0, qty);
     setItems((p) => p.map((x) => (x.inv_id === it.inv_id ? { ...x, quantidade: qty, ativo: qty > 0 } : x)));
-    await base44.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'setQuantity', inv_id: it.inv_id, quantity: qty });
+    await plataforma.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'setQuantity', inv_id: it.inv_id, quantity: qty });
   };
   const toggle = async (it) => {
     const active = !it.ativo;
     setItems((p) => p.map((x) => (x.inv_id === it.inv_id ? { ...x, ativo: active } : x)));
-    await base44.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'toggle', inv_id: it.inv_id, active });
+    await plataforma.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'toggle', inv_id: it.inv_id, active });
   };
   const remove = async (it) => {
     if (!confirm(`Remover "${it.descricao?.slice(0, 40)}" da sua loja?`)) return;
     setBusy(it.inv_id);
-    const r = await base44.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'remove', inv_id: it.inv_id });
+    const r = await plataforma.functions.invoke('manageStoreInventory', { actorId: user.id, action: 'remove', inv_id: it.inv_id });
     if (r?.success) { setItems((p) => p.filter((x) => x.inv_id !== it.inv_id)); toast.success('Removido da sua loja'); }
     else toast.error(r?.error || 'Falha');
     setBusy('');

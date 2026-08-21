@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, Check, Images, Camera } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { toast } from "sonner";
 
 // 🔍 PONTO 77 — Buscador Inteligente de Fotos (reaproveita a MESMA função já em
@@ -58,7 +58,7 @@ export default function BuscadorFotos({ productName = "", imagemBase = "", onSel
     setFotos([]);
     setEscolhidas([]);
     try {
-      const resp = await base44.functions.invoke("buscarFotosPorImagem", { imageUrl: imagemBase });
+      const resp = await plataforma.functions.invoke("buscarFotosPorImagem", { imageUrl: imagemBase });
       processarResposta(resp, "esta foto");
     } catch (e) {
       toast.error("Erro na busca por imagem: " + e.message);
@@ -77,7 +77,7 @@ export default function BuscadorFotos({ productName = "", imagemBase = "", onSel
     setFotos([]);
     setEscolhidas([]);
     try {
-      const resp = await base44.functions.invoke("extractGoogleShoppingImages", { productName: nome });
+      const resp = await plataforma.functions.invoke("extractGoogleShoppingImages", { productName: nome });
       // ⚠️ CAUSA-RAIZ PONTO 77: aqui se lia resp.data.data.products[].imageUrl, campo
       // que esta função NUNCA devolveu — ela devolve { success, images: [...] }. Por
       // isso TODA busca caía em "Nenhuma foto encontrada", com título curto ou longo.

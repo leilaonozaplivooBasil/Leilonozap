@@ -4,7 +4,7 @@ import {
   DollarSign, TrendingDown, Wallet, Receipt, Percent, BarChart3, Scale
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { useQuery } from '@tanstack/react-query';
 
 const fmtBRL = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -13,7 +13,7 @@ const fmtPct = (v) => (v || 0).toFixed(2);
 export default function BalancoGeralTab({ sales, products, customInvestido }) {
   const { data: expenses = [] } = useQuery({
     queryKey: ['financial_expenses_balanco'],
-    queryFn: () => base44.entities.FinancialExpense.list('-due_date', 500),
+    queryFn: () => plataforma.entities.FinancialExpense.list('-due_date', 500),
     initialData: [],
   });
 

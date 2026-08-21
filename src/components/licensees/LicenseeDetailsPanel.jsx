@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -47,7 +47,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
   const { data: sales = [] } = useQuery({
     queryKey: ["licensee-sales", selected?.id],
     enabled: !!selected?.id,
-    queryFn: () => base44.entities.CatalogSale.filter({ licensee_id: selected.id }, "-created_date", 500),
+    queryFn: () => plataforma.entities.CatalogSale.filter({ licensee_id: selected.id }, "-created_date", 500),
   });
 
   const now = new Date();
@@ -60,7 +60,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
   const { data: visits = [] } = useQuery({
     queryKey: ["catalogVisits", selected?.id],
     enabled: !!selected?.id,
-    queryFn: () => base44.entities.CatalogVisit.filter({ licensee_id: selected.id }, "-visited_at", 10000),
+    queryFn: () => plataforma.entities.CatalogVisit.filter({ licensee_id: selected.id }, "-visited_at", 10000),
   });
 
   const totalVisits = visits.length;
@@ -96,7 +96,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
     } else {
       newLevels = [...currentLevels, "licenciado_catalogo"];
     }
-    await base44.entities.AppUser.update(selected.id, { career_levels: newLevels });
+    await plataforma.entities.AppUser.update(selected.id, { career_levels: newLevels });
     toast.success(isActive ? "Loja desativada" : "Loja ativada");
     onRefresh?.("toggled");
     setIsToggling(false);
@@ -118,7 +118,7 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
     if (selected.role === "licensee") {
       updatePayload.role = "user";
     }
-    await base44.entities.AppUser.update(selected.id, updatePayload);
+    await plataforma.entities.AppUser.update(selected.id, updatePayload);
     toast.success("Licenciado removido com sucesso");
     onRefresh?.("removed");
     setIsDeleting(false);

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { useLocation } from 'react-router-dom';
 
 
-const AppUser = base44.entities.AppUser;
-const Auction = base44.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const Auction = plataforma.entities.Auction;
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye, Wallet } from 'lucide-react';
@@ -113,7 +113,7 @@ export default function MyWinningsPage() {
                 
                 // Saldo pela função canônica (a tabela digital_wallets não tem coluna 'balance').
                 try {
-                    const wRes = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+                    const wRes = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
                     const wData = wRes?.data || wRes;
                     setWalletBalance(wData?.balance || 0);
                 } catch (_) {
@@ -140,7 +140,7 @@ export default function MyWinningsPage() {
                 const pendentes = wonAuctions.filter(a => a.order_status === 'awaiting_payment');
                 for (const a of pendentes) {
                     try {
-                        const r = await base44.functions.invoke('settleAuctionWithBalance', { auction_id: a.id, user_id: user.id });
+                        const r = await plataforma.functions.invoke('settleAuctionWithBalance', { auction_id: a.id, user_id: user.id });
                         const d = r?.data || r;
                         if (d?.success) {
                             setWinnings(prev => prev.map(w => w.id === a.id ? { ...w, order_status: 'paid' } : w));

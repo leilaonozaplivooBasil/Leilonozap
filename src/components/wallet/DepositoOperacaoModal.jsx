@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { X, QrCode, CreditCard, Loader2, Banknote } from 'lucide-react';
 
@@ -17,7 +17,7 @@ export default function DepositoOperacaoModal({ userId, onPix, onFechar }) {
   const depositar = async (forma) => {
     if (numero < 1) return toast.error('Valor mínimo: R$ 1,00');
     setEnviando(true);
-    const r = await base44.functions.invoke('createOperationDeposit', {
+    const r = await plataforma.functions.invoke('createOperationDeposit', {
       actorId: userId, amount: numero, payment_method: forma,
     });
     setEnviando(false);

@@ -1,14 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Users, CheckCircle2, X, DollarSign, Loader2, ArrowRight, Copy } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import CotasProgressBar from './CotasProgressBar';
 import { toast } from 'sonner';
 
-const LoteCota = base44.entities.LoteCota;
-const SystemLog = base44.entities.SystemLog;
+const LoteCota = plataforma.entities.LoteCota;
+const SystemLog = plataforma.entities.SystemLog;
 
 const formatCurrency = (val) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);

@@ -353,8 +353,8 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
   const refreshAuction = async () => {
     try {
-      const { base44 } = await import('@/api/base44Client');
-      const auctions = await base44.entities.Auction.filter({ id: localAuction.id });
+      const { plataforma } = await import('@/api/plataformaClient');
+      const auctions = await plataforma.entities.Auction.filter({ id: localAuction.id });
       
       if (auctions && auctions.length > 0) {
         setLocalAuction(auctions[0]);
@@ -370,11 +370,11 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
     
     setIsUploadingLogo(true);
     try {
-      const { base44 } = await import('@/api/base44Client');
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const { plataforma } = await import('@/api/plataformaClient');
+      const result = await plataforma.integrations.Core.UploadFile({ file });
       
       if (result?.file_url) {
-        await base44.entities.Auction.update(localAuction.id, { supplier_logo_url: result.file_url });
+        await plataforma.entities.Auction.update(localAuction.id, { supplier_logo_url: result.file_url });
         
         await refreshAuction();
         
@@ -870,8 +870,8 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                   
                   setIsUploadingLogo(true);
                   try {
-                    const { base44 } = await import('@/api/base44Client');
-                    await base44.entities.Auction.update(localAuction.id, { supplier_logo_url: tempLogoUrl });
+                    const { plataforma } = await import('@/api/plataformaClient');
+                    await plataforma.entities.Auction.update(localAuction.id, { supplier_logo_url: tempLogoUrl });
                     
                     await refreshAuction();
                     

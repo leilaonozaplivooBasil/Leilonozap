@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { X, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import * as XLSX from 'xlsx';
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 
 export default function AtualizarGradesModal({ isOpen, onClose, lote, onSuccess }) {
     const [isProcessing, setIsProcessing] = useState(false);

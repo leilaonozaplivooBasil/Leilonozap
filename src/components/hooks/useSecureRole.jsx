@@ -9,11 +9,11 @@
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { getStoredUser } from '@/lib/session';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 /**
  * @param {string[]} allowedRoles - Roles permitidas para acessar a página.

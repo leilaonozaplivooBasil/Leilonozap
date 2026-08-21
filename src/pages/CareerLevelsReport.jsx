@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Loader2 } from 'lucide-react';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function CareerLevelsReport() {
   const [users, setUsers] = useState([]);

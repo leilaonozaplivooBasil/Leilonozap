@@ -5,7 +5,7 @@ import { thumbUrl } from '@/lib/imgThumb';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { lerSaldos } from '@/lib/carteiraSaldos';
 import { toast } from 'sonner';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
@@ -273,7 +273,7 @@ export default function TirarPedido() {
       storeName: user.store_name || user.full_name || 'Leilão NoZap',
     };
     try {
-      const r = await base44.functions.invoke('createPdvOrder', {
+      const r = await plataforma.functions.invoke('createPdvOrder', {
         actorId: user.id,
         items: cart.map((x) => ({ product_id: x.id, quantity: x.qty, price: parseBRL(x.priceText) })),
         customer: { name: customer.name, phone: customer.phone },
@@ -309,7 +309,7 @@ export default function TirarPedido() {
   const pixCancelado = async () => {
     const saleId = pix?.sale_id;
     setPix(null);
-    if (saleId) { try { await base44.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
+    if (saleId) { try { await plataforma.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
     toast('Cobrança PIX cancelada.');
   };
 
@@ -327,7 +327,7 @@ export default function TirarPedido() {
   const cartaoCancelado = async () => {
     const saleId = cartao?.sale_id;
     setCartao(null);
-    if (saleId) { try { await base44.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
+    if (saleId) { try { await plataforma.functions.invoke('cancelPdvPix', { sale_id: saleId, actorId: user.id }); } catch (_) {} }
     toast('Cobrança no cartão cancelada.');
   };
 

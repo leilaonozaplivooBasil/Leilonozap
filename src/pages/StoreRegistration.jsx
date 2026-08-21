@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const StoreEntity = base44.entities.Store;
-const AppUser = base44.entities.AppUser;
+const StoreEntity = plataforma.entities.Store;
+const AppUser = plataforma.entities.AppUser;
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
 export default function StoreRegistration() {
@@ -68,7 +68,7 @@ export default function StoreRegistration() {
 
         if (!userFound) {
           try {
-            const platformUser = await base44.auth.me();
+            const platformUser = await plataforma.auth.me();
             if (platformUser) {
               userFound = platformUser;
             }
@@ -146,7 +146,7 @@ export default function StoreRegistration() {
       // 🔒 Se a senha foi alterada, hashear antes de salvar
       if (updateData.store_password && !updateData.store_password.startsWith('$2')) {
         try {
-          const hashResponse = await base44.functions.invoke('hashStorePassword', {
+          const hashResponse = await plataforma.functions.invoke('hashStorePassword', {
             password: updateData.store_password
           });
           const hashResult = hashResponse?.data || hashResponse;
@@ -189,7 +189,7 @@ export default function StoreRegistration() {
     if (!file) return;
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       setFormData(prev => ({ ...prev, logo_url: file_url }));
       setLogoFile(file);
       toast.success("Logo enviada com sucesso!");
@@ -225,7 +225,7 @@ export default function StoreRegistration() {
 
       // 🔒 Hashear senha antes de salvar no banco
       try {
-        const hashResponse = await base44.functions.invoke('hashStorePassword', {
+        const hashResponse = await plataforma.functions.invoke('hashStorePassword', {
           password: formData.store_password
         });
         const hashResult = hashResponse?.data || hashResponse;

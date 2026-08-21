@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import { analiseFiscal } from '@/lib/simplesNacional';
 import { TrendingUp, TrendingDown, Package, Percent, Receipt, AlertTriangle, ShoppingBag, Gavel, Wallet, Landmark } from 'lucide-react';
@@ -52,7 +52,7 @@ export default function PainelLucroDiario({
     let vivo = true;
     (async () => {
       try {
-        const products = await base44.entities.Product.list('-created_date', 3000);
+        const products = await plataforma.entities.Product.list('-created_date', 3000);
         if (vivo) setCostMap(buildCostMap(Array.isArray(products) ? products : []));
       } catch (e) {
         console.debug('Erro ao carregar custo de produtos:', e?.message);

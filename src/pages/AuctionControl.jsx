@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { adminDataProxy } from "@/functions/adminDataProxy";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -29,10 +29,10 @@ import LiveMetrics from "@/components/admin/LiveMetrics";
 import PageFullscreen from "@/components/admin/PageFullscreen";
 import { estadoLeilao } from "@/lib/modoChamada";
 
-const Auction = base44.entities.Auction;
-const Payment = base44.entities.Payment;
-const Bid = base44.entities.Bid;
-const AuctionMessage = base44.entities.AuctionMessage;
+const Auction = plataforma.entities.Auction;
+const Payment = plataforma.entities.Payment;
+const Bid = plataforma.entities.Bid;
+const AuctionMessage = plataforma.entities.AuctionMessage;
 
 // Verifica se um leilão está expirado (ativo no banco mas com end_time no passado)
 const isExpiredActive = (auction) =>

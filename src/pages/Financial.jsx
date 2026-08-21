@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { DollarSign } from "lucide-react";
 import PageFullscreen from "@/components/admin/PageFullscreen";
 
-const FinancialExpense = base44.entities.FinancialExpense;
+const FinancialExpense = plataforma.entities.FinancialExpense;
 
 export default function Financial() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -52,7 +52,7 @@ export default function Financial() {
       }
       // 2. Fallback: verifica usuário da plataforma Base44
       try {
-        const platformUser = await base44.auth.me();
+        const platformUser = await plataforma.auth.me();
         if (platformUser) {
           setCurrentUser(platformUser);
           if (platformUser.role === "admin") {

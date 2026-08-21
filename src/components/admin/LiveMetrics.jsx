@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, TrendingUp, Eye, Activity } from 'lucide-react';
 
@@ -26,7 +26,7 @@ export default function LiveMetrics() {
       const todayISO = today.toISOString();
 
       // 1. Lances do dia
-      const bids = await base44.entities.Bid.list('-timestamp', 1000);
+      const bids = await plataforma.entities.Bid.list('-timestamp', 1000);
       const todayBids = bids.filter(bid => {
         const bidDate = new Date(bid.timestamp);
         return bidDate >= today;
@@ -35,7 +35,7 @@ export default function LiveMetrics() {
 
       // 2. Visualizações recentes (últimos 5 minutos)
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const recentViews = await base44.entities.AuctionView.filter({});
+      const recentViews = await plataforma.entities.AuctionView.filter({});
       const activeViewers = recentViews.filter(view => {
         const lastViewed = new Date(view.last_viewed || view.updated_date);
         return lastViewed >= new Date(fiveMinutesAgo);

@@ -1,5 +1,5 @@
 // getPartnerPurchases — lista planos de parceiro ativos (InvestorDashboard + ActivePartners).
-// Antes: função Deno lendo o store interno do Base44 (base44.asServiceRole.entities) — nunca
+// Antes: função Deno lendo o store interno do Base44 (plataforma.asServiceRole.entities) — nunca
 // via os dados reais do Supabase, e sem rota Vercel dava 404 em produção (front caía sempre no
 // fallback legacy de 1 plano só). Agora lê direto da tabela real partner_plan_purchases.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;

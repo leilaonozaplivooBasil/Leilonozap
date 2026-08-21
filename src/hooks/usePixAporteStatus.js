@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 💚 Vigia o PIX do aporte do Parceiro até o pagamento ser confirmado.
 //
@@ -34,7 +34,7 @@ export default function usePixAporteStatus(billingId, onConfirmado) {
     emVooRef.current = true;
     setVerificando(true);
     try {
-      const resp = await base44.functions.invoke('checkPartnerPlanPayment', {
+      const resp = await plataforma.functions.invoke('checkPartnerPlanPayment', {
         billing_id: billingId,
       });
       const pago = resp?.data?.is_paid || resp?.is_paid;

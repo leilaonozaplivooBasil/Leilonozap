@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, ArrowLeft, BadgeCheck } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import SeloCargo from '@/components/network/SeloCargo';
 import AvisoAntifraude from '@/components/catalog/AvisoAntifraude';
 import { levelName } from '@/lib/careerLevels';
@@ -24,7 +24,7 @@ export default function FalarComParceiro() {
     (async () => {
       if (!ref) { setCarregando(false); return; }
       try {
-        const achados = await base44.entities.AppUser.filter({ referral_code: ref });
+        const achados = await plataforma.entities.AppUser.filter({ referral_code: ref });
         const p = achados && achados[0];
         if (vivo && p) {
           setParceiro({

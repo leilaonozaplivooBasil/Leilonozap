@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Lock, ArrowLeft, CheckCircle, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
-const AppUser = base44.entities.AppUser;
+const AppUser = plataforma.entities.AppUser;
 
 export default function ResetPassword() {
     const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function ResetPassword() {
 
             try {
             // Buscar usuário pelo token via backend (bypass RLS)
-            const result = await base44.functions.invoke('updateUserPassword', {
+            const result = await plataforma.functions.invoke('updateUserPassword', {
                 validate_token: token
             });
 
@@ -100,7 +100,7 @@ export default function ResetPassword() {
         setError('');
 
         try {
-            const response = await base44.functions.invoke('updateUserPassword', {
+            const response = await plataforma.functions.invoke('updateUserPassword', {
                 user_id: userId,
                 new_password: password
             });

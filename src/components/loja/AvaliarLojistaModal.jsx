@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { X, Camera, ImagePlus, Loader2 } from 'lucide-react';
 import { StarPicker } from './StarRating';
 
@@ -60,7 +60,7 @@ export default function AvaliarLojistaModal({ order, buyer, onClose, onDone }) {
     if (!stars) { setErr('Escolha de 1 a 5 estrelas.'); return; }
     setSaving(true); setErr('');
     try {
-      const r = await base44.functions.invoke('rateSeller', {
+      const r = await plataforma.functions.invoke('rateSeller', {
         buyer_id: buyer?.id, sale_id: order.id, stars, comment: comment.trim() || null,
         photo_base64: photo || null,
       });

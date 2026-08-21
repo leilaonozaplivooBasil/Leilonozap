@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export default function ProductCarousel({ onBuyClick }) {
   const [products, setProducts] = useState([]);
@@ -13,7 +13,7 @@ export default function ProductCarousel({ onBuyClick }) {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const data = await base44.entities.FeaturedProduct.filter({ is_active: true }, 'order');
+        const data = await plataforma.entities.FeaturedProduct.filter({ is_active: true }, 'order');
         if (data && data.length > 0) {
           setProducts(data);
         }

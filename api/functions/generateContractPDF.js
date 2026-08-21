@@ -1,6 +1,6 @@
 // 📄 /api/functions/generateContractPDF — rota que faltava na Vercel.
 //
-// Correção de causa-raiz (06/08/2026): o front chama base44.functions.invoke(
+// Correção de causa-raiz (06/08/2026): o front chama plataforma.functions.invoke(
 // 'generateContractPDF'), o adapter traduz para /api/functions/generateContractPDF
 // e essa rota não existia — daí o "PDF não gerado" em Baixar e em Compartilhar.
 //

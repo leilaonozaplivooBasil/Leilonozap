@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { Radio, Gavel, ShoppingBag, Loader2, X, ShieldCheck, ShieldAlert } from 'lucide-react';
 import LivooMark from './LivooMark';
@@ -20,7 +20,7 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
 
   useEffect(() => {
     if (!open || !user?.id || kyc) return;
-    base44.functions.invoke('livooStatus', { actorId: user.id })
+    plataforma.functions.invoke('livooStatus', { actorId: user.id })
       .then((r) => { if (r?.success) setKyc(r.kyc_status || 'not_started'); })
       .catch(() => {});
   }, [open, user, kyc]);
@@ -29,7 +29,7 @@ export default function EntrarAoVivo({ user, variant = 'card' }) {
     if (!user?.id) { toast.error('Faça login.'); return; }
     setBusy(mode);
     try {
-      const r = await base44.functions.invoke('livooOpenLive', { actorId: user.id, mode, titulo: '' });
+      const r = await plataforma.functions.invoke('livooOpenLive', { actorId: user.id, mode, titulo: '' });
       if (!r?.success) { toast.error(r?.error || 'Não foi possível entrar ao vivo.'); setBusy(''); return; }
       toast.success(`Ao vivo! ${r.sandbox ? '(sandbox)' : ''} ${mode === 'auction' ? r.lots + ' lote(s)' : r.products + ' produto(s)'}`);
       window.open(r.host_url, '_blank', 'noopener');

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 📊 PAINEL DO ARREMATANTE — carregamento 100% LEITURA.
 // Nada aqui escreve saldo, lance, reserva ou comissão.
@@ -25,13 +25,13 @@ export default function usePainelArrematante() {
       setUser(u);
 
       const [carteiraRes, extratoRes, minhasMsgs, ativos, ganhos] = await Promise.all([
-        base44.functions.invoke('getMyWallet', { user_id: u.id }).catch(() => null),
-        base44.functions.invoke('getDigitalWalletHistory', { user_id: u.id }).catch(() => null),
-        base44.entities.AuctionMessage
+        plataforma.functions.invoke('getMyWallet', { user_id: u.id }).catch(() => null),
+        plataforma.functions.invoke('getDigitalWalletHistory', { user_id: u.id }).catch(() => null),
+        plataforma.entities.AuctionMessage
           .filter({ sender_id: u.id, message_type: 'bid' }, '-created_date', 200)
           .catch(() => []),
-        base44.entities.Auction.filter({ status: 'active' }, '-updated_date', 500).catch(() => []),
-        base44.entities.Auction.filter({ winner_id: u.id }, '-updated_date', 50).catch(() => []),
+        plataforma.entities.Auction.filter({ status: 'active' }, '-updated_date', 500).catch(() => []),
+        plataforma.entities.Auction.filter({ winner_id: u.id }, '-updated_date', 50).catch(() => []),
       ]);
 
       const carteira = carteiraRes?.data || carteiraRes || {};

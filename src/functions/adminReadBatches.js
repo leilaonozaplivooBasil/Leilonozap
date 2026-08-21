@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // Wrapper client-side da Backend Function 'adminReadBatches'.
 // Invoca a function (que lê BatchRegistration + LoteRecebido com service_role,
@@ -17,6 +17,6 @@ export async function adminReadBatches(params = {}) {
       actorEmail = u?.email;
     } catch { /* ignora */ }
   }
-  const data = await base44.functions.invoke('adminReadBatches', { ...params, actorEmail });
+  const data = await plataforma.functions.invoke('adminReadBatches', { ...params, actorEmail });
   return { data };
 }

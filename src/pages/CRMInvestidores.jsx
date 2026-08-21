@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Users, TrendingUp, Search, Briefcase, DollarSign, Activity, RefreshCw, Eye, UserPlus, ArrowLeft, FolderOpen, FileSpreadsheet, LayoutList, LayoutGrid } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import CadastroInvestidorModal from '@/components/crm/CadastroInvestidorModal';
 import { useSecureRole } from '@/components/hooks/useSecureRole';
 import { usePanelVisibility } from '@/hooks/usePanelVisibility';
 
-const AppUser = base44.entities.AppUser;
-const Auction = base44.entities.Auction;
+const AppUser = plataforma.entities.AppUser;
+const Auction = plataforma.entities.Auction;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 

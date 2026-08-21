@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,7 +49,7 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
       if (vivo) setEu(sessao);
       if (sessao.role === 'super_admin') { setSouSuperAdmin(true); return; }
       try {
-        const rows = await base44.entities.AppUser.filter({ id: sessao.id });
+        const rows = await plataforma.entities.AppUser.filter({ id: sessao.id });
         if (vivo && rows?.[0]?.role === 'super_admin') setSouSuperAdmin(true);
       } catch (_) { /* sem leitura: mantém oculto */ }
     })();
@@ -83,7 +83,7 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
     const senha = padrao ? SENHA_PADRAO : nova;
     setOcupado(true);
     try {
-      const r = await base44.functions.invoke('adminSetPassword', {
+      const r = await plataforma.functions.invoke('adminSetPassword', {
         userId: user.id,
         newPassword: senha,
         actorId: eu?.id,
@@ -111,7 +111,7 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
   const enviarReset = async () => {
     setOcupado(true);
     try {
-      const r = await base44.functions.invoke('sendEmailCode', { email: user.email, purpose: 'reset' });
+      const r = await plataforma.functions.invoke('sendEmailCode', { email: user.email, purpose: 'reset' });
       if (r?.success) toast.success(`Código de redefinição enviado para ${user.email}`);
       else toast.error(r?.error || 'Não foi possível enviar o e-mail.');
       setConfirmar(null);
@@ -126,7 +126,7 @@ export default function AcessoSuperAdmin({ user, indicadoPor, onAtualizado }) {
     setOcupado(true);
     try {
       const code = gerarCodigo(user.full_name);
-      const r = await base44.functions.invoke('adminUpdateUser', {
+      const r = await plataforma.functions.invoke('adminUpdateUser', {
         userId: user.id,
         updates: { referral_code: code },
         actorId: eu?.id,

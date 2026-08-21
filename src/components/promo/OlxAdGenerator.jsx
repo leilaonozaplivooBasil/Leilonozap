@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Sparkles, Copy, Check, Loader2, MapPin } from "lucide-react";
 
 function formatPhone(raw) {
@@ -33,7 +33,7 @@ export default function OlxAdGenerator({ product }) {
     if (!telefone || !cidade) return;
     setLoading(true);
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await plataforma.integrations.Core.InvokeLLM({
       prompt: `Gere uma descrição para anúncio de OLX/Marketplace para o seguinte produto:
 
 Produto: ${product.description}

@@ -1,5 +1,5 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export async function requestWithdrawal(params) {
-    return base44.functions.invoke('requestWithdrawal', params);
+    return plataforma.functions.invoke('requestWithdrawal', params);
 }

@@ -2,7 +2,7 @@
 // Recebe o ?code= do callback OAuth e manda pro backend trocar por token.
 // O token NUNCA aparece aqui: a página só mostra "autorizado" ou o erro.
 import React, { useState, useEffect, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Truck, CheckCircle2, AlertCircle, Loader2, ExternalLink } from "lucide-react";
 
 export default function IntegracaoMelhorEnvio() {
@@ -16,7 +16,7 @@ export default function IntegracaoMelhorEnvio() {
   const chamar = useCallback(async (acao, extra = {}) => {
     let actorId = null;
     try { actorId = JSON.parse(localStorage.getItem("currentUser") || "null")?.id || null; } catch { actorId = null; }
-    return await base44.functions.invoke("melhorEnvioOAuth", { acao, actorId, ...extra });
+    return await plataforma.functions.invoke("melhorEnvioOAuth", { acao, actorId, ...extra });
   }, []);
 
   const lerStatus = useCallback(async () => {

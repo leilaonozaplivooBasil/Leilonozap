@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Camera, Search } from "lucide-react";
 
 function slugify(str) {
@@ -49,7 +49,7 @@ const fileInputRef = useRef(null);
   const handleCpfSearch = async () => {
     const doc = normalizeCpf(cpf);
     if (!doc) return;
-    const rows = await base44.entities.AppUser.filter({ cpf: doc });
+    const rows = await plataforma.entities.AppUser.filter({ cpf: doc });
     if (rows && rows.length > 0) {
       const u = rows[0];
       setFoundUser(u);
@@ -69,7 +69,7 @@ const fileInputRef = useRef(null);
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
     setAvatarUrl(file_url);
     setIsUploading(false);
   };
@@ -98,7 +98,7 @@ const fileInputRef = useRef(null);
       let res;
       if (foundUser) {
         // upgrade de usuário existente → rota admin (service_role)
-        res = await base44.functions.invoke("adminUpdateUser", {
+        res = await plataforma.functions.invoke("adminUpdateUser", {
           userId: foundUser.id,
           actorId,
           updates: {
@@ -110,7 +110,7 @@ const fileInputRef = useRef(null);
         });
       } else {
         const genPass = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-        res = await base44.functions.invoke("createLicensee", { ...common, password: genPass, actor_id: actorId });
+        res = await plataforma.functions.invoke("createLicensee", { ...common, password: genPass, actor_id: actorId });
       }
       if (!res?.success) {
         setIsSubmitting(false);

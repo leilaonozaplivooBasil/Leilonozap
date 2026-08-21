@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AppUser = base44.entities.AppUser;
-const SendEmail = (params) => base44.integrations.Core.SendEmail(params);
+const AppUser = plataforma.entities.AppUser;
+const SendEmail = (params) => plataforma.integrations.Core.SendEmail(params);
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -257,14 +257,14 @@ Equipe Leilão NoZap
     try {
       // Atualiza senha se foi alterada
       if (editFormData.password && editFormData.password !== editingUser.password) {
-        await base44.functions.invoke('updateUserPassword', {
+        await plataforma.functions.invoke('updateUserPassword', {
           user_id: editingUser.id,
           new_password: editFormData.password
         });
       }
 
       // Atualiza outros dados
-      await base44.functions.invoke('updateUserData', {
+      await plataforma.functions.invoke('updateUserData', {
         user_id: editingUser.id,
         data: {
           full_name: editFormData.full_name.trim(),

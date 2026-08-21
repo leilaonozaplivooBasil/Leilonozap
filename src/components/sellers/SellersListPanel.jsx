@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,7 +56,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
     }
     setIsLoading(true);
     try {
-      const rows = await base44.entities.AppUser.filter(
+      const rows = await plataforma.entities.AppUser.filter(
         { recruited_by_id: licenseeId, is_seller: true },
         "-created_date"
       );
@@ -103,7 +103,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
     if (sendingAccessId) return;
     setSendingAccessId(seller.id);
     try {
-      const response = await base44.functions.invoke("generateSellerAccessToken", {
+      const response = await plataforma.functions.invoke("generateSellerAccessToken", {
         seller_id: seller.id,
       });
       const data = response?.data;
@@ -135,7 +135,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
     setDeleteSalesCount(0);
     setIsCheckingSales(true);
     try {
-      const sales = await base44.entities.CatalogSale.filter({ licensee_id: seller.id });
+      const sales = await plataforma.entities.CatalogSale.filter({ licensee_id: seller.id });
       setDeleteSalesCount(Array.isArray(sales) ? sales.length : 0);
     } catch (err) {
       // Em caso de falha, assume 0 (a função backend revalida)
@@ -149,7 +149,7 @@ export default function SellersListPanel({ licenseeId, refreshKey }) {
     if (!deletingSeller) return;
     setIsDeleting(true);
     try {
-      const response = await base44.functions.invoke("deleteSeller", {
+      const response = await plataforma.functions.invoke("deleteSeller", {
         seller_id: deletingSeller.id,
       });
       const data = response?.data;

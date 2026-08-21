@@ -2,9 +2,9 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const Auction = base44.entities.Auction;
+const Auction = plataforma.entities.Auction;
 import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, ArrowLeft, Eye } from 'lucide-react';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import VereditoMLCard from '../components/lotes/VereditoMLCard';

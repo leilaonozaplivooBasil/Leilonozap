@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
 // Escrita direta na rota segura entityWrite (service_role) — MESMO caminho da exclusão
@@ -40,7 +40,7 @@ async function _bulkCreateSeguro(rows) {
  * Reimplementação NO CLIENTE da antiga Backend Function homônima.
  * Motivo: em produção (Vercel) não existe rota /api/functions/gerarProdutosDoLote,
  * então a chamada voltava { error: 'not_implemented' }. Aqui usamos o adapter de
- * entidade (base44.entities.*), que já roteia as escritas de admin/super_admin
+ * entidade (plataforma.entities.*), que já roteia as escritas de admin/super_admin
  * pela rota service_role (entityWrite) — mesmo caminho que faz a exclusão de lote
  * funcionar em produção.
  *
@@ -59,7 +59,7 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
   // Busca o lote
   let lote;
   try {
-    const lotes = await base44.entities.LoteRecebido.filter({ id: lote_id });
+    const lotes = await plataforma.entities.LoteRecebido.filter({ id: lote_id });
     if (!lotes || lotes.length === 0) return { data: { status: 'error', error: 'Lote não encontrado' } };
     lote = lotes[0];
   } catch (e) {
@@ -103,7 +103,7 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
   const depositoDestino = lote.deposito_destino || 'Bangu';
 
   // Produtos já criados deste lote (anti-duplicação / retomada)
-  const produtosExistentes = await base44.entities.Product.filter({ lot: lote.nome_lote }, '-created_date', 5000);
+  const produtosExistentes = await plataforma.entities.Product.filter({ lot: lote.nome_lote }, '-created_date', 5000);
 
   const chavesExistentes = new Map();
   for (const p of (produtosExistentes || [])) {

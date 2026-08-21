@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -47,7 +47,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
       }
       setIsLoadingVisits(true);
       try {
-        const visits = await base44.entities.CatalogVisit.filter({ licensee_id: user.id }, "-visited_at", 1000);
+        const visits = await plataforma.entities.CatalogVisit.filter({ licensee_id: user.id }, "-visited_at", 1000);
 
         const days = [];
         for (let i = 6; i >= 0; i--) {

@@ -3,7 +3,7 @@ import { fmtBR } from '@/lib/money';
 import { textoParcelamento } from '@/lib/parcelamento';
 import { useSearchParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2, Truck, ShieldCheck, RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Gavel, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 
-const Product = base44.entities.Product;
+const Product = plataforma.entities.Product;
 
 export default function CatalogProductDetails() {
   const [searchParams] = useSearchParams();
@@ -136,7 +136,7 @@ export default function CatalogProductDetails() {
     if (!ref) return;
     (async () => {
       try {
-        const users = await base44.entities.AppUser.filter({ referral_code: ref });
+        const users = await plataforma.entities.AppUser.filter({ referral_code: ref });
         const lic = users && users[0];
         if (lic && (lic.career_levels || []).includes('licenciado_catalogo')) {
           setLicenseePhone(lic.phone || null);

@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 /**
  * Invoca a função de sistema para converter imagens existentes para WebP.
@@ -8,5 +8,5 @@ import { base44 } from '@/api/base44Client';
  * @param {boolean} params.dry_run - Se true, apenas simula sem salvar
  */
 export async function convertExistingImages(params) {
-    return base44.functions.invoke('convertExistingImages', params);
+    return plataforma.functions.invoke('convertExistingImages', params);
 }

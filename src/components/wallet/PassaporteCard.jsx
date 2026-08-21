@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Ticket, Lock } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 
 /**
@@ -17,7 +17,7 @@ export default function PassaporteCard({ user }) {
     let alive = true;
     (async () => {
       try {
-        const r = await base44.functions.invoke('passaporteCoupon', { user_id: user.id });
+        const r = await plataforma.functions.invoke('passaporteCoupon', { user_id: user.id });
         const data = r?.data || r;
         if (alive && data?.success) setStatus(data);
       } catch { /* sem cupom / offline: cartão simplesmente não aparece */ }

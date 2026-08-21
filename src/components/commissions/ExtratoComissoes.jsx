@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ export default function ExtratoComissoes({ user, isSaiDeBaixo = false }) {
     if (!user?.id) return;
     setCarregando(true);
     try {
-      const r = await base44.functions.invoke('getMyCommissions', { user_id: user.id, limit: 500 });
+      const r = await plataforma.functions.invoke('getMyCommissions', { user_id: user.id, limit: 500 });
       setDados(r?.success ? r : { itens: [], total: 0, por_cargo: {}, saldo_carteira: 0 });
     } catch {
       setDados({ itens: [], total: 0, por_cargo: {}, saldo_carteira: 0 });

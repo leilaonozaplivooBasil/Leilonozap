@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, Copy, Edit, ExternalLink, Power } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
     const newLevels = isActive
       ? currentLevels.filter(l => l !== "licenciado_catalogo")
       : [...currentLevels, "licenciado_catalogo"];
-    await base44.entities.AppUser.update(licensee.id, { career_levels: newLevels });
+    await plataforma.entities.AppUser.update(licensee.id, { career_levels: newLevels });
     toast.success(isActive ? "Loja desativada" : "Loja ativada");
     qc.invalidateQueries({ queryKey: ["licensees"] });
     setToggling(false);

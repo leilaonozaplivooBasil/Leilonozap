@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 /**
  * 🔇 GRAVADOR ÚNICO DE SystemLog COM DEDUPLICAÇÃO EM MEMÓRIA
@@ -58,7 +58,7 @@ export function registrarLog(payload) {
     if (ultimoEnvio && agora - ultimoEnvio < JANELA_MS) return false;
 
     vistos.set(assinatura, agora);
-    base44.entities.SystemLog.create(payload).catch(() => {});
+    plataforma.entities.SystemLog.create(payload).catch(() => {});
     return true;
   } catch (_) {
     return false;

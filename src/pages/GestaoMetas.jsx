@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { money } from '@/lib/format';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import { Target, Search, Trophy, Trash2, Loader2, User as UserIcon } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function GestaoMetas() {
   }, []);
 
   const loadMetas = async () => {
-    const r = await base44.functions.invoke('manageMetas', { action: 'list' });
+    const r = await plataforma.functions.invoke('manageMetas', { action: 'list' });
     setMetas(r?.metas || []);
   };
 
@@ -35,7 +35,7 @@ export default function GestaoMetas() {
     if (!user) return;
     const t = setTimeout(async () => {
       if (q.trim().length < 2) { setResults([]); return; }
-      const r = await base44.functions.invoke('manageMetas', { action: 'searchUsers', actorId: user.id, q: q.trim() });
+      const r = await plataforma.functions.invoke('manageMetas', { action: 'searchUsers', actorId: user.id, q: q.trim() });
       setResults(r?.users || []);
     }, 350);
     return () => clearTimeout(t);
@@ -47,7 +47,7 @@ export default function GestaoMetas() {
     if (!(v > 0)) { toast.error('Informe um valor de meta válido.'); return; }
     setBusy('save');
     try {
-      const r = await base44.functions.invoke('manageMetas', { action: 'set', actorId: user.id, target_user_id: picked.id, valor: v });
+      const r = await plataforma.functions.invoke('manageMetas', { action: 'set', actorId: user.id, target_user_id: picked.id, valor: v });
       if (!r?.success) { toast.error(r?.error || 'Falha'); setBusy(''); return; }
       toast.success(`Meta de ${money(v)} definida para a categoria ${CARGO[picked.primary_career_level] || picked.primary_career_level}!`);
       setValor(''); setPicked(null); setQ(''); setResults([]);
@@ -58,7 +58,7 @@ export default function GestaoMetas() {
 
   const remover = async (m) => {
     setBusy(m.id);
-    try { await base44.functions.invoke('manageMetas', { action: 'remove', actorId: user.id, id: m.id }); setMetas((p) => p.filter((x) => x.id !== m.id)); } catch { toast.error('Erro'); }
+    try { await plataforma.functions.invoke('manageMetas', { action: 'remove', actorId: user.id, id: m.id }); setMetas((p) => p.filter((x) => x.id !== m.id)); } catch { toast.error('Erro'); }
     setBusy('');
   };
 

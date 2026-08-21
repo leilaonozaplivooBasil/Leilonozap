@@ -21,9 +21,9 @@ export function clientIdEmCache() {
 }
 
 // Busca no servidor e atualiza o cache. Nunca lança.
-export async function buscarClientId(base44) {
+export async function buscarClientId(plataforma) {
   try {
-    const res = await base44.functions.invoke('getGoogleClientId', {});
+    const res = await plataforma.functions.invoke('getGoogleClientId', {});
     const id = res?.clientId || null;
     if (id) {
       try { localStorage.setItem(CHAVE, id); } catch { /* storage cheio/bloqueado */ }

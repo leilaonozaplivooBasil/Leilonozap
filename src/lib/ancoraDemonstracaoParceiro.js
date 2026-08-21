@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 🎬 ÂNCORA DO MODO DEMONSTRAÇÃO DA LINHA DO TEMPO DO PARCEIRO.
 //
@@ -72,7 +72,7 @@ export function useAncoraDemonstracao(ativo = true) {
     let vivo = true;
 
     (async () => {
-      const linhas = await base44.entities.UserPreference.filter({ user_id: user.id });
+      const linhas = await plataforma.entities.UserPreference.filter({ user_id: user.id });
       if (!vivo) return;
       const registro = Array.isArray(linhas) ? linhas[0] : null;
 
@@ -85,9 +85,9 @@ export function useAncoraDemonstracao(ativo = true) {
       // Primeira visita: "o depósito entrou hoje".
       const novo = meiaNoiteDeHoje();
       if (registro) {
-        await base44.entities.UserPreference.update(registro.id, { parceiro_demo_inicio: novo });
+        await plataforma.entities.UserPreference.update(registro.id, { parceiro_demo_inicio: novo });
       } else {
-        await base44.entities.UserPreference.create({ user_id: user.id, parceiro_demo_inicio: novo });
+        await plataforma.entities.UserPreference.create({ user_id: user.id, parceiro_demo_inicio: novo });
       }
       if (!vivo) return;
       setInicio(novo);

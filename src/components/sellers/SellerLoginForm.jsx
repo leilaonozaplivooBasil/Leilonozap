@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { saveSession } from '@/lib/session';
 
@@ -22,7 +22,7 @@ export default function SellerLoginForm({ onSuccess }) {
     setIsLoading(true);
     try {
       // senha validada no servidor (o hash não é exposto no client)
-      const _login = await base44.functions.invoke('login', { email: email.trim().toLowerCase(), password });
+      const _login = await plataforma.functions.invoke('login', { email: email.trim().toLowerCase(), password });
       if (!_login?.success) {
         setError(_login?.error || 'E-mail ou senha incorretos.');
         return;

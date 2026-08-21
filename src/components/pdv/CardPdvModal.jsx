@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { toast } from 'sonner';
 import { Loader2, Copy, Check, CreditCard, X, ExternalLink } from 'lucide-react';
@@ -23,7 +23,7 @@ export default function CardPdvModal({ cartao, total, onConfirmed, onCancel }) {
   const check = async () => {
     if (confirmedRef.current) return;
     try {
-      const r = await base44.functions.invoke('checkPaymentStatus', { sale_id: cartao.sale_id });
+      const r = await plataforma.functions.invoke('checkPaymentStatus', { sale_id: cartao.sale_id });
       if (r?.status === 'confirmed' && !confirmedRef.current) {
         confirmedRef.current = true;
         onConfirmed();

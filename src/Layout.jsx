@@ -22,7 +22,7 @@ import GlobalWalletDrawer from "@/components/wallet/GlobalWalletDrawer";
 import TermoGateGlobal from "@/components/legal/TermoGateGlobal";
 import { useActiveSession } from "@/components/system/useActiveSession";
 import PainelSelector, { triggerPanelSelector } from "@/components/portal/PainelSelector";
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
 import { saveReferral, getReferral, clearReferral, saveInfluencerCode, getInfluencerCode } from "@/lib/referral";
@@ -38,8 +38,8 @@ import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 // 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
 import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
 
-const AppUser = base44.entities.AppUser;
-const User = { me: () => base44.auth.me() };
+const AppUser = plataforma.entities.AppUser;
+const User = { me: () => plataforma.auth.me() };
 
 // 🚀 OTIMIZAÇÃO (fase 1 - 18/08/2026): o App.jsx cria um <Layout> novo por rota
 // (não usa <Outlet> persistente), então o Layout remonta a cada navegação e
@@ -225,7 +225,7 @@ export default function Layout({ children, currentPageName }) {
     // busca o nome de quem indicou (SELECT anon), pra mostrar no popup
     (async () => {
       try {
-        const users = await base44.entities.AppUser.filter({ referral_code: ref });
+        const users = await plataforma.entities.AppUser.filter({ referral_code: ref });
         const r = users && users[0];
         if (r) setReferrerName(r.display_first_name || (r.full_name || '').split(' ')[0] || r.nickname || '');
       } catch { /* segue sem nome */ }
@@ -399,10 +399,10 @@ export default function Layout({ children, currentPageName }) {
         sessionStorage.setItem(visitKey, 'true');
         (async () => {
           try {
-            const users = await base44.entities.AppUser.filter({ referral_code: refCode });
+            const users = await plataforma.entities.AppUser.filter({ referral_code: refCode });
             const licensee = users && users[0];
             if (licensee && normalizeLevels(licensee.career_levels).includes('licenciado')) {
-              await base44.entities.CatalogVisit.create({
+              await plataforma.entities.CatalogVisit.create({
                 licensee_id: licensee.id,
                 referral_code: refCode,
                 page: window.location.pathname + window.location.search,
@@ -501,7 +501,7 @@ export default function Layout({ children, currentPageName }) {
                 try {
                   const influencerCode = sessionStorage.getItem('influencerCode');
                   if (influencerCode && !sessionStorage.getItem('influencer_lead_registered')) {
-                    await base44.functions.invoke('registerInfluencerLead', {
+                    await plataforma.functions.invoke('registerInfluencerLead', {
                       influencer_code: influencerCode
                     });
                     sessionStorage.setItem('influencer_lead_registered', 'true');

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 🚀 OTIMIZAÇÃO (fase 1 - 18/08/2026):
 // 1) O efeito antes dependia de `location.pathname` — como o Layout remonta a
@@ -31,7 +31,7 @@ export function useActiveSession(currentUser) {
     const updateSession = async () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       try {
-        const existingSessions = await base44.entities.LiveSession.filter({
+        const existingSessions = await plataforma.entities.LiveSession.filter({
           session_id: sessionIdRef.current
         });
 
@@ -44,9 +44,9 @@ export function useActiveSession(currentUser) {
         };
 
         if (existingSessions.length > 0) {
-          await base44.entities.LiveSession.update(existingSessions[0].id, sessionData);
+          await plataforma.entities.LiveSession.update(existingSessions[0].id, sessionData);
         } else {
-          await base44.entities.LiveSession.create(sessionData);
+          await plataforma.entities.LiveSession.create(sessionData);
         }
       } catch (error) {
         // Silenciosamente ignora rate limit

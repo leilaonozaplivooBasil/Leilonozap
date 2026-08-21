@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export default function Footer() {
   const [footerSettings, setFooterSettings] = useState(null);
@@ -31,7 +31,7 @@ export default function Footer() {
 
   const loadFooterSettings = async () => {
     try {
-      const settings = await base44.entities.FooterSettings.list("-created_date", 1);
+      const settings = await plataforma.entities.FooterSettings.list("-created_date", 1);
       const data = settings && settings.length > 0 ? settings[0] : defaultFooter;
       setFooterSettings(data);
       sessionStorage.setItem('footer_settings_cache', JSON.stringify(data));

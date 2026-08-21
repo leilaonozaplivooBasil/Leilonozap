@@ -8,11 +8,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 
-const Product = base44.entities.Product;
+const Product = plataforma.entities.Product;
 
 export default function AddToCatalogModal({ isOpen, onClose, auction }) {
   const [price, setPrice] = useState("");

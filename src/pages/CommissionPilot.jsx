@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Calculator, AlertTriangle, Cloud, FolderOpen } from 'lucide-react';
-import { base44 as base44Client } from '@/api/base44Client';
+import { plataforma as plataformaClient } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import { calculateExpectedCommission } from '@/utils/CommissionAuditRules';
 
@@ -42,7 +42,7 @@ export default function CommissionPilot() {
                 ? { sale_id: saleId }
                 : { simulate_amount: parseFloat(simAmount), simulate_licensee_id: simLicenseeId };
 
-            const response = await base44Client.functions.invoke('commissionPilot', payload);
+            const response = await plataformaClient.functions.invoke('commissionPilot', payload);
 
             if (response.data && response.data.success) {
                 setResult(response.data);
@@ -104,7 +104,7 @@ export default function CommissionPilot() {
                 products = snapshotData.products || [];
             } else {
                 toast.info(`Baixando dados da API... (${startDate} a ${endDate})`);
-                const auditResp = await base44Client.functions.invoke('exportAuditData', {
+                const auditResp = await plataformaClient.functions.invoke('exportAuditData', {
                     start_date: startDate,
                     end_date: endDate,
                     user_id: filterUserId || undefined

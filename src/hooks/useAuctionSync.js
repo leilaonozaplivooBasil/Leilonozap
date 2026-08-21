@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 
-const Auction = base44.entities.Auction;
-const AuctionMessage = base44.entities.AuctionMessage;
+const Auction = plataforma.entities.Auction;
+const AuctionMessage = plataforma.entities.AuctionMessage;
 
 export default function useAuctionSync({
   auctionId,

@@ -1,5 +1,5 @@
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 export async function ensureSiteLicensee(params) {
-    return base44.functions.invoke('ensureSiteLicensee', params);
+    return plataforma.functions.invoke('ensureSiteLicensee', params);
 }

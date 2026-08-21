@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import FiltrosVitrine from '@/components/common/FiltrosVitrine';
 import { supabase } from '@/api/supabaseClient';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { lerSaldos } from '@/lib/carteiraSaldos';
 import { toast } from 'sonner';
 import { ShoppingBag, Loader2 } from 'lucide-react';
@@ -149,7 +149,7 @@ export default function ComprarEstoque({ embutido = false }) {
   const cotarFrete = async () => {
     if (String(cep).replace(/\D/g, '').length !== 8) return toast.error('Informe os 8 números do CEP.');
     setCotando(true);
-    const r = await base44.functions.invoke('cotarFrete', { cep, items: itens.map((i) => ({ product_id: i.id, quantity: i.qtd })) });
+    const r = await plataforma.functions.invoke('cotarFrete', { cep, items: itens.map((i) => ({ product_id: i.id, quantity: i.qtd })) });
     setCotando(false);
     if (r?.success && Array.isArray(r.opcoes) && r.opcoes.length) { setOpcoesFrete(r.opcoes); setFreteId(r.opcoes[0].id); }
     else { setOpcoesFrete([]); toast.error(r?.error || 'Não conseguimos calcular o frete agora.'); }
@@ -158,7 +158,7 @@ export default function ComprarEstoque({ embutido = false }) {
   const pagar = async (forma) => {
     if (!itens.length) return;
     setEnviando(true);
-    const r = await base44.functions.invoke('createSupplyOrder', {
+    const r = await plataforma.functions.invoke('createSupplyOrder', {
       actorId: user.id,
       items: itens.map((i) => ({ product_id: i.id, quantity: i.qtd })),
       payment_method: forma,

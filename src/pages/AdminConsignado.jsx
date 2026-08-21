@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
 import { toast } from 'sonner';
 import { Handshake, Loader2, Check, X, RefreshCw, CalendarClock } from 'lucide-react';
@@ -21,7 +21,7 @@ export default function AdminConsignado() {
 
   const carregar = async (u = user, status = filtro) => {
     setCarregando(true);
-    const r = await base44.functions.invoke('manageConsignacao', {
+    const r = await plataforma.functions.invoke('manageConsignacao', {
       actorId: u.id, action: 'list', escopo: 'todos', status: status || undefined,
     });
     if (r?.success) setLista(r.consignacoes || []);
@@ -31,7 +31,7 @@ export default function AdminConsignado() {
 
   const agir = async (c, action) => {
     setBusy(c.id);
-    const r = await base44.functions.invoke('manageConsignacao', { actorId: user.id, action, consignacao_id: c.id });
+    const r = await plataforma.functions.invoke('manageConsignacao', { actorId: user.id, action, consignacao_id: c.id });
     if (r?.success) {
       toast.success(action === 'aprovar' ? `Aprovado. Dívida gerada: ${money(r.divida_gerada)}` : 'Pedido recusado');
       carregar();

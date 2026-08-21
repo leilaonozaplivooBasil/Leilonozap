@@ -2,7 +2,7 @@
 // CONTRA O SUPABASE REAL, via service_role.
 //
 // POR QUE ESTA ROTA EXISTE (causa-raiz da falha reportada):
-// o front chama base44.functions.invoke('loteRecebidoWrite', ...), que no adapter faz
+// o front chama plataforma.functions.invoke('loteRecebidoWrite', ...), que no adapter faz
 // fetch('/api/functions/loteRecebidoWrite'). Existia só a Base44 Function (Deno), que o
 // Vercel/preview NÃO serve → o fetch caía em 404/405 e o adapter devolvia
 // { ok:false, error:'not_implemented' }, então a exclusão/arremate nunca chegava no banco.

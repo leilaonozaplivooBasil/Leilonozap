@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 const formatarData = (iso) => {
   if (!iso) return '-';
@@ -54,7 +54,7 @@ export default function ParceiroTermoAssinado({ registro, persistido = true }) {
     const solicitanteId = idDoUsuarioLogado();
     if (!assinaturaId || !solicitanteId) return false;
     try {
-      const resp = await base44.functions.invoke('getDocumentoAssinadoUrl', {
+      const resp = await plataforma.functions.invoke('getDocumentoAssinadoUrl', {
         assinatura_id: assinaturaId,
         solicitante_id: solicitanteId,
       });
@@ -77,7 +77,7 @@ export default function ParceiroTermoAssinado({ registro, persistido = true }) {
       // 1) via oficial do cofre — 2) reserva: gerar na hora
       if (await tentarViaArquivada()) return;
 
-      const resp = await base44.functions.invoke('generateNdaPDF', {
+      const resp = await plataforma.functions.invoke('generateNdaPDF', {
         format: 'base64',
         partner_name: registro?.nome,
         partner_cpf: registro?.cpf,

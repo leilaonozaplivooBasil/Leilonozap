@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gavel, Loader2 } from "lucide-react";
 import { fmtBR } from "@/lib/money";
 
-const AuctionMessage = base44.entities.AuctionMessage;
-const AppUser = base44.entities.AppUser;
+const AuctionMessage = plataforma.entities.AuctionMessage;
+const AppUser = plataforma.entities.AppUser;
 
 // 🔎 PONTO 85 — histórico completo (somente leitura) de todos os lances de um
 // leilão, com identidade do arrematante (nome, e-mail, telefone quando disponível).

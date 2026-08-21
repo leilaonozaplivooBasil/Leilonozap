@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Loader2, Receipt } from 'lucide-react';
 import { formatBRL, formatDataHora, statusDoAporte, STATUS_VISUAL } from '@/components/aportes/aporteUtils';
 
@@ -13,7 +13,7 @@ export default function ParceiroMeusAportes({ user }) {
   const carregar = useCallback(async () => {
     if (!user?.id) { setCarregando(false); return; }
     setCarregando(true);
-    const lista = await base44.entities.CatalogSale.filter(
+    const lista = await plataforma.entities.CatalogSale.filter(
       { kind: 'partner_plan', buyer_id: user.id },
       '-created_date',
       50

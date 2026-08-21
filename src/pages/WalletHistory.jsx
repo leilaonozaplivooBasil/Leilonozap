@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -45,7 +45,7 @@ export default function WalletHistory() {
     try {
       setIsLoading(true);
       // Usa backend function para contornar RLS
-      const result = await base44.functions.invoke('getDigitalWalletHistory', { user_id: userId });
+      const result = await plataforma.functions.invoke('getDigitalWalletHistory', { user_id: userId });
       const data = result?.data || result;
       setTransactions(data?.transactions || []);
       if (data?.wallet) {

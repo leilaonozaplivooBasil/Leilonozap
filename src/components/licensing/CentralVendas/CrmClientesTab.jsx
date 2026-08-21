@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -91,9 +91,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadAutoSources = async () => {
     try {
       const [users, sales, auctionsList] = await Promise.all([
-        base44.entities.AppUser.list('-created_date', 2000),
-        base44.entities.CatalogSale.list('-created_date', 2000),
-        base44.entities.Auction.list('-end_time', 2000),
+        plataforma.entities.AppUser.list('-created_date', 2000),
+        plataforma.entities.CatalogSale.list('-created_date', 2000),
+        plataforma.entities.Auction.list('-end_time', 2000),
       ]);
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
@@ -150,7 +150,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
-      const data = await base44.entities.Product.list('-created_date', 500);
+      const data = await plataforma.entities.Product.list('-created_date', 500);
       // Filtra produtos com estoque disponível (quantidade > 0)
       const inStock = data.filter(p => {
         const qty = p.quantity || 0;
@@ -181,10 +181,10 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   const loadSellers = async () => {
     try {
-      const activeSellers = await base44.entities.Seller.filter({ is_active: true });
+      const activeSellers = await plataforma.entities.Seller.filter({ is_active: true });
       setSellers(activeSellers);
 
-      const all = await base44.entities.Seller.list('-created_date', 100);
+      const all = await plataforma.entities.Seller.list('-created_date', 100);
       setAllSellers(all);
     } catch (error) {
       console.error('Erro ao carregar vendedores:', error);
@@ -194,7 +194,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadCustomers = async () => {
     try {
       setIsLoading(true);
-      const data = await base44.entities.Customer.list('-created_date', 500);
+      const data = await plataforma.entities.Customer.list('-created_date', 500);
       setCustomers(data || []);
       setFilteredCustomers(data || []);
     } catch (error) {
@@ -299,10 +299,10 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     e.preventDefault();
     try {
       if (editingCustomer) {
-        await base44.entities.Customer.update(editingCustomer.id, formData);
+        await plataforma.entities.Customer.update(editingCustomer.id, formData);
         alert('Cliente atualizado!');
       } else {
-        await base44.entities.Customer.create(formData);
+        await plataforma.entities.Customer.create(formData);
         alert('Cliente cadastrado!');
       }
 
@@ -336,7 +336,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const handleDelete = async (id) => {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
     try {
-      await base44.entities.Customer.delete(id);
+      await plataforma.entities.Customer.delete(id);
       alert('Cliente excluído!');
       await loadCustomers();
     } catch (error) {
@@ -366,7 +366,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   const handleToggleSellerStatus = async (seller) => {
     try {
-      await base44.entities.Seller.update(seller.id, {
+      await plataforma.entities.Seller.update(seller.id, {
         is_active: !seller.is_active
       });
       alert(`Vendedor ${!seller.is_active ? 'ativado' : 'desativado'}!`);
@@ -381,10 +381,10 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     e.preventDefault();
     try {
       if (editingSeller) {
-        await base44.entities.Seller.update(editingSeller.id, sellerFormData);
+        await plataforma.entities.Seller.update(editingSeller.id, sellerFormData);
         alert('Vendedor atualizado!');
       } else {
-        await base44.entities.Seller.create(sellerFormData);
+        await plataforma.entities.Seller.create(sellerFormData);
         alert('Vendedor cadastrado!');
       }
       setSellerFormData({
@@ -416,7 +416,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
     // Salva o vendedor no cliente
     try {
-      await base44.entities.Customer.update(customer.id, {
+      await plataforma.entities.Customer.update(customer.id, {
         assigned_seller: selectedSeller
       });
     } catch (error) {

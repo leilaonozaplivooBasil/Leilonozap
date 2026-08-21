@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { normalizarLoteRecebido } from '@/lib/loteParceiro';
 import ParceiroLoteLinha from './ParceiroLoteLinha';
 import ParceiroLoteDetalheModal from './ParceiroLoteDetalheModal';
@@ -16,7 +16,7 @@ export default function ParceiroLotesReais() {
     let ativo = true;
     (async () => {
       try {
-        const dados = await base44.entities.LoteRecebido.list('-created_date', 50);
+        const dados = await plataforma.entities.LoteRecebido.list('-created_date', 50);
         // Só os lotes grandes de leilão do Mercado Livre (LOTE 58, 51, 46-48, 09/04).
         // Lotes pequenos de estoque (maquiagem, relógio) não entram na vitrine.
         const melhores = (dados || [])

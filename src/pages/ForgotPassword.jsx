@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ export default function ForgotPassword() {
         setError('');
 
         try {
-            const response = await base44.functions.invoke('sendPasswordResetEmail', {
+            const response = await plataforma.functions.invoke('sendPasswordResetEmail', {
                 email: email.toLowerCase().trim()
             });
 

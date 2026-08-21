@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,9 +44,9 @@ export default function AmbienteDeTeste() {
     let mounted = true;
     (async () => {
       try {
-        const u = await base44.auth.me().catch(() => null);
+        const u = await plataforma.auth.me().catch(() => null);
         if (mounted) setMe(u);
-        const list = await base44.entities.AppUser.list();
+        const list = await plataforma.entities.AppUser.list();
         const sorted = (Array.isArray(list) ? list : []).sort((a, b) =>
           String(a.full_name || "").localeCompare(String(b.full_name || ""), "pt-BR", { sensitivity: "base" })
         );
@@ -114,7 +114,7 @@ export default function AmbienteDeTeste() {
     setIsSimulating(true);
     setError("");
     try {
-      const { data } = await base44.functions.invoke("previewCatalogCommission", {
+      const { data } = await plataforma.functions.invoke("previewCatalogCommission", {
         sale_value: Number(saleValue),
         anchor_name: anchorUser.full_name,
       });
@@ -130,7 +130,7 @@ export default function AmbienteDeTeste() {
     setIsSyncing(true);
     setSyncMessage("");
     try {
-      const { data } = await base44.functions.invoke("syncCommissionLogicProduction", {});
+      const { data } = await plataforma.functions.invoke("syncCommissionLogicProduction", {});
       setSyncMessage("✅ Lógica sincronizada com sucesso! O sistema de comissões agora está operacional.");
     } catch (e) {
       setSyncMessage("❌ Erro ao sincronizar: " + e.message);
@@ -161,20 +161,20 @@ export default function AmbienteDeTeste() {
       }
 
       // Atualiza ou cria carteira
-      let wallet = await base44.entities.Wallet.filter({ user_id: walletUserId });
+      let wallet = await plataforma.entities.Wallet.filter({ user_id: walletUserId });
       if (wallet && wallet.length > 0) {
-        await base44.entities.Wallet.update(wallet[0].id, {
+        await plataforma.entities.Wallet.update(wallet[0].id, {
           balance: (wallet[0].balance || 0) + amount
         });
       } else {
-        await base44.entities.Wallet.create({
+        await plataforma.entities.Wallet.create({
           user_id: walletUserId,
           balance: amount
         });
       }
 
       // Registra transação no histórico
-      await base44.entities.WalletTransaction.create({
+      await plataforma.entities.WalletTransaction.create({
         user_id: walletUserId,
         type: "deposit",
         direction: "credit",

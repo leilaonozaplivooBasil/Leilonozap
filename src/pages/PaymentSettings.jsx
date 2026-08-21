@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
-import { base44 } from "@/api/base44Client";
+import { plataforma } from "@/api/plataformaClient";
 import { adminDataProxy } from "@/functions/adminDataProxy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -144,7 +144,7 @@ export default function PaymentSettings() {
 
   const loadDepositPackages = async () => {
     try {
-      const packages = await base44.entities.DepositPackage.list("sort_order", 50);
+      const packages = await plataforma.entities.DepositPackage.list("sort_order", 50);
       setDepositPackages(packages);
     } catch (error) {
       console.error("Erro ao carregar pacotes:", error);
@@ -185,10 +185,10 @@ export default function PaymentSettings() {
   const handleSaveGateway = async () => {
     try {
       if (gatewaySettings) {
-        await base44.entities.PaymentSettings.update(gatewaySettings.id, gatewayForm);
+        await plataforma.entities.PaymentSettings.update(gatewaySettings.id, gatewayForm);
         toast.success("Configurações atualizadas!");
       } else {
-        await base44.entities.PaymentSettings.create(gatewayForm);
+        await plataforma.entities.PaymentSettings.create(gatewayForm);
         toast.success("Configurações salvas!");
       }
       await loadGatewaySettings();
@@ -212,11 +212,11 @@ export default function PaymentSettings() {
       };
       
       if (editingPackageId) {
-        await base44.entities.DepositPackage.update(editingPackageId, data);
+        await plataforma.entities.DepositPackage.update(editingPackageId, data);
         toast.success("Pacote atualizado!");
         setEditingPackageId(null);
       } else {
-        await base44.entities.DepositPackage.create(data);
+        await plataforma.entities.DepositPackage.create(data);
         toast.success("Pacote criado!");
       }
       
@@ -247,7 +247,7 @@ export default function PaymentSettings() {
     if (!confirm("Tem certeza que deseja excluir este pacote?")) return;
     
     try {
-      await base44.entities.DepositPackage.delete(pkgId);
+      await plataforma.entities.DepositPackage.delete(pkgId);
       toast.success("Pacote excluído!");
       await loadDepositPackages();
       
@@ -267,7 +267,7 @@ export default function PaymentSettings() {
 
   const togglePackageActive = async (pkgId, currentStatus) => {
     try {
-      await base44.entities.DepositPackage.update(pkgId, { is_active: !currentStatus });
+      await plataforma.entities.DepositPackage.update(pkgId, { is_active: !currentStatus });
       toast.success(currentStatus ? "Pacote desativado" : "Pacote ativado!");
       await loadDepositPackages();
     } catch (error) {

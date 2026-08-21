@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -203,7 +203,7 @@ export default function ProductManagement() {
 
       const updateData = { selling_price_retail: newPrice, price_catalog: newPrice, market_value: newMarket };
       if (item.source_url) updateData.source_url = item.source_url;
-      const _save = await base44.functions.invoke('saveProductPricing', { items: [{ id: item.id, selling_price_retail: newPrice, market_price: newMarket, source_url: item.source_url }] });
+      const _save = await plataforma.functions.invoke('saveProductPricing', { items: [{ id: item.id, selling_price_retail: newPrice, market_price: newMarket, source_url: item.source_url }] });
       if (!_save?.success) { alert('Não salvou o preço: ' + (_save?.error || 'falha')); return; }
 
       // ✅ Atualiza estado local IMEDIATAMENTE
@@ -232,7 +232,7 @@ export default function ProductManagement() {
         market_price: item.market_price,
         source_url: item.source_url,
       }));
-      const r = await base44.functions.invoke('saveProductPricing', { items });
+      const r = await plataforma.functions.invoke('saveProductPricing', { items });
       if (!r?.success) { alert('Erro ao salvar preços: ' + (r?.error || 'falha')); return; }
       alert(`${r.saved} produto(s) precificado(s)!`);
       setShowPricingPreview(false);
@@ -352,7 +352,7 @@ export default function ProductManagement() {
       // cada bloco continua exatamente de onde o anterior parou, aconteça o que
       // acontecer com as outras linhas.
       // `id` serve de âncora porque é único e o adapter já ordena por ele em toda
-      // consulta (Ponto 93 em src/api/base44Adapter.js). Ordenamos por created_date
+      // consulta (Ponto 93 em src/api/plataformaAdapter.js). Ordenamos por created_date
       // para exibir aqui, depois de ter o conjunto completo em mãos.
       const PAGE = 1000;
       const MAX_BLOCOS = 50; // trava de segurança contra laço infinito
@@ -361,7 +361,7 @@ export default function ProductManagement() {
       let ultimoId = '';
       for (let bloco_n = 0; bloco_n < MAX_BLOCOS; bloco_n++) {
         const filtro = ultimoId ? { id: { $gt: ultimoId } } : {};
-        const bloco = await base44.entities.Product.filter(filtro, 'id', PAGE);
+        const bloco = await plataforma.entities.Product.filter(filtro, 'id', PAGE);
         if (!Array.isArray(bloco) || bloco.length === 0) break;
         for (const prod of bloco) {
           if (!prod?.id || vistos.has(prod.id)) continue;
@@ -600,11 +600,11 @@ export default function ProductManagement() {
       };
 
       if (editingProduct) {
-        const _r = await base44.functions.invoke('productAdminAction', { action: 'update', actorId: currentUser?.id, productId: editingProduct.id, fields: dataToSave });
+        const _r = await plataforma.functions.invoke('productAdminAction', { action: 'update', actorId: currentUser?.id, productId: editingProduct.id, fields: dataToSave });
         if (!_r?.success) { alert('Não atualizou: ' + (_r?.error || 'falha')); return; }
         alert('Produto atualizado!');
       } else {
-        const _c = await base44.functions.invoke('productAdminAction', { action: 'create', actorId: currentUser?.id, fields: dataToSave });
+        const _c = await plataforma.functions.invoke('productAdminAction', { action: 'create', actorId: currentUser?.id, fields: dataToSave });
         if (!_c?.success) { alert('Não cadastrou: ' + (_c?.error || 'falha')); return; }
         alert('Produto cadastrado!');
       }
@@ -726,7 +726,7 @@ export default function ProductManagement() {
                     if (!confirm('Agrupar produtos duplicados?')) return;
                     try {
                       setIsLoading(true);
-                      const result = await base44.functions.invoke('groupDuplicateProducts', {});
+                      const result = await plataforma.functions.invoke('groupDuplicateProducts', {});
                       alert(`${result.data.grupos_processados} grupos | ${result.data.produtos_deletados} removidos`);
                       sessionStorage.removeItem('products_cache_v3');
                       sessionStorage.removeItem('products_cache_time_v3');
@@ -742,7 +742,7 @@ export default function ProductManagement() {
                     if (!confirm('Sincronizar estoque com a loja?\n\nIsso irá:\n• Ocultar da loja todos os produtos com estoque = 0\n• NÃO reativará produtos (use "Reativar esgotados" para isso)\n\nContinuar?')) return;
                     try {
                       setIsLoading(true);
-                      const r = await base44.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: false });
+                      const r = await plataforma.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: false });
                       // ⚠️ Confere o resultado ANTES de comemorar. O texto de sucesso era fixo:
                       // quando o servidor recusava (403, erro), a tela dizia "concluída" do
                       // mesmo jeito, só com um "?" no lugar do número — e ninguém percebia
@@ -763,7 +763,7 @@ export default function ProductManagement() {
                     if (!confirm('Reativar produtos com estoque > 0 que estão ocultos na loja?\n\nIsso irá reabrir a venda de todos os produtos que têm unidades disponíveis mas estão marcados como inativos.\n\nContinuar?')) return;
                     try {
                       setIsLoading(true);
-                      const r = await base44.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: true });
+                      const r = await plataforma.functions.invoke('reconciliarEstoqueLoja', { actorId: currentUser?.id, reativar: true });
                       if (!r?.ok) { alert('❌ Não foi possível reconciliar.\n\n' + (r?.error || 'O servidor não confirmou a operação.')); return; }
                       alert(`✅ Reconciliação completa!\n${r.resumo || ''}\n\nOcultados: ${r.ocultados ?? 0}\nReativados: ${r.reativados ?? 0}`);
                       sessionStorage.removeItem('products_cache_v3');
@@ -1622,7 +1622,7 @@ export default function ProductManagement() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm('Retirar este produto da Loja Virtual?')) return;
-                                { const _r = await base44.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { catalog_active: false } }); if (!_r?.success) { alert('Falha: ' + (_r?.error || '')); return; } }
+                                { const _r = await plataforma.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { catalog_active: false } }); if (!_r?.success) { alert('Falha: ' + (_r?.error || '')); return; } }
                                 alert('Produto retirado da Loja Virtual!');
                                 sessionStorage.removeItem('products_cache_v3');
                                 sessionStorage.removeItem('products_cache_time_v3');
@@ -1642,7 +1642,7 @@ export default function ProductManagement() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm('Limpar os leilões vinculados a este produto?')) return;
-                                { const _r = await base44.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { linked_auctions: [] } }); if (!_r?.success) { alert('Falha: ' + (_r?.error || '')); return; } }
+                                { const _r = await plataforma.functions.invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: editingProduct.id, fields: { linked_auctions: [] } }); if (!_r?.success) { alert('Falha: ' + (_r?.error || '')); return; } }
                                 alert('Produto desvinculado dos leilões!');
                                 sessionStorage.removeItem('products_cache_v3');
                                 sessionStorage.removeItem('products_cache_time_v3');
@@ -1814,11 +1814,11 @@ export default function ProductManagement() {
 
                       try {
                         if (operationType === 'zerar_estoque') {
-                          const _z = await base44.functions.invoke('productAdminAction', { action: 'zerarEstoque', actorId: currentUser?.id, productId: editingProduct.id, operator_name: operationData.operatorName, reason: operationData.reason });
+                          const _z = await plataforma.functions.invoke('productAdminAction', { action: 'zerarEstoque', actorId: currentUser?.id, productId: editingProduct.id, operator_name: operationData.operatorName, reason: operationData.reason });
                           if (!_z?.success) { alert('Não zerou: ' + (_z?.error || 'falha')); return; }
                           alert('Estoque zerado com sucesso!');
                         } else {
-                          const _d = await base44.functions.invoke('productAdminAction', { action: 'delete', actorId: currentUser?.id, productId: editingProduct.id });
+                          const _d = await plataforma.functions.invoke('productAdminAction', { action: 'delete', actorId: currentUser?.id, productId: editingProduct.id });
                           if (!_d?.success) { alert('Não excluiu: ' + (_d?.error || 'falha')); return; }
                           alert('Produto excluído com sucesso!');
                         }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
 // 🕒 REGISTRO DAS VENDAS AO VIVO — a venda que cai na frente do parceiro passa a
 // ter horário REAL, gravado no banco (GiroVendaAoVivo). Assim ela aparece com o
@@ -36,7 +36,7 @@ export default function useVendasAoVivo({ seed, dataLocal, diaCiclo }) {
     setRegistros(lerCache());
     (async () => {
       try {
-        const linhas = await base44.entities.GiroVendaAoVivo.filter({ seed, data_local: dataLocal });
+        const linhas = await plataforma.entities.GiroVendaAoVivo.filter({ seed, data_local: dataLocal });
         if (!vivo || !Array.isArray(linhas)) return;
         const doBanco = linhas.map((l) => ({ indice: Number(l.indice), hora: l.hora_real }));
         // une banco + cache mantendo SEMPRE o horário mais antigo por índice
@@ -73,7 +73,7 @@ export default function useVendasAoVivo({ seed, dataLocal, diaCiclo }) {
         return proximo;
       });
       if (jaTinha) return;
-      base44.entities.GiroVendaAoVivo.create({
+      plataforma.entities.GiroVendaAoVivo.create({
         seed,
         data_local: dataLocal,
         dia_ciclo: diaCiclo,

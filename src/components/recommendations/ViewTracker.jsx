@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 
-const AuctionView = base44.entities.AuctionView;
+const AuctionView = plataforma.entities.AuctionView;
 
 /**
  * Componente invisível que rastreia visualizações de leilões

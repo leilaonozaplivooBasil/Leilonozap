@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ export default function Carteira() {
   const [enviandoKyc, setEnviandoKyc] = useState(false);
 
   const load = async (u) => {
-    const r = await base44.functions.invoke('getMyWallet', { user_id: u.id });
+    const r = await plataforma.functions.invoke('getMyWallet', { user_id: u.id });
     if (r?.success) { setW(r); setCpf(r.cpf || ''); }
     setLoading(false);
   };
@@ -50,7 +50,7 @@ export default function Carteira() {
     if (!file) return;
     setUploading(field);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await plataforma.integrations.Core.UploadFile({ file });
       if (file_url) setDocs((d) => ({ ...d, [field]: file_url }));
       else toast.error('Falha no upload');
     } catch { toast.error('Falha no upload'); }
@@ -61,7 +61,7 @@ export default function Carteira() {
     if (onlyDigits(cpf).length !== 11) { toast.error('CPF inválido'); return; }
     if (!docs.doc_front || !docs.selfie) { toast.error('Envie o documento (frente) e a selfie'); return; }
     setEnviandoKyc(true);
-    const r = await base44.functions.invoke('submitKyc', { user_id: user.id, cpf: onlyDigits(cpf), pix_key: onlyDigits(cpf), pix_tipo: 'cpf', ...docs });
+    const r = await plataforma.functions.invoke('submitKyc', { user_id: user.id, cpf: onlyDigits(cpf), pix_key: onlyDigits(cpf), pix_tipo: 'cpf', ...docs });
     if (r?.success) { toast.success(r.message || 'Enviado!'); await load(user); } else toast.error(r?.error || 'Erro');
     setEnviandoKyc(false);
   };
@@ -70,7 +70,7 @@ export default function Carteira() {
     const v = Number(String(valor).replace(',', '.'));
     if (!v || v <= 0) { toast.error('Informe um valor válido'); return; }
     setSacando(true);
-    const r = await base44.functions.invoke('requestWithdrawal', { user_id: user.id, valor: v });
+    const r = await plataforma.functions.invoke('requestWithdrawal', { user_id: user.id, valor: v });
     if (r?.success) { toast.success(r.message || 'Saque solicitado!'); setValor(''); await load(user); }
     else toast.error(r?.error || 'Erro ao sacar');
     setSacando(false);
