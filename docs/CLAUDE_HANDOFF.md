@@ -419,3 +419,57 @@ Tudo isso segue congelado atrás da frente de frete, por ordem do dono.
 **OpenAI faz a auditoria final da frente de frete** sobre os commits
 `50bb0233`, `894fe738`, `3a289c47`, `767b3c44`, `fb2d62a2`, `b74accff`, antes de
 qualquer merge. Nada vai para produção antes disso.
+
+---
+
+## 10. FRENTE SEPARADA — GESTÃO DE PEDIDOS (21/08/2026)
+
+> Aberta pelo dono no mesmo dia, depois da frente de frete estar mergeada em
+> produção (PR #74 e #77). Sem relação com a auditoria da OpenAI acima —
+> registrada aqui porque o dono pediu explicitamente um resumo no handoff.
+> Histórico completo, com print e mensagem do dono em cada passo, no
+> `docs/DIARIO.md` (seções "Gestão de Pedidos" e "PONTO 11x").
+
+**Pedido original do dono:** revisar toda a tela de gestão de pedidos
+(`CatalogOrdersAdmin.jsx`) — renomear "Completar entrega" pra apontar pra
+retirar etiqueta, sincronizar com o Melhor Envio, comunicação de "etiqueta
+enviada", passo de etiqueta na Jornada da Entrega, e **corrigir o "Erro ao
+atualizar pedido"** que ele via ao vivo. Autorizado com "PODE", priorizando
+o bug de salvar primeiro.
+
+**O que foi mergeado e deployado em produção, nesta ordem, cada um achado ao
+vivo pelo dono testando o anterior:**
+
+| Ponto | O que quebrava | Correção | PR / commit em `main` |
+|---|---|---|---|
+| **115** | Rota genérica `entityWrite` deixava editar `status`/valores de venda por fora das regras de negócio (estorno, comissão) | Bloqueou escrita de `status` e afins em `catalog_sales` por essa rota | (mesma sessão, antes desta lista) |
+| **116** | O bloqueio do 115 quebrou o salvamento manual de status na tela — "Erro ao atualizar pedido" em toda venda | `handleSaveOrder` passou a chamar a rota dedicada `updateOrderStatus`; ela passou a aceitar os dois vocabulários (inglês/português) que o sistema usa pro mesmo status | PR #78 · `e4437e74` |
+| **117** | `status` (aba/contador) e `fulfillment_status` (Jornada da Entrega, o que o comprador vê) eram campos separados que não se falavam — marcar "Entregue" na Jornada não movia a aba | `updateOrderStatus` passou a gravar os dois juntos, com mapeamento nos dois sentidos | PR #79 · `d88b479c` |
+| **118** | A correção do 117 também removeu um atalho real (digitar rastreio promovia sozinho pra "Enviado") | Restaurada, mas só quando o rastreio **muda** de verdade | PR #80 · `5ef23387` |
+| **119** | A regra do 118 ainda dependia de inferir intenção pelo conteúdo de um campo de texto — confundiu de novo em outro caso real | **Fim da inferência.** Status salvo é sempre, literalmente, o que está selecionado no dropdown. Sem exceção | PR #81 · `e296d56a` |
+
+**Testes:** 204 → 219 (líquido, depois de remover os 6 testes do PONTO 118
+que testavam o comportamento que o PONTO 119 removeu). `npm run build` exit
+0 em todos os 4 PRs.
+
+**Risco de processo, registrado pra não repetir (e não é da OpenAI, é meu
+com o `git`):** este repo faz **squash merge** — cada PR vira commit novo em
+`main`, sem herança dos commits originais da branch. Duas vezes nesta
+frente, continuar commitando na branch sem resetar pro `main` atual gerou
+"conflito" falso no GitHub (305 arquivos, sem diferença real de conteúdo —
+confirmado por `git diff` vazio). Corrigido com `git checkout -B` na branch
+a partir de `origin/main` + `git cherry-pick` só dos commits ainda não
+mesclados + `push --force-with-lease` com o SHA remoto conferido antes.
+Virou rotina: resetar a branch logo depois de cada merge.
+
+**Status agora:** **MERGEADO e DEPLOYADO** (commit `e296d56a`, CI verde,
+Vercel confirmou "Deployment has completed"). **NÃO VALIDADO EM PRODUÇÃO** —
+o dono ainda vai testar de novo ao vivo depois deste último ajuste.
+
+**O que falta desta frente, ainda não iniciado:** renomear/reformular
+"Completar entrega" pra apontar pra retirar a etiqueta; investigar se o
+Melhor Envio oferece webhook (hoje **confirmado que não existe nada disso no
+código** — nenhum webhook, nenhuma consulta automática; falta checar a
+documentação oficial deles); comunicação de "etiqueta enviada"; passo de
+etiqueta na Jornada da Entrega; proposta de redesenho da tela inteira, a
+apresentar ao dono antes de qualquer implementação ampla.
