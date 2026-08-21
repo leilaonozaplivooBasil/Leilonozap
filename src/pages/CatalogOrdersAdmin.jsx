@@ -376,11 +376,33 @@ export default function CatalogOrdersAdmin() {
     }
   };
 
+  // 🔴 PONTO 117 (21/08/2026) — clicar aqui gravava SÓ fulfillment_status (o
+  // que o comprador vê em "Acompanhar Pedido"), um campo separado de `status`
+  // (o que filtra as abas/contadores desta tela). O dono marcou "Entregue"
+  // aqui e o pedido não saiu da aba "Pagos" — porque o status continuava
+  // 'paid'. Agora manda os dois pra rota dedicada, que grava juntos.
+  const FULFILLMENT_TO_STATUS = {
+    a_enviar: null, preparando: 'preparando',
+    enviado: 'shipped', saiu_entrega: 'saiu_entrega', entregue: 'entregue',
+  };
   const handleSetFulfillment = async (order, value) => {
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { actorId = null; }
+    if (!actorId) { toast.error('Sessão não identificada. Entre novamente.'); return; }
+
+    const statusAlvo = FULFILLMENT_TO_STATUS[value] || order.status;
     try {
-      await CatalogSale.update(order.id, { fulfillment_status: value });
-      setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, fulfillment_status: value } : prev));
-      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, fulfillment_status: value } : o)));
+      const r = await plataforma.functions.invoke('updateOrderStatus', {
+        actorId, saleId: order.id, status: statusAlvo, fulfillment: value,
+      });
+      const data = r?.data || r;
+      if (!data?.success) {
+        toast.error(data?.error || 'Erro ao atualizar etapa da entrega');
+        return;
+      }
+      const patch = { fulfillment_status: data.fulfillment_status || value, status: data.status || statusAlvo };
+      setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
       toast.success('Etapa da entrega atualizada!');
     } catch (error) {
       console.error('Erro ao atualizar etapa da entrega:', error);
@@ -494,15 +516,19 @@ export default function CatalogOrdersAdmin() {
 
     setIsUpdating(true);
     try {
-      const updateData = { status: newStatus };
-      if (trackingCode.trim()) {
-        updateData.tracking_code = trackingCode.trim();
-        if (newStatus === 'paid') updateData.status = 'shipped'; // auto-avança para enviado
-      }
+      // PONTO 117 (21/08/2026): AQUI TINHA uma regra que trocava o status de
+      // volta pra 'shipped' sozinha sempre que o campo de rastreio não estava
+      // vazio — mesmo quando o admin tinha acabado de escolher outra coisa
+      // (ex.: corrigir um pedido marcado errado de volta pra 'Pago'). O campo
+      // de rastreio quase sempre já vem preenchido (todo pedido nasce com um
+      // rastreio provisório), então a troca acontecia silenciosamente quase
+      // toda vez. Removida: o status salvo agora é sempre o que está selecionado.
       if (newStatus === 'shipped' && !trackingCode.trim() && !selectedOrder.tracking_code) {
         toast.error('Informe o código de rastreio para marcar como enviado');
         return;
       }
+      const updateData = { status: newStatus };
+      if (trackingCode.trim()) updateData.tracking_code = trackingCode.trim();
       const r = await plataforma.functions.invoke('updateOrderStatus', {
         actorId,
         saleId: selectedOrder.id,
@@ -514,6 +540,7 @@ export default function CatalogOrdersAdmin() {
         toast.error(data?.error || 'Erro ao atualizar pedido');
         return;
       }
+      if (data.fulfillment_status) updateData.fulfillment_status = data.fulfillment_status;
       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, ...updateData, status: data.status } : o));
       toast.success('Pedido atualizado com sucesso!');
       setSelectedOrder(null);

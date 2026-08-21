@@ -50,6 +50,30 @@ const ALLOWED = ['pending_payment', 'paid', 'preparando', 'shipped', 'saiu_entre
 // graça um pedido pago só porque o status dele estava gravado em inglês.
 const JA_PAGO = ['paid', 'entregue', 'enviado', 'confirmado', 'pago', 'concluido', 'preparando', 'saiu_entrega', 'shipped', 'delivered'];
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 117 (21/08/2026) — DOIS "STATUS" QUE NÃO SE FALAVAM
+// ══════════════════════════════════════════════════════════════════════════════
+// O dono clicou "Entregue" na Jornada da Entrega (grava só `fulfillment_status`,
+// o que o COMPRADOR vê em "Acompanhar Pedido") e o pedido não saiu da aba
+// "Pagos" — porque a aba/contador é filtrada por `status` (o campo desta rota),
+// um campo TOTALMENTE separado. Depois ele marcou "Pago" no status principal e
+// o pedido não saiu de "Enviados" — porque CatalogOrdersAdmin.jsx tinha uma
+// regra que RESSUSCITAVA `status: 'shipped'` sempre que o campo de rastreio não
+// estava vazio, mesmo quando o dono tinha acabado de escolher outra coisa.
+// "Toda atualização precisa colocar onde de fato está" — as duas telas viram
+// UMA fonte de verdade aqui:
+//   • Jornada da Entrega manda `fulfillment` + o `status` correspondente
+//     (calculado no cliente, ver FULFILLMENT_TO_STATUS em CatalogOrdersAdmin.jsx);
+//   • o status principal, quando não vem `fulfillment` explícito, deriva um
+//     fulfillment_status coerente por aqui — pra "Acompanhar Pedido" nunca
+//     ficar atrasado em relação ao que o admin realmente marcou.
+const ALLOWED_FULFILLMENT = ['a_enviar', 'preparando', 'enviado', 'saiu_entrega', 'entregue'];
+const STATUS_TO_FULFILLMENT = {
+  paid: 'preparando', preparando: 'preparando',
+  shipped: 'enviado', saiu_entrega: 'saiu_entrega',
+  delivered: 'entregue', entregue: 'entregue',
+};
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -72,7 +96,11 @@ export default async function handler(req, res) {
     const status = String(body?.status || '').trim();
     const carrier = body?.carrier != null ? String(body.carrier) : undefined;
     const tracking = body?.tracking != null ? String(body.tracking) : undefined;
+    const fulfillmentBruto = body?.fulfillment != null ? String(body.fulfillment).trim() : undefined;
     if (!actorId || !saleId || !ALLOWED.includes(status)) return res.status(400).json({ success: false, error: 'Parâmetros inválidos' });
+    if (fulfillmentBruto !== undefined && !ALLOWED_FULFILLMENT.includes(fulfillmentBruto)) {
+      return res.status(400).json({ success: false, error: 'Etapa de entrega inválida' });
+    }
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     // guard: ator admin/super_admin OU vendedor do pedido
@@ -129,17 +157,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, status: 'cancelado', estorno });
     }
 
+    // PONTO 117: se quem chamou não mandou a etapa explícita (Jornada da
+    // Entrega manda), deriva uma coerente a partir do status — "Acompanhar
+    // Pedido" (o que o comprador vê) nunca fica desatualizado em relação ao
+    // status que o admin realmente marcou.
+    const fulfillment = fulfillmentBruto !== undefined ? fulfillmentBruto : STATUS_TO_FULFILLMENT[status];
+
     const patch = { status };
-    // carrier/tracking só se as colunas existirem (best-effort, ignora erro de coluna)
+    // carrier/tracking/fulfillment só se as colunas existirem (best-effort, ignora erro de coluna)
     if (carrier !== undefined) patch.carrier = carrier;
     if (tracking !== undefined) patch.tracking_code = tracking;
+    if (fulfillment !== undefined) patch.fulfillment_status = fulfillment;
     let r = await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
     if (!r.ok) {
       // provavelmente coluna carrier/tracking_code não existe → tenta só o status
       r = await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status }) });
     }
     if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: t.slice(0, 200) }); }
-    return res.status(200).json({ success: true, status });
+    return res.status(200).json({ success: true, status, fulfillment_status: fulfillment });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro', details: String(e?.message || e) });
   }
