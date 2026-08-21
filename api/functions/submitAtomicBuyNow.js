@@ -119,6 +119,34 @@ async function reservar(userId, amount, auctionId = null) {
   return { success: false, error: 'corrida' };
 }
 
+// 👻 BLOQUEADOR 6 (auditoria OpenAI, 21/08/2026) — LANCE FANTASMA.
+// O Buy Now insere a linha em auction_messages ANTES de gravar o frete e de
+// encerrar o leilão. Se qualquer um desses dois passos falhar, a gente estorna o
+// dinheiro — mas a linha do lance CONTINUA LÁ. E ela é, por construção, o maior
+// lance do leilão (é o buy_now_price). Quando o cron `finalizeExpiredAuctions`
+// (ou o pg_cron `expire-auctions`) passar depois, ele lê aquela linha e declara
+// vencedor uma pessoa cujo dinheiro já foi devolvido: arremate sem lastro.
+// Por isso todo caminho de estorno agora apaga o lance também.
+// Best-effort na intenção, mas com sinal de volta: se não conseguir apagar, o
+// chamador precisa saber pra logar `precisa_intervencao` em vez de dizer que
+// está tudo certo.
+async function apagarLanceFantasma(bidId) {
+  if (!bidId) return true;
+  try {
+    const r = await sb(`auction_messages?id=eq.${enc(bidId)}`, {
+      method: 'DELETE', headers: { Prefer: 'return=minimal' },
+    });
+    if (!r.ok) {
+      console.error('[BUYNOW] LANCE FANTASMA nao apagado, HTTP', r.status, 'bid', bidId);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[BUYNOW] LANCE FANTASMA nao apagado:', e?.message, 'bid', bidId);
+    return false;
+  }
+}
+
 /** Devolve `amount` de saldo_reservado → saldo_disponivel, com CAS de verdade. Usado só no estorno de falha. */
 async function estornar(userId, amount, auctionId = null) {
   for (let tentativa = 0; tentativa < 5; tentativa++) {
@@ -232,6 +260,33 @@ export default async function handler(req, res) {
     const totalReservar = money(buyNowPrice + frete.valor);
 
     const reserva = await reservar(userId, totalReservar, auctionId);
+    // 🔴 BLOQUEADOR 1 (auditoria OpenAI, 21/08/2026) — ESTA CHECAGEM TINHA SUMIDO.
+    // Quando eu troquei a reserva de "só o produto" para "produto + frete", apaguei
+    // sem querer o `if (!reserva.success)` e a declaração de `winnerName`. O estrago
+    // não é cosmético: sem a checagem, saldo insuficiente seguia em frente e inseria
+    // lance sem lastro; e o `winnerName` inexistente estourava ReferenceError DEPOIS
+    // da reserva ter dado certo — caindo no catch de fora, que NÃO estorna. Dinheiro
+    // preso em saldo_reservado, arremate falhado, nenhuma devolução.
+    if (!reserva.success) {
+      if (reserva.error === 'saldo_insuficiente') {
+        return res.status(200).json({
+          success: false, saldo_insuficiente: true,
+          message: `Saldo insuficiente. O arremate é R$ ${buyNowPrice.toFixed(2).replace('.', ',')} + R$ ${frete.valor.toFixed(2).replace('.', ',')} de frete = R$ ${totalReservar.toFixed(2).replace('.', ',')}.`,
+          necessario: totalReservar, produto: buyNowPrice, frete: frete.valor,
+          disponivel: reserva.balance ?? null,
+        });
+      }
+      if (reserva.error === 'usuario_nao_encontrado') {
+        return res.status(401).json({ success: false, message: 'Não autorizado' });
+      }
+      return res.status(409).json({
+        success: false, conflict: true,
+        message: 'Seu saldo mudou durante o arremate. Tente novamente.',
+      });
+    }
+
+    const winnerName = user.nickname || user.full_name || 'Anônimo';
+
     const bidInsertResp = await sb('auction_messages', {
       method: 'POST', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({
@@ -267,6 +322,8 @@ export default async function handler(req, res) {
     if (!patchFrete.ok) {
       // Não dá pra seguir: o encerramento leria o frete errado e cobraria errado.
       await estornar(userId, totalReservar, auctionId);
+      const limpou = await apagarLanceFantasma(bidRow.id);
+      if (!limpou) console.error('[BUYNOW] precisa_intervencao: lance', bidRow.id, 'do leilao', auctionId, 'ficou sem lastro');
       return res.status(500).json({ success: false, message: 'Não foi possível registrar o frete do arremate. Nada foi cobrado.' });
     }
 
@@ -279,12 +336,18 @@ export default async function handler(req, res) {
       payload = await finalizeOneAuction(auction);
     } catch (e) {
       await estornar(userId, totalReservar, auctionId);
+      const limpou = await apagarLanceFantasma(bidRow.id);
+      if (!limpou) console.error('[BUYNOW] precisa_intervencao: lance', bidRow.id, 'do leilao', auctionId, 'ficou sem lastro');
       return res.status(500).json({ success: false, message: 'Erro ao encerrar o leilão: ' + String(e?.message || e) });
     }
 
     if (payload?.result?.winner_id !== userId) {
       // Perdeu a corrida de encerramento (outro processo fechou primeiro) — devolve o dinheiro.
+      // Aqui o leilão JÁ ENCERROU com outro vencedor, então apagar o lance é
+      // higiene de histórico e proteção contra reprocessamento, não correção de
+      // vencedor.
       await estornar(userId, totalReservar, auctionId);
+      await apagarLanceFantasma(bidRow.id);
       return res.status(409).json({
         success: false, conflict: true,
         message: 'Outra pessoa arrematou este leilão antes. Seu saldo foi devolvido.',
