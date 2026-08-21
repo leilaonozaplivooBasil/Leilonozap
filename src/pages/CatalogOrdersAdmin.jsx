@@ -153,7 +153,9 @@ const needsLabel = (order) => {
   // pendente" com o botão, e o clique respondia "é retirada no balcão". Os dois
   // estavam certos pela própria regra, e o operador é que ficava sem entender.
   // Agora as duas usam o mesmo critério: só é etiquetável quem é 'delivery'.
-  if ((raw?.delivery_type || '') !== 'delivery') return false;
+  // 'delivery_pendente' = frete pago mas sem endereco: a etiqueta continua
+  // pendente de propósito, e a tela mostra o aviso para a logística agir.
+  if (!['delivery', 'delivery_pendente'].includes(raw?.delivery_type || '')) return false;
   return !raw?.melhor_envio?.order_id;
 };
 

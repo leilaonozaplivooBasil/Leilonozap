@@ -57,7 +57,7 @@ const fromCents = (c) => c / 100;
 // o id/empresa/serviço da etiqueta. Se ela falhar, o pedido nasce com o valor
 // certo e sem id — vira etiqueta pendente, que é um problema de logística, não
 // de dinheiro.
-async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auctionId }) {
+async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auction }) {
   const cep = String(user?.address_zip_code || '').replace(/\D/g, '');
   const endereco = {
     street: user?.address_street || null,
@@ -70,10 +70,17 @@ async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auc
   };
   const temEndereco = !!(endereco.street && cep.length === 8);
 
+  // ⚠️ F9 — NUNCA transformar entrega paga em retirada.
+  // A primeira versão marcava 'pickup' quando faltava endereço, MESMO com frete
+  // cobrado. Isso é apagar um problema com outro: o cliente pagou frete, então
+  // aquilo é entrega. Sem endereço vira 'delivery_pendente' — pendência
+  // operacional visível, que a logística resolve pedindo o endereço.
+  const situacao = freteAmount > 0
+    ? (temEndereco ? 'delivery' : 'delivery_pendente')
+    : (temEndereco ? 'delivery' : 'pickup');
+
   const raw = {
-    // sem endereço utilizável não dá pra despachar: marca retirada e a logística
-    // trata como balcão, em vez de ficar pendurado em "etiqueta pendente".
-    delivery_type: temEndereco && freteAmount > 0 ? 'delivery' : 'pickup',
+    delivery_type: situacao,
     address: temEndereco ? endereco : null,
     amount_charged: amount,
     produto_amount: produtoAmount,
@@ -81,24 +88,34 @@ async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auc
     frete: { id: null, valor: freteAmount, empresa: null, servico: null, prazo: null, cep: cep || null },
   };
 
+  if (situacao === 'delivery_pendente') {
+    raw.pendencia = 'Frete cobrado mas o comprador está sem endereço completo no cadastro. Peça o endereço antes de despachar.';
+  }
   if (!(temEndereco && freteAmount > 0)) return raw;
 
-  // recotação só para descobrir o serviço — nunca para mudar o valor
+  // recotação só para descobrir o serviço — nunca para mudar o valor.
+  // ⚠️ F8 — o produto é `auction.product_id`. A primeira versão passava o id do
+  // LEILÃO, que não existe em `public.products`: `cotarOpcoes` não achava nada e
+  // caía silenciosamente na caixa mínima dos Correios (11×2×16 cm, 0,3 kg). Ou
+  // seja, escolhia transportadora e preço por um pacote fictício. Achado da
+  // auditoria independente da OpenAI, e o erro era meu.
   try {
-    const { cotarOpcoes } = await import('../_lib/frete.js');
-    const r = await cotarOpcoes({ cep, items: [{ id: auctionId, quantidade: 1 }] });
+    const { cotarFreteDoLeilao } = await import('../_lib/freteLeilao.js');
+    const r = await cotarFreteDoLeilao({ auctionId: auction.id, userId: user.id, auction, cep });
     if (r?.ok && Array.isArray(r.opcoes) && r.opcoes.length) {
-      // pega a opção de preço mais próximo do que foi efetivamente reservado
       const escolhida = r.opcoes.reduce((melhor, o) =>
         Math.abs(o.preco - freteAmount) < Math.abs(melhor.preco - freteAmount) ? o : melhor, r.opcoes[0]);
-      raw.frete.id = escolhida.id;
+      raw.frete.id = String(escolhida.id);
       raw.frete.empresa = escolhida.empresa || null;
       raw.frete.servico = escolhida.nome || null;
       raw.frete.prazo = escolhida.prazo ?? null;
       raw.frete.valor_recotado = escolhida.preco;   // trilha: dá pra comparar depois
+    } else if (r?.motivo) {
+      raw.frete.recotacao_falhou = r.motivo;        // a logística vê por que não saiu etiqueta
     }
   } catch (e) {
     console.warn('[SETTLE] recotacao de frete falhou (pedido segue com o valor reservado):', e?.message);
+    raw.frete.recotacao_falhou = String(e?.message || e).slice(0, 120);
   }
   return raw;
 }
@@ -245,7 +262,7 @@ export default async function handler(req, res) {
     }
 
     // venda já paga (mesma rota do arremate via PIX, sem gateway)
-    const rawArremate = await montarRawArremate({ user, freteAmount, amount, produtoAmount, auctionId });
+    const rawArremate = await montarRawArremate({ user: { ...user, id: userId }, freteAmount, amount, produtoAmount, auction });
     const saleId = oid();
     const sale = {
       id: saleId, base44_id: saleId, kind: 'arremate',
