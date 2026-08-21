@@ -7,6 +7,7 @@ import { fulfillStoreOrder } from './storeFulfill.js';
 import { carregarTabelasBalcao, buscarUsuario, pagarComissaoBalcao } from './pdvBalcao.js';
 // 📦 mesma regra de baixa da loja virtual: estoque próprio primeiro, central depois
 import { baixarItensDaVenda } from './baixaEstoque.js';
+import { consumirItensDaVenda } from './estoqueReserva.js';
 import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
 // 🤝 consignado: a dívida da peça morre nesta venda (aqui o cliente pagou PIX,
 // então o custo fica retido na plataforma — nada é debitado do saldo dele)
@@ -34,7 +35,9 @@ export async function settlePdvPixSale(sale) {
 
   // 📦 baixa pela REGRA ÚNICA (api/_lib/baixaEstoque.js): o estoque próprio do
   // balcão (comprado → consignado) sai primeiro; o que faltar sai do central.
-  const { consumos } = await baixarItensDaVenda({ ownerId, items });
+  const { consumos } = await baixarItensDaVenda({ ownerId, items, saleId: sale.id });
+  // 🔴 PONTO 126 (21/08/2026): PIX/cartão do PDV confirmou — solta o "hold" da reserva.
+  await consumirItensDaVenda({ saleId: sale.id }).catch(() => {});
 
   // 💰 comissão pela ÁRVORE OFICIAL (mesmo motor da loja) — estoque já baixado acima
   let commission = 0;

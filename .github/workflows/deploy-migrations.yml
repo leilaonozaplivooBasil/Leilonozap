@@ -1,0 +1,61 @@
+# Deploy de migração do Supabase — Leilão NoZap
+#
+# O QUE ELA FAZ: quando um arquivo novo entra em supabase/migrations/ e chega
+# no `main` (só depois de passar por Pull Request — main tem ruleset ativo
+# desde 21/08/2026, exigindo PR pra qualquer mudança), aplica essa migração
+# no banco de PRODUÇÃO automaticamente, com `supabase db push`.
+#
+# POR QUE ISSO NÃO EXISTIA ANTES: até 21/08/2026 esse passo era manual — colar
+# o SQL no SQL Editor do Supabase depois de cada merge. Isso já causou uma
+# regressão real (RPC e CHECK do plano de estoque ficaram ausentes em
+# produção por ~20 minutos, sem ninguém perceber, até a conferência manual
+# achar). Guardar a credencial de produção aqui só foi liberado DEPOIS de
+# proteger o `main` (ver .github/workflows/ci.yml, comentário do topo) —
+# sem essa proteção, qualquer push direto no main poderia alterar este
+# workflow pra usar a credencial pra qualquer coisa.
+#
+# O QUE ELA NÃO FAZ:
+#   • não roda em Pull Request — só depois de já estar no main;
+#   • não toca em nada além de supabase/migrations/** (path filtro abaixo);
+#   • não decide o que a migração faz — isso já foi revisado no PR.
+#
+# SEGREDOS NECESSÁRIOS (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN  → gerado em supabase.com/dashboard/account/tokens
+#   SUPABASE_DB_PASSWORD   → Project Settings → Database → Database Password
+#                            (a senha do banco, não o access token)
+#   SUPABASE_PROJECT_REF   → gezvviyegtxytnwjkrjv (id do projeto, já no
+#                            final da URL do dashboard) — pode ficar fixo
+#                            abaixo em vez de secret, não é sensível sozinho.
+name: Deploy migração Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+
+permissions:
+  contents: read
+
+jobs:
+  aplicar-migracao:
+    name: supabase db push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: link no projeto de produção
+        run: supabase link --project-ref gezvviyegtxytnwjkrjv
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: aplicar migrações pendentes
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}

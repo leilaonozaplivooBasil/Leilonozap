@@ -54,13 +54,16 @@ export default async function handler(req, res) {
     });
 
     const [first, ...rest] = String(buyer_name || 'Cliente').trim().split(/\s+/);
+    // 🔴 PONTO 124 (21/08/2026): subiu pra antes do ramo de cartão — antes só existia depois
+    // dele (linha do PIX), e o cartão mandava payer sem CPF pro Mercado Pago.
+    const cleanCpf = String(buyer_cpf || '').replace(/\D/g, '');
 
     // 💳 Cartão parcelado: Mercado Pago Checkout Pro (mesmo padrão de createAdesaoPayment.js) —
     // a própria página hospedada da MP mostra as parcelas e calcula os juros por bandeira/emissor.
     if (useCard) {
       const prefBody = {
         items: [{ title: 'Adesão Vendedor - Primeira Compra', quantity: 1, unit_price: amount, currency_id: 'BRL' }],
-        payer: { email: buyer_email || 'sem-email@leilaonozap.net', name: first || 'Cliente', surname: rest.join(' ') || 'NoZap' },
+        payer: { email: buyer_email || 'sem-email@leilaonozap.net', name: first || 'Cliente', surname: rest.join(' ') || 'NoZap', ...(cleanCpf ? { identification: { type: 'CPF', number: cleanCpf } } : {}) },
         external_reference: saleId,
         notification_url: `${BASE_URL}/api/functions/mpWebhook`,
         back_urls: { success: `${BASE_URL}/VendedorCheckout`, failure: `${BASE_URL}/VendedorCheckout`, pending: `${BASE_URL}/VendedorCheckout` },
@@ -83,7 +86,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount, url: pref.init_point });
     }
 
-    const cleanCpf = String(buyer_cpf || '').replace(/\D/g, '');
     const mp = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': saleId },

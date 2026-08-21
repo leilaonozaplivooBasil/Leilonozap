@@ -5,6 +5,7 @@
 import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
+import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -99,6 +100,22 @@ export default async function handler(req, res) {
     if (totalCobrado < 1) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 1,00' });
 
     const saleId = oid();
+
+    // 🔴 PONTO 126 (21/08/2026) — RESERVA COM VALIDADE (Fase 2). Igual createMPPix.js:
+    // até aqui não existia checagem de estoque nenhuma nesta rota. Reserva antes de
+    // criar a venda e o checkout — se não couber, recusa aqui, sem gerar nada no MP.
+    const reserva = await reservarItensDaVenda({
+      ownerId: null,
+      saleId,
+      items: lines.map((l) => ({ product_id: l.p.id, qty: l.q, title: l.p.description })),
+    });
+    if (!reserva.ok) {
+      return res.status(200).json({
+        success: false,
+        error: `Estoque insuficiente de "${(reserva.titulo || '').slice(0, 60)}" — outra pessoa já está pagando essa peça agora.`,
+      });
+    }
+
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
@@ -115,9 +132,22 @@ export default async function handler(req, res) {
     if (passaporte_desconto > 0) mpItems.push({ title: 'Desconto Passaporte do Leilão', quantity: 1, unit_price: -passaporte_desconto, currency_id: 'BRL' });
     if (taxaCartao > 0) mpItems.push({ title: 'Taxa de pagamento no cartão', quantity: 1, unit_price: taxaCartao, currency_id: 'BRL' });
 
+    // 🔴 PONTO 124 (21/08/2026) — CARTÃO SEM CPF NO PAYER, PIX SEMPRE MANDOU.
+    // O CPF é coletado e validado na tela (Cart.jsx) e chega até aqui em `buyer.cpf`,
+    // mas nunca era repassado ao Mercado Pago nesta preferência — createMPPix.js
+    // (mesma estrutura, "mesmo motor do PIX" segundo o cabeçalho deste arquivo) sempre
+    // mandou `payer.identification`, só o cartão ficou sem. Pagamento de cartão sem
+    // identificação do comprador é justamente o que a antifraude do Mercado Pago mais
+    // pesa pra recusar no Brasil — explica a recusa em cartões de pessoas diferentes,
+    // não é problema do cartão de ninguém.
     const prefBody = {
       items: mpItems,
-      payer: { email: buyer.email, name: first || 'Cliente', surname: rest.join(' ') || 'NoZap' },
+      payer: {
+        email: buyer.email,
+        name: first || 'Cliente',
+        surname: rest.join(' ') || 'NoZap',
+        ...(buyer.cpf ? { identification: { type: 'CPF', number: String(buyer.cpf).replace(/\D/g, '') } } : {}),
+      },
       external_reference: saleId,
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
       back_urls: {
@@ -136,7 +166,12 @@ export default async function handler(req, res) {
       method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(prefBody),
     });
     const pref = await r.json();
-    if (!r.ok || !pref?.id) return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 300) });
+    if (!r.ok || !pref?.id) {
+      // 🔴 PONTO 126: reservou, mas o checkout não nasceu — devolve, senão a peça fica
+      // presa 30 minutos por um link que nunca vai existir.
+      await devolverItem({ saleId }).catch(() => {});
+      return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 300) });
+    }
 
     await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
     return res.status(200).json({ success: true, sale_id: saleId, amount: totalCobrado, amount_products: totalProdutos, shipping: frete.valor, taxa_cartao: taxaCartao, url: pref.init_point, preference_id: pref.id, passaporte_desconto });

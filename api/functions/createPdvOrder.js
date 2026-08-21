@@ -7,6 +7,7 @@ import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { carregarTabelasBalcao, buscarUsuario, comissaoDaLicenca, pagarComissaoBalcao } from '../_lib/pdvBalcao.js';
 // 📦 regra única de baixa + repasse do estoque próprio (comprado/consignado)
 import { baixarItensDaVenda } from '../_lib/baixaEstoque.js';
+import { reservarItensDaVenda, devolverItem, consumirItensDaVenda } from '../_lib/estoqueReserva.js';
 import { liberarRepasseEstoqueProprio } from '../_lib/repasseEstoqueProprio.js';
 // 🤝 consignado: a dívida da peça MORRE nesta venda. Se o cliente pagou em
 // dinheiro, o custo sai do saldo dele — e sem saldo a venda não fecha.
@@ -107,6 +108,11 @@ export default async function handler(req, res) {
         total += unit * qty; totalQty += qty;
         lines.push({ p, qty, unit, si });
       } else {
+        // 🔴 PONTO 125 (21/08/2026): faltava aqui a MESMA conferência que o ramo do dono
+        // de loja já tem duas linhas acima. Vendedor da rede vendendo do estoque central
+        // vendia qualquer quantidade de qualquer coisa, inclusive item zerado — a baixa
+        // (baixaEstoque.js) descartava calada o que não existia. Agora recusa antes de vender.
+        if ((Number(p.quantity) || 0) < qty) return res.status(200).json({ success: false, error: `Estoque insuficiente de "${(p.description || '').slice(0, 40)}" (tem ${Number(p.quantity) || 0}).` });
         const unit = it.price != null && it.price !== '' ? round2(it.price) : round2(p.price_catalog || p.selling_price_retail || 0);
         total += unit * qty; totalQty += qty;
         sellerId = sellerId || p.distribuidor_id || null;
@@ -184,6 +190,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: previsaoConsignado.erro, consignado: true, custo_consignado: previsaoConsignado.custo, saldo: previsaoConsignado.saldo });
     }
 
+    // 🔴 PONTO 126 (21/08/2026) — RESERVA COM VALIDADE (Fase 2). O PDV vende do MESMO
+    // estoque (próprio ou central) que a loja virtual — sem reserva aqui, um balcão e
+    // um cliente online podiam fechar a última peça ao mesmo tempo. isStoreOwner decide
+    // o mesmo pool que os dois ramos acima (linhas 98 e 114) já checam manualmente.
+    const reserva = await reservarItensDaVenda({
+      ownerId: isStoreOwner ? actorId : null,
+      saleId,
+      items: itemsJson,
+    });
+    if (!reserva.ok) {
+      return res.status(200).json({ success: false, error: `Estoque insuficiente de "${(reserva.titulo || '').slice(0, 60)}" — outra pessoa já está pagando essa peça agora.` });
+    }
+
     // 💳 PIX REAL (Mercado Pago) — o pedido nasce 'pending_payment' e NÃO baixa estoque
     // nem paga comissão. Isso só acontece quando o dinheiro CAI de verdade:
     // mpWebhook → settlePdvPixSale (api/_lib/pdvSettle.js). Acaba o "paguei sem pagar".
@@ -227,6 +246,7 @@ export default async function handler(req, res) {
       if (!mp.ok || !pay?.id) {
         // não deixa pedido órfão: cancela o pending recém-criado
         await sb(`catalog_sales?id=eq.${saleId}&status=eq.pending_payment`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'canceled' }) });
+        await devolverItem({ saleId }).catch(() => {});
         return res.status(200).json({ success: false, error: 'Falha ao gerar PIX', details: (pay?.message || JSON.stringify(pay)).slice(0, 300) });
       }
       const td = pay.point_of_interaction?.transaction_data || {};
@@ -283,6 +303,7 @@ export default async function handler(req, res) {
       const pref = await rCartao.json();
       if (!rCartao.ok || !pref?.id) {
         await sb(`catalog_sales?id=eq.${saleId}&status=eq.pending_payment`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'canceled' }) });
+        await devolverItem({ saleId }).catch(() => {});
         return res.status(200).json({ success: false, error: 'Falha ao gerar link de cartão', details: (pref?.message || JSON.stringify(pref)).slice(0, 300) });
       }
       await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
@@ -341,6 +362,7 @@ export default async function handler(req, res) {
           // devolve na MESMA carteira que foi debitada — nada de dinheiro trocando de bolso
           await sb(`app_users?id=eq.${encodeURIComponent(walletOwnerId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ [colSaldo]: round2(saldoRestante + total) }) });
         }
+        await devolverItem({ saleId }).catch(() => {});
         const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao gravar venda', details: t.slice(0, 200) });
       }
     }
@@ -348,7 +370,9 @@ export default async function handler(req, res) {
     // 📦 baixa pela REGRA ÚNICA (api/_lib/baixaEstoque.js): o estoque PRÓPRIO do balcão
     // (comprado → consignado) sai primeiro; o que faltar sai do estoque central.
     const donoEstoque = isStoreOwner ? actorId : sellerId;
-    const { consumos } = await baixarItensDaVenda({ ownerId: donoEstoque, items: itemsJson });
+    const { consumos } = await baixarItensDaVenda({ ownerId: donoEstoque, items: itemsJson, saleId });
+    // dinheiro/saldo/operação baixam na hora (síncrono) — solta o "hold" da reserva já.
+    await consumirItensDaVenda({ saleId }).catch(() => {});
 
     // 🤝 peça consignada vendida: a dívida dela morre AGORA (débito no saldo, já
     // conferido pela trava acima — nunca deixa saldo negativo nem dívida sobrando)

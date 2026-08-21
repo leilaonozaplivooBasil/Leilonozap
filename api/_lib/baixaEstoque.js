@@ -81,36 +81,58 @@ export async function baixarItemPriorizandoDono({ ownerId, productId, qty, unit 
   return { consumos, restante };
 }
 
-/** Baixa do estoque central (products) — comportamento de sempre. */
+/**
+ * Baixa do estoque central (products) — agora ATÔMICA no banco (PONTO 125,
+ * 21/08/2026): a RPC baixar_estoque_central recusa (zero linhas) quando não
+ * há peça suficiente, em vez de gravar 0 e devolver sucesso. Antes essa
+ * função nunca falhava — o `Math.max(0, ...)` zerava calado e as peças
+ * vendidas sem existir simplesmente somiam. Agora ela devolve o motivo.
+ * @returns {{ ok: boolean, motivo?: string }}
+ */
 export async function baixarCentral({ productId, qty, unit = 0 }) {
-  if (!productId || qty <= 0) return false;
-  const now = new Date().toISOString();
-  const pArr = await (await sb(`products?select=id,quantity,quantity_sold,sold_amount&id=eq.${encodeURIComponent(productId)}&limit=1`)).json();
-  const p = Array.isArray(pArr) ? pArr[0] : null;
-  if (!p || p.quantity === null || p.quantity === undefined) return false;
-  const novaQtd = Math.max(0, (Number(p.quantity) || 0) - qty);
-  await sb(`products?id=eq.${encodeURIComponent(productId)}`, {
-    method: 'PATCH', headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({
-      quantity: novaQtd,
-      quantity_sold: (Number(p.quantity_sold) || 0) + qty,
-      sold_amount: round2((Number(p.sold_amount) || 0) + (Number(unit) || 0) * qty),
-      status: novaQtd > 0 ? 'ESTOQUE' : 'VENDIDO',
-      updated_date: now,
-      // quando esgota, retira da vitrine automaticamente (mesmo comportamento do store_inventory)
-      ...(novaQtd === 0 ? { catalog_active: false } : {}),
-    }),
+  if (!productId || qty <= 0) return { ok: false, motivo: 'parametros_invalidos' };
+  const r = await sb('rpc/baixar_estoque_central', {
+    method: 'POST',
+    body: JSON.stringify({ _product_id: String(productId), _qty: qty, _unit: Number(unit) || 0 }),
   });
-  return true;
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j?.success) return { ok: false, motivo: j?.error || `http_${r.status}` };
+  return { ok: true };
+}
+
+// 🔴 PONTO 125 — registro append-only de venda que não tinha peça pra dar baixa
+// (nem no estoque próprio do dono, nem no central). Antes isso NUNCA aparecia
+// em lugar nenhum; a venda seguia como se tivesse baixado normal.
+async function logFaltaEstoque(saleId, faltas) {
+  if (!saleId || !faltas.length) return;
+  try {
+    await sb('system_logs', {
+      method: 'POST',
+      body: JSON.stringify({
+        entity_id: saleId,
+        component_name: 'baixaEstoque',
+        step: 'BAIXA_ESTOQUE',
+        status: 'error',
+        message: `Venda ${saleId} sem estoque suficiente para: ` +
+          faltas.map((f) => `${f.title || f.product_id} (faltaram ${f.qty_faltante})`).join(', '),
+        created_at: new Date().toISOString(),
+      }),
+    });
+  } catch (_) { /* log é rede de segurança; nunca pode derrubar a venda já paga */ }
 }
 
 /**
  * Baixa uma lista de itens de uma venda inteira.
  * @param items [{ product_id, qty, unit, title }]
- * @returns { consumos } — só o que saiu do estoque PRÓPRIO (gera repasse)
+ * @param saleId — id da venda, só para o registro de falta (opcional, mas sem
+ *   ele uma falta de estoque não fica rastreada a nenhuma venda específica).
+ * @returns { consumos, faltas } — consumos = o que saiu do estoque PRÓPRIO
+ *   (gera repasse); faltas = itens que não tinham peça em NENHUM lugar —
+ *   antes isso não existia, a venda seguia calada com o estoque no negativo.
  */
-export async function baixarItensDaVenda({ ownerId, items }) {
+export async function baixarItensDaVenda({ ownerId, items, saleId = null }) {
   const consumos = [];
+  const faltas = [];
   for (const it of items || []) {
     const productId = String(it.product_id || '');
     const qty = Math.max(1, Number(it.qty) || Number(it.quantity) || 1);
@@ -118,7 +140,11 @@ export async function baixarItensDaVenda({ ownerId, items }) {
     if (!productId) continue;
     const r = await baixarItemPriorizandoDono({ ownerId, productId, qty, unit });
     for (const c of r.consumos) consumos.push({ ...c, title: it.title || null });
-    if (r.restante > 0) await baixarCentral({ productId, qty: r.restante, unit });
+    if (r.restante > 0) {
+      const central = await baixarCentral({ productId, qty: r.restante, unit });
+      if (!central.ok) faltas.push({ product_id: productId, title: it.title || null, qty_faltante: r.restante, motivo: central.motivo });
+    }
   }
-  return { consumos };
+  await logFaltaEstoque(saleId, faltas);
+  return { consumos, faltas };
 }

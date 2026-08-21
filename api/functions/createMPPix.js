@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
+import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -129,6 +130,23 @@ export default async function handler(req, res) {
 
     // cria a venda pendente (com entrega/endereço)
     const saleId = oid();
+
+    // 🔴 PONTO 126 (21/08/2026) — RESERVA COM VALIDADE (Fase 2). Até aqui não existia
+    // NENHUMA checagem de estoque nesta rota — dois compradores da última peça geravam
+    // PIX os dois. Reserva antes de criar a venda/cobrança; se não couber, recusa aqui,
+    // sem gravar venda nem gerar cobrança nenhuma no Mercado Pago.
+    const reserva = await reservarItensDaVenda({
+      ownerId: null, // carrinho principal vende do estoque central
+      saleId,
+      items: lines.map((l) => ({ product_id: l.p.id, qty: l.q, title: l.p.description })),
+    });
+    if (!reserva.ok) {
+      return res.status(200).json({
+        success: false,
+        error: `Estoque insuficiente de "${(reserva.titulo || '').slice(0, 60)}" — outra pessoa já está pagando essa peça agora.`,
+      });
+    }
+
     await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
@@ -174,6 +192,9 @@ export default async function handler(req, res) {
     });
     const pay = await mp.json();
     if (!mp.ok || !pay?.id) {
+      // 🔴 PONTO 126: reservou a peça, mas a cobrança não nasceu — devolve, senão fica
+      // "presa" 30 minutos sem PIX nenhum de verdade pra pagar.
+      await devolverItem({ saleId }).catch(() => {});
       return res.status(200).json({ success: false, error: 'Falha ao gerar PIX', details: (pay?.message || JSON.stringify(pay)).slice(0, 300) });
     }
     const td = pay.point_of_interaction?.transaction_data || {};

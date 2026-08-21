@@ -980,6 +980,18 @@ export default function CreateAuction() {
         }
 
         if (formData.product_id) {
+          // 🔴 PONTO 125 (21/08/2026): antes publicava sem olhar a quantidade — um
+          // produto já zerado voltava pra vitrine com um clique. Só a baixa de
+          // estoque desligava a vitrine, e só quando ela mesma zerava a peça.
+          // Confere de novo aqui, na hora de publicar (o form não guarda a
+          // quantidade — busca fresca pra não confiar em dado que pode estar velho).
+          const [prodAtual] = await Product.filter({ id: formData.product_id });
+          if (!prodAtual || Number(prodAtual.quantity) <= 0) {
+            toast.error('❌ Este produto está com estoque zerado — não é possível publicar na Loja Virtual sem peça disponível.');
+            setIsSubmittingBid(false);
+            setShowConfirmModal(false);
+            return;
+          }
           // Produto já existe no estoque → atualiza com catalog_active
           await Product.update(formData.product_id, {
             catalog_active: true,

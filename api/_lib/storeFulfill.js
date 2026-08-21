@@ -6,6 +6,7 @@ import { oid } from './oid.js';
 // 📦 regra ÚNICA de baixa (estoque próprio do vendedor tem prioridade sobre o central)
 import { baixarItensDaVenda } from './baixaEstoque.js';
 import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
+import { consumirItensDaVenda } from './estoqueReserva.js';
 // 🤝 venda ONLINE: o cliente pagou pela plataforma, então o custo da peça
 // consignada é retido aqui mesmo e a dívida morre — sem tocar no saldo do lojista.
 import { liquidarConsignado } from './consignadoSettle.js';
@@ -201,10 +202,15 @@ export async function fulfillStoreOrder(sale) {
   // 📦 baixa pela regra única: primeiro o estoque PRÓPRIO do vendedor
   // (comprado → consignado), só depois o estoque central.
   let consumos = [];
+  let faltas = [];
   if (items.length) {
-    const r = await baixarItensDaVenda({ ownerId: sale.seller_id, items });
+    const r = await baixarItensDaVenda({ ownerId: sale.seller_id, items, saleId: sale.id });
     consumos = r.consumos;
+    faltas = r.faltas;
   }
+  // 🔴 PONTO 126 (21/08/2026): pagamento confirmou, a baixa de verdade já rodou acima —
+  // solta o "hold" da reserva (Fase 2). Best-effort: nunca pode travar a venda já paga.
+  await consumirItensDaVenda({ saleId: sale.id }).catch(() => {});
   const baixados = items.length;
   const commission = await payStoreCommissions(sale);
   // 🤝 peça consignada vendida online: dívida morre, retida no pagamento
@@ -223,6 +229,11 @@ export async function fulfillStoreOrder(sale) {
       console.error(`[LOJA] Repasse de estoque próprio falhou na venda ${sale.id}:`, e?.message);
     }
   }
-  await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission, fulfillment_status: 'a_enviar' }) });
-  return { loja: true, baixados, commission };
+  // 🔴 PONTO 125 (21/08/2026): pagamento já confirmado, dinheiro já entrou — não dá
+  // pra recusar a venda aqui. O que dá pra fazer é não deixar seguir como se tivesse
+  // dado tudo certo: falta de estoque vira 'sem_estoque' em vez de 'a_enviar', pra
+  // alguém tratar (repor, reembolsar, avisar o cliente) em vez de a peça ir junto
+  // sem existir.
+  await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission, fulfillment_status: faltas.length ? 'sem_estoque' : 'a_enviar' }) });
+  return { loja: true, baixados, commission, faltas };
 }
