@@ -145,58 +145,183 @@ export function conferirUrl(bruta, opcoes = {}) {
   return { ok: true, motivo: 'ok', url: u };
 }
 
+/** Teto de tempo padrão para a busca inteira, incluindo os redirecionamentos. */
+const TIMEOUT_PADRAO_MS = 10_000;
+
+/**
+ * Lê o corpo da resposta CONTANDO os bytes conforme eles chegam, e corta na hora
+ * em que passa do teto.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════
+ * POR QUE NÃO DÁ PRA USAR arrayBuffer() E CONFERIR DEPOIS
+ * ══════════════════════════════════════════════════════════════════════════════
+ * A versão anterior fazia:
+ *     const buffer = await resposta.arrayBuffer();   // carrega TUDO na memória
+ *     if (buffer.byteLength > maxBytes) ...          // e só então reclama
+ * O `content-length` era conferido antes, mas ele é DECLARAÇÃO do outro lado:
+ * a origem pode não mandar, pode mentir, ou pode mandar um corpo infinito. Em
+ * qualquer um desses casos o corpo inteiro entrava na memória da função antes de
+ * alguém dizer "grande demais". Achado da auditoria independente da OpenAI, e
+ * estava certo.
+ *
+ * Aqui o corpo é lido em pedaços. A cada pedaço o total é somado e comparado. No
+ * pedaço que estoura o teto, o leitor é cancelado e a conexão abortada — o resto
+ * do corpo nunca chega.
+ */
+async function lerComTeto(resposta, maxBytes, abortador, prazoFinal) {
+  // Resposta sem corpo (204, HEAD): nada a ler.
+  if (!resposta.body) {
+    const buf = await resposta.arrayBuffer();
+    if (maxBytes > 0 && buf.byteLength > maxBytes) return { estourou: true };
+    return { estourou: false, buffer: buf };
+  }
+
+  const leitor = resposta.body.getReader();
+  const pedacos = [];
+  let total = 0;
+
+  const desistir = () => {
+    try { leitor.cancel(); } catch { /* já fechado */ }
+    try { abortador.abort(); } catch { /* já abortado */ }
+  };
+
+  try {
+    for (;;) {
+      const restante = prazoFinal - Date.now();
+      if (restante <= 0) { desistir(); return { estourou: false, expirou: true }; }
+
+      // ⏱️ O laço confere o prazo POR CONTA PRÓPRIA, não confia só no signal.
+      // Motivo: abortar o signal derruba a requisição, mas quem garante que a
+      // leitura do corpo também morre é o runtime. Um teste com origem lenta
+      // pendurou a função exatamente aqui — o signal disparou e o `read()`
+      // continuou entregando um byte por vez. Agora cada leitura corre contra
+      // o relógio, então "devagar para sempre" também acaba.
+      let passo;
+      let alarmeLeitura;
+      try {
+        passo = await Promise.race([
+          leitor.read(),
+          new Promise((resolve) => { alarmeLeitura = setTimeout(() => resolve({ __expirou: true }), restante); }),
+        ]);
+      } finally {
+        clearTimeout(alarmeLeitura);
+      }
+
+      if (passo?.__expirou) { desistir(); return { estourou: false, expirou: true }; }
+
+      const { done, value } = passo;
+      if (done) break;
+      if (!value || !value.byteLength) continue;
+
+      total += value.byteLength;
+      if (maxBytes > 0 && total > maxBytes) {
+        // corta AGORA: cancela o leitor e derruba a conexão
+        desistir();
+        return { estourou: true };
+      }
+      pedacos.push(value);
+    }
+  } finally {
+    try { leitor.releaseLock(); } catch { /* já liberado */ }
+  }
+
+  // junta os pedaços numa única visão contínua
+  const junto = new Uint8Array(total);
+  let onde = 0;
+  for (const p of pedacos) { junto.set(p, onde); onde += p.byteLength; }
+  return { estourou: false, buffer: junto.buffer };
+}
+
 /**
  * Busca a URL conferindo CADA salto de redirecionamento.
+ *
+ * ⏱️ TEMPO: existe um prazo único para a operação inteira — não um prazo por
+ * salto. Origem que responde devagar de propósito, ou que fica pingando um byte
+ * por segundo para sempre, é abortada. Sem isso, prender a função era só uma
+ * questão de paciência do outro lado.
+ *
  * @param {string} bruta
  * @param {object} [opcoes]
  *   headers        cabeçalhos extras
  *   permitirHttp   aceitar http:// (fotos antigas de fornecedor)
- *   maxBytes       teto de tamanho do corpo; acima disso a resposta é descartada
+ *   maxBytes       teto de tamanho do corpo; passou disso, a conexão é cortada
  *   tiposAceitos   prefixos de content-type aceitos (ex.: ['image/'])
+ *   timeoutMs      prazo total, incluindo redirecionamentos (padrão 10s)
  * @returns {Promise<{ok:boolean, motivo:string, status?:number, tipo?:string, buffer?:ArrayBuffer, urlFinal?:string}>}
  */
 export async function buscarComSeguranca(bruta, opcoes = {}) {
-  const { headers = {}, permitirHttp = false, maxBytes = 0, tiposAceitos = null } = opcoes;
+  const {
+    headers = {}, permitirHttp = false, maxBytes = 0,
+    tiposAceitos = null, timeoutMs = TIMEOUT_PADRAO_MS,
+  } = opcoes;
 
+  const prazoFinal = Date.now() + Math.max(1000, Number(timeoutMs) || TIMEOUT_PADRAO_MS);
   let alvo = bruta;
-  let resposta = null;
 
   for (let salto = 0; salto <= MAX_SALTOS; salto++) {
     const conf = conferirUrl(alvo, { permitirHttp });
-    if (!conf.ok) return { ok: false, motivo: salto === 0 ? conf.motivo : `redirecionou_para_${conf.motivo}` };
-
-    // redirect: 'manual' é o coração da proteção: o fetch PARA no 3xx e devolve
-    // o Location pra gente conferir, em vez de seguir sozinho pra rede interna.
-    resposta = await fetch(conf.url.toString(), { headers, redirect: 'manual' });
-
-    if (resposta.status >= 300 && resposta.status < 400) {
-      const destino = resposta.headers.get('location');
-      if (!destino) return { ok: false, motivo: 'redirecionamento_sem_destino', status: resposta.status };
-      // Location pode ser relativo ("/outra.jpg") — resolve contra a atual.
-      try { alvo = new URL(destino, conf.url).toString(); }
-      catch { return { ok: false, motivo: 'redirecionamento_invalido', status: resposta.status }; }
-      continue;
+    if (!conf.ok) {
+      return { ok: false, motivo: salto === 0 ? conf.motivo : `redirecionou_para_${conf.motivo}` };
     }
 
-    if (!resposta.ok) return { ok: false, motivo: 'origem_respondeu_erro', status: resposta.status };
+    const restante = prazoFinal - Date.now();
+    if (restante <= 0) return { ok: false, motivo: 'tempo_esgotado' };
 
-    const tipo = (resposta.headers.get('content-type') || '').toLowerCase();
-    if (tiposAceitos && !tiposAceitos.some((p) => tipo.startsWith(p))) {
-      return { ok: false, motivo: 'tipo_nao_aceito', status: resposta.status, tipo };
-    }
+    const abortador = new AbortController();
+    const alarme = setTimeout(() => { try { abortador.abort(); } catch { /* ok */ } }, restante);
 
-    // Teto de tamanho: confere o que o servidor DECLARA e, depois, o que
-    // realmente veio (servidor pode mentir no content-length).
-    const declarado = Number(resposta.headers.get('content-length') || 0);
-    if (maxBytes > 0 && declarado > maxBytes) {
-      return { ok: false, motivo: 'arquivo_grande_demais', status: resposta.status, tipo };
-    }
-    const buffer = await resposta.arrayBuffer();
-    if (maxBytes > 0 && buffer.byteLength > maxBytes) {
-      return { ok: false, motivo: 'arquivo_grande_demais', status: resposta.status, tipo };
-    }
+    try {
+      // redirect: 'manual' é o coração da proteção: o fetch PARA no 3xx e devolve
+      // o Location pra gente conferir, em vez de seguir sozinho pra rede interna.
+      let resposta;
+      try {
+        resposta = await fetch(conf.url.toString(), { headers, redirect: 'manual', signal: abortador.signal });
+      } catch (e) {
+        const abortou = e?.name === 'AbortError' || abortador.signal.aborted;
+        return { ok: false, motivo: abortou ? 'tempo_esgotado' : 'falha_de_rede' };
+      }
 
-    return { ok: true, motivo: 'ok', status: resposta.status, tipo, buffer, urlFinal: conf.url.toString() };
+      if (resposta.status >= 300 && resposta.status < 400) {
+        const destino = resposta.headers.get('location');
+        if (!destino) return { ok: false, motivo: 'redirecionamento_sem_destino', status: resposta.status };
+        // Location pode ser relativo ("/outra.jpg") — resolve contra a atual.
+        try { alvo = new URL(destino, conf.url).toString(); }
+        catch { return { ok: false, motivo: 'redirecionamento_invalido', status: resposta.status }; }
+        continue;  // o próximo giro do laço confere a URL nova ANTES de buscar
+      }
+
+      if (!resposta.ok) return { ok: false, motivo: 'origem_respondeu_erro', status: resposta.status };
+
+      const tipo = (resposta.headers.get('content-type') || '').toLowerCase();
+      if (tiposAceitos && !tiposAceitos.some((p) => tipo.startsWith(p))) {
+        try { abortador.abort(); } catch { /* ok */ }   // não baixa o que não serve
+        return { ok: false, motivo: 'tipo_nao_aceito', status: resposta.status, tipo };
+      }
+
+      // 1ª barreira: o que a origem DECLARA. Barato, evita começar a baixar.
+      const declarado = Number(resposta.headers.get('content-length') || 0);
+      if (maxBytes > 0 && declarado > maxBytes) {
+        try { abortador.abort(); } catch { /* ok */ }
+        return { ok: false, motivo: 'arquivo_grande_demais', status: resposta.status, tipo };
+      }
+
+      // 2ª barreira: o que REALMENTE chega, contado pedaço a pedaço.
+      let lido;
+      try {
+        lido = await lerComTeto(resposta, maxBytes, abortador, prazoFinal);
+      } catch (e) {
+        const abortou = e?.name === 'AbortError' || abortador.signal.aborted;
+        return { ok: false, motivo: abortou ? 'tempo_esgotado' : 'falha_de_leitura', status: resposta.status, tipo };
+      }
+      if (lido.expirou) return { ok: false, motivo: 'tempo_esgotado', status: resposta.status, tipo };
+      if (lido.estourou) {
+        return { ok: false, motivo: 'arquivo_grande_demais', status: resposta.status, tipo };
+      }
+
+      return { ok: true, motivo: 'ok', status: resposta.status, tipo, buffer: lido.buffer, urlFinal: conf.url.toString() };
+    } finally {
+      clearTimeout(alarme);
+    }
   }
 
   return { ok: false, motivo: 'redirecionamento_demais' };
