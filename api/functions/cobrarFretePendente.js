@@ -57,7 +57,13 @@ export default async function handler(req, res) {
     // delivery_type, então o servidor responde "é retirada no balcão".
     // Aqui NÃO SE DEBITA NADA. Só completa o que faltou gravar.
     const apenasCompletar = body?.apenas_completar === true;
-    const valorInformado = body?.frete_valor != null ? Number(body.frete_valor) : null;
+    // ⚠️ F12 — valor manual deixou de ser caminho normal. O preço vem da opção
+    // que o SERVIDOR cotou. Override existe, mas precisa ser pedido com nome e
+    // justificativa, e o pedido guarda que foi override — nunca fica parecendo
+    // que a transportadora validou aquele número.
+    const overrideValor = body?.override_valor != null ? Number(body.override_valor) : null;
+    const overrideMotivo = String(body?.override_motivo || '').trim();
+    const freteIdEscolhido = String(body?.frete_id || '').trim() || null;
 
     const _ses = exigirSessao(req, actorId, 'cobrarFretePendente');
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
@@ -74,6 +80,16 @@ export default async function handler(req, res) {
     const vRows = await (await sb(`catalog_sales?select=id,kind,buyer_id,buyer_name,product_title,total_amount,status,raw_base44&id=eq.${enc(saleId)}&limit=1`)).json();
     const venda = Array.isArray(vRows) ? vRows[0] : null;
     if (!venda) return res.status(200).json({ success: false, error: 'Pedido não encontrado' });
+    // ⚠️ F11 — escopo restrito. Esta rota foi feita para o legado de ARREMATE
+    // liquidado sem frete. Pedido da Loja tem outro fluxo de cobrança e outro
+    // dono do problema; deixar a rota atuar sobre qualquer catalog_sale sem
+    // frete era conceder poder que ninguém pediu.
+    if (venda.kind !== 'arremate') {
+      return res.status(200).json({
+        success: false,
+        error: `Esta rota só atua sobre pedidos de arremate. Este é kind='${venda.kind || '(vazio)'}'.`,
+      });
+    }
 
     let raw = venda.raw_base44;
     if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
@@ -124,15 +140,36 @@ export default async function handler(req, res) {
       const r = await cotarOpcoes({ cep, items: [{ id: saleId, quantidade: 1 }] });
       if (r?.ok && Array.isArray(r.opcoes)) {
         opcoes = r.opcoes;
-        escolhida = valorInformado != null
-          ? r.opcoes.reduce((m, o) => (Math.abs(o.preco - valorInformado) < Math.abs(m.preco - valorInformado) ? o : m), r.opcoes[0])
+        escolhida = freteIdEscolhido
+          ? r.opcoes.find((o) => String(o.id) === freteIdEscolhido)
           : r.opcoes[0];   // mais barata
+        if (freteIdEscolhido && !escolhida) {
+          return res.status(200).json({ success: false, error: 'A opção de frete escolhida não existe na cotação.', opcoes });
+        }
       }
     } catch (e) {
       console.warn('[FRETE-PENDENTE] cotação falhou:', e?.message);
     }
 
-    const valorCobrar = valorInformado != null ? Number(valorInformado) : (escolhida ? escolhida.preco : 0);
+    // preço vem da cotação do servidor; override só com justificativa
+    let valorCobrar = escolhida ? escolhida.preco : 0;
+    let ehOverride = false;
+    if (overrideValor != null) {
+      if (!(overrideValor > 0)) {
+        return res.status(200).json({ success: false, error: 'override_valor precisa ser maior que zero.' });
+      }
+      if (overrideMotivo.length < 10) {
+        return res.status(200).json({ success: false, error: 'override_valor exige override_motivo com pelo menos 10 caracteres — fica registrado no pedido.' });
+      }
+      if (escolhida && overrideValor > escolhida.preco * 3) {
+        return res.status(200).json({
+          success: false,
+          error: `override_valor de R$ ${overrideValor.toFixed(2)} é mais de 3x a cotação real (R$ ${escolhida.preco.toFixed(2)}). Recusado.`,
+        });
+      }
+      valorCobrar = overrideValor;
+      ehOverride = true;
+    }
     if (!apenasCompletar && !(valorCobrar > 0)) {
       return res.status(200).json({
         success: false,
@@ -196,6 +233,8 @@ export default async function handler(req, res) {
         saldo_suficiente: falta === 0,
         falta,
         opcoes,
+        override: ehOverride,
+        cotacao_do_servidor: escolhida ? escolhida.preco : null,
         aviso: falta > 0
           ? `O comprador tem R$ ${saldo.toFixed(2)} e o frete é R$ ${valorCobrar.toFixed(2)}. Faltam R$ ${falta.toFixed(2)} — cobre a diferença por fora antes de executar.`
           : 'Para debitar de verdade, repita a chamada com executar: true.',
@@ -210,9 +249,61 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── DÉBITO ATÔMICO (compare-and-swap) ───────────────────────────────────
-    // Guarda pelo valor exato lido: se outra operação mexeu no saldo no meio,
-    // zero linhas voltam e a gente não cobra em cima de um saldo desatualizado.
+    // ══════════════════════════════════════════════════════════════════════════
+    // ⚠️ F10 — DÉBITO E GRAVAÇÃO PRECISAM ANDAR JUNTOS
+    // ══════════════════════════════════════════════════════════════════════════
+    // COMO ESTAVA: debitava o saldo, montava o pedido, dava PATCH em
+    // catalog_sales e NÃO conferia se esse PATCH funcionou — `fetch` não lança
+    // exceção em HTTP 400/500, então o try/catch não pegava nada. Existia o
+    // caminho: SALDO DEBITADO + PEDIDO INTACTO + resposta de sucesso. E pior: na
+    // segunda tentativa o pedido ainda parecia sem frete, e o cliente era
+    // cobrado de novo.
+    //
+    // O CAS do saldo não resolve isso. Ele protege duas chamadas simultâneas que
+    // leem o mesmo saldo; não protege "debitou e a segunda escrita falhou".
+    //
+    // COMO FICOU — três passos, cada um verificado, com compensação no fim:
+    //   1. MARCA a intenção no pedido (PATCH verificado). Se já houver marca, é
+    //      retry: recusa e manda conferir, em vez de cobrar de novo.
+    //   2. DEBITA por CAS. Se falhar, limpa a marca e sai — nada foi cobrado.
+    //   3. GRAVA o frete (PATCH verificado). Se falhar, ESTORNA o débito.
+    //      Se o estorno também falhar, devolve erro gritando os números para
+    //      intervenção manual — nunca responde sucesso.
+    //
+    // ⚠️ Isto é compensação, não transação. O jeito certo de verdade é uma RPC
+    // que faça as duas escritas num BEGIN/COMMIT só. Está preparada e NÃO
+    // APLICADA em docs/remediacao_NAO_APLICADA/06_rpc_cobrar_frete.sql.
+    const marcaId = `cf_${Date.now().toString(36)}_${saleId.slice(0, 6)}`;
+
+    if (raw?.frete?.cobranca_em_andamento) {
+      return res.status(200).json({
+        success: false, debitado: false,
+        error: 'Existe uma cobrança anterior que não terminou neste pedido. Confira o saldo do comprador e o wallet_ledger antes de tentar de novo — pode ter havido débito sem gravação.',
+        cobranca_em_andamento: raw.frete.cobranca_em_andamento,
+      });
+    }
+
+    // ── PASSO 1 — marca a intenção ────────────────────────────────────────────
+    const marcar = await sb(`catalog_sales?id=eq.${enc(saleId)}`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        raw_base44: { ...raw, frete: { ...(raw.frete || {}), valor: 0, cobranca_em_andamento: { id: marcaId, iniciada_em: new Date().toISOString(), por: actorId } } },
+      }),
+    });
+    if (!marcar.ok) {
+      return res.status(200).json({ success: false, debitado: false, error: 'Não foi possível marcar a cobrança no pedido. Nada foi cobrado.' });
+    }
+
+    const limparMarca = async () => {
+      try {
+        await sb(`catalog_sales?id=eq.${enc(saleId)}`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({ raw_base44: raw }),
+        });
+      } catch (e) { console.error('[FRETE-PENDENTE] falhou limpar a marca:', e?.message); }
+    };
+
+    // ── PASSO 2 — débito por compare-and-swap ─────────────────────────────────
     const novoSaldo = fromCents(cents(saldo) - cents(valorCobrar));
     const filtroSaldo = saldo === 0
       ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)'
@@ -224,13 +315,14 @@ export default async function handler(req, res) {
     });
     const linhas = await patch.json().catch(() => []);
     if (!patch.ok || !Array.isArray(linhas) || linhas.length === 0) {
+      await limparMarca();
       return res.status(200).json({
         success: false, debitado: false,
-        error: 'O saldo do comprador mudou durante a operação. Confira e tente de novo.',
+        error: 'O saldo do comprador mudou durante a operação. Nada foi cobrado. Confira e tente de novo.',
       });
     }
 
-    // ── grava o frete no pedido, sem tocar em total_amount ──────────────────
+    // ── PASSO 3 — grava o frete, e SE FALHAR devolve o dinheiro ──────────────
     const rawNovo = {
       ...raw,
       delivery_type: 'delivery',
@@ -245,18 +337,45 @@ export default async function handler(req, res) {
         cobrado_depois: true,
         cobrado_em: new Date().toISOString(),
         cobrado_por: actorId,
+        cobranca_id: marcaId,
         motivo: 'arremate liquidado sem frete — cobranca posterior autorizada pelo admin',
+        // ⚠️ nunca apresentar override como se a transportadora tivesse validado
+        validado_pela_transportadora: !ehOverride,
+        ...(ehOverride ? { override: true, override_motivo: overrideMotivo, cotacao_real: escolhida?.preco ?? null } : {}),
       },
       amount_charged: fromCents(cents(Number(raw.amount_charged) || Number(venda.total_amount) || 0) + cents(valorCobrar)),
     };
-    await sb(`catalog_sales?id=eq.${enc(saleId)}`, {
-      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    const gravar = await sb(`catalog_sales?id=eq.${enc(saleId)}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({ raw_base44: rawNovo, buyer_phone: comprador.phone || null, buyer_cpf: comprador.cpf || null }),
     });
+    const gravou = await gravar.json().catch(() => []);
+    if (!gravar.ok || !Array.isArray(gravou) || gravou.length === 0) {
+      // COMPENSAÇÃO: devolve o que acabou de sair da carteira.
+      const devolver = await sb(`app_users?id=eq.${enc(venda.buyer_id)}&and=(saldo_disponivel.eq.${novoSaldo})`, {
+        method: 'PATCH', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ saldo_disponivel: saldo }),
+      });
+      const devolveu = await devolver.json().catch(() => []);
+      const estornoOk = devolver.ok && Array.isArray(devolveu) && devolveu.length > 0;
+      if (estornoOk) await limparMarca();
+      console.error(`[FRETE-PENDENTE] gravacao falhou. estorno ${estornoOk ? 'OK' : 'FALHOU'} — pedido ${saleId}, R$ ${valorCobrar}`);
+      return res.status(200).json({
+        success: false,
+        debitado: !estornoOk,
+        error: estornoOk
+          ? 'Não foi possível gravar o frete no pedido. O valor foi devolvido ao comprador e nada ficou cobrado.'
+          : `ATENÇÃO — INTERVENÇÃO MANUAL: o saldo foi debitado em R$ ${valorCobrar.toFixed(2)} e NEM a gravação NEM o estorno funcionaram. Comprador ${venda.buyer_id}, saldo esperado R$ ${saldo.toFixed(2)}, saldo atual R$ ${novoSaldo.toFixed(2)}, pedido ${saleId}.`,
+        precisa_intervencao: !estornoOk,
+      });
+    }
 
-    // ── trilha no livro-caixa (best-effort: nunca derruba a cobrança) ───────
+    // ── trilha no livro-caixa — agora COM verificação de resposta ───────────
+    // `fetch` não lança em HTTP 400/500, então o try/catch sozinho não garantia
+    // nada: a trilha podia sumir em silêncio. (A OpenAI confirmou no banco que
+    // wallet_ledger.tipo é TEXT sem CHECK — a hipótese de constraint caiu.)
     try {
-      await sb('wallet_ledger', {
+      const trilha = await sb('wallet_ledger', {
         method: 'POST', headers: { Prefer: 'return=minimal' },
         body: JSON.stringify({
           user_id: venda.buyer_id, sale_id: saleId, tipo: 'cobranca_frete_pendente',
@@ -265,7 +384,11 @@ export default async function handler(req, res) {
           created_at: new Date().toISOString(),
         }),
       });
-    } catch (e) { console.warn('[FRETE-PENDENTE] livro-caixa:', e?.message); }
+      if (!trilha.ok) {
+        const detalhe = await trilha.text().catch(() => '');
+        console.error(`[FRETE-PENDENTE] wallet_ledger respondeu ${trilha.status}: ${detalhe.slice(0, 200)}`);
+      }
+    } catch (e) { console.error('[FRETE-PENDENTE] wallet_ledger:', e?.message); }
 
     return res.status(200).json({
       success: true, debitado: true,
