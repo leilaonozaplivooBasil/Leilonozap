@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
 // Escrita direta na rota segura entityWrite (service_role) — MESMO caminho da exclusão
 // de lote que já funciona em produção. Evita o fallback anon do adapter (bloqueado por RLS),
@@ -18,7 +19,7 @@ async function _bulkCreateSeguro(rows) {
   const call = async () => {
     const resp = await fetch('/api/functions/entityWrite', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ actorId, table: 'products', action: 'bulkCreate', payload: rows }),
     });
     return resp.json();
@@ -200,7 +201,7 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
     const actorId = _actorId();
     const resp = await fetch('/api/functions/entityWrite', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         actorId,
         table: 'lotes_recebidos',

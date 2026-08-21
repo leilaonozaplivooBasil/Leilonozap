@@ -1,3 +1,4 @@
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 // Helpers de exibição do Extrato de Aportes do Parceiro de Compra.
 // SOMENTE formatação/leitura — nenhuma regra financeira vive aqui.
 
@@ -36,7 +37,7 @@ export const STATUS_VISUAL = {
 export async function conferirNoMercadoPago(mpPaymentId) {
   const r = await fetch('/api/functions/checkPartnerPlanPayment', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ payment_id: mpPaymentId }),
   });
   const json = await r.json();

@@ -188,7 +188,10 @@ export default async function handler(req, res) {
     // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
     // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
     // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
-    const _ses = exigirSessao(req, actorId, 'entityWrite', true);
+    // O rótulo leva tabela e ação: o log de produção mostrou 9 mil chamadas desta
+    // rota em meia hora e não dava pra saber de ONDE vinham. Agora a própria
+    // linha do log diz o que estava sendo escrito.
+    const _ses = exigirSessao(req, actorId, `entityWrite:${table}/${action}`, true);
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const table = String(body?.table || '').trim();
     const action = String(body?.action || '');
