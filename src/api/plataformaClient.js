@@ -15,7 +15,7 @@
  *
  * PREVIEW ISOLADO: somente nesta branch de teste, acessos *.vercel.app usam a
  * Edge Function preview-api do Supabase preview-staging. A correção real de
- * produção continua separada e contém apenas +1 linha em CatalogOrdersAdmin.
+ * produção continua separada.
  * ══════════════════════════════════════════════════════════════════════════
  */
 import { plataforma as basePlataforma } from './plataformaAdapter';
@@ -24,7 +24,7 @@ export { supabase } from './supabaseClient';
 const PREVIEW_STAGING = typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app');
 const PREVIEW_API = 'https://obipnfhwiaafxeqgfeop.supabase.co/functions/v1/preview-api';
 // Chave anon pública da branch de teste — não é service_role nem segredo de servidor.
-const PREVIEW_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iaXBuZmh3aWFhZnhlcWdmZW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNDgzNDAsImV4cCI6MjEwMjkyNDM0MH0.XS42_n2QWWtzV07Et7dUnr5juvRufrnSBJfbql7CwvI';
+const PREVIEW_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Im9iaXBuZmh3aWFhZnhlcWdmZW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNDgzNDAsImV4cCI6MjEwMjkyNDM0MH0.XS42_n2QWWtzV07Et7dUnr5juvRufrnSBJfbql7CwvI';
 
 // Harness TEMPORÁRIO: entra como admin fictício somente em deploy *.vercel.app
 // desta branch. Nenhum usuário ou dado real de produção é usado.
@@ -41,9 +41,9 @@ if (PREVIEW_STAGING && typeof localStorage !== 'undefined') {
 }
 
 async function previewInvoke(name, body = {}) {
-  // Harness deliberadamente mínimo: só o necessário para reproduzir o bug
-  // da Gestão de Pedidos. Nenhuma outra função pode escrever no staging.
-  if (!['login', 'updateOrderStatus'].includes(String(name))) {
+  // Harness deliberadamente mínimo: só o necessário para reproduzir a Gestão
+  // de Pedidos. Nenhuma outra função pode escrever no staging.
+  if (!['login', 'updateOrderStatus', 'updatePackedItems'].includes(String(name))) {
     return { success: false, error: `Função ${String(name)} desativada no preview isolado` };
   }
   try {
@@ -73,10 +73,44 @@ const previewFunctions = new Proxy(
   }
 );
 
+// CatalogSale.update(raw_base44) é usado pelo checklist de conferência. No
+// preview, o adapter normal tentaria entityWrite da Vercel e seria bloqueado;
+// aqui roteamos SOMENTE esse write para a Edge Function isolada do staging.
+const previewCatalogSale = PREVIEW_STAGING
+  ? new Proxy(basePlataforma.entities.CatalogSale, {
+      get(target, prop) {
+        if (prop !== 'update') return target[prop];
+        return async (id, data = {}) => {
+          const keys = Object.keys(data || {});
+          if (String(id) !== 'preview-order-status-sync' || keys.length !== 1 || keys[0] !== 'raw_base44') {
+            throw new Error('Preview isolado: escrita de CatalogSale não autorizada');
+          }
+          const result = await previewInvoke('updatePackedItems', {
+            actorId: 'preview-admin',
+            saleId: String(id),
+            raw_base44: data.raw_base44,
+          });
+          if (!result?.success) throw new Error(result?.error || 'Falha ao salvar conferência');
+          return { id, raw_base44: result.raw_base44 };
+        };
+      },
+    })
+  : null;
+
+const previewEntities = PREVIEW_STAGING
+  ? new Proxy(basePlataforma.entities, {
+      get(target, name) {
+        if (name === 'CatalogSale') return previewCatalogSale;
+        return target[name];
+      },
+    })
+  : null;
+
 export const plataforma = PREVIEW_STAGING
   ? new Proxy(basePlataforma, {
       get(target, prop) {
         if (prop === 'functions') return previewFunctions;
+        if (prop === 'entities') return previewEntities;
         return target[prop];
       },
     })
