@@ -51,6 +51,12 @@ export default async function handler(req, res) {
     const actorId = String(body?.actorId || body?.actor_id || '').trim();
     const saleId  = String(body?.sale_id || '').trim();
     const executar = body?.executar === true;              // padrão: só confere
+    // 🔧 MODO COMPLETAR — para o pedido que JÁ pagou o frete e só está sem os
+    // dados de entrega (delivery_type, endereço, id do serviço). É o caso do
+    // AR3BEF1939: R$ 11,60 cobrados no lance, mas o pedido nasceu sem
+    // delivery_type, então o servidor responde "é retirada no balcão".
+    // Aqui NÃO SE DEBITA NADA. Só completa o que faltou gravar.
+    const apenasCompletar = body?.apenas_completar === true;
     const valorInformado = body?.frete_valor != null ? Number(body.frete_valor) : null;
 
     const _ses = exigirSessao(req, actorId, 'cobrarFretePendente');
@@ -74,11 +80,20 @@ export default async function handler(req, res) {
     raw = raw || {};
 
     const freteAtual = Number(raw?.frete?.valor) || 0;
-    if (freteAtual > 0) {
+    if (freteAtual > 0 && !apenasCompletar) {
       return res.status(200).json({
-        success: false, error: 'Este pedido já tem frete cobrado.',
+        success: false, error: 'Este pedido já tem frete cobrado. Se o que falta são só os dados de entrega, use apenas_completar: true.',
         frete_atual: freteAtual,
       });
+    }
+    if (apenasCompletar && freteAtual <= 0) {
+      return res.status(200).json({
+        success: false,
+        error: 'Este pedido não tem frete cobrado — apenas_completar não serve aqui. Use a cobrança normal.',
+      });
+    }
+    if (apenasCompletar && (raw?.delivery_type === 'delivery') && raw?.frete?.id) {
+      return res.status(200).json({ success: false, error: 'Este pedido já está completo. Nada a fazer.' });
     }
     if (!venda.buyer_id) return res.status(200).json({ success: false, error: 'Pedido sem comprador identificado' });
 
@@ -118,11 +133,52 @@ export default async function handler(req, res) {
     }
 
     const valorCobrar = valorInformado != null ? Number(valorInformado) : (escolhida ? escolhida.preco : 0);
-    if (!(valorCobrar > 0)) {
+    if (!apenasCompletar && !(valorCobrar > 0)) {
       return res.status(200).json({
         success: false,
         error: 'Não foi possível determinar o valor do frete. Informe `frete_valor` manualmente.',
         opcoes,
+      });
+    }
+
+    // ── MODO COMPLETAR: sem débito, sem saldo, só grava o que faltou ────────
+    if (apenasCompletar) {
+      const rawCompleto = {
+        ...raw,
+        delivery_type: 'delivery',
+        address: endereco,
+        frete: {
+          ...(raw.frete || {}),
+          valor: freteAtual,                          // ⚠️ o valor NÃO muda
+          id: escolhida?.id || raw?.frete?.id || null,
+          empresa: escolhida?.empresa || raw?.frete?.empresa || null,
+          servico: escolhida?.nome || raw?.frete?.servico || null,
+          prazo: escolhida?.prazo ?? raw?.frete?.prazo ?? null,
+          cep,
+          completado_em: new Date().toISOString(),
+          completado_por: actorId,
+          motivo: 'frete ja pago no lance; pedido nasceu sem delivery_type/endereco/servico',
+        },
+      };
+      if (!executar) {
+        return res.status(200).json({
+          success: true, modo: 'conferencia', debitado: false, alterado: false,
+          pedido: { id: venda.id, titulo: venda.product_title, comprador: venda.buyer_name },
+          frete_ja_pago: freteAtual,
+          vai_gravar: { delivery_type: 'delivery', endereco, servico: rawCompleto.frete },
+          aviso: 'Nada foi cobrado e nada foi alterado. Para gravar, repita com executar: true.',
+        });
+      }
+      await sb(`catalog_sales?id=eq.${enc(saleId)}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ raw_base44: rawCompleto, buyer_phone: comprador.phone || null, buyer_cpf: comprador.cpf || null }),
+      });
+      return res.status(200).json({
+        success: true, debitado: false, alterado: true,
+        pedido: { id: venda.id, titulo: venda.product_title, comprador: venda.buyer_name },
+        frete_ja_pago: freteAtual,
+        servico: rawCompleto.frete,
+        proximo_passo: 'Pedido completo. A etiqueta já pode ser gerada pelo botão Etiqueta.',
       });
     }
 

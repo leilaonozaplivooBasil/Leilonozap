@@ -157,3 +157,41 @@ describe('cobrarFretePendente — cobranca de verdade', () => {
     assert.equal(patches.some((p) => p.u.includes('catalog_sales')), false, 'gravou o frete no pedido sem ter debitado');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODO COMPLETAR — pedido que JA pagou o frete e so esta sem os dados
+describe('cobrarFretePendente — apenas_completar', () => {
+  test('conferencia nao altera nada', async () => {
+    const r = await chamar({ actorId: ADMIN, sale_id: VENDA_COM_FRETE, apenas_completar: true }, ADMIN);
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo?.alterado, false);
+    assert.equal(r.corpo?.debitado, false);
+    assert.equal(r.corpo?.frete_ja_pago, 11.6);
+    assert.equal(patches.some((p) => p.u.includes('catalog_sales')), false, 'ALTEROU NA CONFERENCIA');
+  });
+
+  test('executar grava delivery_type e endereco SEM debitar', async () => {
+    const r = await chamar({ actorId: ADMIN, sale_id: VENDA_COM_FRETE, apenas_completar: true, executar: true }, ADMIN);
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo?.alterado, true);
+    assert.equal(r.corpo?.debitado, false, 'DEBITOU NO MODO COMPLETAR');
+    assert.equal(debitou(), false, 'TOCOU NO SALDO DO CLIENTE');
+    const gravou = patches.find((p) => p.u.includes('catalog_sales'));
+    const corpo = JSON.parse(gravou.body);
+    assert.equal(corpo.raw_base44.delivery_type, 'delivery');
+    assert.equal(corpo.raw_base44.frete.valor, 11.6, 'MUDOU O VALOR DO FRETE JA PAGO');
+    assert.equal(corpo.raw_base44.frete.completado_por, ADMIN);
+    assert.ok(corpo.raw_base44.address?.zip);
+  });
+
+  test('apenas_completar recusa pedido SEM frete', async () => {
+    const r = await chamar({ actorId: ADMIN, sale_id: VENDA_SEM_FRETE, apenas_completar: true, executar: true }, ADMIN);
+    assert.equal(r.corpo?.success, false);
+    assert.match(r.corpo?.error || '', /não tem frete cobrado/i);
+  });
+
+  test('usuario comum nao completa', async () => {
+    const r = await chamar({ actorId: COMUM, sale_id: VENDA_COM_FRETE, apenas_completar: true, executar: true }, COMUM);
+    assert.equal(r.code, 403);
+  });
+});
