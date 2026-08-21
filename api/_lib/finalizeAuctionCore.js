@@ -105,14 +105,33 @@ export async function reterFatiaDaRede({ auction, finalPrice, pctRetido, arremat
     )).json();
     if (Array.isArray(jaTem) && jaTem.length) return 0;
 
-    const contas = await (await sb(
-      `app_users?select=id,full_name,commission_balance&full_name=eq.${enc(CONTA_OFICIAL_NOME)}&limit=1`
-    )).json();
-    const oficial = Array.isArray(contas) ? contas[0] : null;
+    // 🔴 PONTO 123 (21/08/2026) — ACHAR A EMPRESA PELO NOME É FRÁGIL.
+    // Esta busca era `full_name=eq.'Leilão NoZap - Site Oficial'`: um acento
+    // trocado, um espaço a mais ou uma renomeação na tela de usuários e a conta
+    // "some". O dinheiro do leilão então não é gravado em lugar nenhum — só um
+    // console.error que ninguém lê.
+    // O mesmo defeito já foi corrigido no motor da loja (storeFulfill.js, PONTO
+    // 118). Aqui ficou pra trás. Agora resolve pela MESMA chave estável:
+    // referral_code = 'leilaonozap', a que o cadastro usa pra achar a raiz da
+    // árvore (publicRegister.js:85, googleLogin.js:127). O nome continua como
+    // último recurso, pra não quebrar ambiente sem o referral_code preenchido.
+    let oficial = null;
+    try {
+      const porCodigo = await (await sb(
+        'app_users?select=id,full_name,commission_balance&referral_code=eq.leilaonozap&limit=1'
+      )).json();
+      oficial = Array.isArray(porCodigo) ? porCodigo[0] : null;
+    } catch (_) { oficial = null; }
+    if (!oficial) {
+      const contas = await (await sb(
+        `app_users?select=id,full_name,commission_balance&full_name=eq.${enc(CONTA_OFICIAL_NOME)}&limit=1`
+      )).json();
+      oficial = Array.isArray(contas) ? contas[0] : null;
+    }
     if (!oficial) {
       // 🔴 Sem a conta oficial cadastrada o dinheiro não tem onde cair. NÃO
       // inventa destino: registra alto e claro pra alguém arrumar o cadastro.
-      console.error(`[FINALIZE] Conta oficial "${CONTA_OFICIAL_NOME}" não encontrada — R$ ${valor} do leilão ${auction.id} ficaram sem registro.`);
+      console.error(`[FINALIZE] Conta oficial NÃO encontrada (referral_code=leilaonozap, nem pelo nome "${CONTA_OFICIAL_NOME}") — R$ ${valor} do leilão ${auction.id} ficaram sem registro.`);
       return 0;
     }
 
@@ -467,7 +486,17 @@ export async function finalizeOneAuction(auction) {
       // 🏦 PONTO 100: o que dos 30% da rede NÃO foi distribuído fica RETIDO na
       // conta oficial da empresa, com linha no extrato. Sem indicador, retém os
       // 30% inteiros. Plano de investimento e leilão de teste não retêm nada.
-      if (!auction.is_investment_plan && auction.is_test_auction !== true) {
+      //
+      // 🔴 PONTO 123 (21/08/2026) — A REDE DE SEGURANÇA DO TÍTULO PAROU NA METADE
+      // do caminho. O PONTO 109 fez o título segurar a COMISSÃO quando a flag
+      // `is_investment_plan` vem em branco (e ela vem em branco nos 36 leilões
+      // "Plano de Investimento: Plano V" medidos no banco), mas esta linha aqui
+      // continuou olhando só a flag. Resultado: o mesmo leilão que não paga
+      // comissão RETINHA 30% de R$ 5.000 = R$ 1.500 na conta da empresa, com
+      // linha no extrato — crédito de mentira, R$ 54.000 nos 36. Plano de
+      // investimento não movimenta nem um lado nem o outro: as duas travas
+      // passam a usar exatamente o mesmo critério.
+      if (!auction.is_investment_plan && !pareceInvestimento && auction.is_test_auction !== true) {
         await reterFatiaDaRede({
           auction,
           finalPrice,
