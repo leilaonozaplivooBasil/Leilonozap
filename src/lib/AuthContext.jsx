@@ -38,6 +38,7 @@
  * um crachá válido.
  */
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { apagarCracha } from '@/lib/sessaoCliente';
 
 const AuthContext = createContext();
 
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem('currentUser');
       // 🔐 o crachá de sessão sai junto — ver api/_lib/sessao.js
-      localStorage.removeItem('sessaoToken');
+      apagarCracha();
     } catch { /* sem storage: segue */ }
     setUser(null);
     setIsAuthenticated(false);

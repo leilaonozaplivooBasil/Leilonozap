@@ -17,6 +17,7 @@
  */
 import { supabase } from './supabaseClient';
 
+import { lerCracha, guardarCracha, cabecalhosSessao } from '@/lib/sessaoCliente';
 // Mapa Entidade → tabela (snake_case plural)
 const TABLE_MAP = {
   AppUser: 'app_users',
@@ -210,7 +211,7 @@ async function _routeWrite(table, action, id, payload) {
     if (action === 'update') {
       try {
         const resp = await fetch('/api/functions/adminUpdateUser', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ userId: id, updates: payload, actorId: op.id }),
         });
         const j = await resp.json();
@@ -227,7 +228,7 @@ async function _routeWrite(table, action, id, payload) {
   }
   try {
     const resp = await fetch('/api/functions/entityWrite', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ actorId: op.id, table, action, id, payload }),
     });
     if (resp.status === 429) {
@@ -391,13 +392,11 @@ const APP_ID = '68d536db3c26ff51f79c4137';
 // ser alterada uma por uma.
 // Leitura e escrita protegidas: navegador anônimo, modo privativo ou storage
 // bloqueado não podem derrubar chamada nenhuma.
-const CHAVE_SESSAO = 'sessaoToken';
-function lerCracha() {
-  try { return localStorage.getItem(CHAVE_SESSAO) || ''; } catch { return ''; }
-}
-function guardarCracha(t) {
-  try { if (t) localStorage.setItem(CHAVE_SESSAO, t); } catch { /* sem storage, segue sem crachá */ }
-}
+// 🔴 CORREÇÃO 21/08/2026 — eu tinha escrito que TODAS as chamadas passavam por
+// aqui. Não passam: existem seis `fetch('/api/functions/...')` diretos no site,
+// dois deles neste mesmo arquivo (adminUpdateUser e entityWrite). O log de
+// produção mostrou 9 mil chamadas de entityWrite sem crachá por causa disso.
+// O crachá agora mora em src/lib/sessaoCliente.js e todos importam de lá.
 
 async function invokeFunction(name, body, options = {}) {
   const url = `/api/functions/${name}`;
