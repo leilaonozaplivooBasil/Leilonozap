@@ -165,7 +165,68 @@ export default async function handler(req, res) {
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const bidderName = body?.bidder_name;
     // 🚚 Frete calculado uma vez na sala e somado ao lance na reserva de saldo.
-    const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🚚 F7 — O FRETE VEM DO SELO DO SERVIDOR, NUNCA DO NAVEGADOR
+    // ══════════════════════════════════════════════════════════════════════════
+    // COMO ESTAVA:
+    //     const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);
+    // Ou seja: quanto de frete era financeiramente reservado num lance era o que
+    // o navegador dissesse. Chamada direta com `frete_valor: 0` arrematava sem
+    // pagar frete. O bloqueio que entrou em AuctionRoom.jsx (commit 3b21010e) é
+    // UX — ajuda o cliente honesto e não segura quem fala direto com a API.
+    //
+    // AGORA: a rota cotarFrete assina cada opção (api/_lib/freteSelo.js) e o
+    // navegador devolve o selo aqui. Este arquivo é AUTOCONTIDO por lei — import
+    // de 2 níveis já derrubou o lance em produção — então a conferência é uma
+    // cópia curta da mesma lógica, do mesmo jeito que o crachá de sessão já faz
+    // logo acima. `crypto` já está importado; não há rede nem latência nova no
+    // caminho do lance.
+    const _frete = (() => {
+      const semChave = !(process.env.SESSAO_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY);
+      if (semChave) return { ok: false, motivo: 'sem_chave_no_servidor', valor: 0 };
+      const selo = String(body?.frete_selo || '').trim();
+      if (!selo) return { ok: false, motivo: 'sem_selo', valor: 0 };
+      try {
+        const p = selo.split('.');
+        if (p.length !== 3 || p[0] !== 'f1') return { ok: false, motivo: 'formato', valor: 0 };
+        const chaveSelo = process.env.SESSAO_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const esperado = Buffer.from(
+          crypto.createHmac('sha256', chaveSelo).update(`frete-v1|${p[1]}`).digest()
+            .toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), 'utf8');
+        const veio = Buffer.from(p[2], 'utf8');
+        if (esperado.length !== veio.length || !crypto.timingSafeEqual(esperado, veio)) {
+          return { ok: false, motivo: 'assinatura', valor: 0 };
+        }
+        const d = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+        if (!(Number(d.x) > Date.now())) return { ok: false, motivo: 'vencido', valor: 0 };
+        if (String(d.a) !== String(auctionId)) return { ok: false, motivo: 'selo_de_outro_leilao', valor: 0 };
+        if (String(d.u) !== String(userId)) return { ok: false, motivo: 'selo_de_outra_pessoa', valor: 0 };
+        return { ok: true, motivo: 'ok', valor: (Number(d.v) || 0) / 100, id: d.f || null, cep: d.c || null };
+      } catch (e) {
+        return { ok: false, motivo: `erro:${e?.message}`, valor: 0 };
+      }
+    })();
+
+    // ⚠️ ROLLOUT EM DUAS ETAPAS, igual ao crachá e ao webhook do MP — os dois
+    // deram certo. Enquanto FRETE_MODO não for 'bloquear', o lance sem selo
+    // válido PASSA e só fica anotado no log. Ligar direto recusaria todo lance
+    // de qualquer aba já aberta que ainda não conhece o selo, no meio de leilão
+    // ao vivo. Depois de o log ficar limpo, publica-se FRETE_MODO=bloquear.
+    const _freteBloqueia = String(process.env.FRETE_MODO || '').toLowerCase() === 'bloquear';
+    if (!_frete.ok) {
+      if (_freteBloqueia) {
+        return res.status(400).json({
+          success: false, sem_frete: true, motivo: _frete.motivo,
+          message: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
+        });
+      }
+      console.warn(`[FRETE] submitAtomicBid: lance SEM selo válido (${_frete.motivo}) no leilão ${auctionId} — ETAPA 1, nada foi bloqueado.`);
+    }
+    // O valor financeiro é o do SELO. `body.frete_valor` fica só como reserva da
+    // etapa 1, para não zerar o frete de quem ainda está com a aba antiga.
+    const freteValor = _frete.ok
+      ? _frete.valor
+      : Math.max(0, parseFloat(body?.frete_valor) || 0);
 
     if (!auctionId || !bidAmount || bidAmount <= 0 || !userId) {
       return res.status(400).json({ success: false, message: 'Parâmetros inválidos' });
