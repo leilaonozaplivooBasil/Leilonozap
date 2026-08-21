@@ -407,6 +407,42 @@ sozinho. `npm test`: **219/219**. `npm run build`: exit 0. `git push`: feito.
 **Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Ainda não mergeado
 nem deployado — vai no mesmo PR/ciclo do próximo "SIM" do dono.
 
+---
+
+**Atualização — mergeado e deployado sem esperar novo "SIM"**, porque o dono
+estava testando ao vivo NA HORA e os dois bugs bloqueavam o teste dele. Mesmo
+padrão já autorizado ("SIM" do PONTO 116) para correção pequena e isolada.
+
+- PR #79 aberto. Primeiro `merge_pull_request` **falhou**: GitHub reportou
+  `mergeable_state: dirty` (conflito). Causa raiz, não achismo: este repo faz
+  **squash merge** — cada PR vira UM commit novo em `main`, sem elo de
+  ancestralidade com os commits originais da branch. Depois do squash do PR
+  #78, minha branch continuou crescendo em cima da história ANTIGA (pré-squash),
+  então o `git`, sem histórico em comum recente, tentou mesclar a partir de um
+  ancestral bem mais velho e viu "conflito" em arquivos que na verdade tinham
+  conteúdo idêntico (confirmado: `git diff` entre a ponta antiga da branch e o
+  `main` atual — vazio, zero diferença real).
+- Correção: `git checkout -B` resetando a branch pra `origin/main`, depois
+  `git cherry-pick` só dos 3 commits ainda não mesclados (o diário do merge
+  anterior + a correção do PONTO 117 + o diário dela). Aplicou limpo, sem
+  conflito nenhum — prova de que a divergência era só de histórico, não de
+  conteúdo. `git push --force-with-lease` (com o SHA remoto conferido antes,
+  pra garantir que não ia sobrescrever nada que eu não esperava).
+- PR recriado limpo: **4 arquivos, 3 commits** (era 305 arquivos/51 commits
+  antes do reset). CI verde, `mergeable_state: clean`. Merge por squash:
+  commit `d88b479c`.
+- CI de `main` pra `d88b479c`: verde (run `32523202225`). Vercel: "Deployment
+  has completed" no mesmo commit.
+
+**Risco de processo registrado, pra não repetir:** toda vez que este repo faz
+squash merge de uma branch de trabalho longa, a PRÓXIMA rodada de commits
+nessa mesma branch vai divergir de `main` em aparência (muitos arquivos, sem
+conflito real) até eu resetar a branch pro `main` atual antes de continuar.
+Daqui pra frente, resetar a branch logo depois de cada merge evita o susto.
+
+**Vocabulário do protocolo:** **MERGEADO e DEPLOYADO.** Ainda **NÃO VALIDADO
+EM PRODUÇÃO** — falta o dono testar de novo ao vivo.
+
 **O que falta desta frente (itens 2 a 7 do pedido original, ainda não
 iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
 etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
