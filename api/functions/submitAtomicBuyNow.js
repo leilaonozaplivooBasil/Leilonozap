@@ -24,6 +24,7 @@
 import { fetchAuction, finalizeOneAuction, hasServerEnv } from '../_lib/finalizeAuctionCore.js';
 
 import { exigirSessao } from '../_lib/sessao.js';
+import { cotarFreteDoLeilao } from '../_lib/freteLeilao.js';
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -192,23 +193,45 @@ export default async function handler(req, res) {
 
     // 💰 Reserva o valor ANTES de tocar em qualquer registro do leilão — se faltar
     // saldo, nada mais roda. A partir daqui, qualquer falha precisa estornar.
-    const reserva = await reservar(userId, buyNowPrice, auctionId);
-    if (!reserva.success) {
-      if (reserva.error === 'saldo_insuficiente') {
-        return res.status(200).json({
-          success: false, saldo_insuficiente: true,
-          message: `Saldo insuficiente para arremate. Necessário: R$ ${buyNowPrice.toFixed(2)}.`,
-          required: buyNowPrice, balance: reserva.balance,
-        });
-      }
-      return res.status(409).json({ success: false, message: 'Não foi possível reservar o saldo. Tente novamente.' });
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🚚 FRETE DO ARREMATE RÁPIDO — corrigido em 21/08/2026
+    // ══════════════════════════════════════════════════════════════════════════
+    // COMO ESTAVA, e o estrago é financeiro nos DOIS sentidos:
+    //     const reserva = await reservar(userId, buyNowPrice, auctionId);   ← só o produto
+    //     ... frete_amount: 0
+    // e o `auctions.frete_reservado_valor` NÃO era tocado em lugar nenhum.
+    //
+    //   • leilão SEM líder anterior  → arremate termina com frete ZERO. A empresa
+    //     paga a transportadora do próprio bolso. Foi o pedido ARD5856D19.
+    //   • leilão COM líder anterior  → o novo vencedor HERDA o frete_reservado_valor
+    //     do líder que ele acabou de cobrir. Foi o AR3BEF1939: o R$ 11,60 era de um
+    //     lance anterior de R$ 6,80, com OUTRO CEP. O Buy Now nunca calculou nem
+    //     reservou aquilo — só ficou lá.
+    //
+    // Achado da auditoria independente da OpenAI. A minha hipótese anterior
+    // ("corrida da cotação assíncrona") estava ERRADA: os dois pedidos foram
+    // Arremate Rápido, e o histórico mostra `🔥 ARREMATE RÁPIDO!` com frete_amount = 0.
+    //
+    // COMO FICOU: o servidor cota o frete pelo `auction.product_id` e pelo CEP do
+    // cadastro do vencedor, reserva produto + frete, grava o frete no lance e
+    // SOBRESCREVE o `frete_reservado_valor` com o do novo vencedor.
+    const cot = await cotarFreteDoLeilao({ auctionId, userId, auction, freteId: body?.frete_id || null });
+    if (!cot.ok) {
+      // Sem frete não passa. Decisão do dono em 21/08: "não podemos de maneira
+      // nenhuma aceitar lances ou arrematar sem frete". Cada motivo vira uma
+      // instrução, porque erro seco no meio do leilão faz a pessoa desistir.
+      const explica = {
+        sem_cep: 'Cadastre seu CEP no perfil para arrematar — o frete precisa ser calculado.',
+        produto_nao_vinculado: 'Este leilão está sem produto vinculado, então não dá pra calcular o frete. Avise o suporte.',
+        cotacao_indisponivel: 'Não conseguimos calcular o frete para o seu CEP agora. Tente novamente em instantes.',
+        opcao_invalida: 'A opção de frete escolhida não está mais disponível. Recarregue a página.',
+      }[cot.motivo] || 'Não foi possível calcular o frete deste arremate.';
+      return res.status(200).json({ success: false, sem_frete: true, motivo: cot.motivo, message: explica });
     }
+    const frete = cot.frete;
+    const totalReservar = money(buyNowPrice + frete.valor);
 
-    const winnerName = user.nickname || user.full_name || 'Anônimo';
-
-    // 🎯 Insere o lance de arremate — vira automaticamente o MAIOR lance do leilão
-    // (buy_now_price > current_price já garantido acima), então finalizeOneAuction
-    // vai apurá-lo como vencedor.
+    const reserva = await reservar(userId, totalReservar, auctionId);
     const bidInsertResp = await sb('auction_messages', {
       method: 'POST', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({
@@ -219,7 +242,7 @@ export default async function handler(req, res) {
         bid_amount: buyNowPrice,
         created_date: new Date().toISOString(),
         timestamp: new Date().toISOString(),
-        frete_amount: 0,
+        frete_amount: frete.valor,
         content: `🔥 ARREMATE RÁPIDO! R$ ${buyNowPrice.toFixed(2).replace('.', ',')}`,
         is_system_message: false,
       }),
@@ -227,8 +250,24 @@ export default async function handler(req, res) {
     const bidInsertData = await bidInsertResp.json().catch(() => null);
     const bidRow = Array.isArray(bidInsertData) ? bidInsertData[0] : null;
     if (!bidInsertResp.ok || !bidRow) {
-      await estornar(userId, buyNowPrice, auctionId);
+      await estornar(userId, totalReservar, auctionId);
       return res.status(500).json({ success: false, message: 'Não foi possível registrar o arremate. Tente novamente.' });
+    }
+
+    // 🚚 O FRETE DO LEILÃO PASSA A SER O DESTE VENCEDOR.
+    // Sem esta linha o `frete_reservado_valor` do líder ANTERIOR sobrevive ao
+    // arremate — e a liquidação (settleAuctionWithBalance.js:47) cobra do novo
+    // vencedor um frete que foi cotado para o CEP de outra pessoa. Foi
+    // exatamente o que aconteceu no AR3BEF1939: R$ 11,60 de um lance de R$ 6,80
+    // que ficou pendurado no leilão.
+    const patchFrete = await sb(`auctions?id=eq.${enc(auctionId)}`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ frete_reservado_valor: frete.valor }),
+    });
+    if (!patchFrete.ok) {
+      // Não dá pra seguir: o encerramento leria o frete errado e cobraria errado.
+      await estornar(userId, totalReservar, auctionId);
+      return res.status(500).json({ success: false, message: 'Não foi possível registrar o frete do arremate. Nada foi cobrado.' });
     }
 
     // 🏁 Delega o encerramento pro motor único (mesmo do cron e do botão de
@@ -239,13 +278,13 @@ export default async function handler(req, res) {
     try {
       payload = await finalizeOneAuction(auction);
     } catch (e) {
-      await estornar(userId, buyNowPrice, auctionId);
+      await estornar(userId, totalReservar, auctionId);
       return res.status(500).json({ success: false, message: 'Erro ao encerrar o leilão: ' + String(e?.message || e) });
     }
 
     if (payload?.result?.winner_id !== userId) {
       // Perdeu a corrida de encerramento (outro processo fechou primeiro) — devolve o dinheiro.
-      await estornar(userId, buyNowPrice, auctionId);
+      await estornar(userId, totalReservar, auctionId);
       return res.status(409).json({
         success: false, conflict: true,
         message: 'Outra pessoa arrematou este leilão antes. Seu saldo foi devolvido.',
