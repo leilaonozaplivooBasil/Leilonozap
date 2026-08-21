@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     // 🖤 Parceiro de Compra é captação privada: preview institucional com imagem
     // oficial fixa e SEM valor/comissão/projeção (regra da página /Partners).
     const ehParceiro = cargo === 'parceiro';
-    const PARCEIRO_IMG = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/932dcb425_image.png';
+    const PARCEIRO_IMG = `${SITE}/midia/932dcb425_image.png`;
 
     const title = ehParceiro
       ? 'Parceiro de Compra — Leilão NoZap'

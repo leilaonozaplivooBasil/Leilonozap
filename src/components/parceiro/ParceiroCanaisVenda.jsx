@@ -20,9 +20,9 @@ const PERCURSOS = [
 ];
 
 // Imagens institucionais dos cartões (preto/dourado) — puxam o olho para o "Ver o cálculo"
-const IMG_LEILAO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/37a6c8764_generated_image.png';
-const IMG_LOJA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/1570ba555_generated_image.png';
-const IMG_REDE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/b023a95bd_generated_image.png';
+const IMG_LEILAO = '/midia/37a6c8764_generated_image.png';
+const IMG_LOJA = '/midia/1570ba555_generated_image.png';
+const IMG_REDE = '/midia/b023a95bd_generated_image.png';
 
 // 📊 Números REAIS de hoje (informados por Gabriel em 06/08/2026):
 // 52 pessoas ativas na plataforma · ~70 licenciados reunidos no grupo,

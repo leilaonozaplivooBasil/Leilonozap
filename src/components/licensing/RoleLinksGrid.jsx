@@ -14,25 +14,25 @@ const ROLE_LINKS = (referralCode) => [
   {
     title: "Influenciador",
     desc: "Grátis · 5% por venda/arremate",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png",
+    image: "/midia/84782e7ee_generated_image.png",
     link: `https://leilaonozap.net/c/influenciador?ref=${referralCode}`,
   },
   {
     title: "Vendedor",
     desc: "10% na venda direta",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2f7400a5d_generated_image.png",
+    image: "/midia/2f7400a5d_generated_image.png",
     link: `https://leilaonozap.net/c/vendedor?ref=${referralCode}`,
   },
   {
     title: "Licenciado",
     desc: "Loja virtual própria · 13%",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png",
+    image: "/midia/28db39fb0_generated_image.png",
     link: `https://leilaonozap.net/c/licenciado?ref=${referralCode}`,
   },
   {
     title: "Parceiro",
     desc: "Participa da operação",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3debca5db_generated_image.png",
+    image: "/midia/3debca5db_generated_image.png",
     link: `https://leilaonozap.net/c/parceiro?ref=${referralCode}`,
   },
 ];

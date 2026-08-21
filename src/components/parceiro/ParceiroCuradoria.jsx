@@ -3,7 +3,7 @@ import ParceiroSecao from './ParceiroSecao';
 import ParceiroLamina from './ParceiroLamina';
 import ParceiroDetalhe from './ParceiroDetalhe';
 
-const IMG_CURADORIA = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/d9f9f805d_generated_image.png';
+const IMG_CURADORIA = '/midia/d9f9f805d_generated_image.png';
 
 const PASSOS = [
   'Classificação por curva ABC',

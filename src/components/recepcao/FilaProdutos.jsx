@@ -19,10 +19,10 @@ const ESCALAS = [0.82, 1, 0.88, 0.95];
 // As fotos do catálogo são banners promocionais (fundo roxo/cinza/degradê),
 // então nunca ficariam "chapadas" — por isso a vitrine usa estes recortes.
 const VITRINE = [
-  { id: 'smartphone', src: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/73e6de558_generated_image.png', alt: 'Smartphone premium em leilão' },
-  { id: 'tv', src: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/ae152d078_generated_image.png', alt: 'Smart TV em leilão' },
-  { id: 'headphone', src: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/6e9c4e69e_generated_image.png', alt: 'Fone de ouvido premium em leilão' },
-  { id: 'notebook', src: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/9de567473_generated_image.png', alt: 'Notebook em leilão' },
+  { id: 'smartphone', src: '/midia/73e6de558_generated_image.png', alt: 'Smartphone premium em leilão' },
+  { id: 'tv', src: '/midia/ae152d078_generated_image.png', alt: 'Smart TV em leilão' },
+  { id: 'headphone', src: '/midia/6e9c4e69e_generated_image.png', alt: 'Fone de ouvido premium em leilão' },
+  { id: 'notebook', src: '/midia/9de567473_generated_image.png', alt: 'Notebook em leilão' },
 ];
 
 function Item({ produto, indice }) {

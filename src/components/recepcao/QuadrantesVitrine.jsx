@@ -9,7 +9,7 @@ const QUADRANTES = [
     apoio: 'Entrega em todo o Brasil.',
     bg: '#F5F6F5',
     escuro: false,
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/c2652d991_generated_image.png',
+    img: '/midia/c2652d991_generated_image.png',
     ctas: [{ label: 'Comprar agora', to: '/Loja-Virtual' }],
   },
   {
@@ -17,7 +17,7 @@ const QUADRANTES = [
     apoio: 'Preço de atacado, sem intermediário.',
     bg: '#FFFFFF',
     escuro: false,
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/fa76ed3f1_generated_image.png',
+    img: '/midia/fa76ed3f1_generated_image.png',
     ctas: [{ label: 'Saber mais', to: '/DiretoDeFabrica' }],
   },
   {
@@ -25,7 +25,7 @@ const QUADRANTES = [
     apoio: 'Dê seu lance e veja o martelo bater.',
     bg: '#0C1F16',
     escuro: true,
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/7d402220f_generated_image.png',
+    img: '/midia/7d402220f_generated_image.png',
     ctas: [{ label: 'Entrar na sala', to: '/leiloes' }],
   },
   {
@@ -33,7 +33,7 @@ const QUADRANTES = [
     apoio: 'Lance, arremate e receba em casa.',
     bg: '#F1F7F3',
     escuro: false,
-    img: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a0135bbdf_generated_image.png',
+    img: '/midia/a0135bbdf_generated_image.png',
     ctas: [{ label: 'Como funciona', to: '/ComoFunciona' }],
   },
 ];

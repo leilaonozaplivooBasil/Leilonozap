@@ -9,19 +9,19 @@ export const PLANILHAS_TESTE = [
     id: 'lote253',
     titulo: 'Lote 253 — Franco da Rocha (SP)',
     detalhe: 'Lote completo · 961 itens · Mercado Livre',
-    url: 'https://media.base44.com/files/public/68d536db3c26ff51f79c4137/c69b9b1fd_LOTE253-FCODAROCHA-COMPLETO.xlsx',
+    url: '/midia/c69b9b1fd_LOTE253-FCODAROCHA-COMPLETO.xlsx',
   },
   {
     id: 'lote132',
     titulo: 'Lote 132 — Perus (SP)',
     detalhe: 'Lote misto · 725 itens · Mercado Livre',
-    url: 'https://media.base44.com/files/public/68d536db3c26ff51f79c4137/9629284f3_LOTE132-PERUS-COMPLETO.xlsx',
+    url: '/midia/9629284f3_LOTE132-PERUS-COMPLETO.xlsx',
   },
   {
     id: 'lote495',
     titulo: 'Lote 495 — Cajamar (SP)',
     detalhe: 'Lote especialista · 3.553 itens · Mercado Livre',
-    url: 'https://media.base44.com/files/public/68d536db3c26ff51f79c4137/b114f4230_LOTE495-CAJAMAR-ESPECIALISTA.xlsx',
+    url: '/midia/b114f4230_LOTE495-CAJAMAR-ESPECIALISTA.xlsx',
   },
 ];
 
