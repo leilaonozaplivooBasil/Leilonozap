@@ -52,6 +52,13 @@ export default function CatalogManagement() {
   const ativarNaLoja = async (product) => {
     const preco = Number(product.selling_price_retail) || 0;
     if (preco <= 0) return; // botão já desabilitado; dupla proteção
+    // 🔴 PONTO 125 (21/08/2026): faltava a mesma trava aqui — produto com quantity
+    // zerada podia voltar pra vitrine com este botão, e só a baixa de estoque
+    // desligava de novo, quando ela mesma zerasse a peça.
+    if ((Number(product.quantity) || 0) <= 0) {
+      toast.error('Este produto está com estoque zerado — reponha antes de ativar na Loja Virtual.');
+      return;
+    }
     setAtivandoId(product.id);
     try {
       await _ew('Product', 'update', product.id, {
