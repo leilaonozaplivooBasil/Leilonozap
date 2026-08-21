@@ -443,6 +443,43 @@ Daqui pra frente, resetar a branch logo depois de cada merge evita o susto.
 **Vocabulário do protocolo:** **MERGEADO e DEPLOYADO.** Ainda **NÃO VALIDADO
 EM PRODUÇÃO** — falta o dono testar de novo ao vivo.
 
+---
+
+**Atualização — dono testou de novo, achou um TERCEIRO bug, na hora.**
+
+Print: abriu um pedido, status "Pago" já selecionado, digitou um rastreio
+novo (`LZA49E338F`), clicou Salvar, toast disse "sucesso" — mas o pedido
+continuou em "Pago — Preparar Envio" na lista. Mensagem: "NAO ATAUALIZA OLHA".
+
+**CLAUDE — causa raiz:** o PONTO 117 (correção anterior, poucos minutos
+antes) removeu por completo a promoção automática de status pra 'shipped' ao
+digitar rastreio — correto pra fechar o bug de "Pago não sai de Enviado" —
+mas **esqueceu de conferir se essa promoção era, ela mesma, uma funcionalidade
+real** que a tela promete: o texto abaixo do campo de rastreio sempre disse
+*"Ao adicionar o código, o status será atualizado para Enviado
+automaticamente"* — e continua dizendo, porque eu não toquei nele. O dono
+seguiu exatamente a instrução da própria tela e ela não aconteceu.
+
+**Erro meu, registrado sem eufemismo:** ao corrigir o PONTO 117 eu troquei
+"sempre promove" por "nunca promove", quando o certo era "promove só quando
+o rastreio muda de verdade". Duas correções seguidas no mesmo campo porque a
+primeira não separou os dois problemas reais que estavam misturados na
+mesma linha de código.
+
+**Correção (commit `648848a1`, mesma branch):** extraída a decisão pra
+`src/lib/pedidoStatus.js` — função pura `decidirStatusAoSalvar`, testável
+sem precisar de infraestrutura de teste de componente React (que este repo
+não tem). Regra: rastreio digitado **diferente** do que já estava salvo +
+status "Pago" selecionado → promove pra "Enviado". Rastreio igual ao que já
+tinha (ex.: reabriu o modal só pra corrigir o status) → respeita a escolha
+explícita, sem promover.
+
+**Prova:** 6 testes novos, um pra cada combinação (rastreio novo, rastreio
+igual, sem rastreio, espaço em branco, status já "entregue"/"cancelado" não
+mexe). `npm test`: **225/225**. `npm run build`: exit 0. `git push`: feito.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.**
+
 **O que falta desta frente (itens 2 a 7 do pedido original, ainda não
 iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
 etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
