@@ -49,12 +49,24 @@ export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, au
   }
   if (!leilao) return { ok: false, motivo: 'leilao_nao_encontrado', frete: null, opcoes: [] };
 
+  // 📮 ENDEREÇO COMPLETO (21/08/2026) — junto com o CEP, já busca se falta rua.
+  // Motivo do dono: "eu não posso ficar com pedido preso por conta de coisas
+  // manuais" — o caso Rosenberg/AR3BEF1939 (arrematou com CEP mas sem rua
+  // cadastrada, ninguém percebeu até a hora de despachar). Uma consulta só;
+  // quem não precisa do endereço (cotação de fora do leilão) ignora o campo.
+  let usuario = null;
   let cepUsar = String(cep || '').replace(/\D/g, '');
   if (cepUsar.length !== 8) {
-    const uRows = await (await sb(`app_users?select=address_zip_code&id=eq.${enc(userId)}&limit=1`)).json();
-    cepUsar = String((Array.isArray(uRows) ? uRows[0]?.address_zip_code : '') || '').replace(/\D/g, '');
+    const uRows = await (await sb(`app_users?select=address_zip_code,address_street,address_number,address_complement,address_neighborhood,address_city,address_state&id=eq.${enc(userId)}&limit=1`)).json();
+    usuario = Array.isArray(uRows) ? uRows[0] : null;
+    cepUsar = String(usuario?.address_zip_code || '').replace(/\D/g, '');
   }
   if (cepUsar.length !== 8) return { ok: false, motivo: 'sem_cep', frete: null, opcoes: [] };
+  if (!usuario) {
+    const uRows = await (await sb(`app_users?select=address_street,address_number,address_complement,address_neighborhood,address_city,address_state&id=eq.${enc(userId)}&limit=1`)).json();
+    usuario = Array.isArray(uRows) ? uRows[0] : null;
+  }
+  const enderecoCompleto = Boolean(usuario?.address_street && usuario?.address_number);
 
   // ⚠️ product_id, não auction.id — ver o bloco no topo do arquivo.
   if (!leilao.product_id) return { ok: false, motivo: 'produto_nao_vinculado', frete: null, opcoes: [] };
@@ -84,6 +96,12 @@ export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, au
     // quem assina tem de dizer PARA QUE PRODUTO aquele preço foi calculado.
     productId: String(leilao.product_id),
     cep: cepUsar,
+    enderecoCompleto,
+    enderecoAtual: {
+      street: usuario?.address_street || null, number: usuario?.address_number || null,
+      complement: usuario?.address_complement || null, neighborhood: usuario?.address_neighborhood || null,
+      city: usuario?.address_city || null, state: usuario?.address_state || null,
+    },
     frete: {
       id: String(escolhida.id), valor: money(escolhida.preco),
       empresa: escolhida.empresa || null, servico: escolhida.nome || null,

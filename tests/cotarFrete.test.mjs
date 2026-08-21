@@ -213,3 +213,76 @@ describe('BLOQUEADOR 14 · selo financeiro exige identidade, e ela vem do crach�
     for (const o of r.corpo.opcoes) assert.equal(o.selo, undefined);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('ENDEREÇO NA HORA DO LANCE · 21/08/2026 — decisão do dono', () => {
+  // "eu não posso ficar com pedido preso por conta de coisas manuais" — o caso
+  // Rosenberg/AR3BEF1939: tinha CEP (cotava frete certinho) mas nunca teve rua
+  // cadastrada, e só travou na hora de despachar. Agora a rota avisa ISSO já
+  // na cotação, pra tela pedir a rua/número antes do lance, não depois.
+  test('EA1 · usuário com rua e número: endereco_completo true', async () => {
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('app_users') && String(u).includes('address_zip_code')) {
+        return { ok: true, status: 200, json: async () => [{
+          address_zip_code: CEP_CADASTRO, address_street: 'Rua Completa', address_number: '100',
+          address_neighborhood: 'Centro', address_city: 'São Paulo', address_state: 'SP',
+        }], text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ auction_id: LEILAO });
+    globalThis.fetch = antes;
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo.endereco_completo, true);
+    assert.equal(r.corpo.endereco_atual.number, '100');
+  });
+
+  test('EA2 · usuário SEM rua (caso Rosenberg): endereco_completo false', async () => {
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('app_users') && String(u).includes('address_zip_code')) {
+        return { ok: true, status: 200, json: async () => [{ address_zip_code: CEP_CADASTRO }], text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ auction_id: LEILAO });
+    globalThis.fetch = antes;
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(r.corpo.endereco_completo, false, 'não avisou que faltava endereço — é o defeito do AR3BEF1939');
+  });
+
+  test('EA3 · usuário com rua mas SEM número: ainda é endereco_completo false', async () => {
+    // Rua sem número não dá pra despachar — mesmo defeito, metade corrigida.
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('app_users') && String(u).includes('address_zip_code')) {
+        return { ok: true, status: 200, json: async () => [{
+          address_zip_code: CEP_CADASTRO, address_street: 'Rua Sem Número', address_number: '',
+        }], text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ auction_id: LEILAO });
+    globalThis.fetch = antes;
+    assert.equal(r.corpo.endereco_completo, false);
+  });
+
+  test('EA4 · endereco_atual devolve o que já existe, para a tela prefill', async () => {
+    const antes = globalThis.fetch;
+    globalThis.fetch = async (u, o) => {
+      if (String(u).includes('app_users') && String(u).includes('address_zip_code')) {
+        return { ok: true, status: 200, json: async () => [{
+          address_zip_code: CEP_CADASTRO, address_street: 'Rua das Flores', address_number: '',
+          address_neighborhood: 'Centro', address_city: 'São Paulo', address_state: 'SP',
+        }], text: async () => '[]' };
+      }
+      return antes(u, o);
+    };
+    const r = await chamar({ auction_id: LEILAO });
+    globalThis.fetch = antes;
+    assert.equal(r.corpo.endereco_completo, false);
+    assert.equal(r.corpo.endereco_atual.street, 'Rua das Flores');
+    assert.equal(r.corpo.endereco_atual.city, 'São Paulo');
+  });
+});

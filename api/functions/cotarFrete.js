@@ -113,7 +113,11 @@ export default async function handler(req, res) {
           empresa: o.empresa, servico: o.nome, prazo: o.prazo,
         }),
       }));
-      return res.status(200).json({ success: true, configured: true, opcoes, cep: cot.cep });
+      return res.status(200).json({
+        success: true, configured: true, opcoes, cep: cot.cep,
+        endereco_completo: cot.enderecoCompleto,
+        endereco_atual: cot.enderecoAtual,
+      });
     }
 
     // ── CAMINHO DA LOJA: como sempre foi, e sem selo ──────────────────────
