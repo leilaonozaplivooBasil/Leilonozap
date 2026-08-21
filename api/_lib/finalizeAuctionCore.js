@@ -151,11 +151,27 @@ export async function reterFatiaDaRede({ auction, finalPrice, pctRetido, arremat
     });
 
     // 💰 crédito no saldo — decisão expressa do dono (ver cabeçalho).
-    await sb(`app_users?id=eq.${enc(oficial.id)}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ commission_balance: money((Number(oficial.commission_balance) || 0) + valor) }),
+    //
+    // 🔴 PONTO 123 (21/08/2026) — ERA LER-SOMAR-GRAVAR, E ISSO PERDE DINHEIRO.
+    // A versão anterior lia commission_balance junto com a conta, somava em
+    // memória e gravava o total. Dois leilões encerrando no mesmo instante — o
+    // cron de vencidos fecha vários de uma vez — leem o MESMO saldo e gravam por
+    // cima um do outro: a retenção de um dos dois some, e a linha do extrato dele
+    // fica lá, dizendo que o dinheiro entrou. Extrato e saldo passam a discordar,
+    // sem nada no log.
+    //
+    // A soma agora é feita PELO BANCO, com a mesma RPC atômica que a comissão
+    // usa (rpc/credit_commission, PONTO 114). Duas execuções simultâneas somam
+    // as duas. E se o crédito falhar, a linha do extrato é o rastro que sobra —
+    // por isso o erro é alto, não aviso baixinho.
+    const credito = await sb('rpc/credit_commission', {
+      method: 'POST',
+      body: JSON.stringify({ _user: oficial.id, _amount: valor }),
     });
+    if (!credito.ok) {
+      console.error(`[FINALIZE] RETENÇÃO NÃO CREDITADA — leilão ${auction.id}, R$ ${valor} na conta oficial ${oficial.id}. A linha do extrato foi gravada; o saldo NÃO. Resolver na mão.`);
+      return 0;
+    }
     return valor;
   } catch (e) {
     console.warn('[FINALIZE] retenção da fatia da rede:', e?.message);
