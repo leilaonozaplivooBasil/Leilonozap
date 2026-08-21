@@ -8,6 +8,7 @@ import { oid } from '../_lib/oid.js';
 // O navegador só manda o ID da transportadora + CEP; o valor é apurado aqui.
 // ⚠️ O frete NÃO entra em sale_price/total_amount: essa é a base de comissão.
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
+import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -85,6 +86,22 @@ export default async function handler(req, res) {
     const saleId = oid();
     const title = lines.length === 1 ? lines[0].title : `${lines[0].title} +${lines.length - 1} item(ns)`;
     const tracking = 'LJ' + saleId.slice(0, 8).toUpperCase();
+
+    // 🔴 PONTO 126 (21/08/2026) — RESERVA COM VALIDADE (Fase 2). A checagem de linha 59
+    // olha e segue (dois checkouts da última peça, simultâneos, os dois passam) — aqui
+    // trava de verdade, atômico no banco, contra o estoque PRÓPRIO desta loja.
+    const reserva = await reservarItensDaVenda({
+      ownerId: store.id,
+      saleId,
+      items: lines.map((l) => ({ product_id: l.product_id, qty: l.qty, title: l.title })),
+    });
+    if (!reserva.ok) {
+      return res.status(200).json({
+        success: false,
+        error: `Estoque insuficiente de "${(reserva.titulo || '').slice(0, 60)}" — outra pessoa já está pagando essa peça agora.`,
+      });
+    }
+
     const base = {
       id: saleId, base44_id: saleId, kind: 'loja', source: 'loja_online',
       seller_id: store.id, store_slug: slug,
@@ -101,7 +118,10 @@ export default async function handler(req, res) {
     if (!r.ok) {
       const minimal = { id: saleId, base44_id: saleId, kind: 'loja', source: 'loja_online', seller_id: store.id, buyer_name: customer.name, buyer_phone: customer.phone, product_title: base.product_title, sale_price: total, total_amount: total, quantity: totalQty, items_json: lines, status: 'pending_payment', payment_method: base.payment_method };
       r = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(minimal) });
-      if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao registrar pedido', details: t.slice(0, 200) }); }
+      if (!r.ok) {
+        await devolverItem({ saleId }).catch(() => {});
+        const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao registrar pedido', details: t.slice(0, 200) });
+      }
     }
 
     if (gateway === 'pix') {
@@ -117,7 +137,10 @@ export default async function handler(req, res) {
         }),
       });
       const pay = await mp.json();
-      if (!mp.ok || !pay?.id) return res.status(200).json({ success: false, error: 'Falha ao gerar PIX', details: (pay?.message || '').slice(0, 200) });
+      if (!mp.ok || !pay?.id) {
+        await devolverItem({ saleId }).catch(() => {});
+        return res.status(200).json({ success: false, error: 'Falha ao gerar PIX', details: (pay?.message || '').slice(0, 200) });
+      }
       const td = pay.point_of_interaction?.transaction_data || {};
       await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_payment_id: String(pay.id), pix_qr: td.qr_code, pix_qr_base64: td.qr_code_base64, pix_ticket_url: td.ticket_url }) });
       return res.status(200).json({ success: true, gateway: 'pix', sale_id: saleId, amount: totalCobrado, amount_products: total, shipping: round2(frete.valor || 0), shipping_carrier: [frete.empresa, frete.servico].filter(Boolean).join(' ') || null, tracking, payment_id: String(pay.id), pix_code: td.qr_code, qr_code_base64: td.qr_code_base64, ticket_url: td.ticket_url });
@@ -148,7 +171,10 @@ export default async function handler(req, res) {
     };
     const sr = await fetch('https://api.mercadopago.com/checkout/preferences', { method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(prefBody) });
     const pref = await sr.json();
-    if (!sr.ok || !pref?.id) return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 200) });
+    if (!sr.ok || !pref?.id) {
+      await devolverItem({ saleId }).catch(() => {});
+      return res.status(200).json({ success: false, error: 'Falha ao criar checkout', details: (pref?.message || JSON.stringify(pref)).slice(0, 200) });
+    }
     await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ mp_preference_id: pref.id }) });
     return res.status(200).json({ success: true, gateway: 'card', sale_id: saleId, amount: totalCobrado, amount_products: total, shipping: round2(frete.valor || 0), tracking, url: pref.init_point });
   } catch (e) {

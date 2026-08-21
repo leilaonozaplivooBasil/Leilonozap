@@ -6,6 +6,7 @@ import { oid } from './oid.js';
 // 📦 regra ÚNICA de baixa (estoque próprio do vendedor tem prioridade sobre o central)
 import { baixarItensDaVenda } from './baixaEstoque.js';
 import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
+import { consumirItensDaVenda } from './estoqueReserva.js';
 // 🤝 venda ONLINE: o cliente pagou pela plataforma, então o custo da peça
 // consignada é retido aqui mesmo e a dívida morre — sem tocar no saldo do lojista.
 import { liquidarConsignado } from './consignadoSettle.js';
@@ -207,6 +208,9 @@ export async function fulfillStoreOrder(sale) {
     consumos = r.consumos;
     faltas = r.faltas;
   }
+  // 🔴 PONTO 126 (21/08/2026): pagamento confirmou, a baixa de verdade já rodou acima —
+  // solta o "hold" da reserva (Fase 2). Best-effort: nunca pode travar a venda já paga.
+  await consumirItensDaVenda({ saleId: sale.id }).catch(() => {});
   const baixados = items.length;
   const commission = await payStoreCommissions(sale);
   // 🤝 peça consignada vendida online: dívida morre, retida no pagamento

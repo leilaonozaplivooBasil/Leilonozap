@@ -26,6 +26,7 @@
   "crons": [
     { "path": "/api/functions/syncNexusSheet", "schedule": "0 2 * * *" },
     { "path": "/api/functions/finalizeExpiredAuctions", "schedule": "* * * * *" },
-    { "path": "/api/functions/activateScheduledAuctions", "schedule": "* * * * *" }
+    { "path": "/api/functions/activateScheduledAuctions", "schedule": "* * * * *" },
+    { "path": "/api/functions/expirarReservasEstoque", "schedule": "* * * * *" }
   ]
 }
