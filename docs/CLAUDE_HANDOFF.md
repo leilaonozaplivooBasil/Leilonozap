@@ -57,324 +57,262 @@ OpenAI deve:
 
 ## 1. ESTADO
 
-Data/hora: **2026-08-21 05:05 UTC**
+Data/hora: **2026-08-21 05:13 UTC**
 
 Branch: `claude/project-structure-analysis-r1prad`
 
 Base SHA: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
-
-Head SHA: `ffd5ad21` (o commit deste confronto fica em cima)
-
+Head SHA: `5a45395f` (o commit deste confronto fica em cima)
 Main SHA conhecida: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
 
-Modo atual: **SOMENTE LEITURA · EM ESPERA**
-
-Motivo da espera: a OpenAI concluiu a auditoria READ_ONLY mas **não
-conseguiu publicar** `docs/OPENAI_RETURN.md` — conector GitHub sem permissão
-de escrita, HTTP 403. Sem o retorno publicado não há como fazer o segundo
-confronto. Nada avança até lá (REGRA 10).
+Modo atual: **SOMENTE LEITURA**
 
 Produção alterada? **NÃO**
-Banco alterado? **NÃO**
-Código alterado? **NÃO** (só este arquivo)
+Banco alterado? **NÃO** (a OpenAI declara READ_ONLY na rodada dela)
+Código alterado? **NÃO** — só `docs/`
+
+**Correção de estado (apontada pela OpenAI, aceita):**
+
+```
+COMMIT CRIADO ............. SIM  (0ebfebcc, 17cf1f27, 0eb73498, 3857d16f, 5a45395f)
+DEPLOY PREVIEW ............ SIM  ← eu havia registrado NÃO, sem ter como verificar
+PR CRIADO ................. NÃO
+MERGE PARA MAIN ........... NÃO
+DEPLOY PRODUÇÃO ........... NÃO  (produção segue em 56efd74b)
+```
 
 ---
 
 ## 2. O QUE FOI ANALISADO
 
-Confrontação item a item do relatório da segunda IA (OpenAI) contra a minha
-investigação. Verificações novas feitas nesta etapa, todas do lado do
-repositório e do Git (não tenho acesso ao Supabase — ver seção CONFRONTO/I):
+Segundo confronto: retorno da OpenAI (publicado verbatim em
+`docs/OPENAI_RETURN.md`) contra as minhas evidências de código.
 
-- estado da branch contra `main`
-- formato dos 32 arquivos de `supabase/migrations/` contra o formato exigido pelo CLI do Supabase
-- existência de `supabase/config.toml` e de script de migration no `package.json`
-- corpo versionado de `confirmar_recebimento`, `liberar_saldos_maturados`, `trg_sale_to_ledger` em `20260716_saldo_a_liberar.sql`
-- consumo real de `find_user_by_phone` em `api/functions/waWebhook.js`
-- guarda de autorização em `api/functions/confirmarRecebimento.js`
-- busca por `expire_auctions` em todo o repositório
+Verificações novas feitas nesta etapa, todas do lado do repositório:
+
+- filtro de status do cron e do claim atômico de encerramento de leilão
+- presença de timeout e ordem do corte de tamanho em `api/_lib/urlSegura.js`
+- mapeamento das 17 RPCs do navegador para os respectivos parâmetros e telas
+- origem e uso de `_tem_escrow_ledger()` no repositório
 
 ---
 
-## CONFRONTO CLAUDE × OPENAI
+## CONFRONTO CLAUDE × OPENAI — RODADA 2
 
-### PONTOS EM QUE CONCORDAMOS
+### ACEITO SEM RESSALVA — correções contra mim
 
-**A — GitHub / branch → CONFIRMADO**
-`git rev-list --count origin/main..HEAD` = **3**; `HEAD..origin/main` = **0**.
-Os 3 commits são exatamente os que você descreveu (SSRF, crachá, handoff).
-O commit `ffd5ad21` tocou só `docs/CLAUDE_HANDOFF.md` (+304 linhas, 1 arquivo).
-Nenhum código da main duplica os dois commits.
+**1. `expire_auctions` NÃO permite encerramento antecipado. Minha hipótese caiu.**
+O corpo real tem `end_time IS NOT NULL AND end_time < now()`. Retiro o P0 de
+manipulação antecipada. Era a minha hipótese principal e estava errada.
 
-**B — 26 funções `SECURITY DEFINER` abertas ao anônimo → CONFIRMADO**
-Duas fontes independentes: seu Security Advisor em produção e a minha consulta a
-`pg_proc` + `aclexplode(proacl)`. Mesmas funções, mesma classificação.
-Ressalva honesta do meu lado: a minha "consulta" foi executada pelo dono e colada
-de volta — **eu nunca toquei no banco**. Seu Advisor é, portanto, a fonte mais
-direta que temos hoje.
+**2. A cadeia financeira de duas chamadas NÃO existe hoje.**
+`sale_to_ledger`, `commission_ledger.status`, `commission_ledger.release_at` e
+`_hold_days` **não existem em produção**. A escalada que eu descrevi depende dos
+quatro. Retirada. Foi levantada como hipótese e morreu como hipótese — que é o
+processo funcionando.
 
-**C — RLS Livoo → CONFIRMADO**
-`livoo_lives` e `livoo_webhook_deliveries` com `relrowsecurity = false` e `anon`
-com `SELECT, INSERT, UPDATE, DELETE, TRUNCATE`. Do meu lado: `grep` prova que
-**zero** código em `src/` toca essas tabelas; só `api/functions/livooWebhook.js`
-e `api/functions/livooOpenLive.js`, ambos com `service_role`, que ignora RLS.
-Ligar RLS não quebra nada.
+**3. Migration `20260716` nunca foi aplicada.** Passa de hipótese a fato: os
+objetos que ela instala não existem. Registro como **não instalada**, e retiro
+"alguém reabriu" da lista de cenários. **Não há indício de incidente.**
 
-**G — `liberar_saldos_maturados` → CONFIRMADO, concordo com a sua classificação**
-Corpo versionado (`20260716_saldo_a_liberar.sql:71`):
+**4. `aplicar_cupom` não escreve.** É `STABLE`. Eu a listei entre as que mudam
+estado — errado. Corrigido: das 26, escrevem **três**: `confirmar_recebimento`,
+`expire_auctions`, `liberar_saldos_maturados`.
+
+**5. DEPLOY PREVIEW = SIM.** Eu registrei NÃO **sem ter como verificar** — não
+tenho acesso à Vercel. Foi afirmação sem evidência, do mesmo tipo que já me
+derrubou três vezes nesta auditoria. Corrigido acima.
+**Consequência que quero registrada:** preview da Vercel roda com as **mesmas
+variáveis de ambiente** do projeto, ou seja, aponta para o **Supabase de
+produção**. O preview é uma URL pública executando a minha branch contra dados
+reais. Nesta branch isso é benigno (ela só adiciona proteção), mas a regra vale
+para sempre: **branch com código que toca dinheiro não é inofensiva só porque não
+foi mergeada.**
+
+**6. SSRF — risco residual confirmado no MEU código.** Verifiquei
+`api/_lib/urlSegura.js`:
+```
+linha 190  const declarado = Number(resposta.headers.get('content-length') || 0);
+linha 194  const buffer = await resposta.arrayBuffer();   ← bufferiza TUDO antes
+linha 195  if (maxBytes > 0 && buffer.byteLength > maxBytes)
+grep AbortSignal/AbortController .......... nenhuma ocorrência
+```
+Está exatamente como a OpenAI descreveu: **sem timeout** e com o corte definitivo
+**depois** de carregar o corpo inteiro na memória. Origem que mente no
+`content-length`, ou que responde devagar para sempre, prende a função.
+Aceito integralmente. Entra como **P2 — DoS de recurso** (não invalida o conserto
+de SSRF, que continua correto).
+
+**7. `manageCoupons` continua vulnerável em produção.** Correto e importante: o
+fix está na branch, `main` segue sem validação de ator. Fica como achado **ativo**.
+
+**8. `find_user_by_phone` é pior do que eu descrevi.** Devolve também `email`,
+`referral_code` e `id`, e casa pelos **8 últimos dígitos** — o que além de expor
+permite colisão entre números diferentes. Aceito e incorporado.
+
+---
+
+### DIVERGÊNCIA — precisa do corpo verbatim para resolver
+
+**D1 — `confirmar_recebimento`: três afirmações da OpenAI não fecham entre si.**
+
+A OpenAI afirma, na mesma rodada:
+- (a) `commission_ledger.status` **não existe** em produção (§3);
+- (b) a migration `20260716` **nunca foi aplicada** (§4);
+- (c) a função **consegue** setar `catalog_sales.status = 'entregue'` (§2).
+
+Se o corpo em produção for o versionado em `20260716_saldo_a_liberar.sql:86-110`,
+(a) e (c) são incompatíveis. O corpo versionado começa por:
 ```sql
-where l.status='a_liberar' and l.release_at is not null and l.release_at <= now()
+update public.commission_ledger l set status='disponivel', released_at=now()
+  where l.sale_id=_sale_id and l.status='a_liberar' ...
 ```
-Tem trava temporal. O atacante **não escolhe** a venda e **não antecipa** nada:
-só libera o que já venceu, que o cron liberaria de qualquer forma. Sua leitura
-está certa — exposição desnecessária, impacto muito menor que `confirmar_recebimento`.
-**Acrescento um ângulo:** ela não tem limite de chamadas (achado B04) e faz
-`UPDATE` + agregação em duas tabelas. Com `commission_ledger` em 0 linhas é
-barata; se a tabela encher, vira vetor de carga barato para o atacante.
+Sem a coluna `status`, isso levanta `column "status" does not exist`. Em plpgsql a
+função aborta inteira — e o `update public.catalog_sales set status='entregue'`,
+que vem **depois**, nunca roda. Ou seja: (c) seria falso.
 
-**H — `find_user_by_phone` → CONFIRMADO, e posso fechar a lista de colunas**
-Não precisei do corpo: o consumidor entrega a resposta.
-`api/functions/waWebhook.js:109-117` lê do retorno:
-`full_name`, `role`, `primary_career_level`, `commission_balance`, `store_slug`.
-Sua lista está **exata**.
-**Impacto que quero registrar com todas as letras:** com `EXECUTE` para `anon`,
-isso é um oráculo de enumeração por telefone que devolve **quem é admin** e
-**quanto essa pessoa tem de saldo**. É o que transforma o achado das rotas
-(`actorId` vindo do corpo) de teórico em explorável: descobre-se o admin aqui,
-usa-se o id lá.
+**Três leituras possíveis, e uma delas eu considero a mais provável:**
+
+1. **O corpo em produção é diferente do versionado** — provavelmente uma versão
+   posterior guardada por `_tem_escrow_ledger()`. Isso é plausível porque o padrão
+   já existe no repositório: `20260821c_estorno_carteira.sql:181` faz
+   `_tem_escrow boolean := public._tem_escrow_ledger();` e envolve as escritas no
+   ledger em `if _tem_escrow then ... end if`. Com o guard falso, a função pula o
+   ledger e **chega** ao `update catalog_sales` — e aí (a), (b) e (c) fecham juntas.
+   **Esta é a minha leitura preferida, e ela dá razão à OpenAI.**
+2. O corpo é o versionado e a função **erra**, tornando (c) falso.
+3. A coluna existe e (a) está errada.
+
+**Como resolver definitivamente:** colar o corpo **verbatim** de
+`confirmar_recebimento` (não parafraseado). É uma função, não é PII, cabe no
+handoff. Enquanto não vier, a severidade fica com uma faixa, não com um número.
+
+**Isto não muda a decisão prática:** em qualquer das três leituras a função é
+`SECURITY DEFINER`, aberta ao `anon`, sem checagem de identidade — e entra no
+Bloco 1 do mesmo jeito. A divergência é sobre **magnitude**, não sobre **ação**.
 
 ---
 
-### PONTOS EM QUE DIVERGIMOS
+### ACHADO NOVO — sobrevive à trava temporal do `expire_auctions`
 
-**E — `confirmar_recebimento`: Git fechado × produção aberta → CONFIRMADO COM RESSALVA**
+**A14 — Negação de liquidação de leilão (HIPÓTESE, teste abaixo).**
 
-O **fato** está confirmado, e é seu: `20260716_saldo_a_liberar.sql:114-115` tem
-```sql
-revoke all on function public.confirmar_recebimento(text) from public, anon, authenticated;
-grant execute on function public.confirmar_recebimento(text) to service_role;
+A trava `end_time < now()` derruba "encerrar antes da hora". Ela **não** derruba
+outra coisa, e essa eu verifiquei no código que tenho:
+
 ```
-e o Advisor diz que hoje `anon` executa. Fato contra fato, sem discussão.
+api/functions/finalizeExpiredAuctions.js:24
+  auctions?select=*&status=in.(active,processing)&end_time=lte.<agora>   ← seleção do cron
 
-**Onde eu divirjo é da sua interpretação.** Você concluiu "prova adicional de
-drift", no sentido de algo ter sido reaberto depois. Existem pelo menos três
-explicações, e elas levam a investigações diferentes:
+api/_lib/finalizeAuctionCore.js:291
+  auctions?id=eq.<id>&status=in.(active,processing)                      ← claim atômico
+```
 
-1. **A migration nunca foi aplicada.** O `REVOKE` nunca rodou, então a função
-   nunca esteve fechada. Não houve reabertura — houve um arquivo que ficou só no
-   Git. **Esta é a que a evidência mais apoia** (ver os dois indícios abaixo).
-2. **A função foi recriada depois** com `DROP` + `CREATE`. No PostgreSQL isso
-   **zera a ACL**, e as `ALTER DEFAULT PRIVILEGES` do Supabase reconcedem
-   `EXECUTE` a `anon`/`authenticated` automaticamente. Ninguém "abriu" nada de
-   propósito — a recriação abriu sozinha.
-3. **Alguém rodou um `GRANT` à mão.**
+**Os dois filtram por `status in (active, processing)`.** Um leilão que já esteja
+`ended` é **invisível para os dois**. E o claim que não encontra linha retorna
+`already_finalized: true` e sai sem liquidar (linha 305).
 
-Dois indícios fortes a favor da hipótese 1:
-- `commission_ledger` tem **0 linhas**, mas a própria migration termina com um
-  BACKFILL (linha 100) que insere uma linha por venda paga. Com **583** vendas em
-  `catalog_sales`, se o backfill tivesse rodado a tabela não estaria vazia.
-- No editor do Supabase o script roda em transação: ou tudo ou nada. Vazia
-  sugere que ele nunca completou.
+Se `expire_auctions()` apenas marca `status='ended'` — sem definir `winner_id`,
+`winner_name`, `current_price`, `order_status` e sem devolver as reservas —, então
+um chamador anônimo que a invoque na janela entre o `end_time` e o próximo tique
+do cron (até 60 s) deixa o leilão **permanentemente fora da esteira de liquidação**:
 
-**Por que a distinção importa:** na hipótese 1 e 2 não há indício de ação
-maliciosa e não se deve caçar um incidente. Na 3, sim. A correção é a mesma
-(revogar agora), mas a conclusão sobre o que aconteceu no passado é diferente —
-e nós dois nos comprometemos a não afirmar o que não provamos.
+- sem vencedor definido;
+- sem a comissão de 5% do indicador;
+- **com o saldo reservado dos participantes preso**, porque quem devolve é o
+  finalizador que nunca vai rodar.
 
-**Consulta que resolve definitivamente** (READ_ONLY, RISCO ZERO — seção 7, C).
+E `expire_auctions()` é **em lote**: uma chamada por minuto alcança todo leilão
+que fechar naquele minuto. Repetível, anônimo, sem limite de chamadas (achado B04).
+
+Não é manipulação do vencedor. É **negação de liquidação** — e para quem está com
+dinheiro reservado é pior.
+
+**Isto é HIPÓTESE.** Depende exclusivamente do que `expire_auctions()` faz **além**
+do `UPDATE ... SET status`. A OpenAI mostrou só a cláusula `WHERE`.
+
+**Como resolver:** corpo **verbatim** de `expire_auctions()`. Se ela define
+`winner_id` e devolve reservas, o achado morre e eu retiro. Se ela só marca
+`status`, é **P0 — negação de liquidação**, e muda a prioridade do Bloco 1.
 
 ---
 
-**F — impacto financeiro de `confirmar_recebimento` → P0 FINANCEIRO CONFIRMADO (exposição) · MAGNITUDE NÃO PROVADA**
+### CLASSIFICAÇÃO DAS 17 RPCs — feita, conforme a OpenAI pediu
 
-Sua leitura do corpo versionado está **correta e completa**. Confirmo linha a
-linha (`20260716_saldo_a_liberar.sql:86-110`): recebe só `_sale_id`, não confere
-identidade nenhuma, muda `commission_ledger.status` para `disponivel`, soma em
-`app_users.commission_balance` e marca `catalog_sales.status = 'entregue'`.
+Mapeadas pelos argumentos reais nas chamadas do navegador.
 
-**A evidência que fecha o caso não é o corpo da função — é o comentário do
-código que a chama.** `api/functions/confirmarRecebimento.js`, linhas 1-3:
+**PÚBLICA POR DESENHO — 3.** O parâmetro não é identidade de quem chama.
 
-> `// confirmarRecebimento — o COMPRADOR confirma que recebeu o produto → libera na hora`
-> `// o "saldo a liberar" do vendedor (antes do prazo). Usa a RPC confirmar_recebimento,`
-> `// que só o service_role pode chamar. Valida que quem confirma é o dono do pedido.`
+| Função | Chamada | Por quê é pública |
+|---|---|---|
+| `loja_vitrine(_slug, q, lim)` | `LojaVitrine.jsx:39` | vitrine de loja por slug, visitante deslogado |
+| `avaliacao_loja(_seller)` | `Catalog.jsx:78`, `CatalogProductDetails.jsx:47`, `LojaShopeeHeader.jsx:135` | nota pública do vendedor, aparece no card |
+| `aplicar_cupom(_code, _subtotal, _seller)` | `Cart.jsx:392` | valida cupom no carrinho, visitante usa |
 
-A rota **faz** a validação certa (linha 32: `if (sale.buyer_id !== userId) return 403`).
-Mas ela declara um invariante — *"que só o service_role pode chamar"* — que a
-produção **viola**. Com `EXECUTE` para `anon`, dá para pular a rota inteira:
+⚠️ Ressalva em `aplicar_cupom`: pública por desenho, mas **sem limite de chamadas**
+permite **força bruta de código de cupom**. Não é IDOR; é abuso. Cabe no rate limit
+da FASE 3, não no Bloco 1.
 
-```
-POST https://<projeto>.supabase.co/rest/v1/rpc/confirmar_recebimento
-apikey: <chave anon, publicada no bundle do site>
-{"_sale_id": "<id de qualquer pedido>"}
-```
+**PRIVADA POR OBJETO — IDOR confirmado — 14.** O navegador manda o id do dono,
+lido do `localStorage`. Trocar o número entrega o painel de outra pessoa.
 
-A porta tem fechadura. A parede ao lado tem um buraco.
+| Função | Parâmetro de dono | Tela |
+|---|---|---|
+| `distribuidor_dash` | `dist_id` | `PainelDistribuidor.jsx:92` |
+| `distribuidor_rede` | `dist_id` | `PainelDistribuidor.jsx:96` |
+| `distribuidor_vendas` | `dist_id` | `PainelDistribuidor.jsx:225` |
+| `distribuidor_vendas_resumo` | `dist_id` | `PainelDistribuidor.jsx:226` |
+| `loja_dash` | `_owner` | `PainelDistribuidor.jsx:92` |
+| `loja_estoque` | `_owner` | `MeuEstoque.jsx:47`, `TirarPedido.jsx:105` |
+| `ranking_dia` | `_owner` | `RankingDia.jsx:18` |
+| `ranking_periodo` | `_owner` | `RankingDia.jsx:19`, `RankingFull.jsx:36`, `PainelDistribuidor.jsx:121` |
+| `evolucao_diaria` | `_owner` | `EvolucaoDiaria.jsx:28` |
+| `evolucao_vendedores_diaria` | `_owner` | `EvolucaoVendedores.jsx:41` |
+| `vendas_auditoria` | `_owner` | `VendasAuditoria.jsx:39` |
+| `meta_do_usuario` | `uid` | `MetaBanner.jsx:17` |
+| `painel_atividade` | `_owner` | `PainelDistribuidor.jsx:185` |
+| `marketing_resumo` | `_owner` + `_ref` | `PainelDistribuidor.jsx:215` |
 
-**NOVO ACHADO — cadeia de escalada em duas chamadas (HIPÓTESE, teste na seção 7)**
+⚠️ `marketing_resumo` também recebe `_ref: user.referral_code` — que mora em
+`app_users`, tabela com leitura pública. O segundo parâmetro **não** protege nada.
 
-Lendo a migration inteira apareceu algo que nenhum de nós dois reportou. O
-trigger `sale_to_ledger` (linha 62) dispara em `after insert or update of status
-on catalog_sales`, e `'entregue'` está na lista de status que ele aceita (linha 47).
-E `confirmar_recebimento` **termina** fazendo `update catalog_sales set status='entregue'`.
-
-Então, contra uma venda ainda sem linha no ledger:
-
-```
-chamada 1  → ledger vazio, libera R$ 0
-           → mas seta status='entregue'
-           → o TRIGGER dispara e INSERE uma linha 'a_liberar' com o valor TOTAL da venda
-chamada 2  → agora existe linha 'a_liberar' para esse sale_id
-           → ela é liberada  →  app_users.commission_balance += valor total da venda
-```
-
-E o `where` da liberação em `confirmar_recebimento` **não confere `release_at`** —
-ou seja, o prazo de 7/14 dias é pulado por completo. É o propósito da função
-(liberação antecipada), só que sem conferir que quem pediu é o comprador.
-
-**Duas chamadas anônimas creditam o saldo sacável do vendedor com o valor cheio
-de uma venda escolhida pelo atacante.** 583 vendas na mesa.
-
-**Isto é HIPÓTESE, não fato.** Depende de três coisas que só a produção responde:
-(a) o trigger `sale_to_ledger` existe? (b) `commission_ledger.status` existe?
-(c) o corpo em produção é igual ao versionado?
-`commission_ledger` com 0 linhas é indício de que o trigger **não** está instalado —
-o que reduziria o impacto de hoje a *"anônimo marca qualquer pedido como entregue"*,
-que já é escrita não autorizada em `catalog_sales`.
-
-**Cumprindo a REGRA 7:** as duas condições que ela exige estão satisfeitas —
-aberta ao `anon` (duas fontes independentes) e sem autenticação interna (corpo
-versionado + invariante violado, declarado pelo próprio código). Marco
-**P0 FINANCEIRO CONFIRMADO**. Não marco a magnitude, porque não a provei.
+**Severidade das 14: P0 de exposição** (leitura cruzada entre usuários, ignorando
+RLS por serem `SECURITY DEFINER`). **Correção não é revogar** — derrubaria os
+painéis. É mover para rota de servidor com crachá, que é o mesmo caminho do SEC-A02.
 
 ---
 
-**D — drift de migrations → CONFIRMADO, e o mecanismo é pior do que "drift"**
+### TABELAS DE CONFIGURAÇÃO — o que eu acrescento
 
-Sua conclusão está certa. Encontrei a causa, e ela muda o nome do problema.
+**`payment_settings`** — `public_read` para `anon`, condição `true`, mais
+`authenticated_*` de escrita. Do meu lado: **nenhuma rota do projeto escreve nela**
+(só aparece nas listas de tabelas permitidas de `entityWrite.js` e
+`adminReadEntity.js`). A coluna `raw_base44` é resquício da era Base44. Concordo
+que não se deve afirmar que há segredo ali **sem ler** — mas a tabela se chama
+"configurações de pagamento" e está aberta ao anônimo. Classificar já.
 
-| Verificação | Resultado |
-|---|---|
-| `supabase/config.toml` existe? | **NÃO** — o CLI nunca foi inicializado neste repositório |
-| Script de migration no `package.json`? | **NÃO** |
-| Arquivos no formato do CLI (`YYYYMMDDHHMMSS_nome.sql`) | **1 de 32** |
-| Arquivos fora do formato (`YYYYMMDD_nome.sql`, `20260821c_...`) | **31 de 32** |
-| Os 3 IDs registrados (`20260526214416`, `20260527002613`, `20260527041849`) batem com algum arquivo do repo? | **Nenhum dos 3** |
+**`wa_config`** — `wcfg_read` para `public`. Colunas `ai_prompt` e `backend_url`.
+Resposta à pergunta da OpenAI, do lado do código: **não são públicas por desenho.**
+`api/functions/waProxy.js:59` lê a tabela com `select=*` via `service_role` e
+`waWebhook.js:94` lê `ai_global_on, ai_prompt` para montar a instrução do robô de
+WhatsApp. `backend_url` é o endereço do backend da Evolution API. Nada disso é
+conteúdo de vitrine. Deve sair da leitura pública.
 
-O CLI do Supabase só aplica arquivo com 14 dígitos no prefixo. **31 dos 32
-arquivos nunca poderiam ter sido aplicados por `supabase db push`, nem que o
-projeto estivesse ligado — e ele não está.** E as 3 migrations registradas em
-produção não correspondem a arquivo nenhum do repositório.
-
-Ou seja: não é que o Git e o banco *divergiram* ao longo do tempo.
-**Eles nunca estiveram ligados.** `supabase/migrations/` neste projeto é uma
-pasta de scripts que foram colados à mão no SQL Editor — documentação, não
-pipeline. Nenhum deles tem garantia de ter rodado, e nenhum tem garantia de ter
-rodado por inteiro.
-
-**Consequência operacional, e concordo integralmente com a sua REGRA 3:**
-nenhuma afirmação sobre função, policy, trigger ou coluna pode se apoiar em
-arquivo versionado. **Produção é a única fonte de verdade.**
-Duas confirmações disso já apareceram: `expire_auctions` não existe em lugar
-nenhum do repositório (só nas minhas notas), e `commission_ledger` é *alterada*
-por três migrations mas **criada** por nenhuma.
+**`melhor_envio_tokens`** — RLS ligada, sem policy pública. Concordo: **sem
+evidência de leitura anônima**. Fica fora da lista de achados.
 
 ---
 
-### PONTOS AINDA NÃO PROVADOS
+### PONTOS EM QUE CONCORDAMOS (rodada 2)
 
-**I — `expire_auctions` → NÃO CONSIGO TRAZER O CORPO. BLOQUEIO MÚTUO.**
-
-Preciso ser direto sobre uma premissa errada no seu relatório. Você escreveu:
-
-> *"Você deve resolver esta incógnita pela sua conexão."*
-
-**Eu não tenho conexão com o Supabase.** Verifiquei antes de responder, para não
-afirmar de memória:
-
-```
-variáveis de ambiente com Supabase/SERVICE_ROLE/DATABASE_URL ....... nenhuma
-arquivo .env no disco .............................................. nenhum
-servidor MCP de Supabase nesta sessão .............................. não existe
-```
-Meus servidores são `github`, `Claude_Code_Remote`, `Figma`, `Magnific`.
-Todo dado de banco desta auditoria veio do dono colar resultado. O SQL que eu
-"rodei" foi contra um PostgreSQL 16 descartável que subi no meu próprio
-container, com um banco de mentira imitando o Supabase — foi lá que testei o
-snapshot, o rollback ida-e-volta e a forense antes de entregar.
-
-E `expire_auctions` **não existe em nenhum arquivo do repositório**. É função que
-só vive em produção.
-
-**Portanto: você está com `execute_sql` bloqueado, eu não tenho acesso nenhum.
-Nenhuma das duas IAs consegue ler o corpo hoje.** Isso é um bloqueio real e é a
-peça que falta para o veredito.
-
-**Três saídas, em ordem de preferência:**
-1. **A sua integração provavelmente já resolve isto sem `execute_sql`.** A
-   Management API do Supabase expõe `pg-meta` com um endpoint de funções que
-   devolve o campo `definition` (o corpo) — é a mesma origem de onde o painel
-   desenha a tela "Database → Functions". Se você tem `list_migrations`,
-   `advisors` e listagem de tabelas, é bem provável que tenha o equivalente a
-   `list_functions`. **Tente por aí antes de qualquer outra coisa.**
-2. Desbloquear `execute_sql` para `SELECT` na sua camada de segurança.
-3. Último recurso: o dono roda a consulta da seção 7 à mão. Volta ao ciclo manual
-   que o protocolo veio eliminar — por isso é o último recurso.
-
-**Veredito de `expire_auctions`: SUSPENSO.** Não vou marcar P0 nem descartar.
-A REGRA 8 exige saber se existe `end_time <= now()` no corpo, e ninguém sabe.
-Registro só o que é fato: assinatura `expire_auctions()` sem parâmetro (confirmado
-pelo seu Advisor), portanto operação em lote; `SECURITY DEFINER`; `EXECUTE` para
-`anon`. Se tiver a trava temporal, é redundante com o cron da Vercel e o impacto
-é baixo. Se não tiver, é **P0 — MANIPULAÇÃO DE ENCERRAMENTO DE LEILÃO**.
-
----
-
-**J — OUTRAS DIVERGÊNCIAS E ACHADOS NOVOS**
-
-**J1 — Seus números de linhas corrigem a severidade de um achado meu (para menos).**
-`kyc_data` tem **2 linhas**. Eu tratei "KYC em balde público" como o P0 número 1
-da auditoria. Continua sendo P0 — documento de identidade com selfie, LGPD, dever
-de notificação — mas o raio de alcance é **2 pessoas**, não centenas. Eu não sabia
-disso e minha redação anterior dava a entender escala maior. Correção registrada.
-
-**J2 — Seus números elevam a severidade de outro achado meu (para mais).**
-`system_logs` com **~2,75 milhões de linhas** e política `system_logs_insert_publico`
-aceitando `INSERT` de `anon` (migration `20260805`). Eu classifiquei como P2. Com
-esse volume, sobe para **P1**: qualquer um insere linha sem limite (não há rate
-limit no servidor — achado B04), e a tabela ainda tem `public_read`, então o log
-é legível e gravável por qualquer um. Envenenamento de log + custo de armazenamento.
-
-**J3 — Três hipóteses minhas que já caíram. Registro para você não re-derivar:**
-- `credit_commission` aberta ao anônimo → **FALSO**. Ela, `cancelar_venda`,
-  `comprar_com_saldo`, `estornar_para_carteira` e `increment_coupon` são
-  `EXECUTE` só do dono.
-- `password_reset_token` / `access_token` preenchidos → **FALSO**, 0 linhas.
-- `"Anon upload during import"` sem restrição de balde → **FALSO**. A policy real
-  é `WITH CHECK (bucket_id = ANY (ARRAY['avatars','products','banners','auctions','public-assets']))`.
-  Errei porque minha consulta imprimia só `polqual` (USING) e policy de INSERT
-  usa `polwithcheck`.
-
-**J4 — Falso positivo da minha forense de leilão, para você não partir dele.**
-34 leilões apareceram como "encerrados antes do previsto". São falso positivo:
-todos com `updated_date` idêntico ao microssegundo (`2026-08-21 00:32:19.024425+00`),
-todos "Plano de Investimento", 0 lances — é o `UPDATE` em massa que marcou
-`is_investment_plan` em 21/08. **Limitação do método:** usei `updated_date` como
-hora de encerramento; é hora da última alteração, e qualquer `UPDATE` posterior
-apaga a evidência. Os 14 encerramentos legítimos ficaram entre 0,0 e 0,7 minutos
-após o `end_time` — o cron está preciso. **Não há sinal de uso indevido; não é o
-mesmo que provar que não houve.**
-
-**J5 — Divergência de escopo que quero alinhar antes de qualquer revogação.**
-Eu classifiquei **9 das 26** como revogáveis hoje sem quebrar tela (0 ocorrências
-em `src/`, chamadas só por rotas do servidor com `service_role`):
-`busca_estoque`, `concurso_ranking_periodo`, `confirmar_recebimento`,
-`expire_auctions`, `find_user_by_phone`, `liberar_saldos_maturados`,
-`livoo_ao_vivo_agora`, `loja_catalogo`, `vendedores_disponiveis`.
-As outras 17 **são chamadas pelo navegador** via `supabase.rpc(...)`. Confirmei
-que `waWebhook.js:20` chama por `service_role`, logo revogar `anon` não afeta o
-WhatsApp. **Peço a sua validação independente desta lista de 9 antes do Bloco 1** —
-se a sua leitura divergir em qualquer nome, paramos (REGRA 12).
+- 26 `SECURITY DEFINER` abertas ao anônimo — duas fontes independentes
+- RLS desligada em `livoo_lives` e `livoo_webhook_deliveries`
+- Git e Supabase não formam pipeline confiável; produção é a fonte de verdade
+- `find_user_by_phone` é exposição séria e prioritária
+- `liberar_saldos_maturados` tem trava temporal; severidade abaixo de `confirmar_recebimento`
+- a branch não chegou a produção
+- **lista das 9 funções server-only: VALIDADA pelos dois lados**
+- `confirmar_recebimento` tem quebra de autorização confirmada
 
 ---
 
@@ -382,153 +320,102 @@ se a sua leitura divergir em qualquer nome, paramos (REGRA 12).
 
 ### P0
 
-- **A11 — `confirmar_recebimento` executável por `anon`, sem checagem de identidade.**
-  **P0 FINANCEIRO CONFIRMADO (exposição).** Ver CONFRONTO/F. Magnitude não provada.
-- **A08 — 26 funções `SECURITY DEFINER` abertas ao anônimo.** Confirmado por duas fontes.
-- **A12 — `find_user_by_phone` executável por `anon`**, devolve `role` e `commission_balance`. Oráculo de enumeração.
-- **A01 — KYC em balde público e listável.** Raio de alcance corrigido: **2 registros** em `kyc_data`.
+- **A11 — `confirmar_recebimento` executável por `anon`, sem checagem de identidade.** Quebra de autorização confirmada pelos dois lados. **Magnitude em faixa** até o corpo verbatim chegar (ver D1). Retirada a afirmação de liberação de comissão.
+- **A15 — 14 RPCs de painel com IDOR por objeto.** O cliente fornece o id do dono; `SECURITY DEFINER` ignora RLS. Leitura cruzada de rede, vendas, estoque, metas e auditoria de qualquer distribuidor ou loja.
+- **A12 — `find_user_by_phone`** devolve `id, full_name, email, role, primary_career_level, referral_code, commission_balance, store_slug`, casando por 8 dígitos.
+- **A01 — KYC em balde público e listável** (2 registros em `kyc_data`).
 - **A02 — 57 tabelas com leitura liberada ao anônimo** (26 senhas em texto, 307 e-mails, 298 telefones, 76 CPFs, 42 saldos).
-- **A03 — Upload sem validação de caminho, tipo ou tamanho** (`src/api/base44Adapter.js:634`).
+- **A03 — Upload sem validação de caminho, tipo ou tamanho.**
 - **A04 — Saques e movimentações financeiras legíveis por anônimo.**
 - **A10 — `livoo_lives` e `livoo_webhook_deliveries` sem RLS**, com `TRUNCATE` para `anon`.
-- **A13 — Migrations do repositório nunca estiveram ligadas ao banco.** Ver CONFRONTO/D.
+- **A13 — Migrations do repositório nunca estiveram ligadas ao banco.**
+- **A16 — `manageCoupons` sem validação de ator, em `main`/produção.** Fix existe só na branch.
 
 ### P1
 
-- **B01** `catalog_sales` público (`buyer_cpf`, `buyer_address`, `buyer_phone`); 583 pedidos.
-- **B02** `products` público expõe `cost_price`; 3.138 produtos.
+- **B01** `catalog_sales` público (583 pedidos com CPF e endereço do comprador).
+- **B02** `products` público expõe `cost_price` (3.138 produtos).
 - **B03** 150 policies `authenticated_*` de escrita com condição `true`, em 50 tabelas.
-- **B04** Nenhum limite de chamadas no servidor. Login sem limite de tentativa.
+- **B04** Nenhum limite de chamadas no servidor.
 - **B05** `vercel.json` sem nenhum header de segurança.
 - **B06** `npm audit`: 2 críticas, 21 altas.
-- **B08** `main` sem proteção, zero GitHub Actions, deploy direto.
-- **B09** Crachá de 30 dias em `localStorage`, sem revogação, sem MFA no admin.
-- **B10** (**subiu de P2**) `system_logs`: ~2,75M linhas, `INSERT` liberado ao `anon`, leitura pública.
+- **B08** `main` sem proteção, zero GitHub Actions.
+- **B09** Crachá de 30 dias em `localStorage`, sem revogação, sem MFA.
+- **B10** `system_logs`: ~2,75M linhas, `INSERT` liberado ao `anon`, leitura pública.
+- **B11** `wa_config` e `payment_settings` com leitura pública (`ai_prompt`, `backend_url`, `raw_base44`).
 
 ### P2
 
 - **C01** CORS `*` em `getGoogleClientId.js`.
 - **C02** `login.js:27` faz `select=*` em `app_users`.
 - **C04** `resizeImage.js` com redirecionamento aberto.
+- **C05** (novo, achado da OpenAI contra o meu código) `api/_lib/urlSegura.js` sem timeout e com corte de tamanho após `arrayBuffer()`. DoS de recurso.
+- **C06** `aplicar_cupom` sem limite de chamadas → força bruta de código de cupom.
 
 ### P3
 
 - **D01** 40+ variáveis de ambiente sem rotação documentada.
-- **D02** Pasta `base44/` versionada (código morto).
+- **D02** Pasta `base44/` versionada.
 - **D03** `TABLE_MAP` no bundle.
 
 ---
 
 ## 4. HIPÓTESES AINDA NÃO PROVADAS
 
-1. **`expire_auctions` tem ou não `end_time <= now()`.** Veredito suspenso. Bloqueio mútuo de acesso.
-2. **Cadeia de escalada em duas chamadas de `confirmar_recebimento`.** Depende do trigger `sale_to_ledger` estar instalado e de `commission_ledger.status` existir.
-3. **Por que `confirmar_recebimento` está aberta:** migration nunca aplicada (mais provável) × `DROP`+`CREATE` que zerou a ACL × `GRANT` manual.
-4. **As 17 funções de painel não conferem quem chamou.** Padrão sugere que não; não provado.
-5. **`wa_config` e `payment_settings` guardam credencial.** Ambas com leitura pública. Colunas desconhecidas.
+1. **A14 — negação de liquidação via `expire_auctions`.** Depende do que a função faz além do `SET status`. Corpo verbatim resolve.
+2. **D1 — qual dos três cenários explica `confirmar_recebimento`.** Corpo verbatim resolve.
+3. **`raw_base44` em `payment_settings` contém segredo.** Ninguém leu. Não afirmar.
+
+### Hipóteses minhas que já morreram (registro para não re-derivar)
+
+- `credit_commission` aberta ao anônimo → **FALSO**
+- `password_reset_token` / `access_token` preenchidos → **FALSO**
+- `"Anon upload during import"` sem restrição de balde → **FALSO**
+- 34 leilões encerrados antes da hora → **FALSO** (era o meu próprio `UPDATE` em massa)
+- `expire_auctions` permite encerramento antecipado → **FALSO** (trava temporal real)
+- cadeia de duas chamadas liberando comissão → **FALSO** (trigger e colunas não existem)
+- `aplicar_cupom` escreve no banco → **FALSO** (é `STABLE`)
+- deploy preview não aconteceu → **FALSO** (previews `READY` existem)
 
 ---
 
 ## 5. ALTERAÇÕES REALIZADAS
 
-**NENHUMA ALTERAÇÃO** além deste arquivo.
-
-Branch: `claude/project-structure-analysis-r1prad`
+**NENHUMA ALTERAÇÃO FUNCIONAL.** Nesta etapa: `docs/OPENAI_RETURN.md` (novo,
+verbatim da OpenAI) e este arquivo.
 
 | Estado | |
 |---|---|
-| COMMIT CRIADO | `0ebfebcc` — SSRF em `proxyImage` + `api/_lib/urlSegura.js` |
-| COMMIT CRIADO | `17cf1f27` — crachá em 57 rotas (modo observação) + admin real em `manageCoupons` |
-| COMMIT CRIADO | `ffd5ad21` — handoff |
+| COMMIT CRIADO | `0ebfebcc` SSRF · `17cf1f27` crachá + `manageCoupons` · docs |
+| DEPLOY PREVIEW | **SIM** — previews `READY` para `17cf1f27`, `0eb73498`, `3857d16f` |
 | PR CRIADO | **NÃO** |
-| PR MERGEADO | **NÃO** |
-| DEPLOY PREVIEW | **NÃO** |
-| DEPLOY PRODUÇÃO | **NÃO** |
+| MERGE PARA MAIN | **NÃO** |
+| DEPLOY PRODUÇÃO | **NÃO** — produção em `56efd74b` |
 
-Banco: nenhuma alteração. Vercel: nenhuma alteração. `npm run build` sai 0.
+Banco: nenhuma alteração pelos dois lados. `npm run build` sai 0.
 
 ---
 
 ## 6. AÇÃO NECESSÁRIA DA SEGUNDA IA
 
-### BLOQUEIO ATUAL — canal de escrita da OpenAI no GitHub retorna 403
+1. **Colar o corpo VERBATIM de `expire_auctions()`** — não parafraseado. Resolve A14.
+2. **Colar o corpo VERBATIM de `confirmar_recebimento(text)`** — resolve D1.
+3. Confirmar se o corpo de `confirmar_recebimento` chama `_tem_escrow_ledger()`.
+4. Validar a classificação PÚBLICA×PRIVADA das 17 (seção CONFRONTO).
+5. Confirmar se `expire_auctions()` define `winner_id` / devolve reserva, ou só marca `status`.
 
-A auditoria READ_ONLY foi concluída, mas `docs/OPENAI_RETURN.md` não foi
-publicado. O conector GitHub da OpenAI tem leitura e **não tem escrita**.
+**Observação sobre o canal:** o conector GitHub da OpenAI segue com 403 na escrita.
+Mantida a recomendação de **não conceder escrita** — auditor que não escreve no
+repositório que audita não reescreve o próprio registro. O roteamento por
+"OpenAI entrega → Claude publica verbatim" funcionou nesta rodada e fica como padrão.
 
-Confirmado do meu lado, em 21/08 05:05 UTC:
-
-```
-main .................................. 56efd74b  (inalterada)
-claude/project-structure-analysis-r1prad  3857d16f  (remoto == local)
-docs/OPENAI_RETURN.md ................. não existe em nenhum commit de nenhuma branch
-ninguém escreveu nesta branch além de mim
-```
-
-### TRÊS FORMAS DE ROTEAR O RETORNO — em ordem de preferência
-
-**1. A OpenAI entrega o markdown, o Claude publica.** (recomendada)
-A OpenAI devolve o conteúdo completo de `OPENAI_RETURN.md` ao dono; o dono cola
-para o Claude; o Claude commita como `docs/OPENAI_RETURN.md`, **verbatim**, com
-autoria explícita no commit: conteúdo produzido pela OpenAI, publicado pelo Claude
-por falta de permissão de escrita. Zero mudança de permissão. Uma colagem só, do
-documento inteiro — não volta o ciclo de "rode esta consulta e me manda o print".
-
-**2. O dono publica o arquivo direto.** Mesmo resultado, sem intermediário.
-
-**3. Conceder escrita ao conector GitHub da OpenAI.** Desbloqueia de vez, mas
-ver a ressalva abaixo antes de decidir.
-
-### RESSALVA TÉCNICA SOBRE A OPÇÃO 3
-
-Este 403 pode não ser um defeito. Um auditor independente que **não consegue
-escrever** no repositório que audita é um auditor mais forte, não mais fraco:
-o registro que ele produz não pode ser reescrito por ele mesmo depois. A OpenAI
-já tem leitura de GitHub, leitura de Supabase e leitura de Vercel — que é tudo
-que a função de auditoria exige.
-
-E há um dado de contexto: na sessão anterior o bloqueio de `execute_sql` da
-OpenAI **sumiu sozinho**, sem ninguém alterar configuração. A superfície de
-permissão dessa integração não está estável. Alargá-la por conveniência, no meio
-de uma auditoria de segurança, é o tipo de decisão que a gente registra hoje e
-lamenta depois.
-
-**Recomendação: manter o 403 e usar a opção 1 ou 2.** Se o dono preferir a 3, que
-seja decisão consciente e registrada — não efeito colateral de querer ir rápido.
-
-### DEPOIS QUE O RETORNO FOR PUBLICADO
-
-O Claude faz o segundo confronto item a item, como no commit `0eb73498`, e
-atualiza este arquivo. Nenhuma correção antes disso.
-
-### O QUE CONTINUA PENDENTE DA OPENAI (do confronto anterior)
-
-1. Corpo completo de `expire_auctions` — existe ou não `end_time <= now()`? (REGRA 8)
-2. Corpo completo de `confirmar_recebimento` em produção — igual ao versionado?
-3. Resultado da CONSULTA C — decide se houve incidente ou se a migration nunca rodou.
-4. CONSULTA D — quais das 17 RPCs do navegador conferem identidade.
-5. CONSULTA E — só nomes de coluna de `wa_config` / `payment_settings`.
-6. **Validação independente da lista de 9 funções revogáveis** (CONFRONTO/J5).
-7. **Resposta direta a uma dúvida de linguagem:** a OpenAI relatou ter "fechado"
-   `expire_auctions`, `confirmar_recebimento`, a divergência da migration e as 17
-   RPCs. Precisa ficar explícito se "fechei" significa **resolvi a dúvida** ou
-   **executei comando no banco**. O briefing do dono dizia "não altere produção
-   agora" e "não execute o Bloco 1". Se algum comando foi executado, isso muda o
-   estado do projeto e é a primeira coisa a registrar aqui.
+---
 
 ## 7. SQL PARA EXECUÇÃO
 
-### CONSULTA A — corpo das 4 funções, linha por linha
-
 TIPO: **READ_ONLY** · RISCO: **ZERO**
 
-OBJETIVO: destravar os veredictos de `expire_auctions` (REGRA 8) e de
-`confirmar_recebimento` (REGRA 7). O grid trunca célula longa, por isso devolve
-uma linha do resultado por linha de código.
-
-RESULTADO ESPERADO: presença ou ausência de `end_time` no `WHERE` de
-`expire_auctions`; e se o corpo de `confirmar_recebimento` em produção é igual ao
-versionado em `20260716_saldo_a_liberar.sql:86-110`.
+OBJETIVO: fechar A14 e D1. Devolver **o texto como sai**, sem resumir.
 
 ```sql
 SELECT p.proname AS funcao, l.n AS linha, l.txt AS codigo
@@ -536,147 +423,50 @@ FROM pg_proc p
 JOIN pg_namespace ns ON ns.oid = p.pronamespace,
 LATERAL unnest(string_to_array(pg_get_functiondef(p.oid), E'\n')) WITH ORDINALITY AS l(txt, n)
 WHERE ns.nspname = 'public'
-  AND p.proname IN ('expire_auctions','liberar_saldos_maturados',
-                    'confirmar_recebimento','find_user_by_phone')
+  AND p.proname IN ('expire_auctions','confirmar_recebimento','_tem_escrow_ledger')
 ORDER BY p.proname, l.n;
-```
-
-### CONSULTA B — raio-X das 26 abertas ao anônimo
-
-TIPO: **READ_ONLY** · RISCO: **ZERO**
-
-OBJETIVO: classificar as 26 em três eixos. `confere_quem_chamou = false` nas
-funções de painel prova leitura cruzada entre usuários (hipótese 4).
-
-```sql
-SELECT p.proname AS funcao,
-       pg_get_functiondef(p.oid) ILIKE '%end_time%'              AS filtra_por_end_time,
-       pg_get_functiondef(p.oid) ~* '\m(insert|update|delete)\M' AS escreve_no_banco,
-       (pg_get_functiondef(p.oid) ILIKE '%auth.uid%'
-        OR pg_get_functiondef(p.oid) ILIKE '%current_setting%')  AS confere_quem_chamou,
-       length(pg_get_functiondef(p.oid))                         AS tamanho_do_codigo
-FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.prosecdef
-  AND EXISTS (SELECT 1 FROM aclexplode(p.proacl) a
-              WHERE a.privilege_type = 'EXECUTE'
-                AND (a.grantee = 0 OR a.grantee::regrole::text = 'anon'))
-ORDER BY escreve_no_banco DESC, p.proname;
-```
-
-### CONSULTA C — por que `confirmar_recebimento` está aberta (resolve a divergência E)
-
-TIPO: **READ_ONLY** · RISCO: **ZERO**
-
-OBJETIVO: separar "migration nunca aplicada" de "ACL zerada por recriação" de
-"GRANT manual".
-
-RESULTADO ESPERADO: se o trigger `sale_to_ledger` **não** existir e a coluna
-`commission_ledger.status` **não** existir, a migration `20260716` nunca rodou e
-o `REVOKE` nunca aconteceu — não houve reabertura. Se ambos existirem, a
-migration rodou e alguém reabriu depois: aí é incidente, e vira investigação.
-
-```sql
-SELECT 'trigger sale_to_ledger existe' AS item,
-       EXISTS (SELECT 1 FROM pg_trigger t
-               JOIN pg_class c ON c.oid = t.tgrelid
-               WHERE c.relname='catalog_sales' AND t.tgname='sale_to_ledger'
-                 AND NOT t.tgisinternal)::text AS resposta
-UNION ALL
-SELECT 'coluna commission_ledger.status existe',
-       EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_schema='public' AND table_name='commission_ledger'
-                 AND column_name='status')::text
-UNION ALL
-SELECT 'coluna commission_ledger.release_at existe',
-       EXISTS (SELECT 1 FROM information_schema.columns
-               WHERE table_schema='public' AND table_name='commission_ledger'
-                 AND column_name='release_at')::text
-UNION ALL
-SELECT 'funcao _hold_days existe (so a 20260716 cria)',
-       EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-               WHERE n.nspname='public' AND p.proname='_hold_days')::text
-UNION ALL
-SELECT 'linhas em commission_ledger',
-       (SELECT count(*) FROM public.commission_ledger)::text;
-```
-
-### CONSULTA D — as 17 funções usadas pelo navegador conferem identidade?
-
-TIPO: **READ_ONLY** · RISCO: **ZERO**
-
-```sql
-SELECT p.proname AS funcao,
-       pg_get_function_identity_arguments(p.oid) AS parametros,
-       (pg_get_functiondef(p.oid) ILIKE '%auth.uid%'
-        OR pg_get_functiondef(p.oid) ILIKE '%current_setting%') AS confere_quem_chamou
-FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname='public'
-  AND p.proname = ANY(ARRAY['aplicar_cupom','avaliacao_loja','distribuidor_dash',
-    'distribuidor_rede','distribuidor_vendas','distribuidor_vendas_resumo',
-    'evolucao_diaria','evolucao_vendedores_diaria','loja_dash','loja_estoque',
-    'loja_vitrine','marketing_resumo','meta_do_usuario','painel_atividade',
-    'ranking_dia','ranking_periodo','vendas_auditoria'])
-ORDER BY confere_quem_chamou, p.proname;
-```
-
-### CONSULTA E — `wa_config` e `payment_settings` guardam credencial? (só nomes de coluna)
-
-TIPO: **READ_ONLY** · RISCO: **ZERO** · **REGRA 4: devolver SOMENTE nomes de coluna, nunca valores.**
-
-```sql
-SELECT table_name, column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('wa_config','payment_settings','melhor_envio_tokens')
-ORDER BY table_name, ordinal_position;
 ```
 
 ---
 
 ## 8. ROLLBACK
 
-**NÃO APLICÁVEL.** As cinco consultas são `SELECT`. Nenhuma altera nada.
+**NÃO APLICÁVEL.** Consulta `SELECT`.
 
 ---
 
 ## 9. O QUE A SEGUNDA IA PRECISA TE DEVOLVER
 
-- **corpo completo de `expire_auctions`** — e a resposta direta: existe `end_time` no `WHERE`? (REGRA 8)
-- **corpo completo de `confirmar_recebimento` em produção** — é igual ao versionado? tem alguma checagem de identidade que o versionado não tem?
-- resultado da CONSULTA C, item por item — é o que decide se houve incidente ou se a migration nunca rodou
-- CONSULTA B inteira: quantas escrevem, quantas não conferem quem chamou
-- CONSULTA D: quais das 17 do navegador conferem identidade
-- CONSULTA E: **só nomes de coluna**, nenhum valor
-- **validação independente da lista de 9 funções revogáveis** (CONFRONTO/J5)
+- corpo **verbatim** de `expire_auctions()` — e a resposta direta: ela define `winner_id`/`winner_name`/`order_status`, ou só marca `status='ended'`?
+- corpo **verbatim** de `confirmar_recebimento(text)` — chama `_tem_escrow_ledger()`?
+- corpo de `_tem_escrow_ledger()`
+- concordância ou contestação da classificação das 17 RPCs
+- concordância ou contestação do achado A14
 
-**REGRA 4:** nomes, condições e contagens. Nenhum valor de linha de `app_users`,
-`kyc_data`, `withdrawal_requests`, `wa_config` ou qualquer tabela com PII.
-
-**REGRA 12:** divergiu em qualquer ponto → registrar e **parar**.
+**REGRA 4:** corpo de função, nomes e contagens. Nenhum valor de linha com PII.
+**REGRA 12:** divergiu → registrar e parar.
 
 ---
 
 ## 10. DECISÃO PENDENTE DO DONO
 
-AGUARDANDO AUTORIZAÇÃO DO DONO PARA:
+AGUARDANDO AUTORIZAÇÃO PARA:
 
-1. **Bloco 1** — revogar `EXECUTE` de `PUBLIC`/`anon`/`authenticated` nas 9 funções, concedendo antes a `service_role`. Snapshot e rollback prontos e testados em ciclo ida-e-volta.
-2. **Bloco 2** — ligar RLS em `livoo_lives` e `livoo_webhook_deliveries`.
-3. **Bloco 3** — apagar as 150 policies `authenticated_*` de escrita, em lotes de 40.
-4. **Bloco 4** — estreitar a policy de upload anônimo de 5 baldes para `public-assets`.
-5. **Tratar as 26 contas com senha em texto** (hash → provar 26/26 → zerar coluna → invalidar sessão → exigir redefinição).
-6. **Abrir PR** dos commits `0ebfebcc` e `17cf1f27`.
+1. **Bloco 1** — revogar `EXECUTE` das 9 funções (lista validada pelos dois lados).
+2. **Bloco 2** — RLS em `livoo_lives` e `livoo_webhook_deliveries`.
+3. **Bloco 3** — apagar as 150 policies `authenticated_*` de escrita.
+4. **Bloco 4** — estreitar a policy de upload anônimo.
+5. **Tratar as 26 contas com senha em texto.**
+6. **Abrir PR** de `0ebfebcc` e `17cf1f27` — lembrando que `manageCoupons` **segue vulnerável em produção** até esse merge.
 
-Nenhum executado. Rollback de 182 comandos já gerado e exportado pelo dono.
+Nada executado. Rollback de 182 comandos gerado e exportado.
 
-**Nada disso deve avançar enquanto o veredito de `expire_auctions` estiver
-suspenso e a divergência E não estiver resolvida (REGRA 10).**
+**REGRA 10:** nada avança enquanto A14 e D1 estiverem em aberto.
 
 ---
 
 ## 11. PRÓXIMO PASSO RECOMENDADO
 
-Rotear o `OPENAI_RETURN.md` para o repositório pela opção 1 ou 2 da seção 6 (sem
-conceder escrita ao conector), porque sem o retorno publicado não existe segundo
-confronto — e sem o segundo confronto nada do Bloco 1 pode avançar.
+OpenAI cola os corpos verbatim de `expire_auctions`, `confirmar_recebimento` e
+`_tem_escrow_ledger`, porque A14 (negação de liquidação) e D1 (as três afirmações
+que não fecham) são as duas últimas divergências materiais antes do Bloco 1.
