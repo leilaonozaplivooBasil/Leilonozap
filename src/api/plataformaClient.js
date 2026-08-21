@@ -26,6 +26,20 @@ const PREVIEW_API = 'https://obipnfhwiaafxeqgfeop.supabase.co/functions/v1/previ
 // Chave anon pública da branch de teste — não é service_role nem segredo de servidor.
 const PREVIEW_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iaXBuZmh3aWFhZnhlcWdmZW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNDgzNDAsImV4cCI6MjEwMjkyNDM0MH0.XS42_n2QWWtzV07Et7dUnr5juvRufrnSBJfbql7CwvI';
 
+// Harness TEMPORÁRIO: entra como admin fictício somente em deploy *.vercel.app
+// desta branch. Nenhum usuário ou dado real de produção é usado.
+if (PREVIEW_STAGING && typeof localStorage !== 'undefined') {
+  localStorage.setItem('currentUser', JSON.stringify({
+    id: 'preview-admin',
+    email: 'preview@leilaonozap.test',
+    full_name: 'Admin Preview',
+    display_first_name: 'Preview',
+    role: 'admin',
+    enabled_panels: ['admin'],
+  }));
+  if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('isLoggedIn', 'true');
+}
+
 async function previewInvoke(name, body = {}) {
   // Harness deliberadamente mínimo: só o necessário para reproduzir o bug
   // da Gestão de Pedidos. Nenhuma outra função pode escrever no staging.
