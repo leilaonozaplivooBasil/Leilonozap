@@ -70,10 +70,17 @@ begin
   if _owner_id is null then
     select coalesce(quantity, 0) into _base from public.products where id = _product_id for update;
   else
-    select coalesce(sum(quantity), 0) into _base
-      from public.store_inventory
+    -- ⚠️ Postgres não permite FOR UPDATE junto com função de agregação (sum) na mesma
+    -- consulta ("aggregate functions are not allowed in FOR UPDATE") — travaria com erro
+    -- de sintaxe toda reserva de estoque próprio de lojista. Trava as linhas primeiro
+    -- (PERFORM descarta o resultado mas ainda aplica o lock a cada linha lida), soma depois
+    -- — já dentro da mesma transação, com as linhas já travadas.
+    perform 1 from public.store_inventory
      where owner_id = _owner_id and product_id = _product_id
      for update;
+    select coalesce(sum(quantity), 0) into _base
+      from public.store_inventory
+     where owner_id = _owner_id and product_id = _product_id;
   end if;
 
   if _base is null then
