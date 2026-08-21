@@ -546,3 +546,51 @@ bypass de autenticação em produção.
 **Nada foi escrito nesta rodada.** Resposta completa e sem cortes também
 publicada como comentário nas PRs #86 e #87, pra a OpenAI ver direto onde
 está trabalhando. Aguardando revisão dela antes de qualquer implementação.
+
+---
+
+### 11.1 Execução do comando da OpenAI no PR #87 (Preview isolado)
+
+> A OpenAI leu a Edge Function `preview-api` de verdade (acesso que eu não
+> tenho) e postou um comando de implementação completo no PR #87. Autorizado
+> pelo dono: "execute exatamente o que foi definido. Não mexa em produção."
+
+**Diagnóstico novo da OpenAI, não derivado por mim:** depois da v2 da
+`preview-api`, toda chamada POST (`updateOrderStatus`/`updatePackedItems`)
+volta HTTP 401 **antes** de entrar na função — problema de autenticação do
+harness do Preview, não da lógica de negócio.
+
+**Executado, só em `openai/catalog-status-sync-preview` (PR #87), commit
+`5689c588`:**
+
+1. `select.jsx` revertido por completo (era o achado B da auditoria).
+2. Vocabulário PT↔EN do status resolvido **localmente** em
+   `CatalogOrdersAdmin.jsx` (`statusParaSelect`) — nunca mais no primitive.
+3. Admin fake por hostname `.vercel.app` **removido** — agora exige também
+   `VITE_PREVIEW_STAGING=true`, variável que só a OpenAI pode configurar na
+   Vercel (não tenho esse acesso). 3 variáveis exatas documentadas no fim de
+   `src/api/supabaseClient.js`.
+4. JWT hardcoded do harness removido — unificado com a chave que
+   `supabaseClient.js` já resolve pro mesmo projeto (provável causa raiz do
+   401: duas chaves divergentes pro mesmo projeto Supabase). **Não
+   confirmado que fecha o 401 sozinho** — sem acesso à Edge Function pra
+   testar.
+5. Imagem real do produto no card de conferência (pedido de 1 item).
+6. Erro do checklist mostra `error.message` real, não mais texto fixo.
+7. Bloco de etiqueta Melhor Envio reforçado visualmente (dado já existente).
+
+**Não feito, por falta de acesso, documentado para a OpenAI aplicar:** a
+Edge Function `preview-api` em si — não tenho conexão ao Supabase
+`preview-staging`.
+
+**Prova:** `npm test` 219/219 · `npm run build` exit 0 · CI verde · Vercel
+confirmou o MESMO alias estável que o dono já usa
+(`leilonozap-git-openai-catalog-status-4593e6-leilaapp-s-projects.vercel.app`).
+Resposta também publicada como comentário no PR #87.
+
+**Status:** CORRIGIDO NA BRANCH DE PREVIEW (não é `main`, por instrução
+explícita não deveria ser). **Bloqueador para o próximo teste do dono:** o
+Preview só volta a abrir sozinho depois que a OpenAI configurar as 3
+variáveis de ambiente na Vercel — até lá, pede login real (comportamento
+esperado, não regressão). Sem alteração alguma em produção, banco de
+produção ou `main`.

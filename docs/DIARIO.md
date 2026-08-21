@@ -536,3 +536,68 @@ será dito com honestidade antes de prometer qualquer coisa "automática"**;
 comunicação de "etiqueta enviada"; passo de etiqueta na Jornada da Entrega;
 proposta de redesenho da tela inteira, a ser apresentada ao dono antes de
 qualquer implementação ampla.
+
+---
+
+## 21/08 · OpenAI comanda correção direto no PR #87 (Preview isolado)
+
+**DONO** — "Leia o último comentário da OpenAI no PR #87 e execute exatamente
+o que foi definido. Não mexa em produção."
+
+**OPENAI** — postou um "COMANDO DE IMPLEMENTAÇÃO" completo no PR #87. Tinha
+lido a Edge Function `preview-api` de verdade (acesso que eu não tenho) e
+fechou um diagnóstico novo: depois da v2 dessa função, toda chamada
+`updateOrderStatus`/`updatePackedItems` volta HTTP 401 **antes** de entrar na
+função — problema de autenticação do harness, não da lógica de negócio.
+Confirmou o achado crítico da minha auditoria (admin fake por hostname) como
+BLOCKER de segurança a remover. Mandou trabalhar SÓ na branch
+`openai/catalog-status-sync-preview` (PR #87), sem tocar `main`, sem mergear,
+sem tocar Supabase/Vercel de produção, e **sem alterar `select.jsx` global**
+— resolver o vocabulário de status localmente na Gestão de Pedidos.
+
+**CLAUDE — executado, nesta ordem, tudo só no PR #87:**
+
+1. **`select.jsx` revertido por completo** — de volta ao primitive puro
+   (`Select = SelectPrimitive.Root`).
+2. **Vocabulário PT↔EN do status resolvido localmente** em
+   `CatalogOrdersAdmin.jsx` (`statusParaSelect`, PONTO 120): tradução só de
+   EXIBIÇÃO, o Select sempre fala inglês (rótulo e valor interno do Radix
+   sempre batem — sem o risco de gravar status errado sozinho que o hack
+   antigo tinha).
+3. **Admin fake por hostname removido** (PONTO 121). Agora exige TAMBÉM a
+   variável de ambiente `VITE_PREVIEW_STAGING=true`, que só a OpenAI pode
+   configurar na Vercel (não tenho esse acesso) — documentei as 3 variáveis
+   exatas no comentário do fim de `supabaseClient.js`. Sem elas, o Preview
+   passa a se comportar como produção em vez de logar admin sozinho —
+   seguro por padrão, não regressão.
+4. **JWT hardcoded do harness removido.** Provável causa raiz do 401 que a
+   OpenAI achou: o harness usava uma chave DIFERENTE da que
+   `supabaseClient.js` já resolvia pro mesmo projeto de staging — duas
+   chaves divergentes pro mesmo projeto Supabase. Unificado numa fonte só.
+   **Não confirmei que isso fecha o 401 sozinho** — não tenho acesso à Edge
+   Function pra testar; é a correção mais bem fundamentada que consigo fazer
+   do lado do cliente.
+5. **Imagem real do produto** no card de conferência (`order.product_image`,
+   pedido de 1 item — a maioria real). Multi-item sem imagem, documentado
+   como falta de dado no banco, não inventado.
+6. **Erro do checklist deixou de esconder a mensagem real** — antes era
+   sempre "Erro ao salvar" fixo, agora mostra `error.message` quando existe.
+7. **Bloco de etiqueta Melhor Envio reforçado** — "Etiqueta recebida no
+   Melhor Envio" + botão "Imprimir etiqueta", usando só
+   `raw_base44.melhor_envio` que já existia (nada inventado).
+
+**Não fiz, por falta de acesso, documentado pra OpenAI:** editar a Edge
+Function `preview-api` em si — não tenho conexão ao projeto Supabase
+`preview-staging`. Segue REGRA 13 (nunca tocar projeto sem confirmação
+explícita) e a própria instrução da OpenAI de não inventar quando falta
+acesso.
+
+**Prova:** `npm test` 219/219, `npm run build` exit 0, commit `5689c588` em
+`openai/catalog-status-sync-preview`, CI verde, Vercel confirmou o mesmo
+alias estável que o dono já usa
+(`leilonozap-git-openai-catalog-status-4593e6-leilaapp-s-projects.vercel.app`).
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH DE PREVIEW.** Não é
+`main`, não é produção — por instrução explícita, não deveria ser. O Preview
+só volta a logar automaticamente depois que a OpenAI configurar as 3
+variáveis de ambiente na Vercel; até lá, é esperado que ele peça login real.
