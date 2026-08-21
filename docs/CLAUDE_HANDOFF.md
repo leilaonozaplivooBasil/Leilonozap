@@ -57,232 +57,232 @@ OpenAI deve:
 
 ## 1. ESTADO
 
-Data/hora: **2026-08-21 05:47 UTC** — sprint noturna autônoma concluída
+Data/hora: **2026-08-21 06:05 UTC**
 
 Branch: `claude/project-structure-analysis-r1prad`
-Base SHA: `56efd74b` · Head: `e50d5da7` (+ o commit deste handoff)
-Main SHA conhecida: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
+Base: `56efd74b` · Head: `4f2ca4dd` (+ o commit deste handoff)
+Main conhecida: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
 
 Modo: **IMPLEMENTAÇÃO EM BRANCH · PRODUÇÃO INTOCADA**
 
 ```
-Produção alterada? .... NÃO
-Banco alterado? ....... NÃO   (nenhum DDL/DML; nem li — não tenho acesso)
-main alterada? ........ NÃO
-Merge? ................ NÃO
-Deploy produção? ...... NÃO
-SESSAO_MODO ........... intocado
-RLS ................... intocada
-9 revogações .......... NÃO executadas
+Produção alterada ..... NÃO      Banco alterado ........ NÃO
+main alterada ......... NÃO      Merge ................. NÃO
+Deploy produção ....... NÃO      SESSAO_MODO ........... intocado
+RLS ................... intocada 9 revogações .......... NÃO executadas
+pg_cron ............... NÃO tocado — segue ATIVO em produção
 ```
 
 ```
-COMMIT CRIADO ..... SIM · 8 commits nesta sprint
-DEPLOY PREVIEW .... SIM · automático da Vercel, aponta para o Supabase de produção
+COMMIT CRIADO ..... SIM · 11 na sprint
+DEPLOY PREVIEW .... SIM · automático, aponta para o Supabase de produção
 PR CRIADO ......... NÃO
-MERGE ............. NÃO
 DEPLOY PRODUÇÃO ... NÃO
 ```
 
-`npm run build` exit 0 · `npm test` **61/61** · worktree limpa.
+`npm run build` exit 0 · `npm test` **65/65** · worktree limpa.
 
 ---
 
 ## 2. O QUE FOI ANALISADO
 
-Sprint noturna, blocos A→K. Todo trabalho ficou na branch.
+Incorporação do achado do `pg_cron` e das duas ressalvas da OpenAI sobre o
+commit `771856e1`. Revisão completa do Bloco 1.
 
 ---
 
-## 3. ACHADOS
+## 🚨 3. ACHADO QUE MUDA A PRIORIDADE DE TUDO
 
-Rodada 2 fechada. Os dois pendentes viraram fato com o retorno da OpenAI.
+### A14 deixou de ser risco de ataque. É defeito operacional ativo há 52 dias.
 
-### P0
+```
+pg_cron   job "expire-auctions"   * * * * *   SELECT public.expire_auctions();
+          ativo desde 30/06 · 75.365 execuções
 
-- **A14 — NEGAÇÃO DE LIQUIDAÇÃO DE LEILÃO · CONFIRMADO pelas duas IAs.**
-  `expire_auctions()` marca `sold`/`ended` sem definir `winner_id`, sem
-  `order_status`, sem comissão, sem devolver reserva. `finalizeExpiredAuctions.js:24`
-  e `finalizeAuctionCore.js:291` filtram os dois por `status in (active,processing)`
-  — leilão já marcado fica invisível para a esteira. Anônimo chamando na janela de
-  até 60 s entre o `end_time` e o cron tira o leilão da liquidação para sempre:
-  sem vencedor, sem comissão, **com a reserva dos participantes presa**. Em lote e
-  repetível. A OpenAI confirmou que o único trigger de UPDATE em `auctions` é
-  `set_updated_at` — não há liquidação escondida.
-- **A11 — `confirmar_recebimento` executável por `anon`, sem checar identidade.**
-  Corpo real: chama `_tem_escrow_ledger()`, e como `commission_ledger.status` não
-  existe o bloco financeiro é pulado — mas a função **chega** ao
-  `update catalog_sales set status='entregue'`. **A OpenAI estava certa e eu
-  estava errado** na divergência D1: eu supus que a função abortaria antes.
-  Magnitude final: **não libera comissão**; muda qualquer venda para `entregue`.
-- **A15 — 14 RPCs de painel com IDOR por objeto.** 17/17 sem `auth.uid()`.
-  Classificadas: 3 públicas por desenho, 14 privadas.
-- **A12 — `find_user_by_phone`** devolve `id, full_name, email, role,
-  primary_career_level, referral_code, commission_balance, store_slug`, casando
-  pelos 8 últimos dígitos (permite colisão).
-- **A01 — KYC em balde público e listável** (2 registros).
-- **A02 — 57 tabelas com leitura liberada ao anônimo** (26 senhas em texto).
-- **A03 — Upload sem validação de caminho, tipo ou tamanho.**
-- **A04 — Saques e movimentações legíveis por anônimo.**
-- **A10 — `livoo_lives` e `livoo_webhook_deliveries` sem RLS**, com `TRUNCATE` para `anon`.
-- **A13 — `supabase/migrations/` nunca esteve ligado ao banco.**
-- **A16 — `manageCoupons` sem validação de ator em `main`/produção.**
+Vercel    finalizeExpiredAuctions  * * * * *   (vercel.json:28)
+```
 
-### P1
-`catalog_sales` público · `products` expõe `cost_price` · 150 policies
-`authenticated_*` · sem limite de chamadas no servidor · `vercel.json` sem
-headers · `main` sem proteção · crachá de 30 dias sem revogação ·
-`system_logs` 2,75M com insert anônimo · `wa_config`/`payment_settings` públicas.
+**Dois motores de encerramento correndo a cada minuto, e só um liquida.**
 
-### P2
-CORS `*` em `getGoogleClientId` · `login.js` com `select=*` ·
-`resizeImage` com redirecionamento aberto · `aplicar_cupom` sem limite (força
-bruta de código de cupom) · lint com 71 erros.
+| | Vercel | pg_cron |
+|---|---|---|
+| define `winner_id` | sim | não |
+| `order_status = awaiting_payment` | sim (`finalizeAuctionCore.js:299`) | **não** |
+| paga comissão de 5% | sim | **não** |
+| devolve reserva dos perdedores | sim | **não** |
+| mensagem de vitória | sim | **não** |
 
-**`urlSegura` sem timeout — CORRIGIDO nesta sprint** (era C05).
+E os dois lados filtram por `status in (active, processing)`
+(`finalizeExpiredAuctions.js:24`, `finalizeAuctionCore.js:291`). Quando o
+`pg_cron` chega primeiro, o leilão sai desse estado e **a Vercel deixa de
+enxergá-lo para sempre**.
+
+Edge Functions: zero. Webhook de banco: nenhum. Ou seja, **não há terceiro motor** —
+e também não há nada além do `pg_cron` a considerar para desligá-lo.
+
+### A assinatura do dano é exata
+
+`submitAtomicBid.js:371` grava `winner_id` a **cada lance**. Quem grava
+`order_status` é o finalizador da Vercel. Logo:
+
+> **leilão COM lance + encerrado + `order_status` VAZIO = o `pg_cron` chegou
+> primeiro e a liquidação nunca aconteceu.**
+
+**Isto ainda é HIPÓTESE sobre os dados.** Existe explicação alternativa
+(`reactivateAuction.js` pode zerar campos), e a consulta 3 do
+`00_dano_A14_leitura.sql` separa as duas pelo histórico de lances. Não vou
+afirmar que há leilão danificado antes de ver o resultado.
+
+**O que mais importa:** a consulta 4 procura reserva que entrou no
+`reserva_ledger` e nunca saiu em leilão já encerrado — isso é **saldo de
+participante travado agora**, não risco futuro.
 
 ---
 
 ## 4. HIPÓTESES AINDA NÃO PROVADAS
 
-1. **Existe `pg_cron`, webhook do Supabase ou automação externa chamando
-   `expire_auctions()`?** É a **única** coisa que separa "aposentar a função" de
-   ser decisão óbvia. Só a OpenAI consegue checar.
-2. `raw_base44` em `payment_settings` contém segredo. Ninguém leu. Não afirmar.
-3. Houve exploração real de A14 no passado. Sem evidência — e o método forense
-   disponível (`updated_date`) não detecta, porque qualquer `UPDATE` posterior
-   apaga o rastro.
-
-### Hipóteses minhas que morreram (não re-derivar)
-`credit_commission` aberta ao anônimo · `password_reset_token` preenchido ·
-upload anônimo sem restrição de balde · 34 leilões encerrados antes da hora (era
-o meu próprio `UPDATE` em massa) · `expire_auctions` sem trava temporal ·
-cadeia de duas chamadas liberando comissão · `aplicar_cupom` escreve ·
-deploy preview não aconteceu · `confirmar_recebimento` abortaria antes do
-`update catalog_sales` (**D1 — a OpenAI estava certa**).
+1. **Quantos leilões foram efetivamente danificados** e **quanto dinheiro está
+   travado.** `00_dano_A14_leitura.sql` responde. Precisa rodar **antes** de
+   desligar o job — depois disso o padrão muda e não dá mais para medir.
+2. **DNS rebinding** continua aberto no `urlSegura`. Registrado no arquivo, não
+   marcado como resolvido.
+3. `raw_base44` em `payment_settings` contém segredo. Ninguém leu.
 
 ---
 
 ## 5. ALTERAÇÕES REALIZADAS
 
-### Implementado e testado na branch
+### Código, testado na branch
 
 | Commit | O quê |
 |---|---|
-| `771856e1` | `urlSegura.js`: streaming com contador incremental, `AbortController`, prazo único para toda a operação, e o laço de leitura conferindo o prazo por conta própria |
-| `bf4ab7a1` | 42 testes de SSRF/tamanho/tipo/tempo |
-| `542e7471` | `npm test` precisa de glob, não de diretório |
+| `771856e1` | `urlSegura`: streaming, contador incremental, `AbortController`, prazo próprio no laço de leitura |
+| `879c0e4f` | **novo** — confere o DNS antes de buscar (nome público apontando pra dentro) e descarta corpo de 3xx/404/tipo recusado/tamanho excedido |
+| `bf4ab7a1` + `879c0e4f` | 46 testes de `urlSegura` |
 | `cefbc251` | 19 testes de autorização de `manageCoupons` |
-| `b6c6f5dd` | `npm audit fix` sem breaking: **32 → 11** vulnerabilidades, só lockfile |
-| `f02163f1` | CI mínima: lint, build, testes. Sem segredo, sem deploy, `contents: read` |
+| `b6c6f5dd` | `npm audit fix` sem breaking: 32 → 11 |
+| `f02163f1` | CI mínima, sem segredo, sem deploy |
+
+**Sobre as duas ressalvas da OpenAI ao `771856e1`:**
+
+- **Corpo não cancelado em redirect/erro — CORRIGIDO** (`879c0e4f`). Procedia.
+- **DNS rebinding — PARCIALMENTE ENDEREÇADO, e digo com todas as letras o que
+  ficou de fora.** Agora o nome é resolvido antes do fetch e todo endereço
+  devolvido (IPv4 e IPv6) passa pela régua de rede interna, em cada salto. Isso
+  fecha o caminho fácil: domínio público que aponta para dentro (`nip.io`,
+  `localtest.me`). **Não fecha rebinding**: entre a conferência e a conexão há
+  uma janela, e quem controla o DNS responde IP público agora e interno logo
+  depois. Fechar de verdade exige fixar o IP conferido na conexão, o que o
+  `fetch` do runtime não permite sem trocar o dispatcher. **Fica como risco
+  residual registrado, não como resolvido.**
 
 ### Preparado e NÃO aplicado
 
-| Arquivo | O quê |
-|---|---|
-| `docs/remediacao_NAO_APLICADA/01..04` | revogação das 9 RPCs + diagnóstico + verificação + rollback. **Ciclo testado num PostgreSQL 16 real: 9 fechadas, servidor mantém acesso, rollback devolve** |
-| `docs/PLANO_REMEDIACAO.md` | blocos E–K: arquitetura do `expire_auctions`, as 14 RPCs viradas em 4 rotas, RLS tabela a tabela, KYC em 8 passos, e a ordem de 19 itens |
-| `docs/OPENAI_RETURN.md` | retorno da OpenAI, verbatim |
+`docs/remediacao_NAO_APLICADA/` — **Bloco 1 reescrito**:
 
-**Dois defeitos do meu próprio código encontrados pelos testes**, documentados nos
-commits: (1) o `abort` do signal derruba o `fetch` mas não garante que a leitura
-do corpo morra — com um dublê que não derruba o corpo, a função pendurava; agora
-cada `read()` corre contra o relógio. (2) `npm test` com diretório em vez de glob.
+| Ordem | Arquivo | Tipo |
+|---|---|---|
+| 1 | `00_dano_A14_leitura.sql` | READ_ONLY — mede o estrago |
+| 2 | `01_diagnostico_pre.sql` | READ_ONLY — fotografa permissões |
+| 3 | `02b_desligar_pg_cron.sql` | **WRITE — desliga o segundo motor** |
+| 4 | `02_revogar_9_rpcs.sql` | WRITE — revoga EXECUTE |
+| 5 | `03_verificacao_pos.sql` | READ_ONLY |
+| — | `04_rollback.sql` / `04b_rollback_pg_cron.sql` | WRITE — desfaz |
+
+**Por que o `02b` vem antes do `02`:** revogar o EXECUTE sem desligar o job não
+resolve. O `pg_cron` roda com o dono do job, que provavelmente não perde a
+permissão — teríamos fechado a porta de entrada errada achando que resolveu.
+
+O `02b` usa `active = false` em vez de `cron.unschedule()`: mantém o job
+cadastrado, e religar vira um `UPDATE`. E confere **antes de desligar** se houve
+encerramento nas últimas 2 h — para não deixar o sistema sem motor nenhum caso a
+Vercel esteja com problema.
+
+`docs/PLANO_REMEDIACAO.md` e `docs/OPENAI_RETURN.md` seguem publicados.
 
 ---
 
 ## 6. AÇÃO NECESSÁRIA DA SEGUNDA IA
 
-1. **Auditar os 6 commits de código** — principalmente `771856e1` (o streaming) e
-   os testes. Procurar o que eu não testei.
-2. **Responder a hipótese 1:** existe `pg_cron`, webhook ou Edge Function
-   chamando `expire_auctions()`? Consulta na seção 7.
-3. **Revisar `docs/remediacao_NAO_APLICADA/02_revogar_9_rpcs.sql`** — em especial
-   a ordem `GRANT service_role` antes do `REVOKE`, e a trava que aborta se não
-   encontrar exatamente 9.
-4. **Revisar o agrupamento das 14 RPCs em 4 famílias** (`PLANO_REMEDIACAO.md`, F).
-   Contestar se a divisão estiver errada.
-5. **Contestar a ordem dos 19 itens** (K), se discordar.
+1. **Executar `00_dano_A14_leitura.sql`** (READ_ONLY, 6 consultas). É a coisa
+   mais urgente do projeto: mede quantos leilões não liquidaram e se há saldo de
+   participante travado. **Antes de qualquer desligamento.**
+2. **Revisar `02b_desligar_pg_cron.sql`** — em especial: `active=false` é
+   suficiente no Supabase, ou o `cron.unschedule()` é obrigatório? E a
+   conferência das 2 h cobre o caso de não haver leilão vencendo no período?
+3. **Confirmar com que usuário o job roda** (`cron.job.username`). Se for
+   `postgres` ou o dono das funções, isso confirma que revogar `anon` não o
+   afetaria — que é a razão de o `02b` existir.
+4. **Auditar `879c0e4f`** — a conferência de DNS tem furo? O `descartarCorpo`
+   ficou em todos os caminhos de saída?
+5. **Contestar a ordem revisada** do Bloco 1, se discordar.
 
 ---
 
 ## 7. SQL PARA EXECUÇÃO
 
 TIPO: **READ_ONLY** · RISCO: **ZERO**
+Arquivo completo: `docs/remediacao_NAO_APLICADA/00_dano_A14_leitura.sql`
+(6 consultas — faixas de encerramento, casos suspeitos, separação de leilão
+reativado, reserva presa, o job e o histórico de execuções).
 
-OBJETIVO: descobrir se algo agenda `expire_auctions()`. É o que falta para
-aposentá-la com segurança.
+Mais esta, que responde direto ao item 3 acima:
 
 ```sql
--- 1) pg_cron, se a extensao existir
-SELECT 'pg_cron' AS fonte, jobname, schedule, command
+SELECT jobid, jobname, schedule, active, username, database, nodename
 FROM cron.job
-WHERE command ILIKE '%expire_auctions%'
-   OR command ILIKE '%liberar_saldos%'
-   OR command ILIKE '%confirmar_recebimento%';
-
--- 2) qualquer funcao do banco que chame expire_auctions por dentro
-SELECT 'funcao chama' AS fonte, p.proname, '' , ''
-FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.proname <> 'expire_auctions'
-  AND pg_get_functiondef(p.oid) ILIKE '%expire_auctions%';
-
--- 3) trigger que a chame
-SELECT 'trigger' AS fonte, t.tgname, c.relname, p.proname
-FROM pg_trigger t
-JOIN pg_class c ON c.oid = t.tgrelid
-JOIN pg_proc p ON p.oid = t.tgfoid
-WHERE NOT t.tgisinternal
-  AND pg_get_functiondef(p.oid) ILIKE '%expire_auctions%';
+WHERE command ILIKE '%expire_auctions%';
 ```
-
-Fora do SQL, a OpenAI deve conferir no painel: **Database → Webhooks** e
-**Edge Functions**, procurando chamada a `expire_auctions`.
 
 ---
 
 ## 8. ROLLBACK
 
-**NÃO APLICÁVEL** para a consulta acima.
-Para o que está preparado: `docs/remediacao_NAO_APLICADA/04_rollback.sql`, ciclo
-já testado. Para os commits de código: `git revert`.
+`04_rollback.sql` (permissões, ciclo testado em PostgreSQL 16 real) e
+`04b_rollback_pg_cron.sql` (religa o job). Código: `git revert`.
+
+⚠️ Religar o job **traz o defeito de volta**. É medida de emergência para o
+sistema não ficar sem motor, não é solução.
 
 ---
 
 ## 9. O QUE A SEGUNDA IA PRECISA TE DEVOLVER
 
-- resultado das três consultas — **existe algo agendando `expire_auctions`?**
-- o que ela conferiu em **Webhooks** e **Edge Functions**
-- crítica ao `771856e1`: o corte por streaming tem furo? o prazo tem furo?
-- crítica aos 61 testes: o que ficou de fora
-- concordância ou contestação do agrupamento das 14 em 4 famílias
-- concordância ou contestação da ordem dos 19 itens
+- resultado das 6 consultas do `00` — **quantos leilões e quanto dinheiro**
+- `cron.job.username` do job `expire-auctions`
+- se `active = false` basta no Supabase ou se precisa `cron.unschedule()`
+- crítica ao `879c0e4f` (DNS e descarte de corpo)
+- concordância ou contestação da ordem revisada: `00 → 01 → 02b → 02 → 03`
 
-**REGRA 4:** nomes, condições, contagens. Nenhuma PII.
+**REGRA 4:** contagens, ids de leilão e valores agregados. Nenhum dado de pessoa.
 **REGRA 12:** divergiu → registrar e parar.
 
 ---
 
 ## 10. DECISÃO PENDENTE DO DONO
 
-Ordem completa em `docs/PLANO_REMEDIACAO.md`, seção K. Os cinco primeiros, que
-**não quebram nada** e podem ir assim que ele acordar:
+**A ordem mudou por causa do `pg_cron`.** O que era "revogar 9 funções" virou
+"desligar um motor de encerramento que está em produção há 52 dias".
 
-1. **RLS** em `livoo_lives` e `livoo_webhook_deliveries` — 5 min, zero uso no front.
-2. **Revogar as 9 RPCs** — 20 min, scripts prontos e ciclo testado.
-3. **Apagar `wcfg_read`** de `wa_config` — 5 min, só `service_role` lê.
-4. **Abrir o PR** de segurança — `manageCoupons` **segue vulnerável em produção**
+1. **Rodar `00_dano_A14_leitura.sql`** — só leitura, pode ser agora. Define o
+   tamanho do problema e se há dinheiro travado.
+2. **Desligar o job do `pg_cron`** (`02b`) — este é o que fecha o defeito.
+   Risco MÉDIO: se a Vercel falhar depois, os leilões param de encerrar. Por
+   isso o script confere antes e o `04b` religa.
+3. **Revogar as 9 RPCs** (`02`) — depois do `02b`, não antes.
+4. **RLS em `livoo_lives` e `livoo_webhook_deliveries`** — 5 min, zero risco.
+5. **Apagar `wcfg_read`** de `wa_config` — 5 min, zero risco.
+6. **Abrir o PR de segurança** — `manageCoupons` segue vulnerável em produção
    até esse merge.
-5. **Apagar as 150 policies `authenticated_*`** — rollback de 182 comandos testado.
+7. **Apagar as 150 policies `authenticated_*`** — rollback de 182 comandos testado.
 
-Depois disso, o que fecha de verdade é o item **17** (`SESSAO_MODO=bloquear`), e
-ele depende dos itens 7, 8, 15 e 16.
+Ordem completa dos 19 itens em `docs/PLANO_REMEDIACAO.md`, seção K.
 
 ---
 
 ## 11. PRÓXIMO PASSO RECOMENDADO
 
-OpenAI audita os 6 commits de código e responde se existe `pg_cron`, webhook ou
-Edge Function chamando `expire_auctions()` — é o único dado que falta para
-aposentar a função e acabar com os dois motores de encerramento.
+OpenAI roda `00_dano_A14_leitura.sql` e diz quantos leilões ficaram sem liquidar
+e quanto saldo de participante está travado — porque isso decide se o próximo
+passo é só desligar o motor ou também reparar dado, e reparar dado é decisão que
+só o dono toma.
