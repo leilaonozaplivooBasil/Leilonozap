@@ -100,7 +100,7 @@ export default function AuctionRoom() {
   // ele quem cotou. Sem guardar e devolver o selo, ligar FRETE_MODO=bloquear
   // recusaria TODO lance legítimo vindo da tela.
   const [freteSelo, setFreteSelo] = useState(null);
-  const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep
+  const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep|needs_login
   const [freteCep, setFreteCep] = useState('');
   const freteCalcRef = useRef(false);
 
@@ -505,7 +505,26 @@ export default function AuctionRoom() {
       } else {
         setFreteValor(0);
         setFreteSelo(null);
-        setFreteStatus(data?.motivo === 'sem_cep' ? 'needs_cep' : 'error');
+        // 🔴 CRACHÁ VELHO = SALA DE LEILÃO MORTA. Achado na revisão de deploy,
+        // 21/08 — nem eu nem a auditoria tínhamos visto, porque os dois olhamos
+        // CORREÇÃO e ninguém olhou ROLLOUT.
+        //
+        // O B14 deixou `cotarFrete` estrito: sem crachá válido, 401. Certo — a
+        // rota emite autorização financeira. Só que o crachá é emitido APENAS
+        // nas rotas de login/cadastro (login.js, googleLogin.js,
+        // publicRegister.js, registerNetworkUser.js) e fica no localStorage.
+        // Quem já estava logado ANTES do crachá existir não tem nenhum, e não
+        // há rota que renove.
+        //
+        // Sem este ramo, essas pessoas cairiam em 'error' → "confira o seu CEP"
+        // → e o botão de lance ficaria travado para sempre, num leilão ao vivo,
+        // com uma instrução que não resolve nada, porque o CEP delas está certo.
+        // Aqui a tela diz a verdade e manda entrar de novo, que é o que resolve.
+        if (data?.error === 'nao_autenticado') {
+          setFreteStatus('needs_login');
+        } else {
+          setFreteStatus(data?.motivo === 'sem_cep' ? 'needs_cep' : 'error');
+        }
       }
     } catch (e) {
       console.warn('⚠️ [FRETE] Erro ao calcular frete do leilão:', e.message);
@@ -549,6 +568,7 @@ export default function AuctionRoom() {
     if (freteStatus === 'ok' && freteValor > 0 && !freteSelo) {
       return 'Não conseguimos confirmar o frete com o servidor. Recarregue a página e tente de novo.';
     }
+    if (freteStatus === 'needs_login') return 'Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.';
     if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
     if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
     if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';

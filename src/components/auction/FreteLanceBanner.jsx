@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2, Truck, MapPin, Search } from "lucide-react";
+import { Loader2, Truck, MapPin, Search, LogIn } from "lucide-react";
 import { fmtBR } from "@/lib/money";
 
 /**
@@ -25,6 +25,21 @@ export default function FreteLanceBanner({ status, freteValor, cep, onChangeCep,
         style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-400" />
         <span className="text-xs text-gray-300">Calculando frete…</span>
+      </div>
+    );
+  }
+
+  // 🔴 SESSÃO VELHA. Quem já estava logado antes do crachá existir não tem
+  // nenhum, e a cotação passou a exigir crachá válido (B14). Pedir CEP aqui
+  // seria mentir: o CEP da pessoa está certo, o que venceu foi a sessão.
+  if (status === "needs_login") {
+    return (
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.40)' }}>
+        <LogIn className="h-4 w-4 shrink-0 text-amber-400" />
+        <span className="min-w-0 flex-1 text-xs text-amber-100">
+          Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.
+        </span>
       </div>
     );
   }
