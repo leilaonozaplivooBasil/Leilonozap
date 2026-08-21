@@ -13,14 +13,57 @@
  * valia. Este arquivo é esse adapter: por fora parece a API antiga, por dentro
  * fala só com o Supabase e as rotas da Vercel do próprio projeto.
  *
- * O nome do identificador (antes `base44`, agora `plataforma`) mudou em
- * 21/08/2026 por pedido direto do dono — não porque a história é feia, mas
- * porque o nome antigo estava confundindo, fazendo parecer que o app ainda
- * dependia do servidor de terceiro. Não dependia mais; só o nome é que tinha
- * ficado desatualizado. Este comentário é o "alerta pra lembrar" que ele
- * pediu — a história fica registrada aqui, no lugar certo, em vez de
- * espalhada pelo nome de uma variável em 300 arquivos.
+ * PREVIEW ISOLADO: somente nesta branch de teste, acessos *.vercel.app usam a
+ * Edge Function preview-api do Supabase preview-staging. A correção real de
+ * produção continua separada e contém apenas +1 linha em CatalogOrdersAdmin.
  * ══════════════════════════════════════════════════════════════════════════
  */
-export { plataforma } from './plataformaAdapter';
+import { plataforma as basePlataforma } from './plataformaAdapter';
 export { supabase } from './supabaseClient';
+
+const PREVIEW_STAGING = typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app');
+const PREVIEW_API = 'https://obipnfhwiaafxeqgfeop.supabase.co/functions/v1/preview-api';
+// Chave anon pública da branch de teste — não é service_role nem segredo de servidor.
+const PREVIEW_ANON_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iaXBuZmh3aWFhZnhlcWdmZW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNDgzNDAsImV4cCI6MjEwMjkyNDM0MH0.XS42_n2QWWtzV07Et7dUnr5juvRufrnSBJfbql7CwvI';
+
+async function previewInvoke(name, body = {}) {
+  // Harness deliberadamente mínimo: só o necessário para reproduzir o bug
+  // da Gestão de Pedidos. Nenhuma outra função pode escrever no staging.
+  if (!['login', 'updateOrderStatus'].includes(String(name))) {
+    return { success: false, error: `Função ${String(name)} desativada no preview isolado` };
+  }
+  try {
+    const resp = await fetch(`${PREVIEW_API}?fn=${encodeURIComponent(String(name))}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: PREVIEW_ANON_JWT,
+        Authorization: `Bearer ${PREVIEW_ANON_JWT}`,
+      },
+      body: JSON.stringify(body || {}),
+    });
+    return await resp.json();
+  } catch (error) {
+    return { success: false, error: 'Preview staging indisponível', details: String(error?.message || error) };
+  }
+}
+
+const previewFunctions = new Proxy(
+  { invoke: previewInvoke },
+  {
+    get(target, name) {
+      if (name in target) return target[name];
+      if (typeof name === 'symbol') return undefined;
+      return (body) => previewInvoke(name, body);
+    },
+  }
+);
+
+export const plataforma = PREVIEW_STAGING
+  ? new Proxy(basePlataforma, {
+      get(target, prop) {
+        if (prop === 'functions') return previewFunctions;
+        return target[prop];
+      },
+    })
+  : basePlataforma;
