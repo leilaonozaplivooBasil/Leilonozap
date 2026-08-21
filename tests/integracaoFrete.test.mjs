@@ -341,3 +341,63 @@ describe('BLOQUEADOR 15 · o buraco que a primeira versão da trava deixou', () 
     assert.equal(mundo.lances.length, 0);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASO 2 · "não pode existir arremate sem frete" — validação do que está no ar
+// ═══════════════════════════════════════════════════════════════════════════
+describe('CASO 2 · nenhum caminho normal gera arremate com frete ZERO', () => {
+  test('C2a · LANCE com frete zero é recusado mesmo com FRETE_MODO DESLIGADO', async () => {
+    // Este é o buraco que sobrava: sem selo, a etapa 1 caía em `body.frete_valor`
+    // e um `frete_valor: 0` por chamada direta criava lance sem frete — esperando
+    // o FRETE_MODO ser ligado para fechar. Leilão não tem retirada no balcão,
+    // então frete zero é sempre erro.
+    delete process.env.FRETE_MODO;
+    const bid = await rodar(darLance, {
+      auction_id: LEILAO, user_id: USER, amount: 50, bidder_name: 'fulano', frete_valor: 0,
+    });
+    assert.equal(bid.code, 400, JSON.stringify(bid.corpo));
+    assert.equal(bid.corpo?.motivo, 'frete_zero');
+    assert.equal(mundo.lances.length, 0, 'gravou lance com frete ZERO');
+  });
+
+  test('C2b · LANCE sem nenhum campo de frete é recusado', async () => {
+    delete process.env.FRETE_MODO;
+    const bid = await rodar(darLance, { auction_id: LEILAO, user_id: USER, amount: 50, bidder_name: 'fulano' });
+    assert.equal(bid.corpo?.sem_frete, true);
+    assert.equal(mundo.lances.length, 0);
+  });
+
+  test('C2c · aba ANTIGA (sem selo, mas com frete_valor real) continua funcionando', async () => {
+    // A trava não pode derrubar quem está no meio de um leilão ao vivo.
+    delete process.env.FRETE_MODO;
+    const bid = await rodar(darLance, {
+      auction_id: LEILAO, user_id: USER, amount: 50, bidder_name: 'fulano', frete_valor: 11.6,
+    });
+    assert.equal(bid.corpo?.success, true, JSON.stringify(bid.corpo));
+    assert.equal(mundo.lances[0].frete_amount, 11.6);
+  });
+
+  test('C2d · BUY NOW sem frete cotável é recusado, e isso NÃO depende de FRETE_MODO', async () => {
+    // É o caminho exato do ARD5856D19: Arremate Rápido sem frete.
+    delete process.env.FRETE_MODO;
+    mundo.leilao.product_id = null;          // sem produto não há cotação
+    mundo.leilao.buy_now_price = 500;
+    const { default: buyNow } = await import('../api/functions/submitAtomicBuyNow.js');
+    const r = await rodar(buyNow, { auction_id: LEILAO, user_id: USER });
+    assert.equal(r.corpo?.success, false, JSON.stringify(r.corpo));
+    assert.equal(r.corpo?.sem_frete, true);
+    assert.equal(mundo.reservado, 0, 'reservou saldo num arremate sem frete');
+    assert.equal(mundo.lances.length, 0);
+  });
+
+  test('C2e · BUY NOW com frete reserva PRODUTO + FRETE, não só o produto', async () => {
+    delete process.env.FRETE_MODO;
+    mundo.leilao.buy_now_price = 500;
+    const { default: buyNow } = await import('../api/functions/submitAtomicBuyNow.js');
+    const r = await rodar(buyNow, { auction_id: LEILAO, user_id: USER });
+    assert.equal(r.corpo?.success, true, JSON.stringify(r.corpo));
+    assert.equal(Math.round((1000 - mundo.disponivel) * 100) / 100, 511.6,
+      'reservou valor diferente de produto + frete');
+    assert.equal(mundo.lances.find((l) => l.message_type === 'bid')?.frete_amount, 11.6);
+  });
+});

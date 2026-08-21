@@ -344,6 +344,28 @@ export default async function handler(req, res) {
       ? _frete.valor
       : Math.max(0, parseFloat(body?.frete_valor) || 0);
 
+    // ══════════════════════════════════════════════════════════════════════
+    // 🔴 FRETE ZERO NUNCA PASSA — nem na etapa 1 de observação.
+    // ══════════════════════════════════════════════════════════════════════
+    // O rollout em duas etapas existe para não recusar quem está com uma aba
+    // antiga aberta: aquela aba não conhece o selo, mas MANDA `frete_valor`,
+    // porque a tela sempre calculou o frete. Então "sem selo" pode passar.
+    // "Sem frete nenhum" NÃO pode — é literalmente o defeito que originou tudo
+    // isto (ARD5856D19) e a decisão do dono em 21/08: "não podemos de maneira
+    // nenhuma aceitar lances ou arrematar sem frete".
+    //
+    // Leilão não tem retirada no balcão: toda venda de leilão é entrega. Não
+    // existe caso legítimo de lance com frete zero, então recusar aqui não
+    // derruba ninguém honesto — só fecha a chamada direta de API que manda
+    // `frete_valor: 0` e ficaria esperando o FRETE_MODO ser ligado.
+    if (!(freteValor > 0)) {
+      console.error(`[FRETE] submitAtomicBid: RECUSADO lance com frete ZERO no leilão ${auctionId} (selo: ${_freteMotivo}).`);
+      return res.status(400).json({
+        success: false, sem_frete: true, motivo: 'frete_zero',
+        message: 'Não foi possível confirmar o frete deste lance. Recarregue a página e tente de novo.',
+      });
+    }
+
     // 📣 PONTO 69 — MODO CHAMADA: leilão visível mas ainda fechado para lances.
     // Guarda ANTES de qualquer escrita/valor — nada de saldo é tocado aqui.
     if (auction.modo_chamada && auction.data_abertura_lances) {
