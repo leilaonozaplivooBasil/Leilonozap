@@ -89,6 +89,61 @@ comparado em centavos, mais `delivery_type = 'delivery'`. **Continua NÃO APLICA
 
 ---
 
+## 2.1 ACHADOS ALÉM DOS 11 — apareceram ao corrigir, e os dois eram meus
+
+> Não estavam na lista da OpenAI e não estavam na minha. Apareceram porque
+> corrigir um bloqueador obrigou a reler o caminho inteiro. Ficam registrados
+> aqui para a auditoria conferir, e para nenhuma das duas IAs re-derivar.
+
+### A1 · A chamada da RPC estava com os parâmetros ERRADOS
+
+A assinatura da função é:
+
+```sql
+public.cobrar_frete_pendente(_sale_id text, _valor numeric, _raw jsonb, _actor text)
+```
+
+A primeira versão da minha chamada mandava
+`{ _sale_id, _user_id, _valor, _actor_id }` — dois nomes que **não existem** na
+função, e **sem o `_raw`**, que é o pedido inteiro que a função grava.
+
+**O perigo não é o erro em si — é como ele falha.** O PostgREST resolve função
+por nome de argumento. Argumento que não existe não dá erro de tipo: dá
+`PGRST202 / 404 · Could not find the function`. E o meu código trata 404
+exatamente como **"a RPC ainda não foi aplicada no banco"**.
+
+Ou seja: você aplicaria a RPC 06, ela estaria lá funcionando, e a rota
+continuaria respondendo *"a cobrança transacional ainda não está aplicada"* para
+sempre. Ninguém investigaria — a mensagem seria a esperada. O frete pendente
+nunca seria cobrado e a causa ficaria invisível.
+
+**Corrigido:** a chamada agora usa `{ _sale_id, _valor, _raw, _actor }`.
+Coberto pelo teste `B8 · a chamada da RPC usa a assinatura certa`, que confere
+os nomes dos quatro parâmetros com `deepEqual` nas chaves — de propósito, para
+quebrar se alguém renomear um lado sem o outro.
+
+### A2 · A guarda de "cobrança travada" estava DEPOIS da RPC
+
+O bloqueio de pedido com `cobranca_em_andamento` existia só na frente do caminho
+de compensação. Quando eu pus a RPC antes dele, a RPC passou a rodar **por cima**
+dessa guarda: um pedido com cobrança anterior não terminada — que pode já ter
+sido debitado — seria debitado de novo, agora dentro de uma transação, o que
+torna o débito duplo *mais* confiável, não menos.
+
+**Corrigido:** a guarda subiu para antes dos dois caminhos.
+Coberto por `B8 · cobrança travada bloqueia TAMBÉM o caminho da RPC`, que afirma
+`estado.rpcChamadas.length === 0` — prova que a RPC nem chegou a ser chamada.
+
+### Nota de autoria
+
+B1, B7, B11, A1 e A2 são erros meus, introduzidos nesta mesma branch ao corrigir
+F6–F12. Nenhum chegou a produção. Registro isso porque a taxa importa para a
+auditoria: **cinco defeitos materiais introduzidos em seis commits de correção**
+é o argumento mais forte a favor de a OpenAI reauditar antes do merge, e contra
+qualquer merge feito com pressa.
+
+---
+
 ## 3. O QUE MUDOU DE ARQUITETURA
 
 **O servidor é a única autoridade sobre o frete.** Três lugares decidiam antes;
@@ -141,7 +196,11 @@ tem teste do handler real.** O único dublê é o `fetch` global.
 4. **B8:** a RPC 06, com a invariante nova, está correta para aplicar?
 5. **A volta segura do `product_id`** no `submitAtomicBid` é aceitável, ou o
    risco de perder a conferência de produto supera o de matar o lance?
-6. **Residual conhecido:** `reserveBidBalance` **não** confere o produto do selo
+6. **A1 e A2 (seção 2.1):** conferir a chamada da RPC contra a assinatura do
+   arquivo `06_rpc_cobrar_frete.sql`, e conferir que a guarda de cobrança
+   travada cobre os dois caminhos. Foram achados meus, então merecem olho de
+   fora.
+7. **Residual conhecido:** `reserveBidBalance` **não** confere o produto do selo
    (não lê o leilão, e ler custaria uma ida ao banco no caminho do lance ao
    vivo). Quem confere é o `submitAtomicBid`. Isto é decisão, não esquecimento —
    dizer se é aceitável.
