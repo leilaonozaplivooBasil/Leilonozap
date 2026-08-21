@@ -57,206 +57,201 @@ OpenAI deve:
 
 ## 1. ESTADO
 
-Data/hora: **2026-08-21 06:40 UTC**
+Data/hora: **2026-08-21 07:20 UTC**
 
 Branch: `claude/project-structure-analysis-r1prad`
-Base: `56efd74b` · Head: `e7547441` (+ o commit deste handoff)
-Main conhecida: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
+Base: `56efd74b` · Head: `e8b46e0e` (+ o commit deste handoff)
+Main conhecida: **`9b0659f3`** — a main andou (PRs #68, #69, #70). **Sem conflito**, verificado.
 
 Modo: **IMPLEMENTAÇÃO EM BRANCH · PRODUÇÃO INTOCADA**
 
 ```
 Produção alterada ..... NÃO      Banco alterado ........ NÃO
 main alterada ......... NÃO      Merge ................. NÃO
-Deploy produção ....... NÃO      pg_cron ............... NÃO tocado, segue ATIVO
-RLS ................... intocada 9 revogações .......... NÃO executadas
-Nenhum saldo de cliente foi debitado. Nenhum pedido foi alterado em produção.
+pg_cron ............... NÃO tocado    RLS ............... intocada
+Nenhum saldo debitado. Nenhum pedido alterado. Cobrança do ARD5856D19 NÃO executada.
 ```
 
-`npm run build` exit 0 · `npm test` **73/73** · worktree limpa.
+`npm run build` exit 0 · `npm test` **98/98** · worktree limpa.
 
 ---
 
 ## 2. O QUE FOI ANALISADO
 
-Mudança de frente a pedido do dono: **defeito funcional no fluxo
-arremate → frete → etiqueta**, encontrado por ele na tela de Gestão de Pedidos.
-
-Sintomas relatados: mesmo comprador, dois arremates com 3 minutos de diferença —
-um com `Frete: R$ 11,60`, outro sem frete nenhum. E o botão "Etiqueta" respondia
-*"Pedido é retirada no balcão, não precisa de etiqueta"* nos dois.
+Confrontação de F6–F12 e reconstrução da arquitetura de frete: lance normal,
+Buy Now, liquidação, pedido e cobrança de legado.
 
 ---
 
-## 3. ACHADOS — não era um defeito, eram cinco
+## 3. ACHADOS
 
-### F1 · As duas pontas discordam do `delivery_type` ausente · **atinge 100% dos arremates**
+### 🔴 HIPÓTESES MINHAS DERRUBADAS — a OpenAI achou a causa raiz real
 
-```
-FRONT  CatalogOrdersAdmin.jsx:149   if ((raw?.delivery_type || '') === 'pickup') return false;
-BACK   melhorEnvioShipment.js:151   if (raw.delivery_type !== 'delivery') return { skipped:'retirada_na_loja' };
-```
+| Minha hipótese | Veredito |
+|---|---|
+| (a) corrida da cotação assíncrona | **DERRUBADA** como causa principal |
+| (b) produto sem dimensões | **DERRUBADA** como causa principal |
 
-E `settleAuctionWithBalance.js:178` **nunca gravava `delivery_type`**. Ficava
-`undefined`: o front mostrava "Etiqueta pendente" com botão, o back respondia
-"retirada no balcão". Os dois certos pela própria regra.
-Pedido da Loja não sofria disso — `createMPPix.js:139` e `payWithBalance.js:78`
-gravam. Só o arremate ficou de fora.
+**Os dois pedidos foram ARREMATE RÁPIDO (Buy Now), não lance normal.** O
+histórico mostra `🔥 ARREMATE RÁPIDO!` com `frete_amount = 0` nos dois. Meu
+diagnóstico F5 descrevia um caminho que existe e é real, mas **não é o que
+produziu esses pedidos**.
 
-### F2 · Sem frete, o pedido nascia sem `raw_base44` nenhum
+### CAUSA RAIZ REAL — F6
 
-```js
-...(freteAmount > 0 ? { raw_base44: {...} } : {}),
-```
-Frete zero ⇒ o objeto inteiro deixava de existir. Sem frete, sem
-`amount_charged`, sem nada. É o `ARD5856D19`.
-
-### F3 · Mesmo o arremate COM frete jamais geraria etiqueta
-
-O frete ia como `{ valor: 11.60 }` só. `melhorEnvioShipment.js:154` exige
-`frete.id` ou devolve `sem_frete_id`. Sem `empresa`/`servico` também — por isso
-a tela mostrava "Frete: R$ 11,60" sem transportadora, enquanto o pedido da Loja
-mostra "Correios SEDEX".
-
-### F4 · O arremate não gravava endereço de entrega
-
-`getEndereco` não achava nada. A Melhor Envio precisa do endereço.
-
-### F5 · **CAUSA RAIZ** — o lance saía mesmo com o frete falhado
+`submitAtomicBuyNow.js` reservava `buyNowPrice` (só o produto), criava o lance
+com `frete_amount: 0` e **nunca tocava em `auctions.frete_reservado_valor`**.
 
 ```
-submitAtomicBid.js:168   const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);   ← vem do NAVEGADOR
-AuctionRoom.jsx:499-509  erro de cotação → setFreteValor(0) · sem CEP → setFreteValor(0)
-AuctionRoom.jsx:1209     freteStatus só era usado para EXIBIR
-handleSubmitBidComTermo  conferia abertura do leilão e aceite do termo — nada sobre frete
+ARD5856D19   leilão sem líder anterior  → frete_reservado_valor = 0
+                                        → arremate com frete ZERO
+                                        → a empresa paga a transportadora
+
+AR3BEF1939   lance anterior R$ 6,80 + frete R$ 11,60 (outro CEP)
+             → Buy Now R$ 10,00 com frete_amount = 0
+             → mas o leilão manteve frete_reservado_valor = 11,60
+             → o pedido HERDOU R$ 11,60 que o Buy Now nunca calculou
 ```
 
-Cotação falhou, CEP fora do cadastro, ou clique antes de a cotação assíncrona
-voltar ⇒ lance sai com frete 0 e **a empresa paga a transportadora do próprio
-bolso**.
+Os dois resultados aparentemente contraditórios, a mesma causa.
+
+### F7–F12 — todos confirmados, e **F8 a F12 eram erros meus**
+
+| | Achado | Status |
+|---|---|---|
+| F7 | `freteBloqueia` é só UX; `submitAtomicBid` seguia lendo `body.frete_valor` | **confirmado** |
+| F8 | `montarRawArremate` cotava por `auction.id`, caindo na caixa mínima dos Correios | **confirmado — meu erro** |
+| F9 | entrega paga virava `pickup` silencioso quando faltava endereço | **confirmado — meu erro** |
+| F10 | débito + gravação sem verificação: saldo debitado com pedido intacto | **confirmado — meu erro** |
+| F11 | rota atuava sobre qualquer `catalog_sale`, não só arremate | **confirmado — meu erro** |
+| F12 | valor manual virava direto o cobrado | **confirmado — meu erro** |
+
+E um que **o próprio código me entregou durante a correção**: com a reserva
+virando produto + frete, os **três** `estornar(userId, buyNowPrice)` deixariam o
+frete preso na reserva do cliente para sempre. Corrigidos para `totalReservar`.
 
 ---
 
 ## 4. HIPÓTESES AINDA NÃO PROVADAS
 
-1. **Qual das duas explicações vale para o `ARD5856D19`:** (a) corrida com o
-   clique — a cotação é assíncrona e os lances têm 3 min de diferença; ou (b) o
-   produto do REPELENTE sem dimensões, fazendo `cotarFrete` voltar vazio.
-   `05_arremates_sem_frete_leitura.sql` responde.
-2. **Quantos outros arremates estão nessa situação** e quanto de frete a empresa
-   já absorveu. Mesma consulta.
-3. `pg_cron` × Vercel (A14) segue aberto — ver `00_dano_A14_leitura.sql`.
+1. **Quantos outros arremates estão sem frete.** `05_arremates_sem_frete_leitura.sql`
+   segue sem rodar. Agora sabemos que o filtro certo é **Buy Now**, não lance.
+2. A14 / `pg_cron` × Vercel — congelado a pedido, para fechar o frete primeiro.
 
 ---
 
-## 5. ALTERAÇÕES REALIZADAS
-
-Tudo na branch. **Nada em produção.**
+## 5. ALTERAÇÕES REALIZADAS — 6 commits
 
 | Commit | O quê |
 |---|---|
-| `f0ae8d46` | arremate nasce com `delivery_type`, endereço, telefone, CPF e frete completo · front e back alinhados no mesmo critério (F1–F4) |
-| `3b21010e` | **bloqueia lance e "arremate agora" sem frete cotado** (F5) |
-| `e7547441` | rota `cobrarFretePendente` + 13 testes |
+| `b767ff33` | `freteLeilao.js` (motor único, cota por `product_id`) + `freteSelo.js` (HMAC) + `cotarFrete` assinando as opções |
+| `3a155e8f` | **F6** — Buy Now reserva produto+frete, grava `frete_amount` e sobrescreve `frete_reservado_valor` |
+| `ef15223f` | **F7** — o frete do lance vem do selo do servidor, com rollout em duas etapas |
+| `a8982b93` | **F8/F9** — cota pelo produto certo; `delivery_pendente` em vez de `pickup` silencioso |
+| `7af0ef52` | **F10/F11/F12** — três passos verificados com compensação; escopo `kind='arremate'`; override com justificativa |
+| `e8b46e0e` | 30 testes novos (A–R) |
 
-### Uma decisão de engenharia que precisa ficar registrada
+### A decisão de arquitetura, e por que não foi "recotar dentro do lance"
 
-O caminho óbvio para F3 seria o lance já gravar `id`/`empresa`/`serviço`.
-**Não dá.** O PATCH do lance (`submitAtomicBid.js`) não aceita campo que não
-exista na tabela — coluna inexistente ali faz o PostgREST devolver `42703` e
-**todo lance morre**. Foi o que derrubou a produção de 03/08 15:03 até o
-PONTO 83, e está no cabeçalho daquele arquivo. Então o detalhe do frete é
-resolvido na **liquidação**, recotando com o CEP do vencedor só para descobrir
-o `id` do serviço.
+`submitAtomicBid.js` e `reserveBidBalance.js` são **autocontidos por lei** —
+import de 2 níveis já derrubou o lance em produção. E pôr uma chamada de rede à
+Melhor Envio no caminho do lance é somar latência e ponto de falha externo num
+leilão ao vivo com gente clicando no mesmo segundo.
 
-**O valor cobrado não muda:** quem manda é `frete_reservado_valor`, o que o
-cliente viu e teve reservado. Se a recotação falhar, o pedido nasce com o valor
-certo e sem `id` — vira etiqueta pendente, que é problema de logística, não de
-dinheiro. E sem endereço utilizável o pedido nasce `pickup`, para não ficar
-pendurado numa pendência impossível.
+Então: **`cotarFrete` assina cada opção com HMAC; o lance só confere a
+assinatura.** `crypto` já está importado lá. Sem rede, sem import novo.
+Verificado: `submitAtomicBid.js` continua com **um único import**.
 
-### `cobrarFretePendente` — as travas, cada uma com teste
+É o mesmo desenho do crachá de sessão, pelo mesmo motivo — o dado se prova
+sozinho.
 
-- **modo padrão é conferência.** Mostra valor, serviço, saldo e quanto falta, e
-  **não debita**. Cobrar de verdade exige `executar: true`. Debitar saldo de
-  cliente não pode acontecer por clique errado.
-- só admin conferido no banco · não cobra duas vezes · **não deixa saldo
-  negativo** · sem endereço completo, recusa · débito por compare-and-swap (se o
-  saldo mudou no meio, não cobra **e não grava o frete no pedido**) · **não toca
-  em `total_amount`** — frete nunca comissiona · registra quem cobrou, quando e
-  por quê, dentro do pedido e no `wallet_ledger`.
+**Rollout em duas etapas**, igual ao crachá e ao webhook do MP: enquanto
+`FRETE_MODO` não for `bloquear`, lance sem selo válido **passa e fica no log**.
+Ligar direto recusaria toda aba já aberta, no meio de leilão ao vivo.
+
+### O que ainda é compensação, e não transação
+
+`cobrarFretePendente` faz três escritas verificadas com estorno. Funciona e está
+testado — mas se o processo morrer entre o débito e o estorno, sobra pendência
+manual. A RPC transacional de verdade está em
+`docs/remediacao_NAO_APLICADA/06_rpc_cobrar_frete.sql`, **não aplicada**, com
+`FOR UPDATE` nas duas linhas, `REVOKE` antes do `GRANT` e rollback documentado.
 
 ---
 
 ## 6. AÇÃO NECESSÁRIA DA SEGUNDA IA
 
-1. **Executar `05_arremates_sem_frete_leitura.sql`** (READ_ONLY) — quantos
-   arremates sem frete existem e quanto a empresa já absorveu.
-2. **Auditar os 3 commits.** Em especial `e7547441`: a rota debita saldo de
-   cliente. Procurar caminho em que ela debite sem gravar, grave sem debitar, ou
-   cobre duas vezes.
-3. **Contestar a decisão de recotar na liquidação** em vez de gravar no lance,
-   se enxergar caminho melhor que não mexa no PATCH do lance.
-4. **Conferir se `wallet_ledger` aceita `tipo = 'cobranca_frete_pendente'`** —
-   se houver constraint de enum, o lançamento falha em silêncio (é best-effort,
-   não derruba a cobrança, mas a trilha some).
-5. Segue pendente: `00_dano_A14_leitura.sql` (pg_cron × Vercel).
+1. **Auditar os 6 commits antes de qualquer merge.** Prioridade: `3a155e8f`
+   (Buy Now, mexe em reserva de saldo) e `7af0ef52` (debita cliente).
+2. **Atacar o selo.** É a peça nova que sustenta a trava financeira: dá para
+   forjar, reusar em outro leilão, reusar depois de vencido, ou fazer o lance
+   aceitar `frete_valor` do corpo com `FRETE_MODO=bloquear` ligado?
+3. **Revisar `06_rpc_cobrar_frete.sql`** — o `FOR UPDATE` nas duas linhas cobre
+   as corridas? Falta algum caminho de erro?
+4. **Rodar `05_arremates_sem_frete_leitura.sql`** — agora com a leitura certa:
+   procurar por Buy Now, não por lance.
+5. Dizer se concorda com o rollout em duas etapas do `FRETE_MODO` ou se acha
+   que deve nascer bloqueando.
 
 ---
 
 ## 7. SQL PARA EXECUÇÃO
 
 TIPO: **READ_ONLY** · RISCO: **ZERO**
-Arquivo: `docs/remediacao_NAO_APLICADA/05_arremates_sem_frete_leitura.sql`
-(3 consultas: arremates por situação · os sem frete um a um, com o
-`frete_reservado_valor` que estava no leilão · leilões encerrados com frete zero)
+`docs/remediacao_NAO_APLICADA/05_arremates_sem_frete_leitura.sql`
+
+Mais esta, para separar Buy Now de lance normal nos pedidos sem frete:
+
+```sql
+SELECT s.id, s.tracking_code, s.product_title, s.total_amount, s.created_date,
+       COALESCE((s.raw_base44 -> 'frete' ->> 'valor')::numeric, 0) AS frete_no_pedido,
+       EXISTS (SELECT 1 FROM public.auction_messages m
+                WHERE m.sender_id = s.buyer_id
+                  AND m.content ILIKE '%ARREMATE RÁPIDO%'
+                  AND m.bid_amount = s.total_amount) AS foi_buy_now
+FROM public.catalog_sales s
+WHERE s.kind = 'arremate'
+  AND COALESCE((s.raw_base44 -> 'frete' ->> 'valor')::numeric, 0) = 0
+ORDER BY s.created_date DESC LIMIT 200;
+```
 
 ---
 
 ## 8. ROLLBACK
 
-Código: `git revert` de cada commit — os três são independentes.
-`cobrarFretePendente` **não tem rollback automático**: se um débito for feito por
-engano, devolver o saldo é operação manual e deliberada. Por isso o modo padrão
-é conferência.
+Código: `git revert` — os 6 commits são independentes.
+RPC: não aplicada; o `DROP` está comentado no próprio arquivo.
+`FRETE_MODO`: não publicado; apagar a variável volta à etapa 1.
 
 ---
 
 ## 9. O QUE A SEGUNDA IA PRECISA TE DEVOLVER
 
-- resultado das 3 consultas — **quantos arremates e quanto dinheiro**
-- crítica ao `e7547441`, caminho a caminho de dinheiro
-- se `wallet_ledger.tipo` tem constraint
-- se o `ARD5856D19` bate com a hipótese (a) corrida ou (b) produto sem dimensões
+- crítica ao selo (`freteSelo.js`) — tentativa real de forjar ou reusar
+- crítica ao `3a155e8f` e ao `7af0ef52`, caminho a caminho de dinheiro
+- crítica ao `06_rpc_cobrar_frete.sql`
+- resultado das consultas: **quantos arremates sem frete, e quantos foram Buy Now**
+- posição sobre o rollout em duas etapas do `FRETE_MODO`
 
-**REGRA 4:** contagens, ids de pedido e valores agregados. Nenhum dado de pessoa.
+**REGRA 4:** contagens, ids de pedido, valores agregados. Nenhum dado de pessoa.
+**REGRA 12:** divergiu → registrar e parar.
 
 ---
 
 ## 10. DECISÃO PENDENTE DO DONO
 
-### Do fluxo de frete
-
-1. **Merge do PR** — enquanto não subir, todo arremate novo continua nascendo
-   sem `delivery_type` e o lance sem frete continua passando.
-2. **Cobrar o frete do `ARD5856D19`.** A rota está pronta. O caminho é: rodar em
-   **conferência** primeiro (mostra valor e saldo, não debita), você olhar, e só
-   então repetir com `executar: true`. **Eu não executo isso sem sua palavra —
-   é dinheiro de cliente.**
-3. **O `AR3BEF1939`** (o que tem R$ 11,60) precisa que o `delivery_type` e o
-   `frete.id` sejam preenchidos para a etiqueta sair. É correção de dado, não de
-   código. Preparo o SQL quando você pedir.
-
-### Da segurança, ainda em aberto
-
-`pg_cron` × Vercel · revogar as 9 RPCs · RLS Livoo · `wcfg_read` · 150 policies
-`authenticated_*` · upload anônimo. Ordem completa em
-`docs/PLANO_REMEDIACAO.md`, seção K.
+1. **Merge do PR.** Enquanto não subir, **todo Buy Now continua nascendo sem
+   frete** — o defeito está em produção agora.
+2. **`FRETE_MODO=bloquear`** — depois do log limpo, não junto do merge.
+3. **Cobrança do `ARD5856D19`** — não executada. Roda em conferência primeiro.
+4. **Completar o `AR3BEF1939`** — `apenas_completar`, sem cobrar nada.
+5. **Aplicar a RPC `06`** — opcional; a compensação já funciona.
 
 ---
 
 ## 11. PRÓXIMO PASSO RECOMENDADO
 
-Rodar `05_arremates_sem_frete_leitura.sql` para saber se o `ARD5856D19` é caso
-isolado ou a ponta de uma série — porque isso muda se a conversa é "cobrar um
-frete" ou "reconciliar um prejuízo acumulado".
+OpenAI ataca o selo e audita os dois commits que mexem em dinheiro
+(`3a155e8f`, `7af0ef52`), porque o merge dessa frente é urgente — o Buy Now
+está em produção nascendo sem frete — e a pressa é justamente o que costuma
+deixar passar defeito em código de dinheiro.
