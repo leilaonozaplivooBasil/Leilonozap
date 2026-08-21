@@ -57,7 +57,7 @@ OpenAI deve:
 
 ## 1. ESTADO
 
-Data/hora: **2026-08-21 04:41 UTC**
+Data/hora: **2026-08-21 05:05 UTC**
 
 Branch: `claude/project-structure-analysis-r1prad`
 
@@ -67,7 +67,12 @@ Head SHA: `ffd5ad21` (o commit deste confronto fica em cima)
 
 Main SHA conhecida: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
 
-Modo atual: **SOMENTE LEITURA**
+Modo atual: **SOMENTE LEITURA · EM ESPERA**
+
+Motivo da espera: a OpenAI concluiu a auditoria READ_ONLY mas **não
+conseguiu publicar** `docs/OPENAI_RETURN.md` — conector GitHub sem permissão
+de escrita, HTTP 403. Sem o retorno publicado não há como fazer o segundo
+confronto. Nada avança até lá (REGRA 10).
 
 Produção alterada? **NÃO**
 Banco alterado? **NÃO**
@@ -446,15 +451,70 @@ Banco: nenhuma alteração. Vercel: nenhuma alteração. `npm run build` sai 0.
 
 ## 6. AÇÃO NECESSÁRIA DA SEGUNDA IA
 
-1. **VERIFICAR RPC — prioridade máxima.** Obter o corpo de `expire_auctions` e de
-   `confirmar_recebimento` **sem `execute_sql`**, pelo endpoint de funções da
-   Management API (`pg-meta`), que devolve o campo `definition`. É o que destrava
-   os dois veredictos pendentes.
-2. **VERIFICAR SUPABASE** — consultas C, D e E da seção 7.
-3. **VALIDAR a lista de 9 funções** revogáveis (CONFRONTO/J5) por leitura própria.
-4. **REVISAR COMMIT** `0ebfebcc` e `17cf1f27`.
+### BLOQUEIO ATUAL — canal de escrita da OpenAI no GitHub retorna 403
 
----
+A auditoria READ_ONLY foi concluída, mas `docs/OPENAI_RETURN.md` não foi
+publicado. O conector GitHub da OpenAI tem leitura e **não tem escrita**.
+
+Confirmado do meu lado, em 21/08 05:05 UTC:
+
+```
+main .................................. 56efd74b  (inalterada)
+claude/project-structure-analysis-r1prad  3857d16f  (remoto == local)
+docs/OPENAI_RETURN.md ................. não existe em nenhum commit de nenhuma branch
+ninguém escreveu nesta branch além de mim
+```
+
+### TRÊS FORMAS DE ROTEAR O RETORNO — em ordem de preferência
+
+**1. A OpenAI entrega o markdown, o Claude publica.** (recomendada)
+A OpenAI devolve o conteúdo completo de `OPENAI_RETURN.md` ao dono; o dono cola
+para o Claude; o Claude commita como `docs/OPENAI_RETURN.md`, **verbatim**, com
+autoria explícita no commit: conteúdo produzido pela OpenAI, publicado pelo Claude
+por falta de permissão de escrita. Zero mudança de permissão. Uma colagem só, do
+documento inteiro — não volta o ciclo de "rode esta consulta e me manda o print".
+
+**2. O dono publica o arquivo direto.** Mesmo resultado, sem intermediário.
+
+**3. Conceder escrita ao conector GitHub da OpenAI.** Desbloqueia de vez, mas
+ver a ressalva abaixo antes de decidir.
+
+### RESSALVA TÉCNICA SOBRE A OPÇÃO 3
+
+Este 403 pode não ser um defeito. Um auditor independente que **não consegue
+escrever** no repositório que audita é um auditor mais forte, não mais fraco:
+o registro que ele produz não pode ser reescrito por ele mesmo depois. A OpenAI
+já tem leitura de GitHub, leitura de Supabase e leitura de Vercel — que é tudo
+que a função de auditoria exige.
+
+E há um dado de contexto: na sessão anterior o bloqueio de `execute_sql` da
+OpenAI **sumiu sozinho**, sem ninguém alterar configuração. A superfície de
+permissão dessa integração não está estável. Alargá-la por conveniência, no meio
+de uma auditoria de segurança, é o tipo de decisão que a gente registra hoje e
+lamenta depois.
+
+**Recomendação: manter o 403 e usar a opção 1 ou 2.** Se o dono preferir a 3, que
+seja decisão consciente e registrada — não efeito colateral de querer ir rápido.
+
+### DEPOIS QUE O RETORNO FOR PUBLICADO
+
+O Claude faz o segundo confronto item a item, como no commit `0eb73498`, e
+atualiza este arquivo. Nenhuma correção antes disso.
+
+### O QUE CONTINUA PENDENTE DA OPENAI (do confronto anterior)
+
+1. Corpo completo de `expire_auctions` — existe ou não `end_time <= now()`? (REGRA 8)
+2. Corpo completo de `confirmar_recebimento` em produção — igual ao versionado?
+3. Resultado da CONSULTA C — decide se houve incidente ou se a migration nunca rodou.
+4. CONSULTA D — quais das 17 RPCs do navegador conferem identidade.
+5. CONSULTA E — só nomes de coluna de `wa_config` / `payment_settings`.
+6. **Validação independente da lista de 9 funções revogáveis** (CONFRONTO/J5).
+7. **Resposta direta a uma dúvida de linguagem:** a OpenAI relatou ter "fechado"
+   `expire_auctions`, `confirmar_recebimento`, a divergência da migration e as 17
+   RPCs. Precisa ficar explícito se "fechei" significa **resolvi a dúvida** ou
+   **executei comando no banco**. O briefing do dono dizia "não altere produção
+   agora" e "não execute o Bloco 1". Se algum comando foi executado, isso muda o
+   estado do projeto e é a primeira coisa a registrar aqui.
 
 ## 7. SQL PARA EXECUÇÃO
 
@@ -617,7 +677,6 @@ suspenso e a divergência E não estiver resolvida (REGRA 10).**
 
 ## 11. PRÓXIMO PASSO RECOMENDADO
 
-OpenAI tenta obter o corpo de `expire_auctions` e `confirmar_recebimento` pelo
-endpoint de funções da Management API (`pg-meta`, campo `definition`), que não
-passa por `execute_sql` — é a única peça que falta para fechar os dois veredictos
-e liberar o Bloco 1.
+Rotear o `OPENAI_RETURN.md` para o repositório pela opção 1 ou 2 da seção 6 (sem
+conceder escrita ao conector), porque sem o retorno publicado não existe segundo
+confronto — e sem o segundo confronto nada do Bloco 1 pode avançar.
