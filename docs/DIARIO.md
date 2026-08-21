@@ -241,3 +241,51 @@ APLICADA** e agora precisa de nova revisão da OpenAI antes de qualquer coisa.
 **Contagem honesta até aqui nesta frente:** 23 defeitos fechados. Destes, 6 foram
 introduzidos por mim nesta mesma branch (B1, B7, B11, A1, A2 e o buraco do B15).
 Nenhum chegou a produção.
+
+---
+
+## 21/08 · PROTOCOLO-MESTRE DE COMANDO E EXECUÇÃO
+
+**DONO** — mudou a forma de trabalhar. Regra central: **acelerar com mais
+segurança**. Não quer engenharia irresponsavelmente rápida, mas também não quer
+burocracia infinita, auditoria sem fim, nem Opus gastando em tarefa que Sonnet ou
+Haiku resolvem. Métrica do projeto passa a ser **tempo do pedido → produção
+segura** — não quantidade de análise, commit, handoff ou token. → **D11**, **D12**
+
+Pontos que mudam o meu comportamento diretamente:
+
+- **Primeira resposta** a todo pedido: entender → classificar tipo e risco →
+  recomendar modelo → gerar o prompt de execução. O dono não escreve
+  especificação técnica; eu traduzo a intenção, mesmo de áudio, print ou
+  mensagem curta.
+- **Achado vira uma de três caixas:** BLOCKER (impede merge), FOLLOW-UP
+  (registra, não bloqueia), OBSERVAÇÃO. Eu vinha tratando quase tudo como
+  bloqueador, o que travou a frente de frete em ciclo de auditoria.
+- **Ciclo máximo:** implementação → auditoria → correção de blockers → final
+  check. `BLOCKERS = 0` ⇒ pronto para merge. Follow-up **não reabre**.
+- **Vocabulário (REGRA 16):** nunca dizer "corrigido" para o que está na branch.
+  Corrigido na branch → mergeado → deployado → validado → resolvido.
+- **Nada é prova de conclusão** a não ser produção validada. Handoff publicado,
+  commit, 195 testes verdes, build verde: tudo isso é evidência intermediária.
+- **Percentual nunca maquiado.**
+
+**CLAUDE** — protocolo ativado e registrado. Conferi o estado real antes de
+responder: **não existe bloqueador pendente da OpenAI**. O último lote entregue
+foi B12–B21, fechado 10/10 no commit `b74accff`. A frente está parada esperando
+o FINAL CHECK dela, não esperando trabalho meu.
+
+**O que eu preciso dizer com todas as letras, aplicando a REGRA 16 e o medidor
+honesto:** depois de 23 defeitos fechados, 195 testes e 6 commits, **produção
+segue em 0%**. O dono pediu conserto de um pedido de frete e o pedido continua
+como estava. Isso é exatamente o que o protocolo dele existe para atacar.
+
+**Risco que precisa estar registrado antes do merge:** mergear a frente de frete
+NÃO resolve os dois pedidos reais sozinho. Faltam duas decisões do dono:
+
+- **P4** — sem a RPC 06 aplicada, `cobrarFretePendente` **recusa** cobrar. O
+  `ARD5856D19` continua sem frete cobrado.
+- **P5** — sem `FRETE_MODO=bloquear`, as travas novas rodam em **observação**: o
+  selo é conferido e registrado, mas lance sem selo ainda passa.
+
+Ou seja: deployar ≠ proteger. Registrado para não virar a próxima confusão entre
+"está na branch" e "está resolvido".

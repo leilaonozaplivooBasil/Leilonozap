@@ -57,6 +57,59 @@ OpenAI deve:
 <próxima ação em uma frase>
 ```
 
+### PROTOCOLO-MESTRE DE COMANDO E EXECUÇÃO — 21/08/2026
+
+> Decisão do dono, nesta data. Regra central: **ACELERAR COM MAIS SEGURANÇA.**
+> Métrica principal do projeto passa a ser **TEMPO DO PEDIDO → PRODUÇÃO SEGURA**
+> — não quantidade de análises, commits, handoffs ou tokens.
+
+**Primeira resposta a todo pedido do dono** traz, nesta ordem:
+`ENTENDI QUE VOCÊ QUER` · `TIPO` · `RISCO` · `MODELO RECOMENDADO` · `MOTIVO` ·
+`CUSTO RELATIVO` · `PROMPT PARA EXECUÇÃO`.
+O dono não precisa escrever especificação técnica — a IA traduz a intenção.
+Tamanho do prompt proporcional à complexidade.
+
+**Roteamento de modelo** (escolher ANTES de executar, e pode trocar no meio):
+
+| Modelo | Quando | Nunca |
+|---|---|---|
+| **Haiku 4.5** | busca, localizar função, formatação, doc curta, alteração determinística | dinheiro, segurança, concorrência, autorização, arquitetura crítica |
+| **Sonnet 5** | **padrão de engenharia**: implementação, debug, refactor, testes, API, front, back, revisão | — |
+| **Opus 5** | arquitetura crítica, segurança profunda, dinheiro, concorrência, autorização, bug sistêmico, auditoria final de mudança crítica, Sonnet travado | renomear arquivo, buscar função, doc simples, CSS pequeno |
+
+Escalar Sonnet→Opus quando travar de verdade (não repetir 5× a mesma abordagem).
+Descalar Opus→Sonnet/Haiku quando sobrar só doc, teste mecânico e ajuste simples.
+
+**Classificação de achado de auditoria** — só três caixas:
+
+- **BLOCKER** — impede merge/deploy. Só com risco concreto: perda financeira,
+  saldo preso, cobrança errada ou duplicada, fraude, bypass de auth,
+  corrupção de dados, pedido inconsistente, indisponibilidade grave, rollback
+  perigoso, ou falha diretamente ligada à mudança atual.
+- **FOLLOW-UP** — importante, não impede a entrega. Registra, **não bloqueia**.
+- **OBSERVAÇÃO** — melhoria futura. Registra se relevante, não interrompe.
+
+**Ciclo máximo, sem loop infinito:**
+`IMPLEMENTAÇÃO → AUDITORIA → CORREÇÃO DE BLOCKERS → FINAL CHECK`.
+`BLOCKERS = 0` ⇒ `PRONTO PARA MERGE = SIM`. Follow-up **não reabre** o incidente.
+
+**Vocabulário obrigatório (REGRA 16).** Nunca dizer "está corrigido" para o que
+está só na branch:
+`CORRIGIDO NA BRANCH → MERGEADO → DEPLOYADO → VALIDADO EM PRODUÇÃO → RESOLVIDO`.
+
+**Não são prova de conclusão:** handoff publicado, commit criado, N testes
+verdes, build verde, preview disponível. São evidências intermediárias.
+
+**Relatório ao dono** é curto e executivo: OBJETIVO · STATUS % · MODELO EM USO ·
+PRODUÇÃO SIM/NÃO · FEITO (≤5) · BLOCKERS · FOLLOW-UPS · PRONTO PARA MERGE ·
+PRÓXIMO PASSO · PRÓXIMO CHECKPOINT. **Percentual nunca é maquiado** — se faz duas
+horas que se investiga e produção segue 0%, o relatório diz 0%.
+
+**Não expandir escopo em incidente** (REGRA 9): problema novo não relacionado vai
+para backlog como follow-up; a correção em curso não para.
+
+---
+
 ### Registro integral da conversa — regra nova, 21/08/2026
 
 > Decisão do dono, nesta data: *"tudo que você conversar comigo tem que estar no
@@ -134,6 +187,8 @@ Nenhum deles chegou a produção — todos nasceram e morreram nesta branch.
 | D8 | — | "Não quero que você seja política, quero que você me confronte e seja sênior." |
 | D9 | — | "Só corrigir se de fato estiver pendente, sem achismo." Toda afirmação precisa de arquivo:linha. |
 | D10 | — | Nunca dizer que o sistema está "100% seguro". |
+| D11 | 21/08 | **PROTOCOLO-MESTRE ativado.** Acelerar com mais segurança. Métrica = tempo do pedido → produção segura. Roteamento de modelo por risco. Achado vira BLOCKER / FOLLOW-UP / OBSERVAÇÃO. Ciclo máximo: implementação → auditoria → blockers → final check. |
+| D12 | 21/08 | **Não iniciar nova auditoria estrutural** antes de a correção do frete estar em produção e validada. A14/pg_cron, RLS e o resto seguem congelados. |
 
 ---
 
