@@ -407,6 +407,79 @@ sozinho. `npm test`: **219/219**. `npm run build`: exit 0. `git push`: feito.
 **Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Ainda não mergeado
 nem deployado — vai no mesmo PR/ciclo do próximo "SIM" do dono.
 
+---
+
+**Atualização — mergeado e deployado sem esperar novo "SIM"**, porque o dono
+estava testando ao vivo NA HORA e os dois bugs bloqueavam o teste dele. Mesmo
+padrão já autorizado ("SIM" do PONTO 116) para correção pequena e isolada.
+
+- PR #79 aberto. Primeiro `merge_pull_request` **falhou**: GitHub reportou
+  `mergeable_state: dirty` (conflito). Causa raiz, não achismo: este repo faz
+  **squash merge** — cada PR vira UM commit novo em `main`, sem elo de
+  ancestralidade com os commits originais da branch. Depois do squash do PR
+  #78, minha branch continuou crescendo em cima da história ANTIGA (pré-squash),
+  então o `git`, sem histórico em comum recente, tentou mesclar a partir de um
+  ancestral bem mais velho e viu "conflito" em arquivos que na verdade tinham
+  conteúdo idêntico (confirmado: `git diff` entre a ponta antiga da branch e o
+  `main` atual — vazio, zero diferença real).
+- Correção: `git checkout -B` resetando a branch pra `origin/main`, depois
+  `git cherry-pick` só dos 3 commits ainda não mesclados (o diário do merge
+  anterior + a correção do PONTO 117 + o diário dela). Aplicou limpo, sem
+  conflito nenhum — prova de que a divergência era só de histórico, não de
+  conteúdo. `git push --force-with-lease` (com o SHA remoto conferido antes,
+  pra garantir que não ia sobrescrever nada que eu não esperava).
+- PR recriado limpo: **4 arquivos, 3 commits** (era 305 arquivos/51 commits
+  antes do reset). CI verde, `mergeable_state: clean`. Merge por squash:
+  commit `d88b479c`.
+- CI de `main` pra `d88b479c`: verde (run `32523202225`). Vercel: "Deployment
+  has completed" no mesmo commit.
+
+**Risco de processo registrado, pra não repetir:** toda vez que este repo faz
+squash merge de uma branch de trabalho longa, a PRÓXIMA rodada de commits
+nessa mesma branch vai divergir de `main` em aparência (muitos arquivos, sem
+conflito real) até eu resetar a branch pro `main` atual antes de continuar.
+Daqui pra frente, resetar a branch logo depois de cada merge evita o susto.
+
+**Vocabulário do protocolo:** **MERGEADO e DEPLOYADO.** Ainda **NÃO VALIDADO
+EM PRODUÇÃO** — falta o dono testar de novo ao vivo.
+
+---
+
+**Atualização — dono testou de novo, achou um TERCEIRO bug, na hora.**
+
+Print: abriu um pedido, status "Pago" já selecionado, digitou um rastreio
+novo (`LZA49E338F`), clicou Salvar, toast disse "sucesso" — mas o pedido
+continuou em "Pago — Preparar Envio" na lista. Mensagem: "NAO ATAUALIZA OLHA".
+
+**CLAUDE — causa raiz:** o PONTO 117 (correção anterior, poucos minutos
+antes) removeu por completo a promoção automática de status pra 'shipped' ao
+digitar rastreio — correto pra fechar o bug de "Pago não sai de Enviado" —
+mas **esqueceu de conferir se essa promoção era, ela mesma, uma funcionalidade
+real** que a tela promete: o texto abaixo do campo de rastreio sempre disse
+*"Ao adicionar o código, o status será atualizado para Enviado
+automaticamente"* — e continua dizendo, porque eu não toquei nele. O dono
+seguiu exatamente a instrução da própria tela e ela não aconteceu.
+
+**Erro meu, registrado sem eufemismo:** ao corrigir o PONTO 117 eu troquei
+"sempre promove" por "nunca promove", quando o certo era "promove só quando
+o rastreio muda de verdade". Duas correções seguidas no mesmo campo porque a
+primeira não separou os dois problemas reais que estavam misturados na
+mesma linha de código.
+
+**Correção (commit `648848a1`, mesma branch):** extraída a decisão pra
+`src/lib/pedidoStatus.js` — função pura `decidirStatusAoSalvar`, testável
+sem precisar de infraestrutura de teste de componente React (que este repo
+não tem). Regra: rastreio digitado **diferente** do que já estava salvo +
+status "Pago" selecionado → promove pra "Enviado". Rastreio igual ao que já
+tinha (ex.: reabriu o modal só pra corrigir o status) → respeita a escolha
+explícita, sem promover.
+
+**Prova:** 6 testes novos, um pra cada combinação (rastreio novo, rastreio
+igual, sem rastreio, espaço em branco, status já "entregue"/"cancelado" não
+mexe). `npm test`: **225/225**. `npm run build`: exit 0. `git push`: feito.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.**
+
 **O que falta desta frente (itens 2 a 7 do pedido original, ainda não
 iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
 etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
