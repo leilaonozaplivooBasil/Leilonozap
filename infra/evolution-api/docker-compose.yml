@@ -1,0 +1,92 @@
+# Evolution API v2 + Postgres + Redis — para colar direto no Coolify (New Resource →
+# Docker Compose). Substitui o backend de WhatsApp da Base44: esta instância é quem recebe
+# e envia as mensagens; quem pensa (Zeca/Heloim) é a Supabase Edge Function que ela chama
+# via webhook, não este container.
+#
+# Depois de subir no Coolify:
+#   1. Preencha as variáveis abaixo na aba "Environment Variables" do recurso (não deixe
+#      hardcoded no compose — são segredos).
+#   2. Aponte um domínio para o serviço `evolution-api`, porta 8080 (Coolify cuida do
+#      certificado/proxy — não precisa de Traefik manual aqui).
+#   3. Depois que estiver no ar: POST {SERVER_URL}/instance/create com o nome da instância
+#      (mesmo valor de EVOLUTION_INSTANCE que você vai usar na Edge Function) pra gerar o
+#      QR Code e conectar o número do WhatsApp.
+#   4. Configure o webhook da instância pra apontar pra Edge Function (o global já cobre
+#      isso via WEBHOOK_GLOBAL_URL abaixo, mas confirme em /webhook/find/{instance}).
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    environment:
+      # ── Identidade do servidor ────────────────────────────────────────────
+      - SERVER_URL=${EVOLUTION_SERVER_URL}          # ex: https://evo.seudominio.com
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}  # header `apikey` em toda chamada — gere algo forte
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - LANGUAGE=pt-BR
+      - LOG_LEVEL=ERROR
+      - LOG_COLOR=true
+
+      # ── Persistência (Postgres embutido, serviço evolution-db abaixo) ─────
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:${EVOLUTION_DB_PASSWORD}@evolution-db:5432/evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_UPDATE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+
+      # ── Cache (Redis embutido, serviço evolution-redis abaixo) ─────────────
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution-redis:6379/1
+      - CACHE_REDIS_SAVE_INSTANCES=true
+      - CACHE_LOCAL_ENABLED=false
+
+      # ── Webhook global — dispara pra Edge Function em TODA mensagem ───────
+      # O ?secret= é conferido pela Edge Function antes de processar qualquer coisa
+      # (ver whatsapp-webhook/index.ts) — sem ele, qualquer um que descubra a URL
+      # da function conseguiria mandar mensagem falsa pros agentes responderem.
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_GLOBAL_URL=${SUPABASE_WEBHOOK_URL}   # ex: https://SEUPROJETO.supabase.co/functions/v1/whatsapp-webhook?secret=...
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
+      - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+      - WEBHOOK_EVENTS_CONNECTION_UPDATE=true
+    depends_on:
+      - evolution-db
+      - evolution-redis
+    networks:
+      - evolution-net
+
+  evolution-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=evolution
+      - POSTGRES_PASSWORD=${EVOLUTION_DB_PASSWORD}
+      - POSTGRES_DB=evolution
+    volumes:
+      - evolution_pgdata:/var/lib/postgresql/data
+    networks:
+      - evolution-net
+
+  evolution-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - evolution_redisdata:/data
+    networks:
+      - evolution-net
+
+volumes:
+  evolution_instances:
+  evolution_pgdata:
+  evolution_redisdata:
+
+networks:
+  evolution-net:
