@@ -289,3 +289,67 @@ NÃO resolve os dois pedidos reais sozinho. Faltam duas decisões do dono:
 
 Ou seja: deployar ≠ proteger. Registrado para não virar a próxima confusão entre
 "está na branch" e "está resolvido".
+
+---
+
+## 21/08 · Gestão de Pedidos — frente nova, separada da frente de frete
+
+**DONO** mandou 3 prints de `CatalogOrdersAdmin.jsx` pedindo uma análise completa
+da gestão de pedidos: renomear "Completar entrega" (deve levar a retirar a
+etiqueta de verdade), sincronizar quando a etiqueta é gerada direto no Melhor
+Envio, comunicação clara de "etiqueta enviada", passo de etiqueta/impressão no
+"Jornada da Entrega", e **corrigir o "Erro ao atualizar pedido"** — mostrado ao
+vivo num dos prints (pedido "Streaming HD ROKU"). Pediu confirmação de
+entendimento antes de executar ("Me diga se você entendeu antes de fazer e siga
+o seu protocolo"), confirmou o modelo (Sonnet 5) e autorizou com "PODE",
+priorizando o bug de salvar primeiro.
+
+**CLAUDE** — investigou só com leitura antes de mexer em código. Causa raiz do
+"Erro ao atualizar pedido":
+
+- `handleSaveOrder` sempre mandou `status` pra `CatalogSale.update()` → rota
+  genérica `entityWrite`.
+- O **PONTO 115** (corrigido nesta mesma sessão, mais cedo) passou a **bloquear**
+  escrita de `status` em `catalog_sales` por essa rota genérica — proteção
+  legítima contra editar venda por fora das regras de negócio (estorno,
+  comissão, escrow). `CatalogOrdersAdmin.jsx` nunca foi religado pra usar a rota
+  dedicada. Resultado: **todo** salvamento manual de status nessa tela quebrou,
+  sem exceção — é exatamente o bug do print.
+- Achado um segundo problema, ligado ao mesmo ponto: a rota dedicada
+  `updateOrderStatus.js` só aceitava status em português
+  (`saiu_entrega`/`entregue`/`cancelado`), mas a tela sempre gravou em inglês
+  (`shipped`/`delivered`/`canceled` — herança da Base44). Reescrever
+  `handleSaveOrder` pra chamar a rota certa não bastava; ela rejeitaria com 400.
+
+**Correção aplicada (commit `8b981e24`, branch
+`claude/project-structure-analysis-r1prad`):**
+
+1. `handleSaveOrder` agora chama `updateOrderStatus` (mesmo padrão de
+   `handleReprocessarEnvio`/`handleCompletarEntrega`: `actorId` do
+   `localStorage`, `plataforma.functions.invoke`).
+2. `updateOrderStatus.js` passou a aceitar as duas línguas — sem migrar dado
+   existente, porque o banco já mistura as duas e a própria tela já filtra os
+   dois lados (`o.status === 'shipped' || o.status === 'saiu_entrega'`).
+3. **Achado de brinde, corrigido junto:** a lista `JA_PAGO` (trava do PONTO 99 —
+   vendedor não pode cancelar pedido já pago) não incluía `shipped`/`delivered`.
+   Um pedido pago com status gravado em inglês podia ser cancelado de graça pelo
+   próprio vendedor, sem estornar comissão nem escrow. Fechado junto, porque
+   deixar como estava reabriria o buraco do PONTO 99 assim que este mesmo
+   arquivo passasse a aceitar os dois vocabulários.
+
+**Prova:** 10 testes novos (`tests/updateOrderStatus.test.mjs`) cobrindo os dois
+vocabulários e o travamento de cancelamento pago nos dois lados. `npm test`:
+**214/214**. `npm run build`: exit 0. `git push`: feito.
+
+**Vocabulário do protocolo, com todas as letras:** isto é **CORRIGIDO NA
+BRANCH**. Não mergeado, não deployado, não validado em produção. O dono ainda
+não pode testar isto ao vivo.
+
+**O que falta desta frente (itens 2 a 7 do pedido original, ainda não
+iniciados):** renomear/reformular "Completar entrega" pra apontar pra retirar a
+etiqueta; investigar se o Melhor Envio oferece webhook (ou só consulta manual)
+pra detectar etiqueta gerada direto no painel dele — **ainda não verificado,
+será dito com honestidade antes de prometer qualquer coisa "automática"**;
+comunicação de "etiqueta enviada"; passo de etiqueta na Jornada da Entrega;
+proposta de redesenho da tela inteira, a ser apresentada ao dono antes de
+qualquer implementação ampla.

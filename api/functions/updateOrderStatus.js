@@ -33,10 +33,22 @@
 import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ALLOWED = ['paid', 'preparando', 'saiu_entrega', 'entregue', 'cancelado'];
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 116 (21/08/2026) — DUAS LÍNGUAS PRO MESMO STATUS
+// ══════════════════════════════════════════════════════════════════════════════
+// A tela de pedidos (CatalogOrdersAdmin.jsx) sempre gravou status em inglês
+// (shipped/delivered/canceled) porque nasceu na Base44. Esta rota só aceitava
+// o vocabulário em português (saiu_entrega/entregue/cancelado) que outras
+// partes do sistema passaram a usar depois — todo salvamento manual de status
+// caía fora do ALLOWED. O banco já tem as duas línguas misturadas (a própria
+// tela filtra os dois lados: o.status === 'shipped' || o.status === 'saiu_entrega'),
+// então em vez de migrar dado existente, esta rota aceita e preserva as duas.
+const ALLOWED = ['pending_payment', 'paid', 'preparando', 'shipped', 'saiu_entrega', 'delivered', 'entregue', 'canceled', 'cancelado'];
 // Estados em que o comprador JÁ PAGOU — a partir daqui cancelar mexe em dinheiro.
-// Mesma lista da trigger trg_sale_to_ledger (20260716_saldo_a_liberar.sql:47).
-const JA_PAGO = ['paid', 'entregue', 'enviado', 'confirmado', 'pago', 'concluido', 'preparando', 'saiu_entrega'];
+// Mesma lista da trigger trg_sale_to_ledger (20260716_saldo_a_liberar.sql:47),
+// mais 'shipped'/'delivered' (PONTO 116) — sem isso o vendedor cancelava de
+// graça um pedido pago só porque o status dele estava gravado em inglês.
+const JA_PAGO = ['paid', 'entregue', 'enviado', 'confirmado', 'pago', 'concluido', 'preparando', 'saiu_entrega', 'shipped', 'delivered'];
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -74,7 +86,9 @@ export default async function handler(req, res) {
     if (!isAdmin && !isSeller) return res.status(403).json({ success: false, error: 'Sem permissão' });
 
     // ─── 🔴 PONTO 99: cancelar venda paga é operação de DINHEIRO ──────────────
-    if (status === 'cancelado') {
+    // PONTO 116: 'canceled' (inglês, o que a tela manda) e 'cancelado' (o que
+    // o resto do sistema usa) caem na MESMA trava — ver comentário do ALLOWED acima.
+    if (status === 'cancelado' || status === 'canceled') {
       const jaPago = JA_PAGO.includes(String(sale.status || '').toLowerCase());
       if (jaPago && !isAdmin) {
         return res.status(403).json({
