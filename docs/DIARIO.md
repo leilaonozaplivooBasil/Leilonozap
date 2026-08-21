@@ -180,3 +180,64 @@ semana. O MAPA resolve o risco de ruído: uma porta, vários cômodos.
 **Sugestões que dependem do dono** — registradas como perguntas, não executadas:
 **P6** (o dono passa a falar com a OpenAI só por link), **P7** (a OpenAI também
 escreve no diário), **P8** (encerramento de ciclo em 5 linhas fixas).
+
+---
+
+## 21/08 · Segunda auditoria da OpenAI: B12–B21
+
+**DONO** — mandou o comando da OpenAI com um cabeçalho próprio, explicando que
+ela tinha lido o handoff do commit `fb2d62a2` e conferido que A1 e A2 estavam
+mesmo registrados. Instrução: A1 e A2 viram **invariantes de regressão** — não
+podem ser refeitos nem desfeitos enquanto os B12–B21 são corrigidos.
+
+**OPENAI** — auditou os quatro commits novos. Veredito: **NÃO MERGEAR AINDA**.
+Dez defeitos novos nos caminhos reais de dinheiro e identidade, que os 162 testes
+não cobriam. Resumo do que ela achou, e que eu confirmei lendo o código:
+
+- **B12** — `fetch` **lançando** (DNS, TLS, socket, timeout) pulava as checagens
+  de `resp.ok` e caía no catch externo, que não sabe que houve reserva. Meus
+  testes só cobriam HTTP 500, que é o caso fácil.
+- **B13** — o PATCH de `frete_reservado_valor` não tinha trava, e o rollback do
+  Buy Now deixava o frete no leilão. O vencedor real herdaria o frete de quem
+  perdeu. **É o AR3BEF1939 entrando pela porta do rollback** — eu tinha fechado a
+  porta da frente e deixado a de trás aberta.
+- **B14** — `cotarFrete` emitia autorização financeira em modo observação. E o
+  ponto que eu não tinha visto: o selo é Base64, **não é cifra**. HMAC prova
+  origem, não esconde conteúdo. Sem crachá, dava pra descobrir o CEP de qualquer
+  pessoa mandando o id dela. Vazamento de endereço, não só de frete.
+- **B15** — o selo carrega o CEP mas ninguém comparava com o cadastro atual.
+- **B16** — a minha "volta segura" do `product_id` era **fail-open**: qualquer
+  erro desligava a conferência. Fail-open num controle de segurança é pior que
+  não ter o controle, porque parece que tem.
+- **B17** — o estorno da tela usava a conta local, não o valor reservado.
+- **B18** — o PostgREST devolve **HTTP 200** para uma função que RECUSOU. Eu lia
+  `rpc.ok` como sucesso e responderia "debitado: true" sem um centavo ter saído.
+- **B19** — a RPC gravava o documento que eu li ANTES da trava. O `FOR UPDATE`
+  impede duas RPCs concorrentes, não impede outro fluxo ter mexido no meio.
+- **B20** — identificar o leilão legado por título casa dois leilões do mesmo
+  comprador. Produto repetido é o normal num leilão, não a exceção.
+- **B21** — `apenas_completar` gravava o serviço **mais barato** num pedido que
+  pagou outro valor.
+
+**CLAUDE** — corrigi 10/10 no commit `b74accff`. `npm test` 195/195,
+`npm run build` exit 0. Produção, banco e RPC intocados.
+
+**A1 e A2 preservados, e provados por reversão** (não por afirmação):
+reverter A1 derruba `B8 · a chamada da RPC usa a assinatura certa`; reverter A2
+derruba `B8 · cobrança travada bloqueia TAMBÉM o caminho da RPC`.
+
+**ERRO MEU, achado na revisão do meu próprio diff antes do commit.** A primeira
+versão da trava de CEP do B15 era `cepDoSelo && cepAtual && cepDoSelo !== cepAtual`.
+O `cepAtual &&` deixava passar quem **apagasse** o CEP do perfil depois de cotar
+— a comparação nem acontecia. "Não tenho CEP agora" não prova que o CEP do selo
+é o certo; prova o contrário. Fechado e com teste próprio.
+
+**Mudança de escopo que precisa ser dita:** a assinatura da RPC 06 mudou de 4
+para 5 argumentos por causa do B19. O arquivo ganhou um `DROP FUNCTION` da versão
+antiga — se as duas sobrecargas coexistirem, o PostgREST fica ambíguo (PGRST203)
+e recusa as duas, o que a rota leria como "RPC não aplicada". Continua **NÃO
+APLICADA** e agora precisa de nova revisão da OpenAI antes de qualquer coisa.
+
+**Contagem honesta até aqui nesta frente:** 23 defeitos fechados. Destes, 6 foram
+introduzidos por mim nesta mesma branch (B1, B7, B11, A1, A2 e o buraco do B15).
+Nenhum chegou a produção.
