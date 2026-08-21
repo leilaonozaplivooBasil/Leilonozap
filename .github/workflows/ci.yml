@@ -1,0 +1,60 @@
+# CI mínima do Leilão NoZap.
+#
+# O QUE ELA FAZ: instala, roda lint, build e a suíte de testes. Só isso.
+#
+# O QUE ELA NÃO FAZ, DE PROPÓSITO:
+#   • não usa nenhum segredo — não há `secrets:` em lugar nenhum deste arquivo;
+#   • não fala com o Supabase;
+#   • não fala com a Vercel;
+#   • não aplica migration;
+#   • não faz deploy;
+#   • não escreve no repositório (permissões em somente-leitura abaixo).
+#
+# Motivo: o deploy de produção já é feito pela Vercel a partir da `main`. Uma
+# Action com poder de escrita ou com credencial seria mais uma porta para
+# guardar, e a auditoria de 21/08 achou que `main` não tem proteção nenhuma.
+# Enquanto isso não muda, a CI serve para uma coisa só: dizer se o código passa.
+#
+# O build roda sem variável de ambiente. `src/api/supabaseClient.js` tem valor
+# padrão para a URL e para a chave publicável, então `vite build` completa. Se
+# um dia isso deixar de ser verdade, a CI quebra no build — que é o lugar certo
+# para descobrir.
+name: CI
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: lint · build · testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: instalar
+        run: npm ci
+
+      - name: lint
+        run: npm run lint
+        continue-on-error: true   # ainda não está limpo; não bloqueia, só reporta
+
+      - name: build
+        run: npm run build
+
+      - name: testes
+        run: npm test
+
+      - name: auditoria de dependencias (informativa)
+        run: npm audit --audit-level=critical
+        continue-on-error: true
