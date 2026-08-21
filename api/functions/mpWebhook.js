@@ -235,8 +235,17 @@ function investigarManifesto({ segredo, idBody, idUrl, requestId, ts, v1 }) {
         add(`${rotulo}/${caso}/com-request-id`, requestId ? `id:${valor};request-id:${requestId};ts:${ts};` : '');
         add(`${rotulo}/${caso}/sem-request-id`, `id:${valor};ts:${ts};`);
         add(`${rotulo}/${caso}/sem-ponto-e-virgula-final`, requestId ? `id:${valor};request-id:${requestId};ts:${ts}` : '');
+        add(`${rotulo}/${caso}/topico-antes`, `topic:payment;id:${valor};ts:${ts};`);
       }
     }
+
+    // O formato ANTIGO (IPN Feed v2.0) chega com ?id=&topic= e NÃO tem data.id.
+    // Nenhuma montagem oficial descreve o manifesto dele, então aqui entram as
+    // formas plausíveis de um manifesto que simplesmente não carrega o id.
+    add('legado/id-vazio', requestId ? `id:;request-id:${requestId};ts:${ts};` : '');
+    add('legado/so-request-id', requestId ? `request-id:${requestId};ts:${ts};` : '');
+    add('legado/so-ts', `ts:${ts};`);
+    add('legado/ts-cru', String(ts));
 
     const alvo = String(v1 || '').toLowerCase();
     const acertou = variantes.find(([, texto]) => hmac(texto) === alvo);
@@ -248,13 +257,45 @@ function investigarManifesto({ segredo, idBody, idUrl, requestId, ts, v1 }) {
   } catch (e) { console.warn('[MP][INVESTIGA] falhou:', e?.message); }
 }
 
-function conferirAssinatura(req, payId, idUrl = '') {
+// `legado` = a notificação chegou no formato antigo (IPN "Feed v2.0": ?id=&topic=,
+// sem data.id). Ver o comentário do handler embaixo pra saber por que ele passa.
+function conferirAssinatura(req, payId, idUrl = '', legado = false) {
   const segredo = process.env.MP_WEBHOOK_SECRET;
   const bloqueia = String(process.env.MP_WEBHOOK_MODO || '').toLowerCase() === 'bloquear';
   // Resultado quando a conferência falha: em modo observação vira aviso e passa.
-  const reprovar = (motivo) => (bloqueia
-    ? { ok: false, motivo }
-    : (console.warn(`[MP] ASSINATURA NÃO CONFERE (${motivo}) — modo OBSERVAÇÃO, nada foi bloqueado. Pagamento ${payId}.`), { ok: true, verificado: false, motivo }));
+  const reprovar = (motivo) => {
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 21/08/2026 — POR QUE O FORMATO ANTIGO PASSA MESMO SEM CONFERIR
+    // ══════════════════════════════════════════════════════════════════════════
+    // Medido em produção: cada pagamento chega DUAS vezes, de dois remetentes
+    // diferentes do próprio Mercado Pago:
+    //   • "MercadoPago WebHook v1.0" — ?data.id=&type=payment — assinatura CONFERE
+    //   • "MercadoPago Feed v2.0"    — ?id=&topic=payment     — assinatura NÃO confere
+    // O segundo é o IPN antigo. Ele NÃO sai da configuração de Webhooks da
+    // aplicação (desligar os eventos lá não o interrompe): é config de conta, de
+    // outra época, e vem assinado com uma chave que não é a da aplicação. Não
+    // existe, no painel, de onde copiar essa chave.
+    //
+    // Recusar esse remetente em modo bloqueio significaria devolver 401 pra metade
+    // das notificações do Mercado Pago — ele reenviaria pra sempre, e o log de
+    // erro viraria ruído permanente. Só que barrá-lo também não protege nada que
+    // já não esteja protegido: o handler NÃO acredita no que chega. Ele pega o id,
+    // vai na API do Mercado Pago com o NOSSO token e só age se o MP responder que
+    // o pagamento existe e está aprovado. Forjar dinheiro por aqui não dá — o
+    // máximo que alguém consegue, mandando um id real, é adiantar o processamento
+    // de um pagamento que ia ser processado de qualquer jeito.
+    //
+    // Então: o formato NOVO é barrado se a assinatura não bater (é lá que mora a
+    // proteção de verdade), e o formato ANTIGO passa com aviso no log. Se um dia
+    // a investigação acertar o manifesto dele, esta exceção sai.
+    if (legado) {
+      console.warn(`[MP] Formato ANTIGO (IPN Feed v2.0) sem assinatura conferida (${motivo}) — liberado de propósito, o pagamento ainda é conferido na API do Mercado Pago. Pagamento ${payId}.`);
+      return { ok: true, verificado: false, legado: true, motivo };
+    }
+    return bloqueia
+      ? { ok: false, motivo }
+      : (console.warn(`[MP] ASSINATURA NÃO CONFERE (${motivo}) — modo OBSERVAÇÃO, nada foi bloqueado. Pagamento ${payId}.`), { ok: true, verificado: false, motivo });
+  };
 
   if (!segredo) {
     console.warn('[MP] MP_WEBHOOK_SECRET não publicada — webhook aceitando sem conferir assinatura (PONTO 122).');
@@ -324,7 +365,12 @@ export default async function handler(req, res) {
     diagnosticarCabecalhos(req, payId);
     // O MP documenta o manifesto com o "data.id_url" — o valor que vem na QUERY da
     // notificação, que nem sempre é o mesmo do corpo. Vai junto pra investigação.
-    const assinatura = conferirAssinatura(req, payId, url.searchParams.get('data.id') || url.searchParams.get('id') || '');
+    // Formato antigo = veio `topic` e NÃO veio `data.id`. É a assinatura do IPN
+    // "Feed v2.0" — ver o comentário dentro de conferirAssinatura.
+    const formatoAntigo = !url.searchParams.get('data.id') && !!url.searchParams.get('topic');
+    const assinatura = conferirAssinatura(
+      req, payId, url.searchParams.get('data.id') || url.searchParams.get('id') || '', formatoAntigo
+    );
     if (!assinatura.ok) {
       console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
       return res.status(401).json({ ok: false, error: 'assinatura_invalida' });
