@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
-import { decidirStatusAoSalvar } from '@/lib/pedidoStatus';
 import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -517,18 +516,21 @@ export default function CatalogOrdersAdmin() {
 
     setIsUpdating(true);
     try {
+      // 🔴 PONTO 119 (21/08/2026) — AQUI TINHA uma promoção automática pra
+      // 'shipped' baseada em "o rastreio mudou" (PONTO 118), que por sua vez
+      // corrigia uma promoção baseada em "tem rastreio no campo" (PONTO 117).
+      // Duas tentativas de adivinhar a intenção pelo conteúdo de um campo de
+      // texto, e as duas confundiram o dono em algum caso real — porque a tela
+      // não tem como mostrar "isso é rastreio NOVO" vs "isso já estava salvo",
+      // então o comportamento parecia mágico dos dois jeitos. Fim da mágica:
+      // o status salvo é SEMPRE, literalmente, o que está selecionado no
+      // dropdown — sem exceção, sem inferência. Pra marcar como Enviado,
+      // escolhe "Enviado" no dropdown.
       if (newStatus === 'shipped' && !trackingCode.trim() && !selectedOrder.tracking_code) {
         toast.error('Informe o código de rastreio para marcar como enviado');
         return;
       }
-      // PONTO 118 — ver src/lib/pedidoStatus.js pro histórico completo do bug.
-      const updateData = {
-        status: decidirStatusAoSalvar({
-          statusEscolhido: newStatus,
-          trackingDigitado: trackingCode,
-          trackingAnterior: selectedOrder.tracking_code,
-        }),
-      };
+      const updateData = { status: newStatus };
       if (trackingCode.trim()) updateData.tracking_code = trackingCode.trim();
       const r = await plataforma.functions.invoke('updateOrderStatus', {
         actorId,
@@ -947,7 +949,7 @@ export default function CatalogOrdersAdmin() {
                       placeholder="Ex: AA123456789BR"
                       className="bg-gray-700 border-gray-600 text-white"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Ao adicionar o código, o status será atualizado para "Enviado" automaticamente</p>
+                    <p className="text-xs text-gray-500 mt-1">Obrigatório para marcar o status como "Enviado" acima</p>
                   </div>
                 </>
               )}
