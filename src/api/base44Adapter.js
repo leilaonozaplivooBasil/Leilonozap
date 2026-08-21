@@ -200,6 +200,72 @@ const ENTITY_WRITE_MAX_COOLDOWN_MS = 300000; // 5min
 let _entityWriteBlockedUntil = 0;
 let _entityWriteCooldownMs = ENTITY_WRITE_BASE_COOLDOWN_MS;
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🚨 FREIO DE RAJADA — corta ANTES de sair do navegador (21/08/2026)
+// ══════════════════════════════════════════════════════════════════════════════
+// O freio logo acima (12/08) só reage DEPOIS que o servidor devolve 429: a
+// rajada já saiu, já custou execução na Vercel e já entupiu o log. Em 20/08 o
+// log de produção registrou 9 MIL chamadas desta rota em meia hora, milhares
+// delas no mesmo segundo, do mesmo usuário. Não foi ataque: é alguma tela
+// disparando escrita em laço — o padrão de `array.forEach(x => Entity.update(x))`
+// sem esperar, que enfileira tudo de uma vez.
+//
+// Este freio conta as chamadas dos últimos 60s. Passou do teto, para de mandar.
+//
+// O TETO É ALTO DE PROPÓSITO: operação legítima em massa tem que passar. Gerar
+// 3.000 produtos de um lote faz ~126 chamadas (o gerador grava de 25 em 25),
+// então 200/min deixa passar com folga. Quem bate nesse teto não é trabalho
+// normal — é laço.
+//
+// E o mais útil: ao travar, ele grava UMA linha em system_logs dizendo QUAL
+// tabela e QUAL ação dominaram a rajada. Aviso no console do navegador some
+// quando a aba fecha; esta linha fica no banco e aparece no log da Vercel. É o
+// que vai identificar a tela culpada sem ninguém precisar adivinhar.
+const RAJADA_JANELA_MS = 60000;
+const RAJADA_TETO = 200;
+let _rajadaEventos = [];      // [{ t, rotulo }]
+let _rajadaJaAvisou = false;
+
+function _registraEContaRajada(rotulo) {
+  const agora = Date.now();
+  _rajadaEventos = _rajadaEventos.filter((e) => agora - e.t < RAJADA_JANELA_MS);
+  _rajadaEventos.push({ t: agora, rotulo });
+  if (_rajadaEventos.length <= RAJADA_TETO) _rajadaJaAvisou = false;
+  return _rajadaEventos.length;
+}
+
+/** Quem dominou a rajada, em ordem: "products/update x812, orders/update x40". */
+function _resumoRajada() {
+  const c = {};
+  for (const e of _rajadaEventos) c[e.rotulo] = (c[e.rotulo] || 0) + 1;
+  return Object.entries(c).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} x${v}`).join(', ');
+}
+
+// Grava o aviso no banco passando POR FORA do freio (senão o próprio aviso seria
+// barrado). Uma vez por rajada, best-effort: falhar aqui não pode atrapalhar nada.
+async function _avisaRajada(actorId) {
+  if (_rajadaJaAvisou) return;
+  _rajadaJaAvisou = true;
+  const resumo = _resumoRajada();
+  console.error(`[RAJADA] ${_rajadaEventos.length} escritas em 60s — bloqueado no navegador. Origem: ${resumo}`);
+  try {
+    await fetch('/api/functions/entityWrite', {
+      method: 'POST',
+      headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        actorId, table: 'system_logs', action: 'create',
+        payload: {
+          component_name: 'freioRajadaEntityWrite',
+          step: 'RAJADA_BLOQUEADA',
+          status: 'warning',
+          message: `${_rajadaEventos.length} escritas em 60s pelo mesmo navegador. Origem: ${resumo}. Tela: ${typeof location !== 'undefined' ? location.pathname : '?'}`,
+          created_date: new Date().toISOString(),
+        },
+      }),
+    });
+  } catch { /* best effort: o console já registrou */ }
+}
+
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
   if (!op) return { _skip: true };
@@ -221,6 +287,13 @@ async function _routeWrite(table, action, id, payload) {
     }
     // delete: mantém o comportamento atual (fora de escopo desta correção)
   }
+  // 🚨 Freio de rajada: corta antes de sair do navegador (ver bloco acima).
+  const quantas = _registraEContaRajada(`${table}/${action}`);
+  if (quantas > RAJADA_TETO) {
+    _avisaRajada(op.id);
+    return { success: false, error: 'rajada_local', details: `Muitas escritas seguidas (${quantas} em 60s). Bloqueado para proteger o servidor.` };
+  }
+
   // Em cooldown (rate limit recente): não tenta de novo, só devolve o erro.
   const agora = Date.now();
   if (agora < _entityWriteBlockedUntil) {
