@@ -480,8 +480,18 @@ export default function CatalogOrdersAdmin() {
     }
   };
 
+  // 🔴 PONTO 116 (21/08/2026) — antes chamava CatalogSale.update() direto (rota
+  // genérica entityWrite). O PONTO 115 passou a bloquear escrita de `status` em
+  // catalog_sales por essa rota (venda tem regra de negócio própria: estorno,
+  // comissão, escrow) — todo salvamento manual daqui em diante caía com
+  // "Erro ao atualizar pedido". Agora usa a rota dedicada updateOrderStatus,
+  // que também cuida do estorno correto quando o status é cancelamento.
   const handleSaveOrder = async () => {
     if (!selectedOrder) return;
+    let actorId = null;
+    try { actorId = JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null; } catch { actorId = null; }
+    if (!actorId) { toast.error('Sessão não identificada. Entre novamente.'); return; }
+
     setIsUpdating(true);
     try {
       const updateData = { status: newStatus };
@@ -493,8 +503,18 @@ export default function CatalogOrdersAdmin() {
         toast.error('Informe o código de rastreio para marcar como enviado');
         return;
       }
-      await CatalogSale.update(selectedOrder.id, updateData);
-      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, ...updateData } : o));
+      const r = await plataforma.functions.invoke('updateOrderStatus', {
+        actorId,
+        saleId: selectedOrder.id,
+        status: updateData.status,
+        tracking: updateData.tracking_code,
+      });
+      const data = r?.data || r;
+      if (!data?.success) {
+        toast.error(data?.error || 'Erro ao atualizar pedido');
+        return;
+      }
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, ...updateData, status: data.status } : o));
       toast.success('Pedido atualizado com sucesso!');
       setSelectedOrder(null);
     } catch (error) {
