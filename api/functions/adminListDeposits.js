@@ -9,6 +9,7 @@
 //
 // Autenticação: body.actorId precisa ser admin/super_admin.
 
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -31,6 +32,11 @@ export default async function handler(req, res) {
 
   let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
   const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+  const _ses = exigirSessao(req, actorId, 'adminListDeposits');
+  if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
   if (!actorId) return res.status(403).json({ success: false, error: 'actorId obrigatório', deposits: [] });
 
   const actorRows = await (await sb(`app_users?select=primary_career_level,role&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();

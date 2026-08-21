@@ -29,6 +29,7 @@
 // ⚠️ Roda no SERVIDOR (Vercel/Node). Sem imports de 2 níveis (já derrubou função em
 // produção): tudo inline de propósito.
 
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -53,6 +54,11 @@ export default async function handler(req, res) {
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
 
     const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'faxinaReservasOrfas');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     // 🔒 só move dinheiro se vier a palavra exata — qualquer outra coisa é só retrato
     const aplicar = String(body?.confirmar || '') === 'APLICAR';
     // opcional: sanear UMA conta só (útil pra tratar caso a caso)

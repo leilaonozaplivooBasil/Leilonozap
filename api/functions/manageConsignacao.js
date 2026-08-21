@@ -6,6 +6,7 @@
 // daquele saldo morre.
 import { oid } from '../_lib/oid.js';
 import { podeEnviarConsignado, PRAZO_CONSIGNADO_DIAS } from '../_lib/consignadoElegibilidade.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -33,6 +34,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'manageConsignacao');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const action = String(body?.action || '').trim();
     if (!actorId || !action) return res.status(400).json({ success: false, error: 'Ação inválida' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });

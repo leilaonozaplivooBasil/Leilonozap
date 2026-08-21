@@ -1,6 +1,7 @@
 // updateSeller — edita um vendedor da equipe (service_role). Par do registerSeller (que também
 // não existia). Só quem cadastrou o vendedor (ou admin) pode editar.
 // ⚠️ NÃO mexe em cargo, comissão nem vínculo de rede: só dados cadastrais.
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CAMPOS = ['full_name', 'store_name', 'phone', 'cpf', 'avatar_url', 'email'];
@@ -21,6 +22,11 @@ export default async function handler(req, res) {
 
     const sellerId = String(body?.seller_id || '').trim();
     const actorId = String(body?.actor_id || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'updateSeller');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!sellerId) return res.status(200).json({ success: false, error: 'Vendedor não informado.' });
     if (!actorId) return res.status(200).json({ success: false, error: 'Faça login novamente.' });
 

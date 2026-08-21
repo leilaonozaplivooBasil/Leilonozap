@@ -11,6 +11,7 @@ import { liberarRepasseEstoqueProprio } from '../_lib/repasseEstoqueProprio.js';
 // 🤝 consignado: a dívida da peça MORRE nesta venda. Se o cliente pagou em
 // dinheiro, o custo sai do saldo dele — e sem saldo a venda não fecha.
 import { preverConsignado, liquidarConsignado } from '../_lib/consignadoSettle.js';
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -31,6 +32,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'createPdvOrder');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const items = Array.isArray(body?.items) ? body.items : [];
     const customer = body?.customer || {};
     const paymentMethod = String(body?.payment_method || 'dinheiro');

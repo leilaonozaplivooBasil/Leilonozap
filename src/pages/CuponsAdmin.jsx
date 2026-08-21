@@ -5,6 +5,15 @@ import { toast } from 'sonner';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// 🔒 FASE 1, item 7 (21/08/2026): a rota manageCoupons passou a exigir admin de
+// verdade — ela não conferia NADA e qualquer um da internet podia criar um cupom
+// de 100%. Daqui pra frente toda chamada leva o actorId, do mesmo jeito que os
+// outros painéis de administração já fazem (ver AdminConsignado.jsx).
+function idDoAdmin() {
+  try { return JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || ''; }
+  catch { return ''; }
+}
+
 export default function CuponsAdmin() {
   const [coupons, setCoupons] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -13,7 +22,8 @@ export default function CuponsAdmin() {
 
   const load = async () => {
     setLoading(true);
-    const r = await base44.functions.invoke('manageCoupons', { action: 'list' });
+    const r = await base44.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'list' });
+    if (r && r.success === false) toast.error(r.error || 'Falha ao carregar cupons');
     setCoupons(r?.coupons || []);
     setLoading(false);
   };
@@ -24,6 +34,7 @@ export default function CuponsAdmin() {
     if (!form.code.trim() || !form.valor) { toast.error('Preencha código e valor'); return; }
     setSaving(true);
     const r = await base44.functions.invoke('manageCoupons', {
+      actorId: idDoAdmin(),
       action: 'create',
       code: form.code, tipo: form.tipo, valor: Number(form.valor),
       min_order: form.min_order ? Number(form.min_order) : 0,
@@ -38,8 +49,8 @@ export default function CuponsAdmin() {
     load();
   };
 
-  const toggle = async (c) => { await base44.functions.invoke('manageCoupons', { action: 'toggle', id: c.id, active: !c.active }); load(); };
-  const excluir = async (c) => { if (!window.confirm(`Excluir o cupom ${c.code}?`)) return; await base44.functions.invoke('manageCoupons', { action: 'delete', id: c.id }); load(); };
+  const toggle = async (c) => { await base44.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'toggle', id: c.id, active: !c.active }); load(); };
+  const excluir = async (c) => { if (!window.confirm(`Excluir o cupom ${c.code}?`)) return; await base44.functions.invoke('manageCoupons', { actorId: idDoAdmin(), action: 'delete', id: c.id }); load(); };
 
   const inp = 'bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-green-500 focus:outline-none w-full';
 

@@ -5,6 +5,7 @@
 import { livoo } from '../_lib/livoo/client.js';
 import { toLivooLot, toLivooProduct } from '../_lib/livoo/adapter.js';
 import { oid } from '../_lib/oid.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,6 +32,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const actorId = String(body?.actorId || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actorId, 'livooOpenLive');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const mode = ['auction', 'commerce', 'hybrid'].includes(body?.mode) ? body.mode : 'auction';
     if (!actorId) return res.status(400).json({ success: false, error: 'Usuário obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config ausente' });

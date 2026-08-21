@@ -1,6 +1,7 @@
 // creditTestWalletBalance — ADMIN credita saldo de TESTE (test_wallet_balance) em qualquer
 // usuário, simulando um depósito, sem tocar em saldo real nem gerar comissão real.
 // Só quem tem role admin/super_admin (verificado no banco) pode chamar.
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -17,6 +18,11 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const { requester_id, target_user_id, amount } = body || {};
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, requester_id, 'creditTestWalletBalance');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!SUPABASE_URL || !SR) return res.status(200).json({ success: false, error: 'Banco não configurado' });
     if (!requester_id || !target_user_id) return res.status(200).json({ success: false, error: 'requester_id e target_user_id são obrigatórios' });
     const value = Number(amount);

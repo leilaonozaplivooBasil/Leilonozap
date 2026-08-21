@@ -7,6 +7,7 @@
 import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -41,6 +42,11 @@ export default async function handler(req, res) {
     const cpf = body?.cpf ? String(body.cpf).replace(/\D/g, '') : null;
     const level = String(body?.career_level || 'licenciado_aplicativo').trim() || 'licenciado_aplicativo';
     const actor_id = String(body?.actor_id || '').trim();     // admin logado (fluxo painel)
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, actor_id, 'createLicensee');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const ref_code = String(body?.ref_code || '').trim();     // código do indicador (link viral)
     let referred_by_id = body?.referred_by_id ? String(body.referred_by_id) : null;
 

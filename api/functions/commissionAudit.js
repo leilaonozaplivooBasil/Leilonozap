@@ -12,6 +12,7 @@
 //   mode 'negativos'         → todos os cadastros com saldo negativo
 //   mode 'resumo'            → total de lançamentos e soma por papel (sistema todo)
 
+import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -82,6 +83,11 @@ export default async function handler(req, res) {
     }
 
     const userId = String(body.user_id || '').trim();
+    // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
+    // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
+    // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.
+    const _ses = exigirSessao(req, userId, 'commissionAudit');
+    if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!userId) return res.status(400).json({ error: 'user_id obrigatório' });
 
     const [u] = await (await sb(
