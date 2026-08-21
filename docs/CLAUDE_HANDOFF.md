@@ -57,10 +57,10 @@ OpenAI deve:
 
 ## 1. ESTADO
 
-Data/hora: **2026-08-21 06:05 UTC**
+Data/hora: **2026-08-21 06:40 UTC**
 
 Branch: `claude/project-structure-analysis-r1prad`
-Base: `56efd74b` · Head: `4f2ca4dd` (+ o commit deste handoff)
+Base: `56efd74b` · Head: `e7547441` (+ o commit deste handoff)
 Main conhecida: `56efd74b8efbd49f18d16c44b6e26c247622b8f4`
 
 Modo: **IMPLEMENTAÇÃO EM BRANCH · PRODUÇÃO INTOCADA**
@@ -68,221 +68,195 @@ Modo: **IMPLEMENTAÇÃO EM BRANCH · PRODUÇÃO INTOCADA**
 ```
 Produção alterada ..... NÃO      Banco alterado ........ NÃO
 main alterada ......... NÃO      Merge ................. NÃO
-Deploy produção ....... NÃO      SESSAO_MODO ........... intocado
+Deploy produção ....... NÃO      pg_cron ............... NÃO tocado, segue ATIVO
 RLS ................... intocada 9 revogações .......... NÃO executadas
-pg_cron ............... NÃO tocado — segue ATIVO em produção
+Nenhum saldo de cliente foi debitado. Nenhum pedido foi alterado em produção.
 ```
 
-```
-COMMIT CRIADO ..... SIM · 11 na sprint
-DEPLOY PREVIEW .... SIM · automático, aponta para o Supabase de produção
-PR CRIADO ......... NÃO
-DEPLOY PRODUÇÃO ... NÃO
-```
-
-`npm run build` exit 0 · `npm test` **65/65** · worktree limpa.
+`npm run build` exit 0 · `npm test` **73/73** · worktree limpa.
 
 ---
 
 ## 2. O QUE FOI ANALISADO
 
-Incorporação do achado do `pg_cron` e das duas ressalvas da OpenAI sobre o
-commit `771856e1`. Revisão completa do Bloco 1.
+Mudança de frente a pedido do dono: **defeito funcional no fluxo
+arremate → frete → etiqueta**, encontrado por ele na tela de Gestão de Pedidos.
+
+Sintomas relatados: mesmo comprador, dois arremates com 3 minutos de diferença —
+um com `Frete: R$ 11,60`, outro sem frete nenhum. E o botão "Etiqueta" respondia
+*"Pedido é retirada no balcão, não precisa de etiqueta"* nos dois.
 
 ---
 
-## 🚨 3. ACHADO QUE MUDA A PRIORIDADE DE TUDO
+## 3. ACHADOS — não era um defeito, eram cinco
 
-### A14 deixou de ser risco de ataque. É defeito operacional ativo há 52 dias.
+### F1 · As duas pontas discordam do `delivery_type` ausente · **atinge 100% dos arremates**
 
 ```
-pg_cron   job "expire-auctions"   * * * * *   SELECT public.expire_auctions();
-          ativo desde 30/06 · 75.365 execuções
-
-Vercel    finalizeExpiredAuctions  * * * * *   (vercel.json:28)
+FRONT  CatalogOrdersAdmin.jsx:149   if ((raw?.delivery_type || '') === 'pickup') return false;
+BACK   melhorEnvioShipment.js:151   if (raw.delivery_type !== 'delivery') return { skipped:'retirada_na_loja' };
 ```
 
-**Dois motores de encerramento correndo a cada minuto, e só um liquida.**
+E `settleAuctionWithBalance.js:178` **nunca gravava `delivery_type`**. Ficava
+`undefined`: o front mostrava "Etiqueta pendente" com botão, o back respondia
+"retirada no balcão". Os dois certos pela própria regra.
+Pedido da Loja não sofria disso — `createMPPix.js:139` e `payWithBalance.js:78`
+gravam. Só o arremate ficou de fora.
 
-| | Vercel | pg_cron |
-|---|---|---|
-| define `winner_id` | sim | não |
-| `order_status = awaiting_payment` | sim (`finalizeAuctionCore.js:299`) | **não** |
-| paga comissão de 5% | sim | **não** |
-| devolve reserva dos perdedores | sim | **não** |
-| mensagem de vitória | sim | **não** |
+### F2 · Sem frete, o pedido nascia sem `raw_base44` nenhum
 
-E os dois lados filtram por `status in (active, processing)`
-(`finalizeExpiredAuctions.js:24`, `finalizeAuctionCore.js:291`). Quando o
-`pg_cron` chega primeiro, o leilão sai desse estado e **a Vercel deixa de
-enxergá-lo para sempre**.
+```js
+...(freteAmount > 0 ? { raw_base44: {...} } : {}),
+```
+Frete zero ⇒ o objeto inteiro deixava de existir. Sem frete, sem
+`amount_charged`, sem nada. É o `ARD5856D19`.
 
-Edge Functions: zero. Webhook de banco: nenhum. Ou seja, **não há terceiro motor** —
-e também não há nada além do `pg_cron` a considerar para desligá-lo.
+### F3 · Mesmo o arremate COM frete jamais geraria etiqueta
 
-### A assinatura do dano é exata
+O frete ia como `{ valor: 11.60 }` só. `melhorEnvioShipment.js:154` exige
+`frete.id` ou devolve `sem_frete_id`. Sem `empresa`/`servico` também — por isso
+a tela mostrava "Frete: R$ 11,60" sem transportadora, enquanto o pedido da Loja
+mostra "Correios SEDEX".
 
-`submitAtomicBid.js:371` grava `winner_id` a **cada lance**. Quem grava
-`order_status` é o finalizador da Vercel. Logo:
+### F4 · O arremate não gravava endereço de entrega
 
-> **leilão COM lance + encerrado + `order_status` VAZIO = o `pg_cron` chegou
-> primeiro e a liquidação nunca aconteceu.**
+`getEndereco` não achava nada. A Melhor Envio precisa do endereço.
 
-**Isto ainda é HIPÓTESE sobre os dados.** Existe explicação alternativa
-(`reactivateAuction.js` pode zerar campos), e a consulta 3 do
-`00_dano_A14_leitura.sql` separa as duas pelo histórico de lances. Não vou
-afirmar que há leilão danificado antes de ver o resultado.
+### F5 · **CAUSA RAIZ** — o lance saía mesmo com o frete falhado
 
-**O que mais importa:** a consulta 4 procura reserva que entrou no
-`reserva_ledger` e nunca saiu em leilão já encerrado — isso é **saldo de
-participante travado agora**, não risco futuro.
+```
+submitAtomicBid.js:168   const freteValor = Math.max(0, parseFloat(body?.frete_valor) || 0);   ← vem do NAVEGADOR
+AuctionRoom.jsx:499-509  erro de cotação → setFreteValor(0) · sem CEP → setFreteValor(0)
+AuctionRoom.jsx:1209     freteStatus só era usado para EXIBIR
+handleSubmitBidComTermo  conferia abertura do leilão e aceite do termo — nada sobre frete
+```
+
+Cotação falhou, CEP fora do cadastro, ou clique antes de a cotação assíncrona
+voltar ⇒ lance sai com frete 0 e **a empresa paga a transportadora do próprio
+bolso**.
 
 ---
 
 ## 4. HIPÓTESES AINDA NÃO PROVADAS
 
-1. **Quantos leilões foram efetivamente danificados** e **quanto dinheiro está
-   travado.** `00_dano_A14_leitura.sql` responde. Precisa rodar **antes** de
-   desligar o job — depois disso o padrão muda e não dá mais para medir.
-2. **DNS rebinding** continua aberto no `urlSegura`. Registrado no arquivo, não
-   marcado como resolvido.
-3. `raw_base44` em `payment_settings` contém segredo. Ninguém leu.
+1. **Qual das duas explicações vale para o `ARD5856D19`:** (a) corrida com o
+   clique — a cotação é assíncrona e os lances têm 3 min de diferença; ou (b) o
+   produto do REPELENTE sem dimensões, fazendo `cotarFrete` voltar vazio.
+   `05_arremates_sem_frete_leitura.sql` responde.
+2. **Quantos outros arremates estão nessa situação** e quanto de frete a empresa
+   já absorveu. Mesma consulta.
+3. `pg_cron` × Vercel (A14) segue aberto — ver `00_dano_A14_leitura.sql`.
 
 ---
 
 ## 5. ALTERAÇÕES REALIZADAS
 
-### Código, testado na branch
+Tudo na branch. **Nada em produção.**
 
 | Commit | O quê |
 |---|---|
-| `771856e1` | `urlSegura`: streaming, contador incremental, `AbortController`, prazo próprio no laço de leitura |
-| `879c0e4f` | **novo** — confere o DNS antes de buscar (nome público apontando pra dentro) e descarta corpo de 3xx/404/tipo recusado/tamanho excedido |
-| `bf4ab7a1` + `879c0e4f` | 46 testes de `urlSegura` |
-| `cefbc251` | 19 testes de autorização de `manageCoupons` |
-| `b6c6f5dd` | `npm audit fix` sem breaking: 32 → 11 |
-| `f02163f1` | CI mínima, sem segredo, sem deploy |
+| `f0ae8d46` | arremate nasce com `delivery_type`, endereço, telefone, CPF e frete completo · front e back alinhados no mesmo critério (F1–F4) |
+| `3b21010e` | **bloqueia lance e "arremate agora" sem frete cotado** (F5) |
+| `e7547441` | rota `cobrarFretePendente` + 13 testes |
 
-**Sobre as duas ressalvas da OpenAI ao `771856e1`:**
+### Uma decisão de engenharia que precisa ficar registrada
 
-- **Corpo não cancelado em redirect/erro — CORRIGIDO** (`879c0e4f`). Procedia.
-- **DNS rebinding — PARCIALMENTE ENDEREÇADO, e digo com todas as letras o que
-  ficou de fora.** Agora o nome é resolvido antes do fetch e todo endereço
-  devolvido (IPv4 e IPv6) passa pela régua de rede interna, em cada salto. Isso
-  fecha o caminho fácil: domínio público que aponta para dentro (`nip.io`,
-  `localtest.me`). **Não fecha rebinding**: entre a conferência e a conexão há
-  uma janela, e quem controla o DNS responde IP público agora e interno logo
-  depois. Fechar de verdade exige fixar o IP conferido na conexão, o que o
-  `fetch` do runtime não permite sem trocar o dispatcher. **Fica como risco
-  residual registrado, não como resolvido.**
+O caminho óbvio para F3 seria o lance já gravar `id`/`empresa`/`serviço`.
+**Não dá.** O PATCH do lance (`submitAtomicBid.js`) não aceita campo que não
+exista na tabela — coluna inexistente ali faz o PostgREST devolver `42703` e
+**todo lance morre**. Foi o que derrubou a produção de 03/08 15:03 até o
+PONTO 83, e está no cabeçalho daquele arquivo. Então o detalhe do frete é
+resolvido na **liquidação**, recotando com o CEP do vencedor só para descobrir
+o `id` do serviço.
 
-### Preparado e NÃO aplicado
+**O valor cobrado não muda:** quem manda é `frete_reservado_valor`, o que o
+cliente viu e teve reservado. Se a recotação falhar, o pedido nasce com o valor
+certo e sem `id` — vira etiqueta pendente, que é problema de logística, não de
+dinheiro. E sem endereço utilizável o pedido nasce `pickup`, para não ficar
+pendurado numa pendência impossível.
 
-`docs/remediacao_NAO_APLICADA/` — **Bloco 1 reescrito**:
+### `cobrarFretePendente` — as travas, cada uma com teste
 
-| Ordem | Arquivo | Tipo |
-|---|---|---|
-| 1 | `00_dano_A14_leitura.sql` | READ_ONLY — mede o estrago |
-| 2 | `01_diagnostico_pre.sql` | READ_ONLY — fotografa permissões |
-| 3 | `02b_desligar_pg_cron.sql` | **WRITE — desliga o segundo motor** |
-| 4 | `02_revogar_9_rpcs.sql` | WRITE — revoga EXECUTE |
-| 5 | `03_verificacao_pos.sql` | READ_ONLY |
-| — | `04_rollback.sql` / `04b_rollback_pg_cron.sql` | WRITE — desfaz |
-
-**Por que o `02b` vem antes do `02`:** revogar o EXECUTE sem desligar o job não
-resolve. O `pg_cron` roda com o dono do job, que provavelmente não perde a
-permissão — teríamos fechado a porta de entrada errada achando que resolveu.
-
-O `02b` usa `active = false` em vez de `cron.unschedule()`: mantém o job
-cadastrado, e religar vira um `UPDATE`. E confere **antes de desligar** se houve
-encerramento nas últimas 2 h — para não deixar o sistema sem motor nenhum caso a
-Vercel esteja com problema.
-
-`docs/PLANO_REMEDIACAO.md` e `docs/OPENAI_RETURN.md` seguem publicados.
+- **modo padrão é conferência.** Mostra valor, serviço, saldo e quanto falta, e
+  **não debita**. Cobrar de verdade exige `executar: true`. Debitar saldo de
+  cliente não pode acontecer por clique errado.
+- só admin conferido no banco · não cobra duas vezes · **não deixa saldo
+  negativo** · sem endereço completo, recusa · débito por compare-and-swap (se o
+  saldo mudou no meio, não cobra **e não grava o frete no pedido**) · **não toca
+  em `total_amount`** — frete nunca comissiona · registra quem cobrou, quando e
+  por quê, dentro do pedido e no `wallet_ledger`.
 
 ---
 
 ## 6. AÇÃO NECESSÁRIA DA SEGUNDA IA
 
-1. **Executar `00_dano_A14_leitura.sql`** (READ_ONLY, 6 consultas). É a coisa
-   mais urgente do projeto: mede quantos leilões não liquidaram e se há saldo de
-   participante travado. **Antes de qualquer desligamento.**
-2. **Revisar `02b_desligar_pg_cron.sql`** — em especial: `active=false` é
-   suficiente no Supabase, ou o `cron.unschedule()` é obrigatório? E a
-   conferência das 2 h cobre o caso de não haver leilão vencendo no período?
-3. **Confirmar com que usuário o job roda** (`cron.job.username`). Se for
-   `postgres` ou o dono das funções, isso confirma que revogar `anon` não o
-   afetaria — que é a razão de o `02b` existir.
-4. **Auditar `879c0e4f`** — a conferência de DNS tem furo? O `descartarCorpo`
-   ficou em todos os caminhos de saída?
-5. **Contestar a ordem revisada** do Bloco 1, se discordar.
+1. **Executar `05_arremates_sem_frete_leitura.sql`** (READ_ONLY) — quantos
+   arremates sem frete existem e quanto a empresa já absorveu.
+2. **Auditar os 3 commits.** Em especial `e7547441`: a rota debita saldo de
+   cliente. Procurar caminho em que ela debite sem gravar, grave sem debitar, ou
+   cobre duas vezes.
+3. **Contestar a decisão de recotar na liquidação** em vez de gravar no lance,
+   se enxergar caminho melhor que não mexa no PATCH do lance.
+4. **Conferir se `wallet_ledger` aceita `tipo = 'cobranca_frete_pendente'`** —
+   se houver constraint de enum, o lançamento falha em silêncio (é best-effort,
+   não derruba a cobrança, mas a trilha some).
+5. Segue pendente: `00_dano_A14_leitura.sql` (pg_cron × Vercel).
 
 ---
 
 ## 7. SQL PARA EXECUÇÃO
 
 TIPO: **READ_ONLY** · RISCO: **ZERO**
-Arquivo completo: `docs/remediacao_NAO_APLICADA/00_dano_A14_leitura.sql`
-(6 consultas — faixas de encerramento, casos suspeitos, separação de leilão
-reativado, reserva presa, o job e o histórico de execuções).
-
-Mais esta, que responde direto ao item 3 acima:
-
-```sql
-SELECT jobid, jobname, schedule, active, username, database, nodename
-FROM cron.job
-WHERE command ILIKE '%expire_auctions%';
-```
+Arquivo: `docs/remediacao_NAO_APLICADA/05_arremates_sem_frete_leitura.sql`
+(3 consultas: arremates por situação · os sem frete um a um, com o
+`frete_reservado_valor` que estava no leilão · leilões encerrados com frete zero)
 
 ---
 
 ## 8. ROLLBACK
 
-`04_rollback.sql` (permissões, ciclo testado em PostgreSQL 16 real) e
-`04b_rollback_pg_cron.sql` (religa o job). Código: `git revert`.
-
-⚠️ Religar o job **traz o defeito de volta**. É medida de emergência para o
-sistema não ficar sem motor, não é solução.
+Código: `git revert` de cada commit — os três são independentes.
+`cobrarFretePendente` **não tem rollback automático**: se um débito for feito por
+engano, devolver o saldo é operação manual e deliberada. Por isso o modo padrão
+é conferência.
 
 ---
 
 ## 9. O QUE A SEGUNDA IA PRECISA TE DEVOLVER
 
-- resultado das 6 consultas do `00` — **quantos leilões e quanto dinheiro**
-- `cron.job.username` do job `expire-auctions`
-- se `active = false` basta no Supabase ou se precisa `cron.unschedule()`
-- crítica ao `879c0e4f` (DNS e descarte de corpo)
-- concordância ou contestação da ordem revisada: `00 → 01 → 02b → 02 → 03`
+- resultado das 3 consultas — **quantos arremates e quanto dinheiro**
+- crítica ao `e7547441`, caminho a caminho de dinheiro
+- se `wallet_ledger.tipo` tem constraint
+- se o `ARD5856D19` bate com a hipótese (a) corrida ou (b) produto sem dimensões
 
-**REGRA 4:** contagens, ids de leilão e valores agregados. Nenhum dado de pessoa.
-**REGRA 12:** divergiu → registrar e parar.
+**REGRA 4:** contagens, ids de pedido e valores agregados. Nenhum dado de pessoa.
 
 ---
 
 ## 10. DECISÃO PENDENTE DO DONO
 
-**A ordem mudou por causa do `pg_cron`.** O que era "revogar 9 funções" virou
-"desligar um motor de encerramento que está em produção há 52 dias".
+### Do fluxo de frete
 
-1. **Rodar `00_dano_A14_leitura.sql`** — só leitura, pode ser agora. Define o
-   tamanho do problema e se há dinheiro travado.
-2. **Desligar o job do `pg_cron`** (`02b`) — este é o que fecha o defeito.
-   Risco MÉDIO: se a Vercel falhar depois, os leilões param de encerrar. Por
-   isso o script confere antes e o `04b` religa.
-3. **Revogar as 9 RPCs** (`02`) — depois do `02b`, não antes.
-4. **RLS em `livoo_lives` e `livoo_webhook_deliveries`** — 5 min, zero risco.
-5. **Apagar `wcfg_read`** de `wa_config` — 5 min, zero risco.
-6. **Abrir o PR de segurança** — `manageCoupons` segue vulnerável em produção
-   até esse merge.
-7. **Apagar as 150 policies `authenticated_*`** — rollback de 182 comandos testado.
+1. **Merge do PR** — enquanto não subir, todo arremate novo continua nascendo
+   sem `delivery_type` e o lance sem frete continua passando.
+2. **Cobrar o frete do `ARD5856D19`.** A rota está pronta. O caminho é: rodar em
+   **conferência** primeiro (mostra valor e saldo, não debita), você olhar, e só
+   então repetir com `executar: true`. **Eu não executo isso sem sua palavra —
+   é dinheiro de cliente.**
+3. **O `AR3BEF1939`** (o que tem R$ 11,60) precisa que o `delivery_type` e o
+   `frete.id` sejam preenchidos para a etiqueta sair. É correção de dado, não de
+   código. Preparo o SQL quando você pedir.
 
-Ordem completa dos 19 itens em `docs/PLANO_REMEDIACAO.md`, seção K.
+### Da segurança, ainda em aberto
+
+`pg_cron` × Vercel · revogar as 9 RPCs · RLS Livoo · `wcfg_read` · 150 policies
+`authenticated_*` · upload anônimo. Ordem completa em
+`docs/PLANO_REMEDIACAO.md`, seção K.
 
 ---
 
 ## 11. PRÓXIMO PASSO RECOMENDADO
 
-OpenAI roda `00_dano_A14_leitura.sql` e diz quantos leilões ficaram sem liquidar
-e quanto saldo de participante está travado — porque isso decide se o próximo
-passo é só desligar o motor ou também reparar dado, e reparar dado é decisão que
-só o dono toma.
+Rodar `05_arremates_sem_frete_leitura.sql` para saber se o `ARD5856D19` é caso
+isolado ou a ponta de uma série — porque isso muda se a conversa é "cobrar um
+frete" ou "reconciliar um prejuízo acumulado".
