@@ -71,7 +71,9 @@ export default async function handler(req, res) {
       const [pFirst, ...pRest] = String(user.name || 'Cliente').trim().split(/\s+/);
       const prefBody = {
         items: [{ title: `Adesão ${level.nome}`, quantity: 1, unit_price: amount, currency_id: 'BRL' }],
-        payer: { email: user.email, name: pFirst || 'Cliente', surname: pRest.join(' ') || 'NoZap' },
+        // 🔴 PONTO 124 (21/08/2026): payer sem CPF — o ramo PIX logo acima (linha 60)
+        // já manda `identification`, este de cartão ficou sem. Ver createMPCatalogCardCheckout.js.
+        payer: { email: user.email, name: pFirst || 'Cliente', surname: pRest.join(' ') || 'NoZap', ...(user.cpf ? { identification: { type: 'CPF', number: String(user.cpf).replace(/\D/g, '') } } : {}) },
         external_reference: saleId,
         notification_url: `${BASE_URL}/api/functions/mpWebhook`,
         back_urls: { success: `${BASE_URL}/Evoluir?upgraded=1`, failure: `${BASE_URL}/Evoluir`, pending: `${BASE_URL}/Evoluir` },

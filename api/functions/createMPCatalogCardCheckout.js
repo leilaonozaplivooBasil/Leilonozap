@@ -115,9 +115,22 @@ export default async function handler(req, res) {
     if (passaporte_desconto > 0) mpItems.push({ title: 'Desconto Passaporte do Leilão', quantity: 1, unit_price: -passaporte_desconto, currency_id: 'BRL' });
     if (taxaCartao > 0) mpItems.push({ title: 'Taxa de pagamento no cartão', quantity: 1, unit_price: taxaCartao, currency_id: 'BRL' });
 
+    // 🔴 PONTO 124 (21/08/2026) — CARTÃO SEM CPF NO PAYER, PIX SEMPRE MANDOU.
+    // O CPF é coletado e validado na tela (Cart.jsx) e chega até aqui em `buyer.cpf`,
+    // mas nunca era repassado ao Mercado Pago nesta preferência — createMPPix.js
+    // (mesma estrutura, "mesmo motor do PIX" segundo o cabeçalho deste arquivo) sempre
+    // mandou `payer.identification`, só o cartão ficou sem. Pagamento de cartão sem
+    // identificação do comprador é justamente o que a antifraude do Mercado Pago mais
+    // pesa pra recusar no Brasil — explica a recusa em cartões de pessoas diferentes,
+    // não é problema do cartão de ninguém.
     const prefBody = {
       items: mpItems,
-      payer: { email: buyer.email, name: first || 'Cliente', surname: rest.join(' ') || 'NoZap' },
+      payer: {
+        email: buyer.email,
+        name: first || 'Cliente',
+        surname: rest.join(' ') || 'NoZap',
+        ...(buyer.cpf ? { identification: { type: 'CPF', number: String(buyer.cpf).replace(/\D/g, '') } } : {}),
+      },
       external_reference: saleId,
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
       back_urls: {
