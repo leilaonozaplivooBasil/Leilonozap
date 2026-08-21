@@ -8,7 +8,7 @@ import { toast } from "sonner";
 //
 // ⚠️ Só UI: não toca em lance, saldo, carteira, comissão nem status de leilão.
 const LINK = "https://leilaonozap.net/leiloes";
-const IMAGEM = "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/939dc2b63_image.png";
+const IMAGEM = "/midia/939dc2b63_image.png";
 
 const montarTexto = (count) => {
   const n = Number(count) > 0 ? Number(count) : null;

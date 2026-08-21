@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 // O link é o curto /c/parceiro — é ele que tem meta tags OG server-side, então a
 // imagem também aparece quando alguém cola só o link.
 const LINK = 'https://leilaonozap.net/c/parceiro';
-const IMAGEM = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/932dcb425_image.png';
+const IMAGEM = '/midia/932dcb425_image.png';
 
 // Texto institucional: sem valor, sem comissão, sem projeção, sem "investimento".
 const TEXTO = `🤝 *LEILÃO NOZAP — PARCEIRO DE COMPRA*

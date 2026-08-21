@@ -8,7 +8,7 @@ export const config = { runtime: 'edge' };
 
 const h = React.createElement;
 const SITE = 'https://leilaonozap.net';
-const LEILOEIRO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/b85495f57_image.png';
+const LEILOEIRO = `${SITE}/midia/b85495f57_image.png`;
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function handler(req) {

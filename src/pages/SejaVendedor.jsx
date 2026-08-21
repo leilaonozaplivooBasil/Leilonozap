@@ -52,7 +52,7 @@ export default function SejaVendedor() {
         {/* 🎬 Vídeo — vendedor real, celular na mão, conversando com clientes */}
         <div className="max-w-3xl mx-auto mt-8 rounded-2xl overflow-hidden border-2 border-nz-verde/30 shadow-xl relative">
           <video
-            src="https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/1e5cd0bf9_Vdeo_Vendedor.mp4"
+            src="/midia/1e5cd0bf9_Vdeo_Vendedor.mp4"
             autoPlay
             loop
             muted

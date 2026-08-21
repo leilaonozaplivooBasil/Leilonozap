@@ -26,7 +26,7 @@ export default function LandingContent({ onRegisterClick, onLoginClick, isSaiDeB
       {/* 🎬 Vídeo — influenciador real gravando conteúdo */}
       <div className="mb-10 rounded-2xl overflow-hidden border-2 border-nz-verde/30 shadow-xl relative">
         <video
-          src="https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/7d6541982_Vdeo_Hero_Influenciador.mp4"
+          src="/midia/7d6541982_Vdeo_Hero_Influenciador.mp4"
           autoPlay
           loop
           muted

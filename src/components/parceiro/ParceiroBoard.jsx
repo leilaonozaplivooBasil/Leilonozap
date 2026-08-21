@@ -2,9 +2,9 @@ import React from 'react';
 import ParceiroSecao from './ParceiroSecao';
 
 // 📸 Fotos oficiais fornecidas pela diretoria (não vêm do cadastro do sistema).
-const FOTO_LUIZ = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/49c03d768_image.png';
-const FOTO_LUCIANO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/9e425bee8_image.png';
-const FOTO_DIOGO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/59c89b643_image.png';
+const FOTO_LUIZ = '/midia/49c03d768_image.png';
+const FOTO_LUCIANO = '/midia/9e425bee8_image.png';
+const FOTO_DIOGO = '/midia/59c89b643_image.png';
 
 const MEMBROS = [
   {

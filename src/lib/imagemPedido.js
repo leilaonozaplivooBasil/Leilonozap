@@ -5,21 +5,21 @@
 // Detecta pelo campo `kind` quando existe e, como os registros atuais estão com
 // `kind` vazio no banco, também pelo título (fonte real hoje).
 
-const IMG_VENDEDOR = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2f7400a5d_generated_image.png';
-const IMG_LICENCIADO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png';
-const IMG_INFLUENCIADOR = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png';
-const IMG_PARCEIRO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3debca5db_generated_image.png';
+const IMG_VENDEDOR = '/midia/2f7400a5d_generated_image.png';
+const IMG_LICENCIADO = '/midia/28db39fb0_generated_image.png';
+const IMG_INFLUENCIADOR = '/midia/84782e7ee_generated_image.png';
+const IMG_PARCEIRO = '/midia/3debca5db_generated_image.png';
 // 🖤 PLANOS DO PARCEIRO DE COMPRA — arte própria preto/dourado por plano
 // (os 4 planos oficiais estão em InvestorDashboard: PORTFOLIOS).
 // Antes, "Plano Elite" caía na arte do Licenciado (regra genérica de "plano").
-const IMG_PC_VISIONARIO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/ed46aa722_generated_image.png';
-const IMG_PC_SOCIOS_OURO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/347d9ddb9_generated_image.png';
-const IMG_PC_ELITE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/ff1866234_generated_image.png';
+const IMG_PC_VISIONARIO = '/midia/ed46aa722_generated_image.png';
+const IMG_PC_SOCIOS_OURO = '/midia/347d9ddb9_generated_image.png';
+const IMG_PC_ELITE = '/midia/ff1866234_generated_image.png';
 // Private Galpão: usa a MESMA arte oficial do carrossel de planos
-const IMG_PRIVATE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/0afd480b8_generated_image.png';
+const IMG_PRIVATE = '/midia/0afd480b8_generated_image.png';
 // 💰 Depósito de saldo de operação: transação financeira, não é produto — sem
 // isso caía no ícone genérico cinza de "sem foto" (nenhuma regra reconhecia o kind).
-const IMG_DEPOSITO_OPERACAO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/5dd076179_generated_image.png';
+const IMG_DEPOSITO_OPERACAO = '/midia/5dd076179_generated_image.png';
 // 🚚 PONTO 85 — Frete (kind='seller_freight', criado em createSellerFreightPayment.js):
 // não é produto, não é "digital" no sentido dos planos/licenças acima — caía direto no
 // placeholder quebrado do navegador. Ícone próprio (caminhão), sem depender de asset

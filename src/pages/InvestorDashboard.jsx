@@ -165,7 +165,7 @@ const PORTFOLIOS = [
       'Curadoria exclusiva com volume fechado sob demanda. O parceiro define o capital do aporte.',
     features: COMMON_FEATURES,
     imageKey: 'private_galpao',
-    imageUrl: 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/0afd480b8_generated_image.png',
+    imageUrl: '/midia/0afd480b8_generated_image.png',
     valorLivre: true,
     valorMin: 50000,
     valorMax: 1000000,

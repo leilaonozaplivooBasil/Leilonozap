@@ -53,7 +53,7 @@ export default function SejaLicenciado() {
         {/* 🎬 Vídeo — licenciado em posição de liderança, home office coordenando a equipe */}
         <div className="max-w-3xl mx-auto mt-8 rounded-2xl overflow-hidden border-2 border-nz-verde/30 shadow-xl relative">
           <video
-            src="https://media.base44.com/videos/public/68d536db3c26ff51f79c4137/31a58a982_Vdeo_Licenciado.mp4"
+            src="/midia/31a58a982_Vdeo_Licenciado.mp4"
             autoPlay
             loop
             muted

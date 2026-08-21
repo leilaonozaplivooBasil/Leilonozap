@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { ArrowRight, Award } from "lucide-react";
 import CompartilharCargo from "@/components/lucre/CompartilharCargo";
 
-const PARTNER_IMAGE = "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/3debca5db_generated_image.png";
+const PARTNER_IMAGE = "/midia/3debca5db_generated_image.png";
 
 // 💰 Página "Lucre" — identidade visual clara/executiva da Recepção (fundo
 // branco, título preto + palavra verde, selo pill), com cards ilustrados
@@ -14,21 +14,21 @@ const EARN_CARDS = [
   {
     title: "Seja um Influenciador",
     desc: "Grátis: indique e ganhe 5% em cada venda e arremate.",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/84782e7ee_generated_image.png",
+    image: "/midia/84782e7ee_generated_image.png",
     page: "Licensing",
     cargo: "influenciador",
   },
   {
     title: "Seja um Vendedor",
     desc: "Ganhe 10% na venda direta (cadastro pelo licenciado).",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/2f7400a5d_generated_image.png",
+    image: "/midia/2f7400a5d_generated_image.png",
     page: "SejaVendedor",
     cargo: "vendedor",
   },
   {
     title: "Seja um Licenciado",
     desc: "Tenha sua loja virtual e ganhe 13% na venda.",
-    image: "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/28db39fb0_generated_image.png",
+    image: "/midia/28db39fb0_generated_image.png",
     page: "SejaLicenciado",
     cargo: "licenciado",
   },

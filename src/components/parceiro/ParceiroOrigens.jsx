@@ -3,7 +3,7 @@ import ParceiroSecao from './ParceiroSecao';
 import ParceiroLamina from './ParceiroLamina';
 import ParceiroDetalhe from './ParceiroDetalhe';
 
-const IMG_ESTOQUE = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/77d21348f_generated_image.png';
+const IMG_ESTOQUE = '/midia/77d21348f_generated_image.png';
 
 const ORIGENS = [
   { n: '01', titulo: 'Devoluções em prazo legal', texto: 'Produtos devolvidos dentro dos sete dias previstos em lei, íntegros e prontos para recolocação.' },

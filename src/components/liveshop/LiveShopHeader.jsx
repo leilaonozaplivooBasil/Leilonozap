@@ -5,7 +5,7 @@ import LivooMarca from "@/components/liveshop/LivooMarca";
 import LinhaConexao from "@/components/liveshop/LinhaConexao";
 
 // Logo do Leilão NoZap na versão para fundo claro (a mesma da Recepção).
-const LOGO_CLARA = "https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a4d99a15d_image.png";
+const LOGO_CLARA = "/midia/a4d99a15d_image.png";
 
 // Cabeçalho co-branded claro: Leilão NoZap ⋯ Livoo Live (linha de conexão pontilhada)
 // + selo AO VIVO e contador de espectadores.

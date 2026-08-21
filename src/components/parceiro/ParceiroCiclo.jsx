@@ -4,7 +4,7 @@ import ParceiroLamina from './ParceiroLamina';
 import ParceiroDetalhe from './ParceiroDetalhe';
 import ParceiroCicloRoda from './ParceiroCicloRoda';
 
-const IMG_CICLO = 'https://media.base44.com/images/public/68d536db3c26ff51f79c4137/a5ded50b6_generated_image.png';
+const IMG_CICLO = '/midia/a5ded50b6_generated_image.png';
 
 const ETAPAS = [
   { quando: 'Dia 0', titulo: 'Aceite e aporte', texto: 'Assinatura do instrumento e transferência do capital. A vigência de doze meses conta do aceite.' },
