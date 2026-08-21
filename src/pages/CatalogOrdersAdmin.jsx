@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
+import { decidirStatusAoSalvar } from '@/lib/pedidoStatus';
 import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -516,18 +517,18 @@ export default function CatalogOrdersAdmin() {
 
     setIsUpdating(true);
     try {
-      // PONTO 117 (21/08/2026): AQUI TINHA uma regra que trocava o status de
-      // volta pra 'shipped' sozinha sempre que o campo de rastreio não estava
-      // vazio — mesmo quando o admin tinha acabado de escolher outra coisa
-      // (ex.: corrigir um pedido marcado errado de volta pra 'Pago'). O campo
-      // de rastreio quase sempre já vem preenchido (todo pedido nasce com um
-      // rastreio provisório), então a troca acontecia silenciosamente quase
-      // toda vez. Removida: o status salvo agora é sempre o que está selecionado.
       if (newStatus === 'shipped' && !trackingCode.trim() && !selectedOrder.tracking_code) {
         toast.error('Informe o código de rastreio para marcar como enviado');
         return;
       }
-      const updateData = { status: newStatus };
+      // PONTO 118 — ver src/lib/pedidoStatus.js pro histórico completo do bug.
+      const updateData = {
+        status: decidirStatusAoSalvar({
+          statusEscolhido: newStatus,
+          trackingDigitado: trackingCode,
+          trackingAnterior: selectedOrder.tracking_code,
+        }),
+      };
       if (trackingCode.trim()) updateData.tracking_code = trackingCode.trim();
       const r = await plataforma.functions.invoke('updateOrderStatus', {
         actorId,
