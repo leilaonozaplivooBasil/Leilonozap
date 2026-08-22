@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { plataforma } from '@/api/plataformaClient';
-import bcrypt from 'bcryptjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,31 +40,25 @@ export default function AcessoArrematante() {
 
     setIsLogging(true);
     try {
+      // 🔴 CAUSA-RAIZ DO "LOGIN NÃO RESOLVE" (22/08/2026) — esta tela conferia
+      // e-mail/senha sozinha, no navegador (AppUser.filter + bcrypt.compareSync),
+      // sem nunca passar pela function `login` no servidor. Ela é quem emite o
+      // crachá de sessão (ver api/functions/login.js, 21/08/2026) — sem passar
+      // por ali, quem entrava por AQUI nunca tinha crachá válido, e cotarFrete
+      // (que agora exige crachá) barrava o lance pra sempre, mesmo repetindo o
+      // login várias vezes. Mesmo padrão já corrigido em LoginModal.jsx e
+      // SellerLoginForm.jsx — a senha nem deveria ser comparada no client
+      // (o hash bcrypt indo pro navegador é o próprio risco que o login.js
+      // servidor foi feito pra evitar).
       const normalizedEmail = email.toLowerCase().trim();
-      const users = await AppUser.filter({ email: normalizedEmail });
+      const _login = await plataforma.functions.invoke('login', { email: normalizedEmail, password });
 
-      if (!users || users.length === 0) {
-        setError('E-mail não encontrado.');
+      if (!_login?.success) {
+        setError(_login?.error || 'E-mail ou senha incorretos.');
         return;
       }
 
-      const user = users[0];
-      const stored = user.password;
-      const isBcrypt = stored && stored.startsWith('$2');
-      const valid = isBcrypt
-        ? bcrypt.compareSync(password, stored)
-        : stored === password;
-
-      if (!valid) {
-        setError('Senha incorreta.');
-        return;
-      }
-
-      // Auto-migra senha legada para bcrypt (não bloqueante)
-      if (!isBcrypt) {
-        const hashed = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-        AppUser.update(user.id, { password: hashed }).catch((e) => console.warn('Falha ao migrar senha p/ bcrypt:', e?.message));
-      }
+      const user = _login.user;
 
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
