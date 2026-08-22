@@ -13,6 +13,9 @@ por fora: se aconteceu, está em um destes lugares.
 |---|---|---|
 | **Este arquivo** | Estado atual, decisões do dono, perguntas abertas, o que falta | Só o estado de AGORA |
 | `docs/DIARIO.md` | **Registro de tudo que foi conversado**, em ordem, com data | Só cresce, nunca é podado |
+| `docs/DIRETIVA_ATUAL.md` | A diretiva de engenharia **em vigor agora** — o que está autorizado nesta rodada | Substituída a cada diretiva nova; a anterior vai pro histórico |
+| `docs/HISTORICO_DIRETIVAS.md` | Log append-only de **toda diretiva formal** já emitida, com resultado | Só cresce, nunca é podado |
+| `docs/ARQUITETURA.md` | Referência de arquitetura — como o sistema é montado, não o que está sendo corrigido agora | Atualizado só quando algo estrutural muda de verdade |
 | `docs/PLANO_REMEDIACAO.md` | Plano ordenado de remediação | |
 | `docs/OPENAI_RETURN.md` | Devolutivas da OpenAI, na íntegra | |
 | `docs/remediacao_NAO_APLICADA/` | SQL preparado e **não aplicado** | Nada aqui rodou |
@@ -22,6 +25,9 @@ por fora: se aconteceu, está em um destes lugares.
 
 - Handoff: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/CLAUDE_HANDOFF.md`
 - Diário: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/DIARIO.md`
+- Diretiva atual: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/DIRETIVA_ATUAL.md`
+- Histórico de diretivas: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/HISTORICO_DIRETIVAS.md`
+- Arquitetura: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/ARQUITETURA.md`
 
 ## 0. PROTOCOLO OPERACIONAL PERMANENTE
 
