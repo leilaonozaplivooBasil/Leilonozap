@@ -13,8 +13,10 @@ por fora: se aconteceu, está em um destes lugares.
 |---|---|---|
 | **Este arquivo** | Estado atual, decisões do dono, perguntas abertas, o que falta | Só o estado de AGORA |
 | `docs/DIARIO.md` | **Registro de tudo que foi conversado**, em ordem, com data | Só cresce, nunca é podado |
+| `docs/PADRAO_DIRETIVAS.md` | Formato fixo (template) de diretiva e de relatório de execução | Regra de forma, não de conteúdo |
 | `docs/DIRETIVA_ATUAL.md` | A diretiva de engenharia **em vigor agora** — o que está autorizado nesta rodada | Substituída a cada diretiva nova; a anterior vai pro histórico |
-| `docs/HISTORICO_DIRETIVAS.md` | Log append-only de **toda diretiva formal** já emitida, com resultado | Só cresce, nunca é podado |
+| `docs/HISTORICO_DIRETIVAS.md` | Log append-only da **especificação** de toda diretiva formal já emitida | Só cresce, nunca é podado |
+| `docs/RELATORIOS_EXECUCAO.md` | Log append-only do **resultado** de cada diretiva executada | Só cresce, nunca é podado |
 | `docs/ARQUITETURA.md` | Referência de arquitetura — como o sistema é montado, não o que está sendo corrigido agora | Atualizado só quando algo estrutural muda de verdade |
 | `docs/PLANO_REMEDIACAO.md` | Plano ordenado de remediação | |
 | `docs/OPENAI_RETURN.md` | Devolutivas da OpenAI, na íntegra | |
@@ -28,6 +30,8 @@ por fora: se aconteceu, está em um destes lugares.
 - Diretiva atual: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/DIRETIVA_ATUAL.md`
 - Histórico de diretivas: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/HISTORICO_DIRETIVAS.md`
 - Arquitetura: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/ARQUITETURA.md`
+- Padrão de diretivas: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/PADRAO_DIRETIVAS.md`
+- Relatórios de execução: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/RELATORIOS_EXECUCAO.md`
 
 ## 0. PROTOCOLO OPERACIONAL PERMANENTE
 

@@ -601,3 +601,32 @@ alias estável que o dono já usa
 `main`, não é produção — por instrução explícita, não deveria ser. O Preview
 só volta a logar automaticamente depois que a OpenAI configurar as 3
 variáveis de ambiente na Vercel; até lá, é esperado que ele peça login real.
+
+---
+
+## 21/08 · Governança de diretivas — rodada zero e refinamento (DIR-3, DIR-4)
+
+**DONO** — pediu, direto e sem relação com o código: criar uma diretiva
+atual, um histórico de diretivas e um documento de arquitetura, "se ainda
+não existir", sem alterar funcionalidade/banco/produção/regra de negócio.
+Pediu confirmação explícita de que nada de código foi tocado, e que depois
+dessa rodada nenhuma implementação começa sem diretiva nova (DIR-3).
+
+**CLAUDE** — criou `docs/DIRETIVA_ATUAL.md`, `docs/HISTORICO_DIRETIVAS.md` e
+`docs/ARQUITETURA.md`; MAPA do handoff atualizado pra indexar. Nenhum
+arquivo de código tocado — confirmado por `git diff --stat` contra `main`.
+
+**DONO** — em seguida, antes de "rodada um": pediu pra refinar essa
+estrutura, padronizando diretiva e relatório de execução num formato fixo,
+pra toda rodada futura seguir o mesmo padrão (DIR-4).
+
+**CLAUDE** — criou `docs/PADRAO_DIRETIVAS.md` com o template dos dois tipos
+de documento; separou `docs/HISTORICO_DIRETIVAS.md` (só especificação) de
+um arquivo novo, `docs/RELATORIOS_EXECUCAO.md` (só resultado — REL-1 a
+REL-4, incluindo os retroativos das diretivas já executadas hoje);
+`docs/DIRETIVA_ATUAL.md` atualizado pra refletir a DIR-4 e o estado "sem
+diretiva em aberto" ao final. De novo, nenhum arquivo de código tocado.
+
+**Vocabulário do protocolo:** **CONCLUÍDA** (DIR-3 e DIR-4, ambas). Nenhuma
+implementação em aberto — aguardando a próxima diretiva, no formato de
+`docs/PADRAO_DIRETIVAS.md`.

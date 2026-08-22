@@ -4,50 +4,42 @@
 > está autorizado a acontecer nesta rodada, e nada além disso. Quando uma
 > diretiva nova for definida (pelo dono ou pela OpenAI), este arquivo é
 > **substituído** pelo conteúdo da diretiva nova; a versão anterior não se
-> perde — vai para `docs/HISTORICO_DIRETIVAS.md` no mesmo commit.
+> perde — vai para `docs/HISTORICO_DIRETIVAS.md` no mesmo commit, e o
+> resultado dela para `docs/RELATORIOS_EXECUCAO.md`.
 >
-> **Regra fixa desta rodada (21/08/2026, pedido do dono):** depois desta
-> rodada, nenhuma implementação (código, banco, produção) começa sem uma
-> diretiva nova e explícita registrada aqui primeiro.
+> Formato fixo desta diretiva e de toda diretiva futura:
+> `docs/PADRAO_DIRETIVAS.md`.
 
 ---
 
-## Diretiva em vigor
+## DIR-4 — Padronização de diretivas e relatórios de execução
 
-**Emitida por:** dono (Luiz), consolidando um pedido de estrutura de
-documentação — sem relação com correção de código.
-
+**Emitida por:** dono (Luiz), diretamente.
 **Data:** 21/08/2026.
+**Objetivo:** refinar a estrutura de governança criada na DIR-3, definindo
+um formato fixo (template) pra diretivas e pra relatórios de execução, pra
+toda rodada futura seguir o mesmo padrão.
+**Escopo autorizado:** criação de `docs/PADRAO_DIRETIVAS.md`; reestruturação
+de `docs/HISTORICO_DIRETIVAS.md` pra separar especificação de execução;
+criação de `docs/RELATORIOS_EXECUCAO.md`.
+**Fora do escopo / proibido:** qualquer alteração de código, banco,
+produção ou regra de negócio.
+**Regras fixas:** nenhuma além da DIR-3 (documentação pura). Depois desta
+rodada, toda implementação futura espera uma diretiva nova e explícita,
+registrada aqui no formato de `docs/PADRAO_DIRETIVAS.md`.
+**Status:** EXECUTADA. Relatório completo em `docs/RELATORIOS_EXECUCAO.md`
+→ `REL-4`.
 
-**Objetivo:** criar a estrutura de governança de diretivas de engenharia
-(este arquivo, o histórico e o documento de arquitetura), preservando todo o
-conteúdo já existente em `docs/CLAUDE_HANDOFF.md` e `docs/DIARIO.md`.
+---
 
-**Escopo autorizado:**
-- Criar/atualizar `docs/DIRETIVA_ATUAL.md`, `docs/HISTORICO_DIRETIVAS.md`,
-  `docs/ARQUITETURA.md`.
-- Atualizar o MAPA em `docs/CLAUDE_HANDOFF.md` pra indexar os arquivos
-  novos (sem remover nada do que já existia).
+## Estado agora
 
-**Fora do escopo, explicitamente proibido nesta rodada:**
-- Alterar funcionalidade de código (frontend, backend, Edge Function).
-- Alterar banco de dados (produção ou staging), migração, RLS.
-- Alterar produção (Vercel Production, domínio, variáveis de ambiente).
-- Alterar regra de negócio (frete, comissão, escrow, pagamento).
-- Mergear qualquer PR, tocar `main` além desta documentação.
+**Nenhuma diretiva em aberto.** As DIR-1 a DIR-4 estão todas executadas
+(ver `docs/RELATORIOS_EXECUCAO.md`). Duas pendências continuam registradas
+como blockers no `REL-2`, do lado da OpenAI (configurar 3 variáveis de
+ambiente na Vercel; confirmar se o 401 da Edge Function `preview-api` foi
+resolvido) — não bloqueiam esta diretiva, bloqueiam a validação final do
+Preview da PR #87.
 
-**Estado dos PRs abertos, sem nenhuma ação nesta rodada:**
-- PR #86 (`openai/catalog-status-sync`) — congelada, aguardando o Preview
-  #87 ser validado pelo dono, por decisão da OpenAI.
-- PR #87 (`openai/catalog-status-sync-preview`) — última execução no commit
-  `5689c588` (ver `docs/HISTORICO_DIRETIVAS.md`, diretiva D2). Blockers
-  pendentes do lado da OpenAI: configurar 3 variáveis de ambiente na Vercel
-  e confirmar se o 401 da Edge Function foi resolvido.
-
-**Confirmação explícita exigida pelo dono:** nenhuma funcionalidade do
-sistema foi alterada nesta rodada. Os três arquivos criados/atualizados são
-documentação pura — nenhum arquivo de código-fonte, configuração de
-build, migração de banco ou variável de ambiente foi tocado.
-
-**Próximo passo:** aguardar. Nenhuma implementação começa até uma diretiva
-nova ser registrada aqui.
+**Nenhuma implementação começa até uma diretiva nova ser registrada aqui,**
+no formato de `docs/PADRAO_DIRETIVAS.md`.
