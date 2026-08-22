@@ -42,7 +42,7 @@ const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') || '';            // opcio
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-const CLAUDE_MODEL = 'claude-3-5-sonnet-latest';
+const CLAUDE_MODEL = 'claude-sonnet-5';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
