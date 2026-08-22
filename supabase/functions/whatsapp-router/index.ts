@@ -237,6 +237,27 @@ async function enviarWhatsApp(telefone: string, texto: string) {
 }
 
 // ============================================================================
+// Processamento em segundo plano — a Claude + o envio pelo Z-API juntos passam de
+// alguns segundos com facilidade. Descoberto em produção: se o webhook não recebe 200
+// rápido, o Z-API reentrega a MESMA mensagem, a function roda de novo do zero, e o
+// cliente recebe duas respostas (visto ao vivo: "como se tivesse recebido comandos em
+// lugares diferentes"). Por isso agora só extrai/valida de forma síncrona e devolve 200
+// IMEDIATAMENTE — Claude e Z-API rodam depois, em background, sem o Z-API esperando.
+// ============================================================================
+async function processarMensagem(msg: MensagemExtraida) {
+  try {
+    const admin = ehAdmin(msg.remetente);
+    const cliente = admin ? null : await buscarClientePorTelefone(msg.remetente);
+    const systemPrompt = admin ? SYSTEM_PROMPT_HELOIM : montarSystemPromptZeca(cliente);
+
+    const resposta = await chamarClaude(systemPrompt, msg.texto);
+    await enviarWhatsApp(msg.remetente, resposta);
+  } catch (e) {
+    console.error('[whatsapp-router] erro processando mensagem de', msg.remetente, ':', e);
+  }
+}
+
+// ============================================================================
 // Handler HTTP
 // ============================================================================
 Deno.serve(async (req) => {
@@ -270,21 +291,11 @@ Deno.serve(async (req) => {
   // sem texto reconhecido etc.) — ignora sem erro, é tráfego normal do webhook.
   if (!msg) return json({ success: true, ignored: true });
 
-  try {
-    const admin = ehAdmin(msg.remetente);
-    const cliente = admin ? null : await buscarClientePorTelefone(msg.remetente);
-    const systemPrompt = admin ? SYSTEM_PROMPT_HELOIM : montarSystemPromptZeca(cliente);
+  // Responde já — o processamento de verdade continua depois, em background.
+  // @ts-ignore — EdgeRuntime é global no runtime do Supabase Edge Functions (Deno Deploy), não no editor local.
+  EdgeRuntime.waitUntil(processarMensagem(msg));
 
-    const resposta = await chamarClaude(systemPrompt, msg.texto);
-    await enviarWhatsApp(msg.remetente, resposta);
-
-    return json({ success: true });
-  } catch (e) {
-    console.error('[whatsapp-router] erro processando mensagem de', msg.remetente, ':', e);
-    // 200 mesmo no erro: já tentamos, não queremos o Z-API reentregando o mesmo webhook
-    // em loop. O erro fica no log pra investigar.
-    return json({ success: false, error: String((e as Error)?.message || e) });
-  }
+  return json({ success: true, queued: true });
 });
 
 // ============================================================================
