@@ -35,6 +35,11 @@ supabase secrets set \
 - `EXECUTIVO_VENDEDOR_PHONE` (opcional): número do executivo que recebe os leads de "quero
   ser vendedor" vindos de anúncio (Zeca encaminha automático). Sem configurar, usa o número
   do João Paim (`21984942730`) como padrão — só precisa desse secret se for trocar.
+- `OPENAI_API_KEY` (opcional): habilita transcrição de áudio de verdade (Whisper — mesmo
+  serviço que já era usado no Base44). Sem essa chave, o Zeca continua funcionando, só que
+  sem entender o CONTEÚDO de mensagens de voz (reconhece que recebeu áudio e pede resumo por
+  texto). Gera em https://platform.openai.com/api-keys — custo é por minuto de áudio, bem
+  barato (~R$0,03/min na tabela pública da OpenAI em 2026).
 
 ## 3. Deploy — SEM verificação de JWT
 
@@ -95,6 +100,12 @@ resposta nenhuma:
 Mesma ressalva vale pros campos `audio`/`image`/`document` (22/08/2026, ainda não testados
 com payload real do Z-API) — se um cliente mandar áudio/imagem/documento e o Zeca não reagir
 nada, é o mesmo processo: olha o log, me manda o JSON.
+
+Se o Zeca RECONHECER que recebeu áudio mas continuar pedindo pra repetir por texto mesmo com
+`OPENAI_API_KEY` configurada, o campo de URL do áudio dentro de `body.audio` (tentamos
+`audioUrl`/`url`/`audioURL`) também pode não bater com o nome real do Z-API — procure a linha
+`falha ao baixar áudio do Z-API` ou `falha ao transcrever áudio` no log, e me manda o JSON de
+`body.audio` de novo.
 
 Mesma lógica vale se o envio falhar com 401/403 — provavelmente `ZAPI_CLIENT_TOKEN`
 errado ou ausente (com a segurança de conta ativada, é obrigatório).
