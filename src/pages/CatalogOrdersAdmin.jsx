@@ -403,6 +403,7 @@ export default function CatalogOrdersAdmin() {
       const patch = { fulfillment_status: data.fulfillment_status || value, status: data.status || statusAlvo };
       setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+      setNewStatus(patch.status);
       toast.success('Etapa da entrega atualizada!');
     } catch (error) {
       console.error('Erro ao atualizar etapa da entrega:', error);
