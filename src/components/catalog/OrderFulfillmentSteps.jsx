@@ -1,11 +1,15 @@
 import React from 'react';
 import { PackageCheck, Box, Send, Truck, CheckCircle2 } from 'lucide-react';
 
-// 🚚 Jornada técnica do pedido — a logística vai clicando nas etapas conforme
-// avança. Grava em fulfillment_status, que já é lido pelo pedido do cliente
+// 🚚 Jornada de entrega — a logística vai clicando nas etapas conforme avança.
+// Grava em fulfillment_status, que já é lido pelo pedido do cliente
 // (DetalhesPedidoModal) — clicar aqui já atualiza o que o cliente vê.
+//
+// As etapas de etiqueta e conferência aparecem logo ACIMA deste bloco no
+// Gerenciar Pedido (não são passos clicáveis daqui) e precisam estar prontas
+// antes de avançar para Embalando — por isso o resumo do fluxo abaixo.
 const STEPS = [
-  { value: 'a_enviar', label: 'Recebemos o pedido', icon: PackageCheck },
+  { value: 'a_enviar', label: 'Pedido recebido', icon: PackageCheck },
   { value: 'preparando', label: 'Embalando', icon: Box },
   { value: 'enviado', label: 'Enviado', icon: Send },
   { value: 'saiu_entrega', label: 'Saiu para entrega', icon: Truck },
@@ -16,10 +20,15 @@ export default function OrderFulfillmentSteps({ current, onSelect }) {
   const idx = Math.max(0, STEPS.findIndex((s) => s.value === current));
 
   return (
-    <div>
-      <p className="mb-2 text-xs font-semibold text-indigo-300 uppercase tracking-wide">
-        🚚 Jornada da entrega — clique para avançar
-      </p>
+    <div className="space-y-2">
+      <div>
+        <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wide">
+          🚚 Jornada da entrega — clique para avançar
+        </p>
+        <p className="mt-1 text-[10px] leading-relaxed text-gray-400">
+          Pedido recebido → etiqueta na Melhor Envio → imprimir etiqueta → conferir produtos → Embalando → Enviado → Saiu para entrega → Entregue.
+        </p>
+      </div>
       <div className="flex items-stretch gap-1">
         {STEPS.map((step, i) => {
           const done = i <= idx;
