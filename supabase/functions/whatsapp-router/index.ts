@@ -1,13 +1,17 @@
 // whatsapp-router — expurgo Base44, etapa 2 (memória + tool-calling), provedor Z-API.
 //
-// Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento,
-// qualquer número) e Heloim (assistente de TI, só o admin). Os dois falam pelo MESMO
-// número — quem decide qual responde é só o telefone de quem mandou a mensagem.
+// Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento, qualquer
+// número, sempre 1:1) e Heloim (assistente de TI — 1:1 com qualquer admin de
+// ADMIN_PHONE_NUMBERS, e também dentro de grupos autorizados em GRUPOS_HELOIM_IDS, onde
+// qualquer participante pode pedir mudança mas só admin aprova). O mesmo número de WhatsApp
+// serve os dois — quem decide qual responde é o telefone/contexto de quem mandou a mensagem.
 //
 // Etapa 2 (22/08/2026): recebe o webhook do Z-API, roteia, carrega memória de conversa
-// (ai_conversas), chama a Claude com o system prompt certo E tool-calling de leitura real
-// (saldo/pedidos/leilões pro Zeca; métricas de sistema pra Heloim), devolve a resposta.
-// Heloim é só-consulta — nenhuma tool escreve dado nenhum.
+// (ai_conversas), chama a Claude com o system prompt certo E tool-calling real (saldo/
+// pedidos/leilões pro Zeca; métricas de sistema + fluxo de solicitação/autorização de
+// mudança pra Heloim — ver heloim_solicitacoes), devolve a resposta. Nenhuma tool mexe em
+// dado de NEGÓCIO (leilão, pagamento, estoque) — a Heloim só registra pedido e decisão,
+// quem executa a mudança de verdade continua sendo humano.
 //
 // 🔴 MUDANÇA DE PROVEDOR (22/08/2026): trocamos a Evolution API (self-hosted na VPS) pelo
 // Z-API (SaaS). Zero mudança na lógica de roteamento/Claude — só a "borda" com o WhatsApp
@@ -34,7 +38,10 @@ const ZAPI_TOKEN = Deno.env.get('ZAPI_TOKEN')!;
 // Vai como header Client-Token em toda chamada pra API deles — sem ele, com a segurança
 // ativada na conta, o envio leva 401/403 mesmo com instance id + token corretos.
 const ZAPI_CLIENT_TOKEN = Deno.env.get('ZAPI_CLIENT_TOKEN') || '';
-const ADMIN_PHONE_NUMBER = Deno.env.get('ADMIN_PHONE_NUMBER') || '';    // só dígitos, com DDI: 5511999999999
+// Múltiplos admins (22/08/2026, pedido do dono: Luiz + Ávila) — lista separada por vírgula.
+// Mantém compatibilidade com quem só tinha ADMIN_PHONE_NUMBER (singular) configurado.
+const ADMIN_PHONE_NUMBERS = (Deno.env.get('ADMIN_PHONE_NUMBERS') || Deno.env.get('ADMIN_PHONE_NUMBER') || '')
+  .split(',').map((s) => s.trim()).filter(Boolean);   // só dígitos, com DDI: 5511999999999,5521988887777
 const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') || '';            // opcional — ver validarSeguranca()
 
 // Executivo que recebe leads de vendedor interessado vindos de anúncio (Meta/Instagram) —
@@ -46,6 +53,18 @@ const EXECUTIVO_VENDEDOR_PHONE = Deno.env.get('EXECUTIVO_VENDEDOR_PHONE') || '21
 // (base44/functions/transcribeAudio/entry.ts). Opcional: sem a chave, Zeca segue
 // funcionando, só sem entender o CONTEÚDO do áudio (ver transcreverAudio()).
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
+
+// Grupos de WhatsApp onde a Heloim opera (22/08/2026) — lista de IDs separados por vírgula
+// (formato Z-API, tipo "120363...@g.us" ou "1203...-group" — ver waGroupDiagZapi.js pra
+// descobrir o ID certo). Grupo fora dessa lista: a function ignora a mensagem (nunca responde
+// em grupo não autorizado). Sem nenhum grupo configurado, Heloim funciona só 1:1 com admin,
+// exatamente como antes desta mudança.
+const GRUPOS_HELOIM_IDS = (Deno.env.get('GRUPOS_HELOIM_IDS') || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+// Slack (22/08/2026) — Incoming Webhook do canal onde a Heloim registra pedido/classificação
+// de risco/decisão, igual fazia no Base44 antigo (canal top-tech-leilao-nozap). Opcional: sem
+// configurar, Heloim funciona igual, só não duplica o registro no Slack.
+const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL') || '';
 
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
@@ -95,8 +114,9 @@ function ultimosDigitos(v: string | null | undefined, n = 10): string {
 }
 
 function ehAdmin(remetente: string): boolean {
-  if (!ADMIN_PHONE_NUMBER) return false; // sem admin configurado, ninguém vira Heloim — padrão seguro
-  return ultimosDigitos(remetente) === ultimosDigitos(ADMIN_PHONE_NUMBER);
+  if (!ADMIN_PHONE_NUMBERS.length) return false; // sem admin configurado, ninguém vira Heloim — padrão seguro
+  const digitos = ultimosDigitos(remetente);
+  return ADMIN_PHONE_NUMBERS.some((n) => ultimosDigitos(n) === digitos);
 }
 
 // ============================================================================
@@ -107,17 +127,42 @@ function ehAdmin(remetente: string): boolean {
 // topo do arquivo.
 // ============================================================================
 type MensagemExtraida = {
-  remetente: string; // telefone de quem mandou — usado tanto pro roteamento quanto pra resposta
+  remetente: string; // telefone de QUEM ESCREVEU — em grupo, é o participante, nunca o ID do grupo
+  remetenteNome: string | null; // nome de exibição, quando o Z-API manda (só em grupo, por ora)
+  grupoId: string | null; // null = conversa 1:1. Setado = veio de um grupo autorizado (GRUPOS_HELOIM_IDS)
+  grupoNome: string | null;
   texto: string; // pra áudio/imagem/documento, um texto sintético descrevendo o que chegou (ver extrairMensagem)
   audioUrl: string | null; // se veio áudio, a URL do arquivo — ver transcreverAudio()
   messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
+// Heloim é a ÚNICA que opera em grupo (pedido do dono, 22/08/2026) — Zeca continua 1:1 só.
+// Grupo fora da lista: mensagem descartada, sem log de payload (grupo não autorizado não é
+// "formato desconhecido pra investigar", é intencionalmente ignorado).
+function grupoAutorizado(grupoId: string): boolean {
+  return GRUPOS_HELOIM_IDS.includes(grupoId);
+}
+
 function extrairMensagem(body: any): MensagemExtraida | null {
   if (body?.fromMe === true) return null;   // eco do que o próprio bot mandou — nunca processa, senão vira loop
-  if (body?.isGroup === true) return null;  // grupo — fora do escopo desta etapa (Zeca/Heloim são 1:1)
 
-  const remetente: string | undefined = body?.phone ? String(body.phone) : undefined;
+  let remetente: string | undefined;
+  let remetenteNome: string | null = null;
+  let grupoId: string | null = null;
+  let grupoNome: string | null = null;
+
+  if (body?.isGroup === true) {
+    const grupoIdRaw: string | undefined = body?.phone ? String(body.phone) : undefined;
+    const participante: string | undefined = body?.participantPhone ? String(body.participantPhone) : undefined;
+    if (!grupoIdRaw || !participante) return null;
+    if (!grupoAutorizado(grupoIdRaw)) return null; // grupo não é da Heloim — ignora, sem log
+    remetente = participante;
+    remetenteNome = body?.senderName ? String(body.senderName) : null;
+    grupoId = grupoIdRaw;
+    grupoNome = body?.chatName ? String(body.chatName) : null;
+  } else {
+    remetente = body?.phone ? String(body.phone) : undefined;
+  }
   if (!remetente) return null;
 
   const messageId: unknown = body?.messageId ?? body?.id ?? null;
@@ -128,8 +173,10 @@ function extrairMensagem(body: any): MensagemExtraida | null {
   const texto: unknown = body?.text?.message ?? body?.body ??
     (typeof body?.message === 'string' ? body.message : body?.message?.text);
 
+  const base = { remetente, remetenteNome, grupoId, grupoNome, messageId: messageIdStr };
+
   if (texto && String(texto).trim()) {
-    return { remetente, texto: String(texto).trim(), audioUrl: null, messageId: messageIdStr };
+    return { ...base, texto: String(texto).trim(), audioUrl: null };
   }
 
   // Áudio: extrai a URL do arquivo pra transcrever depois (em background — ver
@@ -138,17 +185,16 @@ function extrairMensagem(body: any): MensagemExtraida | null {
   if (body?.audio) {
     const audioUrl: unknown = body.audio?.audioUrl ?? body.audio?.url ?? body.audio?.audioURL ?? null;
     return {
-      remetente,
+      ...base,
       texto: '[o cliente mandou uma mensagem de ÁUDIO — sem transcrição disponível ainda]',
       audioUrl: audioUrl ? String(audioUrl) : null,
-      messageId: messageIdStr,
     };
   }
   if (body?.image) {
-    return { remetente, texto: '[o cliente mandou uma IMAGEM]' + (body.image?.caption ? `, com a legenda: "${body.image.caption}"` : ' (sem legenda)'), audioUrl: null, messageId: messageIdStr };
+    return { ...base, texto: '[o cliente mandou uma IMAGEM]' + (body.image?.caption ? `, com a legenda: "${body.image.caption}"` : ' (sem legenda)'), audioUrl: null };
   }
   if (body?.document) {
-    return { remetente, texto: `[o cliente mandou um DOCUMENTO${body.document?.fileName ? `: "${body.document.fileName}"` : ''}]`, audioUrl: null, messageId: messageIdStr };
+    return { ...base, texto: `[o cliente mandou um DOCUMENTO${body.document?.fileName ? `: "${body.document.fileName}"` : ''}]`, audioUrl: null };
   }
 
   console.warn(
@@ -266,11 +312,18 @@ async function salvarTurno(remetente: string, agente: string, role: 'user' | 'as
 // tool_result de erro pra Claude, que decide como contar isso pro usuário — nunca derruba
 // a conversa.
 // ============================================================================
+type ToolCtx = {
+  remetente: string;
+  remetenteNome: string | null;
+  grupoId: string | null;   // não-nulo = a tool foi chamada a partir de um grupo (só Heloim)
+  grupoNome: string | null;
+};
+
 type ToolDef = {
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
-  executar: (input: any, ctx: { remetente: string }) => Promise<unknown>;
+  executar: (input: any, ctx: ToolCtx) => Promise<unknown>;
 };
 
 function sbRest(path: string, opts: RequestInit = {}) {
@@ -356,6 +409,25 @@ const TOOLS_ZECA: ToolDef[] = [
   },
 ];
 
+// Slack — registro paralelo de toda solicitação/decisão da Heloim, igual fazia no Base44
+// antigo. Best-effort: falha aqui NUNCA derruba a resposta pro WhatsApp — o registro em
+// heloim_solicitacoes já é a fonte de verdade auditável, o Slack é conveniência extra.
+async function postarNoSlack(texto: string) {
+  if (!SLACK_WEBHOOK_URL) return;
+  try {
+    const r = await fetch(SLACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: texto }),
+    });
+    if (!r.ok) console.error('[whatsapp-router] Slack recusou o post:', r.status, await r.text().catch(() => ''));
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao postar no Slack (segue sem registrar lá):', e);
+  }
+}
+
+const EMOJI_RISCO: Record<string, string> = { baixo: '🟢', medio: '🟡', alto: '🔴' };
+
 const TOOLS_HELOIM: ToolDef[] = [
   {
     name: 'vendas_hoje',
@@ -410,6 +482,127 @@ const TOOLS_HELOIM: ToolDef[] = [
       return { saldo_disponivel_total: Math.round(disp * 100) / 100, saldo_reservado_total: Math.round(res * 100) / 100 };
     },
   },
+  {
+    name: 'registrar_solicitacao',
+    description:
+      'Registra um pedido de alteração de sistema (feito por qualquer participante do grupo) com sua classificação ' +
+      'de risco. Use SEMPRE que alguém pedir uma mudança estrutural/técnica em grupo — nunca execute nada sozinha, ' +
+      'só classifica, registra e aguarda autorização de um admin (Luiz ou Ávila).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        descricao: { type: 'string', description: 'O que foi pedido, resumido em 1-2 frases.' },
+        risco: {
+          type: 'string',
+          enum: ['baixo', 'medio', 'alto'],
+          description: 'baixo = cosmético/texto/config sem risco; medio = afeta fluxo mas não mexe em dinheiro; ' +
+            'alto = toca pagamento/comissão/saldo/estoque/autenticação (mesma régua 🔴 zona vermelha do projeto).',
+        },
+        pontos_atencao: { type: 'string', description: 'Riscos específicos identificados (colisão de código, link quebrando, etc), se houver.' },
+      },
+      required: ['descricao', 'risco'],
+    },
+    executar: async (input, ctx) => {
+      const r = await sbRest('heloim_solicitacoes', {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          grupo_id: ctx.grupoId,
+          grupo_nome: ctx.grupoNome,
+          solicitante_nome: ctx.remetenteNome,
+          solicitante_telefone: ctx.remetente,
+          descricao: input.descricao,
+          risco: input.risco,
+          pontos_atencao: input.pontos_atencao ?? null,
+        }),
+      });
+      const rows = await r.json().catch(() => []);
+      const solicitacao = Array.isArray(rows) ? rows[0] : null;
+      if (!solicitacao) return { registrado: false, erro: 'falha ao gravar' };
+
+      const emoji = EMOJI_RISCO[input.risco] || '⚪';
+      const quem = ctx.remetenteNome || ctx.remetente;
+      await postarNoSlack(
+        `${emoji} *Nova solicitação #${solicitacao.id}* — risco ${input.risco}\n` +
+        `*Pedido:* ${input.descricao}\n` +
+        (input.pontos_atencao ? `*Pontos de atenção:* ${input.pontos_atencao}\n` : '') +
+        `*De:* ${quem}${ctx.grupoNome ? ` (grupo ${ctx.grupoNome})` : ''}\n` +
+        `*Status:* aguardando autorização`
+      );
+
+      // Se quem pediu NÃO é admin, avisa os admins direto — não dá pra contar só com alguém
+      // estar olhando o grupo naquele instante.
+      if (!ehAdmin(ctx.remetente)) {
+        for (const admin of ADMIN_PHONE_NUMBERS) {
+          enviarWhatsApp(
+            admin,
+            `${emoji} Nova solicitação de ${quem}${ctx.grupoNome ? ` no grupo ${ctx.grupoNome}` : ''} (#${solicitacao.id}):\n` +
+            `"${input.descricao}"\nRisco: ${input.risco}.${input.pontos_atencao ? ` Atenção: ${input.pontos_atencao}.` : ''}\n` +
+            `Me diga se aprova ou rejeita.`
+          ).catch((e) => console.error('[whatsapp-router] falha ao avisar admin da solicitação:', e));
+        }
+      }
+
+      return { registrado: true, id: solicitacao.id };
+    },
+  },
+  {
+    name: 'aprovar_solicitacao',
+    description: 'Aprova uma solicitação pendente (só funciona se quem está falando é um admin — Luiz ou Ávila).',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'number', description: 'ID da solicitação (veio de registrar_solicitacao ou listar_solicitacoes_pendentes).' } },
+      required: ['id'],
+    },
+    executar: async (input, ctx) => {
+      if (!ehAdmin(ctx.remetente)) return { aprovado: false, erro: 'só um admin pode aprovar' };
+      const r = await sbRest(`heloim_solicitacoes?id=eq.${Number(input.id)}&status=eq.pendente`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ status: 'aprovada', decidido_por: ctx.remetenteNome || ctx.remetente, decidido_em: new Date().toISOString() }),
+      });
+      const rows = await r.json().catch(() => []);
+      const solicitacao = Array.isArray(rows) ? rows[0] : null;
+      if (!solicitacao) return { aprovado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
+      await postarNoSlack(`✅ *Solicitação #${solicitacao.id} aprovada* por ${ctx.remetenteNome || ctx.remetente}\n*Pedido:* ${solicitacao.descricao}`);
+      return { aprovado: true, id: solicitacao.id };
+    },
+  },
+  {
+    name: 'rejeitar_solicitacao',
+    description: 'Rejeita uma solicitação pendente (só funciona se quem está falando é um admin — Luiz ou Ávila).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'ID da solicitação.' },
+        motivo: { type: 'string', description: 'Motivo da rejeição, se o admin disser.' },
+      },
+      required: ['id'],
+    },
+    executar: async (input, ctx) => {
+      if (!ehAdmin(ctx.remetente)) return { rejeitado: false, erro: 'só um admin pode rejeitar' };
+      const r = await sbRest(`heloim_solicitacoes?id=eq.${Number(input.id)}&status=eq.pendente`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ status: 'rejeitada', decidido_por: ctx.remetenteNome || ctx.remetente, decidido_em: new Date().toISOString() }),
+      });
+      const rows = await r.json().catch(() => []);
+      const solicitacao = Array.isArray(rows) ? rows[0] : null;
+      if (!solicitacao) return { rejeitado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
+      await postarNoSlack(`⛔ *Solicitação #${solicitacao.id} rejeitada* por ${ctx.remetenteNome || ctx.remetente}${input.motivo ? `\n*Motivo:* ${input.motivo}` : ''}\n*Pedido:* ${solicitacao.descricao}`);
+      return { rejeitado: true, id: solicitacao.id };
+    },
+  },
+  {
+    name: 'listar_solicitacoes_pendentes',
+    description: 'Lista as solicitações ainda aguardando decisão de um admin (até 10, mais recentes primeiro).',
+    input_schema: { type: 'object', properties: {} },
+    executar: async () => {
+      const r = await sbRest(`heloim_solicitacoes?select=id,descricao,risco,pontos_atencao,solicitante_nome,grupo_nome,created_at&status=eq.pendente&order=created_at.desc&limit=10`);
+      const rows = await r.json().catch(() => []);
+      return { pendentes: Array.isArray(rows) ? rows : [] };
+    },
+  },
 ];
 
 async function buscarClienteCompletoPorTelefone(remetente: string): Promise<any | null> {
@@ -429,19 +622,50 @@ async function buscarClienteCompletoPorTelefone(remetente: string): Promise<any 
 // ============================================================================
 // System prompts
 // ============================================================================
-const SYSTEM_PROMPT_HELOIM = `Você é a Heloim, assistente técnica de TI do Leilão NoZap, falando só com o admin no WhatsApp.
+// Heloim volta a operar em grupo (22/08/2026, ver heloim_solicitacoes) — reconstrução do papel
+// que ela tinha no Base44 antigo (recurso nativo da plataforma, sem código versionado). Igual
+// lá: recolhe pedido de QUALQUER participante do grupo, classifica risco, registra (banco +
+// Slack) e aguarda autorização de um admin — nunca executa a mudança sozinha.
+function montarSystemPromptHeloim(ctx: {
+  emGrupo: boolean;
+  grupoNome: string | null;
+  remetenteEhAdmin: boolean;
+  remetenteNome: string | null;
+}): string {
+  const admins = ADMIN_PHONE_NUMBERS.length ? 'Luiz e Ávila' : '(nenhum admin configurado)';
+
+  const contextoCanal = ctx.emGrupo
+    ? `\n\nVocê está respondendo DENTRO DO GRUPO "${ctx.grupoNome || '(sem nome)'}" — quem mandou a última mensagem foi ` +
+      `${ctx.remetenteNome || 'alguém do grupo'}${ctx.remetenteEhAdmin ? ' (é admin — pode aprovar/rejeitar direto)' : ' (NÃO é admin — só pode pedir, não aprovar/rejeitar nada)'}.`
+    : `\n\nVocê está numa conversa 1:1 com ${ctx.remetenteNome || 'um admin'} (admin confirmado).`;
+
+  return `Você é a Heloim, assistente técnica de TI do Leilão NoZap. Responde direto por ${admins}
+e, em grupos autorizados, por qualquer participante — mas só um admin pode AUTORIZAR mudança.
 
 Tom: técnico, direto, sem enrolação.
 
-Você é SOMENTE CONSULTA nesta versão — tem tools de leitura (vendas_hoje,
-produtos_sem_estoque, pedidos_pendentes_envio, resumo_carteiras) e NENHUMA tool que altera
-dado nenhum. Se o admin pedir uma ação que muda estado (pausar leilão, reprocessar pedido,
-mexer em saldo, etc.), diga claramente que essa ação ainda não está disponível por aqui —
-não finja que executou, e não invente que fez algo.
+Suas tools de CONSULTA (só leitura, dado real do sistema): vendas_hoje, produtos_sem_estoque,
+pedidos_pendentes_envio, resumo_carteiras. Sempre que usar uma, cite o número exato que ela
+devolveu — nunca arredonde, estime ou invente.
 
-Sempre que usar uma tool, cite o número real que ela devolveu — nunca arredonde ou estime
-por conta própria. Se pedirem um dado que nenhuma tool cobre, diga isso claramente em vez
-de inventar.`;
+Suas tools de SOLICITAÇÃO (pedido de mudança de sistema — não confundir com as de consulta):
+- registrar_solicitacao: quando ALGUÉM (admin ou não) pedir uma alteração estrutural/técnica.
+  Classifique o risco você mesma ANTES de chamar a tool, usando a régua do próprio projeto:
+  🔴 alto = toca pagamento, comissão, saldo ou estoque; 🟡 médio = afeta fluxo mas não mexe em
+  dinheiro; 🟢 baixo = cosmético, texto, config sem risco. Aponte pontos de atenção concretos
+  se enxergar algum (ex: "pode quebrar link antigo", "colide com outra mudança em andamento").
+  Depois de registrar, informe a pessoa que ficou registrado e está aguardando autorização —
+  NUNCA diga que já fez ou vai fazer a mudança. Você NUNCA executa a mudança sozinha, sempre
+  fica só na classificação + registro.
+- aprovar_solicitacao / rejeitar_solicitacao: só funcionam se quem pediu pra você é um admin —
+  a tool confere isso sozinha e recusa se não for, mas não ofereça essa ação pra quem você já
+  sabe que não é admin (ver contexto do canal abaixo).
+- listar_solicitacoes_pendentes: quando um admin quiser ver o que está esperando decisão.
+
+Você NUNCA finge que executou uma ação que não tem tool pra fazer (pausar leilão, reprocessar
+pedido, mexer em saldo direto, etc.) — isso continua fora do seu alcance, sempre foi só
+classificar/registrar/reportar, quem executa de fato é humano depois de autorizado.${contextoCanal}`;
+}
 
 // Conhecimento parado sobre a plataforma e a carreira de revenda — atualizado em 22/08/2026
 // com base em docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, o documento interno marcado como
@@ -611,7 +835,7 @@ async function responderComAgente(
   tools: ToolDef[],
   historico: Turno[],
   mensagemUsuario: string,
-  remetente: string
+  ctx: ToolCtx
 ): Promise<string> {
   const messages: any[] = [
     ...historico.map((h) => ({ role: h.role, content: h.content })),
@@ -641,7 +865,7 @@ async function responderComAgente(
       const tool = toolsPorNome[bloco.name];
       let resultado: unknown;
       try {
-        resultado = tool ? await tool.executar(bloco.input, { remetente }) : { erro: 'tool desconhecida' };
+        resultado = tool ? await tool.executar(bloco.input, ctx) : { erro: 'tool desconhecida' };
       } catch (e) {
         resultado = { erro: String((e as Error)?.message || e) };
       }
@@ -677,10 +901,14 @@ async function enviarWhatsApp(telefone: string, texto: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (ZAPI_CLIENT_TOKEN) headers['Client-Token'] = ZAPI_CLIENT_TOKEN;
 
+  // ID de grupo (formato "120363...-group") NÃO pode passar por apenasDigitos() — o hífen faz
+  // parte do ID, tirar ele quebra o envio pro grupo. Só número de telefone é "só dígitos".
+  const destino = telefone.includes('-group') ? telefone : apenasDigitos(telefone);
+
   const r = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ phone: apenasDigitos(telefone), message: texto, delayTyping: delayTypingPara(texto) }),
+    body: JSON.stringify({ phone: destino, message: texto, delayTyping: delayTypingPara(texto) }),
   });
   const corpoTexto = await r.text().catch(() => '');
   let corpo: any = null;
@@ -750,21 +978,30 @@ async function processarMensagem(msg: MensagemExtraida) {
       if (transcricao) msg = { ...msg, texto: `[mensagem por áudio, transcrita] ${transcricao}` };
     }
 
+    // Grupo autorizado = SEMPRE Heloim, não importa quem no grupo escreveu (ela é quem recolhe
+    // pedido de qualquer participante; só quem é admin consegue aprovar/rejeitar — a tool que
+    // faz isso confere ehAdmin() de novo por conta própria, não confia só nesta checagem).
     const admin = ehAdmin(msg.remetente);
-    const agente = admin ? 'heloim' : 'zeca';
-    const cliente = admin ? null : await buscarClientePorTelefone(msg.remetente);
-    const systemPrompt = admin ? SYSTEM_PROMPT_HELOIM : montarSystemPromptZeca(cliente);
-    const tools = admin ? TOOLS_HELOIM : TOOLS_ZECA;
+    const emGrupo = !!msg.grupoId;
+    const agente = emGrupo || admin ? 'heloim' : 'zeca';
+    const cliente = agente === 'zeca' ? await buscarClientePorTelefone(msg.remetente) : null;
+    const systemPrompt = agente === 'heloim'
+      ? montarSystemPromptHeloim({ emGrupo, grupoNome: msg.grupoNome, remetenteEhAdmin: admin, remetenteNome: msg.remetenteNome })
+      : montarSystemPromptZeca(cliente);
+    const tools = agente === 'heloim' ? TOOLS_HELOIM : TOOLS_ZECA;
 
+    const ctx: ToolCtx = { remetente: msg.remetente, remetenteNome: msg.remetenteNome, grupoId: msg.grupoId, grupoNome: msg.grupoNome };
     const historico = await carregarHistorico(msg.remetente, agente);
-    const resposta = await responderComAgente(systemPrompt, tools, historico, msg.texto, msg.remetente);
+    const resposta = await responderComAgente(systemPrompt, tools, historico, msg.texto, ctx);
 
     await Promise.all([
       salvarTurno(msg.remetente, agente, 'user', msg.texto),
       salvarTurno(msg.remetente, agente, 'assistant', resposta),
     ]);
 
-    await enviarWhatsApp(msg.remetente, resposta);
+    // Em grupo, a resposta vai pro GRUPO (todo mundo vê a classificação/decisão) — não pro
+    // DM de quem escreveu. Fora de grupo, comportamento de sempre: responde a quem escreveu.
+    await enviarWhatsApp(msg.grupoId ?? msg.remetente, resposta);
   } catch (e) {
     console.error('[whatsapp-router] erro processando mensagem de', msg.remetente, ':', e);
   }
