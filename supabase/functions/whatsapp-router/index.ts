@@ -99,6 +99,7 @@ function ehAdmin(remetente: string): boolean {
 type MensagemExtraida = {
   remetente: string; // telefone de quem mandou — usado tanto pro roteamento quanto pra resposta
   texto: string;
+  messageId: string | null; // usado pra idempotência — ver dedupeOuMarcarProcessada()
 };
 
 function extrairMensagem(body: any): MensagemExtraida | null {
@@ -121,7 +122,9 @@ function extrairMensagem(body: any): MensagemExtraida | null {
     return null;
   }
 
-  return { remetente, texto: String(texto).trim() };
+  const messageId: unknown = body?.messageId ?? body?.id ?? null;
+
+  return { remetente, texto: String(texto).trim(), messageId: messageId ? String(messageId) : null };
 }
 
 // ============================================================================
@@ -244,6 +247,45 @@ async function enviarWhatsApp(telefone: string, texto: string) {
 // lugares diferentes"). Por isso agora só extrai/valida de forma síncrona e devolve 200
 // IMEDIATAMENTE — Claude e Z-API rodam depois, em background, sem o Z-API esperando.
 // ============================================================================
+// ============================================================================
+// Idempotência — descoberto em produção que responder rápido (acima) NÃO bastou: o
+// Z-API reentrega o mesmo webhook de qualquer forma ("at-least-once delivery", comum em
+// provedor de webhook, não necessariamente bug do lado deles). INSERT na tabela com
+// message_id como primary key: primeira vez passa, reentrega bate na chave e falha —
+// é exatamente esse "falhou" que usamos pra saber "já processei essa, pula".
+// Sem messageId no payload (variante desconhecida do Z-API), processa mesmo assim — sem
+// dedupe não tem outra opção segura, mas fica registrado em log pra investigar.
+// ============================================================================
+async function jaProcessada(messageId: string | null): Promise<boolean> {
+  if (!messageId) {
+    console.warn('[whatsapp-router] mensagem sem messageId no payload — sem como deduplicar esta.');
+    return false;
+  }
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false; // sem Supabase configurado, segue sem dedupe
+
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/wa_mensagens_processadas`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ message_id: messageId }),
+    });
+    // 201 = inseriu (primeira vez, segue o processamento). Conflito de primary key
+    // (409, ou 400 dependendo da versão do PostgREST) = já tinha essa mensagem.
+    if (r.status === 201) return false;
+    if (r.status === 409 || r.status === 400) return true;
+    console.warn('[whatsapp-router] resposta inesperada ao checar idempotência:', r.status, await r.text().catch(() => ''));
+    return false; // inconclusivo — melhor processar de novo do que arriscar não responder ninguém
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao checar idempotência (segue sem dedupe):', e);
+    return false;
+  }
+}
+
 async function processarMensagem(msg: MensagemExtraida) {
   try {
     const admin = ehAdmin(msg.remetente);
@@ -290,6 +332,13 @@ Deno.serve(async (req) => {
   // Evento que não é mensagem de texto nova (status, eco do próprio bot, grupo, mídia
   // sem texto reconhecido etc.) — ignora sem erro, é tráfego normal do webhook.
   if (!msg) return json({ success: true, ignored: true });
+
+  // Idempotência ANTES de responder — se já processamos esse messageId (reentrega do
+  // Z-API), nem chega a agendar o background: devolve 200 e não faz nada de novo.
+  if (await jaProcessada(msg.messageId)) {
+    console.log('[whatsapp-router] mensagem duplicada (reentrega do Z-API), ignorando:', msg.messageId);
+    return json({ success: true, duplicated: true });
+  }
 
   // Responde já — o processamento de verdade continua depois, em background.
   // @ts-ignore — EdgeRuntime é global no runtime do Supabase Edge Functions (Deno Deploy), não no editor local.
