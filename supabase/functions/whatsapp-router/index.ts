@@ -37,6 +37,11 @@ const ZAPI_CLIENT_TOKEN = Deno.env.get('ZAPI_CLIENT_TOKEN') || '';
 const ADMIN_PHONE_NUMBER = Deno.env.get('ADMIN_PHONE_NUMBER') || '';    // só dígitos, com DDI: 5511999999999
 const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') || '';            // opcional — ver validarSeguranca()
 
+// Executivo que recebe leads de vendedor interessado vindos de anúncio (Meta/Instagram) —
+// pedido do dono (22/08/2026). Valor padrão é o número passado por ele; dá pra trocar sem
+// redeploy setando o secret EXECUTIVO_VENDEDOR_PHONE.
+const EXECUTIVO_VENDEDOR_PHONE = Deno.env.get('EXECUTIVO_VENDEDOR_PHONE') || '21984942730';
+
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -98,7 +103,7 @@ function ehAdmin(remetente: string): boolean {
 // ============================================================================
 type MensagemExtraida = {
   remetente: string; // telefone de quem mandou — usado tanto pro roteamento quanto pra resposta
-  texto: string;
+  texto: string; // pra áudio/imagem/documento, um texto sintético descrevendo o que chegou (ver extrairMensagem)
   messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
@@ -109,22 +114,37 @@ function extrairMensagem(body: any): MensagemExtraida | null {
   const remetente: string | undefined = body?.phone ? String(body.phone) : undefined;
   if (!remetente) return null;
 
+  const messageId: unknown = body?.messageId ?? body?.id ?? null;
+  const messageIdStr = messageId ? String(messageId) : null;
+
   // Tenta os formatos mais prováveis pro corpo do texto. Se nenhum bater, loga o payload
   // bruto — é assim que a gente ajusta o campo certo no primeiro teste real, sem chutar.
   const texto: unknown = body?.text?.message ?? body?.body ??
     (typeof body?.message === 'string' ? body.message : body?.message?.text);
 
-  if (!texto || !String(texto).trim()) {
-    console.warn(
-      '[whatsapp-router] payload sem texto reconhecido — ajustar extrairMensagem() com o formato real:',
-      JSON.stringify(body).slice(0, 1000)
-    );
-    return null;
+  if (texto && String(texto).trim()) {
+    return { remetente, texto: String(texto).trim(), messageId: messageIdStr };
   }
 
-  const messageId: unknown = body?.messageId ?? body?.id ?? null;
+  // Sem transcrição de áudio configurada (nenhum provedor de speech-to-text plugado ainda):
+  // não dá pra saber O QUE o cliente falou, mas dá pra saber QUE ele mandou áudio — e isso
+  // já é sinal de perfil (ver framework DISC no system prompt). Zeca nunca fica mudo: em vez
+  // de ignorar o webhook, gera uma mensagem sintética pra ele reagir com naturalidade.
+  if (body?.audio) {
+    return { remetente, texto: '[o cliente mandou uma mensagem de ÁUDIO — sem transcrição disponível ainda]', messageId: messageIdStr };
+  }
+  if (body?.image) {
+    return { remetente, texto: '[o cliente mandou uma IMAGEM]' + (body.image?.caption ? `, com a legenda: "${body.image.caption}"` : ' (sem legenda)'), messageId: messageIdStr };
+  }
+  if (body?.document) {
+    return { remetente, texto: `[o cliente mandou um DOCUMENTO${body.document?.fileName ? `: "${body.document.fileName}"` : ''}]`, messageId: messageIdStr };
+  }
 
-  return { remetente, texto: String(texto).trim(), messageId: messageId ? String(messageId) : null };
+  console.warn(
+    '[whatsapp-router] payload sem texto/áudio/imagem/documento reconhecido — ajustar extrairMensagem() com o formato real:',
+    JSON.stringify(body).slice(0, 1000)
+  );
+  return null;
 }
 
 // ============================================================================
@@ -254,6 +274,37 @@ const TOOLS_ZECA: ToolDef[] = [
       return { leiloes: Array.isArray(rows) ? rows : [] };
     },
   },
+  {
+    name: 'encaminhar_lead_vendedor',
+    description:
+      'Encaminha pro executivo humano (João Paim) o contato de alguém interessado em SER VENDEDOR/trabalhar ' +
+      'com a empresa — principalmente quem chegou pelo anúncio do Meta/Instagram ("Anúncio do Instagram", ' +
+      'saudação automática tipo "Obrigado pelo seu interesse em trabalhar conosco"). Chame só quando o assunto ' +
+      'for claramente "quero ser vendedor/trabalhar com vocês/como faço pra revender", não pra dúvida genérica ' +
+      'de cliente comprador.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        resumo: {
+          type: 'string',
+          description: 'Resumo curto (1-2 frases) do que a pessoa disse/perguntou, pro executivo ter contexto.',
+        },
+        nome: { type: 'string', description: 'Nome da pessoa, se ela já disse.' },
+      },
+      required: ['resumo'],
+    },
+    executar: async (input, ctx) => {
+      const mensagem = `🟢 Lead de vendedor (via anúncio Meta/Instagram)\n` +
+        `Telefone: ${ctx.remetente}${input?.nome ? `\nNome: ${input.nome}` : ''}\n` +
+        `Resumo: ${input?.resumo || '(sem resumo)'}`;
+      try {
+        await enviarWhatsApp(EXECUTIVO_VENDEDOR_PHONE, mensagem);
+        return { encaminhado: true };
+      } catch (e) {
+        return { encaminhado: false, erro: String((e as Error)?.message || e) };
+      }
+    },
+  },
 ];
 
 const TOOLS_HELOIM: ToolDef[] = [
@@ -343,47 +394,126 @@ Sempre que usar uma tool, cite o número real que ela devolveu — nunca arredon
 por conta própria. Se pedirem um dado que nenhuma tool cobre, diga isso claramente em vez
 de inventar.`;
 
-// Conhecimento parado sobre o programa Vendedor — só o que está confirmado no código-fonte
-// (SejaVendedor.jsx + createSellerAdhesionPayment.js), 22/08/2026. Licenciado/Parceiro/rede
-// pra cima ficam FORA de propósito: o valor de adesão do Licenciado no career_levels.js não
-// bate com o que o app realmente cobra (inconsistência real, achada nesta revisão) — Zeca
-// nunca deve citar um preço de Licenciado sem confirmação humana. Isso também bate com o
-// processo oficial da empresa: a própria página de vendas diz que quem sobe pra Licenciado
-// é acompanhado por um executivo de contas, não pelo bot.
-const CONHECIMENTO_VENDEDOR = `
-Programa Vendedor (confirmado, pode afirmar com confiança):
-- Ganha 10% de comissão em cada venda pessoal, em dinheiro real.
-- Ganha mais 5% em cada venda de influenciador que ele cadastrar (sem limite).
-- Vende pelo catálogo da loja virtual própria — NÃO precisa comprar/guardar estoque antes de vender.
-- Pra entrar: paga R$ 1.497 (Mercado Pago, PIX ou cartão) como primeira compra — não é uma taxa
-  perdida, é crédito pra escolher produtos de verdade na Loja Virtual, que chegam no endereço
-  dele (ou retira na loja).
-- O Vendedor NÃO se auto-cadastra sozinho: é cadastrado por um Licenciado, ou a empresa conecta
-  a um executivo de contas da região pra dar suporte.
+// Conhecimento parado sobre a plataforma e a carreira de revenda — levantado direto do
+// código-fonte em 22/08/2026 (careerLevels.js + páginas de venda + endpoints de pagamento).
+// Regra de ouro: só afirma valor de adesão/comissão quando está marcado CONFIRMADO abaixo.
+// O que está como "não confirmado" só existe no arquivo-fonte do front, sem um endpoint de
+// pagamento comprovando que é isso mesmo que se cobra hoje — pode ter mudado no banco.
+const CONHECIMENTO_PROGRAMAS = `
+Como funciona a plataforma:
+- Leilão: deposita na Carteira Digital (PIX), o lance reserva valor+frete; se for superado,
+  volta tudo + bônus de 10% pra usar na Loja Virtual; se arrematar, o valor reservado paga o
+  produto, sem cobrança extra.
+- Loja Virtual: venda direta por catálogo, sem dinâmica de lance.
+- Produtos vêm de devolução de 7 dias (sem garantia de loja), direto de fábrica, ou estoque
+  próprio negociado em volume — por isso o preço é mais baixo que loja tradicional.
 
-Acima de Vendedor (Licenciado, Parceiro, e daí pra cima): existe carreira com comissão maior
-e equipe própria, MAS não afirme valor de adesão nem regra de comissão desses níveis — essa
-parte é feita com um humano (executivo de contas/licenciado), não pelo WhatsApp automático.
-Se perguntarem, confirme que existe, desperte o interesse, e ofereça encaminhar pra alguém da
-equipe — nunca invente número.`;
+Carreira de revenda (comissão total distribuída por venda = 30%):
+
+Influenciador (grátis, também chamado "Financiador" — é o MESMO cargo, dois nomes comerciais):
+- Só compartilha link/QR Code, não precisa cadastrar ninguém.
+- Ganha 5% em cada venda/arremate que gerar. Cadastro grátis.
+
+Vendedor — CONFIRMADO:
+- Vende pelo catálogo/loja virtual pronta, sem comprar estoque antes.
+- Ganha 10% em venda pessoal + 5% de rebate em cada venda de Influenciador que cadastrar.
+- Adesão: R$ 1.497 (PIX ou cartão, Mercado Pago) — não é taxa perdida, vira crédito pra
+  escolher produtos de verdade na primeira compra.
+- Não se autocadastra: é cadastrado por um Licenciado, ou a empresa conecta com um executivo
+  de contas da região.
+
+Licenciado — CONFIRMADO:
+- Tem loja virtual própria e monta equipe — é quem cadastra Vendedores e Influenciadores.
+- Ganha 13% em venda pessoal + 3% de rebate sobre venda de Vendedor cadastrado + 8% de rebate
+  sobre venda de Influenciador/Financiador cadastrado.
+- Adesão: R$ 5.000 (PIX ou cartão até 12x).
+
+Parceiro, Ponto de Retirada, Loja Física, Distribuidor (níveis acima de Licenciado) — NÃO
+CONFIRMADO, não afirme valor de adesão nem percentual exato desses níveis (o número existe
+só no front, sem confirmação de que é isso que o banco cobra hoje, e as páginas de venda
+chegam a divergir entre si num dos percentuais). Confirme que a carreira continua, desperte o
+interesse, e use a tool encaminhar_lead_vendedor — quem fecha valor desses níveis é humano.
+
+Bloco Diretor (trainee, sócio executivo, diretoria, CEO, embaixador, conselheiro, fundador):
+são cargos de topo por convite, NÃO é adesão aberta pro público — nunca ofereça isso pra
+cliente comum, nem cite valor.
+
+"Parceiro de Compra" (programa de investidor — DIFERENTE do "Parceiro" da carreira acima,
+mesmo nome, produto diferente): captação privada, só pra quem já está logado e aceitou termo
+de confidencialidade. NUNCA cite valor de aporte/retorno — é proibido até na página oficial.
+Se perguntarem, direcione pra pedir acesso pela plataforma — não é conversa de bot.
+
+Antifraude: sempre que a conversa for sair da plataforma (pagamento fora, PIX direto pra
+pessoa), lembre que só se paga dentro da plataforma — nunca fora.`;
+
+// Método DISC — pedido explícito do dono: Zeca precisa ler o PERFIL COMPORTAMENTAL de quem
+// está falando com ele (pelo jeito de escrever, não por pergunta direta) e ajustar o próprio
+// tom em cima disso, igual um vendedor de alta performance de verdade faria numa loja física.
+const FRAMEWORK_DISC = `
+Perfil comportamental (DISC) — leia nas ENTRELINHAS de como a pessoa fala com você, nunca
+pergunte "qual seu perfil" diretamente:
+- D (Dominante): manda áudio, mensagem curta e direta, vai reto ao "quanto custa"/"como faço
+  pra começar", tem pressa, não gosta de rodeio. Responda rápido, direto ao ponto, sem
+  explicação longa antes do que ele pediu — decisão primeiro, detalhe se ele pedir.
+- I (Influente): tom caloroso, emojis, conta um pouco de si, gosta de trocar ideia antes de
+  ir ao assunto. Responda com energia parecida, seja simpático e humano, mas não perca o fio
+  da venda no meio da conversa social.
+- S (Estável): mensagens mais devagar, cautelosas, pode repetir pergunta pra ter certeza,
+  não gosta de pressão. Vá com calma, reforce segurança e confiança, nunca empurre decisão
+  rápida — dê tempo.
+- C (Consciencioso): pede documento, print, detalhe técnico, número exato, quer entender a
+  regra antes de agir. Responda com precisão, cite os números reais que as tools trouxerem,
+  não enrole com "história de venda" — ele quer fato.
+Isso é leitura de tom, não regra fixa — se o sinal for misto, vá pelo que a última mensagem
+mostrar mais forte. Nunca mencione "DISC" pro cliente, é ferramenta sua, não conversa.`;
 
 function montarSystemPromptZeca(cliente: { nome?: string } | null): string {
   const contexto = cliente?.nome
     ? `\n\nContexto: este número já é cliente cadastrado (${cliente.nome}). Trate com familiaridade, sem precisar pedir dados básicos de novo.`
     : '';
-  return `Você é o Zeca, SDR e atendimento do Leilão NoZap no WhatsApp.
+  return `Você é o Zeca — executivo de vendas de alta performance do Leilão NoZap, atendendo
+pelo WhatsApp. Você não é um FAQ automático: é o melhor vendedor da empresa, só que
+disponível 24h. Fala com confiança, traz solução, nunca deixa o cliente sem resposta.
 
-Tom: consultivo, simpático, brasileiro, direto. Sem formalidade excessiva.
+Tom base: consultivo, brasileiro, direto, sem formalidade excessiva — mas ajustado pelo
+perfil de quem está do outro lado (ver framework DISC abaixo).
+${FRAMEWORK_DISC}
 
 Seu papel: explicar como funcionam os leilões, o catálogo de produtos, o programa Rank
-Premiado, o programa Vendedor, ajudar quem ainda não é cadastrado a se cadastrar, e usar
-suas tools pra responder com dado real:
+Premiado, o programa Vendedor e os demais níveis de carreira, ajudar quem ainda não é
+cadastrado a se cadastrar, e usar suas tools pra responder com dado real:
 - consultar_saldo — saldo disponível/reservado do número que está falando agora.
 - consultar_pedidos — pedidos recentes desse mesmo número.
 - consultar_leiloes_ativos — leilões abertos agora, com preço atual e horário de encerramento.
-${CONHECIMENTO_VENDEDOR}
+- encaminhar_lead_vendedor — usa isso pra mandar contato de quem quer SER vendedor pro executivo.
+${CONHECIMENTO_PROGRAMAS}
 
-Regras:
+Lead de vendedor vindo de anúncio (importante, pedido direto do dono):
+Muita gente chega pelo anúncio do Meta/Instagram já perguntando sobre trabalhar/vender —
+o sinal mais claro é a saudação automática padrão do anúncio (algo como "Anúncio do
+Instagram... Obrigado pelo seu interesse em trabalhar conosco") aparecendo antes da primeira
+mensagem da pessoa, ou ela mesma dizendo que viu o anúncio e quer ser vendedora/revender.
+Nesses casos, converse normalmente pra entender o que ela busca, e chame a tool
+encaminhar_lead_vendedor com um resumo curto — o executivo (João Paim) vai entrar em contato
+direto. Avise a pessoa que você já está conectando ela com alguém do time, não deixe ela
+esperando uma resposta sua sobre valores de Licenciado/Parceiro pra cima (isso é conversa
+pro executivo, não pro bot).
+
+Como conversar (conversa humanizada de verdade, não robótica):
+- NUNCA manda um link seco, sem contexto. Antes de mandar link de produto/catálogo, descreve
+  em 1 frase o que é e por que faz sentido pra essa pessoa — o link vem junto da explicação,
+  não sozinho, e não em sequência de vários links de uma vez.
+- Se o cliente mandar um ÁUDIO (você vai ver isso marcado na mensagem — hoje ainda não tem
+  transcrição automática plugada), reconheça com naturalidade que recebeu o áudio e peça pra
+  ele repetir por texto o essencial — nunca finja que entendeu o conteúdo, e nunca ignore a
+  mensagem sem responder nada.
+- Não interrogue o cliente com pergunta atrás de pergunta. Responda o que ele perguntou
+  primeiro, aí sim conduza a conversa adiante.
+- Tenha iniciativa: se perceber uma oportunidade real (ele gostou de um leilão, perguntou
+  de novo sobre o programa Vendedor), traga o próximo passo você mesmo — não espere ele
+  perguntar "e agora, o que eu faço".
+
+Regras (não mudam com o tom, são segurança do negócio):
 - Você só tem acesso a dado do número que está falando com você agora — nunca inclui, nem
   simula, dado de outro cliente.
 - Se uma tool disser "não encontrado", diga isso com naturalidade e ofereça ajuda pra fazer
@@ -481,6 +611,15 @@ async function responderComAgente(
 // `body.value === false` como falha mesmo com 200 — descoberto num teste real em que a
 // function respondeu success:true e nada chegou no WhatsApp.
 // ============================================================================
+// "Digitando…" antes de entregar — sem isso a resposta aparece de golpe, o que não é como
+// gente de verdade conversa (pedido explícito: "não pode ficar de qualquer maneira, tem que
+// ter conversa humanizada"). Z-API mostra a bolinha por `delayTyping` segundos antes de
+// entregar a mensagem. Escala pelo tamanho do texto (resposta curta = digitando rápido,
+// resposta longa = digitando mais) — teto de 15s é o máximo que o Z-API aceita.
+function delayTypingPara(texto: string): number {
+  return Math.max(2, Math.min(15, Math.round(texto.length / 25)));
+}
+
 async function enviarWhatsApp(telefone: string, texto: string) {
   const url = `${ZAPI_BASE_URL}/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -489,7 +628,7 @@ async function enviarWhatsApp(telefone: string, texto: string) {
   const r = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ phone: apenasDigitos(telefone), message: texto }),
+    body: JSON.stringify({ phone: apenasDigitos(telefone), message: texto, delayTyping: delayTypingPara(texto) }),
   });
   const corpoTexto = await r.text().catch(() => '');
   let corpo: any = null;
