@@ -32,6 +32,9 @@ supabase secrets set \
   no Zeca: sem essa variável, ninguém vira Heloim, todo mundo cai no Zeca.
 - `WEBHOOK_SECRET`: reaproveitei o mesmo valor gerado na etapa da Evolution API
   (`8e2fdf2d2a026e7dd3cd7e86b1a0d24a0f5aa27af0985808`) — troque se preferir gerar um novo.
+- `EXECUTIVO_VENDEDOR_PHONE` (opcional): número do executivo que recebe os leads de "quero
+  ser vendedor" vindos de anúncio (Zeca encaminha automático). Sem configurar, usa o número
+  do João Paim (`21984942730`) como padrão — só precisa desse secret se for trocar.
 
 ## 3. Deploy — SEM verificação de JWT
 
@@ -84,10 +87,14 @@ ordem. Se depois de mandar uma mensagem de verdade pro número do bot ela não g
 resposta nenhuma:
 
 1. Vá em Supabase Dashboard → Edge Functions → `whatsapp-router` → Logs.
-2. Procure a linha `payload sem texto reconhecido` — ela mostra o JSON bruto que o
-   Z-API mandou de verdade.
+2. Procure a linha `payload sem texto/áudio/imagem/documento reconhecido` — ela mostra o
+   JSON bruto que o Z-API mandou de verdade.
 3. Me manda esse JSON (ou o campo que tem o texto da mensagem) que eu ajusto
    `extrairMensagem()` no `index.ts` em minutos.
+
+Mesma ressalva vale pros campos `audio`/`image`/`document` (22/08/2026, ainda não testados
+com payload real do Z-API) — se um cliente mandar áudio/imagem/documento e o Zeca não reagir
+nada, é o mesmo processo: olha o log, me manda o JSON.
 
 Mesma lógica vale se o envio falhar com 401/403 — provavelmente `ZAPI_CLIENT_TOKEN`
 errado ou ausente (com a segurança de conta ativada, é obrigatório).
