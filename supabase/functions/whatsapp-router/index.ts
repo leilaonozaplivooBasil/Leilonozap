@@ -1,24 +1,39 @@
-// whatsapp-router — expurgo Base44, etapa 1 (esqueleto).
+// whatsapp-router — expurgo Base44, etapa 1 (esqueleto), provedor Z-API.
 //
 // Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento,
 // qualquer número) e Heloim (assistente de TI, só o admin). Os dois falam pelo MESMO
 // número — quem decide qual responde é só o telefone de quem mandou a mensagem.
 //
-// Esta é a versão ENXUTA de propósito (v1 "por etapas"): recebe o webhook da Evolution
-// API v2, roteia, chama a Claude com o system prompt certo, devolve a resposta. SEM
-// tool-calling e SEM memória de conversa — cada mensagem é isolada. As duas coisas
-// voltam numa etapa seguinte, em cima deste esqueleto já testado ponta a ponta.
+// Esta é a versão ENXUTA de propósito (v1 "por etapas"): recebe o webhook do Z-API,
+// roteia, chama a Claude com o system prompt certo, devolve a resposta. SEM tool-calling
+// e SEM memória de conversa — cada mensagem é isolada. As duas coisas voltam numa etapa
+// seguinte, em cima deste esqueleto.
 //
-// Deploy TEM que ser com --no-verify-jwt (Evolution API não manda Authorization: Bearer
-// nenhum) — ver o guia de deploy que acompanha esta entrega.
+// 🔴 MUDANÇA DE PROVEDOR (22/08/2026): trocamos a Evolution API (self-hosted na VPS) pelo
+// Z-API (SaaS). Zero mudança na lógica de roteamento/Claude — só a "borda" com o WhatsApp
+// mudou. Diferenças que importam:
+//   - Z-API autentica por URL (instance id + token no path), não por header apikey.
+//   - Payload do webhook é mais simples: `phone`/`fromMe`/`isGroup` no nível raiz, sem
+//     precisar montar remoteJid a partir de sufixo @s.whatsapp.net.
+//   - ⚠️ O formato exato do corpo da mensagem (`text.message` vs `body` vs outro campo)
+//     NÃO está 100% confirmado — o Z-API já mudou isso entre versões. Se a extração falhar,
+//     o payload bruto vai pro log (ver extrairMensagem) — é assim que corrigimos o campo
+//     certo no primeiro teste real, sem chutar.
+//
+// Deploy TEM que ser com --no-verify-jwt (Z-API não manda Authorization: Bearer nenhum)
+// — ver o guia de deploy que acompanha esta entrega.
 
 // ============================================================================
 // Env vars (secrets desta function — `supabase secrets set ...`)
 // ============================================================================
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
-const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL')!;           // ex: https://evo.seudominio.com
-const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY')!;           // = AUTHENTICATION_API_KEY da Evolution
-const EVOLUTION_INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME')!;
+const ZAPI_BASE_URL = (Deno.env.get('ZAPI_BASE_URL') || 'https://api.z-api.io').replace(/\/+$/, '');
+const ZAPI_INSTANCE_ID = Deno.env.get('ZAPI_INSTANCE_ID')!;
+const ZAPI_TOKEN = Deno.env.get('ZAPI_TOKEN')!;
+// Token de "Segurança da conta" do painel Z-API (Segurança > Token de segurança da conta).
+// Vai como header Client-Token em toda chamada pra API deles — sem ele, com a segurança
+// ativada na conta, o envio leva 401/403 mesmo com instance id + token corretos.
+const ZAPI_CLIENT_TOKEN = Deno.env.get('ZAPI_CLIENT_TOKEN') || '';
 const ADMIN_PHONE_NUMBER = Deno.env.get('ADMIN_PHONE_NUMBER') || '';    // só dígitos, com DDI: 5511999999999
 const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') || '';            // opcional — ver validarSeguranca()
 
@@ -43,25 +58,23 @@ function json(body: unknown, status = 200) {
 }
 
 // ============================================================================
-// Segurança — header opcional `webhook-secret` (ou `apikey`, mesmo nome que a própria
-// Evolution API usa pros clientes dela). Se WEBHOOK_SECRET não estiver configurado,
-// não valida nada (comportamento de quem ainda está testando o primeiro deploy) — mas
-// loga um aviso, porque isso não deveria ficar assim em produção.
+// Segurança — o painel do Z-API configura o webhook só como uma URL (sem campo de header
+// customizado), então o segredo viaja por query string (?secret=...). Mantém também a
+// checagem por header, de graça, caso um dia isso mude de provedor de novo. Se
+// WEBHOOK_SECRET não estiver configurado, não valida nada — mas loga um aviso.
 // ============================================================================
-function validarSeguranca(req: Request): boolean {
+function validarSeguranca(req: Request, url: URL): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn('[whatsapp-router] WEBHOOK_SECRET não configurado — endpoint sem validação de origem.');
     return true;
   }
-  const recebido = req.headers.get('webhook-secret') || req.headers.get('apikey');
+  const recebido = url.searchParams.get('secret') || req.headers.get('webhook-secret') || req.headers.get('apikey');
   return recebido === WEBHOOK_SECRET;
 }
 
 // ============================================================================
-// Telefone — remoteJid/participant do WhatsApp vêm como "5511999999999@s.whatsapp.net"
-// (DM) ou com sufixo @g.us (grupo) / @lid (dispositivo vinculado). Comparação por
-// últimos dígitos: o 9º dígito do celular é inconsistente entre o que o WhatsApp manda
-// e o que fica salvo em ADMIN_PHONE_NUMBER/app_users.phone.
+// Telefone — comparação por últimos dígitos: o 9º dígito do celular é inconsistente
+// entre o que o Z-API manda e o que fica salvo em ADMIN_PHONE_NUMBER/app_users.phone.
 // ============================================================================
 function apenasDigitos(v: string | null | undefined): string {
   return (v || '').replace(/\D/g, '');
@@ -77,36 +90,38 @@ function ehAdmin(remetente: string): boolean {
 }
 
 // ============================================================================
-// Payload da Evolution API v2 — evento de mensagem recebida. O nome do evento varia
-// de formatação conforme a versão/config (WEBHOOK_BY_EVENTS liga/desliga), então aceita
-// tanto "messages.upsert" (o formato real do payload) quanto "MESSAGES_UPSERT".
+// Payload do Z-API — webhook "Ao receber" (configurar especificamente esse, não o "ao
+// enviar"/"status"/"conectar" — cada evento tem seu próprio campo de URL no painel deles).
+// `phone` e `fromMe` vêm no nível raiz, sem precisar montar/desmontar JID como na Evolution
+// API. O campo do TEXTO da mensagem é o único ponto de incerteza real — ver o aviso no
+// topo do arquivo.
 // ============================================================================
-function ehMensagemNova(evento: unknown): boolean {
-  const e = String(evento || '').toUpperCase().replace(/\./g, '_');
-  return e === 'MESSAGES_UPSERT';
-}
-
 type MensagemExtraida = {
-  remoteJid: string;    // pra QUEM responder (o chat — grupo ou DM)
-  remetente: string;    // QUEM mandou (participant em grupo, remoteJid em DM) — usado no roteamento
+  remetente: string; // telefone de quem mandou — usado tanto pro roteamento quanto pra resposta
   texto: string;
 };
 
 function extrairMensagem(body: any): MensagemExtraida | null {
-  if (!ehMensagemNova(body?.event)) return null;
+  if (body?.fromMe === true) return null;   // eco do que o próprio bot mandou — nunca processa, senão vira loop
+  if (body?.isGroup === true) return null;  // grupo — fora do escopo desta etapa (Zeca/Heloim são 1:1)
 
-  const data = body?.data;
-  const fromMe = !!data?.key?.fromMe;
-  if (fromMe) return null; // eco do que o próprio bot mandou — nunca processa, senão vira loop
+  const remetente: string | undefined = body?.phone ? String(body.phone) : undefined;
+  if (!remetente) return null;
 
-  const remoteJid: string | undefined = data?.key?.remoteJid;
-  const remetente: string | undefined = data?.key?.participant || data?.key?.remoteJid;
-  if (!remoteJid || !remetente) return null;
+  // Tenta os formatos mais prováveis pro corpo do texto. Se nenhum bater, loga o payload
+  // bruto — é assim que a gente ajusta o campo certo no primeiro teste real, sem chutar.
+  const texto: unknown = body?.text?.message ?? body?.body ??
+    (typeof body?.message === 'string' ? body.message : body?.message?.text);
 
-  const texto: string | undefined = data?.message?.conversation || data?.message?.extendedTextMessage?.text;
-  if (!texto || !texto.trim()) return null; // áudio, imagem, figurinha etc. — fora do escopo desta etapa
+  if (!texto || !String(texto).trim()) {
+    console.warn(
+      '[whatsapp-router] payload sem texto reconhecido — ajustar extrairMensagem() com o formato real:',
+      JSON.stringify(body).slice(0, 1000)
+    );
+    return null;
+  }
 
-  return { remoteJid, remetente, texto: texto.trim() };
+  return { remetente, texto: String(texto).trim() };
 }
 
 // ============================================================================
@@ -190,17 +205,22 @@ async function chamarClaude(system: string, mensagemUsuario: string): Promise<st
 }
 
 // ============================================================================
-// Evolution API — envio da resposta de volta pro WhatsApp.
+// Z-API — envio da resposta de volta pro WhatsApp. Autenticação por URL (instance id +
+// token no path), mais o header Client-Token se a "Segurança da conta" estiver ativada.
 // ============================================================================
-async function enviarWhatsApp(remoteJid: string, texto: string) {
-  const r = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE_NAME}`, {
+async function enviarWhatsApp(telefone: string, texto: string) {
+  const url = `${ZAPI_BASE_URL}/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (ZAPI_CLIENT_TOKEN) headers['Client-Token'] = ZAPI_CLIENT_TOKEN;
+
+  const r = await fetch(url, {
     method: 'POST',
-    headers: { apikey: EVOLUTION_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ number: remoteJid, text: texto }),
+    headers,
+    body: JSON.stringify({ phone: apenasDigitos(telefone), message: texto }),
   });
   if (!r.ok) {
     const corpo = await r.text().catch(() => '');
-    throw new Error(`Evolution API ${r.status} ao enviar resposta: ${corpo}`);
+    throw new Error(`Z-API ${r.status} ao enviar resposta: ${corpo}`);
   }
 }
 
@@ -208,11 +228,13 @@ async function enviarWhatsApp(remoteJid: string, texto: string) {
 // Handler HTTP
 // ============================================================================
 Deno.serve(async (req) => {
+  const url = new URL(req.url);
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== 'POST') return json({ success: false, error: 'method not allowed' }, 405);
 
-  if (!validarSeguranca(req)) {
-    console.warn('[whatsapp-router] webhook-secret inválido ou ausente — recusado.');
+  if (!validarSeguranca(req, url)) {
+    console.warn('[whatsapp-router] segredo do webhook inválido ou ausente — recusado.');
     return json({ success: false, error: 'unauthorized' }, 401);
   }
 
@@ -228,12 +250,12 @@ Deno.serve(async (req) => {
   try {
     msg = extrairMensagem(body);
   } catch (e) {
-    console.error('[whatsapp-router] falha ao interpretar payload da Evolution API:', e, JSON.stringify(body).slice(0, 500));
-    return json({ success: false, error: 'payload inesperado' }, 200); // 200 pra Evolution não ficar reentregando
+    console.error('[whatsapp-router] falha ao interpretar payload do Z-API:', e, JSON.stringify(body).slice(0, 500));
+    return json({ success: false, error: 'payload inesperado' }, 200); // 200 pro Z-API não ficar reentregando
   }
 
-  // Evento que não é mensagem de texto nova (status, reação, mídia, eco do próprio bot,
-  // etc.) — ignora sem erro, é tráfego normal do webhook.
+  // Evento que não é mensagem de texto nova (status, eco do próprio bot, grupo, mídia
+  // sem texto reconhecido etc.) — ignora sem erro, é tráfego normal do webhook.
   if (!msg) return json({ success: true, ignored: true });
 
   try {
@@ -242,13 +264,13 @@ Deno.serve(async (req) => {
     const systemPrompt = admin ? SYSTEM_PROMPT_HELOIM : montarSystemPromptZeca(cliente);
 
     const resposta = await chamarClaude(systemPrompt, msg.texto);
-    await enviarWhatsApp(msg.remoteJid, resposta);
+    await enviarWhatsApp(msg.remetente, resposta);
 
     return json({ success: true });
   } catch (e) {
     console.error('[whatsapp-router] erro processando mensagem de', msg.remetente, ':', e);
-    // 200 mesmo no erro: já tentamos, não queremos a Evolution API reentregando o mesmo
-    // webhook em loop. O erro fica no log pra investigar.
+    // 200 mesmo no erro: já tentamos, não queremos o Z-API reentregando o mesmo webhook
+    // em loop. O erro fica no log pra investigar.
     return json({ success: false, error: String((e as Error)?.message || e) });
   }
 });
