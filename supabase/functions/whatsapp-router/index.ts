@@ -1,13 +1,13 @@
-// whatsapp-router — expurgo Base44, etapa 1 (esqueleto), provedor Z-API.
+// whatsapp-router — expurgo Base44, etapa 2 (memória + tool-calling), provedor Z-API.
 //
 // Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento,
 // qualquer número) e Heloim (assistente de TI, só o admin). Os dois falam pelo MESMO
 // número — quem decide qual responde é só o telefone de quem mandou a mensagem.
 //
-// Esta é a versão ENXUTA de propósito (v1 "por etapas"): recebe o webhook do Z-API,
-// roteia, chama a Claude com o system prompt certo, devolve a resposta. SEM tool-calling
-// e SEM memória de conversa — cada mensagem é isolada. As duas coisas voltam numa etapa
-// seguinte, em cima deste esqueleto.
+// Etapa 2 (22/08/2026): recebe o webhook do Z-API, roteia, carrega memória de conversa
+// (ai_conversas), chama a Claude com o system prompt certo E tool-calling de leitura real
+// (saldo/pedidos/leilões pro Zeca; métricas de sistema pra Heloim), devolve a resposta.
+// Heloim é só-consulta — nenhuma tool escreve dado nenhum.
 //
 // 🔴 MUDANÇA DE PROVEDOR (22/08/2026): trocamos a Evolution API (self-hosted na VPS) pelo
 // Z-API (SaaS). Zero mudança na lógica de roteamento/Claude — só a "borda" com o WhatsApp
@@ -99,7 +99,7 @@ function ehAdmin(remetente: string): boolean {
 type MensagemExtraida = {
   remetente: string; // telefone de quem mandou — usado tanto pro roteamento quanto pra resposta
   texto: string;
-  messageId: string | null; // usado pra idempotência — ver dedupeOuMarcarProcessada()
+  messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
 function extrairMensagem(body: any): MensagemExtraida | null {
@@ -151,17 +151,197 @@ async function buscarClientePorTelefone(remetente: string): Promise<{ nome?: str
 }
 
 // ============================================================================
+// Memória de conversa — sem isto cada mensagem chega na Claude sem contexto nenhum do
+// que já foi dito. Guarda por remetente+agente (tabela ai_conversas). Falha aqui NUNCA
+// derruba a conversa: memória é conveniência, não requisito.
+// ============================================================================
+type Turno = { role: 'user' | 'assistant'; content: string };
+const HISTORICO_MAX_MSGS = 12; // 6 idas-e-voltas — contexto suficiente, custo de token baixo
+
+async function carregarHistorico(remetente: string, agente: string): Promise<Turno[]> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/ai_conversas?select=role,content&remetente=eq.${encodeURIComponent(remetente)}` +
+        `&agente=eq.${agente}&order=created_at.desc&limit=${HISTORICO_MAX_MSGS}`,
+      { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
+    );
+    if (!r.ok) return [];
+    const rows = await r.json().catch(() => []);
+    return (Array.isArray(rows) ? rows : []).reverse();
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao carregar histórico (segue sem memória):', e);
+    return [];
+  }
+}
+
+async function salvarTurno(remetente: string, agente: string, role: 'user' | 'assistant', content: string) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/ai_conversas`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ remetente, agente, role, content }),
+    });
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao salvar turno (memória segue incompleta):', e);
+  }
+}
+
+// ============================================================================
+// Tools — cada uma é uma consulta de LEITURA no Supabase. Nenhuma escreve nada (Heloim é
+// só-consulta nesta versão; Zeca nunca deveria escrever mesmo). Erro de query vira
+// tool_result de erro pra Claude, que decide como contar isso pro usuário — nunca derruba
+// a conversa.
+// ============================================================================
+type ToolDef = {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+  executar: (input: any, ctx: { remetente: string }) => Promise<unknown>;
+};
+
+function sbRest(path: string, opts: RequestInit = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json', ...(opts.headers || {}),
+    },
+  });
+}
+
+const TOOLS_ZECA: ToolDef[] = [
+  {
+    name: 'consultar_saldo',
+    description: 'Consulta o saldo disponível e reservado da carteira do cliente que está falando agora.',
+    input_schema: { type: 'object', properties: {} },
+    executar: async (_input, ctx) => {
+      const cliente = await buscarClienteCompletoPorTelefone(ctx.remetente);
+      if (!cliente) return { encontrado: false, mensagem: 'Nenhum cadastro encontrado para este telefone.' };
+      return {
+        encontrado: true,
+        nome: cliente.full_name,
+        saldo_disponivel: Number(cliente.saldo_disponivel || 0),
+        saldo_reservado: Number(cliente.saldo_reservado || 0),
+      };
+    },
+  },
+  {
+    name: 'consultar_pedidos',
+    description: 'Lista os pedidos/compras mais recentes do cliente que está falando agora (até 5).',
+    input_schema: { type: 'object', properties: {} },
+    executar: async (_input, ctx) => {
+      const ultimos8 = ultimosDigitos(ctx.remetente, 8);
+      const r = await sbRest(
+        `catalog_sales?select=id,product_title,total_amount,status,fulfillment_status,tracking_code,created_at` +
+          `&buyer_phone=ilike.*${ultimos8}*&order=created_at.desc&limit=5`
+      );
+      const rows = await r.json().catch(() => []);
+      return { pedidos: Array.isArray(rows) ? rows : [] };
+    },
+  },
+  {
+    name: 'consultar_leiloes_ativos',
+    description: 'Lista os leilões ativos no momento (até 8), ordenados por quem termina primeiro.',
+    input_schema: { type: 'object', properties: {} },
+    executar: async () => {
+      const r = await sbRest(`auctions?select=id,title,current_price,end_time&status=eq.active&order=end_time.asc&limit=8`);
+      const rows = await r.json().catch(() => []);
+      return { leiloes: Array.isArray(rows) ? rows : [] };
+    },
+  },
+];
+
+const TOOLS_HELOIM: ToolDef[] = [
+  {
+    name: 'vendas_hoje',
+    description: 'Total e quantidade de vendas pagas hoje (desde 00:00 UTC).',
+    input_schema: { type: 'object', properties: {} },
+    executar: async () => {
+      const hoje = new Date();
+      hoje.setUTCHours(0, 0, 0, 0);
+      const r = await sbRest(`catalog_sales?select=total_amount&status=eq.paid&created_at=gte.${hoje.toISOString()}`);
+      const rows = await r.json().catch(() => []);
+      const lista = Array.isArray(rows) ? rows : [];
+      const total = lista.reduce((s: number, x: any) => s + Number(x.total_amount || 0), 0);
+      return { quantidade: lista.length, total_amount: Math.round(total * 100) / 100 };
+    },
+  },
+  {
+    name: 'produtos_sem_estoque',
+    description: 'Quantidade e amostra de produtos publicados na loja com quantity zerada ou negativa.',
+    input_schema: { type: 'object', properties: {} },
+    executar: async () => {
+      const r = await sbRest(`products?select=id,description,quantity&catalog_active=eq.true&quantity=lte.0&limit=10`);
+      const rows = await r.json().catch(() => []);
+      const rc = await sbRest(`products?select=id&catalog_active=eq.true&quantity=lte.0`, {
+        headers: { Prefer: 'count=exact', Range: '0-0' },
+      });
+      const total = rc.headers.get('content-range')?.split('/')?.[1] || String((Array.isArray(rows) ? rows : []).length);
+      return { total: Number(total) || 0, amostra: Array.isArray(rows) ? rows : [] };
+    },
+  },
+  {
+    name: 'pedidos_pendentes_envio',
+    description: 'Amostra de pedidos pagos que ainda estão aguardando envio (fulfillment_status = a_enviar).',
+    input_schema: { type: 'object', properties: {} },
+    executar: async () => {
+      const r = await sbRest(
+        `catalog_sales?select=id,product_title,buyer_name,created_at&fulfillment_status=eq.a_enviar&order=created_at.asc&limit=10`
+      );
+      const rows = await r.json().catch(() => []);
+      return { amostra: Array.isArray(rows) ? rows : [] };
+    },
+  },
+  {
+    name: 'resumo_carteiras',
+    description: 'Soma total de saldo disponível e reservado de todos os clientes (dinheiro parado no sistema).',
+    input_schema: { type: 'object', properties: {} },
+    executar: async () => {
+      const r = await sbRest(`app_users?select=saldo_disponivel,saldo_reservado&or=(saldo_disponivel.gt.0,saldo_reservado.gt.0)`);
+      const rows = await r.json().catch(() => []);
+      const lista = Array.isArray(rows) ? rows : [];
+      const disp = lista.reduce((s: number, x: any) => s + Number(x.saldo_disponivel || 0), 0);
+      const res = lista.reduce((s: number, x: any) => s + Number(x.saldo_reservado || 0), 0);
+      return { saldo_disponivel_total: Math.round(disp * 100) / 100, saldo_reservado_total: Math.round(res * 100) / 100 };
+    },
+  },
+];
+
+async function buscarClienteCompletoPorTelefone(remetente: string): Promise<any | null> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const ultimos8 = ultimosDigitos(remetente, 8);
+    const r = await sbRest(`app_users?select=full_name,email,saldo_disponivel,saldo_reservado&phone=ilike.*${ultimos8}*&limit=1`);
+    if (!r.ok) return null;
+    const rows = await r.json().catch(() => []);
+    return Array.isArray(rows) ? rows[0] || null : null;
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao consultar cliente completo:', e);
+    return null;
+  }
+}
+
+// ============================================================================
 // System prompts
 // ============================================================================
 const SYSTEM_PROMPT_HELOIM = `Você é a Heloim, assistente técnica de TI do Leilão NoZap, falando só com o admin no WhatsApp.
 
 Tom: técnico, direto, sem enrolação.
 
-Nesta versão você NÃO tem acesso a ferramenta nenhuma de consulta ao sistema — isso
-chega numa etapa seguinte. Se o admin pedir um relatório ou dado que você não tem como
-verificar agora, diga isso claramente. Nunca invente número, status ou dado do sistema.
-Ajude com diagnóstico geral, dúvidas técnicas e orientação — não finja ter executado
-uma consulta que não fez.`;
+Você é SOMENTE CONSULTA nesta versão — tem tools de leitura (vendas_hoje,
+produtos_sem_estoque, pedidos_pendentes_envio, resumo_carteiras) e NENHUMA tool que altera
+dado nenhum. Se o admin pedir uma ação que muda estado (pausar leilão, reprocessar pedido,
+mexer em saldo, etc.), diga claramente que essa ação ainda não está disponível por aqui —
+não finja que executou, e não invente que fez algo.
+
+Sempre que usar uma tool, cite o número real que ela devolveu — nunca arredonde ou estime
+por conta própria. Se pedirem um dado que nenhuma tool cobre, diga isso claramente em vez
+de inventar.`;
 
 // Conhecimento parado sobre o programa Vendedor — só o que está confirmado no código-fonte
 // (SejaVendedor.jsx + createSellerAdhesionPayment.js), 22/08/2026. Licenciado/Parceiro/rede
@@ -196,19 +376,40 @@ function montarSystemPromptZeca(cliente: { nome?: string } | null): string {
 Tom: consultivo, simpático, brasileiro, direto. Sem formalidade excessiva.
 
 Seu papel: explicar como funcionam os leilões, o catálogo de produtos, o programa Rank
-Premiado, o programa Vendedor, e ajudar quem ainda não é cadastrado a se cadastrar.
+Premiado, o programa Vendedor, ajudar quem ainda não é cadastrado a se cadastrar, e usar
+suas tools pra responder com dado real:
+- consultar_saldo — saldo disponível/reservado do número que está falando agora.
+- consultar_pedidos — pedidos recentes desse mesmo número.
+- consultar_leiloes_ativos — leilões abertos agora, com preço atual e horário de encerramento.
 ${CONHECIMENTO_VENDEDOR}
 
-Nesta versão você NÃO tem acesso a consulta de saldo, pedidos ou leilões ativos em tempo
-real — isso chega numa etapa seguinte. Se pedirem algo que exige dado ao vivo do sistema
-(estoque de um produto específico, status de um pedido, etc.), diga que vai encaminhar ou
-que essa consulta ainda não está disponível por aqui — nunca invente número.${contexto}`;
+Regras:
+- Você só tem acesso a dado do número que está falando com você agora — nunca inclui, nem
+  simula, dado de outro cliente.
+- Se uma tool disser "não encontrado", diga isso com naturalidade e ofereça ajuda pra fazer
+  o primeiro cadastro/compra — não insista tentando de novo.
+- Sempre que usar uma tool, cite o número real que ela devolveu — nunca arredonde, estime
+  ou invente um valor por conta própria.
+- Pra dado que nenhuma tool cobre (estoque de um produto específico, por exemplo), diga que
+  vai encaminhar — nunca invente.
+- Se a pergunta for sobre algo fora do que você resolve (reclamação grave, problema de
+  pagamento não resolvido, pedido de reembolso), diga que vai encaminhar para um humano —
+  não tente resolver sozinho.${contexto}`;
 }
 
 // ============================================================================
-// Claude — chamada simples (sem tool loop nesta etapa).
+// Claude — loop de tool use via Messages API (fetch cru, sem SDK).
 // ============================================================================
-async function chamarClaude(system: string, mensagemUsuario: string): Promise<string> {
+async function chamarClaude(system: string, messages: any[], tools: ToolDef[]) {
+  const body = {
+    model: CLAUDE_MODEL,
+    max_tokens: 1024,
+    system,
+    messages,
+    ...(tools.length
+      ? { tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema })) }
+      : {}),
+  };
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -216,21 +417,58 @@ async function chamarClaude(system: string, mensagemUsuario: string): Promise<st
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: 'user', content: mensagemUsuario }],
-    }),
+    body: JSON.stringify(body),
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`Anthropic ${r.status}: ${j?.error?.message || JSON.stringify(j)}`);
-  const texto = (j.content || [])
-    .filter((b: any) => b.type === 'text')
-    .map((b: any) => b.text)
-    .join('\n')
-    .trim();
-  return texto || 'Desculpa, não consegui montar uma resposta agora. Pode repetir?';
+  return j;
+}
+
+async function responderComAgente(
+  systemPrompt: string,
+  tools: ToolDef[],
+  historico: Turno[],
+  mensagemUsuario: string,
+  remetente: string
+): Promise<string> {
+  const messages: any[] = [
+    ...historico.map((h) => ({ role: h.role, content: h.content })),
+    { role: 'user', content: mensagemUsuario },
+  ];
+
+  const toolsPorNome = Object.fromEntries(tools.map((t) => [t.name, t]));
+  const MAX_RODADAS_TOOL = 4;
+
+  for (let rodada = 0; rodada < MAX_RODADAS_TOOL; rodada++) {
+    const resp = await chamarClaude(systemPrompt, messages, tools);
+
+    if (resp.stop_reason !== 'tool_use') {
+      const textoFinal = (resp.content || [])
+        .filter((b: any) => b.type === 'text')
+        .map((b: any) => b.text)
+        .join('\n')
+        .trim();
+      return textoFinal || 'Desculpa, não consegui montar uma resposta agora. Pode repetir?';
+    }
+
+    // A Claude pediu tool(s) — executa cada uma e devolve o resultado na próxima rodada.
+    messages.push({ role: 'assistant', content: resp.content });
+    const toolResults = [];
+    for (const bloco of resp.content) {
+      if (bloco.type !== 'tool_use') continue;
+      const tool = toolsPorNome[bloco.name];
+      let resultado: unknown;
+      try {
+        resultado = tool ? await tool.executar(bloco.input, { remetente }) : { erro: 'tool desconhecida' };
+      } catch (e) {
+        resultado = { erro: String((e as Error)?.message || e) };
+      }
+      toolResults.push({ type: 'tool_result', tool_use_id: bloco.id, content: JSON.stringify(resultado) });
+    }
+    messages.push({ role: 'user', content: toolResults });
+  }
+
+  return 'Isso está exigindo mais consultas do que eu consigo fazer de uma vez — tenta reformular em uma pergunta mais direta?';
 }
 
 // ============================================================================
@@ -272,8 +510,7 @@ async function enviarWhatsApp(telefone: string, texto: string) {
 // cliente recebe duas respostas (visto ao vivo: "como se tivesse recebido comandos em
 // lugares diferentes"). Por isso agora só extrai/valida de forma síncrona e devolve 200
 // IMEDIATAMENTE — Claude e Z-API rodam depois, em background, sem o Z-API esperando.
-// ============================================================================
-// ============================================================================
+//
 // Idempotência — descoberto em produção que responder rápido (acima) NÃO bastou: o
 // Z-API reentrega o mesmo webhook de qualquer forma ("at-least-once delivery", comum em
 // provedor de webhook, não necessariamente bug do lado deles). INSERT na tabela com
@@ -315,10 +552,19 @@ async function jaProcessada(messageId: string | null): Promise<boolean> {
 async function processarMensagem(msg: MensagemExtraida) {
   try {
     const admin = ehAdmin(msg.remetente);
+    const agente = admin ? 'heloim' : 'zeca';
     const cliente = admin ? null : await buscarClientePorTelefone(msg.remetente);
     const systemPrompt = admin ? SYSTEM_PROMPT_HELOIM : montarSystemPromptZeca(cliente);
+    const tools = admin ? TOOLS_HELOIM : TOOLS_ZECA;
 
-    const resposta = await chamarClaude(systemPrompt, msg.texto);
+    const historico = await carregarHistorico(msg.remetente, agente);
+    const resposta = await responderComAgente(systemPrompt, tools, historico, msg.texto, msg.remetente);
+
+    await Promise.all([
+      salvarTurno(msg.remetente, agente, 'user', msg.texto),
+      salvarTurno(msg.remetente, agente, 'assistant', resposta),
+    ]);
+
     await enviarWhatsApp(msg.remetente, resposta);
   } catch (e) {
     console.error('[whatsapp-router] erro processando mensagem de', msg.remetente, ':', e);
