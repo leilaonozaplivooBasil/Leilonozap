@@ -207,6 +207,12 @@ async function chamarClaude(system: string, mensagemUsuario: string): Promise<st
 // ============================================================================
 // Z-API — envio da resposta de volta pro WhatsApp. Autenticação por URL (instance id +
 // token no path), mais o header Client-Token se a "Segurança da conta" estiver ativada.
+//
+// ⚠️ O Z-API pode devolver HTTP 200 com um erro DENTRO do corpo (ex: número inválido,
+// não é WhatsApp) — status HTTP sozinho não prova que a mensagem foi aceita de verdade.
+// Por isso sempre loga o corpo da resposta (sucesso ou erro) e trata `body.error`/
+// `body.value === false` como falha mesmo com 200 — descoberto num teste real em que a
+// function respondeu success:true e nada chegou no WhatsApp.
 // ============================================================================
 async function enviarWhatsApp(telefone: string, texto: string) {
   const url = `${ZAPI_BASE_URL}/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
@@ -218,9 +224,15 @@ async function enviarWhatsApp(telefone: string, texto: string) {
     headers,
     body: JSON.stringify({ phone: apenasDigitos(telefone), message: texto }),
   });
-  if (!r.ok) {
-    const corpo = await r.text().catch(() => '');
-    throw new Error(`Z-API ${r.status} ao enviar resposta: ${corpo}`);
+  const corpoTexto = await r.text().catch(() => '');
+  let corpo: any = null;
+  try { corpo = JSON.parse(corpoTexto); } catch { /* corpo não era JSON — segue com corpoTexto bruto */ }
+
+  console.log('[whatsapp-router] resposta do Z-API ao enviar:', r.status, corpoTexto.slice(0, 500));
+
+  if (!r.ok) throw new Error(`Z-API ${r.status} ao enviar resposta: ${corpoTexto}`);
+  if (corpo && (corpo.error || corpo.value === false)) {
+    throw new Error(`Z-API recusou o envio (HTTP 200, mas corpo indica falha): ${corpoTexto}`);
   }
 }
 
