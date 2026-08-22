@@ -42,6 +42,11 @@ const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') || '';            // opcio
 // redeploy setando o secret EXECUTIVO_VENDEDOR_PHONE.
 const EXECUTIVO_VENDEDOR_PHONE = Deno.env.get('EXECUTIVO_VENDEDOR_PHONE') || '21984942730';
 
+// Transcrição de áudio (Whisper) — mesmo serviço que já era usado no Base44
+// (base44/functions/transcribeAudio/entry.ts). Opcional: sem a chave, Zeca segue
+// funcionando, só sem entender o CONTEÚDO do áudio (ver transcreverAudio()).
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
+
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -104,6 +109,7 @@ function ehAdmin(remetente: string): boolean {
 type MensagemExtraida = {
   remetente: string; // telefone de quem mandou — usado tanto pro roteamento quanto pra resposta
   texto: string; // pra áudio/imagem/documento, um texto sintético descrevendo o que chegou (ver extrairMensagem)
+  audioUrl: string | null; // se veio áudio, a URL do arquivo — ver transcreverAudio()
   messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
@@ -123,21 +129,26 @@ function extrairMensagem(body: any): MensagemExtraida | null {
     (typeof body?.message === 'string' ? body.message : body?.message?.text);
 
   if (texto && String(texto).trim()) {
-    return { remetente, texto: String(texto).trim(), messageId: messageIdStr };
+    return { remetente, texto: String(texto).trim(), audioUrl: null, messageId: messageIdStr };
   }
 
-  // Sem transcrição de áudio configurada (nenhum provedor de speech-to-text plugado ainda):
-  // não dá pra saber O QUE o cliente falou, mas dá pra saber QUE ele mandou áudio — e isso
-  // já é sinal de perfil (ver framework DISC no system prompt). Zeca nunca fica mudo: em vez
-  // de ignorar o webhook, gera uma mensagem sintética pra ele reagir com naturalidade.
+  // Áudio: extrai a URL do arquivo pra transcrever depois (em background — ver
+  // transcreverAudio() e processarMensagem()). Tenta os campos mais prováveis do Z-API; se
+  // nenhum bater, ainda assim NUNCA fica muda — vira texto sintético mesmo sem URL.
   if (body?.audio) {
-    return { remetente, texto: '[o cliente mandou uma mensagem de ÁUDIO — sem transcrição disponível ainda]', messageId: messageIdStr };
+    const audioUrl: unknown = body.audio?.audioUrl ?? body.audio?.url ?? body.audio?.audioURL ?? null;
+    return {
+      remetente,
+      texto: '[o cliente mandou uma mensagem de ÁUDIO — sem transcrição disponível ainda]',
+      audioUrl: audioUrl ? String(audioUrl) : null,
+      messageId: messageIdStr,
+    };
   }
   if (body?.image) {
-    return { remetente, texto: '[o cliente mandou uma IMAGEM]' + (body.image?.caption ? `, com a legenda: "${body.image.caption}"` : ' (sem legenda)'), messageId: messageIdStr };
+    return { remetente, texto: '[o cliente mandou uma IMAGEM]' + (body.image?.caption ? `, com a legenda: "${body.image.caption}"` : ' (sem legenda)'), audioUrl: null, messageId: messageIdStr };
   }
   if (body?.document) {
-    return { remetente, texto: `[o cliente mandou um DOCUMENTO${body.document?.fileName ? `: "${body.document.fileName}"` : ''}]`, messageId: messageIdStr };
+    return { remetente, texto: `[o cliente mandou um DOCUMENTO${body.document?.fileName ? `: "${body.document.fileName}"` : ''}]`, audioUrl: null, messageId: messageIdStr };
   }
 
   console.warn(
@@ -145,6 +156,44 @@ function extrairMensagem(body: any): MensagemExtraida | null {
     JSON.stringify(body).slice(0, 1000)
   );
   return null;
+}
+
+// ============================================================================
+// Transcrição de áudio — Whisper (OpenAI), mesmo serviço já usado antes no Base44. Roda em
+// background (chamada de dentro de processarMensagem, nunca no caminho síncrono do webhook).
+// Sem OPENAI_API_KEY configurada, ou qualquer falha no meio do caminho, devolve null — quem
+// chama já sabe lidar com "sem transcrição" (mensagem sintética do extrairMensagem).
+// ============================================================================
+async function transcreverAudio(audioUrl: string): Promise<string | null> {
+  if (!OPENAI_API_KEY) return null;
+  try {
+    const audioResp = await fetch(audioUrl);
+    if (!audioResp.ok) {
+      console.error('[whatsapp-router] falha ao baixar áudio do Z-API:', audioResp.status);
+      return null;
+    }
+    const audioBlob = await audioResp.blob();
+
+    const form = new FormData();
+    form.append('file', audioBlob, 'audio.ogg');
+    form.append('model', 'whisper-1');
+    form.append('language', 'pt');
+
+    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: form,
+    });
+    if (!r.ok) {
+      console.error('[whatsapp-router] Whisper recusou a transcrição:', r.status, await r.text().catch(() => ''));
+      return null;
+    }
+    const data = await r.json();
+    return typeof data?.text === 'string' && data.text.trim() ? data.text.trim() : null;
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao transcrever áudio (segue sem transcrição):', e);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -394,49 +443,52 @@ Sempre que usar uma tool, cite o número real que ela devolveu — nunca arredon
 por conta própria. Se pedirem um dado que nenhuma tool cobre, diga isso claramente em vez
 de inventar.`;
 
-// Conhecimento parado sobre a plataforma e a carreira de revenda — levantado direto do
-// código-fonte em 22/08/2026 (careerLevels.js + páginas de venda + endpoints de pagamento).
-// Regra de ouro: só afirma valor de adesão/comissão quando está marcado CONFIRMADO abaixo.
-// O que está como "não confirmado" só existe no arquivo-fonte do front, sem um endpoint de
-// pagamento comprovando que é isso mesmo que se cobra hoje — pode ter mudado no banco.
+// Conhecimento parado sobre a plataforma e a carreira de revenda — atualizado em 22/08/2026
+// com base em docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md, o documento interno marcado como
+// "fonte de verdade absoluta" pro time técnico (transcrição da apresentação oficial de
+// negócio entregue pelo dono em 04/08/2026, validada seção 10 do documento: "motor de
+// comissão 100% alinhado ao documento oficial, zero alteração necessária"). Todos os valores
+// abaixo são CONFIRMADOS por essa fonte — pode afirmar com confiança.
 const CONHECIMENTO_PROGRAMAS = `
 Como funciona a plataforma:
 - Leilão: deposita na Carteira Digital (PIX), o lance reserva valor+frete; se for superado,
   volta tudo + bônus de 10% pra usar na Loja Virtual; se arrematar, o valor reservado paga o
-  produto, sem cobrança extra.
+  produto, sem cobrança extra. Indicou quem arrematou? Ganha 5% do valor do produto (sem
+  frete), pago na hora do martelo.
 - Loja Virtual: venda direta por catálogo, sem dinâmica de lance.
-- Produtos vêm de devolução de 7 dias (sem garantia de loja), direto de fábrica, ou estoque
-  próprio negociado em volume — por isso o preço é mais baixo que loja tradicional.
+- Produtos vêm de devolução de 7 dias (até 80% off da fábrica, revendido até 60% off do
+  mercado — margem até 100%) ou direto de fábrica (6.500+ produtos novos, sem intermediário).
+  Entrega no mesmo dia em todo o RJ (pedido até 19h devolução / 11h fábrica).
 
-Carreira de revenda (comissão total distribuída por venda = 30%):
+Carreira de revenda — tabela oficial de comissão por venda direta (todo cargo pago tem
+suporte de um executivo de contas dedicado):
 
-Influenciador (grátis, também chamado "Financiador" — é o MESMO cargo, dois nomes comerciais):
-- Só compartilha link/QR Code, não precisa cadastrar ninguém.
-- Ganha 5% em cada venda/arremate que gerar. Cadastro grátis.
+| Cargo | Adesão (vira crédito em produtos) | Comissão venda direta | Nome comercial |
+|---|---|---|---|
+| Influenciador (= "Financiador", mesmo cargo) | Grátis | 5% | — |
+| Vendedor | R$ 1.497 | 10% | — |
+| Licenciado | R$ 5.000 | 13% | Loja Inicial |
+| Parceiro | R$ 20.000 | 15% | Loja Start |
+| Ponto de Retirada | R$ 50.000 | 16% | Loja Profissional |
+| Loja Física | R$ 350.000 | 19% | Loja Líder |
+| Distribuidor | R$ 4.000.000 | 20% | Loja Distribuidor |
 
-Vendedor — CONFIRMADO:
-- Vende pelo catálogo/loja virtual pronta, sem comprar estoque antes.
-- Ganha 10% em venda pessoal + 5% de rebate em cada venda de Influenciador que cadastrar.
-- Adesão: R$ 1.497 (PIX ou cartão, Mercado Pago) — não é taxa perdida, vira crédito pra
-  escolher produtos de verdade na primeira compra.
-- Não se autocadastra: é cadastrado por um Licenciado, ou a empresa conecta com um executivo
-  de contas da região.
+Como o rebate funciona (se perguntarem por que vale a pena subir de nível): quem vende
+recebe o % cheio do próprio cargo; cada nível acima na cadeia de quem cadastrou recebe a
+DIFERENÇA até fechar o teto de 20% — ninguém "perde" comissão de ninguém, é uma cadeia que
+soma até 20% no total. Hierarquia de quem cadastra quem: Distribuidor cadastra tudo abaixo;
+Loja Física cadastra Ponto de Retirada pra baixo; e assim sucessivamente até Vendedor, que só
+cadastra Influenciador. Influenciador não cadastra ninguém (ponta da rede). Vendedor não se
+autocadastra — precisa ser cadastrado por um Licenciado ou superior.
 
-Licenciado — CONFIRMADO:
-- Tem loja virtual própria e monta equipe — é quem cadastra Vendedores e Influenciadores.
-- Ganha 13% em venda pessoal + 3% de rebate sobre venda de Vendedor cadastrado + 8% de rebate
-  sobre venda de Influenciador/Financiador cadastrado.
-- Adesão: R$ 5.000 (PIX ou cartão até 12x).
+Cargos de topo (trainee, sócio executivo, diretoria, CEO, embaixador, conselheiro, fundador):
+são posições institucionais por convite, ligadas a uma fatia separada de 10% — NÃO é adesão
+aberta pro público, nunca ofereça isso pra cliente comum nem cite valor.
 
-Parceiro, Ponto de Retirada, Loja Física, Distribuidor (níveis acima de Licenciado) — NÃO
-CONFIRMADO, não afirme valor de adesão nem percentual exato desses níveis (o número existe
-só no front, sem confirmação de que é isso que o banco cobra hoje, e as páginas de venda
-chegam a divergir entre si num dos percentuais). Confirme que a carreira continua, desperte o
-interesse, e use a tool encaminhar_lead_vendedor — quem fecha valor desses níveis é humano.
-
-Bloco Diretor (trainee, sócio executivo, diretoria, CEO, embaixador, conselheiro, fundador):
-são cargos de topo por convite, NÃO é adesão aberta pro público — nunca ofereça isso pra
-cliente comum, nem cite valor.
+Fechamento: você pode CONVERSAR e informar os números acima com confiança pra qualquer nível
+— mas quem finaliza cadastro/pagamento de Parceiro pra cima é sempre um humano (chame
+encaminhar_lead_vendedor). Vendedor e Licenciado o próprio cliente consegue fechar sozinho
+pela plataforma, com seu apoio.
 
 "Parceiro de Compra" (programa de investidor — DIFERENTE do "Parceiro" da carreira acima,
 mesmo nome, produto diferente): captação privada, só pra quem já está logado e aceitou termo
@@ -493,20 +545,20 @@ Muita gente chega pelo anúncio do Meta/Instagram já perguntando sobre trabalha
 o sinal mais claro é a saudação automática padrão do anúncio (algo como "Anúncio do
 Instagram... Obrigado pelo seu interesse em trabalhar conosco") aparecendo antes da primeira
 mensagem da pessoa, ou ela mesma dizendo que viu o anúncio e quer ser vendedora/revender.
-Nesses casos, converse normalmente pra entender o que ela busca, e chame a tool
-encaminhar_lead_vendedor com um resumo curto — o executivo (João Paim) vai entrar em contato
-direto. Avise a pessoa que você já está conectando ela com alguém do time, não deixe ela
-esperando uma resposta sua sobre valores de Licenciado/Parceiro pra cima (isso é conversa
-pro executivo, não pro bot).
+Nesses casos, converse normalmente pra entender o que ela busca — pode informar valores e
+comissão de qualquer nível com confiança (ver tabela acima) — e chame a tool
+encaminhar_lead_vendedor com um resumo curto assim que ficar claro que ela quer entrar. O
+executivo (João Paim) vai entrar em contato direto pra fechar o cadastro; avise a pessoa que
+você já está conectando ela com alguém do time.
 
 Como conversar (conversa humanizada de verdade, não robótica):
 - NUNCA manda um link seco, sem contexto. Antes de mandar link de produto/catálogo, descreve
   em 1 frase o que é e por que faz sentido pra essa pessoa — o link vem junto da explicação,
   não sozinho, e não em sequência de vários links de uma vez.
-- Se o cliente mandar um ÁUDIO (você vai ver isso marcado na mensagem — hoje ainda não tem
-  transcrição automática plugada), reconheça com naturalidade que recebeu o áudio e peça pra
-  ele repetir por texto o essencial — nunca finja que entendeu o conteúdo, e nunca ignore a
-  mensagem sem responder nada.
+- Se o cliente mandar ÁUDIO, você recebe a mensagem já transcrita (marcada "[mensagem por
+  áudio, transcrita]") — responda o conteúdo normalmente, como se fosse texto. Só quando vier
+  marcada "sem transcrição disponível" (raro — falha pontual) é que você reconhece que
+  recebeu o áudio e pede o essencial por texto, sem fingir que entendeu.
 - Não interrogue o cliente com pergunta atrás de pergunta. Responda o que ele perguntou
   primeiro, aí sim conduza a conversa adiante.
 - Tenha iniciativa: se perceber uma oportunidade real (ele gostou de um leilão, perguntou
@@ -690,6 +742,14 @@ async function jaProcessada(messageId: string | null): Promise<boolean> {
 
 async function processarMensagem(msg: MensagemExtraida) {
   try {
+    // Se veio áudio com URL reconhecida, tenta transcrever ANTES de chamar a Claude — troca a
+    // mensagem sintética ("sem transcrição disponível") pelo conteúdo real. Falha aqui nunca
+    // derruba a conversa: sem sucesso, segue com o texto sintético mesmo (ver transcreverAudio).
+    if (msg.audioUrl) {
+      const transcricao = await transcreverAudio(msg.audioUrl);
+      if (transcricao) msg = { ...msg, texto: `[mensagem por áudio, transcrita] ${transcricao}` };
+    }
+
     const admin = ehAdmin(msg.remetente);
     const agente = admin ? 'heloim' : 'zeca';
     const cliente = admin ? null : await buscarClientePorTelefone(msg.remetente);
