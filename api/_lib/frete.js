@@ -51,6 +51,16 @@ export async function cotarOpcoes({ cep, items }) {
   });
   if (!products.length) return { ok: false, error: 'Itens inválidos para cotação de frete.' };
 
+  // 🩺 DIAGNÓSTICO (22/08/2026) — achado em produção: cliente real preso com
+  // "cotacao_indisponivel" e nenhuma pista de por quê. A calculadora do painel da
+  // Melhor Envio cotou a MESMA rota (22795-030 → 23092-470) e devolveu 4
+  // transportadoras — ou seja, cobertura não é o problema, a diferença está no que
+  // ESTE código manda. Três incógnitas de uma vez: o CEP de origem (env var
+  // Sensitive na Vercel, não dá pra ler pelo painel), o pacote montado a partir
+  // das medidas do banco, e a resposta crua deles. Nada aqui é segredo — CEP de
+  // galpão e dimensão de caixa. O TOKEN nunca entra no log.
+  const enviado = { from: { postal_code: FROM_CEP }, to: { postal_code: toCep }, products };
+
   const resp = await fetch('https://www.melhorenvio.com.br/api/v2/me/shipment/calculate', {
     method: 'POST',
     headers: {
@@ -59,19 +69,18 @@ export async function cotarOpcoes({ cep, items }) {
       Accept: 'application/json',
       'User-Agent': 'Leilao NoZap (contato@leilaonozap.net)',
     },
-    body: JSON.stringify({ from: { postal_code: FROM_CEP }, to: { postal_code: toCep }, products }),
+    body: JSON.stringify(enviado),
   });
   const raw = await resp.text();
   let cot = null;
   try { cot = JSON.parse(raw); } catch { cot = null; }
 
   if (!resp.ok || !Array.isArray(cot)) {
-    // 🩺 DIAGNÓSTICO (22/08/2026) — achado em produção: cliente real preso com
-    // "cotacao_indisponivel" e nenhuma pista de por quê (token expirado? conta
-    // com pendência? CEP mesmo?). Sem log da resposta real da Melhor Envio,
-    // cada falha exigia reproduzir às cegas. Loga status + corpo (truncado,
-    // sem token nenhum nele) — a resposta pro cliente continua igual.
-    console.error('[FRETE] Melhor Envio recusou a cotação:', resp.status, String(raw).slice(0, 500));
+    console.error(
+      '[FRETE] Melhor Envio recusou a cotação:', resp.status,
+      '| enviado:', JSON.stringify(enviado),
+      '| resposta:', String(raw).slice(0, 500)
+    );
     const cepInvalido = /postal_code|cep_destino/i.test(String(raw));
     return { ok: false, error: cepInvalido ? 'CEP não encontrado. Confira os números do seu CEP.' : 'Não conseguimos calcular o frete agora.' };
   }
@@ -89,11 +98,15 @@ export async function cotarOpcoes({ cep, items }) {
     .sort((a, b) => a.preco - b.preco);
 
   if (!opcoes.length) {
-    // Mesmo ideia: a Melhor Envio respondeu 200 com array, mas cada opção veio
+    // Mesmo motivo: a Melhor Envio respondeu 200 com array, mas cada opção veio
     // com `error` (ex: transportadora não atende a rota, dimensão fora do
-    // limite) — sem logar CADA item, não dá pra saber qual transportadora
-    // recusou e por quê.
-    console.error('[FRETE] Melhor Envio devolveu só opções com erro:', JSON.stringify(cot).slice(0, 800));
+    // limite, valor de seguro acima do teto) — sem logar CADA item junto do que
+    // foi enviado, não dá pra saber qual transportadora recusou e por quê.
+    console.error(
+      '[FRETE] Melhor Envio devolveu só opções com erro',
+      '| enviado:', JSON.stringify(enviado),
+      '| resposta:', JSON.stringify(cot).slice(0, 800)
+    );
     return { ok: false, error: 'Nenhuma transportadora atende esse CEP.' };
   }
   return { ok: true, opcoes };
