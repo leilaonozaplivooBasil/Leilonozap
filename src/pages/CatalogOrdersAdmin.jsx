@@ -61,6 +61,20 @@ const STATUS_CONFIG = {
   cancelado: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: X },
 };
 
+// 🔴 PONTO 120 (21/08/2026) — o dropdown de "Status do Pedido" abaixo só tem
+// itens no vocabulário em inglês, mas o pedido pode estar salvo em português
+// (updateOrderStatus.js aceita e grava os dois — PONTO 116). Uma tentativa
+// anterior "consertou" isso remapeando o valor DENTRO do componente Select
+// compartilhado (`src/components/ui/select.jsx`), usado pelo app inteiro —
+// o rótulo mostrava um texto e o Radix considerava outro item selecionado por
+// dentro, e reabrir o dropdown sem trocar nada podia gravar o status errado
+// sozinho. Revertido. A tradução correta é só de EXIBIÇÃO e só nesta tela:
+// o Select sempre fala o vocabulário em inglês (rótulo e valor interno do
+// Radix sempre batem), e o valor real do pedido (`newStatus`) só muda quando
+// o admin de fato escolhe algo — nunca sozinho.
+const STATUS_PT_PARA_SELECT = { preparando: 'paid', saiu_entrega: 'shipped', entregue: 'delivered', cancelado: 'canceled' };
+const statusParaSelect = (status) => STATUS_PT_PARA_SELECT[status] || status;
+
 // 🎫 Badge exclusivo do Passaporte quando o pagamento já confirmou: nunca "Preparar Envio".
 const STATUS_PASSAPORTE_ENTREGUE = { label: 'Entregue — Automático', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: PartyPopper };
 const getDisplayStatusConfig = (o) => (isPassaporte(o) && STATUS_PAGO.has(o.status)) ? STATUS_PASSAPORTE_ENTREGUE : (STATUS_CONFIG[o.status] || STATUS_CONFIG.paid);
@@ -122,10 +136,14 @@ const getItems = (order) => {
 
 // 📦 Checklist SEMPRE mostra ao menos o produto principal como card clicável
 // (mesmo pedido de 1 item só) — não fica só em texto/descrição.
+// 🖼️ Imagem real do produto — só existe hoje pro pedido de 1 item (order.product_image,
+// já usado na lista). Pedido com múltiplos itens (items_json/raw_base44.items) não grava
+// imagem por item em lugar nenhum do banco — sem inventar fonte nova, fica sem imagem
+// nesse caso (fallback pro ícone genérico dentro de OrderItemsChecklist).
 const getItemsForChecklist = (order) => {
   const bundle = getItems(order);
   if (bundle) return bundle;
-  return [{ title: order.product_title, qty: order.quantity || 1 }];
+  return [{ title: order.product_title, qty: order.quantity || 1, image: order.product_image || null }];
 };
 
 const getPackedItems = (order) => {
@@ -372,7 +390,7 @@ export default function CatalogOrdersAdmin() {
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, raw_base44: newRaw } : o)));
     } catch (error) {
       console.error('Erro ao marcar item separado:', error);
-      toast.error('Erro ao salvar');
+      toast.error(error?.message ? `Erro ao salvar: ${error.message}` : 'Erro ao salvar');
     }
   };
 
@@ -403,6 +421,7 @@ export default function CatalogOrdersAdmin() {
       const patch = { fulfillment_status: data.fulfillment_status || value, status: data.status || statusAlvo };
       setSelectedOrder((prev) => (prev && prev.id === order.id ? { ...prev, ...patch } : prev));
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o)));
+      setNewStatus(patch.status);
       toast.success('Etapa da entrega atualizada!');
     } catch (error) {
       console.error('Erro ao atualizar etapa da entrega:', error);
@@ -854,12 +873,21 @@ export default function CatalogOrdersAdmin() {
                   const envio = getEnvioAutomatico(selectedOrder);
                   if (!envio) return null;
                   return (
-                    <p className="text-sm text-gray-400 pt-1 border-t border-gray-600/50 mt-2">
-                      🚚 Etiqueta gerada automaticamente{envio.protocol ? ` — protocolo ${envio.protocol}` : ''}
+                    <div className="pt-1 border-t border-gray-600/50 mt-2 flex items-center justify-between gap-2">
+                      <p className="text-sm text-green-400">
+                        📦 Etiqueta recebida no Melhor Envio{envio.protocol ? ` — protocolo ${envio.protocol}` : ''}
+                      </p>
                       {envio.label_url && (
-                        <> · <a href={envio.label_url} target="_blank" rel="noreferrer" className="text-indigo-300 underline">imprimir etiqueta</a></>
+                        <a
+                          href={envio.label_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 inline-flex items-center gap-1 rounded-md border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 text-xs h-7 px-2"
+                        >
+                          <Printer className="w-3 h-3" /> Imprimir etiqueta
+                        </a>
                       )}
-                    </p>
+                    </div>
                   );
                 })()}
                 {!getEnvioAutomatico(selectedOrder) && !isPassaporte(selectedOrder) && (
@@ -927,7 +955,7 @@ export default function CatalogOrdersAdmin() {
                 <>
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">Status do Pedido</label>
-                    <Select value={newStatus} onValueChange={setNewStatus}>
+                    <Select value={statusParaSelect(newStatus)} onValueChange={setNewStatus}>
                       <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                         <SelectValue />
                       </SelectTrigger>
