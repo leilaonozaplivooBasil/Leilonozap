@@ -142,9 +142,14 @@ projeto virava admin sem senha).
 
 ## 8. Governança de diretivas (a partir de 21/08/2026)
 
-- `docs/DIRETIVA_ATUAL.md` — a diretiva de engenharia em vigor agora.
-- `docs/HISTORICO_DIRETIVAS.md` — log append-only de toda diretiva formal já
-  emitida, com resultado.
+- `docs/PADRAO_DIRETIVAS.md` — o formato fixo (template) que toda diretiva e
+  todo relatório de execução seguem.
+- `docs/DIRETIVA_ATUAL.md` — a diretiva de engenharia em vigor agora, nesse
+  formato.
+- `docs/HISTORICO_DIRETIVAS.md` — log append-only da ESPECIFICAÇÃO de toda
+  diretiva formal já emitida (o que foi autorizado).
+- `docs/RELATORIOS_EXECUCAO.md` — log append-only do RESULTADO de cada
+  diretiva executada, um relatório por `DIR-N`.
 - Este arquivo (`docs/ARQUITETURA.md`) — referência de arquitetura, atualizado
   quando algo estrutural muda de verdade.
 - `docs/CLAUDE_HANDOFF.md` — canal técnico Claude↔OpenAI, estado da frente em

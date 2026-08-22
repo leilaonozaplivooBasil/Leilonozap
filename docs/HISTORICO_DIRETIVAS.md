@@ -4,7 +4,12 @@
 > estruturada com objetivo, escopo e restrições explícitas, vinda do dono ou
 > da OpenAI, que autorizou uma rodada de trabalho. Nunca reescrito, nunca
 > podado. Quando uma diretiva é substituída, a versão anterior sai de
-> `docs/DIRETIVA_ATUAL.md` e vira uma entrada aqui, com o resultado final.
+> `docs/DIRETIVA_ATUAL.md` e vira uma entrada aqui.
+>
+> **Formato fixo:** `docs/PADRAO_DIRETIVAS.md`. Este arquivo guarda só a
+> ESPECIFICAÇÃO de cada diretiva (o que foi autorizado); o resultado de cada
+> uma está em `docs/RELATORIOS_EXECUCAO.md`, no relatório `REL-N`
+> correspondente.
 >
 > **Isto não é o diário da conversa** — `docs/DIARIO.md` continua sendo o
 > registro integral de tudo que foi falado, decidido e corrigido, incluindo
@@ -22,15 +27,12 @@
 (PR #86) e `openai/catalog-status-sync-preview` (PR #87), causa-raiz de 3
 regressões reportadas pelo dono (checkbox de conferência, Jornada/status
 dessincronizados, "Erro ao atualizar etapa da entrega") + 2 melhorias
-(imagem do produto, etiqueta Melhor Envio). **Regra fixa: somente leitura,
-nenhuma alteração de código.**
-**Executado:** achado crítico fora da lista original (admin fake por
-hostname `.vercel.app` no harness da PR #87); causa-raiz das 3 regressões
-identificada com evidência de código (uma delas — achado C — sem confirmação
-final por falta de acesso à Edge Function `preview-api`).
-**Publicado em:** comentário nas PRs #86 e #87 + `docs/CLAUDE_HANDOFF.md`
-seção 11.
-**Status:** CONCLUÍDA.
+(imagem do produto, etiqueta Melhor Envio).
+**Escopo autorizado:** leitura de código, comparação entre branches,
+diagnóstico com evidência (arquivo/linha).
+**Fora do escopo / proibido:** qualquer alteração de código.
+**Regras fixas:** somente leitura.
+**Status:** EXECUTADA. Ver `REL-1`.
 
 ---
 
@@ -41,46 +43,48 @@ comment id `5376504779`), autorizada pelo dono no chat ("execute exatamente
 o que foi definido, não mexa em produção").
 **Data:** 21/08/2026.
 **Objetivo:** corrigir a Jornada Operacional da Gestão de Pedidos **só no
-Preview** (PR #87), preservando produção intacta. Diagnóstico novo da
-OpenAI: Edge Function `preview-api` volta HTTP 401 antes de entrar na
-função, desde a v2 dela — problema de autenticação do harness, não de
-lógica de negócio.
-**Regras fixas:** só na branch `openai/catalog-status-sync-preview`; nunca
-tocar `main`, produção, Supabase/Vercel de produção, dinheiro/frete/RLS
-geral; nunca mergear; nunca alterar `select.jsx` global — resolver
-vocabulário de status localmente; se precisar de acesso que não tenho
-(Edge Function, variável Vercel), documentar e parar, não inventar.
-**Executado:**
-1. `select.jsx` revertido por completo.
-2. Vocabulário de status resolvido localmente em `CatalogOrdersAdmin.jsx`.
-3. Admin fake por hostname removido — substituído por gate explícito
-   (`VITE_PREVIEW_STAGING=true`, variável que só a OpenAI pode configurar).
-4. JWT hardcoded do harness removido, unificado com a chave já resolvida em
-   `supabaseClient.js` (correção fundamentada, não confirmada como
-   resolução completa do 401 — falta acesso à Edge Function pra validar).
-5. Imagem real do produto no checklist (pedido de 1 item).
-6. Erro real (`error.message`) no toast do checklist, no lugar do texto fixo.
-7. Bloco de etiqueta Melhor Envio reforçado visualmente.
-**Publicado em:** comentário no PR #87 (`5376578505`) + `docs/CLAUDE_HANDOFF.md`
-seção 11.1 + `docs/DIARIO.md`.
-**Commit:** `5689c588` (branch `openai/catalog-status-sync-preview`).
-**Status:** EXECUTADA. Blockers pendentes do lado da OpenAI: configurar as
-3 variáveis de ambiente na Vercel; confirmar se o 401 foi de fato resolvido
-(sem acesso à Edge Function pra validar por aqui).
+Preview** (PR #87), preservando produção intacta. Diagnóstico da OpenAI:
+Edge Function `preview-api` volta HTTP 401 antes de entrar na função, desde
+a v2 dela — problema de autenticação do harness, não de lógica de negócio.
+**Escopo autorizado:** correção de código só na branch
+`openai/catalog-status-sync-preview`; reverter customização indevida de
+`select.jsx`; ajustes de UI/jornada/imagem; correção do harness de
+autenticação do Preview.
+**Fora do escopo / proibido:** tocar `main`; mergear PR #87; tocar
+Supabase/Vercel de produção; dinheiro/frete/RLS geral/pg_cron; alterar
+`select.jsx` global (resolver vocabulário localmente).
+**Regras fixas:** se precisar de acesso que não existe (Edge Function,
+variável Vercel), documentar e parar — não inventar.
+**Status:** EXECUTADA. Ver `REL-2`.
 
 ---
 
-## DIR-3 — Estrutura de governança de diretivas (esta rodada)
+## DIR-3 — Estrutura de governança de diretivas
 
 **Emitida por:** dono (Luiz), diretamente.
 **Data:** 21/08/2026.
 **Objetivo:** criar `docs/DIRETIVA_ATUAL.md`, este arquivo, e
 `docs/ARQUITETURA.md`, preservando todo o conteúdo existente de handoff e
-diário. **Regra fixa: documentação pura — nenhuma alteração de
-funcionalidade, banco, produção ou regra de negócio.** Depois desta rodada,
-toda implementação futura espera uma diretiva nova e explícita.
-**Executado:** os três arquivos criados; MAPA do `docs/CLAUDE_HANDOFF.md`
-atualizado pra indexá-los.
-**Publicado em:** relatório desta rodada, ao dono, no chat.
-**Status:** CONCLUÍDA — ver confirmação explícita de "nada de código
-alterado" em `docs/DIRETIVA_ATUAL.md`.
+diário.
+**Escopo autorizado:** criação/atualização de documentação.
+**Fora do escopo / proibido:** qualquer alteração de funcionalidade, banco,
+produção ou regra de negócio.
+**Regras fixas:** depois desta rodada, toda implementação futura espera uma
+diretiva nova e explícita.
+**Status:** EXECUTADA. Ver `REL-3`.
+
+---
+
+## DIR-4 — Padronização de diretivas e relatórios de execução
+
+**Emitida por:** dono (Luiz), diretamente.
+**Data:** 21/08/2026.
+**Objetivo:** refinar a estrutura de governança criada na DIR-3, definindo
+um formato fixo (template) pra diretivas e pra relatórios de execução, pra
+toda rodada futura seguir o mesmo padrão.
+**Escopo autorizado:** criação de `docs/PADRAO_DIRETIVAS.md`; reestruturação
+de `docs/HISTORICO_DIRETIVAS.md` pra separar especificação de execução;
+criação de `docs/RELATORIOS_EXECUCAO.md`.
+**Fora do escopo / proibido:** qualquer alteração de código ou produção.
+**Regras fixas:** nenhuma além da DIR-3 (documentação pura).
+**Status:** EXECUTADA. Ver `REL-4`.
