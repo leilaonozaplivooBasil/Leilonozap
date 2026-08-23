@@ -131,8 +131,14 @@ type MensagemExtraida = {
   remetenteNome: string | null; // nome de exibição, quando o Z-API manda (só em grupo, por ora)
   grupoId: string | null; // null = conversa 1:1. Setado = veio de um grupo autorizado (GRUPOS_HELOIM_IDS)
   grupoNome: string | null;
-  texto: string; // pra áudio/imagem/documento, um texto sintético descrevendo o que chegou (ver extrairMensagem)
+  texto: string; // pra mídia sem conteúdo legível, um texto sintético descrevendo o que chegou
   audioUrl: string | null; // se veio áudio, a URL do arquivo — ver transcreverAudio()
+  // Imagem/PDF que o Zeca precisa VER de verdade (print de erro, comprovante, catálogo).
+  // A Claude lê os dois nativamente — ver baixarMidia()/blocosDeMidia().
+  midiaUrl: string | null;
+  midiaTipo: 'imagem' | 'documento' | null;
+  midiaMime: string | null;   // o que o Z-API declarou; conferido/corrigido no download
+  midiaNome: string | null;   // nome do arquivo, quando vem (só documento)
   messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
@@ -173,10 +179,13 @@ function extrairMensagem(body: any): MensagemExtraida | null {
   const texto: unknown = body?.text?.message ?? body?.body ??
     (typeof body?.message === 'string' ? body.message : body?.message?.text);
 
-  const base = { remetente, remetenteNome, grupoId, grupoNome, messageId: messageIdStr };
+  const base = {
+    remetente, remetenteNome, grupoId, grupoNome, messageId: messageIdStr,
+    audioUrl: null, midiaUrl: null, midiaTipo: null, midiaMime: null, midiaNome: null,
+  } as const;
 
   if (texto && String(texto).trim()) {
-    return { ...base, texto: String(texto).trim(), audioUrl: null };
+    return { ...base, texto: String(texto).trim() };
   }
 
   // Áudio: extrai a URL do arquivo pra transcrever depois (em background — ver
@@ -190,11 +199,36 @@ function extrairMensagem(body: any): MensagemExtraida | null {
       audioUrl: audioUrl ? String(audioUrl) : null,
     };
   }
+
+  // 👁️ IMAGEM — o Zeca precisa VER (print de erro, comprovante de PIX, foto do produto).
+  // Guarda a URL; o download e a montagem do bloco pra Claude acontecem no background.
   if (body?.image) {
-    return { ...base, texto: '[o cliente mandou uma IMAGEM]' + (body.image?.caption ? `, com a legenda: "${body.image.caption}"` : ' (sem legenda)'), audioUrl: null };
+    const url: unknown = body.image?.imageUrl ?? body.image?.url ?? null;
+    const legenda = body.image?.caption ? String(body.image.caption).trim() : '';
+    return {
+      ...base,
+      texto: legenda || '[o cliente mandou uma imagem, sem legenda]',
+      midiaUrl: url ? String(url) : null,
+      midiaTipo: 'imagem',
+      midiaMime: body.image?.mimeType ? String(body.image.mimeType) : null,
+      midiaNome: null,
+    };
   }
+
+  // 📄 DOCUMENTO — a Claude lê PDF nativamente. Outros formatos (docx, xlsx) ela NÃO lê:
+  // esses seguem só como aviso de texto, e o prompt manda pedir em PDF ou print.
   if (body?.document) {
-    return { ...base, texto: `[o cliente mandou um DOCUMENTO${body.document?.fileName ? `: "${body.document.fileName}"` : ''}]`, audioUrl: null };
+    const url: unknown = body.document?.documentUrl ?? body.document?.url ?? null;
+    const nome = body.document?.fileName ? String(body.document.fileName) : null;
+    const legenda = body.document?.caption ? String(body.document.caption).trim() : '';
+    return {
+      ...base,
+      texto: legenda || `[o cliente mandou um documento${nome ? `: "${nome}"` : ''}]`,
+      midiaUrl: url ? String(url) : null,
+      midiaTipo: 'documento',
+      midiaMime: body.document?.mimeType ? String(body.document.mimeType) : null,
+      midiaNome: nome,
+    };
   }
 
   console.warn(
@@ -239,6 +273,89 @@ async function transcreverAudio(audioUrl: string): Promise<string | null> {
   } catch (e) {
     console.error('[whatsapp-router] falha ao transcrever áudio (segue sem transcrição):', e);
     return null;
+  }
+}
+
+// ============================================================================
+// 👁️ Visão do Zeca — imagem e PDF que chegam pelo WhatsApp vão pra Claude COMO ARQUIVO,
+// não como "[o cliente mandou uma imagem]". É o que faz ele resolver print de erro,
+// comprovante de PIX e catálogo em PDF sem pedir pro cliente digitar o que está na tela.
+//
+// A Messages API lê os dois nativamente, em blocos de conteúdo base64:
+//   imagem   → { type: 'image',    source: { type: 'base64', media_type, data } }
+//   PDF      → { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
+// Formato que não é imagem-suportada nem PDF (docx, xlsx, zip) a Claude NÃO lê — nesse caso
+// não mandamos bloco nenhum e o Zeca é avisado por texto pra pedir print/PDF.
+//
+// Falha aqui NUNCA derruba a conversa: sem bloco de mídia, o Zeca responde só com o texto.
+// ============================================================================
+const IMAGENS_SUPORTADAS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const LIMITE_IMAGEM_BYTES = 4 * 1024 * 1024;   // teto da API por imagem (5MB) com folga
+const LIMITE_PDF_BYTES = 16 * 1024 * 1024;     // teto do request inteiro é 32MB — metade, com folga
+
+// btoa() só aceita string binária, e String.fromCharCode(...bytes) estoura a pilha em
+// arquivo grande. Converte em pedaços — é o jeito seguro pra megabytes.
+function bytesParaBase64(bytes: Uint8Array): string {
+  let binario = '';
+  const PEDACO = 0x8000;
+  for (let i = 0; i < bytes.length; i += PEDACO) {
+    binario += String.fromCharCode(...bytes.subarray(i, i + PEDACO));
+  }
+  return btoa(binario);
+}
+
+// O Z-API às vezes declara mimeType genérico ("application/octet-stream") ou nenhum.
+// Os bytes não mentem — assinatura do arquivo tem prioridade sobre o que foi declarado.
+function detectarMime(bytes: Uint8Array, declarado: string | null): string | null {
+  if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return 'application/pdf'; // %PDF
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+  if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif';
+  if (bytes.length >= 12 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp'; // RIFF....WEBP
+  const limpo = (declarado || '').split(';')[0].trim().toLowerCase();
+  return limpo || null;
+}
+
+type BlocoMidia = { blocos: any[]; aviso: string | null };
+
+async function blocosDeMidia(msg: MensagemExtraida): Promise<BlocoMidia> {
+  if (!msg.midiaUrl || !msg.midiaTipo) return { blocos: [], aviso: null };
+  try {
+    const r = await fetch(msg.midiaUrl);
+    if (!r.ok) {
+      console.error('[whatsapp-router] falha ao baixar mídia do Z-API:', r.status, msg.midiaTipo);
+      return { blocos: [], aviso: 'o arquivo não pôde ser aberto agora' };
+    }
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    const mime = detectarMime(bytes, msg.midiaMime || r.headers.get('content-type'));
+
+    if (mime === 'application/pdf') {
+      if (bytes.length > LIMITE_PDF_BYTES) {
+        return { blocos: [], aviso: 'o PDF é grande demais pra abrir por aqui' };
+      }
+      // O bloco do documento vem ANTES do texto — a Claude lê melhor com o arquivo
+      // primeiro e a pergunta depois.
+      return {
+        blocos: [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: bytesParaBase64(bytes) } }],
+        aviso: null,
+      };
+    }
+
+    if (mime && IMAGENS_SUPORTADAS.includes(mime)) {
+      if (bytes.length > LIMITE_IMAGEM_BYTES) {
+        return { blocos: [], aviso: 'a imagem é pesada demais pra abrir por aqui' };
+      }
+      return {
+        blocos: [{ type: 'image', source: { type: 'base64', media_type: mime, data: bytesParaBase64(bytes) } }],
+        aviso: null,
+      };
+    }
+
+    console.warn('[whatsapp-router] mídia em formato que a Claude não lê:', mime, msg.midiaNome);
+    return { blocos: [], aviso: `o arquivo veio num formato que você não consegue abrir (${mime || 'desconhecido'})` };
+  } catch (e) {
+    console.error('[whatsapp-router] erro ao preparar mídia (segue só com o texto):', e);
+    return { blocos: [], aviso: 'o arquivo não pôde ser aberto agora' };
   }
 }
 
@@ -642,7 +759,13 @@ function montarSystemPromptHeloim(ctx: {
   return `Você é a Heloim, assistente técnica de TI do Leilão NoZap. Responde direto por ${admins}
 e, em grupos autorizados, por qualquer participante — mas só um admin pode AUTORIZAR mudança.
 
-Tom: técnico, direto, sem enrolação.
+Tom: técnico, direto, sem enrolação. Resposta curta de WhatsApp — 2 a 5 linhas; lista só
+quando o dado pedido é uma lista.
+
+Print, foto e PDF você ENXERGA de verdade — o arquivo chega junto da mensagem. Print de erro
+do sistema, log em imagem, PDF de relatório: leia e trabalhe em cima do que está ali, não peça
+pra transcreverem. Se vier "[aviso: ...]" na mensagem, o arquivo não pôde ser aberto — peça
+print ou PDF.
 
 Suas tools de CONSULTA (só leitura, dado real do sistema): vendas_hoje, produtos_sem_estoque,
 pedidos_pendentes_envio, resumo_carteiras. Sempre que usar uma, cite o número exato que ela
@@ -753,6 +876,22 @@ disponível 24h. Fala com confiança, traz solução, nunca deixa o cliente sem 
 
 Tom base: consultivo, brasileiro, direto, sem formalidade excessiva — mas ajustado pelo
 perfil de quem está do outro lado (ver framework DISC abaixo).
+
+TAMANHO DA RESPOSTA — regra dura, vale acima de qualquer outra instrução daqui:
+Isto é WhatsApp, não e-mail. Texto comprido faz o cliente parar de ler e some com a venda.
+- 2 a 4 linhas por mensagem. Só passe disso se ele pediu explicitamente uma lista/comparação
+  (ex: "me manda os leilões abertos"), e mesmo aí no máximo 5 itens de uma linha cada.
+- UMA ideia por mensagem e no máximo UMA pergunta no fim. Nunca dispare duas ou três
+  perguntas juntas.
+- Corte o que não muda a decisão dele: não repita o que ele acabou de dizer, não resuma o que
+  você mesmo já falou, não explique regra que ele não perguntou, não antecipe passo 3 quando
+  ele ainda está no passo 1.
+- Sem saudação a cada mensagem, sem se reapresentar, sem despedida formal, sem "espero ter
+  ajudado", sem emoji em fileira.
+- Sem bullet, sem negrito, sem título de seção na conversa normal — gente não escreve assim
+  no zap. Frase corrida.
+- Não jogue a tabela de comissões/níveis inteira de uma vez. Responda o nível que ele
+  perguntou e ofereça o resto se ele quiser.
 ${FRAMEWORK_DISC}
 
 Seu papel: explicar como funcionam os leilões, o catálogo de produtos, o programa Rank
@@ -779,6 +918,13 @@ Como conversar (conversa humanizada de verdade, não robótica):
 - NUNCA manda um link seco, sem contexto. Antes de mandar link de produto/catálogo, descreve
   em 1 frase o que é e por que faz sentido pra essa pessoa — o link vem junto da explicação,
   não sozinho, e não em sequência de vários links de uma vez.
+- Se o cliente mandar PRINT, FOTO ou PDF, você ENXERGA o arquivo de verdade — ele vem junto
+  da mensagem. Leia o que está na tela e resolva a partir dali: print de erro (leia a mensagem
+  de erro e diga o que fazer), comprovante de PIX (confira valor e data no comprovante), foto
+  de produto, PDF de catálogo/documento. Nunca peça pro cliente digitar o que já está na
+  imagem, e nunca invente conteúdo que você não conseguiu ler — se estiver ilegível ou
+  cortado, diga o que faltou e peça um print melhor. Se vier "[aviso: ...]" na mensagem, é
+  porque o arquivo não pôde ser aberto — aí sim peça print ou PDF, com naturalidade.
 - Se o cliente mandar ÁUDIO, você recebe a mensagem já transcrita (marcada "[mensagem por
   áudio, transcrita]") — responda o conteúdo normalmente, como se fosse texto. Só quando vier
   marcada "sem transcrição disponível" (raro — falha pontual) é que você reconhece que
@@ -834,7 +980,8 @@ async function responderComAgente(
   systemPrompt: string,
   tools: ToolDef[],
   historico: Turno[],
-  mensagemUsuario: string,
+  // string pura na conversa normal; array de blocos quando veio imagem/PDF junto (ver blocosDeMidia)
+  mensagemUsuario: string | any[],
   ctx: ToolCtx
 ): Promise<string> {
   const messages: any[] = [
@@ -992,10 +1139,19 @@ async function processarMensagem(msg: MensagemExtraida) {
 
     const ctx: ToolCtx = { remetente: msg.remetente, remetenteNome: msg.remetenteNome, grupoId: msg.grupoId, grupoNome: msg.grupoNome };
     const historico = await carregarHistorico(msg.remetente, agente);
-    const resposta = await responderComAgente(systemPrompt, tools, historico, msg.texto, ctx);
+
+    // 👁️ Se veio print/foto/PDF, o arquivo vai junto da mensagem — a Claude enxerga de
+    // verdade. Formato que ela não lê (docx, zip) vira aviso em texto pra ele pedir print.
+    const { blocos, aviso } = await blocosDeMidia(msg);
+    const textoParaClaude = aviso ? `${msg.texto}\n[aviso: ${aviso} — peça um print ou PDF]` : msg.texto;
+    const conteudoUsuario = blocos.length
+      ? [...blocos, { type: 'text', text: textoParaClaude }]
+      : textoParaClaude;
+
+    const resposta = await responderComAgente(systemPrompt, tools, historico, conteudoUsuario, ctx);
 
     await Promise.all([
-      salvarTurno(msg.remetente, agente, 'user', msg.texto),
+      salvarTurno(msg.remetente, agente, 'user', textoParaClaude),
       salvarTurno(msg.remetente, agente, 'assistant', resposta),
     ]);
 
