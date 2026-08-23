@@ -136,6 +136,64 @@ async function logResultado(sale, resultado) {
   } catch (_) { /* log é opcional, nunca pode quebrar o fluxo */ }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 O GARGALO DA NOTA (22/08/2026) — o passo que produz o PDF nunca era chamado
+// ══════════════════════════════════════════════════════════════════════════════
+// O fluxo oficial do Melhor Envio tem QUATRO passos: cart → checkout → generate
+// → print. Este arquivo fazia os três primeiros e parava. O `label_url` saía de
+// `generate`, mas quem devolve o PDF imprimível é o `print` — que não existia em
+// lugar nenhum do projeto (zero ocorrências de "shipment/print" no repositório).
+//
+// Efeito prático na operação: a etiqueta era COMPRADA (checkout gasta saldo real
+// da conta), o pedido ficava marcado como "etiqueta gerada", e o operador não
+// tinha documento nenhum para imprimir — tinha que abrir o painel do Melhor
+// Envio à mão, pedido por pedido. Era esse o gargalo da logística.
+//
+// Além disso o `generate` vivia dentro de um `catch (_) {}` mudo: se falhasse,
+// ninguém ficava sabendo o motivo. Agora cada passo loga o próprio erro.
+//
+// Devolve a MELHOR url disponível: a do `print` (PDF pronto) e, se ela não vier,
+// a do `generate` como antes — nunca fica pior do que estava.
+async function obterUrlEtiqueta({ API, headers, orderId, saleId }) {
+  const erros = [];
+
+  // generate — autoriza/emite a etiqueta no Melhor Envio. Precisa vir antes do
+  // print; um pedido não gerado não tem PDF para imprimir.
+  let urlGenerate = null;
+  try {
+    const genResp = await fetch(`${API}/api/v2/me/shipment/generate`, {
+      method: 'POST', headers, body: JSON.stringify({ orders: [orderId] }),
+    });
+    const genData = await genResp.json().catch(() => null);
+    urlGenerate = genData?.[orderId]?.url || null;
+    if (!genResp.ok) {
+      erros.push(`generate ${genResp.status}: ${JSON.stringify(genData || {}).slice(0, 200)}`);
+    }
+  } catch (e) {
+    erros.push(`generate exceção: ${String(e?.message || e)}`);
+  }
+
+  // print — este é o que devolve o PDF de impressão.
+  let urlPrint = null;
+  try {
+    const printResp = await fetch(`${API}/api/v2/me/shipment/print`, {
+      method: 'POST', headers, body: JSON.stringify({ mode: 'private', orders: [orderId] }),
+    });
+    const printData = await printResp.json().catch(() => null);
+    urlPrint = printData?.url || null;
+    if (!printResp.ok || !urlPrint) {
+      erros.push(`print ${printResp.status}: ${JSON.stringify(printData || {}).slice(0, 200)}`);
+    }
+  } catch (e) {
+    erros.push(`print exceção: ${String(e?.message || e)}`);
+  }
+
+  if (erros.length) {
+    console.error(`[MelhorEnvio] etiqueta ${orderId} (venda ${saleId}) — ${erros.join(' | ')}`);
+  }
+  return { url: urlPrint || urlGenerate || null, origem: urlPrint ? 'print' : (urlGenerate ? 'generate' : null), erros };
+}
+
 export async function gerarEnvioAutomatico(sale) {
   const resultado = await tentarGerarEnvio(sale);
   await logResultado(sale, resultado);
@@ -165,7 +223,44 @@ async function tentarGerarEnvio(sale) {
       };
     }
     if (raw.delivery_type !== 'delivery') return { ok: false, skipped: 'retirada_na_loja' };
-    if (raw.melhor_envio?.order_id) return { ok: false, skipped: 'ja_gerado' };
+
+    // 🔴 RECUPERAÇÃO (22/08/2026) — antes, QUALQUER pedido com order_id parava
+    // aqui com 'ja_gerado'. Pedido que comprou a etiqueta mas ficou sem
+    // `label_url` (o caso comum enquanto o `print` não era chamado — ver
+    // obterUrlEtiqueta) ficava travado PARA SEMPRE: dinheiro gasto na etiqueta,
+    // nenhum PDF, e o botão do admin respondendo "já gerado" para sempre.
+    //
+    // Agora, com order_id e sem label_url, busca só o PDF do envio que JÁ foi
+    // comprado — não passa por cart nem checkout, então não gasta saldo de novo.
+    if (raw.melhor_envio?.order_id) {
+      if (raw.melhor_envio.label_url) return { ok: false, skipped: 'ja_gerado' };
+
+      const ambienteExistente = raw.melhor_envio.ambiente || ambienteAtual();
+      const tokenExistente = await getAccessToken(ambienteExistente);
+      if (!tokenExistente) return { ok: false, skipped: 'melhor_envio_nao_autorizado' };
+
+      const orderIdExistente = raw.melhor_envio.order_id;
+      const { url, erros } = await obterUrlEtiqueta({
+        API: baseUrl(ambienteExistente),
+        headers: { Authorization: `Bearer ${tokenExistente}`, 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': UA },
+        orderId: orderIdExistente,
+        saleId: sale.id,
+      });
+
+      if (!url) {
+        return {
+          ok: false, skipped: 'etiqueta_sem_pdf', order_id: orderIdExistente,
+          detalhe: erros.join(' | ') || 'O Melhor Envio não devolveu o PDF desta etiqueta. Abra o pedido no painel deles.',
+        };
+      }
+
+      await sb(`catalog_sales?id=eq.${sale.id}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ raw_base44: { ...raw, melhor_envio: { ...raw.melhor_envio, label_url: url } } }),
+      });
+      return { ok: true, order_id: orderIdExistente, protocol: raw.melhor_envio.protocol || null, label_url: url, recuperada: true };
+    }
+
     const frete = raw.frete;
     if (!frete?.id) return { ok: false, skipped: 'sem_frete_id' };
 
@@ -348,13 +443,8 @@ async function tentarGerarEnvio(sale) {
       return { ok: false, skipped: 'checkout_falhou', order_id: orderId, detalhe: checkoutData?.message || JSON.stringify(checkoutData || {}).slice(0, 300) };
     }
 
-    // 3) gera a etiqueta para impressão
-    let labelUrl = null;
-    try {
-      const genResp = await fetch(`${API}/api/v2/me/shipment/generate`, { method: 'POST', headers, body: JSON.stringify({ orders: [orderId] }) });
-      const genData = await genResp.json().catch(() => null);
-      labelUrl = genData?.[orderId]?.url || null;
-    } catch (_) { /* etiqueta pode ser impressa depois manualmente pelo painel do ME */ }
+    // 3) gera a etiqueta e busca o PDF de impressão
+    const { url: labelUrl } = await obterUrlEtiqueta({ API, headers, orderId, saleId: sale.id });
 
     const protocol = checkoutData?.purchase?.orders?.[0]?.protocol || cartData?.protocol || null;
     await sb(`catalog_sales?id=eq.${sale.id}`, {
