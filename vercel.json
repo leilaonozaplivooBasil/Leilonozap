@@ -28,6 +28,7 @@
     { "path": "/api/functions/finalizeExpiredAuctions", "schedule": "* * * * *" },
     { "path": "/api/functions/activateScheduledAuctions", "schedule": "* * * * *" },
     { "path": "/api/functions/expirarReservasEstoque", "schedule": "* * * * *" },
-    { "path": "/api/functions/renovarTokenMelhorEnvio", "schedule": "17 5 * * *" }
+    { "path": "/api/functions/renovarTokenMelhorEnvio", "schedule": "17 5 * * *" },
+    { "path": "/api/functions/liquidarArrematesPendentes", "schedule": "*/10 * * * *" }
   ]
 }
