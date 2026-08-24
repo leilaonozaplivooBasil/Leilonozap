@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     if (!auctionId || !userId) return res.status(400).json({ success: false, error: 'Dados obrigatórios ausentes' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const aRows = await (await sb(`auctions?select=id,title,current_price,winner_id,winner_name,status,order_status,image_urls,frete_reservado_valor&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
+    const aRows = await (await sb(`auctions?select=id,title,current_price,winner_id,winner_name,status,order_status,image_urls,frete_reservado_valor,product_id&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
     const auction = Array.isArray(aRows) ? aRows[0] : null;
     if (!auction) return res.status(200).json({ success: false, error: 'Leilão não encontrado' });
     if (auction.winner_id !== userId) return res.status(200).json({ success: false, error: 'Usuário não é o vencedor' });
@@ -177,6 +177,22 @@ export default async function handler(req, res) {
       buyer_phone: user.phone || null, buyer_cpf: user.cpf || null,
       product_title: `Arremate — ${auction.title}`.slice(0, 200),
       product_image: auction.image_urls?.[0] || null,
+      // 🔴 24/08/2026 — SEM ISTO O ARREMATE NUNCA BAIXAVA O ESTOQUE.
+      // fulfillStoreOrder (storeFulfill.js:196) monta a lista de itens assim:
+      //     if (!items.length && sale.product_id) { ... }
+      // O comentário lá em cima diz, com todas as letras, "venda de item único
+      // (checkout direto / ARREMATE) não tem items_json — usa o product_id da
+      // venda". Só que o arremate nunca gravava esse campo: a venda nascia sem
+      // product_id, a condição dava falso, `items` ficava vazio e
+      // baixarItensDaVenda NEM ERA CHAMADO.
+      //
+      // Resultado na loja: peça arrematada continuava à venda, com o estoque
+      // intacto. Foi o caso da "panela pressao eletrica mini" — arrematada às
+      // 08:16 e ainda aparecendo na vitrine com Estoque: 1.
+      //
+      // A coluna auctions.product_id sempre existiu; faltava trazer no select
+      // (feito logo acima) e gravar aqui.
+      product_id: auction.product_id || null,
       // total_amount é a base da comissão — fica só com o produto, frete nunca comissiona.
       sale_price: produtoAmount, total_amount: produtoAmount, quantity: 1,
       status: 'paid', payment_method: 'saldo',
