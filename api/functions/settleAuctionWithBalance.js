@@ -185,7 +185,38 @@ export default async function handler(req, res) {
       // 🚚 raw_base44 do arremate — ver montarRawArremate() logo acima do handler.
       raw_base44: rawArremate,
     };
-    await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(sale) });
+    // 🔴 24/08/2026 — ESTA GRAVAÇÃO FALHAVA CALADA, E FOI CARO.
+    //
+    // Era só `await sb(...)`, sem olhar a resposta. O PostgREST recusava o insert
+    // (a coluna buyer_cpf não existia na tabela — ver a migração 20260824), a
+    // função seguia em frente como se tivesse dado certo, e o resultado era o
+    // pior estado possível:
+    //   • o leilão marcado como 'paid'
+    //   • o saldo do cliente DEBITADO (com linha no reserva_ledger)
+    //   • e NENHUM pedido em catalog_sales
+    // O cliente pagou, a logística nunca viu, e ninguém foi avisado. Aconteceu com
+    // 4 clientes de uma vez (R$ 37,40) na primeira execução do cron de liquidação.
+    //
+    // Agora a resposta é conferida. Se a venda não nascer, o erro sobe: o dinheiro
+    // já saiu neste ponto, então o mínimo é NÃO fingir sucesso — quem chamou fica
+    // sabendo, e o motivo real do banco vai pro log.
+    const vendaResp = await sb('catalog_sales', {
+      method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(sale),
+    });
+    if (!vendaResp.ok) {
+      const detalhe = await vendaResp.text().catch(() => '');
+      console.error(
+        `[SETTLE] venda ${saleId} do leilão ${auctionId} NÃO foi gravada — HTTP ${vendaResp.status}:`,
+        detalhe.slice(0, 500)
+      );
+      return res.status(200).json({
+        success: false,
+        error: 'venda_nao_gravada',
+        detalhe: detalhe.slice(0, 300),
+        // Sinaliza o estado exato para quem for consertar: já debitou, falta o pedido.
+        saldo_ja_debitado: true, sale_id: saleId, auction_id: auctionId, amount,
+      });
+    }
 
     // comissões — mesma regra do webhook para arremate
     let commission = 0;
