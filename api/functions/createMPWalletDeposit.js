@@ -59,12 +59,18 @@ async function montarRawDoArremate({ auctionId, buyerId, amount }) {
     const freteAmount = Math.min(money(auction.frete_reservado_valor), amount);
     const produtoAmount = money(amount - Math.max(0, freteAmount));
 
-    return await montarRawArremate({
+    const raw = await montarRawArremate({
       user, auction, amount,
       freteAmount: Math.max(0, freteAmount),
       produtoAmount,
       origem: 'createMPWalletDeposit',
     });
+    // 🔴 24/08/2026 — o product_id vai junto: sem ele a venda de arremate nasce
+    // sem referência ao produto, e fulfillStoreOrder não baixa o estoque (a peça
+    // arrematada continua à venda na loja). Ver o comentário longo em
+    // settleAuctionWithBalance.js. O leilão já era consultado aqui — só faltava
+    // devolver o campo.
+    return { raw, productId: auction.product_id || null };
   } catch (e) {
     console.warn('[DEPOSITO] pacote de entrega do arremate falhou (venda segue normal):', e?.message);
     return undefined;
@@ -161,7 +167,7 @@ export default async function handler(req, res) {
       const applyCardSurcharge = cardKind === 'wallet_deposit' || cardKind === 'commission_deposit';
       const chargeAmount = applyCardSurcharge ? money(amount * (1 + CARD_SURCHARGE_RATE)) : amount;
       // 🚚 Só o arremate precisa de pacote de entrega — depósito/passaporte não têm envio.
-      const cardRawArremate = cardKind === 'arremate'
+      const cardArremate = cardKind === 'arremate'
         ? await montarRawDoArremate({ auctionId, buyerId, amount })
         : undefined;
       await sb('catalog_sales', {
@@ -173,7 +179,8 @@ export default async function handler(req, res) {
           status: 'pending_payment', payment_method: 'credit_card_mp',
           tracking_code: (isWalletDeposit ? 'DP' : 'AR') + cardSaleId.slice(0, 8).toUpperCase(),
           created_date: new Date().toISOString(),
-          ...(cardRawArremate ? { raw_base44: cardRawArremate } : {}),
+          ...(cardArremate?.raw ? { raw_base44: cardArremate.raw } : {}),
+          ...(cardArremate?.productId ? { product_id: cardArremate.productId } : {}),
         }),
       });
 
@@ -256,7 +263,7 @@ export default async function handler(req, res) {
         : depositType === 'commission_wallet' ? 'commission_deposit'
         : 'wallet_deposit');
     // 🚚 Só o arremate precisa de pacote de entrega — depósito/passaporte não têm envio.
-    const pixRawArremate = kind === 'arremate'
+    const pixArremate = kind === 'arremate'
       ? await montarRawDoArremate({ auctionId, buyerId, amount })
       : undefined;
     await sb('catalog_sales', {
@@ -268,7 +275,8 @@ export default async function handler(req, res) {
         status: 'pending_payment', payment_method: 'pix_mp',
         tracking_code: (isWalletDeposit ? 'DP' : 'AR') + saleId.slice(0, 8).toUpperCase(),
         created_date: new Date().toISOString(),
-        ...(pixRawArremate ? { raw_base44: pixRawArremate } : {}),
+        ...(pixArremate?.raw ? { raw_base44: pixArremate.raw } : {}),
+        ...(pixArremate?.productId ? { product_id: pixArremate.productId } : {}),
       }),
     });
 
