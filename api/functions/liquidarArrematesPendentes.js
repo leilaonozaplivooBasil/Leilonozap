@@ -56,7 +56,10 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
 
-const LOTE = 20; // por execução — o cron roda de novo em 10 min
+// Por execução. Com os planos já fora da consulta, 100 cobre a fila inteira com
+// folga (são 4 produtos reais hoje) — o teto continua existindo só como barreira
+// contra um estado ruim virar rajada.
+const LOTE = 100;
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -78,9 +81,23 @@ export default async function handler(req, res) {
   try {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
+    // 🔴 CORREÇÃO 24/08/2026 — O FILTRO TEM QUE VIR ANTES DO LIMITE.
+    //
+    // A primeira versão pegava os 20 mais antigos e SÓ DEPOIS tirava os planos de
+    // carreira, no JavaScript. Só que hoje existem 44 planos e 4 produtos reais em
+    // awaiting_payment, e os planos são MUITO mais velhos (o mais antigo é de
+    // janeiro). Resultado: os 20 primeiros vinham todos plano, o filtro tirava
+    // todos, e sobravam ZERO alvos. O cron rodou 4 vezes sem liquidar nada.
+    //
+    // Agora as duas colunas de sinalização saem na própria consulta, então o limite
+    // conta só produto de verdade. `not.is.true` mantém quem está NULL (a maioria).
+    // O filtro por TÍTULO continua no JavaScript de propósito: lá ele usa \bplano\b,
+    // que não confunde "Planotec" nem "Mesa Planejada" — o ilike do PostgREST
+    // confundiria e deixaria produto legítimo de fora.
     const rows = await (await sb(
       'auctions?select=id,title,winner_id,winner_name,current_price,is_investment_plan,is_test_auction' +
       '&order_status=eq.awaiting_payment&winner_id=not.is.null&status=in.(ended,sold,processing)' +
+      '&is_investment_plan=not.is.true&is_test_auction=not.is.true' +
       `&order=end_time.asc&limit=${LOTE}`
     )).json();
 
@@ -89,6 +106,14 @@ export default async function handler(req, res) {
     }
 
     const alvos = rows.filter((a) => !ehPlanoOuTeste(a));
+
+    // Tinha pendente e sobrou nada? Isso é exatamente o defeito de cima voltando.
+    // Antes esse caso passava MUDO (o log só falava quando liquidava ou dava erro),
+    // e foi o que escondeu o problema por 4 execuções seguidas.
+    if (alvos.length === 0) {
+      console.log(`[CRON LIQUIDAR] ${rows.length} pendente(s), nenhum liquidável — todos plano/teste.`);
+      return res.status(200).json({ success: true, liquidados: 0, pendentes: rows.length, resultados: [] });
+    }
     const resultados = [];
 
     for (const a of alvos) {
