@@ -5,6 +5,8 @@
 // Idempotente: flip atômico do order_status da auction garante execução única.
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
+import { gerarEnvioAutomatico } from '../_lib/melhorEnvioShipment.js';
+import { montarRawArremate } from '../_lib/rawArremate.js';
 
 import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -21,113 +23,9 @@ const cents = (n) => Math.round((Number(n) || 0) * 100);
 const fromCents = (c) => c / 100;
 
 
-// ══════════════════════════════════════════════════════════════════════════════
-// 🚚 O PACOTE DE ENTREGA DO ARREMATE — corrigido em 21/08/2026
-// ══════════════════════════════════════════════════════════════════════════════
-// COMO ESTAVA, e os quatro defeitos numa linha só:
-//
-//   ...(freteAmount > 0 ? { raw_base44: { frete: { valor: freteAmount }, amount_charged: amount } } : {})
-//
-//   ① `delivery_type` NUNCA era gravado. E as duas pontas discordam do valor
-//      ausente: CatalogOrdersAdmin.jsx só esconde a etiqueta quando é 'pickup',
-//      melhorEnvioShipment.js só aceita quando é 'delivery'. Resultado: a tela
-//      mostrava "Etiqueta pendente" e o servidor respondia "é retirada no
-//      balcão". Acontecia em TODO arremate, não em alguns.
-//   ② Com frete zero, o `raw_base44` inteiro deixava de existir — sem frete,
-//      sem amount_charged, sem nada. Foi o caso do pedido ARD5856D19.
-//   ③ O frete ia como `{ valor }` só. melhorEnvioShipment.js exige `frete.id`
-//      (o serviço escolhido) ou devolve 'sem_frete_id'. Ou seja: mesmo o
-//      arremate COM frete jamais geraria etiqueta. E sem `empresa`/`servico`,
-//      a tela mostrava "Frete: R$ 11,60" sem nome de transportadora.
-//   ④ Nenhum endereço de entrega era gravado. A Melhor Envio precisa dele.
-//
-// COMO FICOU: o raw_base44 nasce SEMPRE, com delivery_type, endereço do
-// vencedor e o frete completo.
-//
-// ⚠️ POR QUE O DETALHE DO FRETE É RESOLVIDO AQUI, E NÃO NO LANCE
-// O caminho óbvio seria o lance já gravar id/empresa/serviço. Não dá: o PATCH
-// do lance (submitAtomicBid.js) não aceita campo que não exista na tabela —
-// coluna inexistente ali faz o PostgREST devolver 42703 e TODO lance morre.
-// Foi o que derrubou a produção de 03/08 15:03 até o PONTO 83, e está anotado
-// no cabeçalho daquele arquivo. Então aqui a gente RECOTA o frete com o CEP do
-// vencedor só para descobrir o `id` do serviço.
-//
-// ⚠️ O VALOR COBRADO NÃO MUDA. Quem manda é `frete_reservado_valor`, que foi o
-// que o cliente viu e teve reservado no lance. A recotação serve só para achar
-// o id/empresa/serviço da etiqueta. Se ela falhar, o pedido nasce com o valor
-// certo e sem id — vira etiqueta pendente, que é um problema de logística, não
-// de dinheiro.
-async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auction }) {
-  const cep = String(user?.address_zip_code || '').replace(/\D/g, '');
-  const endereco = {
-    street: user?.address_street || null,
-    number: user?.address_number || null,
-    complement: user?.address_complement || null,
-    neighborhood: user?.address_neighborhood || null,
-    city: user?.address_city || null,
-    state: user?.address_state || null,
-    zip: cep || null,
-  };
-  const temEndereco = !!(endereco.street && cep.length === 8);
-
-  // ⚠️ F9 — NUNCA transformar entrega paga em retirada.
-  // A primeira versão marcava 'pickup' quando faltava endereço, MESMO com frete
-  // cobrado. Isso é apagar um problema com outro: o cliente pagou frete, então
-  // aquilo é entrega. Sem endereço vira 'delivery_pendente' — pendência
-  // operacional visível, que a logística resolve pedindo o endereço.
-  const situacao = freteAmount > 0
-    ? (temEndereco ? 'delivery' : 'delivery_pendente')
-    : (temEndereco ? 'delivery' : 'pickup');
-
-  const raw = {
-    delivery_type: situacao,
-    address: temEndereco ? endereco : null,
-    amount_charged: amount,
-    produto_amount: produtoAmount,
-    origem: 'settleAuctionWithBalance',
-    // 🔗 BLOQUEADOR 7 (auditoria OpenAI, 21/08/2026) — DE ONDE VEIO ESTE PEDIDO.
-    // O pedido de arremate nascia sem NENHUMA referência ao leilão que o gerou.
-    // Quem precisasse recotar o frete depois (a rota cobrarFretePendente) não
-    // tinha como descobrir o produto, e acabava passando o id da VENDA para
-    // `cotarOpcoes` — que procura em `products`, não acha, e cai na caixa mínima
-    // dos Correios. Mesmo defeito F8, um andar acima. Agora o vínculo fica
-    // gravado no pedido.
-    auction_id: auction?.id || null,
-    product_id: auction?.product_id || null,
-    frete: { id: null, valor: freteAmount, empresa: null, servico: null, prazo: null, cep: cep || null },
-  };
-
-  if (situacao === 'delivery_pendente') {
-    raw.pendencia = 'Frete cobrado mas o comprador está sem endereço completo no cadastro. Peça o endereço antes de despachar.';
-  }
-  if (!(temEndereco && freteAmount > 0)) return raw;
-
-  // recotação só para descobrir o serviço — nunca para mudar o valor.
-  // ⚠️ F8 — o produto é `auction.product_id`. A primeira versão passava o id do
-  // LEILÃO, que não existe em `public.products`: `cotarOpcoes` não achava nada e
-  // caía silenciosamente na caixa mínima dos Correios (11×2×16 cm, 0,3 kg). Ou
-  // seja, escolhia transportadora e preço por um pacote fictício. Achado da
-  // auditoria independente da OpenAI, e o erro era meu.
-  try {
-    const { cotarFreteDoLeilao } = await import('../_lib/freteLeilao.js');
-    const r = await cotarFreteDoLeilao({ auctionId: auction.id, userId: user.id, auction, cep });
-    if (r?.ok && Array.isArray(r.opcoes) && r.opcoes.length) {
-      const escolhida = r.opcoes.reduce((melhor, o) =>
-        Math.abs(o.preco - freteAmount) < Math.abs(melhor.preco - freteAmount) ? o : melhor, r.opcoes[0]);
-      raw.frete.id = String(escolhida.id);
-      raw.frete.empresa = escolhida.empresa || null;
-      raw.frete.servico = escolhida.nome || null;
-      raw.frete.prazo = escolhida.prazo ?? null;
-      raw.frete.valor_recotado = escolhida.preco;   // trilha: dá pra comparar depois
-    } else if (r?.motivo) {
-      raw.frete.recotacao_falhou = r.motivo;        // a logística vê por que não saiu etiqueta
-    }
-  } catch (e) {
-    console.warn('[SETTLE] recotacao de frete falhou (pedido segue com o valor reservado):', e?.message);
-    raw.frete.recotacao_falhou = String(e?.message || e).slice(0, 120);
-  }
-  return raw;
-}
+// 🚚 O pacote de entrega do arremate (delivery_type, endereço, frete completo)
+// mora em api/_lib/rawArremate.js — compartilhado com o arremate pago por
+// PIX/cartão, que nasce em createMPWalletDeposit.js. Ver o cabeçalho de lá.
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -271,7 +169,7 @@ export default async function handler(req, res) {
     }
 
     // venda já paga (mesma rota do arremate via PIX, sem gateway)
-    const rawArremate = await montarRawArremate({ user: { ...user, id: userId }, freteAmount, amount, produtoAmount, auction });
+    const rawArremate = await montarRawArremate({ user: { ...user, id: userId }, freteAmount, amount, produtoAmount, auction, origem: 'settleAuctionWithBalance' });
     const saleId = oid();
     const sale = {
       id: saleId, base44_id: saleId, kind: 'arremate',
@@ -299,7 +197,21 @@ export default async function handler(req, res) {
       console.warn('settle: comissão falhou (venda segue paga):', e?.message);
     }
 
-    return res.status(200).json({ success: true, paid: true, sale_id: saleId, amount, produto_amount: produtoAmount, frete_amount: freteAmount, new_balance: newBalance, commission });
+    // 🚚 ETIQUETA (22/08/2026) — esta rota criava a venda e parava aqui. O arremate
+    // pago com SALDO era o único caminho de venda que nunca disparava a etiqueta: a
+    // loja dispara pelo mpWebhook, o arremate por PIX/cartão também, e este não.
+    // O operador só descobria na hora de despachar e tinha que gerar no botão manual,
+    // pedido por pedido.
+    //
+    // `montarRawArremate` (acima) já monta delivery_type, endereço e frete.id — os
+    // dados que a etiqueta precisa já estavam prontos, só faltava a chamada.
+    //
+    // Best-effort, igual ao mpWebhook: `gerarEnvioAutomatico` nunca lança (devolve
+    // {ok:false, skipped}) e o resultado vai no corpo da resposta. Venda e comissão
+    // já aconteceram acima e não dependem disto.
+    const envio = await gerarEnvioAutomatico(sale);
+
+    return res.status(200).json({ success: true, paid: true, sale_id: saleId, amount, produto_amount: produtoAmount, frete_amount: freteAmount, new_balance: newBalance, commission, envio });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });
   }

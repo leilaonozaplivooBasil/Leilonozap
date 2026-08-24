@@ -61,6 +61,12 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
 // exatamente como antes desta mudança.
 const GRUPOS_HELOIM_IDS = (Deno.env.get('GRUPOS_HELOIM_IDS') || '').split(',').map((s) => s.trim()).filter(Boolean);
 
+// Número do próprio bot no WhatsApp (23/08/2026) — serve pra reconhecer quando alguém
+// @marcou ele ou respondeu uma mensagem dele dentro do grupo. Só isso; não é usado pra
+// enviar nada (o envio continua indo pelo instance id + token). Default é o número em uso
+// hoje, no mesmo estilo de EXECUTIVO_VENDEDOR_PHONE — trocou de número, é só setar o secret.
+const ZAPI_NUMERO_BOT = Deno.env.get('ZAPI_NUMERO_BOT') || '5521984072064';
+
 // Slack (22/08/2026) — Incoming Webhook do canal onde a Heloim registra pedido/classificação
 // de risco/decisão, igual fazia no Base44 antigo (canal top-tech-leilao-nozap). Opcional: sem
 // configurar, Heloim funciona igual, só não duplica o registro no Slack.
@@ -139,6 +145,9 @@ type MensagemExtraida = {
   midiaTipo: 'imagem' | 'documento' | null;
   midiaMime: string | null;   // o que o Z-API declarou; conferido/corrigido no download
   midiaNome: string | null;   // nome do arquivo, quando vem (só documento)
+  // Em grupo, a Heloim só fala quando é chamada — ver heloimFoiChamada().
+  mencionaBot: boolean;     // o número do bot foi @marcado na mensagem
+  respondeuBot: boolean;    // a mensagem é resposta (reply) a uma mensagem do próprio bot
   messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
@@ -179,9 +188,30 @@ function extrairMensagem(body: any): MensagemExtraida | null {
   const texto: unknown = body?.text?.message ?? body?.body ??
     (typeof body?.message === 'string' ? body.message : body?.message?.text);
 
+  // 📣 Foi o bot que chamaram? Duas pistas além do nome escrito no texto (esse é
+  // conferido em heloimFoiChamada()):
+  //   ① @marcação — o Z-API manda a lista de números marcados. O nome do campo varia
+  //      entre versões deles, então olhamos os candidatos plausíveis; nenhum bater não
+  //      quebra nada, só significa "não foi marcado".
+  //   ② resposta (reply) a uma mensagem do bot — o corpo citado vem com quem escreveu.
+  // Nunca chuta: na dúvida, os dois ficam false e ela só responde se o nome dela vier
+  // escrito. Melhor ficar calada de leve do que falar por cima da conversa dos outros.
+  const numeroDoBot = apenasDigitos(ZAPI_NUMERO_BOT);
+  const marcados: unknown = body?.mentionedPhones ?? body?.mentioned ?? body?.mentions ?? null;
+  const mencionaBot = !!numeroDoBot && Array.isArray(marcados) &&
+    marcados.some((m) => apenasDigitos(String(m)).endsWith(ultimosDigitos(numeroDoBot, 8)));
+
+  const citada: any = body?.referencedMessage ?? body?.quotedMsg ?? body?.quotedMessage ?? null;
+  const autorDaCitada: unknown = citada?.fromMe === true ? 'bot'
+    : (citada?.participant ?? citada?.phone ?? citada?.author ?? null);
+  const respondeuBot = autorDaCitada === 'bot' ||
+    (!!numeroDoBot && !!autorDaCitada &&
+      apenasDigitos(String(autorDaCitada)).endsWith(ultimosDigitos(numeroDoBot, 8)));
+
   const base = {
     remetente, remetenteNome, grupoId, grupoNome, messageId: messageIdStr,
     audioUrl: null, midiaUrl: null, midiaTipo: null, midiaMime: null, midiaNome: null,
+    mencionaBot, respondeuBot,
   } as const;
 
   if (texto && String(texto).trim()) {
@@ -405,6 +435,63 @@ async function carregarHistorico(remetente: string, agente: string): Promise<Tur
     console.error('[whatsapp-router] falha ao carregar histórico (segue sem memória):', e);
     return [];
   }
+}
+
+// ============================================================================
+// 📣 Em grupo, a Heloim SÓ fala quando é chamada (23/08/2026, pedido do dono:
+// "responder só quando perguntada é o certo desde já").
+//
+// Antes, grupo autorizado = ela respondia TODA mensagem. Num grupo parado dá pra testar;
+// num grupo ativo vira spam e alguém tira ela no mesmo dia.
+//
+// Ela entra na conversa em quatro situações — nesta ordem de custo:
+//   ① o nome dela aparece escrito ("Heloim, quantas vendas hoje?")
+//   ② @marcaram o número do bot
+//   ③ a mensagem é resposta (reply) a uma mensagem dela
+//   ④ ela e essa MESMA pessoa estão no meio de uma conversa (últimos 5 min) — senão a
+//      pessoa teria que repetir "Heloim" a cada frase, e ela pareceria robô
+//
+// Fora disso, em grupo, fica calada: nem chama a Claude, nem grava memória, nem envia nada.
+// Em conversa 1:1 NADA muda — lá ela responde sempre, é o canal dela com o admin.
+//
+// ⚠️ Sem acento de propósito: "Heloim" não tem acento, mas gente escreve de tudo. O
+// normalizar() tira acento dos dois lados antes de comparar.
+// ============================================================================
+const JANELA_CONVERSA_MS = 5 * 60 * 1000;
+
+function normalizar(v: string): string {
+  return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function citaNomeDaHeloim(texto: string): boolean {
+  return /\bheloim\b/.test(normalizar(texto));
+}
+
+// Ela respondeu essa pessoa há pouco? Usa a própria memória (ai_conversas) — não precisa de
+// tabela nova. Falha de rede aqui devolve false: no pior caso ela só não emenda a conversa,
+// e a pessoa chama pelo nome de novo. Nunca o contrário (falar sem ser chamada).
+async function conversaAberta(remetente: string): Promise<boolean> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const desde = new Date(Date.now() - JANELA_CONVERSA_MS).toISOString();
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/ai_conversas?select=created_at&remetente=eq.${encodeURIComponent(remetente)}` +
+        `&agente=eq.heloim&role=eq.assistant&created_at=gte.${encodeURIComponent(desde)}&limit=1`,
+      { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
+    );
+    if (!r.ok) return false;
+    const rows = await r.json().catch(() => []);
+    return Array.isArray(rows) && rows.length > 0;
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao checar conversa aberta (trata como fechada):', e);
+    return false;
+  }
+}
+
+async function heloimFoiChamada(msg: MensagemExtraida): Promise<boolean> {
+  if (citaNomeDaHeloim(msg.texto)) return true;
+  if (msg.mencionaBot || msg.respondeuBot) return true;
+  return await conversaAberta(msg.remetente);
 }
 
 async function salvarTurno(remetente: string, agente: string, role: 'user' | 'assistant', content: string) {
@@ -753,7 +840,11 @@ function montarSystemPromptHeloim(ctx: {
 
   const contextoCanal = ctx.emGrupo
     ? `\n\nVocê está respondendo DENTRO DO GRUPO "${ctx.grupoNome || '(sem nome)'}" — quem mandou a última mensagem foi ` +
-      `${ctx.remetenteNome || 'alguém do grupo'}${ctx.remetenteEhAdmin ? ' (é admin — pode aprovar/rejeitar direto)' : ' (NÃO é admin — só pode pedir, não aprovar/rejeitar nada)'}.`
+      `${ctx.remetenteNome || 'alguém do grupo'}${ctx.remetenteEhAdmin ? ' (é admin — pode aprovar/rejeitar direto)' : ' (NÃO é admin — só pode pedir, não aprovar/rejeitar nada)'}.` +
+      `\n\nVocê só está vendo esta mensagem porque foi CHAMADA (pelo nome, por marcação, por ` +
+      `resposta a uma mensagem sua, ou porque já estava conversando com essa pessoa). O resto ` +
+      `da conversa do grupo passa sem você. Então responda o que foi pedido e pare — não ` +
+      `comente conversa alheia, não puxe assunto, não peça pra te chamarem de novo.`
     : `\n\nVocê está numa conversa 1:1 com ${ctx.remetenteNome || 'um admin'} (admin confirmado).`;
 
   return `Você é a Heloim, assistente técnica de TI do Leilão NoZap. Responde direto por ${admins}
@@ -1131,6 +1222,10 @@ async function processarMensagem(msg: MensagemExtraida) {
     const admin = ehAdmin(msg.remetente);
     const emGrupo = !!msg.grupoId;
     const agente = emGrupo || admin ? 'heloim' : 'zeca';
+
+    // 📣 Em grupo, só fala quando é chamada — ver heloimFoiChamada(). Sai ANTES de qualquer
+    // custo: sem Claude, sem download de mídia, sem gravar memória, sem envio.
+    if (emGrupo && !(await heloimFoiChamada(msg))) return;
     const cliente = agente === 'zeca' ? await buscarClientePorTelefone(msg.remetente) : null;
     const systemPrompt = agente === 'heloim'
       ? montarSystemPromptHeloim({ emGrupo, grupoNome: msg.grupoNome, remetenteEhAdmin: admin, remetenteNome: msg.remetenteNome })
