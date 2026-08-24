@@ -383,12 +383,31 @@ async function tentarGerarEnvio(sale) {
       const rows = await (await sb(`products?select=id,peso,altura,largura,comprimento&id=in.(${ids.map((x) => `"${x}"`).join(',')})`)).json().catch(() => null);
       dims = Object.fromEntries((Array.isArray(rows) ? rows : []).map((p) => [p.id, p]));
     }
-    const products = items.map((it, idx) => {
+    // 🔴 24/08/2026 — O PRODUTO CHEGAVA NA MELHOR ENVIO SEM DIMENSÃO E SEM PESO.
+    //
+    // Este bloco lia `p` (peso/altura/largura/comprimento do produto) e NÃO usava
+    // em lugar nenhum: só nome, quantidade e valor iam no `products[]`. As
+    // dimensões entravam apenas no `volumes` agregado, logo abaixo. Efeito no
+    // painel deles: a caixa até tinha medida, mas cada item aparecia sem peso e
+    // sem dimensão — que é o que a logística vê e confere.
+    //
+    // A cotação (api/_lib/frete.js:44-47) SEMPRE mandou os quatro campos por
+    // produto. O comentário aqui em cima diz "mesma lógica da cotação" e não era.
+    // Agora é: mesmos campos, mesmos mínimos.
+    //
+    // Os mínimos não são chute — são a caixa mínima dos Correios (11 x 2 x 16 cm,
+    // 0,1 kg). Produto sem medida cadastrada cai neles em vez de ir zerado, que a
+    // Melhor Envio recusa.
+    const products = items.map((it) => {
       const p = dims[String(it.id || it.product_id)] || {};
       return {
         name: String(it.title || it.desc || 'Produto').slice(0, 250),
         quantity: Math.max(1, parseInt(it.qty || it.quantity) || 1),
         unitary_value: Math.max(0.01, Number(it.price) || 0),
+        width: Math.max(11, Number(p.largura) || 11),
+        height: Math.max(2, Number(p.altura) || 4),
+        length: Math.max(16, Number(p.comprimento) || 16),
+        weight: Math.max(0.1, Number(p.peso) || 0.3),
       };
     });
     // volume único agregado (o mesmo padrão da cotação: caixa mínima dos Correios)
