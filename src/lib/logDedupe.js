@@ -36,6 +36,30 @@ function limparExpirados(agora) {
   }
 }
 
+// 🔴 24/08/2026 — A TRAVA EXISTIA E NÃO PEGAVA. Incidente em produção: 1.581
+// gravações de `GlobalMonitor / Monitor_rate_limit_risk` em ~12 minutos, e
+// subindo. Causa: a assinatura usava a mensagem CRUA, e a mensagem carrega um
+// número que muda toda vez —
+//     "99 requisições/min - RISCO DE RATE LIMIT"
+//     "100 requisições/min - RISCO DE RATE LIMIT"   ← assinatura diferente
+// Assinatura sempre nova = trava nunca dispara.
+//
+// E fechava um LAÇO DE REALIMENTAÇÃO: o monitor detecta excesso de requisições
+// → grava um log → o log É uma requisição → o número sobe → nova assinatura →
+// grava de novo. Sozinho, sem parar. O freio de rajada (200/60s) não segurava
+// porque cada navegador ficava logo abaixo do teto.
+//
+// Correção: os dígitos saem só da ASSINATURA. A mensagem gravada continua
+// inteira, com o número real — não se perde informação nenhuma de diagnóstico.
+//
+// ⚠️ Efeito colateral aceito: dois erros que diferem SÓ por número (ex.:
+// "HTTP 401" e "HTTP 500" no mesmo step e componente) contam como um dentro dos
+// 60s. Perder uma variante por minuto é muito melhor do que 1.581 gravações.
+// Erros de verdade quase sempre diferem também no step ou no componente.
+function semNumeros(texto) {
+  return texto.replace(/\d+/g, '#');
+}
+
 /**
  * Grava um evento no SystemLog, ignorando repetição idêntica recente.
  * Nunca lança: falha de log jamais pode quebrar a tela do usuário.
@@ -51,7 +75,7 @@ export function registrarLog(payload) {
     const assinatura = [
       payload.step || '',
       payload.component_name || '',
-      String(payload.message || '').slice(0, 300),
+      semNumeros(String(payload.message || '').slice(0, 300)),
     ].join('|');
 
     const ultimoEnvio = vistos.get(assinatura);
