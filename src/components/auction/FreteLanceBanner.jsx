@@ -75,8 +75,11 @@ export default function FreteLanceBanner({
     );
   }
 
-  if (status === "needs_cep" || status === "error") {
-    const falhou = status === "error";
+  // 🔴 PONTO 128 — `cep_nao_salvo` entra aqui junto com os outros dois: sem esta
+  // linha o banner devolveria `null`, a caixinha sumiria da tela e a pessoa
+  // ficaria sem nenhum jeito de tentar de novo, no meio do leilão.
+  if (status === "needs_cep" || status === "error" || status === "cep_nao_salvo") {
+    const falhou = status === "error" || status === "cep_nao_salvo";
     return (
       <div className="mx-auto mt-3 max-w-lg">
         {/* PONTO 83 — parado é NEUTRO (vermelho antes do erro faz o usuário achar
@@ -112,7 +115,13 @@ export default function FreteLanceBanner({
           </button>
         </form>
         {falhou && (
-          <p className="mt-1 px-2 text-[11px] text-amber-400">CEP não encontrado — confira e tente outro.</p>
+          <p className="mt-1 px-2 text-[11px] text-amber-400">
+            {status === "cep_nao_salvo"
+              // O CEP está certo — mandar "confira e tente outro" faria a pessoa
+              // apagar um número correto e digitar um errado.
+              ? 'Não conseguimos salvar seu CEP agora. Clique em Calcular frete de novo.'
+              : 'CEP não encontrado — confira e tente outro.'}
+          </p>
         )}
       </div>
     );
