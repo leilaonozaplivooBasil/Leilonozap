@@ -488,6 +488,53 @@ export default function AuctionRoom() {
       return;
     }
     setFreteStatus('loading');
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 128 (25/08/2026) — A CAIXINHA DE CEP ERA DECORATIVA. LAÇO INFINITO.
+    // ══════════════════════════════════════════════════════════════════════════
+    // Relato real: "preenchi o CEP certo e continua pedindo o CEP — não consigo
+    // dar lance". Não era o CEP dela. Era isto:
+    //
+    //   1. Quem não tem CEP no cadastro cai em `needs_cep` e vê a caixinha.
+    //   2. A pessoa digita o CEP e clica em "Calcular frete".
+    //   3. A tela manda o CEP para `cotarFrete`.
+    //   4. `cotarFrete` IGNORA o CEP do corpo DE PROPÓSITO (BLOQUEADOR 14) e lê o
+    //      CEP do cadastro — porque o selo que ele devolve autoriza reserva de
+    //      saldo, e o CEP do selo tem que ser o mesmo do endereço de entrega.
+    //   5. O cadastro continua sem CEP → volta `sem_cep`.
+    //   6. A tela volta para `needs_cep` e mostra a caixinha de novo.
+    //   → passo 2. Para sempre. Em leilão ao vivo.
+    //
+    // Repare na assimetria que denuncia o furo: a caixinha de ENDEREÇO
+    // (handleConfirmarEndereco) GRAVA no cadastro antes de liberar. A caixinha de
+    // CEP nunca gravou. Ela só guardava o número num estado da tela que o
+    // servidor jamais leria.
+    //
+    // POR QUE GRAVAR EM VEZ DE MANDAR O CEP PARA O SERVIDOR ACEITAR: se o
+    // servidor cotasse por um CEP escolhido na hora, o selo sairia assinado para
+    // um destino diferente do endereço de entrega — daria para cotar por um CEP
+    // vizinho mais barato e receber no endereço real. Gravando primeiro, o CEP do
+    // selo, o do cadastro e o da entrega são o mesmo número, por construção.
+    const cepDoCadastro = String(currentUser?.address_zip_code || '').replace(/\D/g, '');
+    if (currentUser?.id && cep !== cepDoCadastro) {
+      try {
+        await plataforma.entities.AppUser.update(currentUser.id, { address_zip_code: cep });
+        // O cache local também precisa saber, senão o próximo render devolve o
+        // CEP velho e a pessoa acha que não salvou.
+        try {
+          const cached = localStorage.getItem('currentUser');
+          const base = cached ? JSON.parse(cached) : currentUser;
+          localStorage.setItem('currentUser', JSON.stringify({ ...base, address_zip_code: cep }));
+        } catch (_) { /* segue sem cache — não impede a cotação */ }
+      } catch (e) {
+        console.error('[FRETE] não consegui gravar o CEP no cadastro:', e?.message);
+        // Status próprio: dizer "confira o CEP" aqui seria mentira, o CEP está
+        // certo. O que falhou foi gravar.
+        setFreteStatus('cep_nao_salvo');
+        return;
+      }
+    }
+
     try {
       // 🔴 O QUE MUDOU (BLOQUEADOR 3 + 4):
       // Antes esta tela montava o `items` — e mandava `id: auction.id`, que é o
@@ -581,6 +628,7 @@ export default function AuctionRoom() {
     if (freteStatus === 'needs_login') return 'Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.';
     if (freteStatus === 'needs_address') return 'Complete seu endereço de entrega para dar o lance.';
     if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
+    if (freteStatus === 'cep_nao_salvo') return 'Seu CEP está certo, mas não conseguimos salvá-lo no seu cadastro. Tente de novo em alguns segundos.';
     if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
     if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
     return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
