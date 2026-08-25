@@ -43,6 +43,12 @@ test('sem cracha valido nao grava, mesmo em modo observacao', () => {
   assert.match(rota, /if \(!ses\.liberado \|\| ses\.motivo !== 'ok' \|\| !ses\.userId\)/);
 });
 
+test('a mensagem de sessao expirada chega legivel na tela', () => {
+  // O adapter usa `error` no alerta do Perfil. "nao_autenticado" nao diz nada a
+  // ninguem — e quem entrou antes do cracha existir precisa saber o que fazer.
+  assert.match(rota, /error: 'Sua sessão expirou\. Saia e entre de novo para salvar seus dados\.'/);
+});
+
 test('zero linhas deixa de passar calado', () => {
   // Era exatamente esse silencio que fazia a tela achar que tinha salvado.
   assert.match(rota, /if \(!Array\.isArray\(linhas\) \|\| !linhas\.length\)/);

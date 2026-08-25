@@ -76,8 +76,14 @@ export default async function handler(req, res) {
     // 🔑 Identidade do crachá. Ponto. Igual ao cotarFrete (BLOQUEADOR 14).
     const ses = exigirSessao(req, null, 'atualizarMeuCadastro');
     if (!ses.liberado || ses.motivo !== 'ok' || !ses.userId) {
+      // A mensagem vai em português de gente porque ela CHEGA NA TELA: o adapter
+      // usa `error` no alerta do Perfil. "nao_autenticado" não diz nada a
+      // ninguém — e quem entrou antes do crachá existir precisa saber que o que
+      // resolve é sair e entrar de novo.
       return res.status(401).json({
-        success: false, error: 'nao_autenticado', motivo: ses.motivo,
+        success: false,
+        error: 'Sua sessão expirou. Saia e entre de novo para salvar seus dados.',
+        motivo: ses.motivo,
         detalhe: 'Esta rota grava no cadastro, então exige crachá de sessão válido mesmo com SESSAO_MODO em observação.',
       });
     }
