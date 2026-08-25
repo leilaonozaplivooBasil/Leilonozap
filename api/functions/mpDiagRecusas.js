@@ -138,6 +138,59 @@ function resumir(p, incluirBruto = false) {
   };
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// A CONFERÊNCIA QUE NÃO DEPENDE DE INTERPRETAÇÃO
+// ══════════════════════════════════════════════════════════════════════════════
+// `additional_info.payer` é o que o Mercado Pago DECIDIU guardar do que recebeu —
+// e não está escrito em lugar nenhum que ele copie tudo pra lá. Olhar só esse campo
+// e concluir "não mandamos" é chute com cara de prova.
+//
+// A requisição original que o nosso servidor mandou fica guardada no MP como
+// PREFERÊNCIA, e dá pra pedir ela de volta inteira. O caminho:
+//
+//   pagamento  →  p.order.id       (o pedido do MP)
+//   pedido     →  preference_id    (a nossa requisição)
+//   preferência→  payer / shipments  ← o documento que O NOSSO CÓDIGO escreveu
+//
+// Aqui não tem tradução: é o que saiu daqui, do jeito que saiu.
+async function conferirPreferencia(p) {
+  const pedidoId = p?.order?.id;
+  if (!pedidoId) return { conferido: false, porque: 'este pagamento não tem pedido (order) ligado — não dá pra achar a preferência' };
+
+  const pedido = await mpGet(`/merchant_orders/${pedidoId}`);
+  const prefId = pedido.json?.preference_id;
+  if (!prefId) return { conferido: false, porque: 'o pedido do MP não aponta pra nenhuma preferência', resposta_do_mp: pedido.status };
+
+  const pref = await mpGet(`/checkout/preferences/${prefId}`);
+  if (!pref.ok || !pref.json) return { conferido: false, porque: 'não consegui ler a preferência', resposta_do_mp: pref.status };
+
+  const pf = pref.json.payer || {};
+  const sh = pref.json.shipments || {};
+  return {
+    conferido: true,
+    preference_id: prefId,
+    quando_foi_criada: pref.json.date_created || null,
+    // 👇 ISTO é o que o nosso servidor mandou. Sem interpretação.
+    o_que_o_nosso_servidor_mandou: {
+      nome: pf.name || null,
+      sobrenome: pf.surname || null,
+      email: pf.email || null,
+      cpf: pf.identification?.number ? 'enviado' : 'NÃO ENVIADO',
+      telefone: pf.phone?.number ? `enviado (${pf.phone.area_code || '??'}) ${pf.phone.number}` : 'NÃO ENVIADO',
+      endereco: pf.address?.zip_code ? `enviado (CEP ${pf.address.zip_code})` : 'NÃO ENVIADO',
+      entrega: sh.receiver_address?.zip_code ? `enviada (CEP ${sh.receiver_address.zip_code})` : 'NÃO ENVIADA',
+      nome_na_fatura: pref.json.statement_descriptor || 'NÃO ENVIADO',
+    },
+    // Se estes quatro estiverem preenchidos, a correção de 25/08 está no ar.
+    // Se estiverem vazios, esta compra rodou no código antigo (ou caiu na rede
+    // de segurança do createMPCatalogCardCheckout — aí o log da Vercel diz por quê).
+    veredito: pf.phone?.number
+      ? 'A CORREÇÃO ESTÁ NO AR — o telefone saiu daqui.'
+      : 'ESTA COMPRA NÃO LEVOU TELEFONE. Ou rodou no código antigo, ou caiu na rede de segurança.',
+    bruto: { payer: pref.json.payer || null, shipments: pref.json.shipments || null },
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   try {
@@ -160,7 +213,11 @@ export default async function handler(req, res) {
           resposta_do_mp: { status: r.status, corpo: r.json || r.texto, erro: r.erro },
         });
       }
-      return res.status(200).json({ encontrado: true, pagamento: resumir(r.json, true) });
+      return res.status(200).json({
+        encontrado: true,
+        pagamento: resumir(r.json, true),
+        conferencia_da_requisicao: await conferirPreferencia(r.json),
+      });
     }
 
     // ── Modo 2: últimas recusas — responde se é sistêmico ────────────────────
