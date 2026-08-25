@@ -154,12 +154,32 @@ function resumir(p, incluirBruto = false) {
 //
 // Aqui não tem tradução: é o que saiu daqui, do jeito que saiu.
 async function conferirPreferencia(p) {
+  // Caminho 1: pagamento → pedido → preferência.
+  let prefId = null;
+  let comoAchei = null;
   const pedidoId = p?.order?.id;
-  if (!pedidoId) return { conferido: false, porque: 'este pagamento não tem pedido (order) ligado — não dá pra achar a preferência' };
+  if (pedidoId) {
+    const pedido = await mpGet(`/merchant_orders/${pedidoId}`);
+    if (pedido.json?.preference_id) { prefId = pedido.json.preference_id; comoAchei = 'pelo pedido do MP'; }
+  }
 
-  const pedido = await mpGet(`/merchant_orders/${pedidoId}`);
-  const prefId = pedido.json?.preference_id;
-  if (!prefId) return { conferido: false, porque: 'o pedido do MP não aponta pra nenhuma preferência', resposta_do_mp: pedido.status };
+  // Caminho 2 (25/08/2026): o caminho 1 voltou 403 na prática — o token não enxerga
+  // /merchant_orders. Mas dá pra achar a preferência pelo NOSSO número de venda, que
+  // vai na requisição como external_reference. Filtro documentado no SDK oficial
+  // (PreferenceSearchOptions.external_reference).
+  if (!prefId && p?.external_reference) {
+    const busca = await mpGet(`/checkout/preferences/search?external_reference=${encodeURIComponent(p.external_reference)}`);
+    const achada = busca.json?.elements?.[0];
+    if (achada?.id) { prefId = achada.id; comoAchei = 'pelo número da venda (external_reference)'; }
+  }
+
+  if (!prefId) {
+    return {
+      conferido: false,
+      porque: 'não consegui localizar a requisição original nem pelo pedido do MP nem pelo número da venda',
+      numero_da_venda: p?.external_reference || null,
+    };
+  }
 
   const pref = await mpGet(`/checkout/preferences/${prefId}`);
   if (!pref.ok || !pref.json) return { conferido: false, porque: 'não consegui ler a preferência', resposta_do_mp: pref.status };
@@ -169,6 +189,7 @@ async function conferirPreferencia(p) {
   return {
     conferido: true,
     preference_id: prefId,
+    achei: comoAchei,
     quando_foi_criada: pref.json.date_created || null,
     // 👇 ISTO é o que o nosso servidor mandou. Sem interpretação.
     o_que_o_nosso_servidor_mandou: {

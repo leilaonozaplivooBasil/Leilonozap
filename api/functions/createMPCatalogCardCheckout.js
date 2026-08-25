@@ -59,7 +59,7 @@ export default async function handler(req, res) {
     // de rede se a tela do cliente estiver em cache antigo e não mandar o telefone.
     let cadastro = null;
     if (buyer.id) {
-      const me = await (await sb(`app_users?select=id,career_levels,phone,address_street,address_number,address_complement,address_neighborhood,address_city,address_state,address_zip_code&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
+      const me = await (await sb(`app_users?select=id,career_levels,phone,created_date,address_street,address_number,address_complement,address_neighborhood,address_city,address_state,address_zip_code&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
       cadastro = Array.isArray(me) ? me[0] : null;
       const meusCargos = Array.isArray(cadastro?.career_levels) ? cadastro.career_levels : [];
       if (cadastro && meusCargos.some((c) => CARGOS_REDE.includes(c))) seller_id = cadastro.id;
@@ -192,6 +192,11 @@ export default async function handler(req, res) {
     const bairro = String(addrS.neighborhood || cadastro?.address_neighborhood || '').trim();
     const complemento = String(addrS.complement || cadastro?.address_complement || '').trim();
 
+    // ⚠️ Endereço do pagador vai SEMPRE que existir — inclusive em retirada. Em
+    // retirada a tela não pede endereço, então aqui só sobra o do cadastro. Se o
+    // cliente também não tiver endereço no cadastro, o Mercado Pago fica sem o
+    // sinal que mais pesa no Brasil, e a chance de recusa por risco sobe muito.
+    // Caso real 25/08: compra de retirada de R$ 8,42, telefone chegou, endereço não.
     const payerAddress = cepEnt.length === 8
       ? { zip_code: cepEnt, street_name: rua || 'Não informado', street_number: numero || 'S/N' }
       : null;
@@ -222,6 +227,11 @@ export default async function handler(req, res) {
         ...(buyer.cpf ? { identification: { type: 'CPF', number: String(buyer.cpf).replace(/\D/g, '') } } : {}),
         ...(payerPhone ? { phone: payerPhone } : {}),
         ...(payerAddress ? { address: payerAddress } : {}),
+        // Há quanto tempo essa pessoa é cliente nossa. O antifraude usa isso para
+        // separar cliente de sempre de conta criada agora para dar golpe — é campo
+        // próprio para isso no SDK do MP (`registration_date`). Cadastro antigo
+        // joga a favor do cliente.
+        ...(cadastro?.created_date ? { registration_date: new Date(cadastro.created_date).toISOString() } : {}),
       },
       ...(shipments ? { shipments } : {}),
       // O que aparece na fatura do cartão do cliente. Nome irreconhecível na fatura
