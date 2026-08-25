@@ -62,9 +62,21 @@ async function mpGet(caminho) {
 
 // Traduz o código do MP para português de gente, e diz de quem é a ação.
 const EXPLICA = {
+  // 🔴 CORRIGIDO 25/08/2026 — EU ATRIBUÍA ESSA RECUSA À FALTA DE DADO DO PAGADOR.
+  // Estava errado, e o dado provou. Depois da #112 a venda 174621461781 (Veronica)
+  // foi ao Mercado Pago com NOME, TELEFONE, ENDEREÇO e ENDEREÇO DE ENTREGA completos
+  // — e ainda assim levou cc_rejected_high_risk.
+  //
+  // Mandar o pagador completo continua certo (é recomendação do próprio MP), mas não
+  // era a causa. O que o conjunto das 30 recusas mostra:
+  //   • high_risk também em PIX (3× R$ 1.000.000 em 06/08) — e PIX não analisa o
+  //     comprador. Recusa por risco em PIX olha para quem RECEBE.
+  //   • high_risk também em Link de pagamento, valores de R$ 8 a R$ 1.000.000.
+  //   • compradores diferentes, cartões diferentes, IPs diferentes, dias diferentes.
+  // O único denominador comum é a conta. Isso não se resolve no código.
   cc_rejected_high_risk: {
     txt: 'Antifraude do Mercado Pago recusou por risco.',
-    acao: 'NOSSO — falta dado do pagador (telefone e endereço) na requisição.',
+    acao: 'CONTA — se o pagador foi enviado completo, a análise é da nossa conta no MP. Abrir chamado no Mercado Pago.',
   },
   cc_rejected_insufficient_amount: { txt: 'Limite ou saldo insuficiente no cartão.', acao: 'DO CLIENTE.' },
   cc_rejected_bad_filled_card_number: { txt: 'Número do cartão digitado errado.', acao: 'DO CLIENTE.' },
@@ -78,7 +90,8 @@ const EXPLICA = {
   cc_rejected_card_type_not_allowed: { txt: 'Tipo de cartão não aceito nesta conta.', acao: 'CONTA — configuração no Mercado Pago.' },
   cc_rejected_blacklist: { txt: 'Cartão em lista de restrição do Mercado Pago.', acao: 'DO CLIENTE.' },
   cc_rejected_other_reason: { txt: 'Recusado pelo emissor, sem motivo detalhado.', acao: 'DO CLIENTE — tentar outro cartão.' },
-  rejected_high_risk: { txt: 'Antifraude do Mercado Pago recusou por risco.', acao: 'NOSSO — falta dado do pagador.' },
+  rejected_high_risk: { txt: 'Antifraude do Mercado Pago recusou por risco.', acao: 'CONTA — aparece até em PIX, que não analisa comprador. É a nossa conta no MP.' },
+  cc_rejected_3ds_challenge: { txt: 'O cartão exigiu a verificação 3-D Secure e ela não foi concluída.', acao: 'DO CLIENTE — refazer e concluir a verificação do banco.' },
 };
 
 // Recorta só o que interessa. Nada de token, nada de número de cartão.
