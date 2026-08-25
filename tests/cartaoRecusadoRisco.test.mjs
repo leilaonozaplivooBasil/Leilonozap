@@ -50,8 +50,18 @@ test('retirada não declara entrega', () => {
 test('telefone e endereço têm de onde vir mesmo com a tela em cache antigo', () => {
   // O SELECT de app_users que já existia (o do cargo de rede) agora traz também
   // telefone e endereço do cadastro.
-  assert.match(cartao, /app_users\?select=id,career_levels,phone,address_street/);
+  // Sem amarrar a ordem das colunas: o que importa é que cada uma esteja no SELECT.
+  const selectAppUsers = cartao.match(/app_users\?select=([^&`]+)/)?.[1] || '';
+  for (const coluna of ['career_levels', 'phone', 'address_street', 'address_zip_code', 'created_date']) {
+    assert.ok(selectAppUsers.split(',').includes(coluna), `faltou ${coluna} no SELECT de app_users`);
+  }
   assert.match(cartao, /soDigitos\(buyer\.phone \|\| cadastro\?\.phone\)/);
+});
+
+test('a preferência diz há quanto tempo a pessoa é cliente', () => {
+  // Campo próprio do MP para antifraude: separa cliente de sempre de conta criada
+  // agora para dar golpe.
+  assert.match(cartao, /registration_date: new Date\(cadastro\.created_date\)\.toISOString\(\)/);
 });
 
 test('se o MP recusar a preferência nova, a compra não morre', () => {

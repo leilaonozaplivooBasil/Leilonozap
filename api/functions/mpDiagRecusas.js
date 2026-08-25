@@ -62,9 +62,21 @@ async function mpGet(caminho) {
 
 // Traduz o código do MP para português de gente, e diz de quem é a ação.
 const EXPLICA = {
+  // 🔴 CORRIGIDO 25/08/2026 — EU ATRIBUÍA ESSA RECUSA À FALTA DE DADO DO PAGADOR.
+  // Estava errado, e o dado provou. Depois da #112 a venda 174621461781 (Veronica)
+  // foi ao Mercado Pago com NOME, TELEFONE, ENDEREÇO e ENDEREÇO DE ENTREGA completos
+  // — e ainda assim levou cc_rejected_high_risk.
+  //
+  // Mandar o pagador completo continua certo (é recomendação do próprio MP), mas não
+  // era a causa. O que o conjunto das 30 recusas mostra:
+  //   • high_risk também em PIX (3× R$ 1.000.000 em 06/08) — e PIX não analisa o
+  //     comprador. Recusa por risco em PIX olha para quem RECEBE.
+  //   • high_risk também em Link de pagamento, valores de R$ 8 a R$ 1.000.000.
+  //   • compradores diferentes, cartões diferentes, IPs diferentes, dias diferentes.
+  // O único denominador comum é a conta. Isso não se resolve no código.
   cc_rejected_high_risk: {
     txt: 'Antifraude do Mercado Pago recusou por risco.',
-    acao: 'NOSSO — falta dado do pagador (telefone e endereço) na requisição.',
+    acao: 'CONTA — se o pagador foi enviado completo, a análise é da nossa conta no MP. Abrir chamado no Mercado Pago.',
   },
   cc_rejected_insufficient_amount: { txt: 'Limite ou saldo insuficiente no cartão.', acao: 'DO CLIENTE.' },
   cc_rejected_bad_filled_card_number: { txt: 'Número do cartão digitado errado.', acao: 'DO CLIENTE.' },
@@ -78,7 +90,8 @@ const EXPLICA = {
   cc_rejected_card_type_not_allowed: { txt: 'Tipo de cartão não aceito nesta conta.', acao: 'CONTA — configuração no Mercado Pago.' },
   cc_rejected_blacklist: { txt: 'Cartão em lista de restrição do Mercado Pago.', acao: 'DO CLIENTE.' },
   cc_rejected_other_reason: { txt: 'Recusado pelo emissor, sem motivo detalhado.', acao: 'DO CLIENTE — tentar outro cartão.' },
-  rejected_high_risk: { txt: 'Antifraude do Mercado Pago recusou por risco.', acao: 'NOSSO — falta dado do pagador.' },
+  rejected_high_risk: { txt: 'Antifraude do Mercado Pago recusou por risco.', acao: 'CONTA — aparece até em PIX, que não analisa comprador. É a nossa conta no MP.' },
+  cc_rejected_3ds_challenge: { txt: 'O cartão exigiu a verificação 3-D Secure e ela não foi concluída.', acao: 'DO CLIENTE — refazer e concluir a verificação do banco.' },
 };
 
 // Recorta só o que interessa. Nada de token, nada de número de cartão.
@@ -154,12 +167,32 @@ function resumir(p, incluirBruto = false) {
 //
 // Aqui não tem tradução: é o que saiu daqui, do jeito que saiu.
 async function conferirPreferencia(p) {
+  // Caminho 1: pagamento → pedido → preferência.
+  let prefId = null;
+  let comoAchei = null;
   const pedidoId = p?.order?.id;
-  if (!pedidoId) return { conferido: false, porque: 'este pagamento não tem pedido (order) ligado — não dá pra achar a preferência' };
+  if (pedidoId) {
+    const pedido = await mpGet(`/merchant_orders/${pedidoId}`);
+    if (pedido.json?.preference_id) { prefId = pedido.json.preference_id; comoAchei = 'pelo pedido do MP'; }
+  }
 
-  const pedido = await mpGet(`/merchant_orders/${pedidoId}`);
-  const prefId = pedido.json?.preference_id;
-  if (!prefId) return { conferido: false, porque: 'o pedido do MP não aponta pra nenhuma preferência', resposta_do_mp: pedido.status };
+  // Caminho 2 (25/08/2026): o caminho 1 voltou 403 na prática — o token não enxerga
+  // /merchant_orders. Mas dá pra achar a preferência pelo NOSSO número de venda, que
+  // vai na requisição como external_reference. Filtro documentado no SDK oficial
+  // (PreferenceSearchOptions.external_reference).
+  if (!prefId && p?.external_reference) {
+    const busca = await mpGet(`/checkout/preferences/search?external_reference=${encodeURIComponent(p.external_reference)}`);
+    const achada = busca.json?.elements?.[0];
+    if (achada?.id) { prefId = achada.id; comoAchei = 'pelo número da venda (external_reference)'; }
+  }
+
+  if (!prefId) {
+    return {
+      conferido: false,
+      porque: 'não consegui localizar a requisição original nem pelo pedido do MP nem pelo número da venda',
+      numero_da_venda: p?.external_reference || null,
+    };
+  }
 
   const pref = await mpGet(`/checkout/preferences/${prefId}`);
   if (!pref.ok || !pref.json) return { conferido: false, porque: 'não consegui ler a preferência', resposta_do_mp: pref.status };
@@ -169,6 +202,7 @@ async function conferirPreferencia(p) {
   return {
     conferido: true,
     preference_id: prefId,
+    achei: comoAchei,
     quando_foi_criada: pref.json.date_created || null,
     // 👇 ISTO é o que o nosso servidor mandou. Sem interpretação.
     o_que_o_nosso_servidor_mandou: {
