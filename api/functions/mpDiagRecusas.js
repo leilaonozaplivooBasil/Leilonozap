@@ -82,7 +82,7 @@ const EXPLICA = {
 };
 
 // Recorta só o que interessa. Nada de token, nada de número de cartão.
-function resumir(p) {
+function resumir(p, incluirBruto = false) {
   if (!p) return null;
   const detalhe = p.status_detail || null;
   const e = EXPLICA[detalhe] || null;
@@ -101,13 +101,40 @@ function resumir(p) {
 
     // 👇 O QUE NÓS MANDAMOS. É aqui que se vê se falta dado do pagador —
     // a causa mais comum de recusa por risco no Brasil.
-    pagador: {
+    // 🔴 CORREÇÃO 25/08/2026 — EU ESTAVA LENDO O CAMPO ERRADO.
+    //
+    // Num pagamento de Checkout Pro existem DOIS lugares com dado de pagador:
+    //   • `payer`                  → a conta Mercado Pago de quem pagou. Fica
+    //                                vazia quando a pessoa paga como visitante.
+    //   • `additional_info.payer`  → O QUE NÓS ENVIAMOS na preferência.
+    //
+    // A primeira versão só olhava `payer`, e por isso deu "NÃO ENVIADO" em tudo —
+    // inclusive nas vendas de maquininha, que nem passam pelo nosso código. Esse
+    // resultado impossível foi o que denunciou o erro.
+    //
+    // Agora os dois vão na resposta, e o `bruto` vai sem interpretação nenhuma:
+    // é o objeto do Mercado Pago do jeito que ele mandou, pra decidir olhando o
+    // dado real em vez de adivinhar em qual campo procurar.
+    //
+    // Seguro de expor: nem `payer` nem `additional_info` carregam número de
+    // cartão — isso vive em `card`, que não sai daqui.
+    conta_mp_de_quem_pagou: {
       email: p.payer?.email || null,
       cpf: p.payer?.identification?.number ? 'enviado' : 'NÃO ENVIADO',
       nome: p.payer?.first_name ? 'enviado' : 'NÃO ENVIADO',
       telefone: p.payer?.phone?.number ? 'enviado' : 'NÃO ENVIADO',
       endereco: p.payer?.address?.zip_code ? 'enviado' : 'NÃO ENVIADO',
     },
+    o_que_nos_enviamos: {
+      email: p.additional_info?.payer?.email || null,
+      cpf: p.additional_info?.payer?.identification?.number ? 'enviado' : 'NÃO ENVIADO',
+      nome: p.additional_info?.payer?.first_name ? 'enviado' : 'NÃO ENVIADO',
+      telefone: p.additional_info?.payer?.phone?.number ? 'enviado' : 'NÃO ENVIADO',
+      endereco: p.additional_info?.payer?.address?.zip_code ? 'enviado' : 'NÃO ENVIADO',
+      entrega: p.additional_info?.shipments?.receiver_address ? 'enviada' : 'NÃO ENVIADA',
+      itens: Array.isArray(p.additional_info?.items) ? p.additional_info.items.length : 0,
+    },
+    ...(incluirBruto ? { bruto: { payer: p.payer || null, additional_info: p.additional_info || null } } : {}),
   };
 }
 
@@ -133,7 +160,7 @@ export default async function handler(req, res) {
           resposta_do_mp: { status: r.status, corpo: r.json || r.texto, erro: r.erro },
         });
       }
-      return res.status(200).json({ encontrado: true, pagamento: resumir(r.json) });
+      return res.status(200).json({ encontrado: true, pagamento: resumir(r.json, true) });
     }
 
     // ── Modo 2: últimas recusas — responde se é sistêmico ────────────────────
@@ -156,19 +183,22 @@ export default async function handler(req, res) {
     }
 
     // Se o pagador vai incompleto em TODAS, a causa é nossa e é sistêmica.
-    const semTelefone = lista.filter((p) => p.pagador.telefone === 'NÃO ENVIADO').length;
-    const semEndereco = lista.filter((p) => p.pagador.endereco === 'NÃO ENVIADO').length;
-    const semCpf = lista.filter((p) => p.pagador.cpf === 'NÃO ENVIADO').length;
+    // Conta em cima de `o_que_nos_enviamos` — é o único que fala do NOSSO código.
+    const semTelefone = lista.filter((p) => p.o_que_nos_enviamos.telefone === 'NÃO ENVIADO').length;
+    const semEndereco = lista.filter((p) => p.o_que_nos_enviamos.endereco === 'NÃO ENVIADO').length;
+    const semCpf = lista.filter((p) => p.o_que_nos_enviamos.cpf === 'NÃO ENVIADO').length;
+    const semEntrega = lista.filter((p) => p.o_que_nos_enviamos.entrega === 'NÃO ENVIADA').length;
 
     return res.status(200).json({
       total_recusas_recentes: lista.length,
       resumo_por_motivo: Object.entries(porMotivo)
         .sort((a, b) => b[1].vezes - a[1].vezes)
         .map(([codigo, v]) => ({ codigo, ...v })),
-      dado_do_pagador_faltando: {
+      o_que_deixamos_de_enviar: {
         sem_cpf: semCpf,
         sem_telefone: semTelefone,
         sem_endereco: semEndereco,
+        sem_dados_de_entrega: semEntrega,
         de: lista.length,
       },
       recusas: lista,
