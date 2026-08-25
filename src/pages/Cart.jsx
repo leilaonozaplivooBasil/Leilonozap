@@ -662,7 +662,10 @@ export default function Cart() {
       if (paymentType === 'CREDIT_CARD') {
         const st = await plataforma.functions.invoke('createMPCatalogCardCheckout', {
           items: cartItems.map((it) => ({ product_id: it.id, quantity: it.quantity || 1 })),
-          buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, '') },
+          // 🔴 PONTO 127 — `phone` entra aqui. O telefone já é obrigatório nesta tela
+          // (validado logo acima), mas nunca era enviado ao servidor nesta chamada.
+          // Sem ele o antifraude do Mercado Pago recusava o cartão por risco.
+          buyer: { id: freshUser.id, name: formData.name.trim(), email: formData.email.trim(), cpf: formData.cpf.replace(/\D/g, ''), phone: formData.phone.replace(/\D/g, '') },
           delivery_type: deliveryMethod,
           address: { street: formData.street, number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood, city: formData.city, state: formData.state, zip: formData.cep },
           ref_code: refCodeVenda,

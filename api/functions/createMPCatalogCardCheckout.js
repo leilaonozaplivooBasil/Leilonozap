@@ -54,11 +54,15 @@ export default async function handler(req, res) {
       'distribuidor',
     ];
     let seller_id = null;
+    // 🔴 PONTO 127 (25/08/2026) — este SELECT passa a trazer TAMBÉM telefone e endereço
+    // do cadastro. Não é consulta nova: é a mesma que já existia, com mais colunas. Serve
+    // de rede se a tela do cliente estiver em cache antigo e não mandar o telefone.
+    let cadastro = null;
     if (buyer.id) {
-      const me = await (await sb(`app_users?select=id,career_levels&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
-      const eu = Array.isArray(me) ? me[0] : null;
-      const meusCargos = Array.isArray(eu?.career_levels) ? eu.career_levels : [];
-      if (eu && meusCargos.some((c) => CARGOS_REDE.includes(c))) seller_id = eu.id;
+      const me = await (await sb(`app_users?select=id,career_levels,phone,address_street,address_number,address_complement,address_neighborhood,address_city,address_state,address_zip_code&id=eq.${encodeURIComponent(buyer.id)}&limit=1`)).json();
+      cadastro = Array.isArray(me) ? me[0] : null;
+      const meusCargos = Array.isArray(cadastro?.career_levels) ? cadastro.career_levels : [];
+      if (cadastro && meusCargos.some((c) => CARGOS_REDE.includes(c))) seller_id = cadastro.id;
     }
     const refCode = String(body?.ref_code || '').trim();
     if (!seller_id && refCode) { const r = await (await sb(`app_users?select=id&referral_code=eq.${encodeURIComponent(refCode)}&limit=1`)).json(); if (Array.isArray(r) && r[0]) seller_id = r[0].id; }
@@ -140,6 +144,75 @@ export default async function handler(req, res) {
     // identificação do comprador é justamente o que a antifraude do Mercado Pago mais
     // pesa pra recusar no Brasil — explica a recusa em cartões de pessoas diferentes,
     // não é problema do cartão de ninguém.
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 127 (25/08/2026) — CARTÃO RECUSADO POR "RISCO": FALTAVA TELEFONE,
+    //    ENDEREÇO E DADO DE ENTREGA NA REQUISIÇÃO.
+    // ══════════════════════════════════════════════════════════════════════════
+    // Não é hipótese. Consultamos a API do Mercado Pago (mpDiagRecusas) e nas 30
+    // últimas recusas 22 (73%) vieram com o código `cc_rejected_high_risk` — o
+    // antifraude do MP, não o banco do cliente. E no pagamento aberto por dentro,
+    // tudo o que tinha chegado lá do nosso lado era:
+    //
+    //     "payer": { "first_name": "João", "last_name": "Vitor Paim" }
+    //
+    // Só o nome. Sem telefone, sem endereço, sem destino da entrega. O antifraude
+    // avalia o comprador com o que recebe; recebendo quase nada, ele recusa por
+    // precaução. Por isso a recusa acontecia com cartões de pessoas diferentes:
+    // o problema nunca foi o cartão de ninguém.
+    //
+    // A tela do carrinho JÁ coleta telefone (obrigatório, Cart.jsx) e endereço
+    // completo (obrigatório na entrega). O dado existia e parava aqui.
+    //
+    // Nomes dos campos conferidos no SDK oficial do Mercado Pago
+    // (mercadopago/sdk-nodejs, PreferenceRequest / Shipments / ReceiverAddress):
+    //   payer.phone   = { area_code, number }
+    //   payer.address = { zip_code, street_name, street_number }
+    //   shipments     = { mode, receiver_address: { zip_code, street_name,
+    //                     street_number, city_name, state_name, ... } }
+    // `mode: 'not_specified'` é obrigatório aqui: sem ele o MP pode assumir que nós
+    // queremos que ELE calcule o frete (Mercado Envios). Nós já cobramos o frete
+    // como item, então ele só recebe o endereço — não organiza entrega nenhuma.
+    const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+
+    // Tira o 55 do começo quando a pessoa digita o país junto ("+55 11 9..."). Sem isso
+    // o DDD viraria "55" e o antifraude receberia um telefone que não existe — pior do
+    // que não mandar nada.
+    let telDigitos = soDigitos(buyer.phone || cadastro?.phone);
+    if (telDigitos.length > 11 && telDigitos.startsWith('55')) telDigitos = telDigitos.slice(2);
+    const payerPhone = telDigitos.length === 10 || telDigitos.length === 11
+      ? { area_code: telDigitos.slice(0, 2), number: telDigitos.slice(2) }
+      : null;
+
+    const rua = String(addrS.street || cadastro?.address_street || '').trim();
+    const numero = String(addrS.number || cadastro?.address_number || '').trim();
+    const cepEnt = soDigitos(addrS.zip || cadastro?.address_zip_code);
+    const cidade = String(addrS.city || cadastro?.address_city || '').trim();
+    const uf = String(addrS.state || cadastro?.address_state || '').trim();
+    const bairro = String(addrS.neighborhood || cadastro?.address_neighborhood || '').trim();
+    const complemento = String(addrS.complement || cadastro?.address_complement || '').trim();
+
+    const payerAddress = cepEnt.length === 8
+      ? { zip_code: cepEnt, street_name: rua || 'Não informado', street_number: numero || 'S/N' }
+      : null;
+
+    // Entrega só existe quando é entrega. Retirada não tem destino a declarar.
+    const ehEntrega = String(body?.delivery_type || '') === 'delivery';
+    const shipments = ehEntrega && payerAddress
+      ? {
+          mode: 'not_specified',
+          receiver_address: {
+            zip_code: cepEnt,
+            street_name: [rua, bairro].filter(Boolean).join(' - ') || 'Não informado',
+            street_number: numero || 'S/N',
+            ...(complemento ? { apartment: complemento.slice(0, 60) } : {}),
+            ...(cidade ? { city_name: cidade } : {}),
+            ...(uf ? { state_name: uf } : {}),
+            country_name: 'Brasil',
+          },
+        }
+      : null;
+
     const prefBody = {
       items: mpItems,
       payer: {
@@ -147,7 +220,14 @@ export default async function handler(req, res) {
         name: first || 'Cliente',
         surname: rest.join(' ') || 'NoZap',
         ...(buyer.cpf ? { identification: { type: 'CPF', number: String(buyer.cpf).replace(/\D/g, '') } } : {}),
+        ...(payerPhone ? { phone: payerPhone } : {}),
+        ...(payerAddress ? { address: payerAddress } : {}),
       },
+      ...(shipments ? { shipments } : {}),
+      // O que aparece na fatura do cartão do cliente. Nome irreconhecível na fatura
+      // é uma das causas de contestação — e contestação piora a reputação da conta,
+      // que é o que o antifraude olha na próxima compra.
+      statement_descriptor: 'LEILAONOZAP',
       external_reference: saleId,
       notification_url: `${BASE_URL}/api/functions/mpWebhook`,
       back_urls: {
@@ -162,10 +242,42 @@ export default async function handler(req, res) {
         installments: 12,
       },
     };
-    const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(prefBody),
-    });
-    const pref = await r.json();
+    // Devolve { ok, pref } sempre — resposta que não for JSON (página de erro, HTML de
+    // manutenção) não pode estourar aqui: se estourar, a peça fica reservada 30 minutos
+    // por um checkout que nunca existiu.
+    const criarPreferencia = async (corpo) => {
+      const resp = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST', headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo),
+      });
+      const texto = await resp.text().catch(() => '');
+      let json = null;
+      try { json = JSON.parse(texto); } catch { json = { message: texto.slice(0, 300) }; }
+      return { ok: resp.ok, pref: json };
+    };
+
+    let r = await criarPreferencia(prefBody);
+    let pref = r.pref;
+
+    // 🛟 REDE DE SEGURANÇA. Se por qualquer motivo o Mercado Pago recusar a
+    // preferência com os dados novos (um CEP torto, um campo que ele passe a
+    // validar diferente), a compra NÃO pode morrer aqui: tenta de novo exatamente
+    // como era antes desta correção. Pior caso = o comportamento de hoje, nunca
+    // um checkout a menos. O log diz qual foi o campo, pra corrigir depois.
+    if (!r.ok || !pref?.id) {
+      console.error('[MP-CARD] preferência recusada COM dados do pagador — refazendo sem eles. Resposta do MP:', JSON.stringify(pref || {}).slice(0, 600));
+      const semEnriquecer = { ...prefBody };
+      delete semEnriquecer.shipments;
+      delete semEnriquecer.statement_descriptor;
+      semEnriquecer.payer = {
+        email: buyer.email,
+        name: first || 'Cliente',
+        surname: rest.join(' ') || 'NoZap',
+        ...(buyer.cpf ? { identification: { type: 'CPF', number: String(buyer.cpf).replace(/\D/g, '') } } : {}),
+      };
+      r = await criarPreferencia(semEnriquecer);
+      pref = r.pref;
+    }
+
     if (!r.ok || !pref?.id) {
       // 🔴 PONTO 126: reservou, mas o checkout não nasceu — devolve, senão a peça fica
       // presa 30 minutos por um link que nunca vai existir.
