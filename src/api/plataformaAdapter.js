@@ -287,6 +287,45 @@ async function _avisaRajada(actorId) {
 
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 PONTO 130 (25/08/2026) — CLIENTE COMUM NÃO CONSEGUIA SALVAR O PRÓPRIO
+  //    CADASTRO. NEM O ENDEREÇO, NEM O TELEFONE, NEM O CEP.
+  // ══════════════════════════════════════════════════════════════════════════
+  // Sem operador, esta função devolvia `_skip` e a escrita ia direto do
+  // NAVEGADOR para o Supabase com a chave pública. Em `app_users` isso é no-op
+  // silencioso — está escrito no topo de api/functions/adminUpdateUser.js:
+  //
+  //     "UPDATE direto via PostgREST dá no-op silencioso
+  //      (RLS de escrita é só pra 'authenticated')"
+  //
+  // Como o adapter ainda chama `.select().single()` depois, zero linhas viram
+  // erro do PostgREST — e a pessoa via, no print de 25/08:
+  //
+  //     "Erro ao atualizar perfil: Cannot coerce the result to a single JSON object"
+  //
+  // Foi isso que prendeu os clientes novos no leilão: sem CEP no cadastro, a
+  // sala nunca conseguia cotar o frete, e a tela de Perfil também não salvava.
+  //
+  // Agora quem não é operador salva O PRÓPRIO cadastro por uma rota de servidor,
+  // com lista fechada de campos e identidade tirada do crachá de sessão.
+  if (!op && table === 'app_users' && action === 'update') {
+    let eu = null;
+    try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem cache */ }
+    // Só o próprio cadastro. Editar o de outra pessoa continua sendo coisa de
+    // operador — e o servidor recusa de qualquer jeito, pelo crachá.
+    if (!eu?.id || String(eu.id) !== String(id)) return { _skip: true };
+    try {
+      const resp = await fetch('/api/functions/atualizarMeuCadastro', {
+        method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ user_id: id, updates: payload }),
+      });
+      const j = await resp.json();
+      if (j.success) return { success: true, rows: [j.user] };
+      return { success: false, error: j.error, details: j.detalhe || j.motivo };
+    } catch (e) { return { success: false, error: String(e?.message || e) }; }
+  }
+
   if (!op) return { _skip: true };
   // 🩹 app_users tem rota dedicada (adminUpdateUser) — entityWrite recusa essa tabela
   // de propósito (dados sensíveis de usuário/cargo). create continua no fallback
