@@ -14,13 +14,42 @@ const banner = ler('../src/components/auction/FreteLanceBanner.jsx');
 const rota = ler('../api/functions/cotarFrete.js');
 const helper = ler('../api/_lib/freteLeilao.js');
 
-test('a rota do leilão continua ignorando o CEP do navegador', () => {
-  // É de propósito (BLOQUEADOR 14): o selo que ela devolve autoriza reserva de
-  // saldo. Se o servidor cotasse por um CEP escolhido na hora, daria para cotar
-  // por um vizinho barato e receber no endereço real. A correção NÃO afrouxa
-  // isso — ela grava o CEP no cadastro antes de pedir a cotação.
-  assert.match(rota, /body\.items e body\.cep NÃO são lidos aqui/);
+test('a cotação continua saindo do cadastro, nunca do corpo', () => {
+  // O CEP do corpo NÃO vira parâmetro de cotação. Ele só pode preencher um
+  // cadastro vazio. O selo autoriza reserva de saldo — se a cotação aceitasse um
+  // CEP escolhido na hora, daria para cotar por um vizinho barato e receber no
+  // endereço real.
   assert.match(rota, /cotarFreteDoLeilao\(\{ auctionId, userId: donoDaCotacao \}\)/);
+  assert.ok(!/cotarFreteDoLeilao\([^)]*cep:/.test(rota), 'o CEP do corpo virou parâmetro de cotação');
+});
+
+test('o SERVIDOR grava o CEP de quem não tem nenhum', () => {
+  // 🔴 O print da cliente provou o furo: apareceu "Não conseguimos salvar seu CEP
+  // agora". Navegador de cliente comum não escreve em app_users — só admin e
+  // cargo de estoque (plataformaAdapter._operatorActor). Quem grava tem que ser
+  // o servidor, que tem a chave de serviço.
+  assert.match(rota, /await salvarCepSeVazio\(donoDaCotacao, body\?\.cep\)/);
+  assert.match(rota, /import \{ cotarFreteDoLeilao, salvarCepSeVazio \}/);
+});
+
+test('a gravação usa a identidade do crachá, nunca a do corpo', () => {
+  assert.match(rota, /salvarCepSeVazio\(donoDaCotacao/);
+  assert.ok(!/salvarCepSeVazio\(userId/.test(rota), 'passou a gravar no id que veio do corpo');
+});
+
+test('nunca sobrescreve um CEP que já existe', () => {
+  // Quem troca de endereço faz no Perfil, onde rua e número são conferidos junto.
+  assert.match(helper, /if \(atual\.length === 8\) return \{ gravou: false, motivo: 'ja_tinha' \}/);
+});
+
+test('a tela não impede mais a cotação quando não consegue gravar', () => {
+  // Era este `return` que prendia o cliente novo: a tela falhava ao gravar e
+  // nem chegava a chamar o servidor.
+  assert.ok(
+    !/setFreteStatus\('cep_nao_salvo'\)/.test(sala),
+    'a tela voltou a travar a cotação quando não consegue gravar'
+  );
+  assert.match(sala, /o servidor grava/);
 });
 
 test('sem CEP no cadastro, o servidor responde sem_cep', () => {
@@ -49,45 +78,63 @@ test('não grava à toa quando o CEP já é o do cadastro', () => {
   assert.match(sala, /if \(currentUser\?\.id && cep !== cepDoCadastro\)/);
 });
 
-test('falha ao gravar tem status próprio, não vira "confira o CEP"', () => {
-  // Mandar "confira e tente outro" faria a pessoa apagar um número correto.
-  assert.match(sala, /setFreteStatus\('cep_nao_salvo'\)/);
-  assert.match(sala, /freteStatus === 'cep_nao_salvo'/);
-});
-
-test('o banner continua na tela quando a gravação falha', () => {
-  // Sem isto o banner devolveria null, a caixinha sumiria e a pessoa ficaria
-  // sem nenhum jeito de tentar de novo.
-  assert.match(sala, /'cep_nao_salvo'/);
-  assert.match(banner, /status === "needs_cep" \|\| status === "error" \|\| status === "cep_nao_salvo"/);
-  assert.match(banner, /Não conseguimos salvar seu CEP agora/);
+test('o banner continua oferecendo a caixinha quando a cotação falha', () => {
+  assert.match(banner, /status === "needs_cep" \|\| status === "error"/);
 });
 
 // ── O efeito: réplica do laço, para provar e não só descrever ────────────────
-function rodada({ cepNoCadastro, cepDigitado, gravaAntes }) {
+// `quemGrava`: 'ninguem' = antes de tudo | 'tela' = PONTO 128, falha para cliente
+// comum | 'servidor' = PONTO 129, sempre funciona.
+function rodada({ cepNoCadastro, cepDigitado, quemGrava, ehDaEquipe = false }) {
   let cadastro = cepNoCadastro;
-  if (gravaAntes && cepDigitado.length === 8) cadastro = cepDigitado;   // a correção
-  // O servidor SEMPRE lê o cadastro — o CEP digitado nunca chega até ele.
+  const conseguiuGravar =
+    quemGrava === 'servidor' ? true :
+    quemGrava === 'tela' ? ehDaEquipe :   // navegador só escreve se for admin/estoque
+    false;
+  if (conseguiuGravar && cepDigitado.length === 8 && cadastro.length !== 8) cadastro = cepDigitado;
+  // A cotação SEMPRE lê o cadastro — o CEP digitado nunca vira parâmetro dela.
   return cadastro.length === 8 ? 'cotou' : 'needs_cep';
 }
 
-test('o efeito: sem gravar, o CEP certo devolve needs_cep — o laço', () => {
+test('o efeito: ninguém gravando — o laço original', () => {
+  assert.equal(rodada({ cepNoCadastro: '', cepDigitado: '22790669', quemGrava: 'ninguem' }), 'needs_cep');
+});
+
+test('o efeito: gravando só pela tela, cliente comum CONTINUA preso', () => {
+  // Foi isto que o print da cliente mostrou, depois da primeira correção.
   assert.equal(
-    rodada({ cepNoCadastro: '', cepDigitado: '26381367', gravaAntes: false }),
+    rodada({ cepNoCadastro: '', cepDigitado: '22790669', quemGrava: 'tela', ehDaEquipe: false }),
     'needs_cep',
-    'era exatamente isto que a pessoa via, quantas vezes tentasse'
+    'cliente comum não escreve em app_users pelo navegador'
   );
 });
 
-test('o efeito: gravando antes, o mesmo CEP cota', () => {
-  assert.equal(rodada({ cepNoCadastro: '', cepDigitado: '26381367', gravaAntes: true }), 'cotou');
+test('o efeito: gravando só pela tela, quem é da equipe passava', () => {
+  // Explica por que o teste interno funcionou e o do cliente não.
+  assert.equal(
+    rodada({ cepNoCadastro: '', cepDigitado: '22790669', quemGrava: 'tela', ehDaEquipe: true }),
+    'cotou'
+  );
 });
 
-test('o efeito: quem já tinha CEP no cadastro nunca sentiu o problema', () => {
-  // Por isso não aparecia para todo mundo — só para quem nunca cadastrou CEP.
-  assert.equal(rodada({ cepNoCadastro: '20040020', cepDigitado: '', gravaAntes: false }), 'cotou');
+test('o efeito: com o servidor gravando, cliente comum cota', () => {
+  assert.equal(
+    rodada({ cepNoCadastro: '', cepDigitado: '22790669', quemGrava: 'servidor', ehDaEquipe: false }),
+    'cotou'
+  );
+});
+
+test('o efeito: quem já tinha CEP nunca sentiu o problema', () => {
+  assert.equal(rodada({ cepNoCadastro: '20040020', cepDigitado: '', quemGrava: 'ninguem' }), 'cotou');
 });
 
 test('o efeito: CEP incompleto continua sendo recusado', () => {
-  assert.equal(rodada({ cepNoCadastro: '', cepDigitado: '2638', gravaAntes: true }), 'needs_cep');
+  assert.equal(rodada({ cepNoCadastro: '', cepDigitado: '2279', quemGrava: 'servidor' }), 'needs_cep');
+});
+
+test('o efeito: CEP existente não é trocado pelo digitado', () => {
+  assert.equal(
+    rodada({ cepNoCadastro: '20040020', cepDigitado: '22790669', quemGrava: 'servidor' }),
+    'cotou'
+  );
 });

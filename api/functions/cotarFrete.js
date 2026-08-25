@@ -11,7 +11,7 @@
 //
 // Variáveis necessárias na Vercel: MELHOR_ENVIO_TOKEN e MELHOR_ENVIO_FROM_CEP.
 import { cotarOpcoes } from '../_lib/frete.js';
-import { cotarFreteDoLeilao } from '../_lib/freteLeilao.js';
+import { cotarFreteDoLeilao, salvarCepSeVazio } from '../_lib/freteLeilao.js';
 import { emitirSelo } from '../_lib/freteSelo.js';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -93,7 +93,24 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, error: 'cracha_de_outra_pessoa' });
       }
 
-      // ⚠️ body.items e body.cep NÃO são lidos aqui. De propósito.
+      // ⚠️ body.items NÃO é lido aqui. De propósito — o produto sai do banco.
+      //
+      // 🔴 PONTO 129 (25/08/2026) — `body.cep` deixa de ser ignorado, MAS não vira
+      // parâmetro de cotação. Ele só pode fazer UMA coisa: preencher o CEP de quem
+      // ainda não tem nenhum no cadastro (ver salvarCepSeVazio). Depois disso a
+      // cotação continua lendo o cadastro, como sempre.
+      //
+      // Por que isso não afrouxa nada: o selo autoriza reserva de saldo, e o CEP
+      // dele tem que ser o mesmo do endereço de entrega. Como a gravação só
+      // acontece quando o cadastro está VAZIO e nunca sobrescreve, o CEP do selo
+      // continua sendo o CEP do cadastro — que é para onde a peça vai.
+      //
+      // Sem isto, cliente novo ficava preso: a tela dizia que salvou (e não
+      // salvava, porque navegador de cliente comum não escreve em app_users), o
+      // servidor lia o cadastro vazio, devolvia 'sem_cep', e a caixinha de CEP
+      // voltava. Para sempre, em leilão ao vivo.
+      await salvarCepSeVazio(donoDaCotacao, body?.cep);
+
       const cot = await cotarFreteDoLeilao({ auctionId, userId: donoDaCotacao });
       if (!cot.ok) {
         return res.status(200).json({ success: false, configured: true, motivo: cot.motivo, error: {

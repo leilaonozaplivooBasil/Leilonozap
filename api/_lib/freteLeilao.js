@@ -39,6 +39,56 @@ const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
  *   motivo: sem_cep · produto_nao_vinculado · cotacao_indisponivel ·
  *           opcao_invalida · ok
  */
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 PONTO 129 (25/08/2026) — GRAVAR O CEP DO PRIMEIRO LANCE NO SERVIDOR.
+// ══════════════════════════════════════════════════════════════════════════════
+// A correção anterior (PONTO 128) mandou a TELA gravar o CEP antes de cotar. Não
+// resolveu para cliente novo, e o motivo é este:
+//
+//   src/api/plataformaAdapter.js → _operatorActor() só devolve o usuário quando
+//   ele é admin/super_admin ou tem cargo de estoque. Cliente comum devolve null.
+//   Sem operador, `AppUser.update` cai no caminho de baixo: escrita direta no
+//   Supabase, do NAVEGADOR, com a chave pública.
+//
+// Ou seja: a gravação do CEP dependia de o navegador do cliente conseguir
+// escrever em `app_users`. Para quem não é da equipe, não consegue. A tela
+// achava que tinha salvado, o servidor lia o cadastro vazio e devolvia
+// 'sem_cep' — e a pessoa via de novo "informe seu CEP".
+//
+// Aqui é o lugar certo: o servidor tem a chave de serviço, não depende de
+// permissão de navegador, e a identidade já veio do crachá de sessão (nunca do
+// corpo da requisição).
+//
+// REGRA DE SEGURANÇA — só grava quando o cadastro NÃO tem CEP válido. Nunca
+// sobrescreve um CEP que já existe: quem quer trocar de endereço faz isso no
+// Perfil, onde rua e número são conferidos junto. Assim o CEP do selo, o do
+// cadastro e o da entrega continuam sendo o mesmo número, por construção.
+export async function salvarCepSeVazio(userId, cepDigitado) {
+  const cep = String(cepDigitado || '').replace(/\D/g, '');
+  if (!userId || cep.length !== 8 || !SUPABASE_URL || !SR) return { gravou: false, motivo: 'parametros' };
+  try {
+    const rows = await (await sb(`app_users?select=address_zip_code&id=eq.${enc(userId)}&limit=1`)).json();
+    const atual = String((Array.isArray(rows) ? rows[0]?.address_zip_code : '') || '').replace(/\D/g, '');
+    if (atual.length === 8) return { gravou: false, motivo: 'ja_tinha' };
+
+    const r = await sb(`app_users?id=eq.${enc(userId)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ address_zip_code: cep }),
+    });
+    if (!r.ok) {
+      const detalhe = await r.text().catch(() => '');
+      console.error(`[FRETE] não consegui gravar o CEP do usuário ${userId} — HTTP ${r.status}:`, detalhe.slice(0, 300));
+      return { gravou: false, motivo: `http_${r.status}` };
+    }
+    console.log(`[FRETE] CEP ${cep} gravado no cadastro do usuário ${userId} (primeiro lance).`);
+    return { gravou: true };
+  } catch (e) {
+    console.error('[FRETE] erro ao gravar CEP:', String(e?.message || e));
+    return { gravou: false, motivo: 'excecao' };
+  }
+}
+
 export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, auction = null, cep = null }) {
   if (!SUPABASE_URL || !SR) return { ok: false, motivo: 'config_ausente', frete: null, opcoes: [] };
 

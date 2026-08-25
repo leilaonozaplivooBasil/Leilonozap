@@ -527,11 +527,19 @@ export default function AuctionRoom() {
           localStorage.setItem('currentUser', JSON.stringify({ ...base, address_zip_code: cep }));
         } catch (_) { /* segue sem cache — não impede a cotação */ }
       } catch (e) {
-        console.error('[FRETE] não consegui gravar o CEP no cadastro:', e?.message);
-        // Status próprio: dizer "confira o CEP" aqui seria mentira, o CEP está
-        // certo. O que falhou foi gravar.
-        setFreteStatus('cep_nao_salvo');
-        return;
+        // 🔴 PONTO 129 — NÃO PARA MAIS AQUI, e este `return` era o problema.
+        //
+        // Cliente comum NÃO consegue gravar em app_users pelo navegador: o
+        // plataformaAdapter só usa a rota de escrita quando quem está logado é
+        // admin ou tem cargo de estoque (_operatorActor). Para todo mundo mais,
+        // esta gravação falha — e o `return` que existia aqui impedia até de
+        // chamar o servidor. O cliente novo ficava preso sem nunca ter chance.
+        //
+        // Agora quem grava de verdade é o servidor, dentro do cotarFrete
+        // (salvarCepSeVazio), que tem a chave de serviço e não depende de
+        // permissão de navegador. Esta tentativa aqui vira só um atalho: se
+        // funcionar, ótimo; se falhar, seguimos e o servidor resolve.
+        console.warn('[FRETE] a tela não gravou o CEP (esperado para cliente comum) — o servidor grava:', e?.message);
       }
     }
 
@@ -628,7 +636,6 @@ export default function AuctionRoom() {
     if (freteStatus === 'needs_login') return 'Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.';
     if (freteStatus === 'needs_address') return 'Complete seu endereço de entrega para dar o lance.';
     if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
-    if (freteStatus === 'cep_nao_salvo') return 'Seu CEP está certo, mas não conseguimos salvá-lo no seu cadastro. Tente de novo em alguns segundos.';
     if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
     if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
     return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
