@@ -61,18 +61,30 @@ function sb(path) {
 }
 
 // Lê tudo, de mil em mil. A base tem mais produto do que cabe numa página.
+//
+// 🔴 CORRIGIDO 25/08/2026 — A PRIMEIRA VERSÃO PAGINAVA ERRADO.
+// Ela ordenava por `updated_date`. Milhares de produtos foram gravados no mesmo
+// segundo (importação de lote grava tudo de uma vez), e quando o valor da
+// ordenação empata o banco não garante ordem estável entre uma página e outra:
+// o mesmo produto vinha duas vezes e outro nunca vinha.
+//
+// Deu para ver na resposta real: "Cinta Modeladora", "TOALHA UNID." e "Jogo De
+// Lençol" apareceram duplicados, com o MESMO id. Se duplicou, também faltou.
+//
+// A ordenação passa a ser por `id`, que é único — não empata, não embaralha. E
+// a lista ainda passa por uma limpeza de id repetido, como segunda rede.
 async function lerTudo(caminhoBase) {
-  const tudo = [];
+  const porId = new Map();
   const PAGINA = 1000;
   for (let inicio = 0; inicio < 50000; inicio += PAGINA) {
-    const r = await sb(`${caminhoBase}&limit=${PAGINA}&offset=${inicio}`);
+    const r = await sb(`${caminhoBase}&order=id.asc&limit=${PAGINA}&offset=${inicio}`);
     if (!r.ok) break;
     const lote = await r.json().catch(() => []);
     if (!Array.isArray(lote) || !lote.length) break;
-    tudo.push(...lote);
+    for (const linha of lote) porId.set(linha.id ?? `${porId.size}`, linha);
     if (lote.length < PAGINA) break;
   }
-  return tudo;
+  return [...porId.values()];
 }
 
 const num = (v) => Number(v) || 0;
@@ -93,13 +105,14 @@ export default async function handler(req, res) {
     const detalhe = body.detalhe === true;
 
     const colunas = 'id,description,lot,quantity,qty_perfeito,qty_bom,qty_oficina,qty_ruim,catalog_active,status,price_catalog,selling_price_retail,updated_date';
-    const produtos = await lerTudo(`products?select=${colunas}&order=updated_date.desc`);
+    const produtos = await lerTudo(`products?select=${colunas}`);
 
     // Reserva ativa = peça já prometida a quem está pagando agora (PONTO 126).
     // A vitrine mostra `quantity` cru, sem descontar isso.
     const agora = new Date().toISOString();
+    // `id` entra no select porque a leitura pagina e desduplica por ele.
     const reservas = await lerTudo(
-      `estoque_reservas?select=product_id,qty&status=eq.ativa&owner_id=is.null&expira_em=gt.${encodeURIComponent(agora)}&order=created_at.desc`
+      `estoque_reservas?select=id,product_id,qty&status=eq.ativa&owner_id=is.null&expira_em=gt.${encodeURIComponent(agora)}`
     );
     const reservadoPorProduto = {};
     for (const r of reservas) {
@@ -140,6 +153,15 @@ export default async function handler(req, res) {
     //      fechamento. Não perde dinheiro, mas frustra.
     const jaPrometido = naVitrine
       .filter((p) => num(p.quantity) > 0 && num(p.quantity) - (reservadoPorProduto[p.id] || 0) <= 0);
+
+    // ── 4b. O cadastro diz VENDIDO e o produto continua comprável na loja.
+    //      Apareceu de verdade na primeira rodada: "Bike Scooter Elétrica
+    //      Harley 137" (VENDIDO, R$ 4.075) e "MOEDOR DE CARNE" (VENDIDO PIX)
+    //      seguiam à venda. Aqui o próprio sistema se contradiz — não é
+    //      divergência entre duas contagens, é status contra quantidade.
+    const vendidoMasAindaNaLoja = naVitrine.filter(
+      (p) => /VENDID/i.test(String(p.status || '')) && num(p.quantity) > 0
+    );
 
     // ── 5. Está na vitrine com quantidade zerada/nula: aparece como ESGOTADO.
     //      Visível de propósito (decisão registrada em Catalog.jsx), mas se for
@@ -185,6 +207,13 @@ export default async function handler(req, res) {
         quantos: jaPrometido.length,
         o_que_e: 'Aparece comprável, mas a peça já está reservada por alguém que está pagando neste momento. O próximo cliente só descobre no fechamento.',
         itens: jaPrometido.slice(0, limite).map(cartao),
+      },
+
+      marcado_vendido_e_ainda_a_venda: {
+        quantos: vendidoMasAindaNaLoja.length,
+        o_que_e: 'O cadastro do produto está marcado como VENDIDO, mas a quantidade continua positiva e ele segue comprável na loja. Aqui não são duas contagens divergindo — é o próprio cadastro se contradizendo.',
+        o_que_fazer: 'Conferir um a um. Se foi vendido mesmo, zerar a quantidade na Gestão de Produtos.',
+        itens: vendidoMasAindaNaLoja.slice(0, limite).map(cartao),
       },
 
       esgotado_aparecendo_na_vitrine: {

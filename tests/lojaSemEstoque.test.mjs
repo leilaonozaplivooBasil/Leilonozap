@@ -66,3 +66,53 @@ test('o efeito: peça de lote com contagem física bate, não é acusada', () =>
 test('o efeito: fora da loja nunca é acusado, mesmo zerado', () => {
   assert.equal(grave({ catalog_active: false, quantity: 5, lot: 'L-99', qty_perfeito: 0 }), false);
 });
+
+// ── A paginação: o erro que a primeira rodada real denunciou ──────────────────
+// Ordenar por `updated_date` com milhares de linhas gravadas no mesmo segundo
+// faz o banco devolver ordem instável entre páginas: o mesmo produto vem duas
+// vezes e outro nunca vem. "Cinta Modeladora", "TOALHA UNID." e "Jogo De Lençol"
+// vieram duplicados, com o mesmo id.
+
+test('a leitura pagina por id, que não empata', () => {
+  assert.match(diag, /&order=id\.asc&limit=\$\{PAGINA\}&offset=/);
+  assert.ok(!/order=updated_date/.test(diag), 'voltou a paginar por data — duplica e pula');
+});
+
+test('id repetido é descartado, como segunda rede', () => {
+  assert.match(diag, /const porId = new Map\(\);/);
+  assert.match(diag, /porId\.set\(linha\.id/);
+});
+
+test('a busca de reservas traz o id, senão a limpeza por id descarta tudo', () => {
+  assert.match(diag, /estoque_reservas\?select=id,product_id,qty/);
+});
+
+// Réplica do efeito da paginação instável, para provar e não só descrever.
+function juntarComDedupe(paginas) {
+  const porId = new Map();
+  for (const pagina of paginas) for (const linha of pagina) porId.set(linha.id, linha);
+  return [...porId.values()];
+}
+
+test('o efeito: página que repete um registro não infla a contagem', () => {
+  const paginaA = [{ id: 'p1' }, { id: 'p2' }];
+  const paginaB = [{ id: 'p2' }, { id: 'p3' }]; // p2 repetido — foi o que aconteceu
+  assert.equal(paginaA.length + paginaB.length, 4, 'sem limpeza, contava 4');
+  assert.equal(juntarComDedupe([paginaA, paginaB]).length, 3, 'com limpeza, são 3 produtos');
+});
+
+// ── Produto marcado VENDIDO que continua comprável ───────────────────────────
+const aindaAVenda = (p) => p.catalog_active === true && /VENDID/i.test(String(p.status || '')) && num(p.quantity) > 0;
+
+test('o relatório acusa produto marcado VENDIDO que segue comprável', () => {
+  assert.match(diag, /\/VENDID\/i\.test\(String\(p\.status \|\| ''\)\) && num\(p\.quantity\) > 0/);
+});
+
+test('o efeito: VENDIDO e VENDIDO PIX contam; ESTOQUE não', () => {
+  // Casos reais da primeira rodada.
+  assert.equal(aindaAVenda({ catalog_active: true, status: 'VENDIDO', quantity: 1 }), true);
+  assert.equal(aindaAVenda({ catalog_active: true, status: 'VENDIDO PIX', quantity: 1 }), true);
+  assert.equal(aindaAVenda({ catalog_active: true, status: 'ESTOQUE', quantity: 1 }), false);
+  assert.equal(aindaAVenda({ catalog_active: true, status: 'VENDIDO', quantity: 0 }), false);
+  assert.equal(aindaAVenda({ catalog_active: false, status: 'VENDIDO', quantity: 5 }), false);
+});
