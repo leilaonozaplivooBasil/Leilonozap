@@ -116,3 +116,59 @@ test('o efeito: VENDIDO e VENDIDO PIX contam; ESTOQUE não', () => {
   assert.equal(aindaAVenda({ catalog_active: true, status: 'VENDIDO', quantity: 0 }), false);
   assert.equal(aindaAVenda({ catalog_active: false, status: 'VENDIDO', quantity: 5 }), false);
 });
+
+// ── "Contagem física maior" quase nunca é peça escondida ─────────────────────
+// A rodada real mostrou itens com status VENDIDO PIX, quantidade 0 na loja e
+// contagem física 19. Não tem 19 peças no depósito — foram vendidas. A venda
+// desconta `quantity` e nunca encosta na classificação, entao a diferenca e o
+// rastro das vendas. `quantity_sold` separa os dois casos.
+
+test('o relatório traz o quanto já foi vendido', () => {
+  const selectProdutos = diag.match(/const colunas = '([^']+)'/)?.[1] || '';
+  assert.ok(selectProdutos.split(',').includes('quantity_sold'), 'sem quantity_sold nao da pra separar rastro de sobra real');
+});
+
+test('a sobra é classificada linha a linha pelo que já foi vendido', () => {
+  assert.match(diag, /explicada_por_vendas: sobra\(p\) <= num\(p\.quantity_sold\)/);
+  assert.match(diag, /const escondendoPeca = comSobra\.filter\(\(p\) => !cartao\(p\)\.explicada_por_vendas\)/);
+  assert.match(diag, /const rastroDeVenda = comSobra\.filter\(\(p\) => cartao\(p\)\.explicada_por_vendas\)/);
+});
+
+test('o relatório avisa para NÃO repor quantidade por causa do rastro', () => {
+  // Repor quantidade para "bater" com uma contagem velha faria a loja voltar a
+  // vender o que nao existe — o problema que este relatorio veio resolver.
+  assert.match(diag, /NÃO reponha quantidade na loja/);
+});
+
+test('as listas de risco dizem quanto é em reais', () => {
+  assert.match(diag, /valor_exposto: emReais\(vendendoSemPeca/);
+  assert.match(diag, /valor_exposto: emReais\(vendidoMasAindaNaLoja/);
+  assert.match(diag, /valor_parado: emReais\(escondendoPeca, sobra\)/);
+});
+
+test('o valor conta a lista inteira, não só os itens mostrados', () => {
+  // `limite` corta o que aparece; se o total fosse calculado em cima do corte,
+  // o dinheiro apareceria menor do que e.
+  assert.ok(!/emReais\([a-zA-Z]+\.slice/.test(diag), 'o total passou a ser calculado sobre a fatia mostrada');
+});
+
+// Réplica da regra, para provar o efeito.
+const sobraDe = (p) => (num(p.qty_perfeito) + num(p.qty_bom) + num(p.qty_oficina) + num(p.qty_ruim)) - num(p.quantity);
+const soRastro = (p) => sobraDe(p) <= num(p.quantity_sold);
+
+test('o efeito: vendeu 19, loja zerada, contagem 19 → é rastro, não peça parada', () => {
+  // Caso real da rodada: "Panela De Pressão 7 Litros Alusol", VENDIDO PIX.
+  assert.equal(soRastro({ quantity: 0, quantity_sold: 19, qty_perfeito: 19 }), true);
+});
+
+test('o efeito: contagem 48 com 1 na loja e nenhuma venda → sobra de verdade', () => {
+  assert.equal(soRastro({ quantity: 1, quantity_sold: 0, qty_perfeito: 48 }), false);
+});
+
+test('o efeito: vendeu 5 mas sobram 47 → as vendas nao explicam, e sobra real', () => {
+  assert.equal(soRastro({ quantity: 1, quantity_sold: 5, qty_perfeito: 48 }), false);
+});
+
+test('o efeito: contagem batendo com a loja nao entra em lista nenhuma', () => {
+  assert.equal(sobraDe({ quantity: 10, quantity_sold: 3, qty_perfeito: 10 }), 0);
+});
